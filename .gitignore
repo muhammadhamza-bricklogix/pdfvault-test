@@ -182,3 +182,5 @@ vite.config.ts.timestamp-*
 .vite/
 
 .vscode
+# clerk configuration (can include secrets)
+/.clerk/

@@ -1,6 +1,10 @@
+"use client";
+
+import { Show, UserButton } from "@clerk/nextjs";
 import { Button } from "@heroui/react";
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 const NAV_ITEMS = [
@@ -35,9 +39,27 @@ export function SiteNavbar() {
           ))}
         </nav>
 
-        <Button className="min-w-24 rounded-full" variant="outline">
-          Log in
-        </Button>
+        <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
+
+          <Show when="signed-out">
+            <Link
+              className="hidden text-sm font-medium text-[var(--app-muted)] transition-colors hover:text-[var(--color-foreground)] sm:inline-flex"
+              href={ROUTES.AUTH.SIGN_IN}
+            >
+              Sign in
+            </Link>
+            <Link href={ROUTES.AUTH.SIGN_UP}>
+              <Button className="rounded-full" variant="outline">
+                Create account
+              </Button>
+            </Link>
+          </Show>
+
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
+        </div>
       </div>
     </header>
   );
