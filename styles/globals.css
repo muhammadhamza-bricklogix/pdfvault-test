@@ -1,0 +1,34 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+:root {
+  --app-border: color-mix(
+    in oklab,
+    var(--color-foreground) 12%,
+    var(--color-background)
+  );
+  --app-muted: color-mix(
+    in oklab,
+    var(--color-foreground) 58%,
+    var(--color-background)
+  );
+  --app-surface: color-mix(
+    in oklab,
+    var(--color-foreground) 3%,
+    var(--color-background)
+  );
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+* {
+  border-color: var(--app-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
