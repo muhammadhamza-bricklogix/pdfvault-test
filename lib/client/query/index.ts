@@ -1,2 +1,2 @@
-export { createQueryClient } from "./query-client";
-export { QueryProvider } from "./query-provider";
+export * from "./mutations";
+export * from "./queries";

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSignUp } from "@clerk/nextjs";
 import { Button, Fieldset, Form } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthShell } from "@/components/sections/auth/auth-shell";
@@ -12,13 +12,11 @@ import { ControlledInputField } from "@/components/ui/form/controlled-input-fiel
 import { ControlledOtpField } from "@/components/ui/form/controlled-otp-field";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import {
-  authSignUpSchema,
-  type AuthSignUpFormValues,
-} from "@/lib/shared/schemas/auth.sign-up.schema";
-import {
   authVerificationCodeSchema,
+  authSignUpSchema,
   type AuthVerificationCodeFormValues,
-} from "@/lib/shared/schemas/auth.verification-code.schema";
+  type AuthSignUpFormValues,
+} from "@/lib/shared/schemas/auth";
 import {
   getClerkErrorMessage,
   getClerkGlobalErrorMessage,
@@ -53,10 +51,7 @@ export function SignUpSection() {
       signUp.unverifiedFields.includes("email_address") &&
       signUp.missingFields.length === 0);
 
-  const activeGlobalError = useMemo(
-    () => getClerkGlobalErrorMessage(errors.global),
-    [errors.global],
-  );
+  const activeGlobalError = getClerkGlobalErrorMessage(errors.global);
 
   useEffect(() => {
     const emailError = getClerkErrorMessage(errors.fields.emailAddress);

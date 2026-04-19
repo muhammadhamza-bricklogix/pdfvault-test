@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSignIn } from "@clerk/nextjs";
 import { Button, Fieldset, Form } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthShell } from "@/components/sections/auth/auth-shell";
@@ -13,12 +13,10 @@ import { ControlledOtpField } from "@/components/ui/form/controlled-otp-field";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import {
   authSignInSchema,
-  type AuthSignInFormValues,
-} from "@/lib/shared/schemas/auth.sign-in.schema";
-import {
   authVerificationCodeSchema,
+  type AuthSignInFormValues,
   type AuthVerificationCodeFormValues,
-} from "@/lib/shared/schemas/auth.verification-code.schema";
+} from "@/lib/shared/schemas/auth";
 import {
   getClerkErrorMessage,
   getClerkGlobalErrorMessage,
@@ -52,10 +50,7 @@ export function SignInSection() {
     signIn.status === "needs_second_factor" ||
     step === "verification";
 
-  const activeGlobalError = useMemo(
-    () => getClerkGlobalErrorMessage(errors.global),
-    [errors.global],
-  );
+  const activeGlobalError = getClerkGlobalErrorMessage(errors.global);
 
   useEffect(() => {
     const emailError = getClerkErrorMessage(errors.fields.identifier);
