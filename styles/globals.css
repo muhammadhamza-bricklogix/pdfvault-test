@@ -17,6 +17,11 @@
     var(--color-foreground) 3%,
     var(--color-background)
   );
+  --app-accent-subtle: color-mix(
+    in oklab,
+    var(--color-accent) 8%,
+    var(--color-background)
+  );
 }
 
 html,

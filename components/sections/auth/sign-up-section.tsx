@@ -2,12 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSignUp } from "@clerk/nextjs";
-import { Button, Fieldset, Form } from "@heroui/react";
+import { Button, Fieldset, Form, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthShell } from "@/components/sections/auth/auth-shell";
+import { GoogleLogo, OAuthButton } from "@/components/ui/auth/oauth-button";
 import { ControlledInputField } from "@/components/ui/form/controlled-input-field";
 import { ControlledOtpField } from "@/components/ui/form/controlled-otp-field";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -44,6 +45,28 @@ export function SignUpSection() {
     },
     resolver: zodResolver(authVerificationCodeSchema),
   });
+
+  const [oauthLoading, setOauthLoading] = useState(false);
+
+  const handleGoogleSignUp = async () => {
+    setOauthLoading(true);
+    credentialsForm.clearErrors();
+
+    try {
+      await signUp.sso({
+        strategy: "oauth_google",
+        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: ROUTES.PUBLIC.HOME,
+      });
+    } catch (error) {
+      logger.error("Google sign-up failed", error);
+      credentialsForm.setError("root.server", {
+        message: "Something went wrong with Google sign-up.",
+        type: "server",
+      });
+      setOauthLoading(false);
+    }
+  };
 
   const verificationMode =
     step === "verification" ||
@@ -224,7 +247,6 @@ export function SignUpSection() {
       alternateLabel="Sign in"
       alternateText="Already have an account?"
       description="Create your account with email and password, then confirm the verification code we send before you land back in the app."
-      eyebrow="Custom sign up"
       title="Create your PDFForge account"
     >
       {verificationMode ? (
@@ -287,48 +309,67 @@ export function SignUpSection() {
           </Fieldset>
         </Form>
       ) : (
-        <Form onSubmit={handleCredentialsSubmit}>
-          <Fieldset className="space-y-5">
-            <Fieldset.Legend className="text-2xl font-semibold tracking-tight">
-              Set up your account
-            </Fieldset.Legend>
-            <Fieldset.Group className="space-y-4">
-              <ControlledInputField
-                autoComplete="email"
-                control={credentialsForm.control}
-                externalError={null}
-                label="Email address"
-                name="emailAddress"
-                placeholder="you@example.com"
-                type="email"
-              />
-              <ControlledInputField
-                autoComplete="new-password"
-                control={credentialsForm.control}
-                description="Use at least 8 characters."
-                externalError={null}
-                label="Password"
-                name="password"
-                placeholder="Create a password"
-                type="password"
-              />
-              {credentialsForm.formState.errors.root?.server?.message ? (
-                <p className="text-sm text-[var(--color-danger)]">
-                  {credentialsForm.formState.errors.root.server.message}
-                </p>
-              ) : null}
-              <div id="clerk-captcha" />
-            </Fieldset.Group>
-            <Fieldset.Actions>
-              <Button isDisabled={fetchStatus === "fetching"} type="submit">
-                {fetchStatus === "fetching"
-                  ? "Creating account..."
-                  : "Continue"}
-              </Button>
-            </Fieldset.Actions>
-          </Fieldset>
-        </Form>
+        <div className="space-y-5">
+          <Fieldset.Legend className="text-2xl font-semibold tracking-tight">
+            Set up your account
+          </Fieldset.Legend>
+
+          <OAuthButton
+            icon={<GoogleLogo />}
+            isDisabled={fetchStatus === "fetching" || oauthLoading}
+            label="Continue with Google"
+            onPress={handleGoogleSignUp}
+          />
+
+          <div className="flex items-center gap-4">
+            <Separator className="flex-1" />
+            <span className="text-xs text-[var(--app-muted)]">or</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Form onSubmit={handleCredentialsSubmit}>
+            <Fieldset className="space-y-5">
+              <Fieldset.Group className="space-y-4">
+                <ControlledInputField
+                  autoComplete="email"
+                  control={credentialsForm.control}
+                  externalError={null}
+                  label="Email address"
+                  name="emailAddress"
+                  placeholder="you@example.com"
+                  type="email"
+                />
+                <ControlledInputField
+                  autoComplete="new-password"
+                  control={credentialsForm.control}
+                  description="Use at least 8 characters."
+                  externalError={null}
+                  label="Password"
+                  name="password"
+                  placeholder="Create a password"
+                  type="password"
+                />
+                {credentialsForm.formState.errors.root?.server?.message ? (
+                  <p className="text-sm text-[var(--color-danger)]">
+                    {credentialsForm.formState.errors.root.server.message}
+                  </p>
+                ) : null}
+              </Fieldset.Group>
+              <Fieldset.Actions>
+                <Button
+                  isDisabled={fetchStatus === "fetching" || oauthLoading}
+                  type="submit"
+                >
+                  {fetchStatus === "fetching"
+                    ? "Creating account..."
+                    : "Continue"}
+                </Button>
+              </Fieldset.Actions>
+            </Fieldset>
+          </Form>
+        </div>
       )}
+      <div id="clerk-captcha" />
     </AuthShell>
   );
 }

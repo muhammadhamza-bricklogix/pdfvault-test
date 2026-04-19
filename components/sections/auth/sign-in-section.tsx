@@ -2,12 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSignIn } from "@clerk/nextjs";
-import { Button, Fieldset, Form } from "@heroui/react";
+import { Button, Fieldset, Form, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthShell } from "@/components/sections/auth/auth-shell";
+import { GoogleLogo, OAuthButton } from "@/components/ui/auth/oauth-button";
 import { ControlledInputField } from "@/components/ui/form/controlled-input-field";
 import { ControlledOtpField } from "@/components/ui/form/controlled-otp-field";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -44,6 +45,28 @@ export function SignInSection() {
     },
     resolver: zodResolver(authVerificationCodeSchema),
   });
+
+  const [oauthLoading, setOauthLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setOauthLoading(true);
+    credentialsForm.clearErrors();
+
+    try {
+      await signIn.sso({
+        strategy: "oauth_google",
+        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: ROUTES.PUBLIC.HOME,
+      });
+    } catch (error) {
+      logger.error("Google sign-in failed", error);
+      credentialsForm.setError("root.server", {
+        message: "Something went wrong with Google sign-in.",
+        type: "server",
+      });
+      setOauthLoading(false);
+    }
+  };
 
   const verificationMode =
     signIn.status === "needs_client_trust" ||
@@ -255,7 +278,6 @@ export function SignInSection() {
       alternateLabel="Create one"
       alternateText="Need an account?"
       description="Use your email address and password to get into PDFForge. If Clerk asks for an extra check, we keep that verification inside this route."
-      eyebrow="Custom sign in"
       title="Sign in to your PDFForge workspace"
     >
       {verificationMode ? (
@@ -305,44 +327,64 @@ export function SignInSection() {
           </Fieldset>
         </Form>
       ) : (
-        <Form onSubmit={handleCredentialsSubmit}>
-          <Fieldset className="space-y-5">
-            <Fieldset.Legend className="text-2xl font-semibold tracking-tight">
-              Welcome back
-            </Fieldset.Legend>
-            <Fieldset.Group className="space-y-4">
-              <ControlledInputField
-                autoComplete="email"
-                control={credentialsForm.control}
-                externalError={null}
-                label="Email address"
-                name="emailAddress"
-                placeholder="you@example.com"
-                type="email"
-              />
-              <ControlledInputField
-                autoComplete="current-password"
-                control={credentialsForm.control}
-                externalError={null}
-                label="Password"
-                name="password"
-                placeholder="Enter your password"
-                type="password"
-              />
-              {credentialsForm.formState.errors.root?.server?.message ? (
-                <p className="text-sm text-[var(--color-danger)]">
-                  {credentialsForm.formState.errors.root.server.message}
-                </p>
-              ) : null}
-            </Fieldset.Group>
-            <Fieldset.Actions>
-              <Button isDisabled={fetchStatus === "fetching"} type="submit">
-                {fetchStatus === "fetching" ? "Signing in..." : "Sign in"}
-              </Button>
-            </Fieldset.Actions>
-          </Fieldset>
-        </Form>
+        <div className="space-y-5">
+          <Fieldset.Legend className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </Fieldset.Legend>
+
+          <OAuthButton
+            icon={<GoogleLogo />}
+            isDisabled={fetchStatus === "fetching" || oauthLoading}
+            label="Continue with Google"
+            onPress={handleGoogleSignIn}
+          />
+
+          <div className="flex items-center gap-4">
+            <Separator className="flex-1" />
+            <span className="text-xs text-[var(--app-muted)]">or</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Form onSubmit={handleCredentialsSubmit}>
+            <Fieldset className="space-y-5">
+              <Fieldset.Group className="space-y-4">
+                <ControlledInputField
+                  autoComplete="email"
+                  control={credentialsForm.control}
+                  externalError={null}
+                  label="Email address"
+                  name="emailAddress"
+                  placeholder="you@example.com"
+                  type="email"
+                />
+                <ControlledInputField
+                  autoComplete="current-password"
+                  control={credentialsForm.control}
+                  externalError={null}
+                  label="Password"
+                  name="password"
+                  placeholder="Enter your password"
+                  type="password"
+                />
+                {credentialsForm.formState.errors.root?.server?.message ? (
+                  <p className="text-sm text-[var(--color-danger)]">
+                    {credentialsForm.formState.errors.root.server.message}
+                  </p>
+                ) : null}
+              </Fieldset.Group>
+              <Fieldset.Actions>
+                <Button
+                  isDisabled={fetchStatus === "fetching" || oauthLoading}
+                  type="submit"
+                >
+                  {fetchStatus === "fetching" ? "Signing in..." : "Sign in"}
+                </Button>
+              </Fieldset.Actions>
+            </Fieldset>
+          </Form>
+        </div>
       )}
+      <div id="clerk-captcha" />
     </AuthShell>
   );
 }
