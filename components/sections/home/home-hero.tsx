@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { FileUpload } from "@/components/ui/file-upload";
+import { usePdfEditorStore } from "@/lib/client/stores";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 export function HomeHero() {
-  const [file, setFile] = useState<File | null>(null);
+  const router = useRouter();
+  const setFile = usePdfEditorStore((s) => s.setFile);
+
+  const handleFileSelect = (file: File) => {
+    setFile(file);
+    router.push(ROUTES.TOOLS.PDF_EDITOR);
+  };
 
   return (
     <section className="flex w-full flex-col items-center py-4 sm:py-8">
@@ -24,10 +32,8 @@ export function HomeHero() {
           accept={["application/pdf"]}
           acceptLabel="PDF"
           description="Merge, convert, and prepare documents from one calm workspace."
-          file={file}
           heading="Drop your PDF files here"
-          onFileClear={() => setFile(null)}
-          onFileSelect={setFile}
+          onFileSelect={handleFileSelect}
         />
 
         <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-[var(--app-muted)] sm:text-base">

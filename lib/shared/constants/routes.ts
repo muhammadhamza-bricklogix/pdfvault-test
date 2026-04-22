@@ -8,6 +8,7 @@ export const ROUTES = {
     HOME: "/",
   },
   TOOLS: {
+    PDF_EDITOR: "/pdf-editor",
     PDF_TO_EXCEL: "/tools/pdf-to-excel",
     EXCEL_TO_PDF: "/tools/excel-to-pdf",
     DOC_TO_PDF: "/tools/doc-to-pdf",
