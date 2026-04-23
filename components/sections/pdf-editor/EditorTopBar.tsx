@@ -1,11 +1,20 @@
 "use client";
 
 import type { Key } from "@heroui/react";
-import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
+import type {
+  ActiveTool,
+  ShapeType,
+} from "@/lib/client/stores/pdf-editor-store";
 
 import {
+  ArrowDiagonalIcon,
+  CircleIcon,
   Cursor01Icon,
+  EraserIcon,
+  LineIcon,
+  PaintBrush01Icon,
   RedoIcon,
+  Square01Icon,
   TypeCursorIcon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
@@ -21,9 +30,19 @@ import {
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { ShapePickerDropdown } from "./ShapePickerDropdown";
+
+const SHAPE_ICON_MAP: Record<ShapeType, typeof Square01Icon> = {
+  arrow: ArrowDiagonalIcon,
+  ellipse: CircleIcon,
+  line: LineIcon,
+  rect: Square01Icon,
+};
+
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 export function EditorTopBar() {
+  const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
@@ -76,7 +95,21 @@ export function EditorTopBar() {
             <ToggleButtonGroup.Separator />
             <HugeiconsIcon icon={TypeCursorIcon} size={16} />
           </ToggleButton>
+          <ToggleButton isIconOnly aria-label="Draw tool" id="draw">
+            <ToggleButtonGroup.Separator />
+            <HugeiconsIcon icon={PaintBrush01Icon} size={16} />
+          </ToggleButton>
+          <ToggleButton isIconOnly aria-label="Shape tool" id="shape">
+            <ToggleButtonGroup.Separator />
+            <HugeiconsIcon icon={SHAPE_ICON_MAP[activeShapeType]} size={16} />
+          </ToggleButton>
+          <ToggleButton isIconOnly aria-label="Eraser tool" id="eraser">
+            <ToggleButtonGroup.Separator />
+            <HugeiconsIcon icon={EraserIcon} size={16} />
+          </ToggleButton>
         </ToggleButtonGroup>
+
+        <ShapePickerDropdown />
 
         <Separator />
 

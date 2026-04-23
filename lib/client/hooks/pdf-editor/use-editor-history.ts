@@ -12,7 +12,10 @@ type UseEditorHistoryParams = {
   fabricRef: RefObject<Canvas | null>;
 };
 
-export function useEditorHistory({ fabricCanvas, fabricRef }: UseEditorHistoryParams) {
+export function useEditorHistory({
+  fabricCanvas,
+  fabricRef,
+}: UseEditorHistoryParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
@@ -29,6 +32,8 @@ export function useEditorHistory({ fabricCanvas, fabricRef }: UseEditorHistoryPa
     if (!fc) return;
 
     const snapshot = () => {
+      if (usePdfEditorStore.getState().isCreatingShape) return;
+
       const json = JSON.stringify(fc.toJSON());
 
       pushHistory(currentPage, json);

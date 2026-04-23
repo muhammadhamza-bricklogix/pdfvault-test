@@ -5,9 +5,11 @@ import type { PDFPageProxy } from "pdfjs-dist";
 
 import { useEffect, useRef, useState } from "react";
 
+import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
 import { useEditorHistory } from "@/lib/client/hooks/pdf-editor/use-editor-history";
 import { useFabricCanvas } from "@/lib/client/hooks/pdf-editor/use-fabric-canvas";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
+import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
@@ -46,16 +48,30 @@ export function PdfViewerCanvas() {
   });
   const { undo, redo } = useEditorHistory({ fabricCanvas, fabricRef });
 
+  useDrawTool({ fabricCanvas });
+  useShapeTool({ fabricCanvas });
+
   // Wire active tool cursor + click handler
   useEffect(() => {
     const fc = fabricCanvas;
 
     if (!fc) return;
 
-    fc.defaultCursor = activeTool === "text" ? "text" : "default";
-    fc.hoverCursor = activeTool === "text" ? "text" : "move";
-    fc.isDrawingMode = false;
+    const cursorMap: Record<string, string> = {
+      draw: "crosshair",
+      eraser: "crosshair",
+      select: "default",
+      shape: "crosshair",
+      text: "text",
+    };
+
+    fc.defaultCursor = cursorMap[activeTool] ?? "default";
+    fc.hoverCursor = activeTool === "select" ? "move" : fc.defaultCursor;
     fc.selection = activeTool === "select";
+
+    if (activeTool !== "draw") {
+      fc.isDrawingMode = false;
+    }
 
     const handleMouseDown = async (opt: TPointerEventInfo) => {
       if (activeTool !== "text") return;

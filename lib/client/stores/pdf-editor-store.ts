@@ -4,15 +4,18 @@ import { create } from "zustand";
 
 const MAX_HISTORY = 50;
 
-export type ActiveTool = "select" | "text";
+export type ActiveTool = "draw" | "eraser" | "select" | "shape" | "text";
+export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
 
 type PdfEditorStore = {
+  activeShapeType: ShapeType;
   activeTool: ActiveTool;
   currentPage: number;
   fabricJsonByPage: Map<number, string>;
   file: File | null;
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
+  isCreatingShape: boolean;
   isSignedIn: boolean;
   pageCount: number;
   pdfDocument: PDFDocumentProxy | null;
@@ -22,9 +25,11 @@ type PdfEditorStore = {
   pushHistory: (page: number, json: string) => void;
   redo: (page: number) => string | undefined;
   saveFabricJson: (page: number, json: string) => void;
+  setActiveShapeType: (type: ShapeType) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setCurrentPage: (page: number) => void;
   setFile: (file: File) => void;
+  setIsCreatingShape: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   setPdfDocument: (doc: PDFDocumentProxy, pageCount: number) => void;
   setZoom: (zoom: number) => void;
@@ -32,12 +37,14 @@ type PdfEditorStore = {
 };
 
 export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
+  activeShapeType: "rect",
   activeTool: "select",
   currentPage: 1,
   fabricJsonByPage: new Map(),
   file: null,
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
+  isCreatingShape: false,
   isSignedIn: false,
   pageCount: 0,
   pdfDocument: null,
@@ -91,9 +98,11 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       return { fabricJsonByPage: newMap };
     }),
 
+  setActiveShapeType: (type) => set({ activeShapeType: type }),
   setActiveTool: (tool) => set({ activeTool: tool }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setFile: (file) => set({ file }),
+  setIsCreatingShape: (value) => set({ isCreatingShape: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
   setPdfDocument: (doc, pageCount) => set({ pdfDocument: doc, pageCount }),
   setZoom: (zoom) => set({ zoom }),
