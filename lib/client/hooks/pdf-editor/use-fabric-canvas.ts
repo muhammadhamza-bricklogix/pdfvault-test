@@ -28,6 +28,7 @@ export function useFabricCanvas({
     if (!fabricCanvasRef.current || !renderedSize) return;
 
     let cancelled = false;
+    let initDone: Promise<void> | undefined;
 
     const init = async () => {
       const { Canvas: FabricCanvas } = await import("fabric");
@@ -53,28 +54,43 @@ export function useFabricCanvas({
 
       fabricRef.current = fc;
       mountedPageRef.current = currentPage;
-      setFabricCanvas(fc);
 
       // Rehydrate saved JSON for this page
       const saved = getFabricJson(currentPage);
 
       if (saved) {
         await fc.loadFromJSON(JSON.parse(saved));
+
+        if (cancelled) return;
+
         fc.renderAll();
       }
+
+      if (cancelled) return;
+
+      setFabricCanvas(fc);
     };
 
-    init();
+    initDone = init();
 
     return () => {
       cancelled = true;
-      if (fabricRef.current) {
-        const json = JSON.stringify(fabricRef.current.toJSON());
 
-        saveFabricJson(mountedPageRef.current, json);
-        fabricRef.current.dispose();
-        fabricRef.current = null;
-        setFabricCanvas(null);
+      const cleanup = () => {
+        if (fabricRef.current) {
+          const json = JSON.stringify(fabricRef.current.toJSON());
+
+          saveFabricJson(mountedPageRef.current, json);
+          fabricRef.current.dispose();
+          fabricRef.current = null;
+          setFabricCanvas(null);
+        }
+      };
+
+      if (initDone) {
+        initDone.then(cleanup);
+      } else {
+        cleanup();
       }
     };
   }, [currentPage, renderedSize]);

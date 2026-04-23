@@ -22,8 +22,26 @@ export function useEditorHistory({
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
   const undoStore = usePdfEditorStore((s) => s.undo);
   const redoStore = usePdfEditorStore((s) => s.redo);
+  const setIsRestoringHistory = usePdfEditorStore(
+    (s) => s.setIsRestoringHistory,
+  );
 
   const [, forceRender] = useState(0);
+
+  // Push initial baseline snapshot when canvas mounts (if no history exists yet)
+  useEffect(() => {
+    const fc = fabricRef.current;
+
+    if (!fc) return;
+
+    const existing = historyByPage.get(currentPage);
+
+    if (!existing || existing.length === 0) {
+      pushHistory(currentPage, JSON.stringify(fc.toJSON()));
+    }
+    // Only run when canvas mounts/changes — not on every historyByPage change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fabricCanvas, currentPage]);
 
   // Register fabric event listeners whenever the canvas mounts
   useEffect(() => {
@@ -32,7 +50,9 @@ export function useEditorHistory({
     if (!fc) return;
 
     const snapshot = () => {
-      if (usePdfEditorStore.getState().isCreatingShape) return;
+      const state = usePdfEditorStore.getState();
+
+      if (state.isCreatingShape || state.isRestoringHistory) return;
 
       const json = JSON.stringify(fc.toJSON());
 
@@ -60,25 +80,41 @@ export function useEditorHistory({
     const fc = fabricRef.current;
 
     if (!fc || !canUndo) return;
+
     const snapshot = undoStore(currentPage);
 
     if (!snapshot) return;
-    await fc.loadFromJSON(JSON.parse(snapshot));
-    fc.renderAll();
+
+    setIsRestoringHistory(true);
+    try {
+      await fc.loadFromJSON(JSON.parse(snapshot));
+      fc.renderAll();
+    } finally {
+      setIsRestoringHistory(false);
+    }
+
     forceRender((n) => n + 1);
-  }, [canUndo, currentPage, fabricRef, undoStore]);
+  }, [canUndo, currentPage, fabricRef, undoStore, setIsRestoringHistory]);
 
   const redo = useCallback(async () => {
     const fc = fabricRef.current;
 
     if (!fc || !canRedo) return;
+
     const snapshot = redoStore(currentPage);
 
     if (!snapshot) return;
-    await fc.loadFromJSON(JSON.parse(snapshot));
-    fc.renderAll();
+
+    setIsRestoringHistory(true);
+    try {
+      await fc.loadFromJSON(JSON.parse(snapshot));
+      fc.renderAll();
+    } finally {
+      setIsRestoringHistory(false);
+    }
+
     forceRender((n) => n + 1);
-  }, [canRedo, currentPage, fabricRef, redoStore]);
+  }, [canRedo, currentPage, fabricRef, redoStore, setIsRestoringHistory]);
 
   return { canRedo, canUndo, redo, undo };
 }

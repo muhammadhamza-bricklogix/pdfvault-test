@@ -4,7 +4,14 @@ import { create } from "zustand";
 
 const MAX_HISTORY = 50;
 
-export type ActiveTool = "draw" | "eraser" | "select" | "shape" | "text";
+export type ActiveTool =
+  | "draw"
+  | "eraser"
+  | "image"
+  | "select"
+  | "shape"
+  | "signature"
+  | "text";
 export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
 
 type PdfEditorStore = {
@@ -16,6 +23,8 @@ type PdfEditorStore = {
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
   isCreatingShape: boolean;
+  isRestoringHistory: boolean;
+  isSignatureModalOpen: boolean;
   isSignedIn: boolean;
   pageCount: number;
   pdfDocument: PDFDocumentProxy | null;
@@ -30,6 +39,8 @@ type PdfEditorStore = {
   setCurrentPage: (page: number) => void;
   setFile: (file: File) => void;
   setIsCreatingShape: (value: boolean) => void;
+  setIsRestoringHistory: (value: boolean) => void;
+  setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   setPdfDocument: (doc: PDFDocumentProxy, pageCount: number) => void;
   setZoom: (zoom: number) => void;
@@ -45,6 +56,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
   isCreatingShape: false,
+  isRestoringHistory: false,
+  isSignatureModalOpen: false,
   isSignedIn: false,
   pageCount: 0,
   pdfDocument: null,
@@ -103,6 +116,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setCurrentPage: (page) => set({ currentPage: page }),
   setFile: (file) => set({ file }),
   setIsCreatingShape: (value) => set({ isCreatingShape: value }),
+  setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
+  setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
   setPdfDocument: (doc, pageCount) => set({ pdfDocument: doc, pageCount }),
   setZoom: (zoom) => set({ zoom }),

@@ -8,11 +8,14 @@ import { useEffect, useRef, useState } from "react";
 import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
 import { useEditorHistory } from "@/lib/client/hooks/pdf-editor/use-editor-history";
 import { useFabricCanvas } from "@/lib/client/hooks/pdf-editor/use-fabric-canvas";
+import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
+import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
+import { SignatureModal } from "./SignatureModal";
 
 export function PdfViewerCanvas() {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
@@ -49,7 +52,11 @@ export function PdfViewerCanvas() {
   const { undo, redo } = useEditorHistory({ fabricCanvas, fabricRef });
 
   useDrawTool({ fabricCanvas });
+  useImageTool({ fabricCanvas });
   useShapeTool({ fabricCanvas });
+  const { handleModalClose } = useSignatureTool({ fabricCanvas });
+
+  const isSignatureModalOpen = usePdfEditorStore((s) => s.isSignatureModalOpen);
 
   // Wire active tool cursor + click handler
   useEffect(() => {
@@ -60,8 +67,10 @@ export function PdfViewerCanvas() {
     const cursorMap: Record<string, string> = {
       draw: "crosshair",
       eraser: "crosshair",
+      image: "default",
       select: "default",
       shape: "crosshair",
+      signature: "default",
       text: "text",
     };
 
@@ -154,6 +163,11 @@ export function PdfViewerCanvas() {
           />
         </div>
       </div>
+      <SignatureModal
+        fabricCanvas={fabricCanvas}
+        isOpen={isSignatureModalOpen}
+        onClose={handleModalClose}
+      />
     </div>
   );
 }

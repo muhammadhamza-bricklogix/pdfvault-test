@@ -1,0 +1,114 @@
+"use client";
+
+import type { Canvas } from "fabric";
+
+import { useEffect, useRef } from "react";
+
+import { usePdfEditorStore } from "@/lib/client/stores";
+
+type UseImageToolParams = {
+  fabricCanvas: Canvas | null;
+};
+
+const ACCEPTED_TYPES = "image/png,image/jpeg,image/svg+xml,image/webp";
+
+export function useImageTool({ fabricCanvas }: UseImageToolParams) {
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
+  const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Create hidden file input once
+  useEffect(() => {
+    const input = document.createElement("input");
+
+    input.type = "file";
+    input.accept = ACCEPTED_TYPES;
+    input.style.display = "none";
+    document.body.appendChild(input);
+    inputRef.current = input;
+
+    return () => {
+      document.body.removeChild(input);
+      inputRef.current = null;
+    };
+  }, []);
+
+  // Trigger file picker when image tool is activated
+  useEffect(() => {
+    if (activeTool !== "image" || !fabricCanvas || !inputRef.current) return;
+
+    const input = inputRef.current;
+
+    const handleChange = async () => {
+      const file = input.files?.[0];
+
+      if (!file) {
+        setActiveTool("select");
+
+        return;
+      }
+
+      // Convert to data URL so the image survives JSON serialization across page switches
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { FabricImage } = await import("fabric");
+      const img = await FabricImage.fromURL(dataUrl);
+
+      const canvasW = fabricCanvas.width ?? 600;
+      const canvasH = fabricCanvas.height ?? 800;
+      const maxW = canvasW * 0.5;
+      const maxH = canvasH * 0.5;
+      const scale = Math.min(
+        1,
+        maxW / (img.width ?? 1),
+        maxH / (img.height ?? 1),
+      );
+
+      img.set({
+        left: canvasW / 2,
+        lockUniScaling: true,
+        originX: "center",
+        originY: "center",
+        scaleX: scale,
+        scaleY: scale,
+        top: canvasH / 2,
+      });
+
+      fabricCanvas.add(img);
+      fabricCanvas.setActiveObject(img);
+      fabricCanvas.renderAll();
+
+      pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+
+      setActiveTool("select");
+      input.value = "";
+    };
+
+    const handleCancel = () => {
+      setTimeout(() => {
+        if (!input.files?.length) {
+          setActiveTool("select");
+        }
+      }, 300);
+    };
+
+    input.addEventListener("change", handleChange);
+    window.addEventListener("focus", handleCancel, { once: true });
+
+    input.click();
+
+    return () => {
+      input.removeEventListener("change", handleChange);
+      window.removeEventListener("focus", handleCancel);
+    };
+  }, [activeTool, fabricCanvas, currentPage, pushHistory, setActiveTool]);
+}

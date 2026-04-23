@@ -198,6 +198,8 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
 
       const shapeType = activeTool === "eraser" ? "eraser" : activeShapeType;
 
+      let finalShape: FabricObject;
+
       if (shapeType === "arrow") {
         // Replace temp line with a Group(Line + Triangle arrowhead)
         const {
@@ -232,19 +234,28 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
         const arrow = new FGroup([arrowLine, arrowHead]);
 
         fabricCanvas.add(arrow);
+        finalShape = arrow;
       } else {
         // Make the temp shape interactive
         tempShapeRef.current.set({
           evented: true,
           selectable: true,
         });
+        finalShape = tempShapeRef.current;
       }
 
+      // Recalculate bounding box so the object is immediately grabbable
+      finalShape.setCoords();
+      fabricCanvas.setActiveObject(finalShape);
       tempShapeRef.current = null;
 
-      const json = JSON.stringify(fabricCanvas.toJSON());
+      // Arrow gets history from object:added (isCreatingShape is already false).
+      // Non-arrow shapes were added during mousedown while isCreatingShape was
+      // true, so we need a manual push here.
+      if (shapeType !== "arrow") {
+        pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+      }
 
-      pushHistory(currentPage, json);
       fabricCanvas.renderAll();
       setActiveTool("select");
     };

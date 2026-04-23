@@ -1,21 +1,20 @@
 "use client";
 
 import type { Key } from "@heroui/react";
-import type {
-  ActiveTool,
-  ShapeType,
-} from "@/lib/client/stores/pdf-editor-store";
+import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
-  ArrowDiagonalIcon,
+  ArrowDownRight01Icon,
   CircleIcon,
   Cursor01Icon,
   EraserIcon,
-  LineIcon,
+  Image01Icon,
+  LinerIcon,
   PaintBrush01Icon,
   RedoIcon,
-  Square01Icon,
-  TypeCursorIcon,
+  SignatureIcon,
+  SquareIcon,
+  TextFontIcon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -26,31 +25,23 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Toolbar,
+  Tooltip,
 } from "@heroui/react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
-import { ShapePickerDropdown } from "./ShapePickerDropdown";
-
-const SHAPE_ICON_MAP: Record<ShapeType, typeof Square01Icon> = {
-  arrow: ArrowDiagonalIcon,
-  ellipse: CircleIcon,
-  line: LineIcon,
-  rect: Square01Icon,
-};
-
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
-export function EditorTopBar() {
-  const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
-  const activeTool = usePdfEditorStore((s) => s.activeTool);
+// ---------------------------------------------------------------------------
+// Info Bar — filename, page navigation, zoom, undo/redo
+// ---------------------------------------------------------------------------
+export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const zoom = usePdfEditorStore((s) => s.zoom);
-  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
 
@@ -71,120 +62,200 @@ export function EditorTopBar() {
     if (next !== undefined) setZoom(next);
   };
 
-  const handleToolChange = (keys: Set<Key>) => {
-    const key = [...keys][0] as ActiveTool;
-
-    if (key) setActiveTool(key);
-  };
+  const fileName = file?.name ?? "PDF Editor";
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
-      {/* Left: tool selector + undo/redo */}
-      <Toolbar aria-label="Editor tools">
-        <ToggleButtonGroup
-          disallowEmptySelection
-          selectedKeys={new Set([activeTool])}
-          selectionMode="single"
-          size="sm"
-          onSelectionChange={handleToolChange}
-        >
-          <ToggleButton isIconOnly aria-label="Select tool" id="select">
-            <HugeiconsIcon icon={Cursor01Icon} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Text tool" id="text">
-            <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={TypeCursorIcon} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Draw tool" id="draw">
-            <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={PaintBrush01Icon} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Shape tool" id="shape">
-            <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={SHAPE_ICON_MAP[activeShapeType]} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Eraser tool" id="eraser">
-            <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={EraserIcon} size={16} />
-          </ToggleButton>
-        </ToggleButtonGroup>
-
-        <ShapePickerDropdown />
-
-        <Separator />
-
+    <div className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
+      {/* Left: undo/redo */}
+      <Toolbar aria-label="Actions">
         <ButtonGroup size="sm" variant="tertiary">
-          <Button
-            isIconOnly
-            aria-label="Undo"
-            isDisabled={!canUndo}
-            onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
-          >
-            <HugeiconsIcon icon={UndoIcon} size={16} />
-          </Button>
-          <Button
-            isIconOnly
-            aria-label="Redo"
-            isDisabled={!canRedo}
-            onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
-          >
-            <ButtonGroup.Separator />
-            <HugeiconsIcon icon={RedoIcon} size={16} />
-          </Button>
+          <Tooltip delay={300}>
+            <Button
+              isIconOnly
+              aria-label="Undo"
+              isDisabled={!canUndo}
+              onPress={() =>
+                window.dispatchEvent(new CustomEvent("editor:undo"))
+              }
+            >
+              <HugeiconsIcon icon={UndoIcon} size={16} />
+            </Button>
+            <Tooltip.Content>
+              <p>Undo</p>
+            </Tooltip.Content>
+          </Tooltip>
+          <Tooltip delay={300}>
+            <Button
+              isIconOnly
+              aria-label="Redo"
+              isDisabled={!canRedo}
+              onPress={() =>
+                window.dispatchEvent(new CustomEvent("editor:redo"))
+              }
+            >
+              <ButtonGroup.Separator />
+              <HugeiconsIcon icon={RedoIcon} size={16} />
+            </Button>
+            <Tooltip.Content>
+              <p>Redo</p>
+            </Tooltip.Content>
+          </Tooltip>
         </ButtonGroup>
       </Toolbar>
 
       {/* Center: filename + page navigation */}
       <div className="flex items-center gap-3">
-        <span className="max-w-40 truncate text-sm font-medium text-[var(--color-foreground)]">
-          {file?.name ?? "PDF Editor"}
-        </span>
-      </div>
+        <Tooltip delay={300}>
+          <span className="max-w-40 cursor-default truncate text-sm font-medium text-[var(--color-foreground)]">
+            {fileName}
+          </span>
+          <Tooltip.Content>
+            <p>{fileName}</p>
+          </Tooltip.Content>
+        </Tooltip>
 
-      <div className="flex items-center gap-1">
-        <Button
-          isDisabled={currentPage <= 1}
-          size="sm"
-          variant="ghost"
-          onPress={() => setCurrentPage(currentPage - 1)}
-        >
-          ‹
-        </Button>
-        <span className="min-w-24 text-center text-xs text-[var(--app-muted)]">
-          Page {currentPage} of {pageCount}
-        </span>
-        <Button
-          isDisabled={currentPage >= pageCount}
-          size="sm"
-          variant="ghost"
-          onPress={() => setCurrentPage(currentPage + 1)}
-        >
-          ›
-        </Button>
+        <Separator className="!h-4" orientation="vertical" />
+
+        <div className="flex items-center gap-1">
+          <Button
+            isDisabled={currentPage <= 1}
+            size="sm"
+            variant="ghost"
+            onPress={() => setCurrentPage(currentPage - 1)}
+          >
+            ‹
+          </Button>
+          <span className="min-w-24 text-center text-xs text-[var(--app-muted)]">
+            Page {currentPage} of {pageCount}
+          </span>
+          <Button
+            isDisabled={currentPage >= pageCount}
+            size="sm"
+            variant="ghost"
+            onPress={() => setCurrentPage(currentPage + 1)}
+          >
+            ›
+          </Button>
+        </div>
       </div>
 
       {/* Right: zoom controls */}
       <div className="flex items-center gap-1">
-        <Button
-          isDisabled={zoom <= ZOOM_PRESETS[0]}
-          size="sm"
-          variant="ghost"
-          onPress={zoomOut}
-        >
-          −
-        </Button>
+        <Tooltip delay={300}>
+          <Button
+            isDisabled={zoom <= ZOOM_PRESETS[0]}
+            size="sm"
+            variant="ghost"
+            onPress={zoomOut}
+          >
+            −
+          </Button>
+          <Tooltip.Content>
+            <p>Zoom out</p>
+          </Tooltip.Content>
+        </Tooltip>
         <span className="min-w-12 text-center text-xs tabular-nums text-[var(--app-muted)]">
           {Math.round(zoom * 100)}%
         </span>
-        <Button
-          isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
-          size="sm"
-          variant="ghost"
-          onPress={zoomIn}
-        >
-          +
-        </Button>
+        <Tooltip delay={300}>
+          <Button
+            isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+            size="sm"
+            variant="ghost"
+            onPress={zoomIn}
+          >
+            +
+          </Button>
+          <Tooltip.Content>
+            <p>Zoom in</p>
+          </Tooltip.Content>
+        </Tooltip>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tool Bar — all editing tools as individual buttons
+// ---------------------------------------------------------------------------
+
+type ToolId = ActiveTool | `shape:${string}`;
+
+function parseToolId(id: ToolId): {
+  shapeType?: string;
+  tool: ActiveTool;
+} {
+  if (id.startsWith("shape:")) {
+    return { shapeType: id.slice(6), tool: "shape" };
+  }
+
+  return { tool: id as ActiveTool };
+}
+
+function toToggleKey(activeTool: ActiveTool, activeShapeType: string): ToolId {
+  if (activeTool === "shape") return `shape:${activeShapeType}`;
+
+  return activeTool;
+}
+
+const TOOLS = [
+  { icon: Cursor01Icon, id: "select", label: "Select" },
+  { icon: TextFontIcon, id: "text", label: "Text" },
+  { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
+  { icon: SquareIcon, id: "shape:rect", label: "Rectangle" },
+  { icon: CircleIcon, id: "shape:ellipse", label: "Ellipse" },
+  { icon: LinerIcon, id: "shape:line", label: "Line" },
+  { icon: ArrowDownRight01Icon, id: "shape:arrow", label: "Arrow" },
+  { icon: EraserIcon, id: "eraser", label: "Eraser" },
+  { icon: SignatureIcon, id: "signature", label: "Signature" },
+  { icon: Image01Icon, id: "image", label: "Image" },
+] as const;
+
+export function EditorToolBar() {
+  const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
+  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
+  const setActiveShapeType = usePdfEditorStore((s) => s.setActiveShapeType);
+
+  const selectedKey = toToggleKey(activeTool, activeShapeType);
+
+  const handleToolChange = (keys: Set<Key>) => {
+    const key = [...keys][0] as ToolId | undefined;
+
+    if (!key) return;
+
+    const { tool, shapeType } = parseToolId(key);
+
+    if (shapeType) {
+      setActiveShapeType(shapeType as "rect" | "ellipse" | "line" | "arrow");
+    }
+
+    setActiveTool(tool);
+  };
+
+  return (
+    <div className="flex h-10 shrink-0 items-center justify-center border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
+      <Toolbar aria-label="Drawing tools">
+        <ToggleButtonGroup
+          disallowEmptySelection
+          selectedKeys={new Set([selectedKey])}
+          selectionMode="single"
+          size="sm"
+          onSelectionChange={handleToolChange}
+        >
+          {TOOLS.map((tool, i) => (
+            <Tooltip key={tool.id} delay={300}>
+              <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
+                {i > 0 && <ToggleButtonGroup.Separator />}
+                <HugeiconsIcon icon={tool.icon} size={16} />
+              </ToggleButton>
+              <Tooltip.Content>
+                <p>{tool.label}</p>
+              </Tooltip.Content>
+            </Tooltip>
+          ))}
+        </ToggleButtonGroup>
+      </Toolbar>
     </div>
   );
 }

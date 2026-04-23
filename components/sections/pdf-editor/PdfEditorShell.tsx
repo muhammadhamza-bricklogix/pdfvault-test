@@ -7,7 +7,7 @@ import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { FileUpload } from "@/components/ui/file-upload";
 
-import { EditorTopBar } from "./EditorTopBar";
+import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
 
@@ -53,7 +53,8 @@ function EditorLayout() {
 
   return (
     <>
-      <EditorTopBar />
+      <EditorInfoBar />
+      <EditorToolBar />
       <div className="flex flex-1 overflow-hidden">
         <ThumbnailSidebar />
         <PdfViewerCanvas />

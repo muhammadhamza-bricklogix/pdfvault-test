@@ -2,6 +2,14 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import { Dancing_Script } from "next/font/google";
+
+const dancingScript = Dancing_Script({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-dancing-script",
+  weight: ["400", "700"],
+});
 
 import { SiteNavbar } from "@/components/shared/navigation/site-navbar";
 
@@ -32,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html suppressHydrationWarning lang="en">
+    <html suppressHydrationWarning className={dancingScript.variable} lang="en">
       <body className="min-h-screen font-sans antialiased">
         <ClerkProvider>
           <Providers
