@@ -84,6 +84,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
             height: 0,
             left: pointer.x,
             stroke: "#000000",
+            strokeUniform: true,
             strokeWidth: 2,
             top: pointer.y,
             width: 0,
@@ -94,11 +95,10 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
           shape = new FEllipse({
             fill: "transparent",
             left: pointer.x,
-            originX: "center",
-            originY: "center",
             rx: 0,
             ry: 0,
             stroke: "#000000",
+            strokeUniform: true,
             strokeWidth: 2,
             top: pointer.y,
           });
@@ -109,6 +109,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
           shape = new FLine([pointer.x, pointer.y, pointer.x, pointer.y], {
             stroke: "#000000",
             strokeLineCap: "round",
+            strokeUniform: true,
             strokeWidth: 2,
           });
           break;
@@ -159,10 +160,10 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
 
         case "ellipse":
           tempShapeRef.current.set({
-            left: (sx + pointer.x) / 2,
+            left: Math.min(sx, pointer.x),
             rx: Math.abs(dx) / 2,
             ry: Math.abs(dy) / 2,
-            top: (sy + pointer.y) / 2,
+            top: Math.min(sy, pointer.y),
           });
           break;
 
