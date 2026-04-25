@@ -33,6 +33,7 @@ type PdfEditorStore = {
   pdfDocument: PDFDocumentProxy | null;
   zoom: number;
 
+  clearFile: () => void;
   getFabricJson: (page: number) => string | undefined;
   pushHistory: (page: number, json: string) => void;
   redo: (page: number) => string | undefined;
@@ -67,6 +68,22 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   pageCount: 0,
   pdfDocument: null,
   zoom: 1.0,
+
+  clearFile: () =>
+    set({
+      activeTool: "select",
+      currentPage: 1,
+      fabricJsonByPage: new Map(),
+      file: null,
+      historyByPage: new Map(),
+      historyIndexByPage: new Map(),
+      isCreatingShape: false,
+      isRestoringHistory: false,
+      isSignatureModalOpen: false,
+      pageCount: 0,
+      pdfDocument: null,
+      zoom: 1.0,
+    }),
 
   getFabricJson: (page) => get().fabricJsonByPage.get(page),
 

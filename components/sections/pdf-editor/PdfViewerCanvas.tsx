@@ -19,7 +19,11 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
 import { SignatureModal } from "./SignatureModal";
 
-export function PdfViewerCanvas() {
+type PdfViewerCanvasProps = {
+  onFabricCanvasReady?: (canvas: import("fabric").Canvas | null) => void;
+};
+
+export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
@@ -52,6 +56,13 @@ export function PdfViewerCanvas() {
     renderedSize,
   });
   const { undo, redo } = useEditorHistory({ fabricCanvas, fabricRef });
+
+  // Notify parent when fabricCanvas changes
+  useEffect(() => {
+    onFabricCanvasReady?.(fabricCanvas);
+
+    return () => onFabricCanvasReady?.(null);
+  }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
   useEraserTool({ fabricCanvas });
@@ -167,7 +178,6 @@ export function PdfViewerCanvas() {
             canvasContainerRef={containerRef}
             fabricCanvas={fabricCanvas}
           />
-
         </div>
       </div>
       <SignatureModal

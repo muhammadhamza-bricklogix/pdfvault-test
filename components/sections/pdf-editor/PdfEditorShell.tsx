@@ -1,7 +1,9 @@
 "use client";
 
+import type { Canvas } from "fabric";
+
 import { useAuth } from "@clerk/nextjs";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -9,6 +11,8 @@ import { FileUpload } from "@/components/ui/file-upload";
 
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
+import { PerformancePanel } from "./PerformancePanel";
+import { RightSidebar } from "./RightSidebar";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
 
 function UploadScreen() {
@@ -32,6 +36,13 @@ function UploadScreen() {
 function EditorLayout() {
   const { error, isLoading } = usePdfLoader();
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
+  const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
+
+  const handleFabricCanvasReady = useCallback(
+    (canvas: Canvas | null) => setFabricCanvas(canvas),
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -53,11 +64,19 @@ function EditorLayout() {
 
   return (
     <>
-      <EditorInfoBar />
+      <EditorInfoBar
+        isPerformancePanelOpen={isPerformancePanelOpen}
+        onTogglePerformancePanel={() => setIsPerformancePanelOpen((v) => !v)}
+      />
       <EditorToolBar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar />
-        <PdfViewerCanvas />
+        <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+        <RightSidebar fabricCanvas={fabricCanvas} />
+        <PerformancePanel
+          fabricCanvas={fabricCanvas}
+          isOpen={isPerformancePanelOpen}
+        />
       </div>
     </>
   );

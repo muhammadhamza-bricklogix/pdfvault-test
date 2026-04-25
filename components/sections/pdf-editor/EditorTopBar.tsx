@@ -4,6 +4,7 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
+  Analytics01Icon,
   ArrowDownRight01Icon,
   CircleIcon,
   Cursor01Icon,
@@ -32,12 +33,22 @@ import {
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { HamburgerMenu } from "./HamburgerMenu";
+
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 // ---------------------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, undo/redo
 // ---------------------------------------------------------------------------
-export function EditorInfoBar() {
+type EditorInfoBarProps = {
+  isPerformancePanelOpen?: boolean;
+  onTogglePerformancePanel?: () => void;
+};
+
+export function EditorInfoBar({
+  isPerformancePanelOpen,
+  onTogglePerformancePanel,
+}: EditorInfoBarProps) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
@@ -68,42 +79,45 @@ export function EditorInfoBar() {
 
   return (
     <div className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
-      {/* Left: undo/redo */}
-      <Toolbar aria-label="Actions">
-        <ButtonGroup size="sm" variant="tertiary">
-          <Tooltip delay={300}>
-            <Button
-              isIconOnly
-              aria-label="Undo"
-              isDisabled={!canUndo}
-              onPress={() =>
-                window.dispatchEvent(new CustomEvent("editor:undo"))
-              }
-            >
-              <HugeiconsIcon icon={UndoIcon} size={16} />
-            </Button>
-            <Tooltip.Content>
-              <p>Undo</p>
-            </Tooltip.Content>
-          </Tooltip>
-          <Tooltip delay={300}>
-            <Button
-              isIconOnly
-              aria-label="Redo"
-              isDisabled={!canRedo}
-              onPress={() =>
-                window.dispatchEvent(new CustomEvent("editor:redo"))
-              }
-            >
-              <ButtonGroup.Separator />
-              <HugeiconsIcon icon={RedoIcon} size={16} />
-            </Button>
-            <Tooltip.Content>
-              <p>Redo</p>
-            </Tooltip.Content>
-          </Tooltip>
-        </ButtonGroup>
-      </Toolbar>
+      {/* Left: menu + undo/redo */}
+      <div className="flex items-center gap-1">
+        <HamburgerMenu />
+        <Toolbar aria-label="Actions">
+          <ButtonGroup size="sm" variant="tertiary">
+            <Tooltip delay={300}>
+              <Button
+                isIconOnly
+                aria-label="Undo"
+                isDisabled={!canUndo}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:undo"))
+                }
+              >
+                <HugeiconsIcon icon={UndoIcon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Undo</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Tooltip delay={300}>
+              <Button
+                isIconOnly
+                aria-label="Redo"
+                isDisabled={!canRedo}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:redo"))
+                }
+              >
+                <ButtonGroup.Separator />
+                <HugeiconsIcon icon={RedoIcon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Redo</p>
+              </Tooltip.Content>
+            </Tooltip>
+          </ButtonGroup>
+        </Toolbar>
+      </div>
 
       {/* Center: filename + page navigation */}
       <div className="flex items-center gap-3">
@@ -172,6 +186,26 @@ export function EditorInfoBar() {
             <p>Zoom in</p>
           </Tooltip.Content>
         </Tooltip>
+
+        {onTogglePerformancePanel && (
+          <>
+            <Separator className="!h-4" orientation="vertical" />
+            <Tooltip delay={300}>
+              <Button
+                isIconOnly
+                aria-label="Performance panel"
+                size="sm"
+                variant={isPerformancePanelOpen ? "secondary" : "ghost"}
+                onPress={onTogglePerformancePanel}
+              >
+                <HugeiconsIcon icon={Analytics01Icon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Performance</p>
+              </Tooltip.Content>
+            </Tooltip>
+          </>
+        )}
       </div>
     </div>
   );
