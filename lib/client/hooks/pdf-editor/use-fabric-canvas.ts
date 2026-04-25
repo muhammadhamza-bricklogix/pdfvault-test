@@ -31,9 +31,14 @@ export function useFabricCanvas({
     let initDone: Promise<void> | undefined;
 
     const init = async () => {
-      const { Canvas: FabricCanvas } = await import("fabric");
+      const { Canvas: FabricCanvas, FabricObject } = await import("fabric");
 
       if (cancelled || !fabricCanvasRef.current) return;
+
+      // Register custom properties so they survive toJSON() / loadFromJSON()
+      if (!FabricObject.customProperties.includes("editorType")) {
+        FabricObject.customProperties.push("editorType", "noteText");
+      }
 
       const fc = new FabricCanvas(fabricCanvasRef.current, {
         backgroundColor: "transparent",

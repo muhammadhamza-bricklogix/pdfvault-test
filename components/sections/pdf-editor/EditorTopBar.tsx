@@ -8,9 +8,11 @@ import {
   CircleIcon,
   Cursor01Icon,
   EraserIcon,
+  HighlighterIcon,
   Image01Icon,
   LinerIcon,
   PaintBrush01Icon,
+  PaintBucketIcon,
   RedoIcon,
   SignatureIcon,
   SquareIcon,
@@ -202,20 +204,31 @@ const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
+  { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: SquareIcon, id: "shape:rect", label: "Rectangle" },
   { icon: CircleIcon, id: "shape:ellipse", label: "Ellipse" },
   { icon: LinerIcon, id: "shape:line", label: "Line" },
   { icon: ArrowDownRight01Icon, id: "shape:arrow", label: "Arrow" },
   { icon: EraserIcon, id: "eraser", label: "Eraser" },
+  { icon: PaintBucketIcon, id: "whiteout", label: "Whiteout" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: Image01Icon, id: "image", label: "Image" },
+] as const;
+
+const HIGHLIGHT_COLORS = [
+  { color: "#FFEB3B", label: "Yellow" },
+  { color: "#A5D6A7", label: "Green" },
+  { color: "#90CAF9", label: "Blue" },
+  { color: "#F48FB1", label: "Pink" },
 ] as const;
 
 export function EditorToolBar() {
   const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
+  const highlightColor = usePdfEditorStore((s) => s.highlightColor);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setActiveShapeType = usePdfEditorStore((s) => s.setActiveShapeType);
+  const setHighlightColor = usePdfEditorStore((s) => s.setHighlightColor);
 
   const selectedKey = toToggleKey(activeTool, activeShapeType);
 
@@ -234,7 +247,7 @@ export function EditorToolBar() {
   };
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-center border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
+    <div className="flex h-10 shrink-0 items-center justify-center gap-2 border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
       <Toolbar aria-label="Drawing tools">
         <ToggleButtonGroup
           disallowEmptySelection
@@ -256,6 +269,32 @@ export function EditorToolBar() {
           ))}
         </ToggleButtonGroup>
       </Toolbar>
+
+      {/* Highlight color presets — visible only when highlight tool is active */}
+      {activeTool === "highlight" && (
+        <div className="flex items-center gap-1">
+          {HIGHLIGHT_COLORS.map((preset) => (
+            <Tooltip key={preset.color} delay={300}>
+              <button
+                aria-label={`${preset.label} highlight`}
+                aria-pressed={highlightColor === preset.color}
+                className="size-5 rounded-full border-2 transition-transform hover:scale-110"
+                style={{
+                  backgroundColor: preset.color,
+                  borderColor:
+                    highlightColor === preset.color
+                      ? "var(--color-foreground)"
+                      : "transparent",
+                }}
+                onClick={() => setHighlightColor(preset.color)}
+              />
+              <Tooltip.Content>
+                <p>{preset.label}</p>
+              </Tooltip.Content>
+            </Tooltip>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

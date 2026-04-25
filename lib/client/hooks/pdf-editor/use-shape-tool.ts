@@ -42,7 +42,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
 
   useEffect(() => {
     if (!fabricCanvas) return;
-    if (activeTool !== "shape" && activeTool !== "eraser") return;
+    if (activeTool !== "shape" && activeTool !== "whiteout") return;
 
     let cancelled = false;
 
@@ -73,7 +73,8 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       draggingRef.current = true;
       setIsCreatingShape(true);
 
-      const shapeType = activeTool === "eraser" ? "eraser" : activeShapeType;
+      const shapeType =
+        activeTool === "whiteout" ? "whiteout" : activeShapeType;
 
       let shape: FabricObject;
 
@@ -114,8 +115,9 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
           });
           break;
 
-        case "eraser":
+        case "whiteout":
           shape = new FRect({
+            editorType: "whiteout",
             fill: "#FFFFFF",
             height: 0,
             left: pointer.x,
@@ -145,11 +147,12 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       const dx = pointer.x - sx;
       const dy = pointer.y - sy;
 
-      const shapeType = activeTool === "eraser" ? "eraser" : activeShapeType;
+      const shapeType =
+        activeTool === "whiteout" ? "whiteout" : activeShapeType;
 
       switch (shapeType) {
         case "rect":
-        case "eraser":
+        case "whiteout":
           tempShapeRef.current.set({
             height: Math.abs(dy),
             left: Math.min(sx, pointer.x),
@@ -197,7 +200,8 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
         return;
       }
 
-      const shapeType = activeTool === "eraser" ? "eraser" : activeShapeType;
+      const shapeType =
+        activeTool === "whiteout" ? "whiteout" : activeShapeType;
 
       let finalShape: FabricObject;
 

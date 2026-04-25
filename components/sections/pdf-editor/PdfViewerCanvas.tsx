@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
 import { useEditorHistory } from "@/lib/client/hooks/pdf-editor/use-editor-history";
+import { useEraserTool } from "@/lib/client/hooks/pdf-editor/use-eraser-tool";
 import { useFabricCanvas } from "@/lib/client/hooks/pdf-editor/use-fabric-canvas";
+import { useHighlightTool } from "@/lib/client/hooks/pdf-editor/use-highlight-tool";
 import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
@@ -52,6 +54,8 @@ export function PdfViewerCanvas() {
   const { undo, redo } = useEditorHistory({ fabricCanvas, fabricRef });
 
   useDrawTool({ fabricCanvas });
+  useEraserTool({ fabricCanvas });
+  useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });
   useShapeTool({ fabricCanvas });
   const { handleModalClose } = useSignatureTool({ fabricCanvas });
@@ -66,12 +70,14 @@ export function PdfViewerCanvas() {
 
     const cursorMap: Record<string, string> = {
       draw: "crosshair",
-      eraser: "crosshair",
+      eraser: "pointer",
+      highlight: "crosshair",
       image: "default",
       select: "default",
       shape: "crosshair",
       signature: "default",
       text: "text",
+      whiteout: "crosshair",
     };
 
     fc.defaultCursor = cursorMap[activeTool] ?? "default";
@@ -161,6 +167,7 @@ export function PdfViewerCanvas() {
             canvasContainerRef={containerRef}
             fabricCanvas={fabricCanvas}
           />
+
         </div>
       </div>
       <SignatureModal

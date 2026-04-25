@@ -7,17 +7,20 @@ const MAX_HISTORY = 50;
 export type ActiveTool =
   | "draw"
   | "eraser"
+  | "highlight"
   | "image"
   | "select"
   | "shape"
   | "signature"
-  | "text";
+  | "text"
+  | "whiteout";
 export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
 
 type PdfEditorStore = {
   activeShapeType: ShapeType;
   activeTool: ActiveTool;
   currentPage: number;
+  highlightColor: string;
   fabricJsonByPage: Map<number, string>;
   file: File | null;
   historyByPage: Map<number, string[]>;
@@ -36,6 +39,7 @@ type PdfEditorStore = {
   saveFabricJson: (page: number, json: string) => void;
   setActiveShapeType: (type: ShapeType) => void;
   setActiveTool: (tool: ActiveTool) => void;
+  setHighlightColor: (color: string) => void;
   setCurrentPage: (page: number) => void;
   setFile: (file: File) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -51,6 +55,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   activeShapeType: "rect",
   activeTool: "select",
   currentPage: 1,
+  highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
   historyByPage: new Map(),
@@ -113,6 +118,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
   setActiveShapeType: (type) => set({ activeShapeType: type }),
   setActiveTool: (tool) => set({ activeTool: tool }),
+  setHighlightColor: (color) => set({ highlightColor: color }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setFile: (file) => set({ file }),
   setIsCreatingShape: (value) => set({ isCreatingShape: value }),

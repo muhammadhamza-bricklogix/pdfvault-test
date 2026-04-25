@@ -40,7 +40,6 @@ export function useEditorHistory({
       pushHistory(currentPage, JSON.stringify(fc.toJSON()));
     }
     // Only run when canvas mounts/changes — not on every historyByPage change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fabricCanvas, currentPage]);
 
   // Register fabric event listeners whenever the canvas mounts
