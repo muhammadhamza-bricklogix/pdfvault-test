@@ -9,8 +9,12 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 export function HomeHero() {
   const router = useRouter();
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
 
   const handleFileSelect = (file: File) => {
+    // Local-only open: don't upload until the user explicitly Saves in the
+    // editor (which will prompt sign-in if needed).
+    setCurrentDocument(null);
     setFile(file);
     router.push(ROUTES.TOOLS.PDF_EDITOR);
   };

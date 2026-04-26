@@ -7,6 +7,9 @@ export const ROUTES = {
   PUBLIC: {
     HOME: "/",
   },
+  APP: {
+    DASHBOARD: "/dashboard",
+  },
   TOOLS: {
     PDF_EDITOR: "/pdf-editor",
     PDF_TO_EXCEL: "/tools/pdf-to-excel",

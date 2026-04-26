@@ -4,7 +4,6 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
-  Analytics01Icon,
   ArrowDownRight01Icon,
   CircleIcon,
   Cursor01Icon,
@@ -31,6 +30,7 @@ import {
   Tooltip,
 } from "@heroui/react";
 
+import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { HamburgerMenu } from "./HamburgerMenu";
@@ -40,15 +40,8 @@ const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 // ---------------------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, undo/redo
 // ---------------------------------------------------------------------------
-type EditorInfoBarProps = {
-  isPerformancePanelOpen?: boolean;
-  onTogglePerformancePanel?: () => void;
-};
 
-export function EditorInfoBar({
-  isPerformancePanelOpen,
-  onTogglePerformancePanel,
-}: EditorInfoBarProps) {
+export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
@@ -130,7 +123,7 @@ export function EditorInfoBar({
           </Tooltip.Content>
         </Tooltip>
 
-        <Separator className="!h-4" orientation="vertical" />
+        <Separator className="!h-4 self-center" orientation="vertical" />
 
         <div className="flex items-center gap-1">
           <Button
@@ -187,25 +180,8 @@ export function EditorInfoBar({
           </Tooltip.Content>
         </Tooltip>
 
-        {onTogglePerformancePanel && (
-          <>
-            <Separator className="!h-4" orientation="vertical" />
-            <Tooltip delay={300}>
-              <Button
-                isIconOnly
-                aria-label="Performance panel"
-                size="sm"
-                variant={isPerformancePanelOpen ? "secondary" : "ghost"}
-                onPress={onTogglePerformancePanel}
-              >
-                <HugeiconsIcon icon={Analytics01Icon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Performance</p>
-              </Tooltip.Content>
-            </Tooltip>
-          </>
-        )}
+        <Separator className="!h-4 self-center" orientation="vertical" />
+        <ThemeToggle size="sm" variant="tertiary" />
       </div>
     </div>
   );

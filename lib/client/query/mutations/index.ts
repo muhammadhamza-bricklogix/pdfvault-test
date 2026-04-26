@@ -1,1 +1,1 @@
-export {};
+export * from "./documents.mutation";

@@ -2,9 +2,12 @@
 
 import type { ToolConfig } from "@/lib/shared/constants/tools";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { FileUpload } from "@/components/ui/file-upload";
+import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 type ToolUploadSectionProps = {
   tool: ToolConfig;
@@ -12,6 +15,22 @@ type ToolUploadSectionProps = {
 
 export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
   const [file, setFile] = useState<File | null>(null);
+  const router = useRouter();
+  const setEditorFile = usePdfEditorStore((s) => s.setFile);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+
+  const isPdf = tool.accept.includes("application/pdf");
+
+  const handleSelect = (selected: File) => {
+    setFile(selected);
+
+    if (!isPdf) return;
+
+    // Local-only open — backend upload happens on Save inside the editor.
+    setCurrentDocument(null);
+    setEditorFile(selected);
+    router.push(ROUTES.TOOLS.PDF_EDITOR);
+  };
 
   return (
     <section className="flex w-full flex-col items-center py-4 sm:py-8">
@@ -32,7 +51,7 @@ export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
           file={file}
           heading={`Drop your ${tool.acceptLabel} file here`}
           onFileClear={() => setFile(null)}
-          onFileSelect={setFile}
+          onFileSelect={handleSelect}
         />
       </div>
     </section>

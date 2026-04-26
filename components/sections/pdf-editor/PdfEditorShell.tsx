@@ -3,8 +3,12 @@
 import type { Canvas } from "fabric";
 
 import { useAuth } from "@clerk/nextjs";
+import { Analytics01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button, Tooltip } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { FileUpload } from "@/components/ui/file-upload";
@@ -64,10 +68,7 @@ function EditorLayout() {
 
   return (
     <>
-      <EditorInfoBar
-        isPerformancePanelOpen={isPerformancePanelOpen}
-        onTogglePerformancePanel={() => setIsPerformancePanelOpen((v) => !v)}
-      />
+      <EditorInfoBar />
       <EditorToolBar />
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar />
@@ -77,6 +78,25 @@ function EditorLayout() {
           fabricCanvas={fabricCanvas}
           isOpen={isPerformancePanelOpen}
         />
+
+        {/* Floating Performance FAB — bottom-right of canvas area, outside RightSidebar */}
+        <div className="pointer-events-none absolute bottom-4 right-[17rem] z-10">
+          <Tooltip delay={300}>
+            <Button
+              isIconOnly
+              aria-label="Performance panel"
+              className="pointer-events-auto rounded-full shadow-lg"
+              size="md"
+              variant={isPerformancePanelOpen ? "secondary" : "outline"}
+              onPress={() => setIsPerformancePanelOpen((v) => !v)}
+            >
+              <HugeiconsIcon icon={Analytics01Icon} size={18} />
+            </Button>
+            <Tooltip.Content>
+              <p>Performance</p>
+            </Tooltip.Content>
+          </Tooltip>
+        </div>
       </div>
     </>
   );
@@ -86,6 +106,8 @@ export function PdfEditorShell() {
   const { isSignedIn } = useAuth();
   const file = usePdfEditorStore((s) => s.file);
   const setIsSignedIn = usePdfEditorStore((s) => s.setIsSignedIn);
+
+  useEditorDocumentLoader();
 
   useEffect(() => {
     setIsSignedIn(isSignedIn ?? false);

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { Suspense } from "react";
+
 import { PdfEditorShell } from "@/components/sections/pdf-editor/PdfEditorShell";
 
 export const metadata: Metadata = {
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function PdfEditorPage() {
-  return <PdfEditorShell />;
+  return (
+    <Suspense fallback={null}>
+      <PdfEditorShell />
+    </Suspense>
+  );
 }

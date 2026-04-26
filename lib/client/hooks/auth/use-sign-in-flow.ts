@@ -74,7 +74,7 @@ export function useSignInFlow() {
   const navigateToHome = async () => {
     const { error } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
-        const url = decorateUrl(ROUTES.PUBLIC.HOME);
+        const url = decorateUrl(ROUTES.APP.DASHBOARD);
 
         if (url.startsWith("http")) {
           window.location.href = url;
@@ -124,7 +124,7 @@ export function useSignInFlow() {
       await signIn.sso({
         strategy: "oauth_google",
         redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
-        redirectCallbackUrl: ROUTES.PUBLIC.HOME,
+        redirectCallbackUrl: ROUTES.APP.DASHBOARD,
       });
     } catch (error) {
       logger.error("Google sign-in failed", error);

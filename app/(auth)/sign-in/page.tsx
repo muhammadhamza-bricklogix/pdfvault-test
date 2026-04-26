@@ -8,7 +8,7 @@ export default async function SignInPage() {
   const { userId } = await auth();
 
   if (userId) {
-    redirect(ROUTES.PUBLIC.HOME);
+    redirect(ROUTES.APP.DASHBOARD);
   }
 
   return <SignInSection />;

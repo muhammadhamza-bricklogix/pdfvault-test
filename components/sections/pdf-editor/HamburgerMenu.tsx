@@ -12,16 +12,19 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
+import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
-const DISABLED_KEYS = new Set(["save", "export", "my-pdfs"]);
+const DISABLED_KEYS = new Set(["save", "export"]);
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleAction = (key: Key) => {
     switch (key) {
@@ -30,6 +33,9 @@ export function HamburgerMenu() {
         break;
       case "open":
         fileInputRef.current?.click();
+        break;
+      case "my-pdfs":
+        router.push(ROUTES.APP.DASHBOARD);
         break;
     }
   };
@@ -80,7 +86,7 @@ export function HamburgerMenu() {
             </Dropdown.Item>
             <Dropdown.Item id="my-pdfs" textValue="My PDFs">
               <HugeiconsIcon icon={NoteIcon} size={14} />
-              <Label>My PDFs (Coming Soon)</Label>
+              <Label>My PDFs</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>

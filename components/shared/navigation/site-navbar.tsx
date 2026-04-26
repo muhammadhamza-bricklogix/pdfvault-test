@@ -5,6 +5,7 @@ import { Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Separator } from "@heroui/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { MyAccountDrawer } from "@/components/shared/navigation/my-account-drawer";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
@@ -17,7 +18,34 @@ const NAV_ITEMS = [
   { href: ROUTES.PUBLIC.HOME, label: "Protect" },
 ];
 
+const APP_ROUTE_PREFIXES = [
+  ROUTES.APP.DASHBOARD,
+  ROUTES.TOOLS.PDF_EDITOR,
+  "/tools",
+];
+
+const HIDE_NAVBAR_PREFIXES = [ROUTES.APP.DASHBOARD, ROUTES.TOOLS.PDF_EDITOR];
+
+function matchesPrefix(pathname: string | null, prefixes: string[]): boolean {
+  if (!pathname) return false;
+
+  return prefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+function isAppRoute(pathname: string | null): boolean {
+  return matchesPrefix(pathname, APP_ROUTE_PREFIXES);
+}
+
 export function SiteNavbar() {
+  const pathname = usePathname();
+
+  if (matchesPrefix(pathname, HIDE_NAVBAR_PREFIXES)) {
+    return null;
+  }
+
+  const showAvatar = isAppRoute(pathname);
   return (
     <header className="border-b bg-[var(--color-background)]">
       <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-4 sm:px-8">
@@ -74,6 +102,14 @@ export function SiteNavbar() {
                         </Button>
                       </Link>
                     </Show>
+
+                    <Show when="signed-in">
+                      <Link href={ROUTES.APP.DASHBOARD}>
+                        <Button className="w-full" variant="outline">
+                          Dashboard
+                        </Button>
+                      </Link>
+                    </Show>
                   </div>
                 </Drawer.Body>
               </Drawer.Dialog>
@@ -124,7 +160,15 @@ export function SiteNavbar() {
           </Show>
 
           <Show when="signed-in">
-            <MyAccountDrawer />
+            {showAvatar ? (
+              <MyAccountDrawer />
+            ) : (
+              <Link href={ROUTES.APP.DASHBOARD}>
+                <Button className="rounded-full" variant="outline">
+                  Dashboard
+                </Button>
+              </Link>
+            )}
           </Show>
         </div>
       </div>

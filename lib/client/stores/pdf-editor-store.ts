@@ -19,6 +19,8 @@ export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
 type PdfEditorStore = {
   activeShapeType: ShapeType;
   activeTool: ActiveTool;
+  currentDocumentId: string | null;
+  currentDocumentName: string | null;
   currentPage: number;
   highlightColor: string;
   fabricJsonByPage: Map<number, string>;
@@ -34,6 +36,7 @@ type PdfEditorStore = {
   zoom: number;
 
   clearFile: () => void;
+  setCurrentDocument: (doc: { id: string; name: string } | null) => void;
   getFabricJson: (page: number) => string | undefined;
   pushHistory: (page: number, json: string) => void;
   redo: (page: number) => string | undefined;
@@ -55,6 +58,8 @@ type PdfEditorStore = {
 export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   activeShapeType: "rect",
   activeTool: "select",
+  currentDocumentId: null,
+  currentDocumentName: null,
   currentPage: 1,
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
@@ -72,6 +77,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   clearFile: () =>
     set({
       activeTool: "select",
+      currentDocumentId: null,
+      currentDocumentName: null,
       currentPage: 1,
       fabricJsonByPage: new Map(),
       file: null,
@@ -83,6 +90,12 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       pageCount: 0,
       pdfDocument: null,
       zoom: 1.0,
+    }),
+
+  setCurrentDocument: (doc) =>
+    set({
+      currentDocumentId: doc?.id ?? null,
+      currentDocumentName: doc?.name ?? null,
     }),
 
   getFabricJson: (page) => get().fabricJsonByPage.get(page),

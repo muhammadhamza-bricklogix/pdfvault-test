@@ -55,7 +55,7 @@ export function PerformancePanel({
     if (!isOpen) return;
 
     const update = () => {
-      const mem = (performance as Record<string, unknown>).memory as
+      const mem = (performance as unknown as Record<string, unknown>).memory as
         | { jsHeapSizeLimit: number; usedJSHeapSize: number }
         | undefined;
 

@@ -75,7 +75,7 @@ export function useSignUpFlow() {
   const navigateToHome = async () => {
     const { error } = await signUp.finalize({
       navigate: ({ decorateUrl }) => {
-        const url = decorateUrl(ROUTES.PUBLIC.HOME);
+        const url = decorateUrl(ROUTES.APP.DASHBOARD);
 
         if (url.startsWith("http")) {
           window.location.href = url;
@@ -100,7 +100,7 @@ export function useSignUpFlow() {
       await signUp.sso({
         strategy: "oauth_google",
         redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
-        redirectCallbackUrl: ROUTES.PUBLIC.HOME,
+        redirectCallbackUrl: ROUTES.APP.DASHBOARD,
       });
     } catch (error) {
       logger.error("Google sign-up failed", error);
