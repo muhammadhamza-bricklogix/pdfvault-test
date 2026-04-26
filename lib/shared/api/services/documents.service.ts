@@ -58,7 +58,9 @@ async function getDocument(id: string): Promise<Document> {
 }
 
 async function getDocumentDownload(id: string): Promise<DownloadResponse> {
-  const { data } = await apiClient.get<DownloadResponse>(DOCUMENTS.DOWNLOAD(id));
+  const { data } = await apiClient.get<DownloadResponse>(
+    DOCUMENTS.DOWNLOAD(id),
+  );
 
   return data;
 }

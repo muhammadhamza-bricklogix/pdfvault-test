@@ -11,9 +11,6 @@ const dancingScript = Dancing_Script({
   weight: ["400", "700"],
 });
 
-import { SiteFooter } from "@/components/shared/footer/site-footer";
-import { SiteNavbar } from "@/components/shared/navigation/site-navbar";
-
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
@@ -42,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning className={dancingScript.variable} lang="en">
-      <body className="min-h-screen font-sans antialiased">
+      <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <ClerkProvider>
           <Providers
             themeProps={{
@@ -51,13 +48,7 @@ export default function RootLayout({
               enableSystem: true,
             }}
           >
-            <div className="flex min-h-screen flex-col bg-[var(--color-background)] text-[var(--color-foreground)]">
-              <SiteNavbar />
-              <main className="mx-auto flex w-full max-w-7xl flex-1 px-6 py-10 sm:px-8 sm:py-12">
-                {children}
-              </main>
-              <SiteFooter />
-            </div>
+            {children}
           </Providers>
         </ClerkProvider>
       </body>

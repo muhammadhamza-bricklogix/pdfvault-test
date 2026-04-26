@@ -38,14 +38,14 @@
 
 ## Endpoints (assumed contracts — to be reconciled when swagger lands)
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST   | `/documents/upload`           | Multipart: `file` + optional `id`. `id` present → update, else create. Returns `Document`. |
-| GET    | `/documents?page&pageSize`    | Paged list. Returns `{ items, page, pageSize, total, hasNextPage }`. |
-| GET    | `/documents/{id}`             | Document metadata. |
-| GET    | `/documents/{id}/download`    | `{ url, expiresAt }` (presigned S3). |
-| PATCH  | `/documents/{id}/rename`      | Body `{ name }`. Returns updated `Document`. |
-| DELETE | `/documents/{id}`             | 204. |
+| Method | Path                       | Purpose                                                                                    |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------ |
+| POST   | `/documents/upload`        | Multipart: `file` + optional `id`. `id` present → update, else create. Returns `Document`. |
+| GET    | `/documents?page&pageSize` | Paged list. Returns `{ items, page, pageSize, total, hasNextPage }`.                       |
+| GET    | `/documents/{id}`          | Document metadata.                                                                         |
+| GET    | `/documents/{id}/download` | `{ url, expiresAt }` (presigned S3).                                                       |
+| PATCH  | `/documents/{id}/rename`   | Body `{ name }`. Returns updated `Document`.                                               |
+| DELETE | `/documents/{id}`          | 204.                                                                                       |
 
 Assumed `Document` shape:
 `{ id, name, size, mimeType, pageCount?, createdAt, updatedAt }`.
@@ -54,13 +54,13 @@ Assumed `Document` shape:
 
 ## Overall Progress
 
-| Area | Status | Notes |
-|---|---|---|
-| Phase A — API & data plumbing | TODO | axios client, endpoints, types, services, query keys, queries, mutations, toast helper |
-| Phase B — Routing & auth gates | TODO | Protect `/dashboard`, Clerk redirects, navbar Dashboard link |
-| Phase C — Dashboard UI | DONE | Layout, sidebar, list (infinite scroll, real pdf.js thumbnails), per-row actions, upload CTA |
+| Area                                      | Status  | Notes                                                                                                                                                                                          |
+| ----------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase A — API & data plumbing             | TODO    | axios client, endpoints, types, services, query keys, queries, mutations, toast helper                                                                                                         |
+| Phase B — Routing & auth gates            | TODO    | Protect `/dashboard`, Clerk redirects, navbar Dashboard link                                                                                                                                   |
+| Phase C — Dashboard UI                    | DONE    | Layout, sidebar, list (infinite scroll, real pdf.js thumbnails), per-row actions, upload CTA                                                                                                   |
 | Phase D — Editor & tools-page integration | PARTIAL | Open from dashboard via `?id=`, tool-upload-section uploads-then-routes, home-hero uploads when signed-in. Save/Export still blocked on editor's pdf-lib export logic (UI marked Coming Soon). |
-| Phase E — IndexedDB brainstorm | TODO | Document strategy only (no code) |
+| Phase E — IndexedDB brainstorm            | TODO    | Document strategy only (no code)                                                                                                                                                               |
 
 ---
 
@@ -87,6 +87,7 @@ Assumed `Document` shape:
 7. **Toasts helper.** `lib/shared/utils/toast.ts` — thin wrapper around HeroUI `addToast`, exposing `toast.success`, `toast.error`, `toast.info`. Used by mutations.
 
 **Files to create:**
+
 - `lib/shared/api/client.ts`
 - `lib/shared/api/endpoints.ts`
 - `lib/shared/api/services/documents.service.ts`
@@ -97,6 +98,7 @@ Assumed `Document` shape:
 - `lib/client/query/mutations/documents/{use-upload-document,use-rename-document,use-delete-document}.mutation.ts`
 
 **Files to modify:**
+
 - `.env` (add `NEXT_PUBLIC_API_BASE_URL`)
 - `package.json` (add `axios`)
 - `lib/client/query/queries/index.ts` and `lib/client/query/mutations/index.ts` (barrel exports)
@@ -113,6 +115,7 @@ Assumed `Document` shape:
 4. **Navbar Dashboard link.** In `components/shared/navigation/site-navbar.tsx`, render a "Dashboard" link inside `<Show when="signed-in">` (next to `<UserButton />`).
 
 **Files to modify:**
+
 - `proxy.ts`
 - `lib/shared/constants/routes.ts`
 - `app/(auth)/sign-in/page.tsx`, `app/(auth)/sign-up/page.tsx`
@@ -153,6 +156,7 @@ Assumed `Document` shape:
 7. **Upload CTA.** `components/sections/dashboard/upload-button.tsx` — opens a HeroUI `Modal` containing the existing `<FileUpload />`. On select, calls `useUploadDocumentMutation` (no `id`); shows progress (axios `onUploadProgress` → HeroUI `Progress`); on success, closes modal, the new doc appears at the top of the list, and the user is routed to the editor with the returned `id`.
 
 **Files to create:**
+
 - `app/dashboard/layout.tsx`, `app/dashboard/page.tsx`
 - `components/sections/dashboard/dashboard-shell.tsx`
 - `components/sections/dashboard/dashboard-sidebar.tsx`
@@ -184,6 +188,7 @@ Assumed `Document` shape:
    - Routes to `ROUTES.TOOLS.PDF_EDITOR`.
 
 **Files to modify:**
+
 - `lib/client/stores/pdf-editor-store.ts`
 - `components/sections/pdf-editor/HamburgerMenu.tsx` (or wherever Save/Export live)
 - `components/sections/pdf-editor/PdfEditorShell.tsx` (Open from store with id)
@@ -208,16 +213,16 @@ Add a section to this doc capturing the strategy. **No code in this milestone.**
 
 ## Execution Order (recommended)
 
-| Step | Task | Depends on |
-|---|---|---|
-| 1 | Phase A.1–A.4 (client, endpoints, types, services, query keys) | Nothing |
-| 2 | Phase A.5–A.6 (queries, mutations) | 1 |
-| 3 | Phase A.7 (toast helper) | Nothing (parallel) |
-| 4 | Phase B (routing, redirects, navbar link) | Nothing (parallel with 1–3) |
-| 5 | Phase C.1–C.4 (shell, sidebar, page, list) | 2, 4 |
-| 6 | Phase C.5–C.7 (thumbnails, actions, upload CTA) | 5 |
-| 7 | Phase D (editor + tools-page wiring) | 2, 6 |
-| 8 | Phase E (IndexedDB doc) | Nothing (any time) |
+| Step | Task                                                           | Depends on                  |
+| ---- | -------------------------------------------------------------- | --------------------------- |
+| 1    | Phase A.1–A.4 (client, endpoints, types, services, query keys) | Nothing                     |
+| 2    | Phase A.5–A.6 (queries, mutations)                             | 1                           |
+| 3    | Phase A.7 (toast helper)                                       | Nothing (parallel)          |
+| 4    | Phase B (routing, redirects, navbar link)                      | Nothing (parallel with 1–3) |
+| 5    | Phase C.1–C.4 (shell, sidebar, page, list)                     | 2, 4                        |
+| 6    | Phase C.5–C.7 (thumbnails, actions, upload CTA)                | 5                           |
+| 7    | Phase D (editor + tools-page wiring)                           | 2, 6                        |
+| 8    | Phase E (IndexedDB doc)                                        | Nothing (any time)          |
 
 ---
 

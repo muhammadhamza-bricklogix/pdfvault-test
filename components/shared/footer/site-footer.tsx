@@ -1,19 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
-
-const HIDE_FOOTER_PREFIXES = [ROUTES.APP.DASHBOARD, ROUTES.TOOLS.PDF_EDITOR];
-
-function shouldHideFooter(pathname: string | null): boolean {
-  if (!pathname) return false;
-
-  return HIDE_FOOTER_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
 
 const FOOTER_COLUMNS = [
   {
@@ -43,12 +30,6 @@ const FOOTER_COLUMNS = [
 ];
 
 export function SiteFooter() {
-  const pathname = usePathname();
-
-  if (shouldHideFooter(pathname)) {
-    return null;
-  }
-
   return (
     <footer className="border-t border-[var(--app-border)] bg-[var(--color-background)]">
       <div className="mx-auto max-w-7xl px-6 py-12 sm:px-8">
