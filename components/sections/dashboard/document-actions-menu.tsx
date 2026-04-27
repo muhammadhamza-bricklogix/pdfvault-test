@@ -31,11 +31,11 @@ export function DocumentActionsMenu({ document: doc, onDelete, onRename }: Props
                 break;
             case "download":
                 try {
-                    const { url } = await documentsService.getDocumentDownload(doc.id);
+                    const { url } = await documentsService.getDocument(doc.id);
                     const a = window.document.createElement("a");
 
                     a.href = url;
-                    a.download = doc.name;
+                    a.download = doc.filename;
                     a.target = "_blank";
                     a.rel = "noopener";
                     window.document.body.appendChild(a);
@@ -66,7 +66,7 @@ export function DocumentActionsMenu({ document: doc, onDelete, onRename }: Props
             <Dropdown>
                 <Button
                     isIconOnly
-                    aria-label={`Actions for ${doc.name}`}
+                    aria-label={`Actions for ${doc.filename}`}
                     size="sm"
                     variant="ghost"
                 >

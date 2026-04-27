@@ -40,9 +40,15 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     let cancelled = false;
 
-    pdfDocument.getPage(currentPage).then((p) => {
-      if (!cancelled) setPage(p);
-    });
+    pdfDocument
+      .getPage(currentPage)
+      .then((p) => {
+        if (!cancelled) setPage(p);
+      })
+      .catch(() => {
+        // Document may have been destroyed mid-flight (e.g. file changed).
+        // Ignore — a fresh effect will run with the new doc.
+      });
 
     return () => {
       cancelled = true;

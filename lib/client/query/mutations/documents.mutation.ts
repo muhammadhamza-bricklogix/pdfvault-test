@@ -36,8 +36,8 @@ export function useUploadDocumentMutation() {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.setQueryData(documentKeys.detail(data.id), data);
       toast.success({
-        title: variables.id ? "Document saved" : "Document uploaded",
-        description: data.name,
+        title: variables.documentId ? "Document saved" : "Document uploaded",
+        description: data.filename,
       });
     },
     onError: (error) => {
@@ -56,7 +56,7 @@ export function useRenameDocumentMutation() {
 
   return useMutation<Document, Error, RenameDocumentInput, ListContext>({
     mutationFn: (input) => documentsService.renameDocument(input),
-    onMutate: async ({ id, name }) => {
+    onMutate: async ({ id, filename }) => {
       await queryClient.cancelQueries({ queryKey: documentKeys.lists() });
       const previousLists = queryClient.getQueriesData<ListData>({
         queryKey: documentKeys.lists(),
@@ -70,7 +70,7 @@ export function useRenameDocumentMutation() {
             ...page,
             items: page.items.map((doc) =>
               doc.id === id
-                ? { ...doc, name, updatedAt: new Date().toISOString() }
+                ? { ...doc, filename, updatedAt: new Date().toISOString() }
                 : doc,
             ),
           })),
@@ -87,7 +87,7 @@ export function useRenameDocumentMutation() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(documentKeys.detail(data.id), data);
-      toast.success({ title: "Renamed", description: data.name });
+      toast.success({ title: "Renamed", description: data.filename });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
@@ -115,7 +115,10 @@ export function useDeleteDocumentMutation() {
           pages: data.pages.map((page) => ({
             ...page,
             items: page.items.filter((doc) => doc.id !== id),
-            total: Math.max(0, page.total - 1),
+            pagination: {
+              ...page.pagination,
+              total: Math.max(0, page.pagination.total - 1),
+            },
           })),
         });
       });

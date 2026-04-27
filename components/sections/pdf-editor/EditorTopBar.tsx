@@ -14,6 +14,7 @@ import {
   PaintBrush01Icon,
   PaintBucketIcon,
   RedoIcon,
+  SaveMoneyDollarIcon,
   SignatureIcon,
   SquareIcon,
   TextFontIcon,
@@ -46,6 +47,7 @@ export function EditorInfoBar() {
   const file = usePdfEditorStore((s) => s.file);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const zoom = usePdfEditorStore((s) => s.zoom);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
@@ -69,6 +71,13 @@ export function EditorInfoBar() {
   };
 
   const fileName = file?.name ?? "PDF Editor";
+
+  const canSave = !!file && isSignedIn;
+  const saveTooltip = !file
+    ? "Open a PDF to save"
+    : !isSignedIn
+      ? "Sign in to save to your library"
+      : "Save";
 
   return (
     <div className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
@@ -177,6 +186,24 @@ export function EditorInfoBar() {
           </Button>
           <Tooltip.Content>
             <p>Zoom in</p>
+          </Tooltip.Content>
+        </Tooltip>
+
+        <Separator className="!h-4 self-center" orientation="vertical" />
+        <Tooltip delay={300}>
+          <Button
+            isDisabled={!canSave}
+            size="sm"
+            variant="primary"
+            onPress={() =>
+              window.dispatchEvent(new CustomEvent("editor:save"))
+            }
+          >
+            <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
+            Save
+          </Button>
+          <Tooltip.Content>
+            <p>{saveTooltip}</p>
           </Tooltip.Content>
         </Tooltip>
 

@@ -30,14 +30,15 @@ export function useEditorDocumentLoader() {
     (async () => {
       try {
         const doc = await documentsService.getDocument(id);
-        const { url } = await documentsService.getDocumentDownload(id);
-        const res = await fetch(url);
+        const res = await fetch(doc.url);
         const blob = await res.blob();
-        const loaded = new File([blob], doc.name, { type: doc.mimeType });
+        const loaded = new File([blob], doc.filename, {
+          type: doc.contentType,
+        });
 
         if (cancelled) return;
         setFile(loaded);
-        setCurrentDocument({ id: doc.id, name: doc.name });
+        setCurrentDocument({ id: doc.id, name: doc.filename });
       } finally {
         if (loadingIdRef.current === id) loadingIdRef.current = null;
       }

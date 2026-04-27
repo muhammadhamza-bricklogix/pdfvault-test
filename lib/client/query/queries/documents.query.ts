@@ -3,7 +3,6 @@
 import type {
   Document,
   DocumentListResponse,
-  DownloadResponse,
 } from "@/lib/shared/types/documents.types";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -30,38 +29,20 @@ export function useDocumentsQuery(options?: UseDocumentsQueryOptions) {
         pageSize,
       }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasNextPage ? lastPage.page + 1 : undefined,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.pagination;
+
+      return page < totalPages ? page + 1 : undefined;
+    },
     enabled: options?.enabled,
   });
 }
 
-/** Single document metadata. */
+/** Single document metadata (includes a fresh presigned `url`). */
 export function useDocumentQuery(id: string | null | undefined) {
   return useQuery<Document>({
     queryKey: documentKeys.detail(id ?? ""),
     queryFn: () => documentsService.getDocument(id as string),
     enabled: Boolean(id),
-  });
-}
-
-type UseDocumentDownloadQueryOptions = {
-  enabled?: boolean;
-};
-
-/**
- * Presigned download URL — disabled by default. Pass `enabled: true` (or call
- * `refetch()`) only when actually needed so we don't burn quota on hover.
- */
-export function useDocumentDownloadQuery(
-  id: string | null | undefined,
-  options?: UseDocumentDownloadQueryOptions,
-) {
-  return useQuery<DownloadResponse>({
-    queryKey: documentKeys.download(id ?? ""),
-    queryFn: () => documentsService.getDocumentDownload(id as string),
-    enabled: Boolean(id) && (options?.enabled ?? false),
-    staleTime: 30_000,
-    gcTime: 60_000,
   });
 }

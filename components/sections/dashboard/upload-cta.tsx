@@ -28,7 +28,7 @@ export function UploadCta() {
         const doc = await upload.mutateAsync({ file });
 
         setFile(file);
-        setCurrentDocument({ id: doc.id, name: doc.name });
+        setCurrentDocument({ id: doc.id, name: doc.filename });
         router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${doc.id}`);
     };
 

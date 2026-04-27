@@ -24,20 +24,20 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
     const isOpen = !!doc;
 
     useEffect(() => {
-        if (doc) setName(doc.name);
+        if (doc) setName(doc.filename);
     }, [doc]);
 
     const handleSubmit = async () => {
         if (!doc) return;
         const trimmed = name.trim();
 
-        if (!trimmed || trimmed === doc.name) {
+        if (!trimmed || trimmed === doc.filename) {
             onClose();
 
             return;
         }
 
-        await rename.mutateAsync({ id: doc.id, name: trimmed });
+        await rename.mutateAsync({ id: doc.id, filename: trimmed });
         onClose();
     };
 

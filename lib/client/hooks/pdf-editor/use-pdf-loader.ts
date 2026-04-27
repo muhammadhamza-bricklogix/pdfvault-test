@@ -18,6 +18,10 @@ export function usePdfLoader() {
 
     let loadingTask: any = null;
 
+    // Clear any previously loaded document immediately so consumers don't
+    // hold a reference to a doc we're about to destroy.
+    setPdfDocument(null, 0);
+
     const load = async () => {
       setIsLoading(true);
       setError(null);
@@ -58,6 +62,9 @@ export function usePdfLoader() {
     return () => {
       cancelled = true;
       loadingTask?.destroy();
+      // Drop the destroyed proxy from the store so canvas hooks don't try
+      // to call methods on it after unmount or file change.
+      setPdfDocument(null, 0);
     };
   }, [file, setPdfDocument]);
 

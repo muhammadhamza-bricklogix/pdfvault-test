@@ -7,6 +7,4 @@ export const documentKeys = {
     [...documentKeys.lists(), params] as const,
   details: () => [...documentKeys.all, "detail"] as const,
   detail: (id: string) => [...documentKeys.details(), id] as const,
-  downloads: () => [...documentKeys.all, "download"] as const,
-  download: (id: string) => [...documentKeys.downloads(), id] as const,
 };

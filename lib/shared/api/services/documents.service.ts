@@ -2,7 +2,6 @@ import type {
   Document,
   DocumentListParams,
   DocumentListResponse,
-  DownloadResponse,
   RenameDocumentInput,
   UploadDocumentInput,
 } from "@/lib/shared/types/documents.types";
@@ -29,8 +28,8 @@ async function uploadDocument(
         });
 
   formData.append("file", file);
-  if (input.id) {
-    formData.append("id", input.id);
+  if (input.documentId) {
+    formData.append("documentId", input.documentId);
   }
 
   const { data } = await apiClient.post<Document>(DOCUMENTS.UPLOAD, formData, {
@@ -57,17 +56,9 @@ async function getDocument(id: string): Promise<Document> {
   return data;
 }
 
-async function getDocumentDownload(id: string): Promise<DownloadResponse> {
-  const { data } = await apiClient.get<DownloadResponse>(
-    DOCUMENTS.DOWNLOAD(id),
-  );
-
-  return data;
-}
-
 async function renameDocument(input: RenameDocumentInput): Promise<Document> {
   const { data } = await apiClient.patch<Document>(DOCUMENTS.RENAME(input.id), {
-    name: input.name,
+    filename: input.filename,
   });
 
   return data;
@@ -81,7 +72,6 @@ export const documentsService = {
   uploadDocument,
   listDocuments,
   getDocument,
-  getDocumentDownload,
   renameDocument,
   deleteDocument,
 };

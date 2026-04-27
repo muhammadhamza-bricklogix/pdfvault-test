@@ -1,19 +1,19 @@
+import type { Paginated } from "@/lib/shared/types/api.types";
+
+export type DocumentStatus = "READY" | "PROCESSING" | "DELETED";
+
 export type Document = {
   id: string;
-  name: string;
-  size: number;
-  mimeType: string;
-  pageCount?: number;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  status: DocumentStatus | string;
+  pageCount: number | null;
+  version: number;
+  /** Presigned S3 URL — valid for ~15 minutes. */
+  url: string;
   createdAt: string;
   updatedAt: string;
-};
-
-export type Paginated<T> = {
-  items: T[];
-  page: number;
-  pageSize: number;
-  total: number;
-  hasNextPage: boolean;
 };
 
 export type DocumentListResponse = Paginated<Document>;
@@ -25,18 +25,13 @@ export type DocumentListParams = {
 
 export type UploadDocumentInput = {
   file: File | Blob;
-  /** When provided, updates an existing document. Otherwise creates a new one. */
-  id?: string;
+  /** When provided, replaces the file of an existing document (upsert). */
+  documentId?: string;
   /** Override filename when sending a Blob without a name. */
   fileName?: string;
 };
 
 export type RenameDocumentInput = {
   id: string;
-  name: string;
-};
-
-export type DownloadResponse = {
-  url: string;
-  expiresAt: string;
+  filename: string;
 };

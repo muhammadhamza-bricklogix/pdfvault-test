@@ -15,7 +15,7 @@ import {
   authVerificationCodeSchema,
   type AuthVerificationCodeFormValues,
 } from "@/lib/shared/schemas/auth";
-import { parseClerkError } from "@/lib/shared/utils/auth.clerk-error";
+import { parseClerkError } from "@/lib/shared/utils/clerk-error";
 import { logger } from "@/lib/shared/utils/logger";
 
 type SignUpStep = "credentials" | "verification";

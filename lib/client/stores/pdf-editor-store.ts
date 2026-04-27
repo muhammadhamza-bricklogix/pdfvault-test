@@ -50,7 +50,7 @@ type PdfEditorStore = {
   setIsRestoringHistory: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
-  setPdfDocument: (doc: PDFDocumentProxy, pageCount: number) => void;
+  setPdfDocument: (doc: PDFDocumentProxy | null, pageCount: number) => void;
   setZoom: (zoom: number) => void;
   undo: (page: number) => string | undefined;
 };
