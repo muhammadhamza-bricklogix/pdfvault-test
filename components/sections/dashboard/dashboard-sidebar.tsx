@@ -1,24 +1,20 @@
 "use client";
 
-import { useClerk, useUser } from "@clerk/nextjs";
 import {
   Clock01Icon,
   File01Icon,
-  HelpCircleIcon,
-  Logout03Icon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
-  Setting07Icon,
-  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useDashboardUiStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+
+import { IdentityPopover } from "./identity-popover";
 
 const PRIMARY_NAV = [
   {
@@ -85,16 +81,14 @@ type SidebarBodyProps = {
 };
 
 export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
-  const { user } = useUser();
-  const { signOut } = useClerk();
   const pathname = usePathname();
   const toggleCollapsed = useDashboardUiStore((s) => s.toggleSidebarCollapsed);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col border-r border-[var(--app-border)]">
       {/* Header: logo + collapse toggle */}
       <div
-        className={`flex h-14 shrink-0 items-center border-b border-[var(--app-border)] px-3 ${
+        className={`flex h-14 shrink-0 items-center px-3 ${
           collapsed ? "justify-center" : "justify-between"
         }`}
       >
@@ -127,35 +121,6 @@ export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
         </Tooltip>
       </div>
 
-      {/* Identity block */}
-      <Link
-        className={`flex shrink-0 items-center gap-3 border-b border-[var(--app-border)] px-3 py-3 transition-colors hover:bg-[var(--app-surface)] ${
-          collapsed ? "justify-center" : ""
-        }`}
-        href={`${ROUTES.APP.DASHBOARD}/account`}
-        onClick={onNavigate}
-      >
-        {user?.imageUrl ? (
-          <img
-            alt={user.fullName ?? "Avatar"}
-            className="size-9 shrink-0 rounded-full object-cover"
-            src={user.imageUrl}
-          />
-        ) : (
-          <HugeiconsIcon icon={UserCircleIcon} size={36} />
-        )}
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-              {user?.fullName ?? "User"}
-            </p>
-            <p className="truncate text-xs text-[var(--app-muted)]">
-              {user?.primaryEmailAddress?.emailAddress ?? ""}
-            </p>
-          </div>
-        )}
-      </Link>
-
       {/* Primary nav */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
         {PRIMARY_NAV.map((item) => (
@@ -173,41 +138,9 @@ export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
         ))}
       </nav>
 
-      {/* Footer: theme + settings + help + logout */}
-      <div
-        className={`flex shrink-0 flex-col gap-1 border-t border-[var(--app-border)] p-3 ${
-          collapsed ? "items-center" : ""
-        }`}
-      >
-        <div className={collapsed ? "" : "px-1 pb-1"}>
-          <ThemeToggle size="sm" variant="ghost" />
-        </div>
-
-        {collapsed ? (
-          <Tooltip delay={300}>
-            <Button
-              isIconOnly
-              aria-label="Log out"
-              size="sm"
-              variant="ghost"
-              onPress={() => signOut()}
-            >
-              <HugeiconsIcon icon={Logout03Icon} size={18} />
-            </Button>
-            <Tooltip.Content>
-              <p>Log out</p>
-            </Tooltip.Content>
-          </Tooltip>
-        ) : (
-          <button
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--app-muted)] transition-colors hover:bg-[var(--app-surface)] hover:text-[var(--color-foreground)]"
-            type="button"
-            onClick={() => signOut()}
-          >
-            <HugeiconsIcon icon={Logout03Icon} size={18} />
-            <span>Log out</span>
-          </button>
-        )}
+      {/* Bottom: identity popover */}
+      <div className="shrink-0 p-2">
+        <IdentityPopover collapsed={collapsed} onNavigate={onNavigate} />
       </div>
     </div>
   );

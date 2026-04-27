@@ -9,6 +9,11 @@ export const ROUTES = {
   },
   APP: {
     DASHBOARD: "/dashboard",
+    SETTINGS: "/dashboard/settings",
+    SETTINGS_GENERAL: "/dashboard/settings/general",
+    SETTINGS_ACCOUNT: "/dashboard/settings/account",
+    SETTINGS_LANGUAGE: "/dashboard/settings/language",
+    SETTINGS_DANGER: "/dashboard/settings/danger",
   },
   TOOLS: {
     PDF_EDITOR: "/pdf-editor",

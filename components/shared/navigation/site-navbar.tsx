@@ -5,6 +5,7 @@ import { Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Separator } from "@heroui/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -17,6 +18,8 @@ const NAV_ITEMS = [
 ];
 
 export function SiteNavbar() {
+  const router = useRouter();
+
   return (
     <header className="border-b bg-[var(--color-background)]">
       <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-4 sm:px-8">
@@ -62,24 +65,30 @@ export function SiteNavbar() {
                     <ThemeToggle />
 
                     <Show when="signed-out">
-                      <Link href={ROUTES.AUTH.SIGN_IN}>
-                        <Button className="w-full" variant="ghost">
-                          Sign in
-                        </Button>
-                      </Link>
-                      <Link href={ROUTES.AUTH.SIGN_UP}>
-                        <Button className="w-full" variant="outline">
-                          Create account
-                        </Button>
-                      </Link>
+                      <Button
+                        className="w-full"
+                        variant="ghost"
+                        onPress={() => router.push(ROUTES.AUTH.SIGN_IN)}
+                      >
+                        Sign in
+                      </Button>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
+                      >
+                        Create account
+                      </Button>
                     </Show>
 
                     <Show when="signed-in">
-                      <Link href={ROUTES.APP.DASHBOARD}>
-                        <Button className="w-full" variant="outline">
-                          Dashboard
-                        </Button>
-                      </Link>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onPress={() => router.push(ROUTES.APP.DASHBOARD)}
+                      >
+                        Dashboard
+                      </Button>
                     </Show>
                   </div>
                 </Drawer.Body>
@@ -123,19 +132,23 @@ export function SiteNavbar() {
             >
               Sign in
             </Link>
-            <Link href={ROUTES.AUTH.SIGN_UP}>
-              <Button className="rounded-full" variant="outline">
-                Create account
-              </Button>
-            </Link>
+            <Button
+              className="rounded-full"
+              variant="outline"
+              onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
+            >
+              Create account
+            </Button>
           </Show>
 
           <Show when="signed-in">
-            <Link href={ROUTES.APP.DASHBOARD}>
-              <Button className="rounded-full" variant="outline">
-                Dashboard
-              </Button>
-            </Link>
+            <Button
+              className="rounded-full"
+              variant="outline"
+              onPress={() => router.push(ROUTES.APP.DASHBOARD)}
+            >
+              Dashboard
+            </Button>
           </Show>
         </div>
       </div>

@@ -195,9 +195,7 @@ export function EditorInfoBar() {
             isDisabled={!canSave}
             size="sm"
             variant="primary"
-            onPress={() =>
-              window.dispatchEvent(new CustomEvent("editor:save"))
-            }
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:save"))}
           >
             <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
             Save

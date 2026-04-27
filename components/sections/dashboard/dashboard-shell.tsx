@@ -16,9 +16,16 @@ type DashboardShellProps = {
   children: ReactNode;
 };
 
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "My Documents",
-};
+const PAGE_TITLES: { match: (pathname: string) => boolean; title: string }[] = [
+  {
+    match: (p) => p.startsWith("/dashboard/settings"),
+    title: "Settings",
+  },
+  {
+    match: (p) => p === "/dashboard",
+    title: "My Documents",
+  },
+];
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
@@ -31,15 +38,16 @@ export function DashboardShell({ children }: DashboardShellProps) {
     setMobileOpen(false);
   }, [pathname, setMobileOpen]);
 
-  const pageTitle = PAGE_TITLES[pathname ?? ""] ?? "Dashboard";
+  const pageTitle =
+    PAGE_TITLES.find((entry) => entry.match(pathname ?? ""))?.title ??
+    "Dashboard";
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[var(--color-background)]">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden shrink-0 border-r border-[var(--app-border)] bg-[var(--color-background)] transition-[width] duration-200 lg:block ${
-          isCollapsed ? "w-16" : "w-60"
-        }`}
+        className={`hidden shrink-0 bg-[var(--app-surface)]/35 transition-[width] duration-200 lg:block ${isCollapsed ? "w-16" : "w-60"
+          }`}
       >
         <SidebarBody collapsed={isCollapsed} />
       </aside>
@@ -61,7 +69,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--app-border)] px-4 lg:hidden">
+        <div className="flex h-14 shrink-0 items-center gap-3 bg-[var(--app-surface)]/35 px-4 lg:hidden">
           <Button
             isIconOnly
             aria-label="Open navigation"

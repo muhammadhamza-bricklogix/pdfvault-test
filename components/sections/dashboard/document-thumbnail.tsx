@@ -33,6 +33,10 @@ export function DocumentThumbnail({ document: doc }: Props) {
       try {
         const pdfjs = await import("pdfjs-dist");
 
+        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+          pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        }
+
         const task = pdfjs.getDocument({ url: doc.url });
         const pdf = await task.promise;
         const page = await pdf.getPage(1);
