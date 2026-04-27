@@ -32,6 +32,9 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
   const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const shapeFill = usePdfEditorStore((s) => s.shapeFill);
+  const shapeStroke = usePdfEditorStore((s) => s.shapeStroke);
+  const shapeStrokeWidth = usePdfEditorStore((s) => s.shapeStrokeWidth);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCreatingShape = usePdfEditorStore((s) => s.setIsCreatingShape);
 
@@ -81,12 +84,12 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       switch (shapeType) {
         case "rect":
           shape = new FRect({
-            fill: "transparent",
+            fill: shapeFill,
             height: 0,
             left: pointer.x,
-            stroke: "#000000",
+            stroke: shapeStroke,
             strokeUniform: true,
-            strokeWidth: 2,
+            strokeWidth: shapeStrokeWidth,
             top: pointer.y,
             width: 0,
           });
@@ -94,13 +97,13 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
 
         case "ellipse":
           shape = new FEllipse({
-            fill: "transparent",
+            fill: shapeFill,
             left: pointer.x,
             rx: 0,
             ry: 0,
-            stroke: "#000000",
+            stroke: shapeStroke,
             strokeUniform: true,
-            strokeWidth: 2,
+            strokeWidth: shapeStrokeWidth,
             top: pointer.y,
           });
           break;
@@ -108,10 +111,10 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
         case "line":
         case "arrow":
           shape = new FLine([pointer.x, pointer.y, pointer.x, pointer.y], {
-            stroke: "#000000",
+            stroke: shapeStroke,
             strokeLineCap: "round",
             strokeUniform: true,
-            strokeWidth: 2,
+            strokeWidth: shapeStrokeWidth,
           });
           break;
 
@@ -220,18 +223,22 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
         fabricCanvas.remove(tempShapeRef.current);
 
         const arrowLine = new FLine([sx, sy, endX, endY], {
-          stroke: "#000000",
+          stroke: shapeStroke,
           strokeLineCap: "round",
-          strokeWidth: 2,
+          strokeUniform: true,
+          strokeWidth: shapeStrokeWidth,
         });
 
         const arrowHead = new FTriangle({
           angle: angle + 90,
-          fill: "#000000",
+          fill: shapeStroke,
           height: headSize,
           left: endX,
           originX: "center",
           originY: "center",
+          stroke: shapeStroke,
+          strokeUniform: true,
+          strokeWidth: shapeStrokeWidth,
           top: endY,
           width: headSize,
         });
@@ -290,6 +297,9 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
     currentPage,
     fabricCanvas,
     pushHistory,
+    shapeFill,
+    shapeStroke,
+    shapeStrokeWidth,
     setActiveTool,
     setIsCreatingShape,
   ]);

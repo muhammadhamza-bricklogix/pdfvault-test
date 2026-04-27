@@ -33,6 +33,9 @@ type PdfEditorStore = {
   isSignedIn: boolean;
   pageCount: number;
   pdfDocument: PDFDocumentProxy | null;
+  shapeFill: string;
+  shapeStroke: string;
+  shapeStrokeWidth: number;
   zoom: number;
 
   clearFile: () => void;
@@ -51,6 +54,9 @@ type PdfEditorStore = {
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   setPdfDocument: (doc: PDFDocumentProxy | null, pageCount: number) => void;
+  setShapeFill: (color: string) => void;
+  setShapeStroke: (color: string) => void;
+  setShapeStrokeWidth: (width: number) => void;
   setZoom: (zoom: number) => void;
   undo: (page: number) => string | undefined;
 };
@@ -72,6 +78,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isSignedIn: false,
   pageCount: 0,
   pdfDocument: null,
+  shapeFill: "transparent",
+  shapeStroke: "#000000",
+  shapeStrokeWidth: 2,
   zoom: 1.0,
 
   clearFile: () =>
@@ -89,6 +98,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isSignatureModalOpen: false,
       pageCount: 0,
       pdfDocument: null,
+      shapeFill: "transparent",
+      shapeStroke: "#000000",
+      shapeStrokeWidth: 2,
       zoom: 1.0,
     }),
 
@@ -156,6 +168,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
   setPdfDocument: (doc, pageCount) => set({ pdfDocument: doc, pageCount }),
+  setShapeFill: (color) => set({ shapeFill: color }),
+  setShapeStroke: (color) => set({ shapeStroke: color }),
+  setShapeStrokeWidth: (width) => set({ shapeStrokeWidth: width }),
   setZoom: (zoom) => set({ zoom }),
 
   undo: (page) => {

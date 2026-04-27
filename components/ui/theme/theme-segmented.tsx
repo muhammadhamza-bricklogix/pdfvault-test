@@ -47,10 +47,10 @@ export function ThemeSegmented({ size = "sm" }: ThemeSegmentedProps) {
         return (
           <Tooltip key={opt.value} delay={300}>
             <Button
-              variant={isActive ? "secondary" : "ghost"}
               isIconOnly
               aria-label={opt.label}
               type="button"
+              variant={isActive ? "secondary" : "ghost"}
               onPress={() => setTheme(opt.value)}
             >
               {index > 0 && <ButtonGroup.Separator />}

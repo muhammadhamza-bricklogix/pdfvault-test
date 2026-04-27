@@ -4,19 +4,16 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
-  ArrowDownRight01Icon,
-  CircleIcon,
   Cursor01Icon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
-  LinerIcon,
   PaintBrush01Icon,
   PaintBucketIcon,
   RedoIcon,
   SaveMoneyDollarIcon,
+  ShapesIcon,
   SignatureIcon,
-  SquareIcon,
   TextFontIcon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
@@ -80,7 +77,7 @@ export function EditorInfoBar() {
       : "Save";
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
+    <div className="flex h-10 shrink-0 items-center justify-between px-3">
       {/* Left: menu + undo/redo */}
       <div className="flex items-center gap-1">
         <HamburgerMenu />
@@ -216,34 +213,12 @@ export function EditorInfoBar() {
 // Tool Bar — all editing tools as individual buttons
 // ---------------------------------------------------------------------------
 
-type ToolId = ActiveTool | `shape:${string}`;
-
-function parseToolId(id: ToolId): {
-  shapeType?: string;
-  tool: ActiveTool;
-} {
-  if (id.startsWith("shape:")) {
-    return { shapeType: id.slice(6), tool: "shape" };
-  }
-
-  return { tool: id as ActiveTool };
-}
-
-function toToggleKey(activeTool: ActiveTool, activeShapeType: string): ToolId {
-  if (activeTool === "shape") return `shape:${activeShapeType}`;
-
-  return activeTool;
-}
-
 const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
-  { icon: SquareIcon, id: "shape:rect", label: "Rectangle" },
-  { icon: CircleIcon, id: "shape:ellipse", label: "Ellipse" },
-  { icon: LinerIcon, id: "shape:line", label: "Line" },
-  { icon: ArrowDownRight01Icon, id: "shape:arrow", label: "Arrow" },
+  { icon: ShapesIcon, id: "shape", label: "Shapes" },
   { icon: EraserIcon, id: "eraser", label: "Eraser" },
   { icon: PaintBucketIcon, id: "whiteout", label: "Whiteout" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
@@ -258,44 +233,34 @@ const HIGHLIGHT_COLORS = [
 ] as const;
 
 export function EditorToolBar() {
-  const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const highlightColor = usePdfEditorStore((s) => s.highlightColor);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
-  const setActiveShapeType = usePdfEditorStore((s) => s.setActiveShapeType);
   const setHighlightColor = usePdfEditorStore((s) => s.setHighlightColor);
 
-  const selectedKey = toToggleKey(activeTool, activeShapeType);
-
   const handleToolChange = (keys: Set<Key>) => {
-    const key = [...keys][0] as ToolId | undefined;
+    const key = [...keys][0] as ActiveTool | undefined;
 
     if (!key) return;
 
-    const { tool, shapeType } = parseToolId(key);
-
-    if (shapeType) {
-      setActiveShapeType(shapeType as "rect" | "ellipse" | "line" | "arrow");
-    }
-
-    setActiveTool(tool);
+    setActiveTool(key);
   };
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-center gap-2 border-b border-[var(--app-border)] bg-[var(--color-background)] px-3">
+    <div className="flex h-12 shrink-0 items-center justify-center gap-3  px-3">
       <Toolbar aria-label="Drawing tools">
         <ToggleButtonGroup
           disallowEmptySelection
-          selectedKeys={new Set([selectedKey])}
+          selectedKeys={new Set([activeTool])}
           selectionMode="single"
-          size="sm"
+          size="md"
           onSelectionChange={handleToolChange}
         >
           {TOOLS.map((tool, i) => (
             <Tooltip key={tool.id} delay={300}>
               <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
                 {i > 0 && <ToggleButtonGroup.Separator />}
-                <HugeiconsIcon icon={tool.icon} size={16} />
+                <HugeiconsIcon icon={tool.icon} size={25} />
               </ToggleButton>
               <Tooltip.Content>
                 <p>{tool.label}</p>
@@ -307,13 +272,13 @@ export function EditorToolBar() {
 
       {/* Highlight color presets — visible only when highlight tool is active */}
       {activeTool === "highlight" && (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {HIGHLIGHT_COLORS.map((preset) => (
             <Tooltip key={preset.color} delay={300}>
               <button
                 aria-label={`${preset.label} highlight`}
                 aria-pressed={highlightColor === preset.color}
-                className="size-5 rounded-full border-2 transition-transform hover:scale-110"
+                className="size-6 rounded-full border-2 transition-transform hover:scale-110"
                 style={{
                   backgroundColor: preset.color,
                   borderColor:

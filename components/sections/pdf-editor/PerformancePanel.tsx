@@ -1,7 +1,11 @@
 "use client";
 
 import type { Canvas as FabricCanvas } from "fabric";
+import type { Dispatch, SetStateAction } from "react";
 
+import { Analytics01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button, Popover, Tooltip } from "@heroui/react";
 import { useEffect, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -9,6 +13,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 type PerformancePanelProps = {
   fabricCanvas: FabricCanvas | null;
   isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 type MemoryInfo = {
@@ -19,6 +24,7 @@ type MemoryInfo = {
 export function PerformancePanel({
   fabricCanvas,
   isOpen,
+  setIsOpen,
 }: PerformancePanelProps) {
   const file = usePdfEditorStore((s) => s.file);
   const [fps, setFps] = useState(0);
@@ -90,55 +96,76 @@ export function PerformancePanel({
     return `${(file.size / 1024).toFixed(2)} KB`;
   })();
 
-  if (!isOpen) return null;
-
   return (
-    <div className="absolute right-4 top-4 z-50 w-60 rounded-lg border border-[var(--app-border)] bg-[var(--color-background)] p-3 shadow-lg">
-      {/* Memory bar */}
-      {memory ? (
-        <div className="mb-3">
-          <div className="mb-1.5 h-2 w-full overflow-hidden rounded-full bg-[var(--app-surface)]">
-            <div
-              className="h-full rounded-full bg-[var(--color-accent)] transition-all"
-              style={{ width: `${Math.min(memory.percent, 100)}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between text-xs text-[var(--app-muted)]">
-            <span>Total memory used</span>
-            <span className="font-medium text-[var(--color-foreground)]">
-              {memory.percent}% ({memory.usedMB} MB)
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div className="mb-3 text-xs text-[var(--app-muted)]">
-          Memory: N/A (Chrome only)
-        </div>
-      )}
+    <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
+      <Tooltip delay={300}>
+        <Popover.Trigger>
+          <Button
+            isIconOnly
+            aria-label="Performance panel"
+            className="rounded-full shadow-lg"
+            size="md"
+            variant={isOpen ? "secondary" : "outline"}
+          >
+            <HugeiconsIcon icon={Analytics01Icon} size={18} />
+          </Button>
+        </Popover.Trigger>
+        <Tooltip.Content>
+          <p>Performance</p>
+        </Tooltip.Content>
+      </Tooltip>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-xs">
-        <div>
-          <span className="text-[var(--app-muted)]">Size</span>
-          <p className="font-medium text-[var(--color-foreground)]">
-            {fileSizeDisplay}
-          </p>
-        </div>
-        <div>
-          <span className="text-[var(--app-muted)]">Objects</span>
-          <p className="font-medium text-[var(--color-foreground)]">
-            {objectCount}
-          </p>
-        </div>
-        <div>
-          <span className="text-[var(--app-muted)]">Rotation</span>
-          <p className="font-medium text-[var(--color-foreground)]">0&deg;</p>
-        </div>
-        <div>
-          <span className="text-[var(--app-muted)]">FPS</span>
-          <p className="font-medium text-[var(--color-foreground)]">{fps}</p>
-        </div>
-      </div>
-    </div>
+      <Popover.Content className="w-60" offset={12} placement="top end">
+        <Popover.Dialog className="p-3">
+          {memory ? (
+            <div className="mb-3">
+              <div className="mb-1.5 h-2 w-full overflow-hidden rounded-full bg-[var(--app-surface)]">
+                <div
+                  className="h-full rounded-full bg-[var(--color-accent)] transition-all"
+                  style={{ width: `${Math.min(memory.percent, 100)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs text-[var(--app-muted)]">
+                <span>Total memory used</span>
+                <span className="font-medium text-[var(--color-foreground)]">
+                  {memory.percent}% ({memory.usedMB} MB)
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-3 text-xs text-[var(--app-muted)]">
+              Memory: N/A (Chrome only)
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-xs">
+            <div>
+              <span className="text-[var(--app-muted)]">Size</span>
+              <p className="font-medium text-[var(--color-foreground)]">
+                {fileSizeDisplay}
+              </p>
+            </div>
+            <div>
+              <span className="text-[var(--app-muted)]">Objects</span>
+              <p className="font-medium text-[var(--color-foreground)]">
+                {objectCount}
+              </p>
+            </div>
+            <div>
+              <span className="text-[var(--app-muted)]">Rotation</span>
+              <p className="font-medium text-[var(--color-foreground)]">
+                0&deg;
+              </p>
+            </div>
+            <div>
+              <span className="text-[var(--app-muted)]">FPS</span>
+              <p className="font-medium text-[var(--color-foreground)]">
+                {fps}
+              </p>
+            </div>
+          </div>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
   );
 }

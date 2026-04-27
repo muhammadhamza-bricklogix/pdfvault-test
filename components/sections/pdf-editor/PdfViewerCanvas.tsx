@@ -17,6 +17,7 @@ import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-to
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
+import { FloatingShapeToolbar } from "./FloatingShapeToolbar";
 import { SignatureModal } from "./SignatureModal";
 
 type PdfViewerCanvasProps = {
@@ -181,6 +182,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
             role="application"
           />
           <FloatingTextToolbar
+            canvasContainerRef={containerRef}
+            fabricCanvas={fabricCanvas}
+          />
+          <FloatingShapeToolbar
             canvasContainerRef={containerRef}
             fabricCanvas={fabricCanvas}
           />

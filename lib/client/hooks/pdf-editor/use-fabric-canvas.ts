@@ -36,8 +36,15 @@ export function useFabricCanvas({
       if (cancelled || !fabricCanvasRef.current) return;
 
       // Register custom properties so they survive toJSON() / loadFromJSON()
-      if (!FabricObject.customProperties.includes("editorType")) {
-        FabricObject.customProperties.push("editorType", "noteText");
+      for (const property of [
+        "editorType",
+        "noteText",
+        "linkUrl",
+        "shapeAspectLocked",
+      ]) {
+        if (!FabricObject.customProperties.includes(property)) {
+          FabricObject.customProperties.push(property);
+        }
       }
 
       const fc = new FabricCanvas(fabricCanvasRef.current, {

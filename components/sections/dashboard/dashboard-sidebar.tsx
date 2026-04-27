@@ -22,11 +22,6 @@ const PRIMARY_NAV = [
     icon: File01Icon,
     label: "My Documents",
   },
-  {
-    href: `${ROUTES.APP.DASHBOARD}?filter=recents`,
-    icon: Clock01Icon,
-    label: "Recents",
-  },
 ] as const;
 
 type IconType = typeof File01Icon;
