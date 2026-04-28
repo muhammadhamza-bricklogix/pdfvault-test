@@ -6,6 +6,8 @@ import { File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 
+import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
+
 const cache = new Map<string, string>();
 
 function cacheKey(doc: Document): string {
@@ -34,7 +36,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
         const pdfjs = await import("pdfjs-dist");
 
         if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-          pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+          pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
         }
 
         const task = pdfjs.getDocument({ url: doc.url });

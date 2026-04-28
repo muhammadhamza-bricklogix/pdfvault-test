@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 export function usePdfLoader() {
@@ -30,7 +31,7 @@ export function usePdfLoader() {
         // Dynamic import keeps pdfjs-dist out of the SSR bundle entirely
         const pdfjs = await import("pdfjs-dist");
 
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 
         const arrayBuffer = await file.arrayBuffer();
 
