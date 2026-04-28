@@ -70,6 +70,7 @@ function EditorLayout() {
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar />
         <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+        <div aria-hidden className="w-44 shrink-0 bg-[var(--app-surface)]" />
         <RightSidebar fabricCanvas={fabricCanvas} />
 
         <div className="pointer-events-none absolute bottom-4 right-[17rem] z-10">
