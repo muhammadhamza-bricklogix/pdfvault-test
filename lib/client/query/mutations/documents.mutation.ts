@@ -26,25 +26,20 @@ type UploadVariables = UploadDocumentInput & {
   options?: UploadOptions;
 };
 
+/**
+ * Persists an upload to the cache. Surface-level UX (progress, success, error
+ * toasts) is owned by the upload-toast controller via `useTrackedUpload`.
+ * This mutation deliberately does not toast.
+ */
 export function useUploadDocumentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<Document, Error, UploadVariables>({
     mutationFn: ({ options, ...input }) =>
       documentsService.uploadDocument(input, options),
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.setQueryData(documentKeys.detail(data.id), data);
-      toast.success({
-        title: variables.documentId ? "Document saved" : "Document uploaded",
-        description: data.filename,
-      });
-    },
-    onError: (error) => {
-      toast.error({
-        title: "Upload failed",
-        description: error.message,
-      });
     },
   });
 }
@@ -100,35 +95,9 @@ export function useRenameDocumentMutation() {
 export function useDeleteDocumentMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, { id: string }, ListContext>({
+  return useMutation<void, Error, { id: string }>({
     mutationFn: ({ id }) => documentsService.deleteDocument(id),
-    onMutate: async ({ id }) => {
-      await queryClient.cancelQueries({ queryKey: documentKeys.lists() });
-      const previousLists = queryClient.getQueriesData<ListData>({
-        queryKey: documentKeys.lists(),
-      });
-
-      previousLists.forEach(([key, data]) => {
-        if (!data) return;
-        queryClient.setQueryData<ListData>(key, {
-          ...data,
-          pages: data.pages.map((page) => ({
-            ...page,
-            items: page.items.filter((doc) => doc.id !== id),
-            pagination: {
-              ...page.pagination,
-              total: Math.max(0, page.pagination.total - 1),
-            },
-          })),
-        });
-      });
-
-      return { previousLists };
-    },
-    onError: (error, _vars, context) => {
-      context?.previousLists.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
-      });
+    onError: (error) => {
       toast.error({ title: "Delete failed", description: error.message });
     },
     onSuccess: () => {
