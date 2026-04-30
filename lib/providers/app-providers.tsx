@@ -5,6 +5,8 @@ import type { ThemeProviderProps } from "next-themes";
 import { Toast } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
+import { UploadToastProvider } from "@/components/ui/upload-toast";
+
 import { QueryProvider } from "./query-provider";
 
 type AppProvidersProps = {
@@ -18,6 +20,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
       <QueryProvider>
         {children}
         <Toast.Provider placement="top end" />
+        <UploadToastProvider />
       </QueryProvider>
     </NextThemesProvider>
   );

@@ -49,15 +49,15 @@ export default function DangerZonePage() {
         <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
           Danger zone
         </h2>
-        <p className="text-sm text-[var(--app-muted)]">
+        <p className="text-sm text-default-500">
           Irreversible actions. Proceed with care.
         </p>
       </header>
 
-      <div className="flex flex-col gap-4 rounded-xl border border-[var(--app-danger,#dc2626)]/40 bg-[var(--color-background)] p-5">
+      <div className="flex flex-col gap-4 rounded-xl border border-danger/40 bg-[var(--color-background)] p-5">
         <div className="flex items-start gap-3">
           <HugeiconsIcon
-            className="mt-0.5 shrink-0 text-[var(--app-danger,#dc2626)]"
+            className="mt-0.5 shrink-0 text-danger"
             icon={Alert01Icon}
             size={20}
           />
@@ -65,7 +65,7 @@ export default function DangerZonePage() {
             <p className="text-sm font-semibold text-[var(--color-foreground)]">
               Delete account
             </p>
-            <p className="text-sm text-[var(--app-muted)]">
+            <p className="text-sm text-default-500">
               Permanently delete your account and all associated documents. This
               action cannot be undone.
             </p>
@@ -91,7 +91,7 @@ export default function DangerZonePage() {
               <Modal.Heading>Delete account</Modal.Heading>
             </Modal.Header>
             <Modal.Body>
-              <p className="text-sm text-[var(--app-muted)]">
+              <p className="text-sm text-default-500">
                 This will permanently delete your account, your documents, and
                 all associated data. This cannot be undone.
               </p>
@@ -101,14 +101,14 @@ export default function DangerZonePage() {
               </p>
               <input
                 autoComplete="off"
-                className="mt-2 w-full rounded-md border border-[var(--app-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--app-danger,#dc2626)]"
+                className="mt-2 w-full rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-danger"
                 placeholder={email}
                 type="email"
                 value={confirmation}
                 onChange={(e) => setConfirmation(e.target.value)}
               />
               {error && (
-                <p className="mt-2 text-xs text-[var(--app-danger,#dc2626)]">
+                <p className="mt-2 text-xs text-danger">
                   {error}
                 </p>
               )}

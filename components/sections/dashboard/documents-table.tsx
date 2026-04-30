@@ -3,12 +3,16 @@
 import type { DataTableColumn } from "@/components/ui/data-table";
 import type { Document } from "@/lib/shared/types/documents.types";
 
-import { File01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { useCallback, useMemo, useState } from "react";
 
 import { DataTable } from "@/components/ui/data-table";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
+import {
+  AddFilesIllustration,
+  FilesUploadingIllustration,
+  SuccessfulUploadIllustration,
+  UploadErrorIllustration,
+} from "@/components/ui/illustrations";
 
 import { DeleteDocumentModal } from "./delete-document-modal";
 import { RenameDocumentModal } from "./rename-document-modal";
@@ -28,16 +32,13 @@ const COLUMNS: DataTableColumn<Document>[] = [
 ];
 
 const EmptyDocuments = (
-  <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[var(--app-border)] p-6 text-center">
-    <HugeiconsIcon
-      className="text-[var(--app-muted)]"
-      icon={File01Icon}
-      size={32}
-    />
+  <div className="flex items-center justify-center gap-3 rounded-lg p-6 text-center">
+    <UploadErrorIllustration className="h-24 w-24 text-danger opacity-50" />
+    <AddFilesIllustration className="h-24 w-24 text-accent" />
+    <FilesUploadingIllustration className="h-24 w-24 text-danger" />
+    <SuccessfulUploadIllustration className="h-24 w-24 text-success opacity-50" />
     <p className="text-sm font-medium">No documents yet</p>
-    <p className="text-xs text-[var(--app-muted)]">
-      Upload a PDF to see it here.
-    </p>
+    <p className="text-xs text-default-500">Upload a PDF to see it here.</p>
   </div>
 );
 

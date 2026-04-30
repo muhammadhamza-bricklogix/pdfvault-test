@@ -8,7 +8,7 @@ import {
   usePreferencesStore,
 } from "@/lib/client/stores";
 
-const subscribe = () => () => {};
+const subscribe = () => () => { };
 const useIsMounted = () =>
   useSyncExternalStore(
     subscribe,
@@ -48,7 +48,7 @@ const COMMON_TIMEZONES = [
 ];
 
 const fieldClass =
-  "w-full rounded-md border border-[var(--app-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  "w-full rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
 export default function LanguageSettingsPage() {
   const language = usePreferencesStore((s) => s.language);
@@ -75,13 +75,13 @@ export default function LanguageSettingsPage() {
         <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
           Language &amp; Region
         </h2>
-        <p className="text-sm text-[var(--app-muted)]">
+        <p className="text-sm text-default-500">
           Saved automatically. These preferences apply only to this device for
           now.
         </p>
       </header>
 
-      <div className="flex flex-col gap-5 rounded-xl border border-[var(--app-border)] bg-[var(--color-background)] p-5">
+      <div className="flex flex-col gap-5 rounded-xl border border-default-200 bg-[var(--color-background)] p-5">
         <div className="flex flex-col gap-2">
           <label
             className="text-sm font-medium text-[var(--color-foreground)]"

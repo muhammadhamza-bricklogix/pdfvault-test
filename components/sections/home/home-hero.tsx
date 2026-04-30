@@ -26,7 +26,7 @@ export function HomeHero() {
           <h1 className="mx-auto max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             Online PDF tools for the work you do every day.
           </h1>
-          <p className="mx-auto max-w-3xl text-lg leading-8 text-[var(--app-muted)] sm:text-xl">
+          <p className="mx-auto max-w-3xl text-lg leading-8 text-default-500 sm:text-xl">
             Upload a file, choose a task, and move through your document work
             without friction.
           </p>
@@ -40,7 +40,7 @@ export function HomeHero() {
           onFileSelect={handleFileSelect}
         />
 
-        <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-[var(--app-muted)] sm:text-base">
+        <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-default-500 sm:text-base">
           <span className="font-semibold text-[var(--color-foreground)]">
             Great
           </span>

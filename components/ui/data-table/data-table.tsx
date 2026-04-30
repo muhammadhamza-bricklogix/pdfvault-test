@@ -63,7 +63,7 @@ export type DataTableProps<TData> = {
 
 const DEFAULT_EMPTY: ReactNode = (
   <EmptyState className="flex h-full w-full flex-col items-center justify-center gap-2 py-10 text-center">
-    <span className="text-sm text-[var(--app-muted)]">No results found.</span>
+    <span className="text-sm text-default-500">No results found.</span>
   </EmptyState>
 );
 
@@ -185,10 +185,10 @@ export function DataTable<TData extends object>({
 
   if (isError) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] p-6 text-center">
+      <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg border border-default-200 bg-default-100 p-6 text-center">
         <p className="text-sm font-medium">Something went wrong.</p>
         {errorMessage ? (
-          <p className="max-w-md text-xs text-[var(--app-muted)]">
+          <p className="max-w-md text-xs text-default-500">
             {errorMessage}
           </p>
         ) : null}
@@ -290,7 +290,7 @@ function ClientPagination({
       >
         Previous
       </Button>
-      <span className="text-[var(--app-muted)]">
+      <span className="text-default-500">
         Page {page} of {totalPages}
       </span>
       <Button

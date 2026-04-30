@@ -13,7 +13,7 @@ bun run lint         # lint and auto-fix (eslint --fix)
 
 ## Architecture
 
-**PDFForge** — a Next.js 16 App Router frontend for a cloud PDF tools platform. Uses Bun as the package manager/runtime.
+**PDFedits** — a Next.js 16 App Router frontend for a cloud PDF tools platform. Uses Bun as the package manager/runtime.
 
 ### Key layers
 

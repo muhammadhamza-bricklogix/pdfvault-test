@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Clock01Icon,
   File01Icon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
@@ -45,11 +44,10 @@ function SidebarNavItem({
 }: SidebarNavItemProps) {
   const link = (
     <Link
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        isActive
-          ? "bg-[var(--app-surface)] text-[var(--color-foreground)]"
-          : "text-[var(--app-muted)] hover:bg-[var(--app-surface)] hover:text-[var(--color-foreground)]"
-      } ${collapsed ? "justify-center" : ""}`}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+          ? "bg-default-100 text-[var(--color-foreground)]"
+          : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
+        } ${collapsed ? "justify-center" : ""}`}
       href={href}
       onClick={onNavigate}
     >
@@ -80,20 +78,19 @@ export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
   const toggleCollapsed = useDashboardUiStore((s) => s.toggleSidebarCollapsed);
 
   return (
-    <div className="flex h-full flex-col border-r border-[var(--app-border)]">
+    <div className="flex h-full flex-col border-r border-default-200">
       {/* Header: logo + collapse toggle */}
       <div
-        className={`flex h-14 shrink-0 items-center px-3 ${
-          collapsed ? "justify-center" : "justify-between"
-        }`}
+        className={`flex h-14 shrink-0 items-center px-3 ${collapsed ? "justify-center" : "justify-between"
+          }`}
       >
         {!collapsed && (
           <Link
             className="text-xl font-semibold tracking-tight"
             href={ROUTES.PUBLIC.HOME}
           >
-            <span className="text-[var(--color-accent)]">pdf</span>
-            <span className="text-[var(--color-foreground)]">forge</span>
+            <span className="text-[var(--color-accent)]">PDF</span>
+            <span className="text-[var(--color-foreground)]">edits</span>
           </Link>
         )}
         <Tooltip delay={300}>

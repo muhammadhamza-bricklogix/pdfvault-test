@@ -11,7 +11,7 @@ export function DashboardHome() {
           <h1 className="text-2xl font-semibold tracking-tight">
             My Documents
           </h1>
-          <p className="text-sm text-[var(--app-muted)]">
+          <p className="text-sm text-default-500">
             Open, rename, download, or delete your saved PDFs.
           </p>
         </div>

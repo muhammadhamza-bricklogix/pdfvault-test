@@ -73,7 +73,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
 
   if (src) {
     return (
-      <div className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-[var(--app-border)] bg-white">
+      <div className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-default-200 bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt="" className="h-full w-full object-cover" src={src} />
       </div>
@@ -81,12 +81,12 @@ export function DocumentThumbnail({ document: doc }: Props) {
   }
 
   return (
-    <div className="flex h-12 w-9 items-center justify-center rounded border border-[var(--app-border)] bg-[var(--app-surface)]">
+    <div className="flex h-12 w-9 items-center justify-center rounded border border-default-200 bg-default-100">
       <HugeiconsIcon
         className={
           failed
-            ? "text-[var(--app-muted)]"
-            : "text-[var(--app-muted)] opacity-60"
+            ? "text-default-500"
+            : "text-default-500 opacity-60"
         }
         icon={File01Icon}
         size={16}

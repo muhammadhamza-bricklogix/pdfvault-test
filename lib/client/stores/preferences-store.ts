@@ -37,7 +37,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       setDateFormat: (value) => set({ dateFormat: value }),
     }),
     {
-      name: "pdfforge:preferences",
+      name: "pdfedits:preferences",
     },
   ),
 );

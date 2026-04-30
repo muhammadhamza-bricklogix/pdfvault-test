@@ -58,9 +58,8 @@ export function IdentityPopover({
     <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger
         aria-label="Account menu"
-        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[var(--app-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
-          collapsed ? "justify-center" : ""
-        }`}
+        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${collapsed ? "justify-center" : ""
+          }`}
       >
         {avatar}
         {!collapsed && (
@@ -69,12 +68,12 @@ export function IdentityPopover({
               <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
                 {fullName}
               </p>
-              <p className="truncate text-xs text-[var(--app-muted)]">
+              <p className="truncate text-xs text-default-500">
                 {email}
               </p>
             </div>
             <HugeiconsIcon
-              className="text-[var(--app-muted)]"
+              className="text-default-500"
               icon={ArrowUp01Icon}
               size={14}
             />
@@ -84,7 +83,7 @@ export function IdentityPopover({
       <Popover.Content offset={8} placement={"top"}>
         <Popover.Dialog>
           {email && (
-            <p className=" pb-2 pt-2 text-xs text-[var(--app-muted)]">
+            <p className=" pb-2 pt-2 text-xs text-default-500">
               {email}
             </p>
           )}
@@ -98,7 +97,7 @@ export function IdentityPopover({
             <ListBox.Item id="settings" textValue="Settings">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
-                  className="size-4 shrink-0 text-[var(--app-muted)]"
+                  className="size-4 shrink-0 text-default-500"
                   icon={Setting07Icon}
                 />
               </div>
@@ -111,7 +110,7 @@ export function IdentityPopover({
             <ListBox.Item id="theme" textValue="Theme">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
-                  className="size-4 shrink-0 text-[var(--app-muted)]"
+                  className="size-4 shrink-0 text-default-500"
                   icon={PaintBucketIcon}
                 />
               </div>
@@ -124,7 +123,7 @@ export function IdentityPopover({
 
           <ListBox
             aria-label="Session"
-            className="border-t border-[var(--app-border)] p-0 pt-2"
+            className="border-t border-default-200 p-0 pt-2"
             selectionMode="none"
             onAction={handleAction}
           >

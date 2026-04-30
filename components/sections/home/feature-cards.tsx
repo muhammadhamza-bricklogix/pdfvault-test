@@ -78,13 +78,13 @@ export function FeatureCards() {
         <h2 className="mb-2 text-center text-3xl font-semibold tracking-tight text-[var(--color-foreground)]">
           All the PDF tools you need
         </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-center text-[var(--app-muted)]">
+        <p className="mx-auto mb-8 max-w-2xl text-center text-default-500">
           A complete suite of PDF editing tools, right in your browser.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {FEATURE_CARDS.map((card) => (
             <Card key={card.title} className="gap-3 p-5">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--app-accent-subtle)]">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
                 <HugeiconsIcon
                   className="text-[var(--color-accent)]"
                   icon={card.icon}

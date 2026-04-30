@@ -39,7 +39,7 @@ export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
           <h1 className="mx-auto max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             {tool.title}
           </h1>
-          <p className="mx-auto max-w-3xl text-lg leading-8 text-[var(--app-muted)] sm:text-xl">
+          <p className="mx-auto max-w-3xl text-lg leading-8 text-default-500 sm:text-xl">
             {tool.description}
           </p>
         </div>

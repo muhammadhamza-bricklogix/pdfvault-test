@@ -1,5 +1,7 @@
 export const DOCUMENTS = {
   UPLOAD: "/documents/upload",
+  UPLOAD_PROGRESS: (trackingId: string) =>
+    `/documents/upload-progress/${trackingId}`,
   LIST: "/documents",
   DETAIL: (id: string) => `/documents/${id}`,
   RENAME: (id: string) => `/documents/${id}/rename`,

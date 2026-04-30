@@ -4,6 +4,7 @@ import { Show } from "@clerk/nextjs";
 import { Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Separator } from "@heroui/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -51,7 +52,7 @@ export function SiteNavbar() {
                     {NAV_ITEMS.map((item) => (
                       <Link
                         key={item.label}
-                        className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--app-muted)] transition-colors hover:bg-[var(--app-surface)] hover:text-[var(--color-foreground)]"
+                        className="rounded-lg px-3 py-2 text-sm font-medium text-default-500 transition-colors hover:bg-default-100 hover:text-foreground"
                         href={item.href}
                       >
                         {item.label}
@@ -98,12 +99,14 @@ export function SiteNavbar() {
         </Drawer>
 
         {/* Logo */}
-        <Link
-          className="shrink-0 text-2xl font-semibold tracking-tight"
-          href={ROUTES.PUBLIC.HOME}
-        >
-          <span className="text-[var(--color-accent)]">pdf</span>
-          <span className="text-[var(--color-foreground)]">forge</span>
+        <Link className="shrink-0" href={ROUTES.PUBLIC.HOME}>
+          <Image
+            priority
+            alt="PDFedits"
+            height={32}
+            src="/logo.svg"
+            width={32}
+          />
         </Link>
 
         {/* Desktop nav links */}
@@ -111,7 +114,7 @@ export function SiteNavbar() {
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.label}
-              className="text-sm font-medium text-[var(--app-muted)] transition-colors hover:text-[var(--color-foreground)]"
+              className="text-sm font-medium text-default-500 transition-colors hover:text-foreground"
               href={item.href}
             >
               {item.label}
@@ -127,7 +130,7 @@ export function SiteNavbar() {
 
           <Show when="signed-out">
             <Link
-              className="hidden text-sm font-medium text-[var(--app-muted)] transition-colors hover:text-[var(--color-foreground)] sm:inline-flex"
+              className="hidden text-sm font-medium text-default-500 transition-colors hover:text-foreground sm:inline-flex"
               href={ROUTES.AUTH.SIGN_IN}
             >
               Sign in

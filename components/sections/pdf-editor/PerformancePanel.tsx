@@ -119,13 +119,13 @@ export function PerformancePanel({
         <Popover.Dialog className="p-3">
           {memory ? (
             <div className="mb-3">
-              <div className="mb-1.5 h-2 w-full overflow-hidden rounded-full bg-[var(--app-surface)]">
+              <div className="mb-1.5 h-2 w-full overflow-hidden rounded-full bg-default-100">
                 <div
                   className="h-full rounded-full bg-[var(--color-accent)] transition-all"
                   style={{ width: `${Math.min(memory.percent, 100)}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-xs text-[var(--app-muted)]">
+              <div className="flex items-center justify-between text-xs text-default-500">
                 <span>Total memory used</span>
                 <span className="font-medium text-[var(--color-foreground)]">
                   {memory.percent}% ({memory.usedMB} MB)
@@ -133,32 +133,32 @@ export function PerformancePanel({
               </div>
             </div>
           ) : (
-            <div className="mb-3 text-xs text-[var(--app-muted)]">
+            <div className="mb-3 text-xs text-default-500">
               Memory: N/A (Chrome only)
             </div>
           )}
 
           <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-xs">
             <div>
-              <span className="text-[var(--app-muted)]">Size</span>
+              <span className="text-default-500">Size</span>
               <p className="font-medium text-[var(--color-foreground)]">
                 {fileSizeDisplay}
               </p>
             </div>
             <div>
-              <span className="text-[var(--app-muted)]">Objects</span>
+              <span className="text-default-500">Objects</span>
               <p className="font-medium text-[var(--color-foreground)]">
                 {objectCount}
               </p>
             </div>
             <div>
-              <span className="text-[var(--app-muted)]">Rotation</span>
+              <span className="text-default-500">Rotation</span>
               <p className="font-medium text-[var(--color-foreground)]">
                 0&deg;
               </p>
             </div>
             <div>
-              <span className="text-[var(--app-muted)]">FPS</span>
+              <span className="text-default-500">FPS</span>
               <p className="font-medium text-[var(--color-foreground)]">
                 {fps}
               </p>

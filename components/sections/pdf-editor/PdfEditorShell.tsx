@@ -3,6 +3,7 @@
 import type { Canvas } from "fabric";
 
 import { useAuth } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
@@ -11,6 +12,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
+import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { PerformancePanel } from "./PerformancePanel";
 import { RightSidebar } from "./RightSidebar";
@@ -46,11 +48,7 @@ function EditorLayout() {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <span className="text-sm text-[var(--app-muted)]">Loading PDF…</span>
-      </div>
-    );
+    return <EditorLoadingShell />;
   }
 
   if (error) {
@@ -70,7 +68,7 @@ function EditorLayout() {
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar />
         <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
-        <div aria-hidden className="w-44 shrink-0 bg-[var(--app-surface)]" />
+        <div aria-hidden className="w-44 shrink-0 bg-default-100" />
         <RightSidebar fabricCanvas={fabricCanvas} />
 
         <div className="pointer-events-none absolute bottom-4 right-[17rem] z-10">
@@ -91,6 +89,8 @@ export function PdfEditorShell() {
   const { isSignedIn } = useAuth();
   const file = usePdfEditorStore((s) => s.file);
   const setIsSignedIn = usePdfEditorStore((s) => s.setIsSignedIn);
+  const searchParams = useSearchParams();
+  const pendingDocumentId = searchParams.get("id");
 
   useEditorDocumentLoader();
 
@@ -98,9 +98,17 @@ export function PdfEditorShell() {
     setIsSignedIn(isSignedIn ?? false);
   }, [isSignedIn, setIsSignedIn]);
 
-  return (
-    <div className="flex h-full flex-col">
-      {file ? <EditorLayout /> : <UploadScreen />}
-    </div>
-  );
+  let content: React.ReactNode;
+
+  if (file) {
+    content = <EditorLayout />;
+  } else if (pendingDocumentId) {
+    // Doc referenced by URL but not yet hydrated — show editor chrome with
+    // skeletons rather than the empty upload screen.
+    content = <EditorLoadingShell />;
+  } else {
+    content = <UploadScreen />;
+  }
+
+  return <div className="flex h-full flex-col">{content}</div>;
 }

@@ -2,37 +2,18 @@
 @import "@heroui/styles";
 
 :root {
-  --app-border: color-mix(
-    in oklab,
-    var(--color-foreground) 12%,
-    var(--color-background)
-  );
-  --app-muted: color-mix(
-    in oklab,
-    var(--color-foreground) 58%,
-    var(--color-background)
-  );
-  --app-surface: color-mix(
-    in oklab,
-    var(--color-foreground) 3%,
-    var(--color-background)
-  );
-  --app-accent-subtle: color-mix(
-    in oklab,
-    var(--color-accent) 8%,
-    var(--color-background)
-  );
-}
+  /* BRAND RED (#DF3A38) */
+  --accent: oklch(62.3% 0.203 26.5);
+  --accent-foreground: oklch(100% 0 0);
 
+  /* DANGER RED (Darker/Colder for differentiation) */
+  --danger: oklch(45% 0.18 25);
+  --danger-foreground: oklch(100% 0 0);
+}
 html,
 body {
   min-height: 100%;
 }
-
-* {
-  border-color: var(--app-border);
-}
-
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);

@@ -65,18 +65,17 @@ function Thumbnail({ isActive, pageNumber, onSelect }: ThumbnailProps) {
       ref={containerRef}
       aria-label={`Go to page ${pageNumber}`}
       aria-selected={isActive}
-      className={`flex w-full flex-col items-center gap-1 rounded-lg p-2 text-left transition-colors ${
-        isActive
-          ? "bg-[var(--app-accent-subtle)] ring-1 ring-[var(--color-accent)]"
-          : "hover:bg-[var(--app-surface)]"
-      }`}
+      className={`flex w-full flex-col items-center gap-1 rounded-lg p-2 text-left transition-colors ${isActive
+          ? "bg-accent/10 ring-1 ring-[var(--color-accent)]"
+          : "hover:bg-default-100"
+        }`}
       role="option"
       onClick={() => onSelect(pageNumber)}
     >
-      <div className="flex min-h-28 w-full items-center justify-center overflow-hidden rounded border border-[var(--app-border)] bg-white shadow-sm">
+      <div className="flex min-h-28 w-full items-center justify-center overflow-hidden rounded border border-default-200 bg-white shadow-sm">
         <canvas ref={canvasRef} />
       </div>
-      <span className="text-xs text-[var(--app-muted)]">{pageNumber}</span>
+      <span className="text-xs text-default-500">{pageNumber}</span>
     </button>
   );
 }
@@ -89,7 +88,7 @@ export function ThumbnailSidebar() {
   return (
     <aside
       aria-label="Page thumbnails"
-      className="flex w-44 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--app-border)] bg-[var(--app-surface)] p-2"
+      className="flex w-44 shrink-0 flex-col gap-1 overflow-y-auto border-r border-default-200 bg-default-100 p-2"
       role="listbox"
     >
       {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNumber) => (

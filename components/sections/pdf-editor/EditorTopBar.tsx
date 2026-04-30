@@ -140,7 +140,7 @@ export function EditorInfoBar() {
           >
             ‹
           </Button>
-          <span className="min-w-24 text-center text-xs text-[var(--app-muted)]">
+          <span className="min-w-24 text-center text-xs text-default-500">
             Page {currentPage} of {pageCount}
           </span>
           <Button
@@ -169,7 +169,7 @@ export function EditorInfoBar() {
             <p>Zoom out</p>
           </Tooltip.Content>
         </Tooltip>
-        <span className="min-w-12 text-center text-xs tabular-nums text-[var(--app-muted)]">
+        <span className="min-w-12 text-center text-xs tabular-nums text-default-500">
           {Math.round(zoom * 100)}%
         </span>
         <Tooltip delay={300}>

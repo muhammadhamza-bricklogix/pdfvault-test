@@ -1,6 +1,6 @@
-# PDFForge Frontend
+# PDFedits Frontend
 
-Next.js frontend foundation for PDFForge with custom auth flows, shared UI primitives, and a modular `lib/` structure.
+Next.js frontend foundation for PDFedits with custom auth flows, shared UI primitives, and a modular `lib/` structure.
 
 ## Current Scope
 

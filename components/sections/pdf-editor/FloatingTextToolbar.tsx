@@ -193,7 +193,7 @@ export function FloatingTextToolbar({
         {/* Font size */}
         <input
           aria-label="Font size"
-          className="w-14 rounded border border-[var(--app-border)] bg-transparent px-2 py-1 text-sm"
+          className="w-14 rounded border border-default-200 bg-transparent px-2 py-1 text-sm"
           max={200}
           min={6}
           type="number"

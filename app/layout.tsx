@@ -15,11 +15,11 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: {
-    default: "PDFForge",
-    template: "%s | PDFForge",
+    default: "PDFedits",
+    template: "%s | PDFedits",
   },
   description:
-    "PDFForge is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
+    "PDFedits is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
   icons: {
     icon: "/favicon.ico",
   },

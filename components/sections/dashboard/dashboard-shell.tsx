@@ -46,9 +46,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
     <div className="flex h-screen w-full overflow-hidden bg-[var(--color-background)]">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden shrink-0 bg-[var(--app-surface)]/35 transition-[width] duration-200 lg:block ${
-          isCollapsed ? "w-16" : "w-60"
-        }`}
+        className={`hidden shrink-0 bg-default-100/35 transition-[width] duration-200 lg:block ${isCollapsed ? "w-16" : "w-60"
+          }`}
       >
         <SidebarBody collapsed={isCollapsed} />
       </aside>
@@ -70,7 +69,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <div className="flex h-14 shrink-0 items-center gap-3 bg-[var(--app-surface)]/35 px-4 lg:hidden">
+        <div className="flex h-14 shrink-0 items-center gap-3 bg-default-100/35 px-4 lg:hidden">
           <Button
             isIconOnly
             aria-label="Open navigation"

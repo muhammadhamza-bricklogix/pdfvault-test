@@ -89,7 +89,7 @@ function ShapeLinkModalContent({
             <input
               autoFocus
               aria-invalid={!!error}
-              className="h-11 rounded-lg bg-[var(--app-surface)] px-3 text-sm text-[var(--color-foreground)] outline-none placeholder:text-[var(--app-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className="h-11 rounded-lg bg-default-100 px-3 text-sm text-[var(--color-foreground)] outline-none placeholder:text-default-500 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               placeholder="https://example.com"
               type="url"
               value={value}
@@ -106,7 +106,7 @@ function ShapeLinkModalContent({
             <input
               autoFocus
               aria-invalid={!!error}
-              className="h-11 rounded-lg bg-[var(--app-surface)] px-3 text-sm text-[var(--color-foreground)] outline-none placeholder:text-[var(--app-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className="h-11 rounded-lg bg-default-100 px-3 text-sm text-[var(--color-foreground)] outline-none placeholder:text-default-500 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               placeholder="name@example.com"
               type="email"
               value={value}

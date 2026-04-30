@@ -79,7 +79,7 @@ function SignatureDrawPanel({ onSignatureReady }: PanelProps) {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="overflow-hidden rounded-lg border border-[var(--app-border)]">
+      <div className="overflow-hidden rounded-lg border border-default-200">
         <canvas ref={canvasRef} />
       </div>
       <Button size="sm" variant="ghost" onPress={handleClear}>
@@ -145,7 +145,7 @@ function SignatureTypePanel({ onSignatureReady }: PanelProps) {
   return (
     <div className="flex flex-col gap-3">
       <input
-        className="w-full rounded-lg border border-[var(--app-border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
+        className="w-full rounded-lg border border-default-200 bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
         placeholder="Type your signature"
         type="text"
         value={text}
@@ -153,7 +153,7 @@ function SignatureTypePanel({ onSignatureReady }: PanelProps) {
       />
       <div
         ref={previewRef}
-        className="flex min-h-20 items-center justify-center rounded-lg border border-[var(--app-border)] bg-white p-4"
+        className="flex min-h-20 items-center justify-center rounded-lg border border-default-200 bg-white p-4"
         style={{ fontFamily: "var(--font-dancing-script)", fontSize: "48px" }}
       >
         <span className="text-black">{text || "\u00A0"}</span>

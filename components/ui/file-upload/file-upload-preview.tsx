@@ -20,7 +20,7 @@ export function FileUploadPreview({ file, onClear }: FileUploadPreviewProps) {
   const typeLabel = getFileTypeLabel(file.type);
 
   return (
-    <Card className="w-full max-w-4xl rounded-[2rem] border bg-[var(--app-surface)] p-6 sm:p-8">
+    <Card className="w-full max-w-4xl rounded-[2rem] border bg-default-100 p-6 sm:p-8">
       <div className="flex items-center gap-4">
         <div className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-[var(--color-accent)] text-sm font-bold text-[var(--color-background)]">
           {typeLabel}

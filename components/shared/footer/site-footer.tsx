@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -31,7 +32,7 @@ const FOOTER_COLUMNS = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-[var(--app-border)] bg-[var(--color-background)]">
+    <footer className="border-t border-default-200 bg-background">
       <div className="mx-auto max-w-7xl px-6 py-12 sm:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
           {FOOTER_COLUMNS.map((column) => (
@@ -43,7 +44,7 @@ export function SiteFooter() {
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <Link
-                      className="text-sm text-[var(--app-muted)] transition-colors hover:text-[var(--color-foreground)]"
+                      className="text-sm text-default-500 transition-colors hover:text-foreground"
                       href={link.href}
                     >
                       {link.label}
@@ -55,16 +56,21 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-4 border-t border-[var(--app-border)] pt-8 sm:flex-row sm:justify-between">
-          <Link
-            className="text-lg font-semibold tracking-tight"
-            href={ROUTES.PUBLIC.HOME}
-          >
-            <span className="text-[var(--color-accent)]">pdf</span>
-            <span className="text-[var(--color-foreground)]">forge</span>
+        <div className="mt-12 flex flex-col items-center gap-4 border-t border-default-200 pt-8 sm:flex-row sm:justify-between">
+          <Link className="flex items-center gap-2" href={ROUTES.PUBLIC.HOME}>
+            <Image
+              alt="PDFedits"
+              height={32}
+              src="/logo.svg"
+              width={32}
+            />
+            <span className="text-lg font-semibold tracking-tight">
+              <span className="text-[var(--color-accent)]">PDF</span>
+              <span className="text-[var(--color-foreground)]">edits</span>
+            </span>
           </Link>
-          <p className="text-sm text-[var(--app-muted)]">
-            &copy; {new Date().getFullYear()} PDFForge. All rights reserved.
+          <p className="text-sm text-default-500">
+            &copy; {new Date().getFullYear()} PDFedits. All rights reserved.
           </p>
         </div>
       </div>

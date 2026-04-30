@@ -29,6 +29,8 @@ export type UploadDocumentInput = {
   documentId?: string;
   /** Override filename when sending a Blob without a name. */
   fileName?: string;
+  /** Tracking id used to subscribe to the upload-progress SSE stream. */
+  trackingId?: string;
 };
 
 export type RenameDocumentInput = {

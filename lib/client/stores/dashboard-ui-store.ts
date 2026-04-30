@@ -22,7 +22,7 @@ export const useDashboardUiStore = create<DashboardUiState>()(
       setMobileDrawerOpen: (value) => set({ isMobileDrawerOpen: value }),
     }),
     {
-      name: "pdfforge:dashboard-ui",
+      name: "pdfedits:dashboard-ui",
       partialize: (s) => ({ isSidebarCollapsed: s.isSidebarCollapsed }),
     },
   ),

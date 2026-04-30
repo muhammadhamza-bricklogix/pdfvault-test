@@ -13,8 +13,10 @@ import { Button, Dropdown, Label, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
+import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { toast } from "@/lib/shared/utils/toast";
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
@@ -22,6 +24,14 @@ export function HamburgerMenu() {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const { start } = useTrackedUpload();
+
+  const requireSignIn = () => {
+    toast.info({
+      title: "Sign in required",
+      description: "Sign in to access your saved PDFs.",
+    });
+  };
 
   const handleAction = (key: Key) => {
     switch (key) {
@@ -32,6 +42,11 @@ export function HamburgerMenu() {
         fileInputRef.current?.click();
         break;
       case "my-pdfs":
+        if (!isSignedIn) {
+          requireSignIn();
+
+          return;
+        }
         router.push(ROUTES.APP.DASHBOARD);
         break;
     }
@@ -40,12 +55,22 @@ export function HamburgerMenu() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
-    if (file) {
-      clearFile();
-      setTimeout(() => setFile(file), 0);
+    e.target.value = "";
+    if (!file) return;
+
+    if (isSignedIn) {
+      // Cloud upload + open the new doc in this editor when ready.
+      start({
+        file,
+        onOpen: (id) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`),
+      });
+
+      return;
     }
 
-    e.target.value = "";
+    // Signed-out: local-only — preserve previous behavior.
+    clearFile();
+    setTimeout(() => setFile(file), 0);
   };
 
   return (
@@ -69,12 +94,14 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={FolderOpenIcon} size={14} />
               <Label>Open File</Label>
             </Dropdown.Item>
-            {isSignedIn && (
-              <Dropdown.Item id="my-pdfs" textValue="My PDFs">
-                <HugeiconsIcon icon={NoteIcon} size={14} />
-                <Label>My PDFs</Label>
-              </Dropdown.Item>
-            )}
+            <Dropdown.Item
+              className={isSignedIn ? "" : "text-default-400 opacity-60"}
+              id="my-pdfs"
+              textValue="My PDFs"
+            >
+              <HugeiconsIcon icon={NoteIcon} size={14} />
+              <Label>My PDFs</Label>
+            </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>
       </Dropdown>

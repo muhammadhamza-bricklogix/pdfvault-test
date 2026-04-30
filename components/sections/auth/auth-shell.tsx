@@ -23,14 +23,14 @@ export function AuthShell({
         <h1 className="max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
           {title}
         </h1>
-        <p className="max-w-xl text-lg leading-8 text-[var(--app-muted)]">
+        <p className="max-w-xl text-lg leading-8 text-default-500">
           {description}
         </p>
       </div>
 
-      <div className="rounded-[2rem] border bg-[var(--app-surface)] p-6 sm:p-8">
+      <div className="rounded-[2rem] border bg-default-100 p-6 sm:p-8">
         {children}
-        <p className="mt-6 text-sm text-[var(--app-muted)]">
+        <p className="mt-6 text-sm text-default-500">
           {alternateText}{" "}
           <Link
             className="font-semibold text-[var(--color-accent)]"

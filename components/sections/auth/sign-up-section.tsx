@@ -31,7 +31,7 @@ export function SignUpSection() {
       alternateLabel="Sign in"
       alternateText="Already have an account?"
       description="Create your account with email and password, then confirm the verification code we send before you land back in the app."
-      title="Create your PDFForge account"
+      title="Create your PDFedits account"
     >
       {verificationMode ? (
         <Form onSubmit={handleVerificationSubmit}>
@@ -85,7 +85,7 @@ export function SignUpSection() {
 
           <div className="flex items-center gap-4">
             <Separator className="flex-1" />
-            <span className="text-xs text-[var(--app-muted)]">or</span>
+            <span className="text-xs text-default-500">or</span>
             <Separator className="flex-1" />
           </div>
 

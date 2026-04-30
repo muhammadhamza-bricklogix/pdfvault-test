@@ -51,21 +51,21 @@ export function renderDocumentCell(
 
     case "sizeBytes":
       return (
-        <span className="text-sm text-[var(--app-muted)]">
+        <span className="text-sm text-default-500">
           {formatBytes(doc.sizeBytes)}
         </span>
       );
 
     case "pageCount":
       return (
-        <span className="text-sm text-[var(--app-muted)]">
+        <span className="text-sm text-default-500">
           {doc.pageCount ?? "—"}
         </span>
       );
 
     case "updatedAt":
       return (
-        <span className="text-sm text-[var(--app-muted)]">
+        <span className="text-sm text-default-500">
           {formatDate(doc.updatedAt)}
         </span>
       );

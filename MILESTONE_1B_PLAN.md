@@ -204,7 +204,7 @@ Add a section to this doc capturing the strategy. **No code in this milestone.**
 
 - **Why:** offline view of recently-opened PDFs; resilience when a presigned URL expires before the user reloads; faster repeat-opens.
 - **What to cache:** PDF blob keyed by `documentId`, with `updatedAt` as cache version; metadata snapshot for offline list.
-- **How:** `idb` library; single DB `pdfforge`; stores `documents-blobs` (key: `id`, value: `{ blob, updatedAt }`) and `documents-meta` (key: `id`, value: `Document`). Read-through pattern in the viewer: `getBlob(id, updatedAt)` → if hit, return; else fetch presigned URL → fetch blob → save to IDB → return.
+- **How:** `idb` library; single DB `pdfedits`; stores `documents-blobs` (key: `id`, value: `{ blob, updatedAt }`) and `documents-meta` (key: `id`, value: `Document`). Read-through pattern in the viewer: `getBlob(id, updatedAt)` → if hit, return; else fetch presigned URL → fetch blob → save to IDB → return.
 - **Eviction:** LRU with ~200 MB cap; track `lastAccessedAt` per entry.
 - **Conflict:** if server `updatedAt > local`, refetch and overwrite.
 - **Out of scope:** offline mutations / queue / sync; service worker.

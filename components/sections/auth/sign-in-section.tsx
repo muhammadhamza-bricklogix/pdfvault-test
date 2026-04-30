@@ -30,8 +30,8 @@ export function SignInSection() {
       alternateHref={ROUTES.AUTH.SIGN_UP}
       alternateLabel="Create one"
       alternateText="Need an account?"
-      description="Use your email address and password to get into PDFForge. If Clerk asks for an extra check, we keep that verification inside this route."
-      title="Sign in to your PDFForge workspace"
+      description="Use your email address and password to get into PDFedits. If Clerk asks for an extra check, we keep that verification inside this route."
+      title="Sign in to your PDFedits workspace"
     >
       {verificationMode ? (
         <Form onSubmit={handleVerificationSubmit}>
@@ -85,7 +85,7 @@ export function SignInSection() {
 
           <div className="flex items-center gap-4">
             <Separator className="flex-1" />
-            <span className="text-xs text-[var(--app-muted)]">or</span>
+            <span className="text-xs text-default-500">or</span>
             <Separator className="flex-1" />
           </div>
 

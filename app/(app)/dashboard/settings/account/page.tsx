@@ -9,7 +9,7 @@ export default function AccountSettingsPage() {
         <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
           Account
         </h2>
-        <p className="text-sm text-[var(--app-muted)]">
+        <p className="text-sm text-default-500">
           Manage your email, password, connected accounts, and active sessions.
         </p>
       </header>
@@ -18,7 +18,7 @@ export default function AccountSettingsPage() {
         appearance={{
           elements: {
             rootBox: "w-full",
-            cardBox: "w-full shadow-none border border-[var(--app-border)]",
+            cardBox: "w-full shadow-none border border-default-200",
           },
         }}
         routing="hash"

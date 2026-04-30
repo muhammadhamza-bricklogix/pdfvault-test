@@ -1,5 +1,5 @@
 {
-	"name": "pdfforge-frontend",
+	"name": "pdfedits-frontend",
 	"engines": {
     "bun": "1.2.19" 
   },

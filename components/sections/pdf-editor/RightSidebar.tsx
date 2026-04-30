@@ -4,7 +4,9 @@ import type { Canvas as FabricCanvas } from "fabric";
 import type { ShapeType } from "@/lib/client/stores/pdf-editor-store";
 
 import {
+  ArrowDown01Icon,
   ArrowDownRight01Icon,
+  ArrowUp01Icon,
   CircleIcon,
   LayerBringForwardIcon,
   LayerBringToFrontIcon,
@@ -20,7 +22,9 @@ import {
   ColorArea,
   ColorPicker,
   ColorSlider,
+  ColorSwatch,
   Label,
+  NumberField,
   Slider,
   Surface,
   Tooltip,
@@ -67,8 +71,10 @@ const SHAPE_OPTIONS = [
   { icon: ArrowDownRight01Icon, label: "Arrow", value: "arrow" },
 ] as const;
 
+const TRANSPARENT_FILL = "transparent";
+
 const FILL_SWATCHES = [
-  { color: "transparent", label: "Transparent" },
+  { color: TRANSPARENT_FILL, label: "Transparent" },
   { color: "#FFFFFF", label: "White" },
   { color: "#FCA5A5", label: "Red" },
   { color: "#86EFAC", label: "Green" },
@@ -101,6 +107,41 @@ function Section({
   );
 }
 
+function DimensionField({
+  label,
+  minValue,
+  onChange,
+  value,
+}: {
+  label: string;
+  minValue?: number;
+  onChange: (value: number) => void;
+  value: number;
+}) {
+  return (
+    <NumberField
+      aria-label={label}
+      className={"w-full p-0.5"}
+      minValue={minValue}
+      value={value}
+      onChange={(next) => {
+        if (Number.isFinite(next)) onChange(next);
+      }}
+    >
+      <Label className="text-xs text-default-500">{label}</Label>
+      <NumberField.Group>
+        <NumberField.DecrementButton>
+          <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+        </NumberField.DecrementButton>
+        <NumberField.Input />
+        <NumberField.IncrementButton>
+          <HugeiconsIcon icon={ArrowUp01Icon} size={16} />
+        </NumberField.IncrementButton>
+      </NumberField.Group>
+    </NumberField>
+  );
+}
+
 function SwatchButton({
   color,
   isSelected,
@@ -112,28 +153,24 @@ function SwatchButton({
   label: string;
   onPress: () => void;
 }) {
-  const isTransparent = color === "transparent";
-
   return (
     <Tooltip delay={300}>
       <button
         aria-label={label}
         aria-pressed={isSelected}
-        className={`grid size-7 place-items-center rounded-lg bg-[var(--app-surface)] transition hover:bg-[var(--app-border)] ${
-          isSelected ? "ring-2 ring-[var(--color-accent)]" : ""
-        }`}
+        className={`rounded-sm transition ${isSelected
+            ? "ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-default-100"
+            : ""
+          }`}
         type="button"
         onClick={onPress}
       >
-        <span
-          className="size-4 rounded-md"
-          style={{
-            background: isTransparent
-              ? "linear-gradient(135deg, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%)"
-              : color,
-            boxShadow:
-              "inset 0 0 0 1px color-mix(in oklab, var(--app-border), transparent 20%)",
-          }}
+        <ColorSwatch
+          aria-label={label}
+          color={color === "transparent" ? "rgba(0, 0, 0, 0)" : color}
+          colorName={label}
+          shape="square"
+          size="sm"
         />
       </button>
       <Tooltip.Content>
@@ -333,10 +370,10 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     <>
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-[var(--app-border)]/70"
+          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
-          <div className="flex max-h-[calc(100vh-10rem)] min-w-0 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden pr-1">
+          <div className="flex max-h-[calc(100vh-10rem)] min-w-0 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {showShapePanel && (
               <>
                 <Section title="Shape">
@@ -365,7 +402,7 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
                 </Section>
 
                 <Section title="Background">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2 p-1">
                     {FILL_SWATCHES.map((swatch) => (
                       <SwatchButton
                         key={swatch.color}
@@ -377,11 +414,19 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
                     ))}
                     <ColorPicker
                       value={
-                        currentFill === "transparent" ? "#FFFFFF" : currentFill
+                        currentFill === TRANSPARENT_FILL
+                          ? "#FFFFFF"
+                          : currentFill
                       }
                       onChange={(color) => setFill(color.toString("hex"))}
                     >
-                      <ColorPicker.Trigger className="size-7 rounded-lg bg-[var(--app-surface)] p-0" />
+                      <ColorPicker.Trigger>
+                        <ColorSwatch
+                          aria-label="Custom background color"
+                          shape="square"
+                          size="sm"
+                        />
+                      </ColorPicker.Trigger>
                       <ColorPicker.Popover>
                         <ColorArea
                           aria-label="Background color area"
@@ -407,7 +452,7 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
                 </Section>
 
                 <Section title="Stroke">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2 p-1">
                     {STROKE_SWATCHES.map((swatch) => (
                       <SwatchButton
                         key={swatch.color}
@@ -421,7 +466,13 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
                       value={currentStroke || "#000000"}
                       onChange={(color) => setStroke(color.toString("hex"))}
                     >
-                      <ColorPicker.Trigger className="size-7 rounded-lg bg-[var(--app-surface)] p-0" />
+                      <ColorPicker.Trigger>
+                        <ColorSwatch
+                          aria-label="Custom stroke color"
+                          shape="square"
+                          size="sm"
+                        />
+                      </ColorPicker.Trigger>
                       <ColorPicker.Popover>
                         <ColorArea
                           aria-label="Stroke color area"
@@ -478,7 +529,7 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
                 <Section title="Link">
                   <div className="flex items-center justify-between gap-2">
                     <HugeiconsIcon
-                      className="text-[var(--app-muted)]"
+                      className="text-default-500"
                       icon={Link01Icon}
                       size={16}
                     />
@@ -563,11 +614,12 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
 
             {selectedProps && (
               <>
-                <div className="h-px bg-[var(--app-border)]/70" />
+                <div className="h-5 w-1 bg-default-200/70" />
 
                 <Section title="Opacity">
                   <Slider
                     aria-label="Opacity"
+                    className={"p-1"}
                     maxValue={100}
                     minValue={0}
                     value={selectedProps.opacity}
@@ -575,10 +627,10 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
                       applyToSelectedObject({ opacity: value as number })
                     }
                   >
-                    <Label className="text-xs text-[var(--app-muted)]">
+                    <Label className="text-xs text-default-500">
                       Value
                     </Label>
-                    <Slider.Output className="text-xs text-[var(--app-muted)]" />
+                    <Slider.Output className="text-xs text-default-500" />
                     <Slider.Track>
                       <Slider.Fill />
                       <Slider.Thumb />
@@ -588,69 +640,33 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
 
                 <Section title="Position">
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs text-[var(--app-muted)]">X</span>
-                      <input
-                        aria-label="X position"
-                        className="h-8 rounded-lg bg-[var(--app-surface)] px-2 text-xs text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                        type="number"
-                        value={selectedProps.left}
-                        onChange={(event) =>
-                          applyToSelectedObject({
-                            left: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs text-[var(--app-muted)]">Y</span>
-                      <input
-                        aria-label="Y position"
-                        className="h-8 rounded-lg bg-[var(--app-surface)] px-2 text-xs text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                        type="number"
-                        value={selectedProps.top}
-                        onChange={(event) =>
-                          applyToSelectedObject({
-                            top: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
+                    <DimensionField
+                      label="X"
+                      value={selectedProps.left}
+                      onChange={(left) => applyToSelectedObject({ left })}
+                    />
+                    <DimensionField
+                      label="Y"
+                      value={selectedProps.top}
+                      onChange={(top) => applyToSelectedObject({ top })}
+                    />
                   </div>
                 </Section>
 
                 <Section title="Size">
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs text-[var(--app-muted)]">W</span>
-                      <input
-                        aria-label="Width"
-                        className="h-8 rounded-lg bg-[var(--app-surface)] px-2 text-xs text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                        min={1}
-                        type="number"
-                        value={selectedProps.width}
-                        onChange={(event) =>
-                          applyToSelectedObject({
-                            width: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs text-[var(--app-muted)]">H</span>
-                      <input
-                        aria-label="Height"
-                        className="h-8 rounded-lg bg-[var(--app-surface)] px-2 text-xs text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                        min={1}
-                        type="number"
-                        value={selectedProps.height}
-                        onChange={(event) =>
-                          applyToSelectedObject({
-                            height: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
+                    <DimensionField
+                      label="W"
+                      minValue={1}
+                      value={selectedProps.width}
+                      onChange={(width) => applyToSelectedObject({ width })}
+                    />
+                    <DimensionField
+                      label="H"
+                      minValue={1}
+                      value={selectedProps.height}
+                      onChange={(height) => applyToSelectedObject({ height })}
+                    />
                   </div>
                 </Section>
               </>

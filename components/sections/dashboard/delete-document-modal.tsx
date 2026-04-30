@@ -35,7 +35,7 @@ export function DeleteDocumentModal({ document: doc, onClose }: Props) {
             <Modal.Heading>Delete document?</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
-            <p className="text-sm text-[var(--app-muted)]">
+            <p className="text-sm text-default-500">
               {doc ? (
                 <>
                   This will permanently delete{" "}
