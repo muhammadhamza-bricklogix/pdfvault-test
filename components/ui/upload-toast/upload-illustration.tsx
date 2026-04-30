@@ -16,7 +16,7 @@ export function UploadIllustration({ status }: Props) {
   const isPending = status === "uploading" || status === "queued";
   const accent =
     status === "success"
-      ? "text-success"
+      ? "text-accent"
       : status === "error"
         ? "text-danger"
         : "text-accent";
@@ -31,7 +31,7 @@ export function UploadIllustration({ status }: Props) {
   return (
     <div
       aria-hidden
-      className={`relative flex h-20 w-20 shrink-0 items-center justify-center ${accent}`}
+      className={`relative w-full flex h-20 shrink-0 items-center justify-center ${accent}`}
     >
       <Component
         className={`h-full w-full${isPending ? " animate-illust-float" : ""}`}

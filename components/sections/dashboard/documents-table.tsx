@@ -32,11 +32,8 @@ const COLUMNS: DataTableColumn<Document>[] = [
 ];
 
 const EmptyDocuments = (
-  <div className="flex items-center justify-center gap-3 rounded-lg p-6 text-center">
-    <UploadErrorIllustration className="h-24 w-24 text-danger opacity-50" />
-    <AddFilesIllustration className="h-24 w-24 text-accent" />
-    <FilesUploadingIllustration className="h-24 w-24 text-danger" />
-    <SuccessfulUploadIllustration className="h-24 w-24 text-success opacity-50" />
+  <div className="flex flex-col items-center justify-center gap-3 rounded-lg p-6 text-center">
+    <AddFilesIllustration className="size-32 text-accent" />
     <p className="text-sm font-medium">No documents yet</p>
     <p className="text-xs text-default-500">Upload a PDF to see it here.</p>
   </div>

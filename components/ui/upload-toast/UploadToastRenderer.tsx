@@ -58,9 +58,7 @@ export function UploadToastRenderer({ toast: toastItem }: Props) {
             <StatusBadge state={state} />
           </div>
           <ProgressTrack progress={state.progress} status={state.status} />
-          <p className="truncate text-sm text-default-500">
-            {state.message}
-          </p>
+          <p className="truncate text-sm text-default-500">{state.message}</p>
           <ToastActions state={state} />
         </div>
       </Toast.Content>
@@ -86,11 +84,7 @@ function StatusBadge({ state }: { state: UploadToastState }) {
         </span>
       );
     case "queued":
-      return (
-        <span className="shrink-0 text-sm text-default-500">
-          Waiting
-        </span>
-      );
+      return <span className="shrink-0 text-sm text-default-500">Waiting</span>;
     default:
       return (
         <span className="flex shrink-0 items-center gap-1 text-sm text-default-500">
