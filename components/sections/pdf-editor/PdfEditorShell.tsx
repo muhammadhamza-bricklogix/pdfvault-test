@@ -8,9 +8,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
+import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { FileUpload } from "@/components/ui/file-upload";
 
+import { BottomDock } from "./BottomDock";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
@@ -41,6 +43,7 @@ function EditorLayout() {
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
@@ -60,6 +63,27 @@ function EditorLayout() {
   }
 
   if (!pdfDocument) return null;
+
+  if (isMobile) {
+    return (
+      <>
+        <EditorInfoBar />
+        <div className="relative flex flex-1 overflow-hidden">
+          <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+          <div className="pointer-events-none absolute right-4 top-4 z-10">
+            <div className="pointer-events-auto">
+              <PerformancePanel
+                fabricCanvas={fabricCanvas}
+                isOpen={isPerformancePanelOpen}
+                setIsOpen={setIsPerformancePanelOpen}
+              />
+            </div>
+          </div>
+        </div>
+        <BottomDock fabricCanvas={fabricCanvas} />
+      </>
+    );
+  }
 
   return (
     <>

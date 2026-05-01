@@ -67,13 +67,19 @@ export const uploadToasts = {
     useUploadToastStore.getState().patch(trackingId, patch);
   },
   succeed(trackingId: string, doc: Document) {
-    useUploadToastStore.getState().patch(trackingId, {
+    const store = useUploadToastStore.getState();
+    const existing = store.byId[trackingId];
+
+    store.patch(trackingId, {
       status: "success",
       stage: "complete",
       progress: 100,
       message: "Upload complete",
       documentId: doc.id,
     });
+    // Auto-open the new document in the editor as soon as the upload
+    // completes, so the user doesn't have to click "Open" on the toast.
+    existing?.onOpen?.(doc.id);
     setTimeout(() => uploadToasts.close(trackingId), SUCCESS_AUTO_DISMISS_MS);
   },
   fail(trackingId: string, error: unknown) {
