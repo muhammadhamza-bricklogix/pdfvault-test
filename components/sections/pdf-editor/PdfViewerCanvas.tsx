@@ -168,7 +168,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [undo, redo]);
 
   return (
-    <div className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="shadow-lg">
         <div ref={containerRef} className="relative">
           <canvas

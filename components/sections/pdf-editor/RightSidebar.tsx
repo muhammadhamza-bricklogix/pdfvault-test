@@ -58,6 +58,16 @@ type SelectedObjectProps = {
   width: number;
 };
 
+type Orientation = "horizontal" | "vertical";
+
+type ShapePropertiesVariant = "floating" | "inline" | "strip";
+
+type ShapePropertiesContentProps = {
+  fabricCanvas: FabricCanvas | null;
+  orientation?: Orientation;
+  variant?: ShapePropertiesVariant;
+};
+
 type RightSidebarProps = {
   fabricCanvas: FabricCanvas | null;
 };
@@ -158,10 +168,11 @@ function SwatchButton({
       <button
         aria-label={label}
         aria-pressed={isSelected}
-        className={`rounded-sm transition ${isSelected
+        className={`rounded-sm transition ${
+          isSelected
             ? "ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-default-100"
             : ""
-          }`}
+        }`}
         type="button"
         onClick={onPress}
       >
@@ -180,7 +191,11 @@ function SwatchButton({
   );
 }
 
-export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
+export function ShapePropertiesContent({
+  fabricCanvas,
+  orientation = "vertical",
+  variant = "inline",
+}: ShapePropertiesContentProps) {
   const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const shapeFill = usePdfEditorStore((s) => s.shapeFill);
@@ -366,320 +381,385 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     return null;
   }
 
+  const isHorizontal = orientation === "horizontal";
+  const containerClass = isHorizontal
+    ? "flex min-w-0 max-w-full flex-row items-start gap-6 overflow-x-auto overflow-y-hidden px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    : "flex max-h-[calc(100vh-10rem)] min-w-0 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  const sectionWrapperClass = isHorizontal ? "shrink-0" : "";
+  const dividerClass = isHorizontal
+    ? "h-12 w-px shrink-0 self-center bg-default-200/70"
+    : "h-5 w-1 bg-default-200/70";
+
+  const body = (
+    <div className={containerClass}>
+      {showShapePanel && (
+        <>
+          <div className={sectionWrapperClass}>
+            <Section title="Shape">
+              <div className="flex flex-wrap gap-2">
+                {SHAPE_OPTIONS.map((shape) => (
+                  <Tooltip key={shape.value} delay={300}>
+                    <Button
+                      isIconOnly
+                      aria-label={shape.label}
+                      size="sm"
+                      variant={
+                        activeShapeType === shape.value ? "secondary" : "ghost"
+                      }
+                      onPress={() => setShape(shape.value)}
+                    >
+                      <HugeiconsIcon icon={shape.icon} size={16} />
+                    </Button>
+                    <Tooltip.Content>
+                      <p>{shape.label}</p>
+                    </Tooltip.Content>
+                  </Tooltip>
+                ))}
+              </div>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Background">
+              <div className="flex flex-wrap items-center gap-2 p-1">
+                {FILL_SWATCHES.map((swatch) => (
+                  <SwatchButton
+                    key={swatch.color}
+                    color={swatch.color}
+                    isSelected={currentFill === swatch.color}
+                    label={swatch.label}
+                    onPress={() => setFill(swatch.color)}
+                  />
+                ))}
+                <ColorPicker
+                  value={
+                    currentFill === TRANSPARENT_FILL ? "#FFFFFF" : currentFill
+                  }
+                  onChange={(color) => setFill(color.toString("hex"))}
+                >
+                  <ColorPicker.Trigger>
+                    <ColorSwatch
+                      aria-label="Custom background color"
+                      shape="square"
+                      size="sm"
+                    />
+                  </ColorPicker.Trigger>
+                  <ColorPicker.Popover>
+                    <ColorArea
+                      aria-label="Background color area"
+                      className="max-w-full"
+                      colorSpace="hsb"
+                      xChannel="saturation"
+                      yChannel="brightness"
+                    >
+                      <ColorArea.Thumb />
+                    </ColorArea>
+                    <ColorSlider
+                      channel="hue"
+                      className="gap-1 px-1"
+                      colorSpace="hsb"
+                    >
+                      <ColorSlider.Track>
+                        <ColorSlider.Thumb />
+                      </ColorSlider.Track>
+                    </ColorSlider>
+                  </ColorPicker.Popover>
+                </ColorPicker>
+              </div>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Stroke">
+              <div className="flex flex-wrap items-center gap-2 p-1">
+                {STROKE_SWATCHES.map((swatch) => (
+                  <SwatchButton
+                    key={swatch.color}
+                    color={swatch.color}
+                    isSelected={currentStroke === swatch.color}
+                    label={swatch.label}
+                    onPress={() => setStroke(swatch.color)}
+                  />
+                ))}
+                <ColorPicker
+                  value={currentStroke || "#000000"}
+                  onChange={(color) => setStroke(color.toString("hex"))}
+                >
+                  <ColorPicker.Trigger>
+                    <ColorSwatch
+                      aria-label="Custom stroke color"
+                      shape="square"
+                      size="sm"
+                    />
+                  </ColorPicker.Trigger>
+                  <ColorPicker.Popover>
+                    <ColorArea
+                      aria-label="Stroke color area"
+                      className="max-w-full"
+                      colorSpace="hsb"
+                      xChannel="saturation"
+                      yChannel="brightness"
+                    >
+                      <ColorArea.Thumb />
+                    </ColorArea>
+                    <ColorSlider
+                      channel="hue"
+                      className="gap-1 px-1"
+                      colorSpace="hsb"
+                    >
+                      <ColorSlider.Track>
+                        <ColorSlider.Thumb />
+                      </ColorSlider.Track>
+                    </ColorSlider>
+                  </ColorPicker.Popover>
+                </ColorPicker>
+              </div>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Stroke thickness">
+              <div className="flex flex-wrap gap-2">
+                {STROKE_WIDTHS.map((width) => (
+                  <Button
+                    key={width}
+                    isIconOnly
+                    aria-label={width === 0 ? "No stroke" : `${width}px stroke`}
+                    size="sm"
+                    variant={
+                      currentStrokeWidth === width ? "secondary" : "ghost"
+                    }
+                    onPress={() => setStrokeWidth(width)}
+                  >
+                    <span
+                      className="block w-4 rounded-full bg-[var(--color-foreground)]"
+                      style={{
+                        height: width === 0 ? 1 : Math.max(width, 1),
+                      }}
+                    />
+                    {width === 0 && (
+                      <span className="absolute h-5 w-px rotate-45 bg-danger" />
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Link">
+              <div className="flex items-center justify-between gap-2">
+                <HugeiconsIcon
+                  className="text-default-500"
+                  icon={Link01Icon}
+                  size={16}
+                />
+                <Button
+                  isDisabled={!selectedProps}
+                  size="sm"
+                  variant={selectedProps?.linkUrl ? "secondary" : "ghost"}
+                  onPress={() => setIsLinkModalOpen(true)}
+                >
+                  {selectedProps?.linkUrl ? "Edit" : "Add"}
+                  <span className="text-base leading-none">+</span>
+                </Button>
+              </div>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Layers">
+              <div className="flex flex-wrap gap-2">
+                <Tooltip delay={300}>
+                  <Button
+                    isIconOnly
+                    aria-label="Send to back"
+                    isDisabled={!hasSelectedShape}
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => moveLayer("back")}
+                  >
+                    <HugeiconsIcon icon={LayerSendToBackIcon} size={16} />
+                  </Button>
+                  <Tooltip.Content>
+                    <p>Send to back</p>
+                  </Tooltip.Content>
+                </Tooltip>
+                <Tooltip delay={300}>
+                  <Button
+                    isIconOnly
+                    aria-label="Send backward"
+                    isDisabled={!hasSelectedShape}
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => moveLayer("backward")}
+                  >
+                    <HugeiconsIcon icon={LayerSendBackwardIcon} size={16} />
+                  </Button>
+                  <Tooltip.Content>
+                    <p>Send backward</p>
+                  </Tooltip.Content>
+                </Tooltip>
+                <Tooltip delay={300}>
+                  <Button
+                    isIconOnly
+                    aria-label="Bring forward"
+                    isDisabled={!hasSelectedShape}
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => moveLayer("forward")}
+                  >
+                    <HugeiconsIcon icon={LayerBringForwardIcon} size={16} />
+                  </Button>
+                  <Tooltip.Content>
+                    <p>Bring forward</p>
+                  </Tooltip.Content>
+                </Tooltip>
+                <Tooltip delay={300}>
+                  <Button
+                    isIconOnly
+                    aria-label="Bring to front"
+                    isDisabled={!hasSelectedShape}
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => moveLayer("front")}
+                  >
+                    <HugeiconsIcon icon={LayerBringToFrontIcon} size={16} />
+                  </Button>
+                  <Tooltip.Content>
+                    <p>Bring to front</p>
+                  </Tooltip.Content>
+                </Tooltip>
+              </div>
+            </Section>
+          </div>
+        </>
+      )}
+
+      {selectedProps && (
+        <>
+          <div className={dividerClass} />
+
+          <div className={sectionWrapperClass}>
+            <Section title="Opacity">
+              <Slider
+                aria-label="Opacity"
+                className={isHorizontal ? "w-40 p-1" : "p-1"}
+                maxValue={100}
+                minValue={0}
+                value={selectedProps.opacity}
+                onChange={(value) =>
+                  applyToSelectedObject({ opacity: value as number })
+                }
+              >
+                <Label className="text-xs text-default-500">Value</Label>
+                <Slider.Output className="text-xs text-default-500" />
+                <Slider.Track>
+                  <Slider.Fill />
+                  <Slider.Thumb />
+                </Slider.Track>
+              </Slider>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Position">
+              <div
+                className={
+                  isHorizontal ? "flex w-40 gap-2" : "grid grid-cols-2 gap-2"
+                }
+              >
+                <DimensionField
+                  label="X"
+                  value={selectedProps.left}
+                  onChange={(left) => applyToSelectedObject({ left })}
+                />
+                <DimensionField
+                  label="Y"
+                  value={selectedProps.top}
+                  onChange={(top) => applyToSelectedObject({ top })}
+                />
+              </div>
+            </Section>
+          </div>
+
+          <div className={sectionWrapperClass}>
+            <Section title="Size">
+              <div
+                className={
+                  isHorizontal ? "flex w-40 gap-2" : "grid grid-cols-2 gap-2"
+                }
+              >
+                <DimensionField
+                  label="W"
+                  minValue={1}
+                  value={selectedProps.width}
+                  onChange={(width) => applyToSelectedObject({ width })}
+                />
+                <DimensionField
+                  label="H"
+                  minValue={1}
+                  value={selectedProps.height}
+                  onChange={(height) => applyToSelectedObject({ height })}
+                />
+              </div>
+            </Section>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const shapeLinkModal = (
+    <ShapeLinkModal
+      initialValue={selectedProps?.linkUrl ?? ""}
+      isOpen={isLinkModalOpen}
+      onClose={() => setIsLinkModalOpen(false)}
+      onSave={saveLink}
+    />
+  );
+
+  if (variant === "floating") {
+    return (
+      <>
+        <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
+          <Surface
+            className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+            variant="default"
+          >
+            {body}
+          </Surface>
+        </aside>
+        {shapeLinkModal}
+      </>
+    );
+  }
+
+  if (variant === "strip") {
+    return (
+      <>
+        <div className="border-b border-default-200/70 bg-default-50/70 px-3 py-2">
+          {body}
+        </div>
+        {shapeLinkModal}
+      </>
+    );
+  }
+
   return (
     <>
-      <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
-        <Surface
-          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
-          variant="default"
-        >
-          <div className="flex max-h-[calc(100vh-10rem)] min-w-0 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {showShapePanel && (
-              <>
-                <Section title="Shape">
-                  <div className="flex flex-wrap gap-2">
-                    {SHAPE_OPTIONS.map((shape) => (
-                      <Tooltip key={shape.value} delay={300}>
-                        <Button
-                          isIconOnly
-                          aria-label={shape.label}
-                          size="sm"
-                          variant={
-                            activeShapeType === shape.value
-                              ? "secondary"
-                              : "ghost"
-                          }
-                          onPress={() => setShape(shape.value)}
-                        >
-                          <HugeiconsIcon icon={shape.icon} size={16} />
-                        </Button>
-                        <Tooltip.Content>
-                          <p>{shape.label}</p>
-                        </Tooltip.Content>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </Section>
-
-                <Section title="Background">
-                  <div className="flex flex-wrap items-center gap-2 p-1">
-                    {FILL_SWATCHES.map((swatch) => (
-                      <SwatchButton
-                        key={swatch.color}
-                        color={swatch.color}
-                        isSelected={currentFill === swatch.color}
-                        label={swatch.label}
-                        onPress={() => setFill(swatch.color)}
-                      />
-                    ))}
-                    <ColorPicker
-                      value={
-                        currentFill === TRANSPARENT_FILL
-                          ? "#FFFFFF"
-                          : currentFill
-                      }
-                      onChange={(color) => setFill(color.toString("hex"))}
-                    >
-                      <ColorPicker.Trigger>
-                        <ColorSwatch
-                          aria-label="Custom background color"
-                          shape="square"
-                          size="sm"
-                        />
-                      </ColorPicker.Trigger>
-                      <ColorPicker.Popover>
-                        <ColorArea
-                          aria-label="Background color area"
-                          className="max-w-full"
-                          colorSpace="hsb"
-                          xChannel="saturation"
-                          yChannel="brightness"
-                        >
-                          <ColorArea.Thumb />
-                        </ColorArea>
-                        <ColorSlider
-                          channel="hue"
-                          className="gap-1 px-1"
-                          colorSpace="hsb"
-                        >
-                          <ColorSlider.Track>
-                            <ColorSlider.Thumb />
-                          </ColorSlider.Track>
-                        </ColorSlider>
-                      </ColorPicker.Popover>
-                    </ColorPicker>
-                  </div>
-                </Section>
-
-                <Section title="Stroke">
-                  <div className="flex flex-wrap items-center gap-2 p-1">
-                    {STROKE_SWATCHES.map((swatch) => (
-                      <SwatchButton
-                        key={swatch.color}
-                        color={swatch.color}
-                        isSelected={currentStroke === swatch.color}
-                        label={swatch.label}
-                        onPress={() => setStroke(swatch.color)}
-                      />
-                    ))}
-                    <ColorPicker
-                      value={currentStroke || "#000000"}
-                      onChange={(color) => setStroke(color.toString("hex"))}
-                    >
-                      <ColorPicker.Trigger>
-                        <ColorSwatch
-                          aria-label="Custom stroke color"
-                          shape="square"
-                          size="sm"
-                        />
-                      </ColorPicker.Trigger>
-                      <ColorPicker.Popover>
-                        <ColorArea
-                          aria-label="Stroke color area"
-                          className="max-w-full"
-                          colorSpace="hsb"
-                          xChannel="saturation"
-                          yChannel="brightness"
-                        >
-                          <ColorArea.Thumb />
-                        </ColorArea>
-                        <ColorSlider
-                          channel="hue"
-                          className="gap-1 px-1"
-                          colorSpace="hsb"
-                        >
-                          <ColorSlider.Track>
-                            <ColorSlider.Thumb />
-                          </ColorSlider.Track>
-                        </ColorSlider>
-                      </ColorPicker.Popover>
-                    </ColorPicker>
-                  </div>
-                </Section>
-
-                <Section title="Stroke thickness">
-                  <div className="flex flex-wrap gap-2">
-                    {STROKE_WIDTHS.map((width) => (
-                      <Button
-                        key={width}
-                        isIconOnly
-                        aria-label={
-                          width === 0 ? "No stroke" : `${width}px stroke`
-                        }
-                        size="sm"
-                        variant={
-                          currentStrokeWidth === width ? "secondary" : "ghost"
-                        }
-                        onPress={() => setStrokeWidth(width)}
-                      >
-                        <span
-                          className="block w-4 rounded-full bg-[var(--color-foreground)]"
-                          style={{
-                            height: width === 0 ? 1 : Math.max(width, 1),
-                          }}
-                        />
-                        {width === 0 && (
-                          <span className="absolute h-5 w-px rotate-45 bg-danger" />
-                        )}
-                      </Button>
-                    ))}
-                  </div>
-                </Section>
-
-                <Section title="Link">
-                  <div className="flex items-center justify-between gap-2">
-                    <HugeiconsIcon
-                      className="text-default-500"
-                      icon={Link01Icon}
-                      size={16}
-                    />
-                    <Button
-                      isDisabled={!selectedProps}
-                      size="sm"
-                      variant={selectedProps?.linkUrl ? "secondary" : "ghost"}
-                      onPress={() => setIsLinkModalOpen(true)}
-                    >
-                      {selectedProps?.linkUrl ? "Edit" : "Add"}
-                      <span className="text-base leading-none">+</span>
-                    </Button>
-                  </div>
-                </Section>
-
-                <Section title="Layers">
-                  <div className="flex flex-wrap gap-2">
-                    <Tooltip delay={300}>
-                      <Button
-                        isIconOnly
-                        aria-label="Send to back"
-                        isDisabled={!hasSelectedShape}
-                        size="sm"
-                        variant="ghost"
-                        onPress={() => moveLayer("back")}
-                      >
-                        <HugeiconsIcon icon={LayerSendToBackIcon} size={16} />
-                      </Button>
-                      <Tooltip.Content>
-                        <p>Send to back</p>
-                      </Tooltip.Content>
-                    </Tooltip>
-                    <Tooltip delay={300}>
-                      <Button
-                        isIconOnly
-                        aria-label="Send backward"
-                        isDisabled={!hasSelectedShape}
-                        size="sm"
-                        variant="ghost"
-                        onPress={() => moveLayer("backward")}
-                      >
-                        <HugeiconsIcon icon={LayerSendBackwardIcon} size={16} />
-                      </Button>
-                      <Tooltip.Content>
-                        <p>Send backward</p>
-                      </Tooltip.Content>
-                    </Tooltip>
-                    <Tooltip delay={300}>
-                      <Button
-                        isIconOnly
-                        aria-label="Bring forward"
-                        isDisabled={!hasSelectedShape}
-                        size="sm"
-                        variant="ghost"
-                        onPress={() => moveLayer("forward")}
-                      >
-                        <HugeiconsIcon icon={LayerBringForwardIcon} size={16} />
-                      </Button>
-                      <Tooltip.Content>
-                        <p>Bring forward</p>
-                      </Tooltip.Content>
-                    </Tooltip>
-                    <Tooltip delay={300}>
-                      <Button
-                        isIconOnly
-                        aria-label="Bring to front"
-                        isDisabled={!hasSelectedShape}
-                        size="sm"
-                        variant="ghost"
-                        onPress={() => moveLayer("front")}
-                      >
-                        <HugeiconsIcon icon={LayerBringToFrontIcon} size={16} />
-                      </Button>
-                      <Tooltip.Content>
-                        <p>Bring to front</p>
-                      </Tooltip.Content>
-                    </Tooltip>
-                  </div>
-                </Section>
-              </>
-            )}
-
-            {selectedProps && (
-              <>
-                <div className="h-5 w-1 bg-default-200/70" />
-
-                <Section title="Opacity">
-                  <Slider
-                    aria-label="Opacity"
-                    className={"p-1"}
-                    maxValue={100}
-                    minValue={0}
-                    value={selectedProps.opacity}
-                    onChange={(value) =>
-                      applyToSelectedObject({ opacity: value as number })
-                    }
-                  >
-                    <Label className="text-xs text-default-500">
-                      Value
-                    </Label>
-                    <Slider.Output className="text-xs text-default-500" />
-                    <Slider.Track>
-                      <Slider.Fill />
-                      <Slider.Thumb />
-                    </Slider.Track>
-                  </Slider>
-                </Section>
-
-                <Section title="Position">
-                  <div className="grid grid-cols-2 gap-2">
-                    <DimensionField
-                      label="X"
-                      value={selectedProps.left}
-                      onChange={(left) => applyToSelectedObject({ left })}
-                    />
-                    <DimensionField
-                      label="Y"
-                      value={selectedProps.top}
-                      onChange={(top) => applyToSelectedObject({ top })}
-                    />
-                  </div>
-                </Section>
-
-                <Section title="Size">
-                  <div className="grid grid-cols-2 gap-2">
-                    <DimensionField
-                      label="W"
-                      minValue={1}
-                      value={selectedProps.width}
-                      onChange={(width) => applyToSelectedObject({ width })}
-                    />
-                    <DimensionField
-                      label="H"
-                      minValue={1}
-                      value={selectedProps.height}
-                      onChange={(height) => applyToSelectedObject({ height })}
-                    />
-                  </div>
-                </Section>
-              </>
-            )}
-          </div>
-        </Surface>
-      </aside>
-      <ShapeLinkModal
-        initialValue={selectedProps?.linkUrl ?? ""}
-        isOpen={isLinkModalOpen}
-        onClose={() => setIsLinkModalOpen(false)}
-        onSave={saveLink}
-      />
+      {body}
+      {shapeLinkModal}
     </>
+  );
+}
+
+export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
+  return (
+    <ShapePropertiesContent
+      fabricCanvas={fabricCanvas}
+      orientation="vertical"
+      variant="floating"
+    />
   );
 }

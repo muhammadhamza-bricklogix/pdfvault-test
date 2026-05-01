@@ -77,7 +77,7 @@ export function EditorInfoBar() {
       : "Save";
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between px-3">
+    <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
       {/* Left: menu + undo/redo */}
       <div className="flex items-center gap-1">
         <HamburgerMenu />
@@ -119,9 +119,9 @@ export function EditorInfoBar() {
       </div>
 
       {/* Center: filename + page navigation */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2 lg:gap-3">
         <Tooltip delay={300}>
-          <span className="max-w-40 cursor-default truncate text-sm font-medium text-[var(--color-foreground)]">
+          <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] sm:inline lg:max-w-40">
             {fileName}
           </span>
           <Tooltip.Content>
@@ -129,7 +129,10 @@ export function EditorInfoBar() {
           </Tooltip.Content>
         </Tooltip>
 
-        <Separator className="!h-4 self-center" orientation="vertical" />
+        <Separator
+          className="!h-4 hidden self-center sm:block"
+          orientation="vertical"
+        />
 
         <div className="flex items-center gap-1">
           <Button
@@ -140,8 +143,11 @@ export function EditorInfoBar() {
           >
             ‹
           </Button>
-          <span className="min-w-24 text-center text-xs text-default-500">
-            Page {currentPage} of {pageCount}
+          <span className="min-w-16 text-center text-xs text-default-500 lg:min-w-24">
+            <span className="hidden sm:inline">Page </span>
+            {currentPage}
+            <span className="hidden sm:inline"> of</span>
+            <span className="sm:hidden">/</span> {pageCount}
           </span>
           <Button
             isDisabled={currentPage >= pageCount}
@@ -158,6 +164,7 @@ export function EditorInfoBar() {
       <div className="flex items-center gap-1">
         <Tooltip delay={300}>
           <Button
+            className="hidden sm:inline-flex"
             isDisabled={zoom <= ZOOM_PRESETS[0]}
             size="sm"
             variant="ghost"
@@ -169,11 +176,12 @@ export function EditorInfoBar() {
             <p>Zoom out</p>
           </Tooltip.Content>
         </Tooltip>
-        <span className="min-w-12 text-center text-xs tabular-nums text-default-500">
+        <span className="hidden min-w-12 text-center text-xs tabular-nums text-default-500 sm:inline">
           {Math.round(zoom * 100)}%
         </span>
         <Tooltip delay={300}>
           <Button
+            className="hidden sm:inline-flex"
             isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
             size="sm"
             variant="ghost"
@@ -186,7 +194,10 @@ export function EditorInfoBar() {
           </Tooltip.Content>
         </Tooltip>
 
-        <Separator className="!h-4 self-center" orientation="vertical" />
+        <Separator
+          className="!h-4 hidden self-center sm:block"
+          orientation="vertical"
+        />
         <Tooltip delay={300}>
           <Button
             isDisabled={!canSave}
@@ -195,14 +206,17 @@ export function EditorInfoBar() {
             onPress={() => window.dispatchEvent(new CustomEvent("editor:save"))}
           >
             <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
-            Save
+            <span className="hidden sm:inline">Save</span>
           </Button>
           <Tooltip.Content>
             <p>{saveTooltip}</p>
           </Tooltip.Content>
         </Tooltip>
 
-        <Separator className="!h-4 self-center" orientation="vertical" />
+        <Separator
+          className="!h-4 hidden self-center sm:block"
+          orientation="vertical"
+        />
         <ThemeToggle size="sm" variant="tertiary" />
       </div>
     </div>
@@ -232,7 +246,11 @@ const HIGHLIGHT_COLORS = [
   { color: "#F48FB1", label: "Pink" },
 ] as const;
 
-export function EditorToolBar() {
+type ToolsContentProps = {
+  toolIconSize?: number;
+};
+
+export function ToolsContent({ toolIconSize = 25 }: ToolsContentProps = {}) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const highlightColor = usePdfEditorStore((s) => s.highlightColor);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
@@ -247,7 +265,7 @@ export function EditorToolBar() {
   };
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-center gap-3  px-3">
+    <>
       <Toolbar aria-label="Drawing tools">
         <ToggleButtonGroup
           disallowEmptySelection
@@ -260,7 +278,7 @@ export function EditorToolBar() {
             <Tooltip key={tool.id} delay={300}>
               <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
                 {i > 0 && <ToggleButtonGroup.Separator />}
-                <HugeiconsIcon icon={tool.icon} size={25} />
+                <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
               </ToggleButton>
               <Tooltip.Content>
                 <p>{tool.label}</p>
@@ -295,6 +313,14 @@ export function EditorToolBar() {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+export function EditorToolBar() {
+  return (
+    <div className="flex h-12 shrink-0 items-center justify-center gap-3 px-3">
+      <ToolsContent />
     </div>
   );
 }

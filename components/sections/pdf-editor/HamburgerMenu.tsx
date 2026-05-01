@@ -36,7 +36,11 @@ export function HamburgerMenu() {
   const handleAction = (key: Key) => {
     switch (key) {
       case "new":
-        clearFile();
+        if (isSignedIn) {
+          router.push(ROUTES.APP.DASHBOARD);
+        } else {
+          clearFile();
+        }
         break;
       case "open":
         fileInputRef.current?.click();
