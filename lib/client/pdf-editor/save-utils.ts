@@ -1,5 +1,9 @@
 import type { Canvas as FabricCanvas } from "fabric";
 
+import { usePdfEditorStore } from "@/lib/client/stores";
+
+import { mergeFabricEditsIntoPdf } from "./merge-pdf";
+
 export type ParsedFabricJson = {
   height: number;
   objects?: unknown[];
@@ -85,4 +89,32 @@ export function dataUrlToBytes(dataUrl: string): Uint8Array {
   }
 
   return bytes;
+}
+
+type BuildEditedPdfInput = {
+  currentPage: number;
+  fabricCanvas: FabricCanvas | null;
+  file: File;
+};
+
+/**
+ * Flushes the active page's live canvas into the store, then merges every
+ * page's Fabric overlay into the source PDF and returns the saved bytes.
+ * Shared by the save (upload) and export (download) pipelines.
+ */
+export async function buildEditedPdfBytes({
+  currentPage,
+  fabricCanvas,
+  file,
+}: BuildEditedPdfInput): Promise<Uint8Array> {
+  if (fabricCanvas) {
+    usePdfEditorStore
+      .getState()
+      .saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+  }
+
+  const fabricJsonByPage = usePdfEditorStore.getState().fabricJsonByPage;
+  const sourceBytes = await file.arrayBuffer();
+
+  return mergeFabricEditsIntoPdf({ fabricJsonByPage, sourceBytes });
 }

@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
+import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
@@ -61,6 +62,7 @@ function EditorLayout() {
   const isMobile = useIsMobile();
 
   useSaveEditor(fabricCanvas);
+  useExportEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),

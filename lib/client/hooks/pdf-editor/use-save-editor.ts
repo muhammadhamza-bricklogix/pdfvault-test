@@ -6,8 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
-import { mergeFabricEditsIntoPdf } from "@/lib/client/pdf-editor/merge-pdf";
-import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
+import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
@@ -28,7 +27,6 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
 
   // Mirror props/state into a ref so the callback always reads fresh values
   // without re-binding the window listener on every render.
@@ -83,18 +81,10 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     isSavingRef.current = true;
 
     try {
-      // Flush the active page's live canvas into the store before merging.
-      if (liveCanvas) {
-        saveFabricJson(page, serializeFabricCanvas(liveCanvas));
-      }
-
-      // Read the freshest map directly from the store (avoids stale closure).
-      const fabricJsonByPage = usePdfEditorStore.getState().fabricJsonByPage;
-      const sourceBytes = await sourceFile.arrayBuffer();
-
-      const savedBytes = await mergeFabricEditsIntoPdf({
-        fabricJsonByPage,
-        sourceBytes,
+      const savedBytes = await buildEditedPdfBytes({
+        currentPage: page,
+        fabricCanvas: liveCanvas,
+        file: sourceFile,
       });
 
       const savedFile = new File(
@@ -124,7 +114,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     } finally {
       isSavingRef.current = false;
     }
-  }, [router, saveFabricJson, searchParams, start]);
+  }, [router, searchParams, start]);
 
   useEffect(() => {
     const onSave = () => {

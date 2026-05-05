@@ -4,6 +4,7 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
+  ArrowDown01Icon,
   Cursor01Icon,
   EraserIcon,
   HighlighterIcon,
@@ -21,6 +22,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Button,
   ButtonGroup,
+  Dropdown,
+  Label,
   Separator,
   ToggleButton,
   ToggleButtonGroup,
@@ -30,6 +33,7 @@ import {
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { toast } from "@/lib/shared/utils/toast";
 
 import { HamburgerMenu } from "./HamburgerMenu";
 
@@ -75,6 +79,19 @@ export function EditorInfoBar() {
     : !isSignedIn
       ? "Sign in to save to your library"
       : "Save";
+
+  const handleExportAction = (key: Key) => {
+    if (key === "pdf") {
+      window.dispatchEvent(new CustomEvent("editor:export"));
+
+      return;
+    }
+
+    toast.info({
+      title: "Coming soon",
+      description: "This export format isn't available yet.",
+    });
+  };
 
   return (
     <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
@@ -198,20 +215,47 @@ export function EditorInfoBar() {
           className="!h-4 hidden self-center sm:block"
           orientation="vertical"
         />
-        <Tooltip delay={300}>
-          <Button
-            isDisabled={!canSave}
-            size="sm"
-            variant="primary"
-            onPress={() => window.dispatchEvent(new CustomEvent("editor:save"))}
-          >
-            <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
-            <span className="hidden sm:inline">Save</span>
-          </Button>
-          <Tooltip.Content>
-            <p>{saveTooltip}</p>
-          </Tooltip.Content>
-        </Tooltip>
+        <ButtonGroup isDisabled={!file} size="sm" variant="primary">
+          <Tooltip delay={300}>
+            <Button
+              isDisabled={!canSave}
+              onPress={() =>
+                window.dispatchEvent(new CustomEvent("editor:save"))
+              }
+            >
+              <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
+              <span className="hidden sm:inline">Save</span>
+            </Button>
+            <Tooltip.Content>
+              <p>{saveTooltip}</p>
+            </Tooltip.Content>
+          </Tooltip>
+          <Dropdown>
+            <Button isIconOnly aria-label="Export options">
+              <ButtonGroup.Separator />
+              <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+            </Button>
+            <Dropdown.Popover className="min-w-[180px]">
+              <Dropdown.Menu
+                aria-label="Export options"
+                onAction={handleExportAction}
+              >
+                <Dropdown.Item id="pdf" textValue="Export as PDF">
+                  <Label>Export as PDF</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="word" textValue="Export as Word">
+                  <Label>Export as Word</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="excel" textValue="Export as Excel">
+                  <Label>Export as Excel</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="image" textValue="Export as Image">
+                  <Label>Export as Image</Label>
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown>
+        </ButtonGroup>
 
         <Separator
           className="!h-4 hidden self-center sm:block"
