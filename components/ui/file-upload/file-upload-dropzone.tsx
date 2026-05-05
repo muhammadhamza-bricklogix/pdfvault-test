@@ -15,14 +15,16 @@ export function FileUploadDropzone({
 }: FileUploadDropzoneProps) {
   return (
     <div
-      className={`w-full max-w-4xl rounded-[2rem] border p-4 transition-all duration-200 sm:p-5 ${isDragging
+      className={`w-full max-w-4xl rounded-[2rem] border p-4 transition-all duration-200 sm:p-5 ${
+        isDragging
           ? "border-solid border-accent ring-2 ring-accent/10"
           : "border-dashed border-[color-mix(in_oklab,var(--color-accent)_40%,var(--color-background))]"
-        }`}
+      }`}
     >
       <div
-        className={`flex min-h-[20rem] flex-col items-center justify-center rounded-[1.75rem] bg-[var(--color-accent)] px-6 py-10 text-center text-[var(--color-background)] transition-transform duration-200 sm:min-h-[22rem] ${isDragging ? "scale-[1.01]" : ""
-          }`}
+        className={`flex min-h-[20rem] flex-col items-center justify-center rounded-[1.75rem] bg-[var(--color-accent)] px-6 py-10 text-center text-[var(--color-background)] transition-transform duration-200 sm:min-h-[22rem] ${
+          isDragging ? "scale-[1.01]" : ""
+        }`}
       >
         <div className="flex h-24 w-24 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-foreground)_16%,var(--color-background))] bg-[var(--color-background)] text-5xl font-light text-[var(--color-foreground)] shadow-sm">
           {isDragging ? "\u2193" : "+"}

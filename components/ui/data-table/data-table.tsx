@@ -188,9 +188,7 @@ export function DataTable<TData extends object>({
       <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg border border-default-200 bg-default-100 p-6 text-center">
         <p className="text-sm font-medium">Something went wrong.</p>
         {errorMessage ? (
-          <p className="max-w-md text-xs text-default-500">
-            {errorMessage}
-          </p>
+          <p className="max-w-md text-xs text-default-500">{errorMessage}</p>
         ) : null}
         {onRetry ? <Button onPress={onRetry}>Retry</Button> : null}
       </div>

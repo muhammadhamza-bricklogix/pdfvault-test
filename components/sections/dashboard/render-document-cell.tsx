@@ -58,9 +58,7 @@ export function renderDocumentCell(
 
     case "pageCount":
       return (
-        <span className="text-sm text-default-500">
-          {doc.pageCount ?? "—"}
-        </span>
+        <span className="text-sm text-default-500">{doc.pageCount ?? "—"}</span>
       );
 
     case "updatedAt":

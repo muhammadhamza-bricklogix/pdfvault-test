@@ -58,12 +58,7 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col items-center gap-4 border-t border-default-200 pt-8 sm:flex-row sm:justify-between">
           <Link className="flex items-center gap-2" href={ROUTES.PUBLIC.HOME}>
-            <Image
-              alt="PDFedits"
-              height={32}
-              src="/logo.svg"
-              width={32}
-            />
+            <Image alt="PDFedits" height={32} src="/logo.svg" width={32} />
             <span className="text-lg font-semibold tracking-tight">
               <span className="text-[var(--color-accent)]">PDF</span>
               <span className="text-[var(--color-foreground)]">edits</span>

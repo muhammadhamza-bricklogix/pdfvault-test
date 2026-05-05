@@ -44,10 +44,11 @@ function SidebarNavItem({
 }: SidebarNavItemProps) {
   const link = (
     <Link
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        isActive
           ? "bg-default-100 text-[var(--color-foreground)]"
           : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
-        } ${collapsed ? "justify-center" : ""}`}
+      } ${collapsed ? "justify-center" : ""}`}
       href={href}
       onClick={onNavigate}
     >
@@ -81,8 +82,9 @@ export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
     <div className="flex h-full flex-col border-r border-default-200">
       {/* Header: logo + collapse toggle */}
       <div
-        className={`flex h-14 shrink-0 items-center px-3 ${collapsed ? "justify-center" : "justify-between"
-          }`}
+        className={`flex h-14 shrink-0 items-center px-3 ${
+          collapsed ? "justify-center" : "justify-between"
+        }`}
       >
         {!collapsed && (
           <Link

@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 
 import { useEffect, useRef, useState } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 type UseFabricCanvasParams = {
@@ -90,7 +91,7 @@ export function useFabricCanvas({
 
       const cleanup = () => {
         if (fabricRef.current) {
-          const json = JSON.stringify(fabricRef.current.toJSON());
+          const json = serializeFabricCanvas(fabricRef.current);
 
           saveFabricJson(mountedPageRef.current, json);
           fabricRef.current.dispose();

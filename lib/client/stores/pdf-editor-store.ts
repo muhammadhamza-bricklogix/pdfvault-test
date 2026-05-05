@@ -27,6 +27,8 @@ type PdfEditorStore = {
   file: File | null;
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
+  createPdfModalKey: number;
+  isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
   isRestoringHistory: boolean;
   isSignatureModalOpen: boolean;
@@ -49,6 +51,7 @@ type PdfEditorStore = {
   setHighlightColor: (color: string) => void;
   setCurrentPage: (page: number) => void;
   setFile: (file: File) => void;
+  setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
   setIsRestoringHistory: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
@@ -72,6 +75,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   file: null,
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
+  createPdfModalKey: 0,
+  isCreatePdfModalOpen: false,
   isCreatingShape: false,
   isRestoringHistory: false,
   isSignatureModalOpen: false,
@@ -93,6 +98,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       file: null,
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
+      isCreatePdfModalOpen: false,
       isCreatingShape: false,
       isRestoringHistory: false,
       isSignatureModalOpen: false,
@@ -163,6 +169,13 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setHighlightColor: (color) => set({ highlightColor: color }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setFile: (file) => set({ file }),
+  setIsCreatePdfModalOpen: (value) =>
+    set((state) => ({
+      createPdfModalKey: value
+        ? state.createPdfModalKey + 1
+        : state.createPdfModalKey,
+      isCreatePdfModalOpen: value,
+    })),
   setIsCreatingShape: (value) => set({ isCreatingShape: value }),
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),

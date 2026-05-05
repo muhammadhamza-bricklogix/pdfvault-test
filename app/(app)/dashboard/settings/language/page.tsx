@@ -8,7 +8,7 @@ import {
   usePreferencesStore,
 } from "@/lib/client/stores";
 
-const subscribe = () => () => { };
+const subscribe = () => () => {};
 const useIsMounted = () =>
   useSyncExternalStore(
     subscribe,

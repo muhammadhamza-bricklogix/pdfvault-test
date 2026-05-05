@@ -81,14 +81,15 @@ export function SettingsNav({ orientation }: SettingsNavProps) {
             <button
               key={section.id}
               aria-current={isActive ? "page" : undefined}
-              className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+              className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
                   ? isDanger
                     ? "bg-default-100 text-danger"
                     : "bg-default-100 text-[var(--color-foreground)]"
                   : isDanger
                     ? "text-danger hover:bg-default-100"
                     : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
-                }`}
+              }`}
               type="button"
               onClick={() => router.push(section.href)}
             >
@@ -110,14 +111,15 @@ export function SettingsNav({ orientation }: SettingsNavProps) {
           <button
             key={section.id}
             aria-current={isActive ? "page" : undefined}
-            className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${isActive
+            className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+              isActive
                 ? isDanger
                   ? "bg-default-100 text-danger"
                   : "bg-default-100 text-[var(--color-foreground)]"
                 : isDanger
                   ? "text-danger hover:bg-default-100"
                   : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
-              }`}
+            }`}
             type="button"
             onClick={() => router.push(section.href)}
           >

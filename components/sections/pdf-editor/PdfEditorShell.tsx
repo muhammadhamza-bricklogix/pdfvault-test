@@ -8,11 +8,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
+import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
+import { CreatePdfModal } from "./CreatePdfModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
@@ -22,10 +24,13 @@ import { ThumbnailSidebar } from "./ThumbnailSidebar";
 
 function UploadScreen() {
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setIsCreatePdfModalOpen = usePdfEditorStore(
+    (s) => s.setIsCreatePdfModalOpen,
+  );
 
   return (
     <div className="flex flex-1 items-center justify-center p-8">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl space-y-4">
         <FileUpload
           accept={["application/pdf"]}
           acceptLabel="PDF"
@@ -33,6 +38,16 @@ function UploadScreen() {
           heading="Drop your PDF here"
           onFileSelect={setFile}
         />
+        <p className="text-center text-sm text-default-400">
+          or{" "}
+          <button
+            className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
+            type="button"
+            onClick={() => setIsCreatePdfModalOpen(true)}
+          >
+            create a blank PDF
+          </button>
+        </p>
       </div>
     </div>
   );
@@ -44,6 +59,8 @@ function EditorLayout() {
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  useSaveEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
@@ -112,6 +129,11 @@ function EditorLayout() {
 export function PdfEditorShell() {
   const { isSignedIn } = useAuth();
   const file = usePdfEditorStore((s) => s.file);
+  const createPdfModalKey = usePdfEditorStore((s) => s.createPdfModalKey);
+  const isCreatePdfModalOpen = usePdfEditorStore((s) => s.isCreatePdfModalOpen);
+  const setIsCreatePdfModalOpen = usePdfEditorStore(
+    (s) => s.setIsCreatePdfModalOpen,
+  );
   const setIsSignedIn = usePdfEditorStore((s) => s.setIsSignedIn);
   const searchParams = useSearchParams();
   const pendingDocumentId = searchParams.get("id");
@@ -134,5 +156,14 @@ export function PdfEditorShell() {
     content = <UploadScreen />;
   }
 
-  return <div className="flex h-full flex-col">{content}</div>;
+  return (
+    <div className="flex h-full flex-col">
+      {content}
+      <CreatePdfModal
+        key={createPdfModalKey}
+        isOpen={isCreatePdfModalOpen}
+        onClose={() => setIsCreatePdfModalOpen(false)}
+      />
+    </div>
+  );
 }

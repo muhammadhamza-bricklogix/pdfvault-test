@@ -83,11 +83,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
   return (
     <div className="flex h-12 w-9 items-center justify-center rounded border border-default-200 bg-default-100">
       <HugeiconsIcon
-        className={
-          failed
-            ? "text-default-500"
-            : "text-default-500 opacity-60"
-        }
+        className={failed ? "text-default-500" : "text-default-500 opacity-60"}
         icon={File01Icon}
         size={16}
       />

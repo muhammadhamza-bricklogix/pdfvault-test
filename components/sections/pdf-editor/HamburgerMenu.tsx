@@ -22,6 +22,9 @@ export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setIsCreatePdfModalOpen = usePdfEditorStore(
+    (s) => s.setIsCreatePdfModalOpen,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { start } = useTrackedUpload();
@@ -36,11 +39,7 @@ export function HamburgerMenu() {
   const handleAction = (key: Key) => {
     switch (key) {
       case "new":
-        if (isSignedIn) {
-          router.push(ROUTES.APP.DASHBOARD);
-        } else {
-          clearFile();
-        }
+        setIsCreatePdfModalOpen(true);
         break;
       case "open":
         fileInputRef.current?.click();

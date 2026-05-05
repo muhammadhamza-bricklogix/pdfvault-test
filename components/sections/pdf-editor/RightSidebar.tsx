@@ -210,24 +210,14 @@ export function ShapePropertiesContent({
   const [selectedProps, setSelectedProps] =
     useState<SelectedObjectProps | null>(null);
 
-  const syncProps = useCallback(() => {
-    if (!fabricCanvas) {
-      setSelectedProps(null);
-
-      return;
-    }
-
+  const computeProps = useCallback((): SelectedObjectProps | null => {
+    if (!fabricCanvas) return null;
     const obj = fabricCanvas.getActiveObject();
 
-    if (!obj) {
-      setSelectedProps(null);
-
-      return;
-    }
-
+    if (!obj) return null;
     const shapeObject = isShapeObject(obj) ? obj : null;
 
-    setSelectedProps({
+    return {
       fill: shapeObject
         ? getShapeFill(shapeObject)
         : typeof obj.fill === "string"
@@ -242,31 +232,70 @@ export function ShapePropertiesContent({
       strokeWidth: shapeObject ? getShapeStrokeWidth(shapeObject) : 1,
       top: Math.round(obj.top ?? 0),
       width: Math.round((obj.width ?? 0) * (obj.scaleX ?? 1)),
-    });
+    };
   }, [fabricCanvas]);
+
+  // Layer 2: shallow-equal guard — skip setState if all fields unchanged
+  const commitProps = useCallback((next: SelectedObjectProps | null) => {
+    setSelectedProps((prev) => {
+      if (prev === next) return prev;
+      if (prev === null || next === null) return next;
+      if (
+        prev.fill === next.fill &&
+        prev.height === next.height &&
+        prev.isShape === next.isShape &&
+        prev.left === next.left &&
+        prev.linkUrl === next.linkUrl &&
+        prev.opacity === next.opacity &&
+        prev.stroke === next.stroke &&
+        prev.strokeWidth === next.strokeWidth &&
+        prev.top === next.top &&
+        prev.width === next.width
+      ) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, []);
+
+  const syncProps = useCallback(() => {
+    commitProps(computeProps());
+  }, [commitProps, computeProps]);
 
   useEffect(() => {
     if (!fabricCanvas) return;
 
-    const onSelect = () => syncProps();
-    const onClear = () => setSelectedProps(null);
+    // Layer 1: rAF throttle for high-frequency drag/scale events.
+    // Without this, object:moving fires every mousemove (~120/s), each
+    // triggering setState → full subtree re-render → CPU spike + GC churn.
+    let rafId: number | null = null;
+    const scheduleSync = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        commitProps(computeProps());
+      });
+    };
+    const onClear = () => commitProps(null);
 
-    fabricCanvas.on("selection:created", onSelect);
-    fabricCanvas.on("selection:updated", onSelect);
+    fabricCanvas.on("selection:created", syncProps);
+    fabricCanvas.on("selection:updated", syncProps);
     fabricCanvas.on("selection:cleared", onClear);
-    fabricCanvas.on("object:modified", onSelect);
-    fabricCanvas.on("object:moving", onSelect);
-    fabricCanvas.on("object:scaling", onSelect);
+    fabricCanvas.on("object:modified", syncProps);
+    fabricCanvas.on("object:moving", scheduleSync);
+    fabricCanvas.on("object:scaling", scheduleSync);
 
     return () => {
-      fabricCanvas.off("selection:created", onSelect);
-      fabricCanvas.off("selection:updated", onSelect);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      fabricCanvas.off("selection:created", syncProps);
+      fabricCanvas.off("selection:updated", syncProps);
       fabricCanvas.off("selection:cleared", onClear);
-      fabricCanvas.off("object:modified", onSelect);
-      fabricCanvas.off("object:moving", onSelect);
-      fabricCanvas.off("object:scaling", onSelect);
+      fabricCanvas.off("object:modified", syncProps);
+      fabricCanvas.off("object:moving", scheduleSync);
+      fabricCanvas.off("object:scaling", scheduleSync);
     };
-  }, [fabricCanvas, syncProps]);
+  }, [fabricCanvas, syncProps, commitProps, computeProps]);
 
   useEffect(() => {
     const openLinkModal = () => {

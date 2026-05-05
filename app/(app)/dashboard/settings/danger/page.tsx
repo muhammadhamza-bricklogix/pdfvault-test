@@ -107,11 +107,7 @@ export default function DangerZonePage() {
                 value={confirmation}
                 onChange={(e) => setConfirmation(e.target.value)}
               />
-              {error && (
-                <p className="mt-2 text-xs text-danger">
-                  {error}
-                </p>
-              )}
+              {error && <p className="mt-2 text-xs text-danger">{error}</p>}
             </Modal.Body>
             <Modal.Footer>
               <Button isDisabled={isDeleting} slot="close" variant="secondary">

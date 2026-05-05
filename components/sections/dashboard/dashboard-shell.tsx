@@ -46,8 +46,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
     <div className="flex h-screen w-full overflow-hidden bg-[var(--color-background)]">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden shrink-0 bg-default-100/35 transition-[width] duration-200 lg:block ${isCollapsed ? "w-16" : "w-60"
-          }`}
+        className={`hidden shrink-0 bg-default-100/35 transition-[width] duration-200 lg:block ${
+          isCollapsed ? "w-16" : "w-60"
+        }`}
       >
         <SidebarBody collapsed={isCollapsed} />
       </aside>
