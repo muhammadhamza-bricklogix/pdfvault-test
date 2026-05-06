@@ -4,6 +4,7 @@ import type {
   Document,
   DocumentListResponse,
   RenameDocumentInput,
+  UploadCloudDocumentInput,
   UploadDocumentInput,
 } from "@/lib/shared/types/documents.types";
 import type { UploadOptions } from "@/lib/shared/api/services/documents.service";
@@ -37,6 +38,20 @@ export function useUploadDocumentMutation() {
   return useMutation<Document, Error, UploadVariables>({
     mutationFn: ({ options, ...input }) =>
       documentsService.uploadDocument(input, options),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+      queryClient.setQueryData(documentKeys.detail(data.id), data);
+    },
+  });
+}
+
+type UploadCloudVariables = UploadCloudDocumentInput;
+
+export function useUploadCloudDocumentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Document, Error, UploadCloudVariables>({
+    mutationFn: (input) => documentsService.uploadCloudDocument(input),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.setQueryData(documentKeys.detail(data.id), data);

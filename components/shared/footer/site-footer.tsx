@@ -34,13 +34,29 @@ const FOOTER_COLUMNS = [
     ],
     title: "Legal",
   },
+  {
+    links: [
+      { href: ROUTES.LEGAL.CONTACT, label: "Contact us" },
+      { href: `${ROUTES.PUBLIC.HOME}#faq`, label: "FAQ" },
+      { href: ROUTES.PUBLIC.PRICING, label: "Pricing" },
+    ],
+    title: "Help",
+  },
+  {
+    links: [
+      { href: ROUTES.AUTH.SIGN_IN, label: "Sign In" },
+      { href: ROUTES.AUTH.SIGN_UP, label: "Register" },
+      { href: ROUTES.LEGAL.CONTACT, label: "Unsubscribe" },
+    ],
+    title: "Account",
+  },
 ];
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-default-200 bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-12 sm:px-8">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+      <div className="mx-auto max-w-[min(100%,104rem)] px-6 py-12 sm:px-8">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.title}>
               <h3 className="text-sm font-semibold text-[var(--color-foreground)]">

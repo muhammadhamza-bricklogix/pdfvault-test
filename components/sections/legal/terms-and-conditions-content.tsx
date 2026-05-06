@@ -1,55 +1,95 @@
+import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
+
 import Link from "next/link";
+import {
+  Alert01Icon,
+  ArrowReloadHorizontalIcon,
+  BalanceScaleIcon,
+  CancelCircleIcon,
+  CopyrightIcon,
+  Delete02Icon,
+  File01Icon,
+  MoneyRemove02Icon,
+  SecurityCheckIcon,
+  SecurityPasswordIcon,
+  Shield01Icon,
+  UserCircleIcon,
+} from "@hugeicons/core-free-icons";
 
-import { LegalSubsection } from "@/components/sections/legal/legal-subsection";
-
+import { LegalCallout } from "@/components/sections/legal/legal-callout";
+import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 import { ROUTES } from "@/lib/shared/constants/routes";
+
+export const termsTocEntries: LegalTocEntry[] = [
+  { id: "t-2-1", label: "2.1 Agreement" },
+  { id: "t-2-2", label: "2.2 Eligibility" },
+  { id: "t-2-3", label: "2.3 Account Registration" },
+  { id: "t-2-4", label: "2.4 Acceptable Use" },
+  { id: "t-2-5", label: "2.5 Intellectual Property" },
+  { id: "t-2-6", label: "2.6 Privacy" },
+  { id: "t-2-7", label: "2.7 Disclaimers" },
+  { id: "t-2-8", label: "2.8 Limitation of Liability" },
+  { id: "t-2-9", label: "2.9 Indemnification" },
+  { id: "t-2-10", label: "2.10 Termination" },
+  { id: "t-2-11", label: "2.11 Governing Law and Disputes" },
+  { id: "t-2-12", label: "2.12 Changes to Terms" },
+];
 
 export function TermsAndConditionsContent() {
   return (
     <>
-      <LegalSubsection title="2.1 Agreement">
+      <LegalSectionCard icon={File01Icon} id="t-2-1" title="2.1 Agreement">
         <p>
-          By accessing or using PDF Viewer App at pdfedits.io (&quot;Service&quot;),
-          you agree to be bound by these Terms and Conditions. If you do not
-          agree, do not use the Service.
+          By accessing or using PDF Viewer App at pdfedits.io
+          (&quot;Service&quot;), you agree to be bound by these Terms and
+          Conditions. If you do not agree, do not use the Service.
         </p>
-      </LegalSubsection>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.2 Eligibility">
+      <LegalSectionCard
+        icon={UserCircleIcon}
+        id="t-2-2"
+        title="2.2 Eligibility"
+      >
         <p>
           You must be at least 18 years of age and capable of forming a binding
-          contract to use this Service. By using the Service, you represent
-          that you meet these requirements.
+          contract to use this Service. By using the Service, you represent that
+          you meet these requirements.
         </p>
-      </LegalSubsection>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.3 Account Registration">
-        <p>
-          You may use certain features without an account, but premium features
-          require registration.
-        </p>
-        <p>
-          You are responsible for maintaining the confidentiality of your
-          account credentials.
-        </p>
-        <p>
-          You are responsible for all activity that occurs under your account.
-        </p>
-        <p>
-          You must notify us immediately of any unauthorized use at{" "}
-          <a
-            className="font-medium text-[var(--color-accent)] underline underline-offset-2"
-            href="mailto:support@pdfeditsapp.com"
-          >
-            support@pdfeditsapp.com
-          </a>
-          .
-        </p>
-      </LegalSubsection>
-
-      <LegalSubsection title="2.4 Acceptable Use">
-        <p>You agree not to:</p>
+      <LegalSectionCard
+        icon={SecurityPasswordIcon}
+        id="t-2-3"
+        title="2.3 Account Registration"
+      >
         <ul className="list-disc space-y-2 pl-5">
+          <li>
+            You may use certain features without an account, but premium
+            features require registration.
+          </li>
+          <li>
+            You are responsible for maintaining the confidentiality of your
+            account credentials.
+          </li>
+          <li>
+            You are responsible for all activity that occurs under your account.
+          </li>
+          <li>
+            You must notify us immediately of any unauthorized use at{" "}
+            <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>
+            .
+          </li>
+        </ul>
+      </LegalSectionCard>
+
+      <LegalSectionCard
+        icon={CancelCircleIcon}
+        id="t-2-4"
+        title="2.4 Acceptable Use"
+      >
+        <p>You agree not to:</p>
+        <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>
             Upload files containing illegal content, malware, or content that
             infringes third-party intellectual property rights.
@@ -71,60 +111,78 @@ export function TermsAndConditionsContent() {
             unlawful.
           </li>
         </ul>
-      </LegalSubsection>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.5 Intellectual Property">
-        <p>
-          The Service and its content (excluding your uploaded files) are owned
-          by PDF Viewer App and protected by copyright, trademark, and other
-          laws. You retain full ownership of all files you upload. By uploading
-          files, you grant us a temporary, limited license solely to process them
-          and return results to you. We do not claim ownership of your content.
-        </p>
-      </LegalSubsection>
+      <LegalSectionCard
+        icon={CopyrightIcon}
+        id="t-2-5"
+        title="2.5 Intellectual Property"
+      >
+        <LegalCallout variant="emphasis">
+          <p>
+            The Service and its content (excluding your uploaded files) are
+            owned by PDF Viewer App and protected by copyright, trademark, and
+            other laws. You retain full ownership of all files you upload. By
+            uploading files, you grant us a temporary, limited license solely to
+            process them and return results to you. We do not claim ownership of
+            your content.
+          </p>
+        </LegalCallout>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.6 Privacy">
+      <LegalSectionCard icon={Shield01Icon} id="t-2-6" title="2.6 Privacy">
         <p>
           Your use of the Service is also governed by our{" "}
-          <Link
-            className="font-medium text-[var(--color-accent)] underline underline-offset-2 hover:opacity-90"
-            href={ROUTES.LEGAL.PRIVACY}
-          >
-            Privacy Policy
-          </Link>
-          , which is incorporated into these Terms by reference.
+          <Link href={ROUTES.LEGAL.PRIVACY}>Privacy Policy</Link>, which is
+          incorporated into these Terms by reference.
         </p>
-      </LegalSubsection>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.7 Disclaimers">
-        <p className="font-medium uppercase tracking-wide text-default-700 dark:text-default-300">
-          The service is provided &quot;as is&quot; and &quot;as available&quot;
-          without warranties of any kind, express or implied, including
-          warranties of merchantability, fitness for a particular purpose, or
-          non-infringement.
-        </p>
-      </LegalSubsection>
+      <LegalSectionCard icon={Alert01Icon} id="t-2-7" title="2.7 Disclaimers">
+        <LegalCallout variant="emphasis">
+          <p className="text-xs font-semibold uppercase leading-relaxed tracking-wide">
+            The service is provided &quot;as is&quot; and &quot;as
+            available&quot; without warranties of any kind, express or implied,
+            including warranties of merchantability, fitness for a particular
+            purpose, or non-infringement.
+          </p>
+        </LegalCallout>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.8 Limitation of Liability">
-        <p className="font-medium uppercase tracking-wide text-default-700 dark:text-default-300">
-          To the maximum extent permitted by law, PDF Viewer App shall not be
-          liable for any indirect, incidental, special, consequential, or
-          punitive damages, including loss of data or profits, arising from your
-          use of the Service. Our total liability shall not exceed the amount
-          you paid in the 12 months preceding the claim.
-        </p>
-      </LegalSubsection>
+      <LegalSectionCard
+        icon={MoneyRemove02Icon}
+        id="t-2-8"
+        title="2.8 Limitation of Liability"
+      >
+        <LegalCallout variant="emphasis">
+          <p className="text-xs font-semibold uppercase leading-relaxed tracking-wide">
+            To the maximum extent permitted by law, PDF Viewer App shall not be
+            liable for any indirect, incidental, special, consequential, or
+            punitive damages, including loss of data or profits, arising from
+            your use of the Service. Our total liability shall not exceed the
+            amount you paid in the 12 months preceding the claim.
+          </p>
+        </LegalCallout>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.9 Indemnification">
+      <LegalSectionCard
+        icon={SecurityCheckIcon}
+        id="t-2-9"
+        title="2.9 Indemnification"
+      >
         <p>
-          You agree to indemnify and hold harmless PDF Viewer App, its
-          officers, directors, employees, and agents from any claims, damages,
-          or expenses arising out of your use of the Service, your violation of
-          these Terms, or your violation of any third-party rights.
+          You agree to indemnify and hold harmless PDF Viewer App, its officers,
+          directors, employees, and agents from any claims, damages, or expenses
+          arising out of your use of the Service, your violation of these Terms,
+          or your violation of any third-party rights.
         </p>
-      </LegalSubsection>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.10 Termination">
+      <LegalSectionCard
+        icon={Delete02Icon}
+        id="t-2-10"
+        title="2.10 Termination"
+      >
         <p>
           We reserve the right to suspend or terminate your account for
           violation of these Terms. You may terminate your account at any time.
@@ -132,24 +190,39 @@ export function TermsAndConditionsContent() {
           by their nature survive termination (including Intellectual Property,
           Disclaimers, Limitation of Liability, and Governing Law).
         </p>
-      </LegalSubsection>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.11 Governing Law and Disputes">
-        <p>
-          These Terms are governed by applicable law. Any disputes shall first
-          be addressed through good-faith negotiation. Unresolved disputes may
-          be submitted to binding arbitration. You agree to waive the right to
-          participate in class-action lawsuits to the extent permitted by law.
-        </p>
-      </LegalSubsection>
+      <LegalSectionCard
+        icon={BalanceScaleIcon}
+        id="t-2-11"
+        title="2.11 Governing Law and Disputes"
+      >
+        <LegalCallout variant="emphasis">
+          <p>
+            These Terms are governed by applicable law. Any disputes shall first
+            be addressed through <strong>good-faith negotiation</strong>.
+            Unresolved disputes may be submitted to binding arbitration. You
+            agree to{" "}
+            <strong>
+              waive the right to participate in class-action lawsuits
+            </strong>{" "}
+            to the extent permitted by law.
+          </p>
+        </LegalCallout>
+      </LegalSectionCard>
 
-      <LegalSubsection title="2.12 Changes to Terms">
+      <LegalSectionCard
+        icon={ArrowReloadHorizontalIcon}
+        id="t-2-12"
+        title="2.12 Changes to Terms"
+      >
         <p>
           We may update these Terms at any time. We will notify you of material
-          changes by email or prominent notice on the Service. Continued use
-          after the effective date of changes constitutes acceptance.
+          changes by <strong>email</strong> or prominent notice on the Service.
+          Continued use after the effective date of changes constitutes
+          acceptance.
         </p>
-      </LegalSubsection>
+      </LegalSectionCard>
     </>
   );
 }

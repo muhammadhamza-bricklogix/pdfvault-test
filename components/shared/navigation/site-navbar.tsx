@@ -1,30 +1,33 @@
 "use client";
 
 import { Show } from "@clerk/nextjs";
-import { Menu01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Drawer, Separator } from "@heroui/react";
-import Image from "next/image";
+import { Button, Drawer, Dropdown, Label, Separator } from "@heroui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-const NAV_ITEMS = [
-  { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF Editor" },
-  { href: ROUTES.PUBLIC.HOME, label: "Conversions" },
-  { href: ROUTES.PUBLIC.HOME, label: "Compress" },
-  { href: ROUTES.PUBLIC.HOME, label: "Protect" },
-];
+const PDF_TOOL_LINKS = [
+  { href: `${ROUTES.PUBLIC.HOME}#pdf-tools`, label: "All tools overview" },
+  { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF editor" },
+  { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
+] as const;
+
+const DRAWER_LINKS = [
+  ...PDF_TOOL_LINKS,
+  { href: ROUTES.LEGAL.CONTACT, label: "Contact" },
+  { href: ROUTES.PUBLIC.HOME, label: "Home" },
+] as const;
 
 export function SiteNavbar() {
   const router = useRouter();
 
   return (
-    <header className="border-b bg-[var(--color-background)]">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-4 sm:px-8">
-        {/* Mobile hamburger */}
+    <header className="sticky top-0 z-50 w-full border-b border-default-200/80 bg-[var(--color-background)]/90 backdrop-blur-md dark:border-default-800/80">
+      <div className="mx-auto flex w-full max-w-[min(100%,104rem)] items-center gap-4 px-6 py-3.5 sm:px-8">
         <Drawer>
           <Button
             isIconOnly
@@ -40,18 +43,20 @@ export function SiteNavbar() {
               <Drawer.Dialog>
                 <Drawer.CloseTrigger />
                 <Drawer.Header>
-                  <Drawer.Heading>
-                    <span className="text-[var(--color-accent)]">pdf</span>
-                    <span className="text-[var(--color-foreground)]">
-                      forge
+                  <Drawer.Heading className="flex items-center gap-2">
+                    <span className="flex size-9 items-center justify-center rounded-md bg-[#E5252A] text-[10px] font-bold leading-none tracking-tight text-white">
+                      PDF
+                    </span>
+                    <span className="text-lg font-bold text-[var(--color-foreground)]">
+                      PDFedits
                     </span>
                   </Drawer.Heading>
                 </Drawer.Header>
                 <Drawer.Body>
                   <nav className="flex flex-col gap-1">
-                    {NAV_ITEMS.map((item) => (
+                    {DRAWER_LINKS.map((item) => (
                       <Link
-                        key={item.label}
+                        key={item.href}
                         className="rounded-lg px-3 py-2 text-sm font-medium text-default-500 transition-colors hover:bg-default-100 hover:text-foreground"
                         href={item.href}
                       >
@@ -74,11 +79,10 @@ export function SiteNavbar() {
                         Sign in
                       </Button>
                       <Button
-                        className="w-full"
-                        variant="outline"
+                        className="w-full bg-[var(--color-accent)] text-[var(--color-background)]"
                         onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
                       >
-                        Create account
+                        Sign up
                       </Button>
                     </Show>
 
@@ -98,55 +102,67 @@ export function SiteNavbar() {
           </Drawer.Backdrop>
         </Drawer>
 
-        {/* Logo */}
-        <Link className="shrink-0" href={ROUTES.PUBLIC.HOME}>
-          <Image
-            priority
-            alt="PDFedits"
-            height={32}
-            src="/logo.svg"
-            width={32}
-          />
+        <Link
+          className="flex shrink-0 items-center gap-2.5"
+          href={ROUTES.PUBLIC.HOME}
+        >
+          <span className="flex size-9 items-center justify-center rounded-md bg-[#E5252A] text-[10px] font-bold leading-none tracking-tight text-white sm:size-10 sm:text-[11px]">
+            PDF
+          </span>
+          <span className="text-lg font-bold tracking-tight text-[var(--color-foreground)] sm:text-xl">
+            PDFedits
+          </span>
         </Link>
 
-        {/* Desktop nav links */}
-        <nav className="mx-auto hidden items-center gap-8 lg:flex">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.label}
-              className="text-sm font-medium text-default-500 transition-colors hover:text-foreground"
-              href={item.href}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="ml-auto flex items-center gap-1 sm:gap-3">
+          <div className="hidden lg:block">
+            <Dropdown>
+              <Button
+                className="gap-1 font-medium text-default-600 dark:text-default-400"
+                variant="ghost"
+              >
+                All PDF tools
+                <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+              </Button>
+              <Dropdown.Popover className="min-w-[220px]">
+                <Dropdown.Menu aria-label="PDF tools">
+                  {PDF_TOOL_LINKS.map((item) => (
+                    <Dropdown.Item
+                      key={item.href}
+                      href={item.href}
+                      id={item.href}
+                      textValue={item.label}
+                    >
+                      <Label>{item.label}</Label>
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
+          </div>
 
-        {/* Right side: theme, auth */}
-        <div className="ml-auto flex items-center gap-3">
           <div className="hidden lg:block">
             <ThemeToggle />
           </div>
 
           <Show when="signed-out">
             <Link
-              className="hidden text-sm font-medium text-default-500 transition-colors hover:text-foreground sm:inline-flex"
+              className="hidden px-2 text-sm font-medium text-default-600 transition-colors hover:text-foreground sm:inline-flex dark:text-default-400"
               href={ROUTES.AUTH.SIGN_IN}
             >
               Sign in
             </Link>
             <Button
-              className="rounded-full"
-              variant="outline"
+              className="rounded-lg bg-[var(--color-accent)] px-5 font-medium text-[var(--color-background)] shadow-sm"
               onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
             >
-              Create account
+              Sign up
             </Button>
           </Show>
 
           <Show when="signed-in">
             <Button
-              className="rounded-full"
+              className="rounded-lg font-medium"
               variant="outline"
               onPress={() => router.push(ROUTES.APP.DASHBOARD)}
             >

@@ -6,6 +6,7 @@ export const ROUTES = {
   },
   PUBLIC: {
     HOME: "/",
+    PRICING: "/pricing",
   },
   LEGAL: {
     CONTACT: "/contact",
@@ -22,7 +23,6 @@ export const ROUTES = {
     SETTINGS_ACCOUNT: "/dashboard/settings/account",
     SETTINGS_LANGUAGE: "/dashboard/settings/language",
     SETTINGS_DANGER: "/dashboard/settings/danger",
-    SETTINGS_LEGAL: "/dashboard/settings/legal",
   },
   TOOLS: {
     PDF_EDITOR: "/pdf-editor",
