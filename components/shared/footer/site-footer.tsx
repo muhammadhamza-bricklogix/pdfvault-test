@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+const COOKIE_SETTINGS_HREF = `${ROUTES.LEGAL.COOKIES}#managing-cookies`;
+
 const FOOTER_COLUMNS = [
   {
     links: [
@@ -16,15 +18,19 @@ const FOOTER_COLUMNS = [
   {
     links: [
       { href: ROUTES.PUBLIC.HOME, label: "About" },
-      { href: ROUTES.PUBLIC.HOME, label: "Contact" },
+      { href: ROUTES.LEGAL.CONTACT, label: "Contact" },
       { href: ROUTES.PUBLIC.HOME, label: "Blog" },
     ],
     title: "Company",
   },
   {
     links: [
-      { href: ROUTES.PUBLIC.HOME, label: "Privacy Policy" },
-      { href: ROUTES.PUBLIC.HOME, label: "Terms of Service" },
+      { href: ROUTES.LEGAL.PRIVACY, label: "Privacy Policy" },
+      { href: ROUTES.LEGAL.TERMS, label: "Terms & Conditions" },
+      { href: ROUTES.LEGAL.COOKIES, label: "Cookie Policy" },
+      { href: ROUTES.LEGAL.REFUND, label: "Refund Policy" },
+      { href: ROUTES.LEGAL.DO_NOT_SELL, label: "Do not sell my info" },
+      { href: COOKIE_SETTINGS_HREF, label: "Cookie settings" },
     ],
     title: "Legal",
   },
@@ -42,7 +48,7 @@ export function SiteFooter() {
               </h3>
               <ul className="mt-4 space-y-3">
                 {column.links.map((link) => (
-                  <li key={link.label}>
+                  <li key={`${column.title}-${link.href}-${link.label}`}>
                     <Link
                       className="text-sm text-default-500 transition-colors hover:text-foreground"
                       href={link.href}

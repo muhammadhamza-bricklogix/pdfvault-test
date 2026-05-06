@@ -7,6 +7,14 @@ export const ROUTES = {
   PUBLIC: {
     HOME: "/",
   },
+  LEGAL: {
+    CONTACT: "/contact",
+    COOKIES: "/cookies",
+    DO_NOT_SELL: "/do-not-sell",
+    PRIVACY: "/privacy",
+    REFUND: "/refund",
+    TERMS: "/terms",
+  },
   APP: {
     DASHBOARD: "/dashboard",
     SETTINGS: "/dashboard/settings",
@@ -14,6 +22,7 @@ export const ROUTES = {
     SETTINGS_ACCOUNT: "/dashboard/settings/account",
     SETTINGS_LANGUAGE: "/dashboard/settings/language",
     SETTINGS_DANGER: "/dashboard/settings/danger",
+    SETTINGS_LEGAL: "/dashboard/settings/legal",
   },
   TOOLS: {
     PDF_EDITOR: "/pdf-editor",
