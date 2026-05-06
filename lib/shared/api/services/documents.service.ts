@@ -1,8 +1,10 @@
 import type {
+  CloudProvider,
   Document,
   DocumentListParams,
   DocumentListResponse,
   RenameDocumentInput,
+  UploadCloudDocumentInput,
   UploadDocumentInput,
 } from "@/lib/shared/types/documents.types";
 import type { AxiosProgressEvent } from "axios";
@@ -53,6 +55,20 @@ async function listDocuments(
   return data;
 }
 
+async function uploadCloudDocument(input: UploadCloudDocumentInput): Promise<Document> {
+  const { data } = await apiClient.post<Document>(DOCUMENTS.UPLOAD_CLOUD, {
+    accessToken: input.accessToken,
+    documentId: input.documentId,
+    fileId: input.fileId,
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    provider: input.provider satisfies CloudProvider,
+    trackingId: input.trackingId,
+  });
+
+  return data;
+}
+
 async function getDocument(id: string): Promise<Document> {
   const { data } = await apiClient.get<Document>(DOCUMENTS.DETAIL(id));
 
@@ -73,6 +89,7 @@ async function deleteDocument(id: string): Promise<void> {
 
 export const documentsService = {
   uploadDocument,
+  uploadCloudDocument,
   listDocuments,
   getDocument,
   renameDocument,

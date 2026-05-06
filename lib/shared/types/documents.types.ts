@@ -33,6 +33,18 @@ export type UploadDocumentInput = {
   trackingId?: string;
 };
 
+export type CloudProvider = "gdrive" | "onedrive";
+
+export type UploadCloudDocumentInput = {
+  accessToken: string;
+  fileId: string;
+  fileName: string;
+  mimeType?: string;
+  provider: CloudProvider;
+  documentId?: string;
+  trackingId?: string;
+};
+
 export type RenameDocumentInput = {
   id: string;
   filename: string;

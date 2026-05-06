@@ -1,5 +1,6 @@
 export const DOCUMENTS = {
   UPLOAD: "/documents/upload",
+  UPLOAD_CLOUD: "/documents/upload/cloud",
   UPLOAD_PROGRESS: (trackingId: string) =>
     `/documents/upload-progress/${trackingId}`,
   LIST: "/documents",
