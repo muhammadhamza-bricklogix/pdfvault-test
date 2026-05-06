@@ -10,6 +10,10 @@ import {
   validateFile,
 } from "@/lib/shared/utils/file-upload.utils";
 
+import {
+  DEFAULT_MARKETING_FOOTNOTE,
+  FileUploadDropzoneMarketing,
+} from "./file-upload-dropzone-marketing";
 import { FileUploadDropzone } from "./file-upload-dropzone";
 import { FileUploadPreview } from "./file-upload-preview";
 
@@ -19,9 +23,13 @@ const ERROR_DISMISS_MS = 4000;
 export function FileUpload({
   accept,
   acceptLabel,
+  appearance = "default",
+  browseLabel,
   description,
   file = null,
   heading,
+  marketingFootnote,
+  marketingGrouped = false,
   maxSize = DEFAULT_MAX_SIZE,
   onFileClear,
   onFileSelect,
@@ -132,6 +140,23 @@ export function FileUpload({
 
       {file ? (
         <FileUploadPreview file={file} onClear={handleClear} />
+      ) : appearance === "marketing" ? (
+        <div
+          className="flex w-full justify-center"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          <FileUploadDropzoneMarketing
+            browseLabel={browseLabel}
+            embedded={marketingGrouped}
+            footnote={marketingFootnote ?? DEFAULT_MARKETING_FOOTNOTE}
+            heading={heading}
+            isDragging={isDragging}
+            onBrowsePress={handleClick}
+          />
+        </div>
       ) : (
         <div
           aria-label="File upload dropzone"

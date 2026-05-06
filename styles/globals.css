@@ -9,10 +9,29 @@
   /* DANGER RED (Darker/Colder for differentiation) */
   --danger: oklch(45% 0.18 25);
   --danger-foreground: oklch(100% 0 0);
+
+  /* Legal / policy pages (screenshoot-matched, light UI) */
+  --legal-burgundy: #8b2323;
+  --legal-burgundy-hover: #6f1c1c;
+  --legal-hero-bg: #8b1a1a;
+  --legal-surface: #fff8f8;
+  --legal-pink-header: #fef2f2;
+  --legal-pink-active: #ffe4e6;
+  --legal-pink-callout: #fff1f2;
+  --legal-text-muted: #57534e;
+  --legal-text-body: #44403c;
+  --legal-callout-green-bg: #ecfdf5;
+  --legal-callout-green-border: #059669;
+  --legal-callout-green-text: #065f46;
+  --legal-cta-deep: #7f1d1d;
+  --legal-border-subtle: #e7e5e4;
 }
 html,
 body {
   min-height: 100%;
+}
+.font-legal-serif {
+  font-family: var(--font-legal-serif), "Georgia", serif;
 }
 body {
   background-color: var(--color-background);

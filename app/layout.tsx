@@ -2,13 +2,20 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
-import { Dancing_Script } from "next/font/google";
+import { Dancing_Script, Playfair_Display } from "next/font/google";
 
 const dancingScript = Dancing_Script({
   display: "swap",
   subsets: ["latin"],
   variable: "--font-dancing-script",
   weight: ["400", "700"],
+});
+
+const playfairDisplay = Playfair_Display({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-legal-serif",
+  weight: ["400", "600", "700"],
 });
 
 import { Providers } from "./providers";
@@ -38,7 +45,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html suppressHydrationWarning className={dancingScript.variable} lang="en">
+    <html
+      suppressHydrationWarning
+      className={`${dancingScript.variable} ${playfairDisplay.variable}`}
+      lang="en"
+    >
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <ClerkProvider>
           <Providers

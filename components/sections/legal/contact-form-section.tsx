@@ -1,12 +1,13 @@
 "use client";
 
+import type { ContactFormValues } from "@/lib/shared/schemas/contact.schema";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Fieldset, Form } from "@heroui/react";
 import { useForm } from "react-hook-form";
 
 import { ControlledInputField } from "@/components/ui/form/controlled-input-field";
 import { ControlledTextareaField } from "@/components/ui/form/controlled-textarea-field";
-import type { ContactFormValues } from "@/lib/shared/schemas/contact.schema";
 import { contactFormSchema } from "@/lib/shared/schemas/contact.schema";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -24,7 +25,9 @@ export function ContactFormSection() {
   });
 
   const onSubmit = (values: ContactFormValues) => {
-    const subject = encodeURIComponent(`Contact — ${values.firstName} ${values.lastName}`);
+    const subject = encodeURIComponent(
+      `Contact — ${values.firstName} ${values.lastName}`,
+    );
     const body = encodeURIComponent(
       `From: ${values.firstName} ${values.lastName}\nEmail: ${values.email}\n\n${values.message}`,
     );

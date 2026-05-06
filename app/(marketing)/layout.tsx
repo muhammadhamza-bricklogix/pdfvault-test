@@ -11,9 +11,7 @@ export default function MarketingLayout({ children }: MarketingLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteNavbar />
-      <main className="mx-auto flex w-full max-w-7xl flex-1 px-6 py-10 sm:px-8 sm:py-12">
-        {children}
-      </main>
+      <main className="flex w-full flex-1 flex-col">{children}</main>
       <SiteFooter />
     </div>
   );

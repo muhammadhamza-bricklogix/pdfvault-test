@@ -2,7 +2,6 @@
 
 import {
   AlertCircleIcon,
-  File01Icon,
   Globe02Icon,
   Setting07Icon,
   UserCircleIcon,
@@ -42,13 +41,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     icon: Globe02Icon,
     id: "language",
     label: "Language & Region",
-  },
-  {
-    description: "Terms, privacy, cookies, refunds, contact",
-    href: ROUTES.APP.SETTINGS_LEGAL,
-    icon: File01Icon,
-    id: "legal",
-    label: "Legal & policies",
   },
   {
     description: "Delete account",
