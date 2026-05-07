@@ -104,7 +104,23 @@ export function HomeCloudUploadRow({
       return;
     }
 
-    await start(id);
+    const nextItems = await start(id);
+
+    if (id === "gdrive" && nextItems.length > 0 && onCloudUpload) {
+      for (const item of nextItems) {
+        onCloudSelection?.(item);
+
+        try {
+          await onCloudUpload(item);
+        } catch (err) {
+          toast.error({
+            title: "Cloud upload failed",
+            description: err instanceof Error ? err.message : undefined,
+          });
+          break;
+        }
+      }
+    }
   };
 
   const cloudItems = activeProvider

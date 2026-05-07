@@ -1,5 +1,6 @@
 "use client";
 
+import type { SelectionMode } from "@react-types/shared";
 import type { ReactNode } from "react";
 import type { SortDescriptor } from "react-aria-components";
 
@@ -35,6 +36,8 @@ export type DataTableProps<TData> = {
   getRowKey?: (item: TData) => string;
   /** Optional href per row (renders as a link row). */
   getRowHref?: (item: TData) => string | undefined;
+  /** When true, row gets a subtle selected background (e.g. custom checkboxes). */
+  isRowSelected?: (item: TData) => boolean;
 
   isLoading?: boolean;
   isError?: boolean;
@@ -56,6 +59,9 @@ export type DataTableProps<TData> = {
   onLoadMore?: () => void;
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
+
+  /** React Aria table row selection. Default `none` so custom cell checkboxes are not hijacked. */
+  selectionMode?: SelectionMode;
 
   className?: string;
   scrollClassName?: string;
@@ -81,6 +87,7 @@ export function DataTable<TData extends object>({
   isError,
   isFetchingNextPage,
   isLoading,
+  isRowSelected,
   mode = "client",
   onLoadMore,
   onRetry,
@@ -88,6 +95,7 @@ export function DataTable<TData extends object>({
   scrollClassName,
   searchKeys,
   searchQuery,
+  selectionMode = "none",
 }: DataTableProps<TData>) {
   const router = useRouter();
   const [sortDescriptor, setSortDescriptor] = useState<
@@ -200,6 +208,7 @@ export function DataTable<TData extends object>({
       <Table.ScrollContainer className={scrollClassName ?? "max-h-[70vh]"}>
         <Table.Content
           aria-label={ariaLabel}
+          selectionMode={selectionMode}
           sortDescriptor={sortDescriptor}
           onSortChange={mode === "client" ? setSortDescriptor : undefined}
         >
@@ -223,11 +232,18 @@ export function DataTable<TData extends object>({
             {(item) => {
               const key = resolveKey(item);
               const href = getRowHref?.(item);
+              const selected = isRowSelected?.(item) ?? false;
+              const rowClassName = [
+                href ? "cursor-pointer" : null,
+                selected ? "bg-default-100/80 dark:bg-default-50/10" : null,
+              ]
+                .filter(Boolean)
+                .join(" ");
 
               return (
                 <Table.Row
                   key={key}
-                  className={href ? "cursor-pointer" : ""}
+                  className={rowClassName}
                   id={key}
                   onAction={href ? () => router.push(href) : undefined}
                 >

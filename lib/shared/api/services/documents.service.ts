@@ -89,6 +89,10 @@ async function deleteDocument(id: string): Promise<void> {
   await apiClient.delete(DOCUMENTS.DELETE(id));
 }
 
+async function bulkDeleteDocuments(ids: string[]): Promise<void> {
+  await apiClient.post(DOCUMENTS.BULK_DELETE, { ids });
+}
+
 export const documentsService = {
   uploadDocument,
   uploadCloudDocument,
@@ -96,4 +100,5 @@ export const documentsService = {
   getDocument,
   renameDocument,
   deleteDocument,
+  bulkDeleteDocuments,
 };

@@ -2,12 +2,17 @@
 
 import type { Document } from "@/lib/shared/types/documents.types";
 
-import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowRight01Icon,
+  Delete02Icon,
+  Download01Icon,
+  FileEditIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Dropdown, Label } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
-import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -24,71 +29,71 @@ export function DocumentActionsMenu({
 }: Props) {
   const router = useRouter();
 
-  const handleAction = async (key: React.Key) => {
-    switch (key) {
-      case "open":
-        router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${doc.id}`);
-        break;
-      case "download":
-        try {
-          const { url } = await documentsService.getDocument(doc.id);
-          const a = window.document.createElement("a");
+  const handleOpen = () => {
+    router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${doc.id}`);
+  };
 
-          a.href = url;
-          a.download = doc.filename;
-          a.target = "_blank";
-          a.rel = "noopener";
-          window.document.body.appendChild(a);
-          a.click();
-          a.remove();
-        } catch (err) {
-          toast.error({
-            title: "Download failed",
-            description: err instanceof Error ? err.message : undefined,
-          });
-        }
-        break;
-      case "rename":
-        onRename();
-        break;
-      case "delete":
-        onDelete();
-        break;
+  const handleDownload = async () => {
+    try {
+      await triggerDocumentDownload(doc);
+    } catch (err) {
+      toast.error({
+        title: "Download failed",
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      <Dropdown>
+    <div className="flex items-center justify-end gap-1">
+      <Tooltip content="Open">
         <Button
           isIconOnly
-          aria-label={`Actions for ${doc.filename}`}
+          aria-label={`Open ${doc.filename}`}
+          className="text-default-600"
           size="sm"
-          variant="ghost"
+          variant="light"
+          onPress={handleOpen}
         >
-          <HugeiconsIcon icon={MoreHorizontalIcon} size={18} />
+          <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
         </Button>
-        <Dropdown.Popover>
-          <Dropdown.Menu onAction={handleAction}>
-            <Dropdown.Item id="open" textValue="Open">
-              <Label>Open</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="download" textValue="Download">
-              <Label>Download</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="rename" textValue="Rename">
-              <Label>Rename</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="delete" textValue="Delete" variant="danger">
-              <Label>Delete</Label>
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
+      </Tooltip>
+      <Tooltip content="Download">
+        <Button
+          isIconOnly
+          aria-label={`Download ${doc.filename}`}
+          className="text-default-600"
+          size="sm"
+          variant="light"
+          onPress={() => void handleDownload()}
+        >
+          <HugeiconsIcon icon={Download01Icon} size={16} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Rename">
+        <Button
+          isIconOnly
+          aria-label={`Rename ${doc.filename}`}
+          className="text-default-600"
+          size="sm"
+          variant="light"
+          onPress={onRename}
+        >
+          <HugeiconsIcon icon={FileEditIcon} size={16} />
+        </Button>
+      </Tooltip>
+      <Tooltip color="danger" content="Delete">
+        <Button
+          isIconOnly
+          aria-label={`Delete ${doc.filename}`}
+          className="text-danger"
+          size="sm"
+          variant="light"
+          onPress={onDelete}
+        >
+          <HugeiconsIcon icon={Delete02Icon} size={16} />
+        </Button>
+      </Tooltip>
     </div>
   );
 }
