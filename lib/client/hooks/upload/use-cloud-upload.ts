@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { pickGoogleDrivePdfFiles } from "@/lib/client/utils/google-drive-picker";
+
 export type CloudProvider = "gdrive" | "onedrive";
 export type CloudUploadStatus =
   | "idle"
@@ -147,36 +149,17 @@ export function useCloudUpload() {
       throw new Error("Security check failed during Google sign-in.");
     }
 
-    const response = await fetch(
-      "https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType,size)&pageSize=25&orderBy=modifiedTime desc",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
 
-    if (!response.ok) {
-      throw new Error("Could not load files from Google Drive.");
+    if (!apiKey) {
+      throw new Error(
+        "Missing NEXT_PUBLIC_GOOGLE_API_KEY. Create a browser API key in Google Cloud, enable the Picker API, and add it to your env.",
+      );
     }
 
-    const data = (await response.json()) as {
-      files?: Array<{
-        id: string;
-        mimeType?: string;
-        name: string;
-        size?: string;
-      }>;
-    };
+    const picked = await pickGoogleDrivePdfFiles(accessToken, apiKey);
 
-    const mapped = (data.files ?? []).map((file) => ({
-      accessToken,
-      id: file.id,
-      mimeType: file.mimeType,
-      name: file.name,
-      provider: "gdrive" as const,
-      size: file.size ? Number(file.size) : undefined,
-    }));
-
-    return mapped;
+    return picked as CloudBrowserItem[];
   }, []);
 
   const beginOneDriveFlow = useCallback(async () => {
@@ -245,7 +228,7 @@ export function useCloudUpload() {
   }, []);
 
   const start = useCallback(
-    async (provider: CloudProvider) => {
+    async (provider: CloudProvider): Promise<CloudBrowserItem[]> => {
       setActiveProvider(provider);
       setStatus("authenticating");
       setError(null);
@@ -258,14 +241,21 @@ export function useCloudUpload() {
             ? await beginGoogleFlow()
             : await beginOneDriveFlow();
 
-        setItems(nextItems);
+        if (provider === "onedrive") {
+          setItems(nextItems);
+        }
+
         setStatus("idle");
+
+        return nextItems;
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unable to start cloud upload.";
 
         setError(message);
         setStatus("error");
+
+        return [];
       }
     },
     [beginGoogleFlow, beginOneDriveFlow],

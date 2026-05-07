@@ -12,7 +12,8 @@ export function DashboardHome() {
             My Documents
           </h1>
           <p className="text-sm text-default-500">
-            Open, rename, download, or delete your saved PDFs.
+            Open, rename, download, or delete your saved PDFs. Select multiple
+            rows to download or delete in one step.
           </p>
         </div>
 

@@ -123,3 +123,20 @@ export function useDeleteDocumentMutation() {
     },
   });
 }
+
+export function useBulkDeleteDocumentsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { ids: string[] }>({
+    mutationFn: ({ ids }) => documentsService.bulkDeleteDocuments(ids),
+    onError: (error) => {
+      toast.error({ title: "Bulk delete failed", description: error.message });
+    },
+    onSuccess: (_data, { ids }) => {
+      toast.success({ title: `${ids.length} document(s) deleted` });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+    },
+  });
+}

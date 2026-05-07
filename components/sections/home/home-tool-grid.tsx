@@ -1,3 +1,5 @@
+import type { ComponentProps } from "react";
+
 import {
   AiScanIcon,
   ArchiveIcon,
@@ -22,12 +24,10 @@ import Link from "next/link";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-type ToolIcon = typeof PaintBrush01Icon | typeof TextFontIcon;
-
 type ToolCard = {
   description: string;
   href: string;
-  icon: ToolIcon;
+  icon: NonNullable<ComponentProps<typeof HugeiconsIcon>["icon"]>;
   title: string;
 };
 

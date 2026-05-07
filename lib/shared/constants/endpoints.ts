@@ -7,4 +7,5 @@ export const DOCUMENTS = {
   DETAIL: (id: string) => `/documents/${id}`,
   RENAME: (id: string) => `/documents/${id}/rename`,
   DELETE: (id: string) => `/documents/${id}`,
+  BULK_DELETE: "/documents/bulk-delete",
 } as const;
