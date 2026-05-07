@@ -46,53 +46,65 @@ export function DocumentActionsMenu({
 
   return (
     <div className="flex items-center justify-end gap-1">
-      <Tooltip content="Open">
+      <Tooltip delay={300}>
         <Button
           isIconOnly
           aria-label={`Open ${doc.filename}`}
           className="text-default-600"
           size="sm"
-          variant="light"
+          variant="ghost"
           onPress={handleOpen}
         >
           <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
         </Button>
+        <Tooltip.Content>
+          <p>Open</p>
+        </Tooltip.Content>
       </Tooltip>
-      <Tooltip content="Download">
+      <Tooltip delay={300}>
         <Button
           isIconOnly
           aria-label={`Download ${doc.filename}`}
           className="text-default-600"
           size="sm"
-          variant="light"
+          variant="ghost"
           onPress={() => void handleDownload()}
         >
           <HugeiconsIcon icon={Download01Icon} size={16} />
         </Button>
+        <Tooltip.Content>
+          <p>Download</p>
+        </Tooltip.Content>
       </Tooltip>
-      <Tooltip content="Rename">
+      <Tooltip delay={300}>
         <Button
           isIconOnly
           aria-label={`Rename ${doc.filename}`}
           className="text-default-600"
           size="sm"
-          variant="light"
+          variant="ghost"
           onPress={onRename}
         >
           <HugeiconsIcon icon={FileEditIcon} size={16} />
         </Button>
+        <Tooltip.Content>
+          <p>Rename</p>
+        </Tooltip.Content>
       </Tooltip>
-      <Tooltip color="danger" content="Delete">
+      <Tooltip delay={300}>
         <Button
           isIconOnly
           aria-label={`Delete ${doc.filename}`}
           className="text-danger"
           size="sm"
-          variant="light"
+          variant="ghost"
           onPress={onDelete}
         >
           <HugeiconsIcon icon={Delete02Icon} size={16} />
         </Button>
+        <Tooltip.Content>
+          <p className="text-danger">Delete</p>
+        </Tooltip.Content>
       </Tooltip>
     </div>
   );

@@ -14,6 +14,11 @@ import { MantineReactTable } from "mantine-react-table";
 
 import { AddFilesIllustration } from "@/components/ui/illustrations";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
+import {
+  documentMatchesTableFilters,
+  formatDocumentBytes,
+  formatDocumentDate,
+} from "@/lib/client/utils/documents-table-display";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
@@ -25,34 +30,6 @@ import { DocumentThumbnail } from "./document-thumbnail";
 import { RenameDocumentModal } from "./rename-document-modal";
 
 const BULK_DOWNLOAD_DELAY_MS = 280;
-
-/** `YYYY-MM-DD` from `<input type="date">` interpreted as local midnight (not UTC). */
-function localDayStartMs(ymd: string): number | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
-
-  if (!m) return null;
-
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const t = new Date(y, mo - 1, d, 0, 0, 0, 0).getTime();
-
-  return Number.isNaN(t) ? null : t;
-}
-
-/** Exclusive end of that local calendar day (next local midnight). */
-function localDayEndExclusiveMs(ymd: string): number | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
-
-  if (!m) return null;
-
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const t = new Date(y, mo - 1, d + 1, 0, 0, 0, 0).getTime();
-
-  return Number.isNaN(t) ? null : t;
-}
 
 const BRAND_RED: [
   string,
@@ -78,27 +55,11 @@ const BRAND_RED: [
   "#5a0e0c",
 ];
 
-function formatBytes(bytes: number): string {
-  if (!bytes) return "—";
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let unit = 0;
-
-  while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024;
-    unit++;
-  }
-
-  return `${size.toFixed(size < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+const DOCUMENTS_TABLE_MANTINE_THEME = {
+  colors: { brand: BRAND_RED },
+  primaryColor: "brand",
+  primaryShade: 5,
+} as const;
 
 const EmptyDocuments = (
   <div className="flex flex-col items-center justify-center gap-3 rounded-lg p-6 text-center">
@@ -132,24 +93,20 @@ export function DocumentsTable() {
     return [{ id: "updatedAt", value: [dateFrom, dateTo] }];
   }, [dateFrom, dateTo]);
 
-  const filteredCount = useMemo(() => {
-    const q = (globalFilter ?? "").trim().toLowerCase();
-    const fromMs = dateFrom ? localDayStartMs(dateFrom) : null;
-    const toExclusiveMs = dateTo ? localDayEndExclusiveMs(dateTo) : null;
-    const from = fromMs ?? -Infinity;
-    const toExclusive = toExclusiveMs ?? Infinity;
+  const filterParams = useMemo(
+    () => ({
+      dateFrom,
+      dateTo,
+      nameQuery: globalFilter ?? "",
+    }),
+    [dateFrom, dateTo, globalFilter],
+  );
 
-    return items.filter((d) => {
-      if (q && !d.filename.toLowerCase().includes(q)) return false;
-
-      const t = new Date(d.updatedAt).getTime();
-
-      if (!Number.isFinite(t)) return false;
-      if (t < from || t >= toExclusive) return false;
-
-      return true;
-    }).length;
-  }, [items, globalFilter, dateFrom, dateTo]);
+  const filteredCount = useMemo(
+    () =>
+      items.filter((d) => documentMatchesTableFilters(d, filterParams)).length,
+    [items, filterParams],
+  );
 
   const hasActiveDateFilters = Boolean(dateFrom) || Boolean(dateTo);
 
@@ -168,6 +125,7 @@ export function DocumentsTable() {
         id: "thumb",
         accessorFn: (row) => row.id,
         enableColumnFilter: false,
+        enableGlobalFilter: false,
         enableSorting: false,
         header: "",
         size: 64,
@@ -191,16 +149,18 @@ export function DocumentsTable() {
       },
       {
         accessorKey: "sizeBytes",
+        enableGlobalFilter: false,
         header: "Size",
         Cell: ({ row }) => (
           <span className="text-sm text-default-500">
-            {formatBytes(row.original.sizeBytes)}
+            {formatDocumentBytes(row.original.sizeBytes)}
           </span>
         ),
       },
       {
         id: "updatedAt",
         accessorFn: (row) => new Date(row.updatedAt),
+        enableGlobalFilter: false,
         filterFn: (row, _columnId, filterValue: unknown) => {
           if (
             filterValue == null ||
@@ -212,26 +172,17 @@ export function DocumentsTable() {
 
           const [fromYmd, toYmd] = filterValue as [string, string];
 
-          if (!fromYmd && !toYmd) return true;
-
-          const t = new Date(row.original.updatedAt).getTime();
-
-          if (!Number.isFinite(t)) return false;
-
-          const from = fromYmd
-            ? (localDayStartMs(fromYmd) ?? -Infinity)
-            : -Infinity;
-          const toExclusive = toYmd
-            ? (localDayEndExclusiveMs(toYmd) ?? Infinity)
-            : Infinity;
-
-          return t >= from && t < toExclusive;
+          return documentMatchesTableFilters(row.original, {
+            dateFrom: typeof fromYmd === "string" ? fromYmd : "",
+            dateTo: typeof toYmd === "string" ? toYmd : "",
+            nameQuery: "",
+          });
         },
         header: "Updated",
         sortingFn: "datetime",
         Cell: ({ row }) => (
           <span className="text-sm text-default-500">
-            {formatDate(row.original.updatedAt)}
+            {formatDocumentDate(row.original.updatedAt)}
           </span>
         ),
       },
@@ -239,6 +190,7 @@ export function DocumentsTable() {
         id: "actions",
         accessorFn: (row) => row.id,
         enableColumnFilter: false,
+        enableGlobalFilter: false,
         enableSorting: false,
         header: "",
         size: 60,
@@ -362,11 +314,7 @@ export function DocumentsTable() {
         <MantineProvider
           withGlobalStyles
           withNormalizeCSS
-          theme={{
-            colors: { brand: BRAND_RED },
-            primaryColor: "brand",
-            primaryShade: 5,
-          }}
+          theme={DOCUMENTS_TABLE_MANTINE_THEME}
         >
           <MantineReactTable
             enableGlobalFilter

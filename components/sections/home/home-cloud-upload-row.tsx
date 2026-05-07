@@ -4,7 +4,7 @@ import { Upload01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Spinner } from "@heroui/react";
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, type ChangeEvent } from "react";
 
 import {
   type CloudProvider,
@@ -87,7 +87,7 @@ export function HomeCloudUploadRow({
     inputRef.current?.click();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
     if (file) {
@@ -100,6 +100,15 @@ export function HomeCloudUploadRow({
   const onCloudPress = async (id: (typeof OPTIONS)[number]["id"]) => {
     if (id === "device") {
       handleDevicePick();
+
+      return;
+    }
+
+    if (id === "onedrive") {
+      toast.info({
+        title: "OneDrive upload is coming soon",
+        description: "Use Google Drive or device upload for now.",
+      });
 
       return;
     }
@@ -199,10 +208,6 @@ export function HomeCloudUploadRow({
                     if (onCloudUpload) {
                       try {
                         await onCloudUpload(item);
-                        toast.success({
-                          title: `${item.name} uploaded`,
-                          description: "Cloud file imported successfully.",
-                        });
                       } catch (err) {
                         toast.error({
                           title: "Cloud upload failed",

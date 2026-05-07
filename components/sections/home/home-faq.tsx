@@ -216,7 +216,7 @@ export function HomeFaq() {
 
           {TAB_CONFIG.map((t) => (
             <Tabs.Panel key={t.id} className="w-full outline-none" id={t.id}>
-              <FaqAccordion items={[...t.items]} />
+              <FaqAccordion items={t.items} />
             </Tabs.Panel>
           ))}
         </Tabs>
