@@ -107,7 +107,9 @@ export function HomeCloudUploadRow({
     await start(id);
   };
 
-  const cloudItems = activeProvider ? items.filter((item) => item.provider === activeProvider) : [];
+  const cloudItems = activeProvider
+    ? items.filter((item) => item.provider === activeProvider)
+    : [];
 
   return (
     <div className="w-full">
@@ -153,7 +155,12 @@ export function HomeCloudUploadRow({
       {status === "error" && error ? (
         <div className="mt-4 rounded-xl border border-danger-300/70 bg-danger-50/70 p-3 text-sm text-danger-700 dark:border-danger-500/50 dark:bg-danger-950/20 dark:text-danger-300">
           <p className="font-medium">{error}</p>
-          <Button className="mt-2" size="sm" variant="ghost" onPress={clearTransient}>
+          <Button
+            className="mt-2"
+            size="sm"
+            variant="ghost"
+            onPress={clearTransient}
+          >
             Dismiss
           </Button>
         </div>
@@ -195,7 +202,9 @@ export function HomeCloudUploadRow({
                     }
                   }}
                 >
-                  <span className="truncate text-sm text-foreground">{item.name}</span>
+                  <span className="truncate text-sm text-foreground">
+                    {item.name}
+                  </span>
                   <span className="text-xs text-default-500">
                     {item.mimeType ?? "Unknown type"}
                   </span>

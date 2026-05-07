@@ -1,4 +1,3 @@
-import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
 import {
@@ -9,6 +8,8 @@ import {
   Settings02Icon,
   Share01Icon,
 } from "@hugeicons/core-free-icons";
+
+import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 
 export const cookieTocEntries: LegalTocEntry[] = [
   { id: "c-4-1", label: "4.1 What Are Cookies" },
@@ -22,7 +23,11 @@ export const cookieTocEntries: LegalTocEntry[] = [
 export function CookiePolicyContent() {
   return (
     <>
-      <LegalSectionCard icon={CookieIcon} id="c-4-1" title="4.1 What Are Cookies">
+      <LegalSectionCard
+        icon={CookieIcon}
+        id="c-4-1"
+        title="4.1 What Are Cookies"
+      >
         <p>
           Cookies are small text files placed on your device by websites you
           visit. They are widely used to make websites work, improve user
@@ -63,8 +68,12 @@ export function CookiePolicyContent() {
           experience.
         </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>ui_theme — Remembers light/dark mode preference (expires: 1 year)</li>
-          <li>language_pref — Stores your language selection (expires: 1 year)</li>
+          <li>
+            ui_theme — Remembers light/dark mode preference (expires: 1 year)
+          </li>
+          <li>
+            language_pref — Stores your language selection (expires: 1 year)
+          </li>
         </ul>
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           Analytics cookies
@@ -94,7 +103,9 @@ export function CookiePolicyContent() {
         id="c-4-3"
         title="4.3 Third-Party Cookies"
       >
-        <p>Some third-party services we use may set their own cookies, including:</p>
+        <p>
+          Some third-party services we use may set their own cookies, including:
+        </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>Payment processors (for fraud prevention during checkout).</li>
           <li>Google Analytics (for anonymized usage analytics).</li>
@@ -112,7 +123,9 @@ export function CookiePolicyContent() {
           to accept or decline non-essential cookies. You can also change your
           preferences at any time via the Cookie Settings link in the footer.
         </p>
-        <p className="mt-4">You can also control cookies through your browser settings:</p>
+        <p className="mt-4">
+          You can also control cookies through your browser settings:
+        </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>Chrome: Settings &gt; Privacy and Security &gt; Cookies</li>
           <li>Firefox: Options &gt; Privacy and Security &gt; Cookies</li>

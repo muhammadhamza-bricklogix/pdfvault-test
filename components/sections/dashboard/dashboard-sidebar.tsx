@@ -7,6 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -46,7 +47,7 @@ function SidebarNavItem({
     <Link
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         isActive
-          ? "bg-default-100 text-[var(--color-foreground)]"
+          ? "bg-[color-mix(in_oklab,var(--color-accent)_12%,transparent)] text-[var(--color-accent)]"
           : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
       } ${collapsed ? "justify-center" : ""}`}
       href={href}
@@ -88,11 +89,21 @@ export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
       >
         {!collapsed && (
           <Link
-            className="text-xl font-semibold tracking-tight"
+            className="flex items-center gap-2 text-xl font-semibold tracking-tight"
             href={ROUTES.PUBLIC.HOME}
           >
-            <span className="text-[var(--color-accent)]">PDF</span>
-            <span className="text-[var(--color-foreground)]">edits</span>
+            <Image
+              priority
+              alt="PDFedits logo"
+              className="size-8 object-contain"
+              height={32}
+              src="/logo.svg"
+              width={32}
+            />
+            <span>
+              <span className="text-[var(--color-accent)]">PDF</span>
+              <span className="text-[var(--color-foreground)]">edits</span>
+            </span>
           </Link>
         )}
         <Tooltip delay={300}>

@@ -1,10 +1,6 @@
-import Link from "next/link";
-
-import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
-
+import Link from "next/link";
 import {
   Clock01Icon,
   JudgeIcon,
@@ -16,6 +12,9 @@ import {
   UserCircleIcon,
   UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
+
+import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const doNotSellTocEntries: LegalTocEntry[] = [
   { id: "d-6-1", label: "6.1 Your Rights Under CCPA/CPRA" },
@@ -32,7 +31,11 @@ export const doNotSellTocEntries: LegalTocEntry[] = [
 export function DoNotSellContent() {
   return (
     <>
-      <LegalSectionCard icon={JudgeIcon} id="d-6-1" title="6.1 Your Rights Under CCPA/CPRA">
+      <LegalSectionCard
+        icon={JudgeIcon}
+        id="d-6-1"
+        title="6.1 Your Rights Under CCPA/CPRA"
+      >
         <p>
           If you are a California resident, the California Consumer Privacy Act
           (CCPA), as amended by the California Privacy Rights Act (CPRA), gives
@@ -42,7 +45,11 @@ export function DoNotSellContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Shield01Icon} id="d-6-2" title="6.2 Our Current Practices">
+      <LegalSectionCard
+        icon={Shield01Icon}
+        id="d-6-2"
+        title="6.2 Our Current Practices"
+      >
         <p>
           PDF Viewer App does not sell your personal information to third
           parties for monetary compensation.
@@ -71,7 +78,9 @@ export function DoNotSellContent() {
             Internet or network activity (pages visited, features used, session
             data).
           </li>
-          <li>Geolocation data (country-level only, derived from IP address).</li>
+          <li>
+            Geolocation data (country-level only, derived from IP address).
+          </li>
         </ul>
       </LegalSectionCard>
 
@@ -104,7 +113,11 @@ export function DoNotSellContent() {
         </ul>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={SparklesIcon} id="d-6-5" title="6.5 Other California Privacy Rights">
+      <LegalSectionCard
+        icon={SparklesIcon}
+        id="d-6-5"
+        title="6.5 Other California Privacy Rights"
+      >
         <p>As a California resident, you also have the right to:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
@@ -140,8 +153,8 @@ export function DoNotSellContent() {
       <LegalSectionCard icon={Clock01Icon} id="d-6-7" title="6.7 Response Time">
         <p>
           We will acknowledge your opt-out request within 10 business days and
-          fulfill it within 15 business days. We will confirm once the opt-out is
-          effective.
+          fulfill it within 15 business days. We will confirm once the opt-out
+          is effective.
         </p>
       </LegalSectionCard>
 
@@ -152,14 +165,18 @@ export function DoNotSellContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={UserCircleIcon} id="d-6-9" title="6.9 Rights for Residents of Other States">
+      <LegalSectionCard
+        icon={UserCircleIcon}
+        id="d-6-9"
+        title="6.9 Rights for Residents of Other States"
+      >
         <p>
           Residents of Virginia (VCDPA), Colorado (CPA), Connecticut (CTDPA),
           Utah (UCPA), and other states with privacy laws have similar rights.
           We honor opt-out and deletion requests from users in all such
           jurisdictions. Contact us at{" "}
-          <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a> to
-          exercise your rights.
+          <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>{" "}
+          to exercise your rights.
         </p>
       </LegalSectionCard>
     </>

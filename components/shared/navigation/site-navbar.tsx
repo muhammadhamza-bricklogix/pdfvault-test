@@ -4,6 +4,7 @@ import { Show } from "@clerk/nextjs";
 import { ArrowDown01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Dropdown, Label, Separator } from "@heroui/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -44,11 +45,19 @@ export function SiteNavbar() {
                 <Drawer.CloseTrigger />
                 <Drawer.Header>
                   <Drawer.Heading className="flex items-center gap-2">
-                    <span className="flex size-9 items-center justify-center rounded-md bg-[#E5252A] text-[10px] font-bold leading-none tracking-tight text-white">
-                      PDF
-                    </span>
-                    <span className="text-lg font-bold text-[var(--color-foreground)]">
-                      PDFedits
+                    <Image
+                      priority
+                      alt="PDFedits logo"
+                      className="size-9 object-contain"
+                      height={36}
+                      src="/logo.svg"
+                      width={36}
+                    />
+                    <span className="text-lg font-bold">
+                      <span className="text-[var(--color-accent)]">PDF</span>
+                      <span className="text-[var(--color-foreground)]">
+                        edits
+                      </span>
                     </span>
                   </Drawer.Heading>
                 </Drawer.Header>
@@ -79,10 +88,10 @@ export function SiteNavbar() {
                         Sign in
                       </Button>
                       <Button
-                        className="w-full bg-[var(--color-accent)] text-[var(--color-background)]"
+                        className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
                         onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
                       >
-                        Sign up
+                        Sign up free
                       </Button>
                     </Show>
 
@@ -106,11 +115,17 @@ export function SiteNavbar() {
           className="flex shrink-0 items-center gap-2.5"
           href={ROUTES.PUBLIC.HOME}
         >
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#E5252A] text-[10px] font-bold leading-none tracking-tight text-white sm:size-10 sm:text-[11px]">
-            PDF
-          </span>
-          <span className="text-lg font-bold tracking-tight text-[var(--color-foreground)] sm:text-xl">
-            PDFedits
+          <Image
+            priority
+            alt="PDFedits logo"
+            className="size-9 object-contain sm:size-10"
+            height={40}
+            src="/logo.svg"
+            width={40}
+          />
+          <span className="text-lg font-bold tracking-tight sm:text-xl">
+            <span className="text-[var(--color-accent)]">PDF</span>
+            <span className="text-[var(--color-foreground)]">edits</span>
           </span>
         </Link>
 
@@ -153,10 +168,10 @@ export function SiteNavbar() {
               Sign in
             </Link>
             <Button
-              className="rounded-lg bg-[var(--color-accent)] px-5 font-medium text-[var(--color-background)] shadow-sm"
+              className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
               onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
             >
-              Sign up
+              Sign up free
             </Button>
           </Show>
 
