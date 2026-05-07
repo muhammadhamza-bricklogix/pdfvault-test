@@ -54,10 +54,12 @@ const OPTIONS = [
 ] as const;
 
 type HomeCloudUploadRowProps = {
+  cloudImportAllowed: boolean;
+  cloudUploadPending?: boolean;
   onCloudSelection?: (selection: CloudSelectedFile | null) => void;
   onCloudUpload?: (selection: CloudSelectedFile) => Promise<void>;
-  cloudUploadPending?: boolean;
   onFileSelect: (file: File) => void;
+  onRequireSignInForCloud: () => void;
 };
 
 function formatProviderLabel(provider: CloudProvider) {
@@ -65,10 +67,12 @@ function formatProviderLabel(provider: CloudProvider) {
 }
 
 export function HomeCloudUploadRow({
+  cloudImportAllowed,
   cloudUploadPending = false,
   onCloudSelection,
   onCloudUpload,
   onFileSelect,
+  onRequireSignInForCloud,
 }: HomeCloudUploadRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const {
@@ -209,6 +213,12 @@ export function HomeCloudUploadRow({
                       try {
                         await onCloudUpload(item);
                       } catch (err) {
+                        if (
+                          err instanceof Error &&
+                          err.message === "SIGN_IN_REQUIRED"
+                        ) {
+                          return;
+                        }
                         toast.error({
                           title: "Cloud upload failed",
                           description:

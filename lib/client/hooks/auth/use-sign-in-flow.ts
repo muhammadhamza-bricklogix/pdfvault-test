@@ -5,8 +5,8 @@ import type { AuthSignInFormValues } from "@/lib/shared/schemas/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSignIn } from "@clerk/nextjs";
 import { toast } from "@heroui/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -24,9 +24,23 @@ function showServerError(message: string) {
   toast.danger(message);
 }
 
+function safeRedirectPath(raw: string | null, fallback: string): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+    return fallback;
+  }
+
+  return raw;
+}
+
 export function useSignInFlow() {
   const { fetchStatus, signIn } = useSignIn();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrlParam = searchParams.get("redirect_url");
+  const afterSignInPath = useMemo(
+    () => safeRedirectPath(redirectUrlParam, ROUTES.APP.DASHBOARD),
+    [redirectUrlParam],
+  );
   const [step, setStep] = useState<SignInStep>("credentials");
   const [oauthLoading, setOauthLoading] = useState(false);
 
@@ -74,7 +88,7 @@ export function useSignInFlow() {
   const navigateToHome = async () => {
     const { error } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
-        const url = decorateUrl(ROUTES.APP.DASHBOARD);
+        const url = decorateUrl(afterSignInPath);
 
         if (url.startsWith("http")) {
           window.location.href = url;
@@ -123,8 +137,8 @@ export function useSignInFlow() {
     try {
       await signIn.sso({
         strategy: "oauth_google",
+        redirectCallbackUrl: afterSignInPath,
         redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
-        redirectCallbackUrl: ROUTES.APP.DASHBOARD,
       });
     } catch (error) {
       logger.error("Google sign-in failed", error);

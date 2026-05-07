@@ -1,10 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
+import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -48,22 +48,41 @@ export function useEditorDocumentLoader() {
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  const lastHydratedDocumentId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    if (currentDocumentId === id && file) return;
+    if (!id) {
+      lastHydratedDocumentId.current = null;
+
+      return;
+    }
+
+    const alreadyHydratedThisUrl =
+      lastHydratedDocumentId.current === id &&
+      file != null &&
+      currentDocumentId === id;
+
+    if (alreadyHydratedThisUrl) return;
 
     let cancelled = false;
 
     loadDocument(id)
       .then((loaded) => {
         if (cancelled) return;
-        // Re-check store state — a parallel mount may have populated it.
+
         const state = usePdfEditorStore.getState();
 
-        if (state.currentDocumentId === id && state.file) return;
+        if (
+          state.currentDocumentId === id &&
+          state.file != null &&
+          lastHydratedDocumentId.current === id
+        ) {
+          return;
+        }
+
         setFile(loaded.file);
         setCurrentDocument({ id: loaded.id, name: loaded.name });
+        lastHydratedDocumentId.current = id;
       })
       .catch((err) => {
         if (cancelled) return;

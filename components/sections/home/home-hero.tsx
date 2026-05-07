@@ -2,8 +2,9 @@
 
 import type { CloudSelectedFile } from "@/lib/client/hooks/upload/use-cloud-upload";
 
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { FileUpload } from "@/components/ui/file-upload";
 import { useUploadCloudDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
@@ -16,11 +17,22 @@ import { HomeStats } from "./home-stats";
 
 export function HomeHero() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
   const [cloudSelection, setCloudSelection] =
     useState<CloudSelectedFile | null>(null);
   const uploadCloudMutation = useUploadCloudDocumentMutation();
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+
+  const requireSignInForCloud = useCallback(() => {
+    toast.info({
+      description: "Cloud import saves the PDF to your account.",
+      title: "Sign in required",
+    });
+    router.push(
+      `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(ROUTES.PUBLIC.HOME)}`,
+    );
+  }, [router]);
 
   const handleFileSelect = (file: File) => {
     setCloudSelection(null);
@@ -30,6 +42,11 @@ export function HomeHero() {
   };
 
   const handleCloudUpload = async (selection: CloudSelectedFile) => {
+    if (!isSignedIn) {
+      requireSignInForCloud();
+      throw new Error("SIGN_IN_REQUIRED");
+    }
+
     const uploaded = await uploadCloudMutation.mutateAsync({
       accessToken: selection.accessToken,
       fileId: selection.id,
@@ -38,11 +55,14 @@ export function HomeHero() {
       provider: selection.provider,
     });
 
+    setFile(null);
     setCurrentDocument({ id: uploaded.id, name: uploaded.filename });
     setCloudSelection(selection);
     toast.info({ title: "Opening imported document..." });
     router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${uploaded.id}`);
   };
+
+  const cloudImportAllowed = isLoaded && Boolean(isSignedIn);
 
   return (
     <section className="flex w-full flex-col items-center py-4 sm:py-8">
@@ -68,10 +88,12 @@ export function HomeHero() {
           />
           <div className="mt-6 border-t border-dashed border-default-300 pt-7 dark:border-default-600">
             <HomeCloudUploadRow
+              cloudImportAllowed={cloudImportAllowed}
               cloudUploadPending={uploadCloudMutation.isPending}
               onCloudSelection={setCloudSelection}
               onCloudUpload={handleCloudUpload}
               onFileSelect={handleFileSelect}
+              onRequireSignInForCloud={requireSignInForCloud}
             />
             {cloudSelection ? (
               <p className="mt-4 text-center text-sm text-default-600 dark:text-default-400">

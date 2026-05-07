@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { SignInSection } from "@/components/sections/auth/sign-in-section";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -11,5 +12,9 @@ export default async function SignInPage() {
     redirect(ROUTES.APP.DASHBOARD);
   }
 
-  return <SignInSection />;
+  return (
+    <Suspense fallback={null}>
+      <SignInSection />
+    </Suspense>
+  );
 }
