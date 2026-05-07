@@ -16,9 +16,8 @@ import { HomeStats } from "./home-stats";
 
 export function HomeHero() {
   const router = useRouter();
-  const [cloudSelection, setCloudSelection] = useState<CloudSelectedFile | null>(
-    null,
-  );
+  const [cloudSelection, setCloudSelection] =
+    useState<CloudSelectedFile | null>(null);
   const uploadCloudMutation = useUploadCloudDocumentMutation();
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
@@ -48,16 +47,17 @@ export function HomeHero() {
   return (
     <section className="flex w-full flex-col items-center py-4 sm:py-8">
       <div className="flex w-full max-w-5xl flex-col items-center gap-8 text-center">
-        <div className="space-y-4">
+        <div className="space-y-5">
           <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl xl:text-7xl">
-            All-in-One Online PDF Editor
+            All-in-One Online{" "}
+            <span className="text-[var(--color-accent)]">PDF</span> Editor
           </h1>
           <p className="mx-auto max-w-3xl text-lg leading-8 text-default-600 sm:text-xl dark:text-default-400">
             Easily edit, convert and sign PDFs. Fast, simple and secure.
           </p>
         </div>
 
-        <div className="w-full max-w-5xl rounded-[2rem] border border-dashed border-default-300 bg-[var(--color-background)]/75 p-5 backdrop-blur-sm dark:border-default-600 sm:p-6">
+        <div className="w-full max-w-5xl rounded-[2rem] border border-dashed border-[color-mix(in_oklab,var(--color-accent)_35%,transparent)] bg-[var(--color-background)]/75 p-5 backdrop-blur-sm dark:border-[color-mix(in_oklab,var(--color-accent)_25%,transparent)] sm:p-6">
           <FileUpload
             marketingGrouped
             accept={["application/pdf"]}

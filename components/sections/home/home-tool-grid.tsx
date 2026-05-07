@@ -218,6 +218,18 @@ export function HomeToolGrid() {
   return (
     <section className="w-full py-10" id="pdf-tools">
       <div className="mx-auto w-full max-w-6xl">
+        <div className="mb-12 px-2 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[color-mix(in_oklab,var(--color-accent)_8%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">
+            16 PDF Tools
+          </span>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-4xl">
+            Everything you need for{" "}
+            <span className="text-[var(--color-accent)]">PDF</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-base text-default-600 dark:text-default-400">
+            Professional PDF tools built for speed, simplicity, and security.
+          </p>
+        </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
           {TOOL_CARDS.map((card) => (
             <Link

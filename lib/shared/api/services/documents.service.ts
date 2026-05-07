@@ -55,7 +55,9 @@ async function listDocuments(
   return data;
 }
 
-async function uploadCloudDocument(input: UploadCloudDocumentInput): Promise<Document> {
+async function uploadCloudDocument(
+  input: UploadCloudDocumentInput,
+): Promise<Document> {
   const { data } = await apiClient.post<Document>(DOCUMENTS.UPLOAD_CLOUD, {
     accessToken: input.accessToken,
     documentId: input.documentId,

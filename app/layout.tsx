@@ -28,7 +28,8 @@ export const metadata: Metadata = {
   description:
     "PDFedits is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
   icons: {
-    icon: "/favicon.ico",
+    apple: "/logo.svg",
+    icon: "/logo.svg",
   },
 };
 

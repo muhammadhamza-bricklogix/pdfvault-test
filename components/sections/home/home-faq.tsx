@@ -176,10 +176,13 @@ export function HomeFaq() {
     <section className="relative w-full scroll-mt-24 py-16 sm:py-20" id="faq">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-sky-100/50 via-[var(--color-background)] to-[var(--color-background)] dark:from-sky-950/30"
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-red-50/60 via-[var(--color-background)] to-[var(--color-background)] dark:from-red-950/20"
       />
       <div className="relative mx-auto max-w-3xl px-2 text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-4xl">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[color-mix(in_oklab,var(--color-accent)_8%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">
+          FAQ
+        </span>
+        <h2 className="mt-4 text-3xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-4xl">
           Frequently Asked Questions
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-base text-default-600 sm:text-lg dark:text-default-400">
@@ -202,7 +205,7 @@ export function HomeFaq() {
               {TAB_CONFIG.map((t) => (
                 <Tabs.Tab
                   key={t.id}
-                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--color-foreground)] data-[selected=true]:text-[var(--color-background)] data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--color-foreground)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--color-foreground)] dark:data-[hovered=true]:bg-default-50/10"
+                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--color-accent)] data-[selected=true]:text-white data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--color-accent)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--color-accent)] dark:data-[hovered=true]:bg-default-50/10"
                   id={t.id}
                 >
                   {t.label}
@@ -219,22 +222,30 @@ export function HomeFaq() {
         </Tabs>
       </div>
 
-      <div className="relative mx-auto mt-16 w-full max-w-5xl overflow-hidden rounded-2xl bg-[#0b2a5c] px-6 py-10 text-center sm:px-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/90">
+      <div className="relative mx-auto mt-16 w-full max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--color-accent)] via-red-600 to-red-800 px-6 py-10 text-center shadow-xl shadow-red-500/20 sm:px-10 dark:shadow-red-900/30">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full bg-white/10 blur-2xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-8 -left-8 size-40 rounded-full bg-white/10 blur-2xl"
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
           PDF editing made easy
         </p>
-        <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">
+        <p className="relative mt-2 text-xl font-semibold text-white sm:text-2xl">
           All the PDF tools you need
         </p>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-white/80">
+        <p className="relative mx-auto mt-2 max-w-lg text-sm text-white/80">
           Upload, edit, and export from one place — built for teams and everyday
           document work.
         </p>
         <Link
-          className="mt-6 inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#0b2a5c] transition-opacity hover:opacity-90"
+          className="relative mt-6 inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-bold text-[var(--color-accent)] shadow-md transition-transform hover:scale-[1.03]"
           href={ROUTES.TOOLS.PDF_EDITOR}
         >
-          Get started
+          Get started free
         </Link>
       </div>
     </section>

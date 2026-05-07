@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
+import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
 import { LegalContactBanner } from "@/components/sections/legal/legal-contact-banner";
 import { LegalHero } from "@/components/sections/legal/legal-hero";
 import { LegalMiniFooter } from "@/components/sections/legal/legal-mini-footer";
-import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 import { LegalToc } from "@/components/sections/legal/legal-toc";
 
 type LegalDocumentLayoutProps = {

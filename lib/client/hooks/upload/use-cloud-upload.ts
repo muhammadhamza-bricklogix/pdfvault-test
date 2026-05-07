@@ -77,6 +77,7 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
           if (!href.startsWith(window.location.origin)) return;
 
           const parsed = parseOAuthResponse(href);
+
           window.clearInterval(interval);
           popup.close();
 
@@ -129,6 +130,7 @@ export function useCloudUpload() {
     const state = crypto.randomUUID();
     const redirectUri = `${window.location.origin}/`;
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("response_type", "token");
@@ -157,7 +159,12 @@ export function useCloudUpload() {
     }
 
     const data = (await response.json()) as {
-      files?: Array<{ id: string; mimeType?: string; name: string; size?: string }>;
+      files?: Array<{
+        id: string;
+        mimeType?: string;
+        name: string;
+        size?: string;
+      }>;
     };
 
     const mapped = (data.files ?? []).map((file) => ({
@@ -185,6 +192,7 @@ export function useCloudUpload() {
     const authUrl = new URL(
       `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`,
     );
+
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("response_type", "token");
@@ -255,6 +263,7 @@ export function useCloudUpload() {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unable to start cloud upload.";
+
         setError(message);
         setStatus("error");
       }

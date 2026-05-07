@@ -7,7 +7,6 @@ import {
   PrivacyPolicyContent,
   privacyTocEntries,
 } from "@/components/sections/legal/privacy-policy-content";
-
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const metadata: Metadata = {

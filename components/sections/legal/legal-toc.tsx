@@ -51,7 +51,10 @@ export function LegalToc({ entries }: LegalTocProps) {
 
   return (
     <>
-      <nav aria-label="On this page" className="flex gap-2 overflow-x-auto pb-3 lg:hidden">
+      <nav
+        aria-label="On this page"
+        className="flex gap-2 overflow-x-auto pb-3 lg:hidden"
+      >
         <div className="flex min-w-max gap-2">
           {entries.map((item) => (
             <Link

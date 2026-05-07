@@ -1,12 +1,6 @@
-import Link from "next/link";
-
-import { LegalCallout } from "@/components/sections/legal/legal-callout";
-import { LegalRightsGrid } from "@/components/sections/legal/legal-rights-grid";
-import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
-
+import Link from "next/link";
 import {
   Clock01Icon,
   Database01Icon,
@@ -19,6 +13,11 @@ import {
   StarAward01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
+
+import { LegalCallout } from "@/components/sections/legal/legal-callout";
+import { LegalRightsGrid } from "@/components/sections/legal/legal-rights-grid";
+import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const privacyTocEntries: LegalTocEntry[] = [
   { id: "p-3-1", label: "3.1 Introduction" },
@@ -87,8 +86,8 @@ export function PrivacyPolicyContent() {
         <div className="mt-6">
           <LegalCallout title="What we do NOT collect:" variant="success">
             <p>
-              The contents of your uploaded files. Files are processed in
-              memory and not permanently stored beyond the session unless you
+              The contents of your uploaded files. Files are processed in memory
+              and not permanently stored beyond the session unless you
               explicitly save them to your account.
             </p>
           </LegalCallout>
@@ -153,7 +152,9 @@ export function PrivacyPolicyContent() {
             providers) who are contractually bound to protect your data.
           </li>
           <li>Analytics providers (using anonymized data only).</li>
-          <li>Law enforcement or regulatory authorities when required by law.</li>
+          <li>
+            Law enforcement or regulatory authorities when required by law.
+          </li>
           <li>
             Successors in the event of a merger, acquisition, or sale of assets
             (with advance notice to you).
@@ -161,9 +162,15 @@ export function PrivacyPolicyContent() {
         </ul>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Clock01Icon} id="p-3-6" title="3.6 Data Retention">
+      <LegalSectionCard
+        icon={Clock01Icon}
+        id="p-3-6"
+        title="3.6 Data Retention"
+      >
         <ul className="list-disc space-y-2 pl-5">
-          <li>Account data is retained for as long as your account is active.</li>
+          <li>
+            Account data is retained for as long as your account is active.
+          </li>
           <li>
             Uploaded file data is not retained beyond the processing session
             (unless explicitly saved to your account).
@@ -208,8 +215,10 @@ export function PrivacyPolicyContent() {
           <LegalCallout variant="emphasis">
             <p>
               To exercise any of these rights, contact us at{" "}
-              <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>.
-              We will respond within <strong>30 days</strong>.
+              <a href="mailto:support@pdfeditsapp.com">
+                support@pdfeditsapp.com
+              </a>
+              . We will respond within <strong>30 days</strong>.
             </p>
           </LegalCallout>
         </div>
