@@ -36,7 +36,7 @@ function SignatureDrawPanel({ onSignatureReady }: PanelProps) {
       if (cancelled || !canvasRef.current) return;
 
       const fc = new FabricCanvas(canvasRef.current, {
-        backgroundColor: "#ffffff",
+        backgroundColor: "transparent",
         height: 150,
         isDrawingMode: true,
         width: 400,
@@ -51,7 +51,7 @@ function SignatureDrawPanel({ onSignatureReady }: PanelProps) {
       fc.freeDrawingBrush = brush;
 
       fc.on("path:created", () => {
-        onSignatureReady(fc.toDataURL({ format: "png", multiplier: 1 }));
+        onSignatureReady(fc.toDataURL({ format: "png", multiplier: 3 }));
       });
 
       fabricRef.current = fc;
@@ -72,14 +72,14 @@ function SignatureDrawPanel({ onSignatureReady }: PanelProps) {
     if (!fc) return;
 
     fc.clear();
-    fc.backgroundColor = "#ffffff";
+    fc.backgroundColor = "transparent";
     fc.renderAll();
     onSignatureReady(null);
   };
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="overflow-hidden rounded-lg border border-default-200">
+      <div className="overflow-hidden rounded-lg border border-default-200 bg-white">
         <canvas ref={canvasRef} />
       </div>
       <Button size="sm" variant="ghost" onPress={handleClear}>

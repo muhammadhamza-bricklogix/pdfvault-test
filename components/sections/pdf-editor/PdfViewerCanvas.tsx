@@ -119,9 +119,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       const textObj = new FabricIText("", {
         fill: "#000000",
-        fontFamily: "Arial",
+        fontFamily: "Helvetica",
         fontSize: 16,
         left: pointer.x,
+        lockScalingX: true,
+        lockScalingY: true,
         top: pointer.y,
       }) as IText;
 

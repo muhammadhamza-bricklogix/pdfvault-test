@@ -38,7 +38,7 @@ type FloatingTextToolbarProps = {
 };
 
 const FONT_FAMILIES = [
-  "Arial",
+  "Helvetica",
   "Times New Roman",
   "Courier New",
   "Georgia",
@@ -48,7 +48,7 @@ const FONT_FAMILIES = [
 function getTextStyle(obj: IText): TextStyle {
   return {
     color: (obj.fill as string) ?? "#000000",
-    fontFamily: obj.fontFamily ?? "Arial",
+    fontFamily: obj.fontFamily ?? "Helvetica",
     fontSize: obj.fontSize ?? 16,
     isBold: obj.fontWeight === "bold",
     isItalic: obj.fontStyle === "italic",
@@ -64,7 +64,7 @@ export function FloatingTextToolbar({
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const [style, setStyle] = useState<TextStyle>({
     color: "#000000",
-    fontFamily: "Arial",
+    fontFamily: "Helvetica",
     fontSize: 16,
     isBold: false,
     isItalic: false,

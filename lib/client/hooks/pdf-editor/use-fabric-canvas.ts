@@ -13,11 +13,21 @@ type UseFabricCanvasParams = {
   renderedSize: { height: number; width: number } | null;
 };
 
+/**
+ * The Fabric canvas always uses "base" dimensions (zoom=1, i.e. the PDF page
+ * size in points). When the user zooms, we apply Fabric's own viewport zoom
+ * rather than resizing the canvas. This keeps all object coordinates in a
+ * stable, zoom-independent coordinate space so that:
+ *   - Serialized JSON always represents zoom=1 coordinates
+ *   - The merge pipeline always gets scaleX=scaleY=1
+ *   - No rescaling is needed on load
+ */
 export function useFabricCanvas({
   fabricCanvasRef,
   renderedSize,
 }: UseFabricCanvasParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const zoom = usePdfEditorStore((s) => s.zoom);
   const getFabricJson = usePdfEditorStore((s) => s.getFabricJson);
   const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
 
@@ -25,8 +35,14 @@ export function useFabricCanvas({
   const mountedPageRef = useRef<number>(currentPage);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
 
+  // Base dimensions = CSS size at zoom=1 (matches PDF page points)
+  const baseWidth = renderedSize ? renderedSize.width / zoom : null;
+  const baseHeight = renderedSize ? renderedSize.height / zoom : null;
+
+  // --- Canvas creation & page-change lifecycle ---
   useEffect(() => {
-    if (!fabricCanvasRef.current || !renderedSize) return;
+    if (!fabricCanvasRef.current || !renderedSize || !baseWidth || !baseHeight)
+      return;
 
     let cancelled = false;
     let initDone: Promise<void> | undefined;
@@ -48,12 +64,17 @@ export function useFabricCanvas({
         }
       }
 
+      // Create canvas at CSS size (zoom-scaled) but set logical dimensions to base
       const fc = new FabricCanvas(fabricCanvasRef.current, {
         backgroundColor: "transparent",
+        enableRetinaScaling: true,
         height: renderedSize.height,
         selection: true,
         width: renderedSize.width,
       });
+
+      // Apply Fabric zoom so objects are in base-coordinate space
+      fc.setZoom(zoom);
 
       // Fabric wraps the canvas in a <div data-fabric="wrapper"> with position:relative.
       // We need to make it overlay the PDF canvas with position:absolute instead.
@@ -76,6 +97,8 @@ export function useFabricCanvas({
 
         if (cancelled) return;
 
+        // Restore zoom after loadFromJSON (which may reset it)
+        fc.setZoom(zoom);
         fc.renderAll();
       }
 
@@ -107,6 +130,14 @@ export function useFabricCanvas({
       }
     };
   }, [currentPage, renderedSize]);
+
+  // --- Update Fabric zoom when user changes zoom level ---
+  useEffect(() => {
+    if (!fabricRef.current) return;
+
+    fabricRef.current.setZoom(zoom);
+    fabricRef.current.renderAll();
+  }, [zoom]);
 
   return { fabricCanvas, fabricRef };
 }

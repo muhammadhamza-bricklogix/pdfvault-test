@@ -12,15 +12,20 @@ export type ParsedFabricJson = {
 };
 
 /**
- * Serializes a Fabric canvas to a JSON string and embeds the canvas dimensions
- * (which `Canvas.toJSON()` does NOT include in v7). Without this, the saved
- * payload has no width/height and cannot be re-rendered offscreen later.
+ * Serializes a Fabric canvas to a JSON string and embeds the base (zoom=1)
+ * canvas dimensions. Object coordinates are always in base space (Fabric zoom
+ * handles the visual scaling), so we divide by the current zoom to get the
+ * logical dimensions that match the object coordinate space.
  */
 export function serializeFabricCanvas(canvas: FabricCanvas): string {
+  const zoom = canvas.getZoom() || 1;
+  const baseWidth = canvas.getWidth() / zoom;
+  const baseHeight = canvas.getHeight() / zoom;
+
   return JSON.stringify({
     ...canvas.toJSON(),
-    height: canvas.getHeight(),
-    width: canvas.getWidth(),
+    height: baseHeight,
+    width: baseWidth,
   });
 }
 
@@ -63,7 +68,7 @@ export async function renderFabricJsonToPng(
     await fc.loadFromJSON(parsed);
     fc.renderAll();
 
-    return fc.toDataURL({ format: "png", multiplier: 1 });
+    return fc.toDataURL({ format: "png", multiplier: 3 });
   } finally {
     fc.dispose();
 
@@ -71,6 +76,32 @@ export async function renderFabricJsonToPng(
       document.body.removeChild(el);
     }
   }
+}
+
+/**
+ * Renders only the objects at the given indices from a Fabric JSON snapshot
+ * to a PNG data URL. Used by the hybrid merge pipeline to rasterize the
+ * subset of objects that cannot be drawn as vectors (e.g. images).
+ * Returns `null` if no objects pass the filter.
+ */
+export async function renderFabricSubsetToPng(
+  parsed: ParsedFabricJson,
+  objectIndices: number[],
+): Promise<string | null> {
+  if (!objectIndices.length || !parsed.objects?.length) return null;
+
+  const filteredObjects = objectIndices
+    .map((i) => parsed.objects![i])
+    .filter(Boolean);
+
+  if (!filteredObjects.length) return null;
+
+  const subset: ParsedFabricJson = {
+    ...parsed,
+    objects: filteredObjects,
+  };
+
+  return renderFabricJsonToPng(subset);
 }
 
 /** Decodes a `data:image/png;base64,...` URL into raw PNG bytes. */
