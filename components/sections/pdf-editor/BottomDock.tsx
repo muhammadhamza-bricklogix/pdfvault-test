@@ -39,7 +39,7 @@ export function BottomDock({ fabricCanvas }: BottomDockProps) {
 
       <div className="flex items-center gap-2 px-2 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ToolsContent toolIconSize={20} />
+          <ToolsContent showLabels={false} toolIconSize={20} />
         </div>
 
         {pageCount > 1 && (

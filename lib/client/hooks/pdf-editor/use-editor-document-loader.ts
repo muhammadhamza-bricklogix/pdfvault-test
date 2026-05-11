@@ -46,6 +46,7 @@ export function useEditorDocumentLoader() {
   const id = searchParams.get("id");
   const file = usePdfEditorStore((s) => s.file);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
+  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const lastHydratedDocumentId = useRef<string | null>(null);
@@ -55,6 +56,13 @@ export function useEditorDocumentLoader() {
       lastHydratedDocumentId.current = null;
 
       return;
+    }
+
+    // Switching to a different document — reset store immediately so stale
+    // annotations/state don't bleed through and skeleton shows instantly.
+    if (currentDocumentId && currentDocumentId !== id) {
+      clearFile();
+      lastHydratedDocumentId.current = null;
     }
 
     const alreadyHydratedThisUrl =
@@ -96,5 +104,5 @@ export function useEditorDocumentLoader() {
     return () => {
       cancelled = true;
     };
-  }, [id, file, currentDocumentId, setFile, setCurrentDocument]);
+  }, [id, file, currentDocumentId, clearFile, setFile, setCurrentDocument]);
 }

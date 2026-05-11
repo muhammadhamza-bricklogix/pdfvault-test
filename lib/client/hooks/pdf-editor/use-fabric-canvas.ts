@@ -86,6 +86,15 @@ export function useFabricCanvas({
         wrapper.style.left = "0";
       }
 
+      // --- DEBUG LOGGING ---
+      console.group("[fabric-canvas] Init");
+      console.log("renderedSize:", renderedSize);
+      console.log("baseWidth:", baseWidth, "baseHeight:", baseHeight);
+      console.log("zoom:", zoom);
+      console.log("fc created with:", renderedSize.width, "x", renderedSize.height);
+      console.log("fc.setZoom:", zoom);
+      console.groupEnd();
+
       fabricRef.current = fc;
       mountedPageRef.current = currentPage;
 

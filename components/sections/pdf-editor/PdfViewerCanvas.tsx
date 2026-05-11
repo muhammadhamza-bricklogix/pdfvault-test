@@ -6,6 +6,7 @@ import type { PDFPageProxy } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 
 import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
+import { useEditTextMode } from "@/lib/client/hooks/pdf-editor/use-edit-text-mode";
 import { useEditorHistory } from "@/lib/client/hooks/pdf-editor/use-editor-history";
 import { useEraserTool } from "@/lib/client/hooks/pdf-editor/use-eraser-tool";
 import { useFabricCanvas } from "@/lib/client/hooks/pdf-editor/use-fabric-canvas";
@@ -56,7 +57,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     };
   }, [currentPage, pdfDocument]);
 
-  const { renderedSize } = usePageRenderer({ canvasRef, page, zoom });
+  const { renderedSize } = usePageRenderer({
+    canvasRef,
+    page,
+    suppressText: true,
+    zoom,
+  });
 
   const { fabricCanvas, fabricRef } = useFabricCanvas({
     fabricCanvasRef,
@@ -72,6 +78,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
+  useEditTextMode({ fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });
@@ -146,6 +153,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const mod = e.metaKey || e.ctrlKey;
 
       if (!mod) return;
+
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();

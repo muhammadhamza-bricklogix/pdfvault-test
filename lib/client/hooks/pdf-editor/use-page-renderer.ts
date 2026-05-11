@@ -5,9 +5,15 @@ import type { RefObject } from "react";
 
 import { useEffect, useState } from "react";
 
+// pdf.js OPS constants for text rendering operations (31–49)
+const TEXT_OPS_MIN = 31;
+const TEXT_OPS_MAX = 49;
+
 type UsePageRendererParams = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   page: PDFPageProxy | null;
+  /** When true, text operations are filtered out during rendering. Default false. */
+  suppressText?: boolean;
   zoom: number;
 };
 
@@ -16,6 +22,7 @@ type RenderedSize = { height: number; width: number } | null;
 export function usePageRenderer({
   canvasRef,
   page,
+  suppressText = false,
   zoom,
 }: UsePageRendererParams) {
   const [renderedSize, setRenderedSize] = useState<RenderedSize>(null);
@@ -36,13 +43,54 @@ export function usePageRenderer({
     const cssWidth = viewport.width / dpr;
     const cssHeight = viewport.height / dpr;
 
+    // --- DEBUG LOGGING ---
+    console.log(
+      "[page-renderer] zoom:",
+      zoom,
+      "suppressText:",
+      suppressText,
+      "CSS:",
+      cssWidth,
+      "x",
+      cssHeight,
+    );
+
     let renderTask: RenderTask | null = null;
+    let cancelled = false;
 
     const render = async () => {
       try {
-        renderTask = page.render({ canvas, viewport });
+        if (suppressText) {
+          // Get operator list first to identify text operations by index
+          const opList = await page.getOperatorList();
+
+          if (cancelled) return;
+
+          const textIndices = new Set<number>();
+
+          for (let i = 0; i < opList.fnArray.length; i++) {
+            const op = opList.fnArray[i];
+
+            if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
+              textIndices.add(i);
+            }
+          }
+
+          // Render without text operations
+          renderTask = page.render({
+            canvas,
+            operationsFilter: (i: number) => !textIndices.has(i),
+            viewport,
+          });
+        } else {
+          renderTask = page.render({ canvas, viewport });
+        }
+
         await renderTask.promise;
-        setRenderedSize({ height: cssHeight, width: cssWidth });
+
+        if (!cancelled) {
+          setRenderedSize({ height: cssHeight, width: cssWidth });
+        }
       } catch {
         // render was cancelled — expected on re-renders
       }
@@ -51,9 +99,10 @@ export function usePageRenderer({
     render();
 
     return () => {
+      cancelled = true;
       renderTask?.cancel();
     };
-  }, [canvasRef, page, zoom]);
+  }, [canvasRef, page, zoom, suppressText]);
 
   return { renderedSize };
 }

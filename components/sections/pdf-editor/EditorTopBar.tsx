@@ -95,7 +95,7 @@ export function EditorInfoBar() {
 
   return (
     <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
-      {/* Left: menu + undo/redo */}
+      {/* Left: menu + undo/redo + mode toggle */}
       <div className="flex items-center gap-1">
         <HamburgerMenu />
         <Toolbar aria-label="Actions">
@@ -291,10 +291,14 @@ const HIGHLIGHT_COLORS = [
 ] as const;
 
 type ToolsContentProps = {
+  showLabels?: boolean;
   toolIconSize?: number;
 };
 
-export function ToolsContent({ toolIconSize = 25 }: ToolsContentProps = {}) {
+export function ToolsContent({
+  toolIconSize = 25,
+  showLabels = true,
+}: ToolsContentProps = {}) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const highlightColor = usePdfEditorStore((s) => s.highlightColor);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
@@ -318,17 +322,30 @@ export function ToolsContent({ toolIconSize = 25 }: ToolsContentProps = {}) {
           size="md"
           onSelectionChange={handleToolChange}
         >
-          {TOOLS.map((tool, i) => (
-            <Tooltip key={tool.id} delay={300}>
-              <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
+          {TOOLS.map((tool, i) =>
+            showLabels ? (
+              <ToggleButton
+                key={tool.id}
+                aria-label={tool.label}
+                className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+                id={tool.id}
+              >
                 {i > 0 && <ToggleButtonGroup.Separator />}
                 <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
+                <span className="text-[10px] leading-tight">{tool.label}</span>
               </ToggleButton>
-              <Tooltip.Content>
-                <p>{tool.label}</p>
-              </Tooltip.Content>
-            </Tooltip>
-          ))}
+            ) : (
+              <Tooltip key={tool.id} delay={300}>
+                <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
+                  {i > 0 && <ToggleButtonGroup.Separator />}
+                  <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
+                </ToggleButton>
+                <Tooltip.Content>
+                  <p>{tool.label}</p>
+                </Tooltip.Content>
+              </Tooltip>
+            ),
+          )}
         </ToggleButtonGroup>
       </Toolbar>
 
@@ -363,7 +380,7 @@ export function ToolsContent({ toolIconSize = 25 }: ToolsContentProps = {}) {
 
 export function EditorToolBar() {
   return (
-    <div className="flex h-12 shrink-0 items-center justify-center gap-3 px-3">
+    <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
       <ToolsContent />
     </div>
   );

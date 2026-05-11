@@ -14,6 +14,7 @@ export type ActiveTool =
   | "signature"
   | "text"
   | "whiteout";
+export type EditorMode = "edit" | "editText";
 export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
 
 type PdfEditorStore = {
@@ -22,6 +23,7 @@ type PdfEditorStore = {
   currentDocumentId: string | null;
   currentDocumentName: string | null;
   currentPage: number;
+  editorMode: EditorMode;
   highlightColor: string;
   fabricJsonByPage: Map<number, string>;
   file: File | null;
@@ -48,6 +50,7 @@ type PdfEditorStore = {
   saveFabricJson: (page: number, json: string) => void;
   setActiveShapeType: (type: ShapeType) => void;
   setActiveTool: (tool: ActiveTool) => void;
+  setEditorMode: (mode: EditorMode) => void;
   setHighlightColor: (color: string) => void;
   setCurrentPage: (page: number) => void;
   setFile: (file: File | null) => void;
@@ -70,6 +73,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   currentDocumentId: null,
   currentDocumentName: null,
   currentPage: 1,
+  editorMode: "editText",
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
@@ -94,6 +98,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       currentDocumentId: null,
       currentDocumentName: null,
       currentPage: 1,
+      editorMode: "editText",
       fabricJsonByPage: new Map(),
       file: null,
       historyByPage: new Map(),
@@ -166,6 +171,12 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
   setActiveShapeType: (type) => set({ activeShapeType: type }),
   setActiveTool: (tool) => set({ activeTool: tool }),
+  setEditorMode: (mode) =>
+    set(
+      mode === "editText"
+        ? { activeTool: "select", editorMode: mode }
+        : { editorMode: mode },
+    ),
   setHighlightColor: (color) => set({ highlightColor: color }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setFile: (file) => set({ file }),
