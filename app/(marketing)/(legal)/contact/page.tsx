@@ -6,8 +6,7 @@ import { ContactFormSection } from "@/components/sections/legal/contact-form-sec
 import { LegalDocumentLayout } from "@/components/sections/legal/legal-document-layout";
 
 export const metadata: Metadata = {
-  description:
-    "Reach the PDF Viewer App team — replies typically within 24 hours.",
+  description: "Reach the PDFedits team — replies typically within 24 hours.",
   title: "Contact Us",
 };
 
@@ -19,7 +18,6 @@ export default function ContactPage() {
       ctaEyebrow=""
       description="Get in touch — our team typically answers within 24 hours."
       heroTitle="Contact us"
-      lastUpdatedLabel="May 3, 2026"
       readMinutes={2}
       showContactBanner={false}
       tocEntries={[]}

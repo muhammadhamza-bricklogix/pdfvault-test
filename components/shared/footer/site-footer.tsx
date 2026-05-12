@@ -1,95 +1,102 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
+import { FooterLinkColumns } from "@/components/shared/footer/footer-link-columns";
+import { FooterPaymentStrip } from "@/components/shared/footer/footer-payment-strip";
+import {
+  footerAffiliationDisclaimerClass,
+  footerCompanyBlockClass,
+  footerCompanyEntityClass,
+  footerCompanyPlaceholderClass,
+  footerInnerContainerClass,
+  footerLegalStripBlockClass,
+  footerLegalStripLinkClass,
+  footerLogoAccentClass,
+  footerLogoLinkClass,
+  footerLogoRestClass,
+  footerLogoRowClass,
+  footerLogoWordmarkClass,
+  footerPostCopyrightNavClass,
+  footerShellClass,
+} from "@/components/shared/footer/footer-styles";
+import {
+  FOOTER_BRAND_NAME,
+  FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
+  FOOTER_COMPANY_ENTITY,
+  FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINES,
+  FOOTER_LEGAL_STRIP_LINKS,
+  FOOTER_POST_COPYRIGHT_NAV_LINKS,
+  FOOTER_PRODUCT_COLUMN_TITLE,
+  FOOTER_PUBLIC_DOMAIN,
+} from "@/lib/shared/constants/footer";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-const COOKIE_SETTINGS_HREF = `${ROUTES.LEGAL.COOKIES}#managing-cookies`;
-
-const FOOTER_COLUMNS = [
-  {
-    links: [
-      { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF Editor" },
-      { href: ROUTES.PUBLIC.HOME, label: "Compress PDF" },
-      { href: ROUTES.PUBLIC.HOME, label: "Convert PDF" },
-      { href: ROUTES.PUBLIC.HOME, label: "Protect PDF" },
-    ],
-    title: "Product",
-  },
-  {
-    links: [
-      { href: ROUTES.PUBLIC.HOME, label: "About" },
-      { href: ROUTES.LEGAL.CONTACT, label: "Contact" },
-      { href: ROUTES.PUBLIC.HOME, label: "Blog" },
-    ],
-    title: "Company",
-  },
-  {
-    links: [
-      { href: ROUTES.LEGAL.PRIVACY, label: "Privacy Policy" },
-      { href: ROUTES.LEGAL.TERMS, label: "Terms & Conditions" },
-      { href: ROUTES.LEGAL.COOKIES, label: "Cookie Policy" },
-      { href: ROUTES.LEGAL.REFUND, label: "Refund Policy" },
-      { href: ROUTES.LEGAL.DO_NOT_SELL, label: "Do not sell my info" },
-      { href: COOKIE_SETTINGS_HREF, label: "Cookie settings" },
-    ],
-    title: "Legal",
-  },
-  {
-    links: [
-      { href: ROUTES.LEGAL.CONTACT, label: "Contact us" },
-      { href: `${ROUTES.PUBLIC.HOME}#faq`, label: "FAQ" },
-      { href: ROUTES.PUBLIC.PRICING, label: "Pricing" },
-    ],
-    title: "Help",
-  },
-  {
-    links: [
-      { href: ROUTES.AUTH.SIGN_IN, label: "Sign In" },
-      { href: ROUTES.AUTH.SIGN_UP, label: "Register" },
-      { href: ROUTES.LEGAL.CONTACT, label: "Unsubscribe" },
-    ],
-    title: "Account",
-  },
-];
-
 export function SiteFooter() {
-  return (
-    <footer className="border-t border-default-200 bg-background">
-      <div className="mx-auto max-w-[min(100%,104rem)] px-6 py-12 sm:px-8">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
-          {FOOTER_COLUMNS.map((column) => (
-            <div key={column.title}>
-              <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                {column.title}
-              </h3>
-              <ul className="mt-4 space-y-3">
-                {column.links.map((link) => (
-                  <li key={`${column.title}-${link.href}-${link.label}`}>
-                    <Link
-                      className="text-sm text-default-500 transition-colors hover:text-foreground"
-                      href={link.href}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+  const year = new Date().getFullYear();
 
-        <div className="mt-12 flex flex-col items-center gap-4 border-t border-default-200 pt-8 sm:flex-row sm:justify-between">
-          <Link className="flex items-center gap-2" href={ROUTES.PUBLIC.HOME}>
-            <Image alt="PDFedits" height={32} src="/logo.svg" width={32} />
-            <span className="text-lg font-semibold tracking-tight">
-              <span className="text-[var(--color-accent)]">PDF</span>
-              <span className="text-[var(--color-foreground)]">edits</span>
-            </span>
-          </Link>
-          <p className="text-sm text-default-500">
-            &copy; {new Date().getFullYear()} PDFedits. All rights reserved.
+  return (
+    <footer className={footerShellClass}>
+      <div className={footerInnerContainerClass}>
+        <section
+          aria-label={`${FOOTER_PRODUCT_COLUMN_TITLE}, Help, and Account`}
+        >
+          <FooterLinkColumns />
+        </section>
+
+        <div className={footerCompanyBlockClass}>
+          <p className={footerCompanyEntityClass}>{FOOTER_COMPANY_ENTITY}</p>
+          <p className={footerCompanyPlaceholderClass}>
+            {FOOTER_COMPANY_ADDRESS_PLACEHOLDER}
           </p>
         </div>
+
+        <div className={footerLegalStripBlockClass}>
+          <p>
+            &copy; {year} {FOOTER_BRAND_NAME} ·{" "}
+            {FOOTER_LEGAL_STRIP_LINKS.map((item, index) => (
+              <span key={item.href}>
+                {index > 0 ? <> · </> : null}
+                <Link className={footerLegalStripLinkClass} href={item.href}>
+                  {item.label}
+                </Link>
+              </span>
+            ))}{" "}
+            · {FOOTER_PUBLIC_DOMAIN} · All rights reserved.
+          </p>
+          <nav
+            aria-label="Legal policies"
+            className={footerPostCopyrightNavClass}
+          >
+            {FOOTER_POST_COPYRIGHT_NAV_LINKS.map((item, index) => (
+              <span
+                key={item.href}
+                className="inline-flex flex-wrap items-center"
+              >
+                {index > 0 ? (
+                  <span aria-hidden className="px-1.5 text-default-400">
+                    ·
+                  </span>
+                ) : null}
+                <Link className={footerLegalStripLinkClass} href={item.href}>
+                  {item.label}
+                </Link>
+              </span>
+            ))}
+          </nav>
+          <div className={footerAffiliationDisclaimerClass}>
+            {FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINES.map(
+              (line, index) => (
+                <p key={`footer-affiliation-line-${index}`} className="m-0">
+                  {line}
+                </p>
+              ),
+            )}
+          </div>
+        </div>
+
+        <FooterPaymentStrip />
       </div>
     </footer>
   );

@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 type LegalHeroProps = {
   description: string;
-  lastUpdatedLabel: string;
+  lastUpdatedLabel?: string;
   readMinutes: number;
   siteDomain?: string;
   title: string;
@@ -45,10 +45,12 @@ export function LegalHero({
           {description}
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-white/85">
-          <span className="inline-flex items-center gap-2">
-            <HugeiconsIcon icon={Calendar03Icon} size={18} />
-            Last updated: {lastUpdatedLabel}
-          </span>
+          {lastUpdatedLabel ? (
+            <span className="inline-flex items-center gap-2">
+              <HugeiconsIcon icon={Calendar03Icon} size={18} />
+              Last updated: {lastUpdatedLabel}
+            </span>
+          ) : null}
           <span className="inline-flex items-center gap-2">
             <HugeiconsIcon icon={Clock01Icon} size={18} />~{readMinutes} min
             read
