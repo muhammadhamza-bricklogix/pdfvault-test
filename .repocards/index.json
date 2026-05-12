@@ -71,20 +71,14 @@
       "exported": true
     },
     {
-      "file": "app/(marketing)/(site)/pricing/page.tsx",
-      "line": 7,
+      "file": "app/(marketing)/(legal)/contact/page.tsx",
+      "line": 8,
       "kind": "const",
       "exported": true
     },
     {
       "file": "app/(marketing)/(legal)/cookies/page.tsx",
       "line": 9,
-      "kind": "const",
-      "exported": true
-    },
-    {
-      "file": "app/(marketing)/(legal)/contact/page.tsx",
-      "line": 8,
       "kind": "const",
       "exported": true
     },
@@ -103,6 +97,12 @@
     {
       "file": "app/(marketing)/(legal)/terms/page.tsx",
       "line": 9,
+      "kind": "const",
+      "exported": true
+    },
+    {
+      "file": "app/(marketing)/(site)/pricing/page.tsx",
+      "line": 7,
       "kind": "const",
       "exported": true
     },
@@ -27761,38 +27761,6 @@
       "exported": true
     }
   ],
-  "AppProvidersProps": [
-    {
-      "file": "lib/providers/app-providers.tsx",
-      "line": 12,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "AppProviders": [
-    {
-      "file": "lib/providers/app-providers.tsx",
-      "line": 17,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "QueryProviderProps": [
-    {
-      "file": "lib/providers/query-provider.tsx",
-      "line": 8,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "QueryProvider": [
-    {
-      "file": "lib/providers/query-provider.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "API_BASE_URL": [
     {
       "file": "lib/config/api-client.ts",
@@ -27831,6 +27799,38 @@
       "exported": true
     }
   ],
+  "AppProvidersProps": [
+    {
+      "file": "lib/providers/app-providers.tsx",
+      "line": 12,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "AppProviders": [
+    {
+      "file": "lib/providers/app-providers.tsx",
+      "line": 17,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "QueryProviderProps": [
+    {
+      "file": "lib/providers/query-provider.tsx",
+      "line": 8,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "QueryProvider": [
+    {
+      "file": "lib/providers/query-provider.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "DashboardPage": [
     {
       "file": "app/(app)/dashboard/page.tsx",
@@ -27839,58 +27839,34 @@
       "exported": true
     }
   ],
-  "SiteLayoutProps": [
+  "AuthShellProps": [
     {
-      "file": "app/(marketing)/(site)/layout.tsx",
+      "file": "components/sections/auth/auth-shell.tsx",
       "line": 3,
       "kind": "type",
       "exported": false
     }
   ],
-  "SiteLayout": [
+  "AuthShell": [
     {
-      "file": "app/(marketing)/(site)/layout.tsx",
-      "line": 7,
+      "file": "components/sections/auth/auth-shell.tsx",
+      "line": 12,
       "kind": "function",
       "exported": true
     }
   ],
-  "Home": [
+  "SignInSection": [
     {
-      "file": "app/(marketing)/(site)/page.tsx",
-      "line": 6,
+      "file": "components/sections/auth/sign-in-section.tsx",
+      "line": 12,
       "kind": "function",
       "exported": true
     }
   ],
-  "LegalSegmentLayoutProps": [
+  "SignUpSection": [
     {
-      "file": "app/(marketing)/(legal)/layout.tsx",
-      "line": 3,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "LegalSegmentLayout": [
-    {
-      "file": "app/(marketing)/(legal)/layout.tsx",
-      "line": 7,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PdfEditorLayout": [
-    {
-      "file": "app/(tools)/pdf-editor/layout.tsx",
-      "line": 1,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PdfEditorPage": [
-    {
-      "file": "app/(tools)/pdf-editor/page.tsx",
-      "line": 11,
+      "file": "components/sections/auth/sign-up-section.tsx",
+      "line": 12,
       "kind": "function",
       "exported": true
     }
@@ -28137,38 +28113,6 @@
       "exported": true
     }
   ],
-  "AuthShellProps": [
-    {
-      "file": "components/sections/auth/auth-shell.tsx",
-      "line": 3,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "AuthShell": [
-    {
-      "file": "components/sections/auth/auth-shell.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SignInSection": [
-    {
-      "file": "components/sections/auth/sign-in-section.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SignUpSection": [
-    {
-      "file": "components/sections/auth/sign-up-section.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "HomeClosingSection": [
     {
       "file": "components/sections/home/home-closing-section.tsx",
@@ -28355,6 +28299,250 @@
     {
       "file": "components/sections/home/home-tool-grid.tsx",
       "line": 217,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SUPPORT_EMAIL": [
+    {
+      "file": "components/sections/legal/contact-form-section.tsx",
+      "line": 14,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "components/sections/legal/legal-contact-banner.tsx",
+      "line": 10,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "app/(marketing)/(legal)/contact/page.tsx",
+      "line": 14,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "ContactFormSection": [
+    {
+      "file": "components/sections/legal/contact-form-section.tsx",
+      "line": 16,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "cookieTocEntries": [
+    {
+      "file": "components/sections/legal/cookie-policy-content.tsx",
+      "line": 14,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "CookiePolicyContent": [
+    {
+      "file": "components/sections/legal/cookie-policy-content.tsx",
+      "line": 23,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "doNotSellTocEntries": [
+    {
+      "file": "components/sections/legal/do-not-sell-content.tsx",
+      "line": 19,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "DoNotSellContent": [
+    {
+      "file": "components/sections/legal/do-not-sell-content.tsx",
+      "line": 31,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalCalloutProps": [
+    {
+      "file": "components/sections/legal/legal-callout.tsx",
+      "line": 3,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalCallout": [
+    {
+      "file": "components/sections/legal/legal-callout.tsx",
+      "line": 9,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalContactBannerProps": [
+    {
+      "file": "components/sections/legal/legal-contact-banner.tsx",
+      "line": 12,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalContactBanner": [
+    {
+      "file": "components/sections/legal/legal-contact-banner.tsx",
+      "line": 16,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalDocumentLayoutProps": [
+    {
+      "file": "components/sections/legal/legal-document-layout.tsx",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalDocumentLayout": [
+    {
+      "file": "components/sections/legal/legal-document-layout.tsx",
+      "line": 21,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalHeroProps": [
+    {
+      "file": "components/sections/legal/legal-hero.tsx",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalHero": [
+    {
+      "file": "components/sections/legal/legal-hero.tsx",
+      "line": 17,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalMiniFooter": [
+    {
+      "file": "components/sections/legal/legal-mini-footer.tsx",
+      "line": 5,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "RIGHTS": [
+    {
+      "file": "components/sections/legal/legal-rights-grid.tsx",
+      "line": 1,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "LegalRightsGrid": [
+    {
+      "file": "components/sections/legal/legal-rights-grid.tsx",
+      "line": 36,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "IconProp": [
+    {
+      "file": "components/sections/legal/legal-section-card.tsx",
+      "line": 5,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalSectionCardProps": [
+    {
+      "file": "components/sections/legal/legal-section-card.tsx",
+      "line": 7,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalSectionCard": [
+    {
+      "file": "components/sections/legal/legal-section-card.tsx",
+      "line": 14,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalTocEntry": [
+    {
+      "file": "components/sections/legal/legal-toc.tsx",
+      "line": 6,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "LegalTocProps": [
+    {
+      "file": "components/sections/legal/legal-toc.tsx",
+      "line": 11,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalToc": [
+    {
+      "file": "components/sections/legal/legal-toc.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "privacyTocEntries": [
+    {
+      "file": "components/sections/legal/privacy-policy-content.tsx",
+      "line": 22,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "PrivacyPolicyContent": [
+    {
+      "file": "components/sections/legal/privacy-policy-content.tsx",
+      "line": 35,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "refundTocEntries": [
+    {
+      "file": "components/sections/legal/refund-policy-content.tsx",
+      "line": 16,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "RefundPolicyContent": [
+    {
+      "file": "components/sections/legal/refund-policy-content.tsx",
+      "line": 26,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "termsTocEntries": [
+    {
+      "file": "components/sections/legal/terms-and-conditions-content.tsx",
+      "line": 23,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "TermsAndConditionsContent": [
+    {
+      "file": "components/sections/legal/terms-and-conditions-content.tsx",
+      "line": 38,
       "kind": "function",
       "exported": true
     }
@@ -28576,7 +28764,7 @@
   "ToolsContent": [
     {
       "file": "components/sections/pdf-editor/EditorTopBar.tsx",
-      "line": 297,
+      "line": 298,
       "kind": "function",
       "exported": true
     }
@@ -28584,7 +28772,7 @@
   "EditorToolBar": [
     {
       "file": "components/sections/pdf-editor/EditorTopBar.tsx",
-      "line": 364,
+      "line": 381,
       "kind": "function",
       "exported": true
     }
@@ -28688,7 +28876,7 @@
   "PdfViewerCanvasProps": [
     {
       "file": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
-      "line": 23,
+      "line": 24,
       "kind": "type",
       "exported": false
     }
@@ -28696,7 +28884,7 @@
   "PdfViewerCanvas": [
     {
       "file": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
-      "line": 27,
+      "line": 28,
       "kind": "function",
       "exported": true
     }
@@ -29109,246 +29297,34 @@
       "exported": true
     }
   ],
-  "SUPPORT_EMAIL": [
+  "ToolUploadSectionProps": [
     {
-      "file": "components/sections/legal/contact-form-section.tsx",
-      "line": 14,
-      "kind": "const",
-      "exported": false
-    },
-    {
-      "file": "components/sections/legal/legal-contact-banner.tsx",
-      "line": 10,
-      "kind": "const",
-      "exported": false
-    },
-    {
-      "file": "app/(marketing)/(legal)/contact/page.tsx",
-      "line": 14,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "ContactFormSection": [
-    {
-      "file": "components/sections/legal/contact-form-section.tsx",
-      "line": 16,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "cookieTocEntries": [
-    {
-      "file": "components/sections/legal/cookie-policy-content.tsx",
-      "line": 14,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "CookiePolicyContent": [
-    {
-      "file": "components/sections/legal/cookie-policy-content.tsx",
-      "line": 23,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "doNotSellTocEntries": [
-    {
-      "file": "components/sections/legal/do-not-sell-content.tsx",
-      "line": 19,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "DoNotSellContent": [
-    {
-      "file": "components/sections/legal/do-not-sell-content.tsx",
-      "line": 31,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "LegalCalloutProps": [
-    {
-      "file": "components/sections/legal/legal-callout.tsx",
-      "line": 3,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "LegalCallout": [
-    {
-      "file": "components/sections/legal/legal-callout.tsx",
-      "line": 9,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "LegalContactBannerProps": [
-    {
-      "file": "components/sections/legal/legal-contact-banner.tsx",
+      "file": "components/sections/tools/tool-upload-section.tsx",
       "line": 12,
       "kind": "type",
       "exported": false
     }
   ],
-  "LegalContactBanner": [
+  "ToolUploadSection": [
     {
-      "file": "components/sections/legal/legal-contact-banner.tsx",
+      "file": "components/sections/tools/tool-upload-section.tsx",
       "line": 16,
       "kind": "function",
       "exported": true
     }
   ],
-  "LegalDocumentLayoutProps": [
+  "LegalSegmentLayoutProps": [
     {
-      "file": "components/sections/legal/legal-document-layout.tsx",
-      "line": 9,
+      "file": "app/(marketing)/(legal)/layout.tsx",
+      "line": 3,
       "kind": "type",
       "exported": false
     }
   ],
-  "LegalDocumentLayout": [
+  "LegalSegmentLayout": [
     {
-      "file": "components/sections/legal/legal-document-layout.tsx",
-      "line": 21,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "LegalHeroProps": [
-    {
-      "file": "components/sections/legal/legal-hero.tsx",
-      "line": 9,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "LegalHero": [
-    {
-      "file": "components/sections/legal/legal-hero.tsx",
-      "line": 17,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "LegalMiniFooter": [
-    {
-      "file": "components/sections/legal/legal-mini-footer.tsx",
-      "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "RIGHTS": [
-    {
-      "file": "components/sections/legal/legal-rights-grid.tsx",
-      "line": 1,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "LegalRightsGrid": [
-    {
-      "file": "components/sections/legal/legal-rights-grid.tsx",
-      "line": 36,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "IconProp": [
-    {
-      "file": "components/sections/legal/legal-section-card.tsx",
-      "line": 5,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "LegalSectionCardProps": [
-    {
-      "file": "components/sections/legal/legal-section-card.tsx",
+      "file": "app/(marketing)/(legal)/layout.tsx",
       "line": 7,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "LegalSectionCard": [
-    {
-      "file": "components/sections/legal/legal-section-card.tsx",
-      "line": 14,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "LegalTocEntry": [
-    {
-      "file": "components/sections/legal/legal-toc.tsx",
-      "line": 6,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "LegalTocProps": [
-    {
-      "file": "components/sections/legal/legal-toc.tsx",
-      "line": 11,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "LegalToc": [
-    {
-      "file": "components/sections/legal/legal-toc.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "privacyTocEntries": [
-    {
-      "file": "components/sections/legal/privacy-policy-content.tsx",
-      "line": 22,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "PrivacyPolicyContent": [
-    {
-      "file": "components/sections/legal/privacy-policy-content.tsx",
-      "line": 35,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "refundTocEntries": [
-    {
-      "file": "components/sections/legal/refund-policy-content.tsx",
-      "line": 16,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "RefundPolicyContent": [
-    {
-      "file": "components/sections/legal/refund-policy-content.tsx",
-      "line": 26,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "termsTocEntries": [
-    {
-      "file": "components/sections/legal/terms-and-conditions-content.tsx",
-      "line": 23,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "TermsAndConditionsContent": [
-    {
-      "file": "components/sections/legal/terms-and-conditions-content.tsx",
-      "line": 38,
       "kind": "function",
       "exported": true
     }
@@ -29377,6 +29353,110 @@
       "exported": true
     }
   ],
+  "SiteLayoutProps": [
+    {
+      "file": "app/(marketing)/(site)/layout.tsx",
+      "line": 3,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "SiteLayout": [
+    {
+      "file": "app/(marketing)/(site)/layout.tsx",
+      "line": 7,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "Home": [
+    {
+      "file": "app/(marketing)/(site)/page.tsx",
+      "line": 6,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "OAuthButtonProps": [
+    {
+      "file": "components/ui/auth/oauth-button.tsx",
+      "line": 5,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "OAuthButton": [
+    {
+      "file": "components/ui/auth/oauth-button.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "GOOGLE_ICON_URL": [
+    {
+      "file": "components/ui/auth/oauth-button.tsx",
+      "line": 31,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "GoogleLogo": [
+    {
+      "file": "components/ui/auth/oauth-button.tsx",
+      "line": 34,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DataTableColumn": [
+    {
+      "file": "components/ui/data-table/data-table.tsx",
+      "line": 11,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "DataTableMode": [
+    {
+      "file": "components/ui/data-table/data-table.tsx",
+      "line": 28,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "DataTableProps": [
+    {
+      "file": "components/ui/data-table/data-table.tsx",
+      "line": 30,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "DEFAULT_EMPTY": [
+    {
+      "file": "components/ui/data-table/data-table.tsx",
+      "line": 70,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "DataTable": [
+    {
+      "file": "components/ui/data-table/data-table.tsx",
+      "line": 76,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ClientPagination": [
+    {
+      "file": "components/ui/data-table/data-table.tsx",
+      "line": 288,
+      "kind": "function",
+      "exported": false
+    }
+  ],
   "PDF_TOOL_LINKS": [
     {
       "file": "components/shared/navigation/site-navbar.tsx",
@@ -29401,18 +29481,316 @@
       "exported": true
     }
   ],
-  "ToolUploadSectionProps": [
+  "DEFAULT_MARKETING_FOOTNOTE": [
     {
-      "file": "components/sections/tools/tool-upload-section.tsx",
-      "line": 12,
+      "file": "components/ui/file-upload/file-upload-dropzone-marketing.tsx",
+      "line": 5,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FileUploadDropzoneMarketingProps": [
+    {
+      "file": "components/ui/file-upload/file-upload-dropzone-marketing.tsx",
+      "line": 8,
       "kind": "type",
       "exported": false
     }
   ],
-  "ToolUploadSection": [
+  "FileUploadDropzoneMarketing": [
     {
-      "file": "components/sections/tools/tool-upload-section.tsx",
+      "file": "components/ui/file-upload/file-upload-dropzone-marketing.tsx",
+      "line": 17,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "FileUploadDropzoneProps": [
+    {
+      "file": "components/ui/file-upload/file-upload-dropzone.tsx",
+      "line": 1,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "FileUploadDropzone": [
+    {
+      "file": "components/ui/file-upload/file-upload-dropzone.tsx",
+      "line": 9,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "FileUploadPreviewProps": [
+    {
+      "file": "components/ui/file-upload/file-upload-preview.tsx",
+      "line": 5,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "getFileTypeLabel": [
+    {
+      "file": "components/ui/file-upload/file-upload-preview.tsx",
+      "line": 10,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "FileUploadPreview": [
+    {
+      "file": "components/ui/file-upload/file-upload-preview.tsx",
+      "line": 19,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DEFAULT_MAX_SIZE": [
+    {
+      "file": "components/ui/file-upload/file-upload.tsx",
+      "line": 20,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "lib/shared/utils/file-upload.utils.ts",
+      "line": 3,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "ERROR_DISMISS_MS": [
+    {
+      "file": "components/ui/file-upload/file-upload.tsx",
+      "line": 21,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "FileUpload": [
+    {
+      "file": "components/ui/file-upload/file-upload.tsx",
+      "line": 23,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ControlledInputFieldProps": [
+    {
+      "file": "components/ui/form/controlled-input-field.tsx",
+      "line": 14,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ControlledInputField": [
+    {
+      "file": "components/ui/form/controlled-input-field.tsx",
+      "line": 24,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ControlledOtpFieldProps": [
+    {
+      "file": "components/ui/form/controlled-otp-field.tsx",
+      "line": 8,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ControlledOtpField": [
+    {
+      "file": "components/ui/form/controlled-otp-field.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ControlledTextareaFieldProps": [
+    {
+      "file": "components/ui/form/controlled-textarea-field.tsx",
+      "line": 8,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ControlledTextareaField": [
+    {
+      "file": "components/ui/form/controlled-textarea-field.tsx",
+      "line": 17,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "AddFilesIllustration": [
+    {
+      "file": "components/ui/illustrations/add-files.tsx",
+      "line": 3,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "FilesUploadingIllustration": [
+    {
+      "file": "components/ui/illustrations/files-uploading.tsx",
+      "line": 3,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SuccessfulUploadIllustration": [
+    {
+      "file": "components/ui/illustrations/successful-upload.tsx",
+      "line": 3,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UploadErrorIllustration": [
+    {
+      "file": "components/ui/illustrations/upload-error.tsx",
+      "line": 3,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "subscribe": [
+    {
+      "file": "components/ui/theme/theme-segmented.tsx",
+      "line": 15,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "app/(app)/dashboard/settings/language/page.tsx",
+      "line": 11,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "useIsMounted": [
+    {
+      "file": "components/ui/theme/theme-segmented.tsx",
       "line": 16,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "app/(app)/dashboard/settings/language/page.tsx",
+      "line": 12,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "ThemeSegmentedProps": [
+    {
+      "file": "components/ui/theme/theme-segmented.tsx",
+      "line": 29,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ThemeSegmented": [
+    {
+      "file": "components/ui/theme/theme-segmented.tsx",
+      "line": 33,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ThemeToggleProps": [
+    {
+      "file": "components/ui/theme/theme-toggle.tsx",
+      "line": 8,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ThemeToggle": [
+    {
+      "file": "components/ui/theme/theme-toggle.tsx",
+      "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UploadToastPreviewApi": [
+    {
+      "file": "components/ui/upload-toast/UploadToastProvider.tsx",
+      "line": 11,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "UploadToastPreviewWindow": [
+    {
+      "file": "components/ui/upload-toast/UploadToastProvider.tsx",
+      "line": 19,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "UploadToastProvider": [
+    {
+      "file": "components/ui/upload-toast/UploadToastProvider.tsx",
+      "line": 28,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UploadToastRenderer": [
+    {
+      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
+      "line": 26,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "StatusBadge": [
+    {
+      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
+      "line": 70,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "ProgressTrack": [
+    {
+      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
+      "line": 102,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "ToastActions": [
+    {
+      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
+      "line": 128,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "UploadIllustration": [
+    {
+      "file": "components/ui/upload-toast/upload-illustration.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorLayout": [
+    {
+      "file": "app/(tools)/pdf-editor/layout.tsx",
+      "line": 1,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorPage": [
+    {
+      "file": "app/(tools)/pdf-editor/page.tsx",
+      "line": 11,
       "kind": "function",
       "exported": true
     }
@@ -29727,6 +30105,30 @@
       "exported": true
     }
   ],
+  "TextBlock": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 4,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "mapPdfFontFamily": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 26,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "extractTextBlocks": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 75,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "resolveTopLeft": [
     {
       "file": "lib/client/pdf-editor/vector-drawers.ts",
@@ -29831,6 +30233,142 @@
       "exported": false
     }
   ],
+  "DashboardUiState": [
+    {
+      "file": "lib/client/stores/dashboard-ui-store.ts",
+      "line": 6,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useDashboardUiStore": [
+    {
+      "file": "lib/client/stores/dashboard-ui-store.ts",
+      "line": 14,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "MAX_HISTORY": [
+    {
+      "file": "lib/client/stores/pdf-editor-store.ts",
+      "line": 5,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "ActiveTool": [
+    {
+      "file": "lib/client/stores/pdf-editor-store.ts",
+      "line": 7,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "EditorMode": [
+    {
+      "file": "lib/client/stores/pdf-editor-store.ts",
+      "line": 17,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "ShapeType": [
+    {
+      "file": "lib/client/stores/pdf-editor-store.ts",
+      "line": 18,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "PdfEditorStore": [
+    {
+      "file": "lib/client/stores/pdf-editor-store.ts",
+      "line": 20,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "usePdfEditorStore": [
+    {
+      "file": "lib/client/stores/pdf-editor-store.ts",
+      "line": 70,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "DateFormat": [
+    {
+      "file": "lib/client/stores/preferences-store.ts",
+      "line": 6,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "Language": [
+    {
+      "file": "lib/client/stores/preferences-store.ts",
+      "line": 8,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "PreferencesState": [
+    {
+      "file": "lib/client/stores/preferences-store.ts",
+      "line": 10,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "resolveDefaultTimezone": [
+    {
+      "file": "lib/client/stores/preferences-store.ts",
+      "line": 19,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "usePreferencesStore": [
+    {
+      "file": "lib/client/stores/preferences-store.ts",
+      "line": 29,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "UploadToastStatus": [
+    {
+      "file": "lib/client/stores/upload-toasts-store.ts",
+      "line": 7,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "UploadToastState": [
+    {
+      "file": "lib/client/stores/upload-toasts-store.ts",
+      "line": 9,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "Store": [
+    {
+      "file": "lib/client/stores/upload-toasts-store.ts",
+      "line": 24,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useUploadToastStore": [
+    {
+      "file": "lib/client/stores/upload-toasts-store.ts",
+      "line": 34,
+      "kind": "const",
+      "exported": true
+    }
+  ],
   "SUCCESS_AUTO_DISMISS_MS": [
     {
       "file": "lib/client/upload-toasts/controller.ts",
@@ -29919,147 +30457,131 @@
       "exported": true
     }
   ],
-  "DashboardUiState": [
+  "documentSelectionKey": [
     {
-      "file": "lib/client/stores/dashboard-ui-store.ts",
-      "line": 6,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useDashboardUiStore": [
-    {
-      "file": "lib/client/stores/dashboard-ui-store.ts",
-      "line": 14,
-      "kind": "const",
+      "file": "lib/client/utils/document-selection-key.ts",
+      "line": 4,
+      "kind": "function",
       "exported": true
     }
   ],
-  "MAX_HISTORY": [
+  "localDayStartMs": [
     {
-      "file": "lib/client/stores/pdf-editor-store.ts",
-      "line": 5,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "ActiveTool": [
-    {
-      "file": "lib/client/stores/pdf-editor-store.ts",
-      "line": 7,
-      "kind": "type",
+      "file": "lib/client/utils/documents-table-display.ts",
+      "line": 4,
+      "kind": "function",
       "exported": true
     }
   ],
-  "ShapeType": [
+  "localDayEndExclusiveMs": [
     {
-      "file": "lib/client/stores/pdf-editor-store.ts",
-      "line": 17,
+      "file": "lib/client/utils/documents-table-display.ts",
+      "line": 18,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DocumentTableFilterParams": [
+    {
+      "file": "lib/client/utils/documents-table-display.ts",
+      "line": 31,
       "kind": "type",
       "exported": true
     }
   ],
-  "PdfEditorStore": [
+  "documentMatchesTableFilters": [
     {
-      "file": "lib/client/stores/pdf-editor-store.ts",
-      "line": 19,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "usePdfEditorStore": [
-    {
-      "file": "lib/client/stores/pdf-editor-store.ts",
-      "line": 67,
-      "kind": "const",
+      "file": "lib/client/utils/documents-table-display.ts",
+      "line": 37,
+      "kind": "function",
       "exported": true
     }
   ],
-  "DateFormat": [
+  "formatDocumentBytes": [
     {
-      "file": "lib/client/stores/preferences-store.ts",
-      "line": 6,
-      "kind": "type",
+      "file": "lib/client/utils/documents-table-display.ts",
+      "line": 57,
+      "kind": "function",
       "exported": true
     }
   ],
-  "Language": [
+  "formatDocumentDate": [
     {
-      "file": "lib/client/stores/preferences-store.ts",
-      "line": 8,
-      "kind": "type",
+      "file": "lib/client/utils/documents-table-display.ts",
+      "line": 71,
+      "kind": "function",
       "exported": true
     }
   ],
-  "PreferencesState": [
+  "PickedGoogleDrivePdf": [
     {
-      "file": "lib/client/stores/preferences-store.ts",
-      "line": 10,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "resolveDefaultTimezone": [
-    {
-      "file": "lib/client/stores/preferences-store.ts",
-      "line": 19,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "usePreferencesStore": [
-    {
-      "file": "lib/client/stores/preferences-store.ts",
-      "line": 29,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "UploadToastStatus": [
-    {
-      "file": "lib/client/stores/upload-toasts-store.ts",
-      "line": 7,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "UploadToastState": [
-    {
-      "file": "lib/client/stores/upload-toasts-store.ts",
-      "line": 9,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "Store": [
-    {
-      "file": "lib/client/stores/upload-toasts-store.ts",
-      "line": 24,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useUploadToastStore": [
-    {
-      "file": "lib/client/stores/upload-toasts-store.ts",
-      "line": 34,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "contactFormSchema": [
-    {
-      "file": "lib/shared/schemas/contact.schema.ts",
+      "file": "lib/client/utils/google-drive-picker.ts",
       "line": 3,
-      "kind": "const",
+      "kind": "type",
       "exported": true
     }
   ],
-  "ContactFormValues": [
+  "pickerApiLoadPromise": [
     {
-      "file": "lib/shared/schemas/contact.schema.ts",
-      "line": 13,
+      "file": "lib/client/utils/google-drive-picker.ts",
+      "line": 12,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "loadScript": [
+    {
+      "file": "lib/client/utils/google-drive-picker.ts",
+      "line": 14,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "ensureGooglePickerLoaded": [
+    {
+      "file": "lib/client/utils/google-drive-picker.ts",
+      "line": 38,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "pickGoogleDrivePdfFiles": [
+    {
+      "file": "lib/client/utils/google-drive-picker.ts",
+      "line": 80,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DocsViewInstance": [
+    {
+      "file": "lib/client/utils/google-drive-picker.ts",
+      "line": 103,
       "kind": "type",
+      "exported": false
+    }
+  ],
+  "PickerBuilderInstance": [
+    {
+      "file": "lib/client/utils/google-drive-picker.ts",
+      "line": 110,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "safeDownloadFilename": [
+    {
+      "file": "lib/client/utils/trigger-document-download.ts",
+      "line": 5,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "triggerDocumentDownload": [
+    {
+      "file": "lib/client/utils/trigger-document-download.ts",
+      "line": 15,
+      "kind": "function",
       "exported": true
     }
   ],
@@ -30107,6 +30629,22 @@
     {
       "file": "lib/shared/constants/tools.ts",
       "line": 1,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "contactFormSchema": [
+    {
+      "file": "lib/shared/schemas/contact.schema.ts",
+      "line": 3,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "ContactFormValues": [
+    {
+      "file": "lib/shared/schemas/contact.schema.ts",
+      "line": 13,
       "kind": "type",
       "exported": true
     }
@@ -30373,20 +30911,6 @@
       "exported": true
     }
   ],
-  "DEFAULT_MAX_SIZE": [
-    {
-      "file": "lib/shared/utils/file-upload.utils.ts",
-      "line": 3,
-      "kind": "const",
-      "exported": false
-    },
-    {
-      "file": "components/ui/file-upload/file-upload.tsx",
-      "line": 20,
-      "kind": "const",
-      "exported": false
-    }
-  ],
   "formatFileSize": [
     {
       "file": "lib/shared/utils/file-upload.utils.ts",
@@ -30483,498 +31007,6 @@
       "exported": true
     }
   ],
-  "documentSelectionKey": [
-    {
-      "file": "lib/client/utils/document-selection-key.ts",
-      "line": 4,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "localDayStartMs": [
-    {
-      "file": "lib/client/utils/documents-table-display.ts",
-      "line": 4,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "localDayEndExclusiveMs": [
-    {
-      "file": "lib/client/utils/documents-table-display.ts",
-      "line": 18,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DocumentTableFilterParams": [
-    {
-      "file": "lib/client/utils/documents-table-display.ts",
-      "line": 31,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "documentMatchesTableFilters": [
-    {
-      "file": "lib/client/utils/documents-table-display.ts",
-      "line": 37,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "formatDocumentBytes": [
-    {
-      "file": "lib/client/utils/documents-table-display.ts",
-      "line": 57,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "formatDocumentDate": [
-    {
-      "file": "lib/client/utils/documents-table-display.ts",
-      "line": 71,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PickedGoogleDrivePdf": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 3,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "pickerApiLoadPromise": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 12,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "loadScript": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 14,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "ensureGooglePickerLoaded": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 38,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "pickGoogleDrivePdfFiles": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 80,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DocsViewInstance": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 103,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "PickerBuilderInstance": [
-    {
-      "file": "lib/client/utils/google-drive-picker.ts",
-      "line": 110,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "safeDownloadFilename": [
-    {
-      "file": "lib/client/utils/trigger-document-download.ts",
-      "line": 5,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "triggerDocumentDownload": [
-    {
-      "file": "lib/client/utils/trigger-document-download.ts",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "OAuthButtonProps": [
-    {
-      "file": "components/ui/auth/oauth-button.tsx",
-      "line": 5,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "OAuthButton": [
-    {
-      "file": "components/ui/auth/oauth-button.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "GOOGLE_ICON_URL": [
-    {
-      "file": "components/ui/auth/oauth-button.tsx",
-      "line": 31,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "GoogleLogo": [
-    {
-      "file": "components/ui/auth/oauth-button.tsx",
-      "line": 34,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DEFAULT_MARKETING_FOOTNOTE": [
-    {
-      "file": "components/ui/file-upload/file-upload-dropzone-marketing.tsx",
-      "line": 5,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "FileUploadDropzoneMarketingProps": [
-    {
-      "file": "components/ui/file-upload/file-upload-dropzone-marketing.tsx",
-      "line": 8,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "FileUploadDropzoneMarketing": [
-    {
-      "file": "components/ui/file-upload/file-upload-dropzone-marketing.tsx",
-      "line": 17,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "FileUploadDropzoneProps": [
-    {
-      "file": "components/ui/file-upload/file-upload-dropzone.tsx",
-      "line": 1,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "FileUploadDropzone": [
-    {
-      "file": "components/ui/file-upload/file-upload-dropzone.tsx",
-      "line": 9,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "FileUploadPreviewProps": [
-    {
-      "file": "components/ui/file-upload/file-upload-preview.tsx",
-      "line": 5,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "getFileTypeLabel": [
-    {
-      "file": "components/ui/file-upload/file-upload-preview.tsx",
-      "line": 10,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "FileUploadPreview": [
-    {
-      "file": "components/ui/file-upload/file-upload-preview.tsx",
-      "line": 19,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ERROR_DISMISS_MS": [
-    {
-      "file": "components/ui/file-upload/file-upload.tsx",
-      "line": 21,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "FileUpload": [
-    {
-      "file": "components/ui/file-upload/file-upload.tsx",
-      "line": 23,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DataTableColumn": [
-    {
-      "file": "components/ui/data-table/data-table.tsx",
-      "line": 11,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "DataTableMode": [
-    {
-      "file": "components/ui/data-table/data-table.tsx",
-      "line": 28,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "DataTableProps": [
-    {
-      "file": "components/ui/data-table/data-table.tsx",
-      "line": 30,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "DEFAULT_EMPTY": [
-    {
-      "file": "components/ui/data-table/data-table.tsx",
-      "line": 70,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "DataTable": [
-    {
-      "file": "components/ui/data-table/data-table.tsx",
-      "line": 76,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ClientPagination": [
-    {
-      "file": "components/ui/data-table/data-table.tsx",
-      "line": 288,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "subscribe": [
-    {
-      "file": "components/ui/theme/theme-segmented.tsx",
-      "line": 15,
-      "kind": "const",
-      "exported": false
-    },
-    {
-      "file": "app/(app)/dashboard/settings/language/page.tsx",
-      "line": 11,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "useIsMounted": [
-    {
-      "file": "components/ui/theme/theme-segmented.tsx",
-      "line": 16,
-      "kind": "const",
-      "exported": false
-    },
-    {
-      "file": "app/(app)/dashboard/settings/language/page.tsx",
-      "line": 12,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "ThemeSegmentedProps": [
-    {
-      "file": "components/ui/theme/theme-segmented.tsx",
-      "line": 29,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ThemeSegmented": [
-    {
-      "file": "components/ui/theme/theme-segmented.tsx",
-      "line": 33,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ThemeToggleProps": [
-    {
-      "file": "components/ui/theme/theme-toggle.tsx",
-      "line": 8,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ThemeToggle": [
-    {
-      "file": "components/ui/theme/theme-toggle.tsx",
-      "line": 13,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ControlledInputFieldProps": [
-    {
-      "file": "components/ui/form/controlled-input-field.tsx",
-      "line": 14,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ControlledInputField": [
-    {
-      "file": "components/ui/form/controlled-input-field.tsx",
-      "line": 24,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ControlledOtpFieldProps": [
-    {
-      "file": "components/ui/form/controlled-otp-field.tsx",
-      "line": 8,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ControlledOtpField": [
-    {
-      "file": "components/ui/form/controlled-otp-field.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ControlledTextareaFieldProps": [
-    {
-      "file": "components/ui/form/controlled-textarea-field.tsx",
-      "line": 8,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ControlledTextareaField": [
-    {
-      "file": "components/ui/form/controlled-textarea-field.tsx",
-      "line": 17,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UploadToastPreviewApi": [
-    {
-      "file": "components/ui/upload-toast/UploadToastProvider.tsx",
-      "line": 11,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "UploadToastPreviewWindow": [
-    {
-      "file": "components/ui/upload-toast/UploadToastProvider.tsx",
-      "line": 19,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "UploadToastProvider": [
-    {
-      "file": "components/ui/upload-toast/UploadToastProvider.tsx",
-      "line": 28,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UploadToastRenderer": [
-    {
-      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
-      "line": 26,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "StatusBadge": [
-    {
-      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
-      "line": 70,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "ProgressTrack": [
-    {
-      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
-      "line": 102,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "ToastActions": [
-    {
-      "file": "components/ui/upload-toast/UploadToastRenderer.tsx",
-      "line": 128,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "UploadIllustration": [
-    {
-      "file": "components/ui/upload-toast/upload-illustration.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "AddFilesIllustration": [
-    {
-      "file": "components/ui/illustrations/add-files.tsx",
-      "line": 3,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "FilesUploadingIllustration": [
-    {
-      "file": "components/ui/illustrations/files-uploading.tsx",
-      "line": 3,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SuccessfulUploadIllustration": [
-    {
-      "file": "components/ui/illustrations/successful-upload.tsx",
-      "line": 3,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UploadErrorIllustration": [
-    {
-      "file": "components/ui/illustrations/upload-error.tsx",
-      "line": 3,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "SettingsLayout": [
     {
       "file": "app/(app)/dashboard/settings/layout.tsx",
@@ -30987,70 +31019,6 @@
     {
       "file": "app/(app)/dashboard/settings/page.tsx",
       "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PricingPage": [
-    {
-      "file": "app/(marketing)/(site)/pricing/page.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SSOCallbackPage": [
-    {
-      "file": "app/(marketing)/(site)/sso-callback/page.tsx",
-      "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "CookiesPage": [
-    {
-      "file": "app/(marketing)/(legal)/cookies/page.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ContactPage": [
-    {
-      "file": "app/(marketing)/(legal)/contact/page.tsx",
-      "line": 16,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DoNotSellPage": [
-    {
-      "file": "app/(marketing)/(legal)/do-not-sell/page.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PrivacyPage": [
-    {
-      "file": "app/(marketing)/(legal)/privacy/page.tsx",
-      "line": 18,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "TermsPage": [
-    {
-      "file": "app/(marketing)/(legal)/terms/page.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "RefundPage": [
-    {
-      "file": "app/(marketing)/(legal)/refund/page.tsx",
-      "line": 15,
       "kind": "function",
       "exported": true
     }
@@ -31091,6 +31059,124 @@
     {
       "file": "components/sections/dashboard/settings/settings-nav.tsx",
       "line": 65,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ContactPage": [
+    {
+      "file": "app/(marketing)/(legal)/contact/page.tsx",
+      "line": 16,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "CookiesPage": [
+    {
+      "file": "app/(marketing)/(legal)/cookies/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DoNotSellPage": [
+    {
+      "file": "app/(marketing)/(legal)/do-not-sell/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PrivacyPage": [
+    {
+      "file": "app/(marketing)/(legal)/privacy/page.tsx",
+      "line": 18,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "TermsPage": [
+    {
+      "file": "app/(marketing)/(legal)/terms/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PricingPage": [
+    {
+      "file": "app/(marketing)/(site)/pricing/page.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SSOCallbackPage": [
+    {
+      "file": "app/(marketing)/(site)/sso-callback/page.tsx",
+      "line": 5,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "RefundPage": [
+    {
+      "file": "app/(marketing)/(legal)/refund/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SignInStep": [
+    {
+      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
+      "line": 21,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "showServerError": [
+    {
+      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
+      "line": 23,
+      "kind": "function",
+      "exported": false
+    },
+    {
+      "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
+      "line": 23,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "safeRedirectPath": [
+    {
+      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
+      "line": 27,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "useSignInFlow": [
+    {
+      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
+      "line": 35,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SignUpStep": [
+    {
+      "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
+      "line": 21,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useSignUpFlow": [
+    {
+      "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
+      "line": 27,
       "kind": "function",
       "exported": true
     }
@@ -31263,164 +31349,6 @@
       "exported": true
     }
   ],
-  "ListData": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 19,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ListContext": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 20,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "UploadVariables": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 26,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useUploadDocumentMutation": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 35,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UploadCloudVariables": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 48,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useUploadCloudDocumentMutation": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 50,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "useRenameDocumentMutation": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 64,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "useDeleteDocumentMutation": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 110,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "useBulkDeleteDocumentsMutation": [
-    {
-      "file": "lib/client/query/mutations/documents.mutation.ts",
-      "line": 127,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DEFAULT_PAGE_SIZE": [
-    {
-      "file": "lib/client/query/queries/documents.query.ts",
-      "line": 13,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "UseDocumentsQueryOptions": [
-    {
-      "file": "lib/client/query/queries/documents.query.ts",
-      "line": 15,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useDocumentsQuery": [
-    {
-      "file": "lib/client/query/queries/documents.query.ts",
-      "line": 21,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "useDocumentQuery": [
-    {
-      "file": "lib/client/query/queries/documents.query.ts",
-      "line": 42,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SignInStep": [
-    {
-      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
-      "line": 21,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "showServerError": [
-    {
-      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
-      "line": 23,
-      "kind": "function",
-      "exported": false
-    },
-    {
-      "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
-      "line": 23,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "safeRedirectPath": [
-    {
-      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
-      "line": 27,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "useSignInFlow": [
-    {
-      "file": "lib/client/hooks/auth/use-sign-in-flow.ts",
-      "line": 35,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SignUpStep": [
-    {
-      "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
-      "line": 21,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useSignUpFlow": [
-    {
-      "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
-      "line": 27,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "UseDrawToolParams": [
     {
       "file": "lib/client/hooks/pdf-editor/use-draw-tool.ts",
@@ -31433,6 +31361,22 @@
     {
       "file": "lib/client/hooks/pdf-editor/use-draw-tool.ts",
       "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseEditTextModeParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-edit-text-mode.ts",
+      "line": 15,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useEditTextMode": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-edit-text-mode.ts",
+      "line": 28,
       "kind": "function",
       "exported": true
     }
@@ -31573,10 +31517,26 @@
       "exported": true
     }
   ],
+  "TEXT_OPS_MIN": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 9,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "TEXT_OPS_MAX": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 10,
+      "kind": "const",
+      "exported": false
+    }
+  ],
   "UsePageRendererParams": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 8,
+      "line": 12,
       "kind": "type",
       "exported": false
     }
@@ -31584,7 +31544,7 @@
   "RenderedSize": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 14,
+      "line": 20,
       "kind": "type",
       "exported": false
     }
@@ -31592,7 +31552,7 @@
   "usePageRenderer": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 16,
+      "line": 22,
       "kind": "function",
       "exported": true
     }
@@ -31649,6 +31609,110 @@
     {
       "file": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
       "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ListData": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 19,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ListContext": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 20,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "UploadVariables": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 26,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useUploadDocumentMutation": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 35,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UploadCloudVariables": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 48,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useUploadCloudDocumentMutation": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 50,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useRenameDocumentMutation": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 64,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useDeleteDocumentMutation": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 110,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useBulkDeleteDocumentsMutation": [
+    {
+      "file": "lib/client/query/mutations/documents.mutation.ts",
+      "line": 127,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DEFAULT_PAGE_SIZE": [
+    {
+      "file": "lib/client/query/queries/documents.query.ts",
+      "line": 13,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "UseDocumentsQueryOptions": [
+    {
+      "file": "lib/client/query/queries/documents.query.ts",
+      "line": 15,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useDocumentsQuery": [
+    {
+      "file": "lib/client/query/queries/documents.query.ts",
+      "line": 21,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useDocumentQuery": [
+    {
+      "file": "lib/client/query/queries/documents.query.ts",
+      "line": 42,
       "kind": "function",
       "exported": true
     }
@@ -31781,6 +31845,22 @@
       "exported": true
     }
   ],
+  "DangerZonePage": [
+    {
+      "file": "app/(app)/dashboard/settings/danger/page.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "GeneralSettingsPage": [
+    {
+      "file": "app/(app)/dashboard/settings/general/page.tsx",
+      "line": 10,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "LANGUAGES": [
     {
       "file": "app/(app)/dashboard/settings/language/page.tsx",
@@ -31821,18 +31901,10 @@
       "exported": true
     }
   ],
-  "DangerZonePage": [
+  "SignInPage": [
     {
-      "file": "app/(app)/dashboard/settings/danger/page.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "GeneralSettingsPage": [
-    {
-      "file": "app/(app)/dashboard/settings/general/page.tsx",
-      "line": 10,
+      "file": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+      "line": 8,
       "kind": "function",
       "exported": true
     }
@@ -31841,14 +31913,6 @@
     {
       "file": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
       "line": 7,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SignInPage": [
-    {
-      "file": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-      "line": 8,
       "kind": "function",
       "exported": true
     }

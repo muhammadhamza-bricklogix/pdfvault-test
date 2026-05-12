@@ -5,7 +5,11 @@ export type TextBlock = {
   color: string;
   fontFamily: string;
   fontSize: number;
+  fontStyle: "italic" | "normal";
+  fontWeight: "bold" | "normal";
   height: number;
+  /** The real PDF font name (e.g. "JJMAVV+CMBX12") for reference */
+  pdfFontName: string;
   text: string;
   width: number;
   x: number;
@@ -13,151 +17,283 @@ export type TextBlock = {
 };
 
 /**
- * Parses a PDF.js font name string and returns a Fabric-compatible font family.
+ * Detects font weight and style from the real PDF font name.
  *
- * PDF font names come in many forms:
- *   - Standard:   "Helvetica", "Times-Roman", "Courier"
- *   - Subset:     "BCDERF+Arial", "ABCDEF+TimesNewRoman,Bold"
- *   - Internal:   "g_d0_f1" (generic fallback)
- *
- * We strip the subset prefix (everything before "+"), then match against
- * known family keywords to return one of the three standard families.
+ * PDF font names follow patterns like:
+ *   "SUBSET+FamilyName-BoldItalic"
+ *   "Arial,Bold"
+ *   "TimesNewRomanPS-BoldMT"
+ *   "CMBX12"  (Computer Modern Bold Extended)
+ *   "CMTI10"  (Computer Modern Text Italic)
  */
-function mapPdfFontFamily(fontName: string): string {
-  const stripped = fontName.includes("+")
-    ? fontName.slice(fontName.indexOf("+") + 1)
-    : fontName;
+function detectWeightAndStyle(realFontName: string): {
+  style: "italic" | "normal";
+  weight: "bold" | "normal";
+} {
+  const lower = realFontName.toLowerCase().replace(/[^a-z]/g, "");
 
-  const lower = stripped.toLowerCase().replace(/[^a-z]/g, "");
+  const isBold =
+    lower.includes("bold") ||
+    lower.includes("cmbx") || // Computer Modern Bold Extended
+    lower.includes("cmb") || // Computer Modern Bold (but not "cmr" which has "cm" prefix)
+    /\bcmb\d/.test(realFontName.toLowerCase());
 
-  if (lower.includes("courier") || lower.includes("mono")) {
-    return "Courier New";
-  }
+  const isItalic =
+    lower.includes("italic") ||
+    lower.includes("oblique") ||
+    lower.includes("cmti") || // Computer Modern Text Italic
+    lower.includes("cmmi") || // Computer Modern Math Italic
+    lower.includes("slant");
 
-  if (
-    lower.includes("times") ||
-    lower.includes("georgia") ||
-    lower.includes("garamond") ||
-    lower.includes("palatino")
-  ) {
-    return "Times New Roman";
-  }
+  return {
+    style: isItalic ? "italic" : "normal",
+    weight: isBold ? "bold" : "normal",
+  };
+}
 
-  if (
-    lower.includes("arial") ||
-    lower.includes("helvetica") ||
-    lower.includes("verdana") ||
-    lower.includes("calibri") ||
-    lower.includes("trebuchet") ||
-    lower.includes("tahoma")
-  ) {
-    return "Helvetica";
-  }
+/**
+ * Resolves the font family for a text item.
+ *
+ * Strategy:
+ *   1. Use the pdf.js loadedName (e.g. "g_d2_f1") directly — pdf.js already
+ *      registered this as a FontFace in document.fonts with the actual
+ *      embedded OpenType font data. This gives us pixel-perfect rendering.
+ *   2. Verify the font exists in document.fonts; if not, fall back to a
+ *      web-safe family based on the textContent style hint.
+ */
+function resolveFontFamily(
+  fontName: string,
+  styleFontFamily: string,
+): string {
+  // Check if pdf.js registered this font in document.fonts
+  let found = false;
 
-  // Unknown / internal font names → safe sans-serif fallback
+  document.fonts.forEach((face) => {
+    if (face.family === fontName || face.family === `"${fontName}"`) {
+      found = true;
+    }
+  });
+
+  if (found) return fontName;
+
+  // Fallback: use the generic family hint from textContent.styles
+  if (styleFontFamily === "monospace") return "Courier New";
+  if (styleFontFamily === "serif") return "Times New Roman";
+
   return "Helvetica";
+}
+
+type TextColorEntry = {
+  color: string;
+  x: number;
+  y: number;
+};
+
+/**
+ * Extracts text fill colors from the PDF operator list by walking the
+ * graphics state machine. Records the fill color and text matrix position
+ * for each showText operation.
+ *
+ * Returns entries that can be matched to getTextContent() items by position.
+ */
+async function extractTextColorsWithPositions(
+  page: PDFPageProxy,
+): Promise<TextColorEntry[]> {
+  const { OPS } = await import("pdfjs-dist");
+  const opList = await page.getOperatorList();
+
+  let currentFillColor = "#000000";
+  const gsStack: string[] = [];
+  const entries: TextColorEntry[] = [];
+
+  // Track current text matrix position (set by setTextMatrix / moveText)
+  let textX = 0;
+  let textY = 0;
+
+  for (let i = 0; i < opList.fnArray.length; i++) {
+    const op = opList.fnArray[i];
+    const args = opList.argsArray[i];
+
+    if (op === OPS.save) {
+      gsStack.push(currentFillColor);
+    } else if (op === OPS.restore) {
+      currentFillColor = gsStack.pop() ?? "#000000";
+    } else if (
+      op === OPS.setFillRGBColor ||
+      op === OPS.setFillGray ||
+      op === OPS.setFillCMYKColor
+    ) {
+      const colorArg = args[0];
+
+      if (typeof colorArg === "string" && colorArg.startsWith("#")) {
+        currentFillColor = colorArg;
+      } else if (typeof colorArg === "number") {
+        currentFillColor = rgbToHex(colorArg, colorArg, colorArg);
+      }
+    } else if (op === OPS.setTextMatrix) {
+      // setTextMatrix args: [a, b, c, d, e, f] — e=x, f=y
+      textX = Number(args[4]) || 0;
+      textY = Number(args[5]) || 0;
+    } else if (op === OPS.moveText) {
+      // moveText args: [tx, ty] — relative offset
+      textX += Number(args[0]) || 0;
+      textY += Number(args[1]) || 0;
+    } else if (
+      op === OPS.showText ||
+      op === OPS.showSpacedText ||
+      op === OPS.nextLineShowText ||
+      op === OPS.nextLineSetSpacingShowText
+    ) {
+      entries.push({ color: currentFillColor, x: textX, y: textY });
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Finds the color for a text item by matching its PDF-space position
+ * against the operator list color entries.
+ */
+function findColorForPosition(
+  pdfX: number,
+  pdfY: number,
+  colorEntries: TextColorEntry[],
+): string {
+  // Find the closest color entry by position (within a tolerance)
+  let bestColor = "#000000";
+  let bestDist = Infinity;
+
+  for (const entry of colorEntries) {
+    const dx = Math.abs(entry.x - pdfX);
+    const dy = Math.abs(entry.y - pdfY);
+    const dist = dx + dy;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestColor = entry.color;
+    }
+  }
+
+  return bestColor;
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (v: number) =>
+    Math.round(v * 255)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 /**
  * Extracts text items from a PDF page and converts their positions into
  * Fabric.js canvas coordinates (base space, zoom=1).
  *
- * The Fabric canvas uses the same dimensions as a pdf.js viewport at scale=1,
- * so the viewport transform handles all coordinate conversion for us.
- *
- * The transform matrix from `getTextContent()` is a 6-element affine matrix:
- *   [scaleX, skewY, skewX, scaleY, translateX, translateY]
- *
- * In PDF coordinate space (origin bottom-left, Y up), translateX/Y give the
- * text baseline position. The viewport's `convertToViewportPoint` flips Y
- * and scales to match our canvas coordinate system.
+ * Uses the actual embedded fonts loaded by pdf.js (via document.fonts)
+ * instead of mapping to generic web-safe fonts. Extracts real text colors
+ * from the PDF operator list.
  */
 export async function extractTextBlocks(
   page: PDFPageProxy,
 ): Promise<TextBlock[]> {
   const viewport = page.getViewport({ scale: 1.0 });
-  const textContent = await page.getTextContent();
+  const [textContent, colorEntries] = await Promise.all([
+    page.getTextContent(),
+    extractTextColorsWithPositions(page),
+  ]);
+
   const blocks: TextBlock[] = [];
 
-  // --- DEBUG LOGGING ---
-  console.group("[text-extraction] Page info");
-  console.log("viewport scale:", viewport.scale);
-  console.log("viewport width:", viewport.width, "height:", viewport.height);
-  console.log(
-    "page rotation:",
-    page.rotate,
-    "userUnit:",
-    page.userUnit,
-  );
-  console.log("total textContent items:", textContent.items.length);
-  console.groupEnd();
-
-  let loggedCount = 0;
+  // Build a map of fontName → real PDF font name + weight/style from commonObjs
+  const fontInfoMap = new Map<
+    string,
+    { realName: string; style: "italic" | "normal"; weight: "bold" | "normal" }
+  >();
 
   for (const item of textContent.items) {
-    // Skip marked-content items (they have `type` instead of `str`)
+    if (!("fontName" in item)) continue;
+
+    const { fontName } = item as TextItem;
+
+    if (fontInfoMap.has(fontName)) continue;
+
+    try {
+      if (page.commonObjs.has(fontName)) {
+        const fontObj = page.commonObjs.get(fontName);
+        const realName = (fontObj?.name as string) ?? fontName;
+        const { weight, style } = detectWeightAndStyle(realName);
+
+        fontInfoMap.set(fontName, { realName, style, weight });
+      } else {
+        fontInfoMap.set(fontName, {
+          realName: fontName,
+          style: "normal",
+          weight: "normal",
+        });
+      }
+    } catch {
+      fontInfoMap.set(fontName, {
+        realName: fontName,
+        style: "normal",
+        weight: "normal",
+      });
+    }
+  }
+
+  for (const item of textContent.items) {
     if (!("str" in item)) continue;
 
     const textItem = item as TextItem;
     const { str, transform, fontName } = textItem;
 
-    // Skip empty or whitespace-only text
     if (!str.trim()) continue;
 
-    // transform = [scaleX, skewY, skewX, scaleY, translateX, translateY]
     const fontSize = Math.abs(transform[3]);
 
-    // Skip tiny text (likely artifacts or metadata)
     if (fontSize < 2) continue;
 
-    // Convert PDF text origin (baseline, bottom-left) to viewport coords (top-left)
-    // translateX, translateY are the baseline position in PDF space
     const [vpX, vpY] = viewport.convertToViewportPoint(
       transform[4] as number,
       transform[5] as number,
     );
 
-    // The height of the text in viewport space
     const vpHeight = fontSize * viewport.scale;
-
-    // Width from getTextContent is in PDF space — scale to viewport
     const vpWidth = textItem.width * viewport.scale;
-
-    // vpY points to the baseline in viewport coords; move up by the text height
-    // to get the top-left corner
     const y = vpY - vpHeight;
 
-    // --- DEBUG: Log first 5 items ---
-    if (loggedCount < 5) {
-      console.group(`[text-extraction] Item ${loggedCount}: "${str.slice(0, 30)}"`);
-      console.log("transform:", JSON.stringify(transform));
-      console.log("fontName:", fontName, "→", mapPdfFontFamily(fontName));
-      console.log("fontSize (from transform[3]):", fontSize);
-      console.log("textItem.width:", textItem.width, "textItem.height:", textItem.height);
-      console.log("PDF coords: x=", transform[4], "y=", transform[5]);
-      console.log("viewport coords: vpX=", vpX, "vpY=", vpY);
-      console.log("final Fabric coords: x=", vpX, "y=", y);
-      console.log("final size: w=", vpWidth, "h=", vpHeight);
-      console.groupEnd();
-      loggedCount++;
-    }
-
-    // Filter out blocks that are too small to be useful
     if (vpWidth < 2 || vpHeight < 2) continue;
 
+    const fontInfo = fontInfoMap.get(fontName) ?? {
+      realName: fontName,
+      style: "normal" as const,
+      weight: "normal" as const,
+    };
+
+    const styleFontFamily = textContent.styles[fontName]?.fontFamily ?? "sans-serif";
+
+    // Match color by PDF-space position (transform[4]=x, transform[5]=y)
+    const color = findColorForPosition(
+      transform[4] as number,
+      transform[5] as number,
+      colorEntries,
+    );
+
     blocks.push({
-      color: "#000000",
-      fontFamily: mapPdfFontFamily(fontName),
+      color,
+      fontFamily: resolveFontFamily(fontName, styleFontFamily),
       fontSize,
+      fontStyle: fontInfo.style,
+      fontWeight: fontInfo.weight,
       height: vpHeight,
+      pdfFontName: fontInfo.realName,
       text: str,
       width: vpWidth,
-      x: vpX,
-      y,
+      x: Math.round(vpX),
+      y: Math.round(y),
     });
   }
-
-  console.log("[text-extraction] Total blocks extracted:", blocks.length);
 
   return blocks;
 }

@@ -85,19 +85,6 @@ Files where execution begins — servers, CLIs, library public API, scripts.
 - `components/sections/pdf-editor/RightSidebar.tsx`
 - `components/sections/pdf-editor/ThumbnailSidebar.tsx`
 
-## `lib/client/upload-toasts/controller.ts`
-
-**Reason:** no-incoming-imports · **Language:** ts · **LOC:** 103
-
-**Exports:**
-
-- `type` **StartUploadToastInput** — [`lib/client/upload-toasts/controller.ts:10`](../lib/client/upload-toasts/controller.ts#L10)
-- `const` **uploadToasts** — [`lib/client/upload-toasts/controller.ts:24`](../lib/client/upload-toasts/controller.ts#L24)
-
-**Imports 1 local file:**
-
-- `lib/client/upload-toasts/queue.ts`
-
 ## `components/ui/file-upload/file-upload.tsx`
 
 **Reason:** no-incoming-imports · **Language:** tsx · **LOC:** 195
@@ -123,6 +110,19 @@ Files where execution begins — servers, CLIs, library public API, scripts.
 **Imports 1 local file:**
 
 - `components/ui/upload-toast/UploadToastRenderer.tsx`
+
+## `lib/client/upload-toasts/controller.ts`
+
+**Reason:** no-incoming-imports · **Language:** ts · **LOC:** 103
+
+**Exports:**
+
+- `type` **StartUploadToastInput** — [`lib/client/upload-toasts/controller.ts:10`](../lib/client/upload-toasts/controller.ts#L10)
+- `const` **uploadToasts** — [`lib/client/upload-toasts/controller.ts:24`](../lib/client/upload-toasts/controller.ts#L24)
+
+**Imports 1 local file:**
+
+- `lib/client/upload-toasts/queue.ts`
 
 ## npm scripts
 

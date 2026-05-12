@@ -22,6 +22,7 @@ type UseEditTextModeParams = {
  *
  * 1. The PDF canvas renders WITHOUT text (via operationsFilter in use-page-renderer)
  * 2. This hook extracts ALL text blocks and places them as Fabric.js IText objects
+ *    using the actual embedded fonts loaded by pdf.js (via document.fonts)
  * 3. Users can click any text to edit it in-place
  * 4. Text objects are permanent — they ARE the text layer
  */
@@ -52,12 +53,6 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         .filter((obj) => (obj as any).editorType === "editModeText");
 
       if (existingEditText.length > 0) {
-        console.log(
-          "[edit-text-mode] Canvas already has",
-          existingEditText.length,
-          "editModeText objects, skipping placement",
-        );
-
         return;
       }
 
@@ -89,8 +84,8 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         fontWarningShownRef.current = true;
         toast.info({
           description:
-            "Original fonts may not be available. Text will use substitute fonts.",
-          title: "Font substitution",
+            "Some characters may not be available in the embedded font subset.",
+          title: "Embedded fonts loaded",
         });
       }
 
@@ -98,43 +93,25 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
       if (cancelled) return;
 
-      // --- DEBUG LOGGING ---
-      console.group("[edit-text-mode] Canvas state before placing text");
-      console.log("fabricCanvas zoom:", fabricCanvas.getZoom());
-      console.log(
-        "existing objects on canvas:",
-        fabricCanvas.getObjects().length,
-      );
-      console.log("blocks to place:", blocks.length);
-      console.groupEnd();
-
-      // Place ALL text blocks as IText objects
-      for (let i = 0; i < blocks.length; i++) {
-        const block = blocks[i];
-
+      // Place ALL text blocks as IText objects with real embedded fonts
+      for (const block of blocks) {
         const textObj = new FabricIText(block.text, {
           editorType: "editModeText",
           fill: block.color,
           fontFamily: block.fontFamily,
           fontSize: block.fontSize,
+          fontStyle: block.fontStyle,
+          fontWeight: block.fontWeight,
           left: block.x,
+          objectCaching: false,
           originX: "left",
           originY: "top",
           top: block.y,
         } as any) as IText;
 
         fabricCanvas.add(textObj);
-
-        // --- DEBUG: Log first 3 placed objects ---
-        if (i < 3) {
-          console.log(
-            `[edit-text-mode] Placed ${i}: "${block.text.slice(0, 25)}" at (${block.x.toFixed(1)}, ${block.y.toFixed(1)}) fontSize=${block.fontSize.toFixed(1)} boundingRect=`,
-            textObj.getBoundingRect(),
-          );
-        }
       }
 
-      console.log("[edit-text-mode] Total placed:", blocks.length);
       fabricCanvas.renderAll();
     };
 

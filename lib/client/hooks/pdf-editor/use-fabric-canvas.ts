@@ -91,7 +91,12 @@ export function useFabricCanvas({
       console.log("renderedSize:", renderedSize);
       console.log("baseWidth:", baseWidth, "baseHeight:", baseHeight);
       console.log("zoom:", zoom);
-      console.log("fc created with:", renderedSize.width, "x", renderedSize.height);
+      console.log(
+        "fc created with:",
+        renderedSize.width,
+        "x",
+        renderedSize.height,
+      );
       console.log("fc.setZoom:", zoom);
       console.groupEnd();
 

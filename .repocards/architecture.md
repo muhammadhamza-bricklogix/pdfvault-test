@@ -2,14 +2,14 @@
 
 **Package:** `pdfedits-frontend` v0.0.1
 
-**Stats:** 184 files · 4276 symbols · 624 imports.
+**Stats:** 186 files · 4284 symbols · 633 imports.
 
 ## Top-level layout
 
 | Directory | Files | LOC |
 |---|---:|---:|
-| `components/` | 75 | 10224 |
-| `lib/` | 72 | 5510 |
+| `components/` | 75 | 10249 |
+| `lib/` | 74 | 5891 |
 | `app/` | 28 | 1010 |
 | `(root)` | 8 | 1627 |
 | `public/` | 1 | 31 |
@@ -39,9 +39,9 @@ These files sit at the center of the import graph. Changes here tend to ripple w
 - [`components/sections/dashboard/dashboard-shell.tsx`](../components/sections/dashboard/dashboard-shell.tsx) — no-incoming-imports
 - [`components/sections/home/home-hero.tsx`](../components/sections/home/home-hero.tsx) — no-incoming-imports
 - [`components/sections/pdf-editor/PdfEditorShell.tsx`](../components/sections/pdf-editor/PdfEditorShell.tsx) — no-incoming-imports
-- [`lib/client/upload-toasts/controller.ts`](../lib/client/upload-toasts/controller.ts) — no-incoming-imports
 - [`components/ui/file-upload/file-upload.tsx`](../components/ui/file-upload/file-upload.tsx) — no-incoming-imports
 - [`components/ui/upload-toast/UploadToastProvider.tsx`](../components/ui/upload-toast/UploadToastProvider.tsx) — no-incoming-imports
+- [`lib/client/upload-toasts/controller.ts`](../lib/client/upload-toasts/controller.ts) — no-incoming-imports
 
 _See [entrypoints.md](./entrypoints.md) for full detail._
 
