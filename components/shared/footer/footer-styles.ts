@@ -2,7 +2,7 @@ export const footerShellClass =
   "border-t border-default-200/80 bg-transparent dark:border-default-100/20";
 
 export const footerInnerContainerClass =
-  "mx-auto max-w-[min(100%,104rem)] px-6 py-14 sm:px-10 sm:py-16";
+  "mx-auto max-w-[min(100%,104rem)] px-6 pb-4 pt-14 sm:px-10 sm:pb-5 sm:pt-16";
 
 export const footerAsideColumnTitleClass =
   "flex flex-col gap-2 text-lg font-bold tracking-tight text-[var(--color-accent)]";
@@ -46,13 +46,16 @@ export const footerPostCopyrightNavClass =
   "mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-default-700 dark:text-default-300 sm:text-base";
 
 export const footerAffiliationDisclaimerClass =
-  "mx-auto mt-4 max-w-5xl space-y-1.5 text-center text-xs leading-snug text-default-500 dark:text-default-500 sm:text-sm";
+  "mx-auto mt-4 max-w-[min(100%,90rem)] text-center text-default-500 dark:text-default-500";
+
+export const footerAffiliationDisclaimerTextClass =
+  "m-0 text-pretty text-xs leading-snug text-default-500 dark:text-default-500 sm:text-[13px] sm:leading-snug md:text-sm";
 
 export const footerPaymentStripClass =
-  "mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-default-200/80 pt-6";
+  "mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-default-200/80 pb-0 pt-6";
 
 export const footerPaymentIconClass =
-  "h-7 w-auto max-w-[4.5rem] opacity-90 sm:h-8 sm:max-w-[5.5rem]";
+  "block h-7 w-auto max-w-[4.5rem] shrink-0 leading-none opacity-90 sm:h-8 sm:max-w-[5.5rem]";
 
 export const footerLogoRowClass =
   "mt-8 flex justify-center border-t border-default-200/80 pt-6";

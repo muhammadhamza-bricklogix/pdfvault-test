@@ -112,8 +112,6 @@ export const FOOTER_POST_COPYRIGHT_NAV_LINKS: FooterNavLink[] = [
   { href: ROUTES.LEGAL.REFUND, label: "Subscription Policy" },
 ];
 
-export const FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINES: readonly string[] =
-  [
-    `${FOOTER_BRAND_NAME} is an independent service and is not affiliated with, endorsed by, or approved by any governmental authority, agency, or public institution of any kind, including but not limited to the Internal Revenue Service (IRS), the Social Security Administration (SSA), or U.S. Citizenship and Immigration Services (USCIS).`,
-    `${FOOTER_BRAND_NAME} is also not associated with, connected to, or endorsed by any other editors or brands.`,
-  ];
+export const FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_1 = `${FOOTER_BRAND_NAME} is an independent service and is not affiliated with, endorsed by, or approved by any governmental authority, agency, or public institution of any kind, including but not limited to the Internal Revenue Service (IRS),`;
+
+export const FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_2 = `${FOOTER_BRAND_NAME} the Social Security Administration (SSA), or U.S. Citizenship and Immigration Services (USCIS). is also not associated with, connected to, or endorsed by any other editors or brands.`;

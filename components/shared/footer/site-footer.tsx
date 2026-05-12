@@ -1,23 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { FooterLinkColumns } from "@/components/shared/footer/footer-link-columns";
 import { FooterPaymentStrip } from "@/components/shared/footer/footer-payment-strip";
 import {
   footerAffiliationDisclaimerClass,
+  footerAffiliationDisclaimerTextClass,
   footerCompanyBlockClass,
   footerCompanyEntityClass,
   footerCompanyPlaceholderClass,
   footerInnerContainerClass,
   footerLegalStripBlockClass,
   footerLegalStripLinkClass,
-  footerLogoAccentClass,
-  footerLogoLinkClass,
-  footerLogoRestClass,
-  footerLogoRowClass,
-  footerLogoWordmarkClass,
   footerPostCopyrightNavClass,
   footerShellClass,
 } from "@/components/shared/footer/footer-styles";
@@ -25,13 +20,13 @@ import {
   FOOTER_BRAND_NAME,
   FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
   FOOTER_COMPANY_ENTITY,
-  FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINES,
+  FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_1,
+  FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_2,
   FOOTER_LEGAL_STRIP_LINKS,
   FOOTER_POST_COPYRIGHT_NAV_LINKS,
   FOOTER_PRODUCT_COLUMN_TITLE,
   FOOTER_PUBLIC_DOMAIN,
 } from "@/lib/shared/constants/footer";
-import { ROUTES } from "@/lib/shared/constants/routes";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -86,13 +81,11 @@ export function SiteFooter() {
             ))}
           </nav>
           <div className={footerAffiliationDisclaimerClass}>
-            {FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINES.map(
-              (line, index) => (
-                <p key={`footer-affiliation-line-${index}`} className="m-0">
-                  {line}
-                </p>
-              ),
-            )}
+            <p className={footerAffiliationDisclaimerTextClass}>
+              {FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_1}
+              <br />
+              {FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_2}
+            </p>
           </div>
         </div>
 
