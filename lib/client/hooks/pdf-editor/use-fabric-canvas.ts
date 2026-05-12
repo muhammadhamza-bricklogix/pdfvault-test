@@ -58,8 +58,6 @@ export function useFabricCanvas({
         "noteText",
         "linkUrl",
         "shapeAspectLocked",
-        "pdfTextIndex",
-        "pdfTextRole",
       ]) {
         if (!FabricObject.customProperties.includes(property)) {
           FabricObject.customProperties.push(property);
