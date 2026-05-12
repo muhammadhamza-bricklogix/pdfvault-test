@@ -14,23 +14,19 @@ import { LegalCallout } from "@/components/sections/legal/legal-callout";
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 
 export const refundTocEntries: LegalTocEntry[] = [
-  { id: "r-5-1", label: "5.1 Our Commitment" },
-  { id: "r-5-2", label: "5.2 14-Day Money-Back Guarantee" },
-  { id: "r-5-3", label: "5.3 Renewal Payments" },
-  { id: "r-5-4", label: "5.4 Exceptional Circumstances" },
-  { id: "r-5-5", label: "5.5 How to Request a Refund" },
-  { id: "r-5-6", label: "5.6 Chargebacks" },
-  { id: "r-5-7", label: "5.7 Lifetime Plan" },
+  { id: "r-5-1", label: "Our Commitment" },
+  { id: "r-5-2", label: "14-Day Money-Back Guarantee" },
+  { id: "r-5-3", label: "Renewal Payments" },
+  { id: "r-5-4", label: "Exceptional Circumstances" },
+  { id: "r-5-5", label: "How to Request a Refund" },
+  { id: "r-5-6", label: "Chargebacks" },
+  { id: "r-5-7", label: "Lifetime Plan" },
 ];
 
 export function RefundPolicyContent() {
   return (
     <>
-      <LegalSectionCard
-        icon={SparklesIcon}
-        id="r-5-1"
-        title="5.1 Our Commitment"
-      >
+      <LegalSectionCard icon={SparklesIcon} id="r-5-1" title="Our Commitment">
         <p>
           We want you to be satisfied with the PDF Edits App. Our refund policy
           is designed to be <strong>fair and transparent</strong>.
@@ -40,7 +36,7 @@ export function RefundPolicyContent() {
       <LegalSectionCard
         icon={Tick02Icon}
         id="r-5-2"
-        title="5.2 14-Day Money-Back Guarantee"
+        title="14-Day Money-Back Guarantee"
       >
         <LegalCallout variant="success">
           <p className="font-semibold">
@@ -74,11 +70,7 @@ export function RefundPolicyContent() {
         </ul>
       </LegalSectionCard>
 
-      <LegalSectionCard
-        icon={RefreshIcon}
-        id="r-5-3"
-        title="5.3 Renewal Payments"
-      >
+      <LegalSectionCard icon={RefreshIcon} id="r-5-3" title="Renewal Payments">
         <p>
           For monthly and annual renewal payments, we do not offer automatic
           refunds. However, if a renewal charge occurs and you cancel within{" "}
@@ -90,7 +82,7 @@ export function RefundPolicyContent() {
       <LegalSectionCard
         icon={Alert01Icon}
         id="r-5-4"
-        title="5.4 Exceptional Circumstances"
+        title="Exceptional Circumstances"
       >
         <p>
           We will issue refunds outside the standard policy at our discretion in
@@ -109,7 +101,7 @@ export function RefundPolicyContent() {
       <LegalSectionCard
         icon={Mail01Icon}
         id="r-5-5"
-        title="5.5 How to Request a Refund"
+        title="How to Request a Refund"
       >
         <LegalCallout variant="emphasis">
           <p>
@@ -126,11 +118,7 @@ export function RefundPolicyContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard
-        icon={CreditCardIcon}
-        id="r-5-6"
-        title="5.6 Chargebacks"
-      >
+      <LegalSectionCard icon={CreditCardIcon} id="r-5-6" title="Chargebacks">
         <p>
           We strongly encourage you to contact us before initiating a chargeback
           with your bank or card provider. Chargebacks result in significant
@@ -142,7 +130,7 @@ export function RefundPolicyContent() {
       <LegalSectionCard
         icon={MoneyReceive02Icon}
         id="r-5-7"
-        title="5.7 Lifetime Plan"
+        title="Lifetime Plan"
       >
         <p>
           The Lifetime plan is refundable within 14 days of purchase. After 14

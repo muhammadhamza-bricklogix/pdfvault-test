@@ -20,24 +20,24 @@ import { LegalSectionCard } from "@/components/sections/legal/legal-section-card
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const privacyTocEntries: LegalTocEntry[] = [
-  { id: "p-3-1", label: "3.1 Introduction" },
-  { id: "p-3-2", label: "3.2 Information We Collect" },
-  { id: "p-3-3", label: "3.3 How We Use Your Information" },
-  { id: "p-3-4", label: "3.4 Legal Basis for Processing" },
-  { id: "p-3-5", label: "3.5 Data Sharing and Disclosure" },
-  { id: "p-3-6", label: "3.6 Data Retention" },
-  { id: "p-3-7", label: "3.7 International Data Transfers" },
-  { id: "p-3-8", label: "3.8 Your Rights" },
-  { id: "p-3-9", label: "3.9 Children's Privacy" },
-  { id: "p-3-10", label: "3.10 Security" },
+  { id: "p-3-1", label: "Introduction" },
+  { id: "p-3-2", label: "Information We Collect" },
+  { id: "p-3-3", label: "How We Use Your Information" },
+  { id: "p-3-4", label: "Legal Basis for Processing (GDPR)" },
+  { id: "p-3-5", label: "Data Sharing and Disclosure" },
+  { id: "p-3-6", label: "Data Retention" },
+  { id: "p-3-7", label: "International Data Transfers" },
+  { id: "p-3-8", label: "Your Rights" },
+  { id: "p-3-9", label: "Children's Privacy" },
+  { id: "p-3-10", label: "Security" },
 ];
 
 export function PrivacyPolicyContent() {
   return (
     <>
-      <LegalSectionCard icon={SparklesIcon} id="p-3-1" title="3.1 Introduction">
+      <LegalSectionCard icon={SparklesIcon} id="p-3-1" title="Introduction">
         <p>
-          PDF Viewer App (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is
+          PDFedits (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is
           committed to protecting your privacy. This Privacy Policy explains how
           we collect, use, disclose, and protect your personal information when
           you use our Service at pdfedits.io.
@@ -47,7 +47,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={Database01Icon}
         id="p-3-2"
-        title="3.2 Information We Collect"
+        title="Information We Collect"
       >
         <p className="font-semibold text-[var(--legal-burgundy)]">
           Information you provide directly:
@@ -97,7 +97,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={Settings01Icon}
         id="p-3-3"
-        title="3.3 How We Use Your Information"
+        title="How We Use Your Information"
       >
         <p>We use your information to:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
@@ -120,7 +120,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={JudgeIcon}
         id="p-3-4"
-        title="3.4 Legal Basis for Processing (GDPR)"
+        title="Legal Basis for Processing (GDPR)"
       >
         <p>For users in the European Economic Area, our legal bases are:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
@@ -140,7 +140,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={Share01Icon}
         id="p-3-5"
-        title="3.5 Data Sharing and Disclosure"
+        title="Data Sharing and Disclosure"
       >
         <LegalCallout variant="success">
           <p className="font-semibold">We do not sell your personal data.</p>
@@ -162,11 +162,7 @@ export function PrivacyPolicyContent() {
         </ul>
       </LegalSectionCard>
 
-      <LegalSectionCard
-        icon={Clock01Icon}
-        id="p-3-6"
-        title="3.6 Data Retention"
-      >
+      <LegalSectionCard icon={Clock01Icon} id="p-3-6" title="Data Retention">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             Account data is retained for as long as your account is active.
@@ -190,7 +186,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={Globe02Icon}
         id="p-3-7"
-        title="3.7 International Data Transfers"
+        title="International Data Transfers"
       >
         <p>
           Your data may be processed in countries outside your own. Where we
@@ -200,11 +196,7 @@ export function PrivacyPolicyContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard
-        icon={StarAward01Icon}
-        id="p-3-8"
-        title="3.8 Your Rights"
-      >
+      <LegalSectionCard icon={StarAward01Icon} id="p-3-8" title="Your Rights">
         <p className="font-medium">
           Depending on your location, you may have the right to:
         </p>
@@ -227,7 +219,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={UserCircleIcon}
         id="p-3-9"
-        title="3.9 Children's Privacy"
+        title="Children's Privacy"
       >
         <p>
           The Service is not directed to children under <strong>16</strong>. We
@@ -241,7 +233,7 @@ export function PrivacyPolicyContent() {
       <LegalSectionCard
         icon={SecurityPasswordIcon}
         id="p-3-10"
-        title="3.10 Security"
+        title="Security"
       >
         <p>
           We implement industry-standard security measures including TLS

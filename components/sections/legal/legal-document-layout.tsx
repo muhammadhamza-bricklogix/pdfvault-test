@@ -11,7 +11,7 @@ type LegalDocumentLayoutProps = {
   ctaEyebrow: string;
   description: string;
   heroTitle: string;
-  lastUpdatedLabel: string;
+  lastUpdatedLabel?: string;
   readMinutes: number;
   showContactBanner?: boolean;
   showMiniFooter?: boolean;
@@ -26,7 +26,7 @@ export function LegalDocumentLayout({
   lastUpdatedLabel,
   readMinutes,
   showContactBanner = true,
-  showMiniFooter = true,
+  showMiniFooter = false,
   tocEntries,
 }: LegalDocumentLayoutProps) {
   const hasToc = tocEntries.length > 0;

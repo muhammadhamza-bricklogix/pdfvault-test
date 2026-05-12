@@ -1,149 +1,15 @@
-import type { ComponentProps } from "react";
-
-import {
-  AiScanIcon,
-  ArchiveIcon,
-  ArrowRight01Icon,
-  CropIcon,
-  Delete02Icon,
-  FileExportIcon,
-  FileUnlockedIcon,
-  GroupLayersIcon,
-  Layout03Icon,
-  LockKeyIcon,
-  PaintBrush01Icon,
-  RotateLeft01Icon,
-  Scissor01Icon,
-  SecurityPasswordIcon,
-  SignatureIcon,
-  StampIcon,
-  TextFontIcon,
-} from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
-
-type ToolCard = {
-  description: string;
-  href: string;
-  icon: NonNullable<ComponentProps<typeof HugeiconsIcon>["icon"]>;
-  title: string;
-};
-
-/** Row-major order so a 3-column grid matches reference column layout (read down each column). */
-const TOOL_CARDS: ToolCard[] = [
-  {
-    description:
-      "Highlight, comment, and mark up pages without leaving your browser.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: PaintBrush01Icon,
-    title: "Annotate PDF",
-  },
-  {
-    description:
-      "Revise text and objects inline with our full in-browser PDF workspace.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: TextFontIcon,
-    title: "Edit PDF",
-  },
-  {
-    description:
-      "Draw, type, or upload a signature and place it anywhere on the file.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: SignatureIcon,
-    title: "Sign PDF",
-  },
-  {
-    description:
-      "Turn PDFs into spreadsheets, Word docs, and more — starting with Excel.",
-    href: ROUTES.TOOLS.PDF_TO_EXCEL,
-    icon: FileExportIcon,
-    title: "Convert Document",
-  },
-  {
-    description: "Combine multiple PDFs into one polished document in order.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: GroupLayersIcon,
-    title: "Merge Documents",
-  },
-  {
-    description:
-      "Shrink large PDFs with balanced compression presets for sharing.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: ArchiveIcon,
-    title: "Compress PDF",
-  },
-  {
-    description:
-      "Permanently remove sensitive content before you share or archive.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: SecurityPasswordIcon,
-    title: "Redact PDF",
-  },
-  {
-    description:
-      "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: Layout03Icon,
-    title: "Organize Pages",
-  },
-  {
-    description:
-      "Pull out the pages you need or split a long file into lighter parts.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: Scissor01Icon,
-    title: "Split & Extract Pages",
-  },
-  {
-    description:
-      "Lock your PDF with a password so only intended readers open it.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: LockKeyIcon,
-    title: "Password Protect",
-  },
-  {
-    description: "Remove encryption when you have the right credentials handy.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: FileUnlockedIcon,
-    title: "Unlock PDF",
-  },
-  {
-    description:
-      "Stamp text or imagery across every page for branding or confidentiality.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: StampIcon,
-    title: "Add Watermark",
-  },
-  {
-    description:
-      "Fix upside-down scans or mixed-orientation bundles in seconds.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: RotateLeft01Icon,
-    title: "Rotate Pages",
-  },
-  {
-    description:
-      "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: Delete02Icon,
-    title: "Delete Pages",
-  },
-  {
-    description:
-      "Tighten margins and focus readers on the content that matters.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: CropIcon,
-    title: "Crop Pages",
-  },
-  {
-    description:
-      "Make scanned pages searchable and selectable with OCR-friendly flows.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: AiScanIcon,
-    title: "OCR Pages",
-  },
-];
+import {
+  HOME_TOOL_GRID_BADGE_SUFFIX,
+  HOME_TOOL_GRID_HEADING_ACCENT,
+  HOME_TOOL_GRID_HEADING_PREFIX,
+  HOME_TOOL_GRID_SECTION_ID,
+  HOME_TOOL_GRID_SUBTITLE,
+  HOME_TOOL_GRID_TOOL_CARDS,
+} from "@/lib/shared/constants/home-tool-grid";
 
 type ToolCardTextPreviewProps = {
   description: string;
@@ -170,7 +36,6 @@ function ToolCardTextPreview({ description, title }: ToolCardTextPreviewProps) {
   );
 }
 
-/** Desktop + fine pointer: idle shows icon + large title; hover hides icon, shrinks title, reveals description. */
 function ToolCardTextDesktopHover({
   description,
   title,
@@ -215,23 +80,27 @@ function ToolCardTextDesktopHover({
 }
 
 export function HomeToolGrid() {
+  const toolCount = HOME_TOOL_GRID_TOOL_CARDS.length;
+
   return (
-    <section className="w-full py-10" id="pdf-tools">
+    <section className="w-full py-10" id={HOME_TOOL_GRID_SECTION_ID}>
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-12 px-2 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[color-mix(in_oklab,var(--color-accent)_8%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">
-            16 PDF Tools
+            {toolCount} {HOME_TOOL_GRID_BADGE_SUFFIX}
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-4xl">
-            Everything you need for{" "}
-            <span className="text-[var(--color-accent)]">PDF</span>
+            {HOME_TOOL_GRID_HEADING_PREFIX}{" "}
+            <span className="text-[var(--color-accent)]">
+              {HOME_TOOL_GRID_HEADING_ACCENT}
+            </span>
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-base text-default-600 dark:text-default-400">
-            Professional PDF tools built for speed, simplicity, and security.
+            {HOME_TOOL_GRID_SUBTITLE}
           </p>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
-          {TOOL_CARDS.map((card) => (
+          {HOME_TOOL_GRID_TOOL_CARDS.map((card) => (
             <Link
               key={card.title}
               className="group block rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"

@@ -11,7 +11,7 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const metadata: Metadata = {
   description:
-    "How PDF Viewer App collects, uses, and protects your personal information.",
+    "How PDFedits collects, uses, and protects your personal information.",
   title: "Privacy Policy",
 };
 
@@ -21,7 +21,6 @@ export default function PrivacyPage() {
       ctaEyebrow="FOR PRIVACY CONCERNS"
       description="How we collect, use, and protect your personal information when you use pdfedits.io."
       heroTitle="Privacy Policy"
-      lastUpdatedLabel="May 2, 2026"
       readMinutes={5}
       tocEntries={privacyTocEntries}
     >
