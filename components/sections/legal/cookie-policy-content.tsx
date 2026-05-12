@@ -12,22 +12,18 @@ import {
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 
 export const cookieTocEntries: LegalTocEntry[] = [
-  { id: "c-4-1", label: "4.1 What Are Cookies" },
-  { id: "c-4-2", label: "4.2 How We Use Cookies" },
-  { id: "c-4-3", label: "4.3 Third-Party Cookies" },
-  { id: "managing-cookies", label: "4.4 Managing Cookies" },
-  { id: "c-4-5", label: "4.5 Do Not Track" },
-  { id: "c-4-6", label: "4.6 Cookie Policy Updates" },
+  { id: "c-4-1", label: "What Are Cookies" },
+  { id: "c-4-2", label: "How We Use Cookies" },
+  { id: "c-4-3", label: "Third-Party Cookies" },
+  { id: "managing-cookies", label: "Managing Cookies" },
+  { id: "c-4-5", label: "Do Not Track" },
+  { id: "c-4-6", label: "Cookie Policy Updates" },
 ];
 
 export function CookiePolicyContent() {
   return (
     <>
-      <LegalSectionCard
-        icon={CookieIcon}
-        id="c-4-1"
-        title="4.1 What Are Cookies"
-      >
+      <LegalSectionCard icon={CookieIcon} id="c-4-1" title="What Are Cookies">
         <p>
           Cookies are small text files placed on your device by websites you
           visit. They are widely used to make websites work, improve user
@@ -38,12 +34,11 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Settings02Icon}
         id="c-4-2"
-        title="4.2 How We Use Cookies"
+        title="How We Use Cookies"
       >
         <p>
-          PDF Viewer App uses cookies and similar technologies (web beacons,
-          pixels, local storage) on pdfedits.io. We use four categories of
-          cookies:
+          PDFedits uses cookies and similar technologies (web beacons, pixels,
+          local storage) on pdfedits.io. We use four categories of cookies:
         </p>
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           Strictly necessary cookies
@@ -101,7 +96,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Share01Icon}
         id="c-4-3"
-        title="4.3 Third-Party Cookies"
+        title="Third-Party Cookies"
       >
         <p>
           Some third-party services we use may set their own cookies, including:
@@ -116,7 +111,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={ArrowReloadHorizontalIcon}
         id="managing-cookies"
-        title="4.4 Managing Cookies"
+        title="Managing Cookies"
       >
         <p>
           On your first visit, you will see a cookie consent banner allowing you
@@ -141,7 +136,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={FingerPrintCheckIcon}
         id="c-4-5"
-        title="4.5 Do Not Track"
+        title="Do Not Track"
       >
         <p>
           We honor Do Not Track (DNT) browser signals. When DNT is enabled, we
@@ -152,7 +147,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Globe02Icon}
         id="c-4-6"
-        title="4.6 Cookie Policy Updates"
+        title="Cookie Policy Updates"
       >
         <p>
           We may update this Cookie Policy periodically. Material changes will

@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   description:
-    "California Consumer Privacy Act (CCPA/CPRA) opt-out information for PDF Viewer App.",
+    "California Consumer Privacy Act (CCPA/CPRA) opt-out information for PDFedits.",
   title: "Do Not Sell or Share My Personal Information",
 };
 
@@ -18,7 +18,6 @@ export default function DoNotSellPage() {
       ctaEyebrow="STILL HAVE QUESTIONS?"
       description="Your rights under CCPA/CPRA and similar state laws — opt out of sale or sharing."
       heroTitle="Do Not Sell or Share My Personal Information"
-      lastUpdatedLabel="May 3, 2026"
       readMinutes={5}
       tocEntries={doNotSellTocEntries}
     >

@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   description:
-    "How PDF Viewer App uses cookies and similar technologies on pdfedits.io.",
+    "How PDFedits uses cookies and similar technologies on pdfedits.io.",
   title: "Cookie Policy",
 };
 
@@ -18,7 +18,6 @@ export default function CookiesPage() {
       ctaEyebrow="FOR COOKIE POLICY CONCERNS"
       description="How we use cookies, local storage, and your choices on pdfedits.io."
       heroTitle="Cookie Policy"
-      lastUpdatedLabel="May 3, 2026"
       readMinutes={4}
       tocEntries={cookieTocEntries}
     >
