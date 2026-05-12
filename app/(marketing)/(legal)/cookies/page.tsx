@@ -18,7 +18,6 @@ export default function CookiesPage() {
       ctaEyebrow="FOR COOKIE POLICY CONCERNS"
       description="How we use cookies, local storage, and your choices on pdfedits.io."
       heroTitle="Cookie Policy"
-      readMinutes={4}
       tocEntries={cookieTocEntries}
     >
       <CookiePolicyContent />

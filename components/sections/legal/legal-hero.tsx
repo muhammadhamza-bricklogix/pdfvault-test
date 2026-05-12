@@ -1,23 +1,22 @@
 import {
   Calendar03Icon,
-  Clock01Icon,
+  CustomerSupportIcon,
   Globe02Icon,
-  SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 type LegalHeroProps = {
   description: string;
+  eyebrow?: string;
   lastUpdatedLabel?: string;
-  readMinutes: number;
   siteDomain?: string;
   title: string;
 };
 
 export function LegalHero({
   description,
+  eyebrow = "Support",
   lastUpdatedLabel,
-  readMinutes,
   siteDomain = "pdfedits.io",
   title,
 }: LegalHeroProps) {
@@ -35,8 +34,12 @@ export function LegalHero({
     >
       <div className="relative z-[1] mx-auto max-w-4xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-          <HugeiconsIcon className="text-white" icon={SparklesIcon} size={14} />
-          Legal information
+          <HugeiconsIcon
+            className="text-white"
+            icon={CustomerSupportIcon}
+            size={14}
+          />
+          {eyebrow}
         </div>
         <h1 className="font-legal-serif mt-5 text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-[2.75rem]">
           {title}
@@ -51,10 +54,6 @@ export function LegalHero({
               Last updated: {lastUpdatedLabel}
             </span>
           ) : null}
-          <span className="inline-flex items-center gap-2">
-            <HugeiconsIcon icon={Clock01Icon} size={18} />~{readMinutes} min
-            read
-          </span>
           <span className="inline-flex items-center gap-2">
             <HugeiconsIcon icon={Globe02Icon} size={18} />
             {siteDomain}

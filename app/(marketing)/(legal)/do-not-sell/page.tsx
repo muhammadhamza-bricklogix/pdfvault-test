@@ -18,7 +18,6 @@ export default function DoNotSellPage() {
       ctaEyebrow="STILL HAVE QUESTIONS?"
       description="Your rights under CCPA/CPRA and similar state laws — opt out of sale or sharing."
       heroTitle="Do Not Sell or Share My Personal Information"
-      readMinutes={5}
       tocEntries={doNotSellTocEntries}
     >
       <DoNotSellContent />

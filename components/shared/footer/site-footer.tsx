@@ -7,9 +7,6 @@ import { FooterPaymentStrip } from "@/components/shared/footer/footer-payment-st
 import {
   footerAffiliationDisclaimerClass,
   footerAffiliationDisclaimerTextClass,
-  footerCompanyBlockClass,
-  footerCompanyEntityClass,
-  footerCompanyPlaceholderClass,
   footerInnerContainerClass,
   footerLegalStripBlockClass,
   footerLegalStripLinkClass,
@@ -17,15 +14,11 @@ import {
   footerShellClass,
 } from "@/components/shared/footer/footer-styles";
 import {
-  FOOTER_BRAND_NAME,
-  FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
-  FOOTER_COMPANY_ENTITY,
   FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_1,
   FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_2,
-  FOOTER_LEGAL_STRIP_LINKS,
   FOOTER_POST_COPYRIGHT_NAV_LINKS,
   FOOTER_PRODUCT_COLUMN_TITLE,
-  FOOTER_PUBLIC_DOMAIN,
+  formatFooterCopyrightLine,
 } from "@/lib/shared/constants/footer";
 
 export function SiteFooter() {
@@ -40,26 +33,8 @@ export function SiteFooter() {
           <FooterLinkColumns />
         </section>
 
-        <div className={footerCompanyBlockClass}>
-          <p className={footerCompanyEntityClass}>{FOOTER_COMPANY_ENTITY}</p>
-          <p className={footerCompanyPlaceholderClass}>
-            {FOOTER_COMPANY_ADDRESS_PLACEHOLDER}
-          </p>
-        </div>
-
         <div className={footerLegalStripBlockClass}>
-          <p>
-            &copy; {year} {FOOTER_BRAND_NAME} ·{" "}
-            {FOOTER_LEGAL_STRIP_LINKS.map((item, index) => (
-              <span key={item.href}>
-                {index > 0 ? <> · </> : null}
-                <Link className={footerLegalStripLinkClass} href={item.href}>
-                  {item.label}
-                </Link>
-              </span>
-            ))}{" "}
-            · {FOOTER_PUBLIC_DOMAIN} · All rights reserved.
-          </p>
+          <p>{formatFooterCopyrightLine(year)}</p>
           <nav
             aria-label="Legal policies"
             className={footerPostCopyrightNavClass}

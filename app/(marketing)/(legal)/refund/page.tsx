@@ -18,7 +18,6 @@ export default function RefundPage() {
       ctaEyebrow="FOR ANY REFUND CONCERNS"
       description="Our commitment to fair and transparent refunds for PDFedits subscriptions."
       heroTitle="Refund Policy"
-      readMinutes={4}
       tocEntries={refundTocEntries}
     >
       <RefundPolicyContent />

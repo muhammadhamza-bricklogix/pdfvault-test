@@ -10,9 +10,9 @@ type LegalDocumentLayoutProps = {
   children: ReactNode;
   ctaEyebrow: string;
   description: string;
+  heroEyebrow?: string;
   heroTitle: string;
   lastUpdatedLabel?: string;
-  readMinutes: number;
   showContactBanner?: boolean;
   showMiniFooter?: boolean;
   tocEntries: LegalTocEntry[];
@@ -22,9 +22,9 @@ export function LegalDocumentLayout({
   children,
   ctaEyebrow,
   description,
+  heroEyebrow,
   heroTitle,
   lastUpdatedLabel,
-  readMinutes,
   showContactBanner = true,
   showMiniFooter = false,
   tocEntries,
@@ -35,8 +35,8 @@ export function LegalDocumentLayout({
     <article className="w-full">
       <LegalHero
         description={description}
+        eyebrow={heroEyebrow}
         lastUpdatedLabel={lastUpdatedLabel}
-        readMinutes={readMinutes}
         title={heroTitle}
       />
       <div className="mx-auto w-full max-w-7xl px-4 pb-6 pt-8 sm:px-6 lg:px-8">

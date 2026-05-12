@@ -27,15 +27,6 @@ export const footerMainColumnsGridClass =
 
 export const footerLinkColumnListClass = "mt-2 space-y-1";
 
-export const footerCompanyBlockClass =
-  "mt-8 border-t border-default-200/80 pt-6 text-center";
-
-export const footerCompanyEntityClass =
-  "text-base font-medium text-[var(--color-foreground)] sm:text-lg";
-
-export const footerCompanyPlaceholderClass =
-  "mt-1.5 text-sm text-default-500 sm:text-base";
-
 export const footerLegalStripBlockClass =
   "mt-8 border-t border-default-200/80 pt-6 text-center text-sm leading-snug text-default-600 dark:text-default-400 sm:text-base";
 
@@ -52,10 +43,14 @@ export const footerAffiliationDisclaimerTextClass =
   "m-0 text-pretty text-xs leading-snug text-default-500 dark:text-default-500 sm:text-[13px] sm:leading-snug md:text-sm";
 
 export const footerPaymentStripClass =
-  "mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-default-200/80 pb-0 pt-6";
+  "mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-default-200/80 pb-0 pt-6";
+
+/** Uniform slot for payment marks — same box for every brand. */
+export const footerPaymentLogoSlotClass =
+  "flex h-14 w-28 shrink-0 items-center justify-center sm:h-16 sm:w-32";
 
 export const footerPaymentIconClass =
-  "block h-7 w-auto max-w-[4.5rem] shrink-0 leading-none opacity-90 sm:h-8 sm:max-w-[5.5rem]";
+  "h-9 w-auto max-w-[5.25rem] shrink-0 object-contain sm:h-10 sm:max-w-28 [&_svg]:h-full [&_svg]:max-h-full [&_svg]:w-auto [&_svg_path]:fill-current";
 
 export const footerLogoRowClass =
   "mt-8 flex justify-center border-t border-default-200/80 pt-6";

@@ -18,7 +18,6 @@ export default function ContactPage() {
       ctaEyebrow=""
       description="Get in touch — our team typically answers within 24 hours."
       heroTitle="Contact us"
-      readMinutes={2}
       showContactBanner={false}
       tocEntries={[]}
     >

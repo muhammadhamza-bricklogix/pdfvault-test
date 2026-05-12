@@ -17,7 +17,6 @@ export default function TermsPage() {
       ctaEyebrow="FOR QUESTIONS ABOUT THESE TERMS"
       description="The rules and guidelines that govern your use of PDFedits. Please read carefully before using the service."
       heroTitle="Terms and Conditions"
-      readMinutes={6}
       tocEntries={termsTocEntries}
     >
       <TermsAndConditionsContent />

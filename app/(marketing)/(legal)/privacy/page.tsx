@@ -21,7 +21,6 @@ export default function PrivacyPage() {
       ctaEyebrow="FOR PRIVACY CONCERNS"
       description="How we collect, use, and protect your personal information when you use pdfedits.io."
       heroTitle="Privacy Policy"
-      readMinutes={5}
       tocEntries={privacyTocEntries}
     >
       <PrivacyPolicyContent />

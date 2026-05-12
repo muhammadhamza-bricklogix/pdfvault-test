@@ -7,14 +7,31 @@ import {
 
 import {
   footerPaymentIconClass,
+  footerPaymentLogoSlotClass,
   footerPaymentStripClass,
 } from "@/components/shared/footer/footer-styles";
 
 const PAYMENT_BRANDS = [
-  { Icon: SiVisa, label: "Visa" },
-  { Icon: SiMastercard, label: "Mastercard" },
-  { Icon: SiPaypal, label: "PayPal" },
-  { Icon: SiAmericanexpress, label: "American Express" },
+  {
+    Icon: SiVisa,
+    label: "Visa",
+    slotClass: "text-[#1434CB]",
+  },
+  {
+    Icon: SiMastercard,
+    label: "Mastercard",
+    slotClass: "text-[#EB001B]",
+  },
+  {
+    Icon: SiPaypal,
+    label: "PayPal",
+    slotClass: "text-[#003087]",
+  },
+  {
+    Icon: SiAmericanexpress,
+    label: "American Express",
+    slotClass: "text-[#006FCF]",
+  },
 ] as const;
 
 export function FooterPaymentStrip() {
@@ -24,13 +41,13 @@ export function FooterPaymentStrip() {
       className={footerPaymentStripClass}
       role="group"
     >
-      {PAYMENT_BRANDS.map(({ Icon, label }) => (
-        <Icon
+      {PAYMENT_BRANDS.map(({ Icon, label, slotClass }) => (
+        <div
           key={label}
-          aria-hidden
-          className={footerPaymentIconClass}
-          title={label}
-        />
+          className={`${footerPaymentLogoSlotClass} ${slotClass}`}
+        >
+          <Icon aria-hidden className={footerPaymentIconClass} title={label} />
+        </div>
       ))}
     </div>
   );
