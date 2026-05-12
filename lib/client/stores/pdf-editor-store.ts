@@ -2,6 +2,8 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 
 import { create } from "zustand";
 
+import type { ExtractedTextItem } from "@/lib/client/pdf-editor/extract-text";
+
 const MAX_HISTORY = 50;
 
 export type ActiveTool =
@@ -13,6 +15,7 @@ export type ActiveTool =
   | "shape"
   | "signature"
   | "text"
+  | "text-edit"
   | "whiteout";
 export type EditorMode = "edit" | "editText";
 export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
@@ -43,6 +46,7 @@ type PdfEditorStore = {
   zoom: number;
 
   clearFile: () => void;
+  setExtractedTextForPage: (page: number, items: ExtractedTextItem[]) => void;
   setCurrentDocument: (doc: { id: string; name: string } | null) => void;
   getFabricJson: (page: number) => string | undefined;
   pushHistory: (page: number, json: string) => void;
@@ -167,6 +171,15 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       newMap.set(page, json);
 
       return { fabricJsonByPage: newMap };
+    }),
+
+  setExtractedTextForPage: (page, items) =>
+    set((state) => {
+      const newMap = new Map(state.extractedTextByPage);
+
+      newMap.set(page, items);
+
+      return { extractedTextByPage: newMap };
     }),
 
   setActiveShapeType: (type) => set({ activeShapeType: type }),

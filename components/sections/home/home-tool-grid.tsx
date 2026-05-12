@@ -1,149 +1,22 @@
-import type { ComponentProps } from "react";
+"use client";
 
-import {
-  AiScanIcon,
-  ArchiveIcon,
-  ArrowRight01Icon,
-  CropIcon,
-  Delete02Icon,
-  FileExportIcon,
-  FileUnlockedIcon,
-  GroupLayersIcon,
-  Layout03Icon,
-  LockKeyIcon,
-  PaintBrush01Icon,
-  RotateLeft01Icon,
-  Scissor01Icon,
-  SecurityPasswordIcon,
-  SignatureIcon,
-  StampIcon,
-  TextFontIcon,
-} from "@hugeicons/core-free-icons";
+import type { HomeToolCard } from "@/lib/shared/constants/home-tool-grid";
+
+import { useState } from "react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Tabs } from "@heroui/react";
 import Link from "next/link";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
-
-type ToolCard = {
-  description: string;
-  href: string;
-  icon: NonNullable<ComponentProps<typeof HugeiconsIcon>["icon"]>;
-  title: string;
-};
-
-/** Row-major order so a 3-column grid matches reference column layout (read down each column). */
-const TOOL_CARDS: ToolCard[] = [
-  {
-    description:
-      "Highlight, comment, and mark up pages without leaving your browser.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: PaintBrush01Icon,
-    title: "Annotate PDF",
-  },
-  {
-    description:
-      "Revise text and objects inline with our full in-browser PDF workspace.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: TextFontIcon,
-    title: "Edit PDF",
-  },
-  {
-    description:
-      "Draw, type, or upload a signature and place it anywhere on the file.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: SignatureIcon,
-    title: "Sign PDF",
-  },
-  {
-    description:
-      "Turn PDFs into spreadsheets, Word docs, and more — starting with Excel.",
-    href: ROUTES.TOOLS.PDF_TO_EXCEL,
-    icon: FileExportIcon,
-    title: "Convert Document",
-  },
-  {
-    description: "Combine multiple PDFs into one polished document in order.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: GroupLayersIcon,
-    title: "Merge Documents",
-  },
-  {
-    description:
-      "Shrink large PDFs with balanced compression presets for sharing.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: ArchiveIcon,
-    title: "Compress PDF",
-  },
-  {
-    description:
-      "Permanently remove sensitive content before you share or archive.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: SecurityPasswordIcon,
-    title: "Redact PDF",
-  },
-  {
-    description:
-      "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: Layout03Icon,
-    title: "Organize Pages",
-  },
-  {
-    description:
-      "Pull out the pages you need or split a long file into lighter parts.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: Scissor01Icon,
-    title: "Split & Extract Pages",
-  },
-  {
-    description:
-      "Lock your PDF with a password so only intended readers open it.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: LockKeyIcon,
-    title: "Password Protect",
-  },
-  {
-    description: "Remove encryption when you have the right credentials handy.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: FileUnlockedIcon,
-    title: "Unlock PDF",
-  },
-  {
-    description:
-      "Stamp text or imagery across every page for branding or confidentiality.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: StampIcon,
-    title: "Add Watermark",
-  },
-  {
-    description:
-      "Fix upside-down scans or mixed-orientation bundles in seconds.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: RotateLeft01Icon,
-    title: "Rotate Pages",
-  },
-  {
-    description:
-      "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: Delete02Icon,
-    title: "Delete Pages",
-  },
-  {
-    description:
-      "Tighten margins and focus readers on the content that matters.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: CropIcon,
-    title: "Crop Pages",
-  },
-  {
-    description:
-      "Make scanned pages searchable and selectable with OCR-friendly flows.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
-    icon: AiScanIcon,
-    title: "OCR Pages",
-  },
-];
+import {
+  HOME_TOOL_GRID_BADGE_SUFFIX,
+  HOME_TOOL_GRID_HEADING_ACCENT,
+  HOME_TOOL_GRID_HEADING_PREFIX,
+  HOME_TOOL_GRID_SECTION_ID,
+  HOME_TOOL_GRID_SUBTITLE,
+  HOME_TOOL_GRID_TAB_GROUPS,
+  HOME_TOOL_GRID_TOTAL_TOOL_COUNT,
+} from "@/lib/shared/constants/home-tool-grid";
 
 type ToolCardTextPreviewProps = {
   description: string;
@@ -170,7 +43,6 @@ function ToolCardTextPreview({ description, title }: ToolCardTextPreviewProps) {
   );
 }
 
-/** Desktop + fine pointer: idle shows icon + large title; hover hides icon, shrinks title, reveals description. */
 function ToolCardTextDesktopHover({
   description,
   title,
@@ -214,68 +86,117 @@ function ToolCardTextDesktopHover({
   );
 }
 
-export function HomeToolGrid() {
+function ToolCardGrid({ cards }: { cards: readonly HomeToolCard[] }) {
   return (
-    <section className="w-full py-10" id="pdf-tools">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
+      {cards.map((card) => (
+        <Link
+          key={card.title}
+          className="group block rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"
+          href={card.href}
+        >
+          <div className="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-6 sm:py-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border-2 border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[var(--color-background)] sm:size-14">
+              <HugeiconsIcon
+                className="text-[var(--color-accent)]"
+                icon={card.icon}
+                size={24}
+              />
+            </div>
+
+            <ToolCardTextPreview
+              description={card.description}
+              title={card.title}
+            />
+            <ToolCardTextDesktopHover
+              description={card.description}
+              title={card.title}
+            />
+
+            <span
+              className={[
+                "inline-flex shrink-0 overflow-hidden pt-0.5 motion-reduce:transition-none sm:pt-0",
+                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:transition-[width,opacity,min-width]",
+                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:duration-300",
+                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:w-0",
+                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:min-w-0",
+                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:opacity-0",
+              ].join(" ")}
+            >
+              <HugeiconsIcon
+                aria-hidden
+                className="translate-y-px text-default-400 transition-transform duration-200 [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0"
+                icon={ArrowRight01Icon}
+                size={20}
+              />
+            </span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export function HomeToolGrid() {
+  const defaultTabId = HOME_TOOL_GRID_TAB_GROUPS[0]!.id;
+  const [tab, setTab] = useState<string>(defaultTabId);
+
+  function handleTabChange(key: string | number) {
+    setTab(String(key));
+  }
+
+  const toolCount = HOME_TOOL_GRID_TOTAL_TOOL_COUNT;
+
+  return (
+    <section className="w-full py-10" id={HOME_TOOL_GRID_SECTION_ID}>
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-12 px-2 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[color-mix(in_oklab,var(--color-accent)_8%,transparent)] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">
-            16 PDF Tools
+            {toolCount} {HOME_TOOL_GRID_BADGE_SUFFIX}
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-4xl">
-            Everything you need for{" "}
-            <span className="text-[var(--color-accent)]">PDF</span>
+            {HOME_TOOL_GRID_HEADING_PREFIX}{" "}
+            <span className="text-[var(--color-accent)]">
+              {HOME_TOOL_GRID_HEADING_ACCENT}
+            </span>
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-base text-default-600 dark:text-default-400">
-            Professional PDF tools built for speed, simplicity, and security.
+            {HOME_TOOL_GRID_SUBTITLE}
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
-          {TOOL_CARDS.map((card) => (
-            <Link
-              key={card.title}
-              className="group block rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"
-              href={card.href}
+
+        <Tabs
+          className="w-full flex-col gap-8 px-2"
+          selectedKey={tab}
+          onSelectionChange={handleTabChange}
+        >
+          <Tabs.ListContainer className="w-full">
+            <Tabs.List
+              aria-label="PDF tool categories"
+              className="flex w-full flex-col gap-2 rounded-2xl border border-default-200 bg-[var(--color-background)]/90 p-1.5 shadow-sm sm:flex-row sm:gap-1 dark:border-default-700"
             >
-              <div className="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-6 sm:py-4">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border-2 border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[var(--color-background)] sm:size-14">
-                  <HugeiconsIcon
-                    className="text-[var(--color-accent)]"
-                    icon={card.icon}
-                    size={24}
-                  />
-                </div>
-
-                <ToolCardTextPreview
-                  description={card.description}
-                  title={card.title}
-                />
-                <ToolCardTextDesktopHover
-                  description={card.description}
-                  title={card.title}
-                />
-
-                <span
-                  className={[
-                    "inline-flex shrink-0 overflow-hidden pt-0.5 motion-reduce:transition-none sm:pt-0",
-                    "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:transition-[width,opacity,min-width]",
-                    "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:duration-300",
-                    "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:w-0",
-                    "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:min-w-0",
-                    "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:opacity-0",
-                  ].join(" ")}
+              {HOME_TOOL_GRID_TAB_GROUPS.map((group) => (
+                <Tabs.Tab
+                  key={group.id}
+                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--color-accent)] data-[selected=true]:text-white data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--color-accent)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--color-accent)] dark:data-[hovered=true]:bg-default-50/10"
+                  id={group.id}
                 >
-                  <HugeiconsIcon
-                    aria-hidden
-                    className="translate-y-px text-default-400 transition-transform duration-200 [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0"
-                    icon={ArrowRight01Icon}
-                    size={20}
-                  />
-                </span>
-              </div>
-            </Link>
+                  {group.label}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs.ListContainer>
+
+          {HOME_TOOL_GRID_TAB_GROUPS.map((group) => (
+            <Tabs.Panel
+              key={group.id}
+              className="w-full outline-none"
+              id={group.id}
+            >
+              <ToolCardGrid cards={group.cards} />
+            </Tabs.Panel>
           ))}
-        </div>
+        </Tabs>
       </div>
     </section>
   );

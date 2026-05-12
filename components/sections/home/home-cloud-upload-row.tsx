@@ -13,21 +13,6 @@ import {
 } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { toast } from "@/lib/shared/utils/toast";
 
-function OneDriveIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden className={className} viewBox="0 0 24 24">
-      <path
-        d="M9.8 9.2c-1.7 0-3.2.9-4 2.3A3.9 3.9 0 0 0 2 15.4C2 17.4 3.6 19 5.6 19h10.8c2 0 3.6-1.6 3.6-3.6s-1.6-3.6-3.6-3.6h-.2a5.1 5.1 0 0 0-4.7-3.3c-.6 0-1.2.1-1.7.3Z"
-        fill="#0078D4"
-      />
-      <path
-        d="M8.8 10.2a4.4 4.4 0 0 0-2.9 1.3 3.9 3.9 0 0 0-2.4 3.6c0 1.4.8 2.7 2 3.4-.9-.7-1.5-1.8-1.5-3 0-1.9 1.5-3.5 3.5-3.5h.2a4.6 4.6 0 0 1 4.2-2.9c1.8 0 3.4 1 4.2 2.5a3.7 3.7 0 0 0-3.8-3.1c-1.3 0-2.6.6-3.5 1.7Z"
-        fill="#1490DF"
-      />
-    </svg>
-  );
-}
-
 function DeviceIcon({ className }: { className?: string }) {
   return <HugeiconsIcon className={className} icon={Upload01Icon} size={28} />;
 }
@@ -44,12 +29,6 @@ const OPTIONS = [
     Glyph: DeviceIcon,
     id: "device",
     label: "Upload from Device",
-  },
-  {
-    brandClassName: "text-[#0078D4]",
-    Glyph: OneDriveIcon,
-    id: "onedrive",
-    label: "Upload from OneDrive",
   },
 ] as const;
 
@@ -108,11 +87,8 @@ export function HomeCloudUploadRow({
       return;
     }
 
-    if (id === "onedrive") {
-      toast.info({
-        title: "OneDrive upload is coming soon",
-        description: "Use Google Drive or device upload for now.",
-      });
+    if (id === "gdrive" && !cloudImportAllowed) {
+      onRequireSignInForCloud();
 
       return;
     }

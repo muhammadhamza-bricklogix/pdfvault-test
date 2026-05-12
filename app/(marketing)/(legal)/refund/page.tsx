@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   description:
-    "Refund policy and 14-day money-back guarantee for PDF Viewer App subscriptions.",
+    "Refund policy and 14-day money-back guarantee for PDFedits subscriptions.",
   title: "Refund Policy",
 };
 
@@ -16,10 +16,8 @@ export default function RefundPage() {
   return (
     <LegalDocumentLayout
       ctaEyebrow="FOR ANY REFUND CONCERNS"
-      description="Our commitment to fair and transparent refunds for PDF Viewer App subscriptions."
+      description="Our commitment to fair and transparent refunds for PDFedits subscriptions."
       heroTitle="Refund Policy"
-      lastUpdatedLabel="May 3, 2026"
-      readMinutes={4}
       tocEntries={refundTocEntries}
     >
       <RefundPolicyContent />

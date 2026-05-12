@@ -6,6 +6,7 @@ import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import {
   ArrowDown01Icon,
   Cursor01Icon,
+  Edit02Icon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
@@ -274,6 +275,7 @@ export function EditorInfoBar() {
 const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: TextFontIcon, id: "text", label: "Text" },
+  { icon: Edit02Icon, id: "text-edit", label: "Edit PDF Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },
@@ -305,7 +307,7 @@ export function ToolsContent({
   const setHighlightColor = usePdfEditorStore((s) => s.setHighlightColor);
 
   const handleToolChange = (keys: Set<Key>) => {
-    const key = [...keys][0] as ActiveTool | undefined;
+    const key = Array.from(keys)[0] as ActiveTool | undefined;
 
     if (!key) return;
 

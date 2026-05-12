@@ -15,6 +15,9 @@ import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
+import { useTextEditTool } from "@/lib/client/hooks/pdf-editor/use-text-edit-tool";
+import { useTextExtractionCache } from "@/lib/client/hooks/pdf-editor/use-text-extraction-cache";
+import { useTextExtractionDebugOverlay } from "@/lib/client/hooks/pdf-editor/use-text-extraction-debug-overlay";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
@@ -64,6 +67,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     zoom,
   });
 
+  useTextExtractionCache({ currentPage, page });
+
   const { fabricCanvas, fabricRef } = useFabricCanvas({
     fabricCanvasRef,
     renderedSize,
@@ -77,15 +82,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => onFabricCanvasReady?.(null);
   }, [fabricCanvas, onFabricCanvasReady]);
 
+  useTextExtractionDebugOverlay({ fabricCanvas });
+
   useDrawTool({ fabricCanvas });
   useEditTextMode({ fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });
   useShapeTool({ fabricCanvas });
+  useTextEditTool({ fabricCanvas });
   const { handleModalClose } = useSignatureTool({ fabricCanvas });
 
   const isSignatureModalOpen = usePdfEditorStore((s) => s.isSignatureModalOpen);
+
 
   // Wire active tool cursor + click handler
   useEffect(() => {
@@ -102,6 +111,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       shape: "crosshair",
       signature: "default",
       text: "text",
+      "text-edit": "text",
       whiteout: "crosshair",
     };
 
