@@ -73,12 +73,12 @@ export function EditorInfoBar() {
 
   const fileName = file?.name ?? "PDF Editor";
 
-  const canSave = !!file && isSignedIn;
+  const canSave = !!file;
   const saveTooltip = !file
     ? "Open a PDF to save"
     : !isSignedIn
-      ? "Sign in to save to your library"
-      : "Save";
+      ? "Download edited PDF (sign in to also save to your library)"
+      : "Download edited PDF and save to your library";
 
   const handleExportAction = (key: Key) => {
     if (key === "pdf") {

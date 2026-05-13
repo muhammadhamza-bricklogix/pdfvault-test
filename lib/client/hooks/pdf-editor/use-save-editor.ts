@@ -1,24 +1,32 @@
 "use client";
 
 import type { Canvas as FabricCanvas } from "fabric";
+import type { RefObject } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
+import {
+  editedPdfFilename,
+  triggerPdfDownload,
+} from "@/lib/client/pdf-editor/trigger-pdf-download";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * Listens for `editor:save` (dispatched by the Save button) and runs the
- * flatten-and-upload pipeline:
- *   flush live page  →  merge overlays into PDF (pdf-lib)  →  upload via
- *   tracked-upload (upserts when documentId is known)  →  sync URL `?id=`.
+ * Listens for `editor:save` (dispatched by the Save button) and runs:
+ *   flush live page  →  merge overlays into PDF (pdf-lib)  →  download
+ *   edited copy  →  when signed in, upload via tracked-upload (upserts when
+ *   documentId is known)  →  sync URL `?id=`.
  */
-export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
+export function useSaveEditor(
+  fabricCanvas: FabricCanvas | null,
+  fabricCanvasInstanceRef?: RefObject<FabricCanvas | null>,
+) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { start } = useTrackedUpload();
@@ -55,24 +63,17 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     const {
       currentDocumentId: docId,
       currentPage: page,
-      fabricCanvas: liveCanvas,
+      fabricCanvas: staleProp,
       file: sourceFile,
       isSignedIn: signedIn,
     } = stateRef.current;
+
+    const liveCanvas = fabricCanvasInstanceRef?.current ?? staleProp;
 
     if (!sourceFile) {
       toast.error({
         title: "Nothing to save",
         description: "Open a PDF before saving.",
-      });
-
-      return;
-    }
-
-    if (!signedIn) {
-      toast.error({
-        title: "Sign in required",
-        description: "Sign in to save your edits to the cloud.",
       });
 
       return;
@@ -87,11 +88,20 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         file: sourceFile,
       });
 
-      const savedFile = new File(
-        [savedBytes.buffer as ArrayBuffer],
-        sourceFile.name,
-        { type: "application/pdf" },
-      );
+      triggerPdfDownload(savedBytes, editedPdfFilename(sourceFile.name));
+
+      if (!signedIn) {
+        toast.success({
+          title: "Downloaded",
+          description: "Your edited PDF has been downloaded.",
+        });
+
+        return;
+      }
+
+      const savedFile = new File([savedBytes as BlobPart], sourceFile.name, {
+        type: "application/pdf",
+      });
 
       start({
         documentId: docId ?? undefined,
@@ -114,7 +124,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     } finally {
       isSavingRef.current = false;
     }
-  }, [router, searchParams, start]);
+  }, [fabricCanvasInstanceRef, router, searchParams, start]);
 
   useEffect(() => {
     const onSave = () => {

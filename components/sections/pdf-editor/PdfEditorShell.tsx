@@ -4,7 +4,7 @@ import type { Canvas } from "fabric";
 
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
@@ -58,11 +58,12 @@ function EditorLayout() {
   const { error, isLoading } = usePdfLoader();
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
+  const fabricCanvasInstanceRef = useRef<Canvas | null>(null);
   const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  useSaveEditor(fabricCanvas);
-  useExportEditor(fabricCanvas);
+  useSaveEditor(fabricCanvas, fabricCanvasInstanceRef);
+  useExportEditor(fabricCanvas, fabricCanvasInstanceRef);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
@@ -88,7 +89,10 @@ function EditorLayout() {
       <>
         <EditorInfoBar />
         <div className="relative flex flex-1 overflow-hidden">
-          <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+          <PdfViewerCanvas
+            fabricInstanceRef={fabricCanvasInstanceRef}
+            onFabricCanvasReady={handleFabricCanvasReady}
+          />
           <div className="pointer-events-none absolute right-4 top-4 z-10">
             <div className="pointer-events-auto">
               <PerformancePanel
@@ -110,7 +114,10 @@ function EditorLayout() {
       <EditorToolBar />
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar />
-        <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+        <PdfViewerCanvas
+          fabricInstanceRef={fabricCanvasInstanceRef}
+          onFabricCanvasReady={handleFabricCanvasReady}
+        />
         <div aria-hidden className="w-44 shrink-0 bg-default-100" />
         <RightSidebar fabricCanvas={fabricCanvas} />
 

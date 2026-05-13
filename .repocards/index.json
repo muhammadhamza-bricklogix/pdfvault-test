@@ -1,8 +1,16 @@
 {
+  "projectRoot": [
+    {
+      "file": "next.config.mjs",
+      "line": 5,
+      "kind": "const",
+      "exported": false
+    }
+  ],
   "nextConfig": [
     {
       "file": "next.config.mjs",
-      "line": 2,
+      "line": 8,
       "kind": "const",
       "exported": false
     }
@@ -66,7 +74,7 @@
     },
     {
       "file": "app/(tools)/pdf-editor/page.tsx",
-      "line": 7,
+      "line": 5,
       "kind": "const",
       "exported": true
     },
@@ -95,6 +103,12 @@
       "exported": true
     },
     {
+      "file": "app/(marketing)/(legal)/refund/page.tsx",
+      "line": 9,
+      "kind": "const",
+      "exported": true
+    },
+    {
       "file": "app/(marketing)/(legal)/terms/page.tsx",
       "line": 9,
       "kind": "const",
@@ -103,18 +117,6 @@
     {
       "file": "app/(marketing)/(site)/pricing/page.tsx",
       "line": 7,
-      "kind": "const",
-      "exported": true
-    },
-    {
-      "file": "app/(marketing)/(legal)/refund/page.tsx",
-      "line": 9,
-      "kind": "const",
-      "exported": true
-    },
-    {
-      "file": "app/(marketing)/(site)/tools/pdf-to-excel/page.tsx",
-      "line": 8,
       "kind": "const",
       "exported": true
     }
@@ -27745,10 +27747,18 @@
       "exported": true
     }
   ],
+  "dynamic": [
+    {
+      "file": "app/(marketing)/layout.tsx",
+      "line": 7,
+      "kind": "const",
+      "exported": true
+    }
+  ],
   "MarketingLayoutProps": [
     {
       "file": "app/(marketing)/layout.tsx",
-      "line": 6,
+      "line": 9,
       "kind": "type",
       "exported": false
     }
@@ -27756,7 +27766,7 @@
   "MarketingLayout": [
     {
       "file": "app/(marketing)/layout.tsx",
-      "line": 10,
+      "line": 13,
       "kind": "function",
       "exported": true
     }
@@ -27835,6 +27845,84 @@
     {
       "file": "app/(app)/dashboard/page.tsx",
       "line": 3,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LegalSegmentLayoutProps": [
+    {
+      "file": "app/(marketing)/(legal)/layout.tsx",
+      "line": 3,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "LegalSegmentLayout": [
+    {
+      "file": "app/(marketing)/(legal)/layout.tsx",
+      "line": 7,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SiteLayoutProps": [
+    {
+      "file": "app/(marketing)/(site)/layout.tsx",
+      "line": 3,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "SiteLayout": [
+    {
+      "file": "app/(marketing)/(site)/layout.tsx",
+      "line": 7,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "Home": [
+    {
+      "file": "app/(marketing)/(site)/page.tsx",
+      "line": 7,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorShell": [
+    {
+      "file": "app/(tools)/pdf-editor/PdfEditorPageClient.tsx",
+      "line": 6,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "components/sections/pdf-editor/PdfEditorShell.tsx",
+      "line": 138,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorPageClient": [
+    {
+      "file": "app/(tools)/pdf-editor/PdfEditorPageClient.tsx",
+      "line": 14,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorLayout": [
+    {
+      "file": "app/(tools)/pdf-editor/layout.tsx",
+      "line": 1,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorPage": [
+    {
+      "file": "app/(tools)/pdf-editor/page.tsx",
+      "line": 9,
       "kind": "function",
       "exported": true
     }
@@ -28121,7 +28209,7 @@
       "exported": true
     }
   ],
-  "OneDriveIcon": [
+  "DeviceIcon": [
     {
       "file": "components/sections/home/home-cloud-upload-row.tsx",
       "line": 16,
@@ -28129,18 +28217,10 @@
       "exported": false
     }
   ],
-  "DeviceIcon": [
-    {
-      "file": "components/sections/home/home-cloud-upload-row.tsx",
-      "line": 31,
-      "kind": "function",
-      "exported": false
-    }
-  ],
   "OPTIONS": [
     {
       "file": "components/sections/home/home-cloud-upload-row.tsx",
-      "line": 35,
+      "line": 20,
       "kind": "const",
       "exported": false
     },
@@ -28154,7 +28234,7 @@
   "HomeCloudUploadRowProps": [
     {
       "file": "components/sections/home/home-cloud-upload-row.tsx",
-      "line": 56,
+      "line": 35,
       "kind": "type",
       "exported": false
     }
@@ -28162,7 +28242,7 @@
   "formatProviderLabel": [
     {
       "file": "components/sections/home/home-cloud-upload-row.tsx",
-      "line": 65,
+      "line": 44,
       "kind": "function",
       "exported": false
     }
@@ -28170,7 +28250,7 @@
   "HomeCloudUploadRow": [
     {
       "file": "components/sections/home/home-cloud-upload-row.tsx",
-      "line": 69,
+      "line": 48,
       "kind": "function",
       "exported": true
     }
@@ -28255,26 +28335,10 @@
       "exported": true
     }
   ],
-  "ToolCard": [
-    {
-      "file": "components/sections/home/home-tool-grid.tsx",
-      "line": 27,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "TOOL_CARDS": [
-    {
-      "file": "components/sections/home/home-tool-grid.tsx",
-      "line": 35,
-      "kind": "const",
-      "exported": false
-    }
-  ],
   "ToolCardTextPreviewProps": [
     {
       "file": "components/sections/home/home-tool-grid.tsx",
-      "line": 148,
+      "line": 21,
       "kind": "type",
       "exported": false
     }
@@ -28282,7 +28346,7 @@
   "ToolCardTextPreview": [
     {
       "file": "components/sections/home/home-tool-grid.tsx",
-      "line": 153,
+      "line": 26,
       "kind": "function",
       "exported": false
     }
@@ -28290,7 +28354,15 @@
   "ToolCardTextDesktopHover": [
     {
       "file": "components/sections/home/home-tool-grid.tsx",
-      "line": 174,
+      "line": 46,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "ToolCardGrid": [
+    {
+      "file": "components/sections/home/home-tool-grid.tsx",
+      "line": 89,
       "kind": "function",
       "exported": false
     }
@@ -28298,7 +28370,23 @@
   "HomeToolGrid": [
     {
       "file": "components/sections/home/home-tool-grid.tsx",
-      "line": 217,
+      "line": 140,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "handleTabChange": [
+    {
+      "file": "components/sections/home/home-tool-grid.tsx",
+      "line": 144,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "HomeTrustStrip": [
+    {
+      "file": "components/sections/home/home-trust-strip.tsx",
+      "line": 7,
       "kind": "function",
       "exported": true
     }
@@ -28318,7 +28406,7 @@
     },
     {
       "file": "app/(marketing)/(legal)/contact/page.tsx",
-      "line": 14,
+      "line": 13,
       "kind": "const",
       "exported": false
     }
@@ -28414,7 +28502,7 @@
   "LegalHeroProps": [
     {
       "file": "components/sections/legal/legal-hero.tsx",
-      "line": 9,
+      "line": 8,
       "kind": "type",
       "exported": false
     }
@@ -28422,7 +28510,7 @@
   "LegalHero": [
     {
       "file": "components/sections/legal/legal-hero.tsx",
-      "line": 17,
+      "line": 16,
       "kind": "function",
       "exported": true
     }
@@ -28430,7 +28518,7 @@
   "LegalMiniFooter": [
     {
       "file": "components/sections/legal/legal-mini-footer.tsx",
-      "line": 5,
+      "line": 10,
       "kind": "function",
       "exported": true
     }
@@ -28865,18 +28953,10 @@
       "exported": false
     }
   ],
-  "PdfEditorShell": [
-    {
-      "file": "components/sections/pdf-editor/PdfEditorShell.tsx",
-      "line": 131,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "PdfViewerCanvasProps": [
     {
       "file": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
-      "line": 24,
+      "line": 25,
       "kind": "type",
       "exported": false
     }
@@ -28884,7 +28964,7 @@
   "PdfViewerCanvas": [
     {
       "file": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
-      "line": 28,
+      "line": 34,
       "kind": "function",
       "exported": true
     }
@@ -29313,66 +29393,290 @@
       "exported": true
     }
   ],
-  "LegalSegmentLayoutProps": [
+  "ASIDE_ICONS": [
     {
-      "file": "app/(marketing)/(legal)/layout.tsx",
-      "line": 3,
+      "file": "components/shared/footer/footer-aside-column-heading.tsx",
+      "line": 11,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "FooterAsideColumnHeadingProps": [
+    {
+      "file": "components/shared/footer/footer-aside-column-heading.tsx",
+      "line": 16,
       "kind": "type",
       "exported": false
     }
   ],
-  "LegalSegmentLayout": [
+  "FooterAsideColumnHeading": [
     {
-      "file": "app/(marketing)/(legal)/layout.tsx",
-      "line": 7,
+      "file": "components/shared/footer/footer-aside-column-heading.tsx",
+      "line": 21,
       "kind": "function",
       "exported": true
     }
   ],
-  "COOKIE_SETTINGS_HREF": [
+  "SECTION_ICONS": [
     {
-      "file": "components/shared/footer/site-footer.tsx",
-      "line": 6,
+      "file": "components/shared/footer/footer-link-columns.tsx",
+      "line": 26,
       "kind": "const",
       "exported": false
     }
   ],
-  "FOOTER_COLUMNS": [
+  "isViewAllLinkLabel": [
     {
-      "file": "components/shared/footer/site-footer.tsx",
-      "line": 8,
+      "file": "components/shared/footer/footer-link-columns.tsx",
+      "line": 33,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "FooterLinkColumns": [
+    {
+      "file": "components/shared/footer/footer-link-columns.tsx",
+      "line": 37,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PAYMENT_BRANDS": [
+    {
+      "file": "components/shared/footer/footer-payment-strip.tsx",
+      "line": 14,
       "kind": "const",
       "exported": false
+    }
+  ],
+  "FooterPaymentStrip": [
+    {
+      "file": "components/shared/footer/footer-payment-strip.tsx",
+      "line": 37,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "footerShellClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 1,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerInnerContainerClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 4,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerAsideColumnTitleClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 7,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerSubsectionIconWrapClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 10,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerSubsectionHeadingClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 13,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerSubsectionTitleStackClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 16,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLinkClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 18,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLinkViewAllClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 21,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerMainColumnsGridClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 25,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLinkColumnListClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 28,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLegalStripBlockClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 30,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLegalStripLinkClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 33,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerPostCopyrightNavClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 36,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerAffiliationDisclaimerClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 39,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerAffiliationDisclaimerTextClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 42,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerPaymentStripClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 45,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerPaymentLogoSlotClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 49,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerPaymentIconClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 52,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLogoRowClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 55,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLogoLinkClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 58,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLogoWordmarkClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 60,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLogoAccentClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 63,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLogoRestClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 65,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "footerLegalMiniFooterLinkClass": [
+    {
+      "file": "components/shared/footer/footer-styles.ts",
+      "line": 67,
+      "kind": "const",
+      "exported": true
     }
   ],
   "SiteFooter": [
     {
       "file": "components/shared/footer/site-footer.tsx",
-      "line": 55,
+      "line": 24,
       "kind": "function",
       "exported": true
     }
   ],
-  "SiteLayoutProps": [
+  "PDF_TOOL_LINKS": [
     {
-      "file": "app/(marketing)/(site)/layout.tsx",
-      "line": 3,
-      "kind": "type",
+      "file": "components/shared/navigation/site-navbar.tsx",
+      "line": 14,
+      "kind": "const",
       "exported": false
     }
   ],
-  "SiteLayout": [
+  "DRAWER_LINKS": [
     {
-      "file": "app/(marketing)/(site)/layout.tsx",
-      "line": 7,
-      "kind": "function",
-      "exported": true
+      "file": "components/shared/navigation/site-navbar.tsx",
+      "line": 20,
+      "kind": "const",
+      "exported": false
     }
   ],
-  "Home": [
+  "SiteNavbar": [
     {
-      "file": "app/(marketing)/(site)/page.tsx",
-      "line": 6,
+      "file": "components/shared/navigation/site-navbar.tsx",
+      "line": 26,
       "kind": "function",
       "exported": true
     }
@@ -29455,30 +29759,6 @@
       "line": 288,
       "kind": "function",
       "exported": false
-    }
-  ],
-  "PDF_TOOL_LINKS": [
-    {
-      "file": "components/shared/navigation/site-navbar.tsx",
-      "line": 14,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "DRAWER_LINKS": [
-    {
-      "file": "components/shared/navigation/site-navbar.tsx",
-      "line": 20,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "SiteNavbar": [
-    {
-      "file": "components/shared/navigation/site-navbar.tsx",
-      "line": 26,
-      "kind": "function",
-      "exported": true
     }
   ],
   "DEFAULT_MARKETING_FOOTNOTE": [
@@ -29775,22 +30055,6 @@
     {
       "file": "components/ui/upload-toast/upload-illustration.tsx",
       "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PdfEditorLayout": [
-    {
-      "file": "app/(tools)/pdf-editor/layout.tsx",
-      "line": 1,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PdfEditorPage": [
-    {
-      "file": "app/(tools)/pdf-editor/page.tsx",
-      "line": 11,
       "kind": "function",
       "exported": true
     }
@@ -30113,10 +30377,50 @@
       "exported": true
     }
   ],
-  "mapPdfFontFamily": [
+  "detectWeightAndStyle": [
     {
       "file": "lib/client/pdf-editor/text-extraction.ts",
-      "line": 26,
+      "line": 29,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "resolveFontFamily": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 64,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "TextColorEntry": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 86,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "extractTextColorsWithPositions": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 99,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "findColorForPosition": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 158,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "rgbToHex": [
+    {
+      "file": "lib/client/pdf-editor/text-extraction.ts",
+      "line": 181,
       "kind": "function",
       "exported": false
     }
@@ -30124,7 +30428,23 @@
   "extractTextBlocks": [
     {
       "file": "lib/client/pdf-editor/text-extraction.ts",
-      "line": 75,
+      "line": 198,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "editedPdfFilename": [
+    {
+      "file": "lib/client/pdf-editor/trigger-pdf-download.ts",
+      "line": 5,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "triggerPdfDownload": [
+    {
+      "file": "lib/client/pdf-editor/trigger-pdf-download.ts",
+      "line": 12,
       "kind": "function",
       "exported": true
     }
@@ -30609,6 +30929,308 @@
       "exported": true
     }
   ],
+  "PDF_TOOLS_HUB": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 3,
+      "kind": "const",
+      "exported": true
+    },
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 39,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "FooterNavLink": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 5,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "FooterProductSubsection": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 10,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "FooterAsideColumnIcon": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 15,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "FooterColumn": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 17,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "FOOTER_PRODUCT_COLUMN_TITLE": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 23,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_EDIT_PDF_SUBSECTION_TITLE": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 25,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_PRODUCT_SUBSECTIONS": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 27,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_COLUMNS": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 71,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_COMPANY_ENTITY": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 92,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_COMPANY_ADDRESS_PLACEHOLDER": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 94,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_BRAND_NAME": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 97,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_PUBLIC_DOMAIN": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 99,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "formatFooterCopyrightLine": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 102,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "FOOTER_LEGAL_STRIP_LINKS": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 106,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_POST_COPYRIGHT_NAV_LINKS": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 113,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_1": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 120,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "FOOTER_GOVERNMENT_AFFILIATION_DISCLAIMER_LINE_2": [
+    {
+      "file": "lib/shared/constants/footer.ts",
+      "line": 122,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_SECTION_ID": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 28,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_HEADING_PREFIX": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 30,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_HEADING_ACCENT": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 32,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_SUBTITLE": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 34,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_BADGE_SUFFIX": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 37,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_ICON_POOL": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 42,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "HomeToolCardIcon": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 67,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "HomeToolCard": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 69,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "stringHash": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 76,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "iconForPdfToFormatTitle": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 86,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "hrefForPdfToFormatTitle": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 92,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "PDF_TO_FORMAT_TITLES": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 104,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "PDF_TO_FORMAT_CARDS": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 139,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "HOME_TOOL_GRID_PRIMARY_CARDS": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 152,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "CONVERT_TO_PDF_CARDS": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 210,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "HomeToolGridTabGroup": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 249,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_TAB_GROUPS": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 255,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_TOTAL_TOOL_COUNT": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 273,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "HOME_TOOL_GRID_TOOL_CARDS": [
+    {
+      "file": "lib/shared/constants/home-tool-grid.ts",
+      "line": 279,
+      "kind": "const",
+      "exported": true
+    }
+  ],
   "documentKeys": [
     {
       "file": "lib/shared/constants/query-keys.ts",
@@ -31023,6 +31645,70 @@
       "exported": true
     }
   ],
+  "ContactPage": [
+    {
+      "file": "app/(marketing)/(legal)/contact/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "CookiesPage": [
+    {
+      "file": "app/(marketing)/(legal)/cookies/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "DoNotSellPage": [
+    {
+      "file": "app/(marketing)/(legal)/do-not-sell/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PrivacyPage": [
+    {
+      "file": "app/(marketing)/(legal)/privacy/page.tsx",
+      "line": 18,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "RefundPage": [
+    {
+      "file": "app/(marketing)/(legal)/refund/page.tsx",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "TermsPage": [
+    {
+      "file": "app/(marketing)/(legal)/terms/page.tsx",
+      "line": 14,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PricingPage": [
+    {
+      "file": "app/(marketing)/(site)/pricing/page.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SSOCallbackPage": [
+    {
+      "file": "app/(marketing)/(site)/sso-callback/page.tsx",
+      "line": 5,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "SettingsSection": [
     {
       "file": "components/sections/dashboard/settings/settings-nav.tsx",
@@ -31059,70 +31745,6 @@
     {
       "file": "components/sections/dashboard/settings/settings-nav.tsx",
       "line": 65,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ContactPage": [
-    {
-      "file": "app/(marketing)/(legal)/contact/page.tsx",
-      "line": 16,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "CookiesPage": [
-    {
-      "file": "app/(marketing)/(legal)/cookies/page.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DoNotSellPage": [
-    {
-      "file": "app/(marketing)/(legal)/do-not-sell/page.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PrivacyPage": [
-    {
-      "file": "app/(marketing)/(legal)/privacy/page.tsx",
-      "line": 18,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "TermsPage": [
-    {
-      "file": "app/(marketing)/(legal)/terms/page.tsx",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PricingPage": [
-    {
-      "file": "app/(marketing)/(site)/pricing/page.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SSOCallbackPage": [
-    {
-      "file": "app/(marketing)/(site)/sso-callback/page.tsx",
-      "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "RefundPage": [
-    {
-      "file": "app/(marketing)/(legal)/refund/page.tsx",
-      "line": 15,
       "kind": "function",
       "exported": true
     }
@@ -31177,6 +31799,254 @@
     {
       "file": "lib/client/hooks/auth/use-sign-up-flow.ts",
       "line": 27,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseDrawToolParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-draw-tool.ts",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useDrawTool": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-draw-tool.ts",
+      "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseEditTextModeParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-edit-text-mode.ts",
+      "line": 15,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useEditTextMode": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-edit-text-mode.ts",
+      "line": 29,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "LoadedDoc": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-editor-document-loader.ts",
+      "line": 11,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "inflight": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-editor-document-loader.ts",
+      "line": 15,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "useEditorDocumentLoader": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-editor-document-loader.ts",
+      "line": 44,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseEditorHistoryParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-editor-history.ts",
+      "line": 10,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useEditorHistory": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-editor-history.ts",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseEraserToolParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-eraser-tool.ts",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useEraserTool": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-eraser-tool.ts",
+      "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useExportEditor": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-export-editor.ts",
+      "line": 21,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseFabricCanvasParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-fabric-canvas.ts",
+      "line": 11,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useFabricCanvas": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-fabric-canvas.ts",
+      "line": 25,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseHighlightToolParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-highlight-tool.ts",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useHighlightTool": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-highlight-tool.ts",
+      "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseImageToolParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-image-tool.ts",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "ACCEPTED_TYPES": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-image-tool.ts",
+      "line": 13,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "useImageTool": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-image-tool.ts",
+      "line": 15,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "TEXT_OPS_MIN": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 9,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "TEXT_OPS_MAX": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 10,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "UsePageRendererParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 12,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "RenderedSize": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 20,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "usePageRenderer": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
+      "line": 22,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "usePdfLoader": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-pdf-loader.ts",
+      "line": 8,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useSaveEditor": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-save-editor.ts",
+      "line": 26,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseShapeToolParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-shape-tool.ts",
+      "line": 18,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "FabricClasses": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-shape-tool.ts",
+      "line": 22,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useShapeTool": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-shape-tool.ts",
+      "line": 30,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "UseSignatureToolParams": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
+      "line": 9,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "useSignatureTool": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
+      "line": 13,
       "kind": "function",
       "exported": true
     }
@@ -31346,270 +32216,6 @@
       "file": "lib/client/hooks/upload/use-tracked-upload.ts",
       "line": 165,
       "kind": "type",
-      "exported": true
-    }
-  ],
-  "UseDrawToolParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-draw-tool.ts",
-      "line": 9,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useDrawTool": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-draw-tool.ts",
-      "line": 13,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseEditTextModeParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-edit-text-mode.ts",
-      "line": 15,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useEditTextMode": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-edit-text-mode.ts",
-      "line": 28,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "LoadedDoc": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-editor-document-loader.ts",
-      "line": 11,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "inflight": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-editor-document-loader.ts",
-      "line": 15,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "useEditorDocumentLoader": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-editor-document-loader.ts",
-      "line": 44,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseEditorHistoryParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-editor-history.ts",
-      "line": 10,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useEditorHistory": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-editor-history.ts",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseEraserToolParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-eraser-tool.ts",
-      "line": 9,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useEraserTool": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-eraser-tool.ts",
-      "line": 13,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "buildExportFilename": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-export-editor.ts",
-      "line": 12,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "downloadBytes": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-export-editor.ts",
-      "line": 19,
-      "kind": "function",
-      "exported": false
-    }
-  ],
-  "useExportEditor": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-export-editor.ts",
-      "line": 38,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseFabricCanvasParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-fabric-canvas.ts",
-      "line": 11,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useFabricCanvas": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-fabric-canvas.ts",
-      "line": 25,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseHighlightToolParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-highlight-tool.ts",
-      "line": 9,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useHighlightTool": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-highlight-tool.ts",
-      "line": 13,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseImageToolParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-image-tool.ts",
-      "line": 9,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "ACCEPTED_TYPES": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-image-tool.ts",
-      "line": 13,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "useImageTool": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-image-tool.ts",
-      "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "TEXT_OPS_MIN": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 9,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "TEXT_OPS_MAX": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 10,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "UsePageRendererParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 12,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "RenderedSize": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 20,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "usePageRenderer": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-page-renderer.ts",
-      "line": 22,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "usePdfLoader": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-pdf-loader.ts",
-      "line": 8,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "useSaveEditor": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-save-editor.ts",
-      "line": 21,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseShapeToolParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-shape-tool.ts",
-      "line": 18,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "FabricClasses": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-shape-tool.ts",
-      "line": 22,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useShapeTool": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-shape-tool.ts",
-      "line": 30,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "UseSignatureToolParams": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
-      "line": 9,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "useSignatureTool": [
-    {
-      "file": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
-      "line": 13,
-      "kind": "function",
       "exported": true
     }
   ],
@@ -31917,18 +32523,34 @@
       "exported": true
     }
   ],
-  "tool": [
+  "PageProps": [
     {
-      "file": "app/(marketing)/(site)/tools/pdf-to-excel/page.tsx",
-      "line": 6,
-      "kind": "const",
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 8,
+      "kind": "type",
       "exported": false
     }
   ],
-  "PdfToExcelPage": [
+  "generateStaticParams": [
     {
-      "file": "app/(marketing)/(site)/tools/pdf-to-excel/page.tsx",
-      "line": 13,
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "generateMetadata": [
+    {
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 16,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ToolBySlugPage": [
+    {
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 32,
       "kind": "function",
       "exported": true
     }

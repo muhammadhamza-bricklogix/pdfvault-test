@@ -1,24 +1,13 @@
-import type { PDFDocument, PDFPage } from "pdf-lib";
-import type { CoordinateContext } from "./coordinate-transform";
-import type { ParsedFabricJson } from "./save-utils";
-
-import { createCoordinateContext } from "./coordinate-transform";
-import { FontCache } from "./font-mapping";
+import {
+  PDF_EXPORT_RASTER_MULTIPLIER,
+  renderPdfPageToPngWithoutText,
+} from "./render-pdf-page-no-text";
 import {
   dataUrlToBytes,
   parseFabricJson,
-  renderFabricSubsetToPng,
+  renderFabricJsonToPng,
 } from "./save-utils";
-import {
-  drawEllipse,
-  drawGroup,
-  drawIText,
-  drawLine,
-  drawRect,
-  drawTriangle,
-} from "./vector-drawers";
-
-type FabricObj = Record<string, any>;
+import { PDFJS_WORKER_SRC } from "./pdfjs-worker";
 
 export type MergePdfInput = {
   /** Map of 1-indexed page number → Fabric canvas JSON. */
@@ -27,151 +16,14 @@ export type MergePdfInput = {
   sourceBytes: ArrayBuffer;
 };
 
-// ---------------------------------------------------------------------------
-// Object classification
-// ---------------------------------------------------------------------------
-
-const VECTOR_TYPES = new Set([
-  "ellipse",
-  "group",
-  "i-text",
-  "itext",
-  "line",
-  "rect",
-  "text",
-  "textbox",
-  "triangle",
-]);
-// "path" and "image" go through raster (PNG at multiplier:3)
-
-function isVectorizable(obj: FabricObj): boolean {
-  return VECTOR_TYPES.has((obj.type as string).toLowerCase());
-}
-
-// ---------------------------------------------------------------------------
-// Raster batch flush — renders a subset of objects to PNG and draws on page
-// ---------------------------------------------------------------------------
-
-async function flushRasterBatch(
-  indices: number[],
-  parsed: ParsedFabricJson,
-  page: PDFPage,
-  pdfDoc: PDFDocument,
-): Promise<void> {
-  if (!indices.length) return;
-
-  const pngDataUrl = await renderFabricSubsetToPng(parsed, indices);
-
-  if (!pngDataUrl) return;
-
-  const pngBytes = dataUrlToBytes(pngDataUrl);
-  const pngImage = await pdfDoc.embedPng(pngBytes);
-  const { height, width } = page.getSize();
-
-  page.drawImage(pngImage, { height, width, x: 0, y: 0 });
-}
-
-// ---------------------------------------------------------------------------
-// Draw a single vectorizable object
-// ---------------------------------------------------------------------------
-
-async function drawVectorObject(
-  obj: FabricObj,
-  page: PDFPage,
-  ctx: CoordinateContext,
-  fontCache: FontCache,
-): Promise<boolean> {
-  const type = (obj.type as string).toLowerCase();
-
-  switch (type) {
-    case "i-text":
-    case "itext":
-    case "text":
-    case "textbox":
-      await drawIText(obj, page, ctx, fontCache);
-
-      return true;
-
-    case "rect":
-      drawRect(obj, page, ctx);
-
-      return true;
-
-    case "ellipse":
-      drawEllipse(obj, page, ctx);
-
-      return true;
-
-    case "line":
-      drawLine(obj, page, ctx);
-
-      return true;
-
-    case "triangle":
-      drawTriangle(obj, page, ctx);
-
-      return true;
-
-    case "group":
-      return drawGroup(obj, page, ctx, fontCache);
-
-    default:
-      return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Process all objects on a page in z-order (hybrid vector + raster)
-// ---------------------------------------------------------------------------
-
-async function processPageObjects(
-  objects: FabricObj[],
-  parsed: ParsedFabricJson,
-  page: PDFPage,
-  pdfDoc: PDFDocument,
-  ctx: CoordinateContext,
-  fontCache: FontCache,
-): Promise<void> {
-  let rasterBatch: number[] = [];
-
-  for (let i = 0; i < objects.length; i++) {
-    const obj = objects[i];
-
-    if (isVectorizable(obj)) {
-      // Flush any accumulated raster objects first (preserves z-order)
-      if (rasterBatch.length) {
-        await flushRasterBatch(rasterBatch, parsed, page, pdfDoc);
-        rasterBatch = [];
-      }
-
-      const drawn = await drawVectorObject(obj, page, ctx, fontCache);
-
-      // If the vector drawer couldn't handle it (e.g. unknown group children),
-      // fall back to raster for this specific object
-      if (!drawn) {
-        rasterBatch.push(i);
-      }
-    } else {
-      // Rasterizable object (image, or unknown type)
-      rasterBatch.push(i);
-    }
-  }
-
-  // Flush remaining raster objects
-  if (rasterBatch.length) {
-    await flushRasterBatch(rasterBatch, parsed, page, pdfDoc);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Public API — unchanged signature
-// ---------------------------------------------------------------------------
-
 /**
- * Loads the source PDF and merges each page's Fabric edits using a hybrid
- * strategy: vectorizable objects (text, shapes, paths) are drawn directly
- * via pdf-lib drawing commands; bitmap objects (images, signatures) are
- * rasterized to PNG and overlaid. Z-order is preserved.
+ * For each page that has Fabric edits, paints:
+ * 1. A full-page bitmap of the PDF **without** text (matches the on-screen
+ *    suppressText layer), so native text is not duplicated in the file.
+ * 2. A full Fabric composite at the same resolution (matches the overlay).
+ *
+ * This mirrors what the user sees in the editor and avoids WinAnsi / vector
+ * text encoding issues from the old pdf-lib-only path.
  */
 export async function mergeFabricEditsIntoPdf({
   fabricJsonByPage,
@@ -180,30 +32,43 @@ export async function mergeFabricEditsIntoPdf({
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
   const pdfDoc = await PdfDoc.load(sourceBytes);
   const pages = pdfDoc.getPages();
-  const fontCache = new FontCache(pdfDoc);
+  const pdfData = new Uint8Array(sourceBytes);
 
-  for (const [pageNumber, json] of Array.from(fabricJsonByPage.entries())) {
-    const page = pages[pageNumber - 1];
+  const pdfjs = await import("pdfjs-dist");
 
-    if (!page) continue;
+  pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 
-    const parsed = parseFabricJson(json);
+  const pdfjsDoc = await pdfjs.getDocument({ data: pdfData }).promise;
 
-    if (!parsed) continue;
+  try {
+    for (const [pageNumber, json] of Array.from(fabricJsonByPage.entries())) {
+      const libPage = pages[pageNumber - 1];
 
-    const objects = (parsed.objects ?? []) as FabricObj[];
+      if (!libPage) continue;
 
-    if (!objects.length) continue;
+      const parsed = parseFabricJson(json);
 
-    const { height: pdfHeight, width: pdfWidth } = page.getSize();
-    const ctx = createCoordinateContext(
-      parsed.width,
-      parsed.height,
-      pdfWidth,
-      pdfHeight,
-    );
+      if (!parsed) continue;
 
-    await processPageObjects(objects, parsed, page, pdfDoc, ctx, fontCache);
+      if (!(parsed.objects ?? []).length) continue;
+
+      const { height: pdfH, width: pdfW } = libPage.getSize();
+      const pageProxy = await pdfjsDoc.getPage(pageNumber);
+      const k = PDF_EXPORT_RASTER_MULTIPLIER;
+
+      const bgBytes = await renderPdfPageToPngWithoutText(pageProxy, k);
+      const bgImg = await pdfDoc.embedPng(bgBytes);
+
+      libPage.drawImage(bgImg, { height: pdfH, width: pdfW, x: 0, y: 0 });
+
+      const fabricUrl = await renderFabricJsonToPng(parsed, k);
+      const fabricBytes = dataUrlToBytes(fabricUrl);
+      const fgImg = await pdfDoc.embedPng(fabricBytes);
+
+      libPage.drawImage(fgImg, { height: pdfH, width: pdfW, x: 0, y: 0 });
+    }
+  } finally {
+    await pdfjsDoc.destroy();
   }
 
   return pdfDoc.save();

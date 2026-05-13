@@ -61,10 +61,7 @@ function detectWeightAndStyle(realFontName: string): {
  *   2. Verify the font exists in document.fonts; if not, fall back to a
  *      web-safe family based on the textContent style hint.
  */
-function resolveFontFamily(
-  fontName: string,
-  styleFontFamily: string,
-): string {
+function resolveFontFamily(fontName: string, styleFontFamily: string): string {
   // Check if pdf.js registered this font in document.fonts
   let found = false;
 
@@ -271,7 +268,8 @@ export async function extractTextBlocks(
       weight: "normal" as const,
     };
 
-    const styleFontFamily = textContent.styles[fontName]?.fontFamily ?? "sans-serif";
+    const styleFontFamily =
+      textContent.styles[fontName]?.fontFamily ?? "sans-serif";
 
     // Match color by PDF-space position (transform[4]=x, transform[5]=y)
     const color = findColorForPosition(

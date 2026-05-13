@@ -1,9 +1,10 @@
 "use client";
 
-import type { IText, TPointerEventInfo } from "fabric";
+import type { Canvas, IText, TPointerEventInfo } from "fabric";
 import type { PDFPageProxy } from "pdfjs-dist";
+import type { MutableRefObject } from "react";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
 import { useEditTextMode } from "@/lib/client/hooks/pdf-editor/use-edit-text-mode";
@@ -22,10 +23,18 @@ import { FloatingShapeToolbar } from "./FloatingShapeToolbar";
 import { SignatureModal } from "./SignatureModal";
 
 type PdfViewerCanvasProps = {
-  onFabricCanvasReady?: (canvas: import("fabric").Canvas | null) => void;
+  /**
+   * Updated in useLayoutEffect to match the live Fabric instance so save/export
+   * can read it even when parent React state has not re-rendered yet.
+   */
+  fabricInstanceRef?: MutableRefObject<Canvas | null>;
+  onFabricCanvasReady?: (canvas: Canvas | null) => void;
 };
 
-export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
+export function PdfViewerCanvas({
+  fabricInstanceRef,
+  onFabricCanvasReady,
+}: PdfViewerCanvasProps) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
@@ -66,9 +75,20 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
   const { fabricCanvas, fabricRef } = useFabricCanvas({
     fabricCanvasRef,
+    page,
     renderedSize,
   });
   const { undo, redo } = useEditorHistory({ fabricCanvas, fabricRef });
+
+  useLayoutEffect(() => {
+    if (!fabricInstanceRef) return;
+
+    fabricInstanceRef.current = fabricRef.current;
+
+    return () => {
+      fabricInstanceRef.current = null;
+    };
+  }, [fabricCanvas, fabricInstanceRef, fabricRef]);
 
   // Notify parent when fabricCanvas changes
   useEffect(() => {

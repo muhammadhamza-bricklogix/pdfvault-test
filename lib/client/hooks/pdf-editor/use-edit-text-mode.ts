@@ -25,10 +25,29 @@ type UseEditTextModeParams = {
  *    using the actual embedded fonts loaded by pdf.js (via document.fonts)
  * 3. Users can click any text to edit it in-place
  * 4. Text objects are permanent — they ARE the text layer
+ *
+ * Extraction runs only once per page load: we skip if the canvas already has any
+ * IText/Text objects (including restored JSON without `editorType`) and we use a
+ * run id so overlapping async work cannot add a second copy (Strict Mode / races).
  */
+function canvasAlreadyHasPlacedText(fc: Canvas): boolean {
+  return fc.getObjects().some((obj) => {
+    const o = obj as { editorType?: string; type?: string };
+
+    if (o.editorType === "editModeText") return true;
+
+    const t = (o.type || "").toLowerCase();
+
+    return (
+      t === "i-text" || t === "itext" || t === "text" || t === "textbox"
+    );
+  });
+}
+
 export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const fontWarningShownRef = useRef(false);
+  const setupRunIdRef = useRef(0);
 
   // Cache extracted text blocks per page
   const blocksCacheRef = useRef<Map<number, TextBlock[]>>(new Map());
@@ -44,15 +63,13 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
   useEffect(() => {
     if (!fabricCanvas || !page) return;
 
+    const runId = ++setupRunIdRef.current;
     let cancelled = false;
 
     const setup = async () => {
-      // Skip if canvas already has editModeText objects (restored from serialization)
-      const existingEditText = fabricCanvas
-        .getObjects()
-        .filter((obj) => (obj as any).editorType === "editModeText");
-
-      if (existingEditText.length > 0) {
+      // Skip if anything that looks like placed PDF / user text is already on canvas
+      // (restored JSON, a prior extraction pass, or legacy saves without editorType).
+      if (canvasAlreadyHasPlacedText(fabricCanvas)) {
         return;
       }
 
@@ -65,9 +82,16 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       } else {
         blocks = await extractTextBlocks(page);
 
-        if (cancelled) return;
+        if (cancelled || runId !== setupRunIdRef.current) return;
 
         blocksCacheRef.current.set(currentPage, blocks);
+      }
+
+      if (cancelled || runId !== setupRunIdRef.current) return;
+
+      // Another pass may have populated the canvas while we awaited (Strict Mode / races).
+      if (canvasAlreadyHasPlacedText(fabricCanvas)) {
+        return;
       }
 
       if (blocks.length === 0) {
@@ -91,7 +115,11 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
       const { IText: FabricIText } = await import("fabric");
 
-      if (cancelled) return;
+      if (cancelled || runId !== setupRunIdRef.current) return;
+
+      if (canvasAlreadyHasPlacedText(fabricCanvas)) {
+        return;
+      }
 
       // Place ALL text blocks as IText objects with real embedded fonts
       for (const block of blocks) {
@@ -115,7 +143,7 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       fabricCanvas.renderAll();
     };
 
-    setup();
+    void setup();
 
     return () => {
       cancelled = true;

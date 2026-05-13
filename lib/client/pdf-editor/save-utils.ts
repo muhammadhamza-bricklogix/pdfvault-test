@@ -45,6 +45,7 @@ export function parseFabricJson(json: string): ParsedFabricJson | null {
  */
 export async function renderFabricJsonToPng(
   parsed: ParsedFabricJson,
+  multiplier = 3,
 ): Promise<string> {
   const { Canvas } = await import("fabric");
 
@@ -68,7 +69,7 @@ export async function renderFabricJsonToPng(
     await fc.loadFromJSON(parsed);
     fc.renderAll();
 
-    return fc.toDataURL({ format: "png", multiplier: 3 });
+    return fc.toDataURL({ format: "png", multiplier });
   } finally {
     fc.dispose();
 

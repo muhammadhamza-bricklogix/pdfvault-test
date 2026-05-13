@@ -1,6 +1,7 @@
 "use client";
 
 import type { Canvas } from "fabric";
+import type { PDFPageProxy } from "pdfjs-dist";
 import type { RefObject } from "react";
 
 import { useEffect, useRef, useState } from "react";
@@ -10,20 +11,49 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 
 type UseFabricCanvasParams = {
   fabricCanvasRef: RefObject<HTMLCanvasElement | null>;
+  /** Resolved pdf.js page for `currentPage`; init waits until this matches. */
+  page: PDFPageProxy | null;
   renderedSize: { height: number; width: number } | null;
 };
 
 /**
- * The Fabric canvas always uses "base" dimensions (zoom=1, i.e. the PDF page
- * size in points). When the user zooms, we apply Fabric's own viewport zoom
- * rather than resizing the canvas. This keeps all object coordinates in a
- * stable, zoom-independent coordinate space so that:
- *   - Serialized JSON always represents zoom=1 coordinates
- *   - The merge pipeline always gets scaleX=scaleY=1
- *   - No rescaling is needed on load
+ * Matches pdf.js page canvas: CSS size = renderedSize, backing store = CSS × DPR.
+ * `enableRetinaScaling` stays false so we do not double-apply devicePixelRatio.
+ */
+function applyFabricViewport(
+  fc: Canvas,
+  renderedSize: { height: number; width: number },
+  zoom: number,
+): void {
+  const dpr =
+    typeof window !== "undefined"
+      ? Math.max(1, window.devicePixelRatio || 1)
+      : 1;
+
+  fc.setDimensions({
+    height: renderedSize.height,
+    width: renderedSize.width,
+  });
+  fc.setDimensions(
+    {
+      height: Math.max(1, Math.round(renderedSize.height * dpr)),
+      width: Math.max(1, Math.round(renderedSize.width * dpr)),
+    },
+    { backstoreOnly: true },
+  );
+  fc.setZoom(zoom);
+  fc.renderAll();
+}
+
+/**
+ * Fabric overlay uses PDF point space (logical size = renderedSize / zoom).
+ * The canvas is **recreated only when `currentPage` or the loaded `page` proxy
+ * changes**. Zoom updates use `setDimensions` + `setZoom` so annotations are not
+ * disposed (avoids async teardown races and “disappearing” text).
  */
 export function useFabricCanvas({
   fabricCanvasRef,
+  page,
   renderedSize,
 }: UseFabricCanvasParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
@@ -34,25 +64,47 @@ export function useFabricCanvas({
   const fabricRef = useRef<Canvas | null>(null);
   const mountedPageRef = useRef<number>(currentPage);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
+  const initTokenRef = useRef(0);
 
-  // Base dimensions = CSS size at zoom=1 (matches PDF page points)
-  const baseWidth = renderedSize ? renderedSize.width / zoom : null;
-  const baseHeight = renderedSize ? renderedSize.height / zoom : null;
-
-  // --- Canvas creation & page-change lifecycle ---
+  // --- Create / dispose when the PDF page changes (not on zoom-only renders) ---
   useEffect(() => {
-    if (!fabricCanvasRef.current || !renderedSize || !baseWidth || !baseHeight)
-      return;
+    const fcExisting = fabricRef.current;
 
+    if (fcExisting && mountedPageRef.current !== currentPage) {
+      const json = serializeFabricCanvas(fcExisting);
+
+      saveFabricJson(mountedPageRef.current, json);
+      fcExisting.dispose();
+      fabricRef.current = null;
+      void setFabricCanvas(null);
+    }
+
+    if (!fabricCanvasRef.current || !renderedSize) {
+      return;
+    }
+
+    if (!page || page.pageNumber !== currentPage) {
+      return;
+    }
+
+    if (fabricRef.current && mountedPageRef.current === currentPage) {
+      return;
+    }
+
+    const initToken = ++initTokenRef.current;
     let cancelled = false;
-    let initDone: Promise<void> | undefined;
 
     const init = async () => {
       const { Canvas: FabricCanvas, FabricObject } = await import("fabric");
 
-      if (cancelled || !fabricCanvasRef.current) return;
+      if (
+        cancelled ||
+        initToken !== initTokenRef.current ||
+        !fabricCanvasRef.current
+      ) {
+        return;
+      }
 
-      // Register custom properties so they survive toJSON() / loadFromJSON()
       for (const property of [
         "editorType",
         "noteText",
@@ -64,94 +116,93 @@ export function useFabricCanvas({
         }
       }
 
-      // Create canvas at CSS size (zoom-scaled) but set logical dimensions to base
       const fc = new FabricCanvas(fabricCanvasRef.current, {
         backgroundColor: "transparent",
-        enableRetinaScaling: true,
+        enableRetinaScaling: false,
         height: renderedSize.height,
         selection: true,
         width: renderedSize.width,
       });
 
-      // Apply Fabric zoom so objects are in base-coordinate space
-      fc.setZoom(zoom);
-
-      // Fabric wraps the canvas in a <div data-fabric="wrapper"> with position:relative.
-      // We need to make it overlay the PDF canvas with position:absolute instead.
       const wrapper = fc.getElement().parentElement;
 
       if (wrapper) {
         wrapper.style.position = "absolute";
-        wrapper.style.top = "0";
         wrapper.style.left = "0";
+        wrapper.style.top = "0";
       }
 
-      // --- DEBUG LOGGING ---
-      console.group("[fabric-canvas] Init");
-      console.log("renderedSize:", renderedSize);
-      console.log("baseWidth:", baseWidth, "baseHeight:", baseHeight);
-      console.log("zoom:", zoom);
-      console.log(
-        "fc created with:",
-        renderedSize.width,
-        "x",
-        renderedSize.height,
-      );
-      console.log("fc.setZoom:", zoom);
-      console.groupEnd();
-
       fabricRef.current = fc;
-      mountedPageRef.current = currentPage;
 
-      // Rehydrate saved JSON for this page
       const saved = getFabricJson(currentPage);
 
       if (saved) {
         await fc.loadFromJSON(JSON.parse(saved));
 
-        if (cancelled) return;
+        if (cancelled || initToken !== initTokenRef.current) {
+          fc.dispose();
 
-        // Restore zoom after loadFromJSON (which may reset it)
-        fc.setZoom(zoom);
-        fc.renderAll();
+          if (fabricRef.current === fc) {
+            fabricRef.current = null;
+          }
+
+          return;
+        }
       }
 
-      if (cancelled) return;
+      if (cancelled || initToken !== initTokenRef.current) {
+        fc.dispose();
 
+        if (fabricRef.current === fc) {
+          fabricRef.current = null;
+        }
+
+        return;
+      }
+
+      applyFabricViewport(fc, renderedSize, zoom);
+      mountedPageRef.current = currentPage;
       setFabricCanvas(fc);
     };
 
-    initDone = init();
+    void init();
 
     return () => {
       cancelled = true;
-
-      const cleanup = () => {
-        if (fabricRef.current) {
-          const json = serializeFabricCanvas(fabricRef.current);
-
-          saveFabricJson(mountedPageRef.current, json);
-          fabricRef.current.dispose();
-          fabricRef.current = null;
-          setFabricCanvas(null);
-        }
-      };
-
-      if (initDone) {
-        initDone.then(cleanup);
-      } else {
-        cleanup();
-      }
     };
-  }, [currentPage, renderedSize]);
+  }, [currentPage, getFabricJson, page, renderedSize, saveFabricJson]);
 
-  // --- Update Fabric zoom when user changes zoom level ---
+  // --- Zoom / DPR: resize viewport without recreating the canvas ---
   useEffect(() => {
-    if (!fabricRef.current) return;
+    const fc = fabricRef.current;
 
-    fabricRef.current.setZoom(zoom);
-    fabricRef.current.renderAll();
-  }, [zoom]);
+    if (!fc || !renderedSize || mountedPageRef.current !== currentPage) {
+      return;
+    }
+
+    if (!page || page.pageNumber !== currentPage) {
+      return;
+    }
+
+    applyFabricViewport(fc, renderedSize, zoom);
+  }, [currentPage, page, renderedSize, zoom]);
+
+  // --- Unmount: persist and dispose ---
+  useEffect(() => {
+    return () => {
+      initTokenRef.current += 1;
+
+      const fc = fabricRef.current;
+
+      if (!fc) return;
+
+      const json = serializeFabricCanvas(fc);
+
+      saveFabricJson(mountedPageRef.current, json);
+      fc.dispose();
+      fabricRef.current = null;
+    };
+  }, [saveFabricJson]);
 
   return { fabricCanvas, fabricRef };
 }

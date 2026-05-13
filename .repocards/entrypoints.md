@@ -28,6 +28,19 @@ Files where execution begins — servers, CLIs, library public API, scripts.
 
 - `lib/providers/query-provider.tsx`
 
+## `app/(tools)/pdf-editor/page.tsx`
+
+**Reason:** no-incoming-imports · **Language:** tsx · **LOC:** 12
+
+**Exports:**
+
+- `const` **metadata** — [`app/(tools)/pdf-editor/page.tsx:5`](../app/(tools)/pdf-editor/page.tsx#L5)
+- `function` **PdfEditorPage** — [`app/(tools)/pdf-editor/page.tsx:9`](../app/(tools)/pdf-editor/page.tsx#L9)
+
+**Imports 1 local file:**
+
+- `app/(tools)/pdf-editor/PdfEditorPageClient.tsx`
+
 ## `components/sections/dashboard/dashboard-home.tsx`
 
 **Reason:** no-incoming-imports · **Language:** tsx · **LOC:** 27
@@ -68,11 +81,11 @@ Files where execution begins — servers, CLIs, library public API, scripts.
 
 ## `components/sections/pdf-editor/PdfEditorShell.tsx`
 
-**Reason:** no-incoming-imports · **Language:** tsx · **LOC:** 172
+**Reason:** no-incoming-imports · **Language:** tsx · **LOC:** 179
 
 **Exports:**
 
-- `function` **PdfEditorShell** — [`components/sections/pdf-editor/PdfEditorShell.tsx:131`](../components/sections/pdf-editor/PdfEditorShell.tsx#L131)
+- `function` **PdfEditorShell** — [`components/sections/pdf-editor/PdfEditorShell.tsx:138`](../components/sections/pdf-editor/PdfEditorShell.tsx#L138)
 
 **Imports 8 local files:**
 

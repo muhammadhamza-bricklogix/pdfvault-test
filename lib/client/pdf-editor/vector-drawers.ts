@@ -47,82 +47,102 @@ function resolveTopLeft(obj: FabricObj): { left: number; top: number } {
 // Text
 // ---------------------------------------------------------------------------
 
+/**
+ * Draws Fabric IText via pdf-lib StandardFonts (WinAnsi only).
+ * Returns false when the string contains characters those fonts cannot encode
+ * (e.g. math symbols); the merge pipeline then rasterizes that object instead.
+ */
 export async function drawIText(
   obj: FabricObj,
   page: PDFPage,
   ctx: CoordinateContext,
   fontCache: FontCache,
-): Promise<void> {
+): Promise<boolean> {
   const text = obj.text as string | undefined;
 
-  if (!text) return;
+  if (!text) return true;
 
-  const fontFamily = (obj.fontFamily as string) || "Helvetica";
-  const fontWeight = (obj.fontWeight as string) || "normal";
-  const fontStyle = (obj.fontStyle as string) || "normal";
-  const objScaleX = (obj.scaleX as number) ?? 1;
-  const objScaleY = (obj.scaleY as number) ?? 1;
-  const baseFontSize = (obj.fontSize as number) || 16;
-  const fontSize = baseFontSize * objScaleY;
-  const opacity = (obj.opacity as number) ?? 1;
-  const angle = (obj.angle as number) || 0;
+  try {
+    const fontFamily = (obj.fontFamily as string) || "Helvetica";
+    const fontWeight = (obj.fontWeight as string) || "normal";
+    const fontStyle = (obj.fontStyle as string) || "normal";
+    const objScaleX = (obj.scaleX as number) ?? 1;
+    const objScaleY = (obj.scaleY as number) ?? 1;
+    const baseFontSize = (obj.fontSize as number) || 16;
+    const fontSize = baseFontSize * objScaleY;
+    const opacity = (obj.opacity as number) ?? 1;
+    const angle = (obj.angle as number) || 0;
 
-  // The object's bounding box width in Fabric units (what the user sees as the text container)
-  const objWidth = ((obj.width as number) || 0) * objScaleX;
+    // The object's bounding box width in Fabric units (what the user sees as the text container)
+    const objWidth = ((obj.width as number) || 0) * objScaleX;
 
-  const { left, top } = resolveTopLeft(obj);
+    const { left, top } = resolveTopLeft(obj);
 
-  const font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
-  const color = hexToPdfColor(obj.fill as string) ?? rgb(0, 0, 0);
+    const font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+    const color = hexToPdfColor(obj.fill as string) ?? rgb(0, 0, 0);
 
-  const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
-  const fontHeight = font.heightAtSize(pdfFontSize, { descender: false });
-  const pdfMaxWidth = objWidth > 0 ? toPdfDim(objWidth, ctx.scaleX) : undefined;
+    const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
+    const fontHeight = font.heightAtSize(pdfFontSize, { descender: false });
+    const pdfMaxWidth =
+      objWidth > 0 ? toPdfDim(objWidth, ctx.scaleX) : undefined;
 
-  const pdfX = toPdfX(left, ctx);
-  const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY) - fontHeight;
+    const pdfX = toPdfX(left, ctx);
+    const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY) - fontHeight;
 
-  const lines = text.split("\n");
-  const lineHeight = (obj.lineHeight as number) ?? 1.16;
-  const pdfLineHeight = pdfFontSize * lineHeight;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (!line) continue; // skip blank lines (Y still advances via index)
-
-    page.drawText(line, {
-      color,
-      font,
-      maxWidth: pdfMaxWidth,
-      opacity,
-      rotate: angle ? degrees(-angle) : undefined,
-      size: pdfFontSize,
-      x: pdfX,
-      y: pdfY - i * pdfLineHeight,
-    });
-  }
-
-  // Underline simulation
-  if (obj.underline) {
-    const underlineOffset = pdfFontSize * 0.1;
+    const lines = text.split("\n");
+    const lineHeight = (obj.lineHeight as number) ?? 1.16;
+    const pdfLineHeight = pdfFontSize * lineHeight;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
       if (!line) continue;
 
-      const lineWidth = font.widthOfTextAtSize(line, pdfFontSize);
-      const lineY = pdfY - i * pdfLineHeight - underlineOffset;
+      font.widthOfTextAtSize(line, pdfFontSize);
+    }
 
-      page.drawLine({
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (!line) continue; // skip blank lines (Y still advances via index)
+
+      page.drawText(line, {
         color,
-        end: { x: pdfX + lineWidth, y: lineY },
+        font,
+        maxWidth: pdfMaxWidth,
         opacity,
-        start: { x: pdfX, y: lineY },
-        thickness: Math.max(0.5, pdfFontSize * 0.05),
+        rotate: angle ? degrees(-angle) : undefined,
+        size: pdfFontSize,
+        x: pdfX,
+        y: pdfY - i * pdfLineHeight,
       });
     }
+
+    // Underline simulation
+    if (obj.underline) {
+      const underlineOffset = pdfFontSize * 0.1;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (!line) continue;
+
+        const lineWidth = font.widthOfTextAtSize(line, pdfFontSize);
+        const lineY = pdfY - i * pdfLineHeight - underlineOffset;
+
+        page.drawLine({
+          color,
+          end: { x: pdfX + lineWidth, y: lineY },
+          opacity,
+          start: { x: pdfX, y: lineY },
+          thickness: Math.max(0.5, pdfFontSize * 0.05),
+        });
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -439,9 +459,13 @@ export async function drawGroup(
       case "i-text":
       case "itext":
       case "text":
-      case "textbox":
-        await drawIText(resolvedChild, page, ctx, fontCache);
+      case "textbox": {
+        const ok = await drawIText(resolvedChild, page, ctx, fontCache);
+
+        if (!ok) return false;
+
         break;
+      }
       case "path":
         drawPath(resolvedChild, page, ctx);
         break;

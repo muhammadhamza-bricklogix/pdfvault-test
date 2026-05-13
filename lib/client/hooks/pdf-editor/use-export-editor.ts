@@ -1,41 +1,27 @@
 "use client";
 
 import type { Canvas as FabricCanvas } from "fabric";
+import type { RefObject } from "react";
 
 import { useCallback, useEffect, useRef } from "react";
 
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
+import {
+  editedPdfFilename,
+  triggerPdfDownload,
+} from "@/lib/client/pdf-editor/trigger-pdf-download";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
-
-function buildExportFilename(name: string): string {
-  const dot = name.lastIndexOf(".");
-  const base = dot > 0 ? name.slice(0, dot) : name;
-
-  return `${base} (edited).pdf`;
-}
-
-function downloadBytes(bytes: Uint8Array, filename: string) {
-  const blob = new Blob([bytes.buffer as ArrayBuffer], {
-    type: "application/pdf",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 /**
  * Listens for `editor:export` (dispatched by the Export menu) and runs the
  * flatten-and-download pipeline locally. No upload, no auth.
  */
-export function useExportEditor(fabricCanvas: FabricCanvas | null) {
+export function useExportEditor(
+  fabricCanvas: FabricCanvas | null,
+  fabricCanvasInstanceRef?: RefObject<FabricCanvas | null>,
+) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
 
@@ -51,9 +37,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
     const {
       currentPage: page,
-      fabricCanvas: liveCanvas,
+      fabricCanvas: staleProp,
       file: sourceFile,
     } = stateRef.current;
+
+    const liveCanvas = fabricCanvasInstanceRef?.current ?? staleProp;
 
     if (!sourceFile) {
       toast.error({
@@ -73,7 +61,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         file: sourceFile,
       });
 
-      downloadBytes(bytes, buildExportFilename(sourceFile.name));
+      triggerPdfDownload(bytes, editedPdfFilename(sourceFile.name));
 
       toast.success({
         title: "Exported",
@@ -88,7 +76,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     } finally {
       isExportingRef.current = false;
     }
-  }, []);
+  }, [fabricCanvasInstanceRef]);
 
   useEffect(() => {
     const onExport = () => {

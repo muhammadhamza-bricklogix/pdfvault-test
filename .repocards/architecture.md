@@ -2,16 +2,16 @@
 
 **Package:** `pdfedits-frontend` v0.0.1
 
-**Stats:** 186 files · 4284 symbols · 633 imports.
+**Stats:** 195 files · 4362 symbols · 667 imports.
 
 ## Top-level layout
 
 | Directory | Files | LOC |
 |---|---:|---:|
-| `components/` | 75 | 10249 |
-| `lib/` | 74 | 5891 |
-| `app/` | 28 | 1010 |
-| `(root)` | 8 | 1627 |
+| `components/` | 80 | 10412 |
+| `lib/` | 77 | 6441 |
+| `app/` | 29 | 1042 |
+| `(root)` | 8 | 1640 |
 | `public/` | 1 | 31 |
 
 ## Hub files (most-connected)
@@ -35,6 +35,7 @@ These files sit at the center of the import graph. Changes here tend to ripple w
 
 - [`app/layout.tsx`](../app/layout.tsx) — no-incoming-imports
 - [`lib/providers/app-providers.tsx`](../lib/providers/app-providers.tsx) — no-incoming-imports
+- [`app/(tools)/pdf-editor/page.tsx`](../app/(tools)/pdf-editor/page.tsx) — no-incoming-imports
 - [`components/sections/dashboard/dashboard-home.tsx`](../components/sections/dashboard/dashboard-home.tsx) — no-incoming-imports
 - [`components/sections/dashboard/dashboard-shell.tsx`](../components/sections/dashboard/dashboard-shell.tsx) — no-incoming-imports
 - [`components/sections/home/home-hero.tsx`](../components/sections/home/home-hero.tsx) — no-incoming-imports
