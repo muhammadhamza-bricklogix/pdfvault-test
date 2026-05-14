@@ -43,18 +43,6 @@ export function usePageRenderer({
     const cssWidth = viewport.width / dpr;
     const cssHeight = viewport.height / dpr;
 
-    // --- DEBUG LOGGING ---
-    console.log(
-      "[page-renderer] zoom:",
-      zoom,
-      "suppressText:",
-      suppressText,
-      "CSS:",
-      cssWidth,
-      "x",
-      cssHeight,
-    );
-
     let renderTask: RenderTask | null = null;
     let cancelled = false;
 
@@ -89,7 +77,13 @@ export function usePageRenderer({
         await renderTask.promise;
 
         if (!cancelled) {
-          setRenderedSize({ height: cssHeight, width: cssWidth });
+          setRenderedSize((prev) => {
+            if (prev && prev.width === cssWidth && prev.height === cssHeight) {
+              return prev;
+            }
+
+            return { height: cssHeight, width: cssWidth };
+          });
         }
       } catch {
         // render was cancelled — expected on re-renders

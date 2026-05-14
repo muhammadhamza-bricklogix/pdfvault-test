@@ -61,10 +61,7 @@ function detectWeightAndStyle(realFontName: string): {
  *   2. Verify the font exists in document.fonts; if not, fall back to a
  *      web-safe family based on the textContent style hint.
  */
-function resolveFontFamily(
-  fontName: string,
-  styleFontFamily: string,
-): string {
+function resolveFontFamily(fontName: string, styleFontFamily: string): string {
   // Check if pdf.js registered this font in document.fonts
   let found = false;
 
@@ -83,32 +80,34 @@ function resolveFontFamily(
   return "Helvetica";
 }
 
-type TextColorEntry = {
-  color: string;
-  x: number;
-  y: number;
-};
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (v: number) =>
+    Math.round(v * 255)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
 
 /**
- * Extracts text fill colors from the PDF operator list by walking the
- * graphics state machine. Records the fill color and text matrix position
- * for each showText operation.
+ * Extracts a flat sequential list of fill colors from the operator list —
+ * one color per showText operation. Colors are tracked through save/restore
+ * graphics state. The list is in document order.
  *
- * Returns entries that can be matched to getTextContent() items by position.
+ * NOTE: Color-to-text-item mapping is not yet implemented. All text items
+ * currently default to #000000. This will be addressed in a future update
+ * once a reliable correlation strategy between showText ops and
+ * getTextContent() items is established.
  */
-async function extractTextColorsWithPositions(
+async function extractSequentialTextColors(
   page: PDFPageProxy,
-): Promise<TextColorEntry[]> {
+): Promise<string[]> {
   const { OPS } = await import("pdfjs-dist");
   const opList = await page.getOperatorList();
 
   let currentFillColor = "#000000";
   const gsStack: string[] = [];
-  const entries: TextColorEntry[] = [];
-
-  // Track current text matrix position (set by setTextMatrix / moveText)
-  let textX = 0;
-  let textY = 0;
+  const colors: string[] = [];
 
   for (let i = 0; i < opList.fnArray.length; i++) {
     const op = opList.fnArray[i];
@@ -130,61 +129,17 @@ async function extractTextColorsWithPositions(
       } else if (typeof colorArg === "number") {
         currentFillColor = rgbToHex(colorArg, colorArg, colorArg);
       }
-    } else if (op === OPS.setTextMatrix) {
-      // setTextMatrix args: [a, b, c, d, e, f] — e=x, f=y
-      textX = Number(args[4]) || 0;
-      textY = Number(args[5]) || 0;
-    } else if (op === OPS.moveText) {
-      // moveText args: [tx, ty] — relative offset
-      textX += Number(args[0]) || 0;
-      textY += Number(args[1]) || 0;
     } else if (
       op === OPS.showText ||
       op === OPS.showSpacedText ||
       op === OPS.nextLineShowText ||
       op === OPS.nextLineSetSpacingShowText
     ) {
-      entries.push({ color: currentFillColor, x: textX, y: textY });
+      colors.push(currentFillColor);
     }
   }
 
-  return entries;
-}
-
-/**
- * Finds the color for a text item by matching its PDF-space position
- * against the operator list color entries.
- */
-function findColorForPosition(
-  pdfX: number,
-  pdfY: number,
-  colorEntries: TextColorEntry[],
-): string {
-  // Find the closest color entry by position (within a tolerance)
-  let bestColor = "#000000";
-  let bestDist = Infinity;
-
-  for (const entry of colorEntries) {
-    const dx = Math.abs(entry.x - pdfX);
-    const dy = Math.abs(entry.y - pdfY);
-    const dist = dx + dy;
-
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestColor = entry.color;
-    }
-  }
-
-  return bestColor;
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  const toHex = (v: number) =>
-    Math.round(v * 255)
-      .toString(16)
-      .padStart(2, "0");
-
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  return colors;
 }
 
 /**
@@ -192,16 +147,17 @@ function rgbToHex(r: number, g: number, b: number): string {
  * Fabric.js canvas coordinates (base space, zoom=1).
  *
  * Uses the actual embedded fonts loaded by pdf.js (via document.fonts)
- * instead of mapping to generic web-safe fonts. Extracts real text colors
- * from the PDF operator list.
+ * instead of mapping to generic web-safe fonts.
  */
 export async function extractTextBlocks(
   page: PDFPageProxy,
 ): Promise<TextBlock[]> {
   const viewport = page.getViewport({ scale: 1.0 });
-  const [textContent, colorEntries] = await Promise.all([
+  const [textContent] = await Promise.all([
     page.getTextContent(),
-    extractTextColorsWithPositions(page),
+    // Color extraction runs but isn't mapped yet — keep the call so the
+    // pipeline is ready when mapping is implemented.
+    extractSequentialTextColors(page),
   ]);
 
   const blocks: TextBlock[] = [];
@@ -271,17 +227,11 @@ export async function extractTextBlocks(
       weight: "normal" as const,
     };
 
-    const styleFontFamily = textContent.styles[fontName]?.fontFamily ?? "sans-serif";
-
-    // Match color by PDF-space position (transform[4]=x, transform[5]=y)
-    const color = findColorForPosition(
-      transform[4] as number,
-      transform[5] as number,
-      colorEntries,
-    );
+    const styleFontFamily =
+      textContent.styles[fontName]?.fontFamily ?? "sans-serif";
 
     blocks.push({
-      color,
+      color: "#000000",
       fontFamily: resolveFontFamily(fontName, styleFontFamily),
       fontSize,
       fontStyle: fontInfo.style,
