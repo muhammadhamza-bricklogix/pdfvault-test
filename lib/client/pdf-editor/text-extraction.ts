@@ -1,6 +1,14 @@
 import type { PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
+export type FontData = {
+  bold: boolean;
+  bytes: Uint8Array;
+  italic: boolean;
+  /** The pdf.js identifier (e.g. "g_d2_f1") — matches Fabric fontFamily */
+  loadedName: string;
+};
+
 export type TextBlock = {
   color: string;
   fontFamily: string;
@@ -230,9 +238,13 @@ export async function extractTextBlocks(
     const styleFontFamily =
       textContent.styles[fontName]?.fontFamily ?? "sans-serif";
 
+    const resolvedFamily = resolveFontFamily(fontName, styleFontFamily);
+
+    console.log(`[TextExtract] "${str.slice(0, 40)}" | font=${fontName} resolved=${resolvedFamily} real=${fontInfo.realName} w=${fontInfo.weight} s=${fontInfo.style} | transform=[${transform.map((v: number) => v.toFixed(2)).join(",")}] | pdfX=${(transform[4] as number).toFixed(2)} pdfY=${(transform[5] as number).toFixed(2)} | vpX=${vpX.toFixed(2)} vpY=${vpY.toFixed(2)} | fontSize=${fontSize.toFixed(2)} | textItem.width=${textItem.width.toFixed(2)} vpWidth=${vpWidth.toFixed(2)} vpHeight=${vpHeight.toFixed(2)} | finalX=${Math.round(vpX)} finalY=${Math.round(y)} | viewport.scale=${viewport.scale}`);
+
     blocks.push({
       color: "#000000",
-      fontFamily: resolveFontFamily(fontName, styleFontFamily),
+      fontFamily: resolvedFamily,
       fontSize,
       fontStyle: fontInfo.style,
       fontWeight: fontInfo.weight,
@@ -246,4 +258,58 @@ export async function extractTextBlocks(
   }
 
   return blocks;
+}
+
+/**
+ * Extracts binary font data from pdf.js for the given font identifiers.
+ *
+ * pdf.js converts embedded PDF fonts to OpenType format and exposes the bytes
+ * via `commonObjs.get(fontName).data`. We copy these bytes (they're views that
+ * become invalid when the page is destroyed) so they can be embedded into the
+ * output PDF via pdf-lib + fontkit.
+ *
+ * Fonts without binary data (Type3, system fonts, missing) are skipped —
+ * they'll fall back to StandardFonts during export.
+ */
+export function extractFontData(
+  page: PDFPageProxy,
+  fontNames: Set<string>,
+): FontData[] {
+  const result: FontData[] = [];
+
+  for (const fontName of fontNames) {
+    try {
+      if (!page.commonObjs.has(fontName)) {
+        console.warn(`[FontExtract] commonObjs missing: ${fontName}`);
+        continue;
+      }
+
+      // fontExtraProperties must be true in getDocument() options,
+      // otherwise pdf.js clears font data after loading into document.fonts.
+      const fontObj = page.commonObjs.get(fontName) as Record<string, unknown>;
+
+      if (!fontObj) {
+        console.warn(`[FontExtract] fontObj is null: ${fontName}`);
+        continue;
+      }
+
+      const data = (fontObj as any).data as Uint8Array | undefined;
+
+      if (!data || data.byteLength === 0) {
+        console.warn(`[FontExtract] No binary data for: ${fontName}`);
+        continue;
+      }
+
+      result.push({
+        bold: ((fontObj as any).bold as boolean) ?? false,
+        bytes: new Uint8Array(data),
+        italic: ((fontObj as any).italic as boolean) ?? false,
+        loadedName: fontName,
+      });
+    } catch (err) {
+      console.error(`[FontExtract] Error reading font ${fontName}:`, err);
+    }
+  }
+
+  return result;
 }

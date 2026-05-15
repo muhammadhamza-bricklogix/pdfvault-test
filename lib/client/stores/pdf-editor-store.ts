@@ -1,5 +1,7 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 
+import type { FontData } from "@/lib/client/pdf-editor/text-extraction";
+
 import { create } from "zustand";
 
 const MAX_HISTORY = 50;
@@ -27,6 +29,7 @@ type PdfEditorStore = {
   highlightColor: string;
   fabricJsonByPage: Map<number, string>;
   file: File | null;
+  fontDataByLoadedName: Map<string, FontData>;
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
   createPdfModalKey: number;
@@ -42,6 +45,7 @@ type PdfEditorStore = {
   shapeStrokeWidth: number;
   zoom: number;
 
+  addFontData: (fonts: FontData[]) => void;
   clearFile: () => void;
   setCurrentDocument: (doc: { id: string; name: string } | null) => void;
   getFabricJson: (page: number) => string | undefined;
@@ -77,6 +81,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
+  fontDataByLoadedName: new Map(),
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
   createPdfModalKey: 0,
@@ -92,6 +97,21 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   shapeStrokeWidth: 2,
   zoom: 1.0,
 
+  addFontData: (fonts) =>
+    set((state) => {
+      const newMap = new Map(state.fontDataByLoadedName);
+      let changed = false;
+
+      for (const font of fonts) {
+        if (!newMap.has(font.loadedName)) {
+          newMap.set(font.loadedName, font);
+          changed = true;
+        }
+      }
+
+      return changed ? { fontDataByLoadedName: newMap } : {};
+    }),
+
   clearFile: () =>
     set({
       activeTool: "select",
@@ -101,6 +121,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       editorMode: "editText",
       fabricJsonByPage: new Map(),
       file: null,
+      fontDataByLoadedName: new Map(),
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
       isCreatePdfModalOpen: false,

@@ -1,6 +1,9 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
+import type { FontData } from "./text-extraction";
 
 import { createCoordinateContext } from "./coordinate-transform";
 import { FontCache } from "./font-mapping";
@@ -23,9 +26,20 @@ type FabricObj = Record<string, any>;
 export type MergePdfInput = {
   /** Map of 1-indexed page number → Fabric canvas JSON. */
   fabricJsonByPage: Map<number, string>;
+  /** Font data extracted from pdf.js for custom font embedding. */
+  fontDataMap: Map<string, FontData>;
+  /** The pdf.js document proxy — needed to render pages for raster backgrounds. */
+  pdfDocument: PDFDocumentProxy;
   /** Original PDF bytes. */
   sourceBytes: ArrayBuffer;
 };
+
+// pdf.js OPS constants for text rendering operations (31–49)
+const TEXT_OPS_MIN = 31;
+const TEXT_OPS_MAX = 49;
+
+// Background raster scale — 3× for high quality output
+const RASTER_SCALE = 3;
 
 // ---------------------------------------------------------------------------
 // Object classification
@@ -46,6 +60,58 @@ const VECTOR_TYPES = new Set([
 
 function isVectorizable(obj: FabricObj): boolean {
   return VECTOR_TYPES.has((obj.type as string).toLowerCase());
+}
+
+// ---------------------------------------------------------------------------
+// Render a pdf.js page to PNG (text-suppressed) for use as raster background
+// ---------------------------------------------------------------------------
+
+async function renderPageToPng(page: PDFPageProxy): Promise<Uint8Array> {
+  const viewport = page.getViewport({ scale: RASTER_SCALE });
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.position = "fixed";
+  canvas.style.left = "-9999px";
+  canvas.style.top = "-9999px";
+  document.body.appendChild(canvas);
+
+  try {
+    // Identify text operations to suppress
+    const opList = await page.getOperatorList();
+    const textIndices = new Set<number>();
+
+    for (let i = 0; i < opList.fnArray.length; i++) {
+      const op = opList.fnArray[i];
+
+      if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
+        textIndices.add(i);
+      }
+    }
+
+    // Render with text suppressed
+    await page.render({
+      canvas,
+      operationsFilter: (i: number) => !textIndices.has(i),
+      viewport,
+    }).promise;
+
+    // Export as PNG bytes
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))),
+        "image/png",
+      );
+    });
+
+    return new Uint8Array(await blob.arrayBuffer());
+  } finally {
+    if (document.body.contains(canvas)) {
+      document.body.removeChild(canvas);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -164,47 +230,97 @@ async function processPageObjects(
 }
 
 // ---------------------------------------------------------------------------
-// Public API — unchanged signature
+// Public API
 // ---------------------------------------------------------------------------
 
 /**
- * Loads the source PDF and merges each page's Fabric edits using a hybrid
- * strategy: vectorizable objects (text, shapes, paths) are drawn directly
- * via pdf-lib drawing commands; bitmap objects (images, signatures) are
- * rasterized to PNG and overlaid. Z-order is preserved.
+ * Builds a new PDF from the source by:
+ *
+ * - **Unedited pages**: copied as-is from the source PDF (zero quality loss).
+ * - **Edited pages**: the original page is rendered to a high-res PNG (with
+ *   text suppressed) as a raster background, then all Fabric objects are drawn
+ *   on top using real embedded fonts extracted from pdf.js.
+ *
+ * This eliminates text duplication (original text is rasterized into the
+ * background, Fabric text objects become the sole vector text layer) and
+ * preserves original font fidelity.
  */
 export async function mergeFabricEditsIntoPdf({
   fabricJsonByPage,
+  fontDataMap,
+  pdfDocument,
   sourceBytes,
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
-  const pdfDoc = await PdfDoc.load(sourceBytes);
-  const pages = pdfDoc.getPages();
-  const fontCache = new FontCache(pdfDoc);
 
-  for (const [pageNumber, json] of Array.from(fabricJsonByPage.entries())) {
-    const page = pages[pageNumber - 1];
+  // Load source for copying unedited pages
+  const sourcePdf = await PdfDoc.load(sourceBytes);
+  const totalPages = sourcePdf.getPageCount();
 
-    if (!page) continue;
+  // Create a fresh output document
+  const outputPdf = await PdfDoc.create();
+  const fontCache = new FontCache(outputPdf, fontDataMap);
 
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    if (!fabricJsonByPage.has(pageNum)) {
+      // No edits — copy original page as-is (preserves vectors, fonts, etc.)
+      const [copiedPage] = await outputPdf.copyPages(sourcePdf, [
+        pageNum - 1,
+      ]);
+
+      outputPdf.addPage(copiedPage);
+      continue;
+    }
+
+    // Page has edits — rasterize background + draw Fabric objects
+    const sourcePage = sourcePdf.getPage(pageNum - 1);
+    const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
+
+    // 1. Render original page to PNG (text-suppressed)
+    const pdfjsPage = await pdfDocument.getPage(pageNum);
+    const pngBytes = await renderPageToPng(pdfjsPage);
+
+    // 2. Create new page with same dimensions
+    const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
+
+    // 3. Embed and draw rasterized background
+    const bgImage = await outputPdf.embedPng(pngBytes);
+
+    newPage.drawImage(bgImage, {
+      height: pdfHeight,
+      width: pdfWidth,
+      x: 0,
+      y: 0,
+    });
+
+    // 4. Draw all Fabric objects on top
+    const json = fabricJsonByPage.get(pageNum)!;
     const parsed = parseFabricJson(json);
 
-    if (!parsed) continue;
+    if (parsed) {
+      const objects = (parsed.objects ?? []) as FabricObj[];
 
-    const objects = (parsed.objects ?? []) as FabricObj[];
+      if (objects.length) {
+        const ctx = createCoordinateContext(
+          parsed.width,
+          parsed.height,
+          pdfWidth,
+          pdfHeight,
+        );
 
-    if (!objects.length) continue;
+        console.log(`[MergePDF] CoordinateContext: fabricW=${parsed.width} fabricH=${parsed.height} pdfW=${pdfWidth} pdfH=${pdfHeight} scaleX=${ctx.scaleX.toFixed(6)} scaleY=${ctx.scaleY.toFixed(6)}`);
 
-    const { height: pdfHeight, width: pdfWidth } = page.getSize();
-    const ctx = createCoordinateContext(
-      parsed.width,
-      parsed.height,
-      pdfWidth,
-      pdfHeight,
-    );
-
-    await processPageObjects(objects, parsed, page, pdfDoc, ctx, fontCache);
+        await processPageObjects(
+          objects,
+          parsed,
+          newPage,
+          outputPdf,
+          ctx,
+          fontCache,
+        );
+      }
+    }
   }
 
-  return pdfDoc.save();
+  return outputPdf.save();
 }

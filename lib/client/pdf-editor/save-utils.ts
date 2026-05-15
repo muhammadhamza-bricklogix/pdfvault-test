@@ -144,8 +144,19 @@ export async function buildEditedPdfBytes({
       .saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
   }
 
-  const fabricJsonByPage = usePdfEditorStore.getState().fabricJsonByPage;
+  const { fabricJsonByPage, fontDataByLoadedName, pdfDocument } =
+    usePdfEditorStore.getState();
+
+  if (!pdfDocument) {
+    throw new Error("PDF document not loaded");
+  }
+
   const sourceBytes = await file.arrayBuffer();
 
-  return mergeFabricEditsIntoPdf({ fabricJsonByPage, sourceBytes });
+  return mergeFabricEditsIntoPdf({
+    fabricJsonByPage,
+    fontDataMap: fontDataByLoadedName,
+    pdfDocument,
+    sourceBytes,
+  });
 }

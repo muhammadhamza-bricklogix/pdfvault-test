@@ -1,7 +1,19 @@
-import type { Color, PDFPage } from "pdf-lib";
+import type { Color, PDFFont, PDFPage } from "pdf-lib";
 import type { FontCache } from "./font-mapping";
 
-import { degrees, LineCapStyle, rgb } from "pdf-lib";
+import {
+  beginText,
+  degrees,
+  endText,
+  LineCapStyle,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+  setFillingColor,
+  setFontAndSize,
+  setTextMatrix,
+  showText,
+} from "pdf-lib";
 
 import { hexToPdfColor } from "./color-utils";
 import {
@@ -69,6 +81,7 @@ export async function drawIText(
 
   // The object's bounding box width in Fabric units (what the user sees as the text container)
   const objWidth = ((obj.width as number) || 0) * objScaleX;
+  const editorType = (obj.editorType as string) || "";
 
   const { left, top } = resolveTopLeft(obj);
 
@@ -77,30 +90,78 @@ export async function drawIText(
 
   const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
   const fontHeight = font.heightAtSize(pdfFontSize, { descender: false });
-  const pdfMaxWidth = objWidth > 0 ? toPdfDim(objWidth, ctx.scaleX) : undefined;
+
+  // For extracted PDF text items, skip maxWidth — their position is controlled
+  // by precise x/y coordinates, not text wrapping. maxWidth would cause pdf-lib
+  // to compress text when its font metrics differ from the original PDF's.
+  const pdfMaxWidth =
+    editorType === "editModeText"
+      ? undefined
+      : objWidth > 0
+        ? toPdfDim(objWidth, ctx.scaleX)
+        : undefined;
 
   const pdfX = toPdfX(left, ctx);
   const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY) - fontHeight;
+
+  // Compute what pdf-lib thinks the text width is vs what Fabric reported
+  const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
+  const fabricReportedWidth = toPdfDim(objWidth, ctx.scaleX);
+
+  if (editorType === "editModeText") {
+    console.log(`[DrawIText] "${text.slice(0, 40)}" | font=${fontFamily} w=${fontWeight} s=${fontStyle} | fabricLeft=${left} fabricTop=${top} | objWidth=${objWidth} scaleX=${objScaleX} scaleY=${objScaleY} | baseFontSize=${baseFontSize} computedFontSize=${fontSize} | pdfFontSize=${pdfFontSize.toFixed(2)} | pdfX=${pdfX.toFixed(2)} pdfY=${pdfY.toFixed(2)} | fontHeight=${fontHeight.toFixed(2)} | pdfLibTextWidth=${pdfLibTextWidth.toFixed(2)} fabricWidth(pdf)=${fabricReportedWidth.toFixed(2)} | maxWidth=${pdfMaxWidth?.toFixed(2) ?? "none"} | ctx: fabricW=${ctx.fabricWidth} fabricH=${ctx.fabricHeight} pdfW=${ctx.pdfWidth} pdfH=${ctx.pdfHeight} scX=${ctx.scaleX.toFixed(4)} scY=${ctx.scaleY.toFixed(4)}`);
+  }
 
   const lines = text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
   const pdfLineHeight = pdfFontSize * lineHeight;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  // For extracted PDF text, use raw operators with horizontal scaling to match
+  // the original text width. pdf-lib/fontkit calculates narrower widths than
+  // the browser's font renderer for the same font bytes, so we stretch to
+  // compensate.
+  if (editorType === "editModeText" && pdfLibTextWidth > 0 && fabricReportedWidth > 0) {
+    const hScale = fabricReportedWidth / pdfLibTextWidth;
 
-    if (!line) continue; // skip blank lines (Y still advances via index)
+    // Register font on the page and get its PDF resource name
+    const fontKey = page.node.newFontDictionary(font.name, font.ref);
 
-    page.drawText(line, {
-      color,
-      font,
-      maxWidth: pdfMaxWidth,
-      opacity,
-      rotate: angle ? degrees(-angle) : undefined,
-      size: pdfFontSize,
-      x: pdfX,
-      y: pdfY - i * pdfLineHeight,
-    });
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (!line) continue;
+
+      const lineY = pdfY - i * pdfLineHeight;
+      const encodedText = font.encodeText(line);
+
+      page.pushOperators(
+        pushGraphicsState(),
+        beginText(),
+        setFillingColor(color),
+        setFontAndSize(fontKey, pdfFontSize),
+        setTextMatrix(hScale, 0, 0, 1, pdfX, lineY),
+        showText(encodedText),
+        endText(),
+        popGraphicsState(),
+      );
+    }
+  } else {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (!line) continue; // skip blank lines (Y still advances via index)
+
+      page.drawText(line, {
+        color,
+        font,
+        maxWidth: pdfMaxWidth,
+        opacity,
+        rotate: angle ? degrees(-angle) : undefined,
+        size: pdfFontSize,
+        x: pdfX,
+        y: pdfY - i * pdfLineHeight,
+      });
+    }
   }
 
   // Underline simulation

@@ -37,7 +37,10 @@ export function usePdfLoader() {
 
         if (cancelled) return;
 
-        loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+        loadingTask = pdfjs.getDocument({
+          data: arrayBuffer,
+          fontExtraProperties: true,
+        });
         const doc = await loadingTask.promise;
 
         if (cancelled) {
