@@ -30,6 +30,13 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const sourcePage = usePdfEditorStore((s) => {
+    const order = s.pageOrder;
+
+    if (!order.length) return s.currentPage;
+
+    return order[s.currentPage - 1] ?? s.currentPage;
+  });
   const zoom = usePdfEditorStore((s) => s.zoom);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,7 +50,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     let cancelled = false;
 
     pdfDocument
-      .getPage(currentPage)
+      .getPage(sourcePage)
       .then((p) => {
         if (!cancelled) setPage(p);
       })
@@ -55,7 +62,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, pdfDocument]);
+  }, [sourcePage, pdfDocument]);
 
   const { renderedSize } = usePageRenderer({
     canvasRef,

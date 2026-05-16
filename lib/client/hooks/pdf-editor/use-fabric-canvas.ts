@@ -27,12 +27,21 @@ export function useFabricCanvas({
   renderedSize,
 }: UseFabricCanvasParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const sourcePage = usePdfEditorStore((s) => {
+    const order = s.pageOrder;
+
+    if (!order.length) return s.currentPage;
+
+    return order[s.currentPage - 1] ?? s.currentPage;
+  });
   const zoom = usePdfEditorStore((s) => s.zoom);
   const getFabricJson = usePdfEditorStore((s) => s.getFabricJson);
-  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
+  const saveFabricJsonBySourcePage = usePdfEditorStore(
+    (s) => s.saveFabricJsonBySourcePage,
+  );
 
   const fabricRef = useRef<Canvas | null>(null);
-  const mountedPageRef = useRef<number>(currentPage);
+  const mountedPageRef = useRef<number>(sourcePage);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
 
   // Base dimensions = CSS size at zoom=1 (matches PDF page points)
@@ -88,7 +97,7 @@ export function useFabricCanvas({
       }
 
       fabricRef.current = fc;
-      mountedPageRef.current = currentPage;
+      mountedPageRef.current = sourcePage;
 
       // Rehydrate saved JSON for this page
       const saved = getFabricJson(currentPage);
@@ -137,7 +146,7 @@ export function useFabricCanvas({
         if (fabricRef.current) {
           const json = serializeFabricCanvas(fabricRef.current);
 
-          saveFabricJson(mountedPageRef.current, json);
+          saveFabricJsonBySourcePage(mountedPageRef.current, json);
           fabricRef.current.dispose();
           fabricRef.current = null;
           setFabricCanvas(null);
@@ -150,7 +159,7 @@ export function useFabricCanvas({
         cleanup();
       }
     };
-  }, [currentPage, renderedSize]);
+  }, [renderedSize, sourcePage]);
 
   // --- Update Fabric zoom when user changes zoom level ---
   useEffect(() => {

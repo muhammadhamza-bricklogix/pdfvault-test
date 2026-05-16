@@ -1,4 +1,4 @@
-import type { Color, PDFFont, PDFPage } from "pdf-lib";
+import type { Color, PDFPage } from "pdf-lib";
 import type { FontCache } from "./font-mapping";
 
 import {
@@ -127,7 +127,9 @@ export async function drawIText(
       : fabricObjWidth;
 
   if (editorType === "editModeText") {
-    console.log(`[DrawIText] "${text.slice(0, 40)}" | pdfOrigWidth=${pdfTextWidth > 0 ? toPdfDim(pdfTextWidth, ctx.scaleX).toFixed(2) : "N/A"} fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`);
+    console.log(
+      `[DrawIText] "${text.slice(0, 40)}" | pdfOrigWidth=${pdfTextWidth > 0 ? toPdfDim(pdfTextWidth, ctx.scaleX).toFixed(2) : "N/A"} fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
+    );
   }
 
   const lines = text.split("\n");

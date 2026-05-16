@@ -1,5 +1,4 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
-
 import type { FontData } from "@/lib/client/pdf-editor/text-extraction";
 
 import { create } from "zustand";
@@ -19,6 +18,13 @@ export type ActiveTool =
 export type EditorMode = "edit" | "editText";
 export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
 
+/** Resolves a display slot (1..N) to a stable source PDF page index (1..N). */
+function resolveSourcePage(displayPage: number, pageOrder: number[]): number {
+  if (!pageOrder.length) return displayPage;
+
+  return pageOrder[displayPage - 1] ?? displayPage;
+}
+
 type PdfEditorStore = {
   activeShapeType: ShapeType;
   activeTool: ActiveTool;
@@ -27,18 +33,22 @@ type PdfEditorStore = {
   currentPage: number;
   editorMode: EditorMode;
   highlightColor: string;
+  /** Fabric JSON keyed by source PDF page number (stable across reorder). */
   fabricJsonByPage: Map<number, string>;
   file: File | null;
   fontDataByLoadedName: Map<string, FontData>;
+  /** Undo stacks keyed by source PDF page number (stable across reorder). */
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
   createPdfModalKey: number;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
+  isManagePagesOpen: boolean;
   isRestoringHistory: boolean;
   isSignatureModalOpen: boolean;
   isSignedIn: boolean;
   pageCount: number;
+  pageOrder: number[];
   pdfDocument: PDFDocumentProxy | null;
   shapeFill: string;
   shapeStroke: string;
@@ -49,16 +59,28 @@ type PdfEditorStore = {
   clearFile: () => void;
   setCurrentDocument: (doc: { id: string; name: string } | null) => void;
   getFabricJson: (page: number) => string | undefined;
+  getSourcePageIndex: (displayPage?: number) => number;
   pushHistory: (page: number, json: string) => void;
+  reorderPages: (fromDisplay: number, toDisplay: number) => void;
+  setPageOrder: (pageOrder: number[]) => void;
   redo: (page: number) => string | undefined;
   saveFabricJson: (page: number, json: string) => void;
+  saveFabricJsonBySourcePage: (sourcePage: number, json: string) => void;
   setActiveShapeType: (type: ShapeType) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setEditorMode: (mode: EditorMode) => void;
   setHighlightColor: (color: string) => void;
   setCurrentPage: (page: number) => void;
+  applyManagePagesSave: (params: {
+    currentPage: number;
+    fabricJsonByPage: Map<number, string>;
+    file: File;
+    historyByPage: Map<number, string[]>;
+    historyIndexByPage: Map<number, number>;
+  }) => void;
   setFile: (file: File | null) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
+  setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
   setIsRestoringHistory: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
@@ -87,10 +109,12 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   createPdfModalKey: 0,
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
+  isManagePagesOpen: false,
   isRestoringHistory: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
   pageCount: 0,
+  pageOrder: [],
   pdfDocument: null,
   shapeFill: "transparent",
   shapeStroke: "#000000",
@@ -126,9 +150,11 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       historyIndexByPage: new Map(),
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
+      isManagePagesOpen: false,
       isRestoringHistory: false,
       isSignatureModalOpen: false,
       pageCount: 0,
+      pageOrder: [],
       pdfDocument: null,
       shapeFill: "transparent",
       shapeStroke: "#000000",
@@ -142,12 +168,72 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       currentDocumentName: doc?.name ?? null,
     }),
 
-  getFabricJson: (page) => get().fabricJsonByPage.get(page),
+  getFabricJson: (displayPage) => {
+    const state = get();
+    const source = resolveSourcePage(displayPage, state.pageOrder);
 
-  pushHistory: (page, json) =>
+    return state.fabricJsonByPage.get(source);
+  },
+
+  getSourcePageIndex: (displayPage) => {
+    const state = get();
+    const display = displayPage ?? state.currentPage;
+
+    return resolveSourcePage(display, state.pageOrder);
+  },
+
+  reorderPages: (fromDisplay, toDisplay) =>
     set((state) => {
-      const history = [...(state.historyByPage.get(page) ?? [])];
-      const idx = state.historyIndexByPage.get(page) ?? -1;
+      const n = state.pageCount;
+
+      if (n <= 1 || fromDisplay === toDisplay) return {};
+
+      const fromIdx = fromDisplay - 1;
+      const toIdx = toDisplay - 1;
+
+      if (
+        fromIdx < 0 ||
+        toIdx < 0 ||
+        fromIdx >= n ||
+        toIdx >= n ||
+        fromIdx === toIdx
+      ) {
+        return {};
+      }
+
+      const oldOrder = [...state.pageOrder];
+      const newOrder = [...oldOrder];
+      const [moved] = newOrder.splice(fromIdx, 1);
+
+      newOrder.splice(toIdx, 0, moved);
+
+      const sourceAtCurrent = oldOrder[state.currentPage - 1];
+      const newCurrentPage = newOrder.indexOf(sourceAtCurrent) + 1;
+
+      return {
+        currentPage: newCurrentPage,
+        pageOrder: newOrder,
+      };
+    }),
+
+  setPageOrder: (newOrder) =>
+    set((state) => {
+      if (newOrder.length !== state.pageCount) return {};
+
+      const sourceAtCurrent = state.pageOrder[state.currentPage - 1];
+      const newCurrentPage = newOrder.indexOf(sourceAtCurrent) + 1;
+
+      return {
+        currentPage: newCurrentPage > 0 ? newCurrentPage : 1,
+        pageOrder: [...newOrder],
+      };
+    }),
+
+  pushHistory: (displayPage, json) =>
+    set((state) => {
+      const source = resolveSourcePage(displayPage, state.pageOrder);
+      const history = [...(state.historyByPage.get(source) ?? [])];
+      const idx = state.historyIndexByPage.get(source) ?? -1;
       // Discard any redo states ahead of current index
       const trimmed = history.slice(0, idx + 1);
 
@@ -156,16 +242,17 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       const newHistory = new Map(state.historyByPage);
       const newIndex = new Map(state.historyIndexByPage);
 
-      newHistory.set(page, trimmed);
-      newIndex.set(page, trimmed.length - 1);
+      newHistory.set(source, trimmed);
+      newIndex.set(source, trimmed.length - 1);
 
       return { historyByPage: newHistory, historyIndexByPage: newIndex };
     }),
 
-  redo: (page) => {
+  redo: (displayPage) => {
     const state = get();
-    const history = state.historyByPage.get(page) ?? [];
-    const idx = state.historyIndexByPage.get(page) ?? -1;
+    const source = resolveSourcePage(displayPage, state.pageOrder);
+    const history = state.historyByPage.get(source) ?? [];
+    const idx = state.historyIndexByPage.get(source) ?? -1;
 
     if (idx >= history.length - 1) return undefined;
     const newIdx = idx + 1;
@@ -173,7 +260,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     set((s) => {
       const newIndex = new Map(s.historyIndexByPage);
 
-      newIndex.set(page, newIdx);
+      newIndex.set(source, newIdx);
 
       return { historyIndexByPage: newIndex };
     });
@@ -181,11 +268,21 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     return history[newIdx];
   },
 
-  saveFabricJson: (page, json) =>
+  saveFabricJson: (displayPage, json) =>
+    set((state) => {
+      const source = resolveSourcePage(displayPage, state.pageOrder);
+      const newMap = new Map(state.fabricJsonByPage);
+
+      newMap.set(source, json);
+
+      return { fabricJsonByPage: newMap };
+    }),
+
+  saveFabricJsonBySourcePage: (sourcePage, json) =>
     set((state) => {
       const newMap = new Map(state.fabricJsonByPage);
 
-      newMap.set(page, json);
+      newMap.set(sourcePage, json);
 
       return { fabricJsonByPage: newMap };
     }),
@@ -200,6 +297,22 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     ),
   setHighlightColor: (color) => set({ highlightColor: color }),
   setCurrentPage: (page) => set({ currentPage: page }),
+
+  applyManagePagesSave: ({
+    currentPage,
+    fabricJsonByPage,
+    file,
+    historyByPage,
+    historyIndexByPage,
+  }) =>
+    set({
+      currentPage,
+      fabricJsonByPage: new Map(fabricJsonByPage),
+      file,
+      historyByPage: new Map(historyByPage),
+      historyIndexByPage: new Map(historyIndexByPage),
+    }),
+
   setFile: (file) => set({ file }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
@@ -209,19 +322,26 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isCreatePdfModalOpen: value,
     })),
   setIsCreatingShape: (value) => set({ isCreatingShape: value }),
+  setIsManagePagesOpen: (value) => set({ isManagePagesOpen: value }),
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
-  setPdfDocument: (doc, pageCount) => set({ pdfDocument: doc, pageCount }),
+  setPdfDocument: (doc, pageCount) =>
+    set({
+      pageOrder: Array.from({ length: pageCount }, (_, i) => i + 1),
+      pdfDocument: doc,
+      pageCount,
+    }),
   setShapeFill: (color) => set({ shapeFill: color }),
   setShapeStroke: (color) => set({ shapeStroke: color }),
   setShapeStrokeWidth: (width) => set({ shapeStrokeWidth: width }),
   setZoom: (zoom) => set({ zoom }),
 
-  undo: (page) => {
+  undo: (displayPage) => {
     const state = get();
-    const history = state.historyByPage.get(page) ?? [];
-    const idx = state.historyIndexByPage.get(page) ?? -1;
+    const source = resolveSourcePage(displayPage, state.pageOrder);
+    const history = state.historyByPage.get(source) ?? [];
+    const idx = state.historyIndexByPage.get(source) ?? -1;
 
     if (idx <= 0) return undefined;
     const newIdx = idx - 1;
@@ -229,7 +349,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     set((s) => {
       const newIndex = new Map(s.historyIndexByPage);
 
-      newIndex.set(page, newIdx);
+      newIndex.set(source, newIdx);
 
       return { historyIndexByPage: newIndex };
     });

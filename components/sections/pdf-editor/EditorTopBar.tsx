@@ -9,6 +9,7 @@ import {
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
+  Layout03Icon,
   PaintBrush01Icon,
   PaintBucketIcon,
   RedoIcon,
@@ -379,9 +380,31 @@ export function ToolsContent({
 }
 
 export function EditorToolBar() {
+  const pageCount = usePdfEditorStore((s) => s.pageCount);
+  const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
+
+  const canManagePages = !!pdfDocument && pageCount > 0;
+
   return (
     <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
       <ToolsContent />
+      <Separator className="!h-6" orientation="vertical" />
+      <Tooltip delay={300}>
+        <Button
+          className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+          isDisabled={!canManagePages}
+          size="sm"
+          variant="tertiary"
+          onPress={() => setIsManagePagesOpen(true)}
+        >
+          <HugeiconsIcon icon={Layout03Icon} size={22} />
+          <span className="text-[10px] leading-tight">Manage Pages</span>
+        </Button>
+        <Tooltip.Content>
+          <p>Reorder and manage document pages</p>
+        </Tooltip.Content>
+      </Tooltip>
     </div>
   );
 }

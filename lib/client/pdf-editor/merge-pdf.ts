@@ -1,6 +1,5 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
-
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
 import type { FontData } from "./text-extraction";
@@ -24,10 +23,12 @@ import {
 type FabricObj = Record<string, any>;
 
 export type MergePdfInput = {
-  /** Map of 1-indexed page number → Fabric canvas JSON. */
+  /** Map of display slot (1-indexed) → Fabric canvas JSON. */
   fabricJsonByPage: Map<number, string>;
   /** Font data extracted from pdf.js for custom font embedding. */
   fontDataMap: Map<string, FontData>;
+  /** Display order: each entry is a 1-indexed source PDF page number. */
+  pageOrder: number[];
   /** The pdf.js document proxy — needed to render pages for raster backgrounds. */
   pdfDocument: PDFDocumentProxy;
   /** Original PDF bytes. */
@@ -248,6 +249,7 @@ async function processPageObjects(
 export async function mergeFabricEditsIntoPdf({
   fabricJsonByPage,
   fontDataMap,
+  pageOrder,
   pdfDocument,
   sourceBytes,
 }: MergePdfInput): Promise<Uint8Array> {
@@ -255,17 +257,23 @@ export async function mergeFabricEditsIntoPdf({
 
   // Load source for copying unedited pages
   const sourcePdf = await PdfDoc.load(sourceBytes);
-  const totalPages = sourcePdf.getPageCount();
 
   // Create a fresh output document
   const outputPdf = await PdfDoc.create();
   const fontCache = new FontCache(outputPdf, fontDataMap);
 
-  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-    if (!fabricJsonByPage.has(pageNum)) {
+  const order =
+    pageOrder.length > 0
+      ? pageOrder
+      : Array.from({ length: sourcePdf.getPageCount() }, (_, i) => i + 1);
+
+  for (let displayPage = 1; displayPage <= order.length; displayPage++) {
+    const sourcePageNum = order[displayPage - 1];
+
+    if (!fabricJsonByPage.has(sourcePageNum)) {
       // No edits — copy original page as-is (preserves vectors, fonts, etc.)
       const [copiedPage] = await outputPdf.copyPages(sourcePdf, [
-        pageNum - 1,
+        sourcePageNum - 1,
       ]);
 
       outputPdf.addPage(copiedPage);
@@ -273,11 +281,11 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // Page has edits — rasterize background + draw Fabric objects
-    const sourcePage = sourcePdf.getPage(pageNum - 1);
+    const sourcePage = sourcePdf.getPage(sourcePageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
 
     // 1. Render original page to PNG (text-suppressed)
-    const pdfjsPage = await pdfDocument.getPage(pageNum);
+    const pdfjsPage = await pdfDocument.getPage(sourcePageNum);
     const pngBytes = await renderPageToPng(pdfjsPage);
 
     // 2. Create new page with same dimensions
@@ -294,7 +302,7 @@ export async function mergeFabricEditsIntoPdf({
     });
 
     // 4. Draw all Fabric objects on top
-    const json = fabricJsonByPage.get(pageNum)!;
+    const json = fabricJsonByPage.get(sourcePageNum)!;
     const parsed = parseFabricJson(json);
 
     if (parsed) {
@@ -308,7 +316,9 @@ export async function mergeFabricEditsIntoPdf({
           pdfHeight,
         );
 
-        console.log(`[MergePDF] CoordinateContext: fabricW=${parsed.width} fabricH=${parsed.height} pdfW=${pdfWidth} pdfH=${pdfHeight} scaleX=${ctx.scaleX.toFixed(6)} scaleY=${ctx.scaleY.toFixed(6)}`);
+        console.log(
+          `[MergePDF] CoordinateContext: fabricW=${parsed.width} fabricH=${parsed.height} pdfW=${pdfWidth} pdfH=${pdfHeight} scaleX=${ctx.scaleX.toFixed(6)} scaleY=${ctx.scaleY.toFixed(6)}`,
+        );
 
         await processPageObjects(
           objects,

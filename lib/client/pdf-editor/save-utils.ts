@@ -122,6 +122,16 @@ export function dataUrlToBytes(dataUrl: string): Uint8Array {
   return bytes;
 }
 
+/** Persists the live Fabric canvas into the store for a display slot. */
+export function flushLiveFabricPage(
+  displayPage: number,
+  fabricCanvas: FabricCanvas,
+) {
+  usePdfEditorStore
+    .getState()
+    .saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));
+}
+
 type BuildEditedPdfInput = {
   currentPage: number;
   fabricCanvas: FabricCanvas | null;
@@ -139,12 +149,10 @@ export async function buildEditedPdfBytes({
   file,
 }: BuildEditedPdfInput): Promise<Uint8Array> {
   if (fabricCanvas) {
-    usePdfEditorStore
-      .getState()
-      .saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+    flushLiveFabricPage(currentPage, fabricCanvas);
   }
 
-  const { fabricJsonByPage, fontDataByLoadedName, pdfDocument } =
+  const { fabricJsonByPage, fontDataByLoadedName, pageOrder, pdfDocument } =
     usePdfEditorStore.getState();
 
   if (!pdfDocument) {
@@ -156,6 +164,7 @@ export async function buildEditedPdfBytes({
   return mergeFabricEditsIntoPdf({
     fabricJsonByPage,
     fontDataMap: fontDataByLoadedName,
+    pageOrder,
     pdfDocument,
     sourceBytes,
   });

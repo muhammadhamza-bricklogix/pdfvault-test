@@ -1,6 +1,7 @@
 "use client";
 
 import type { Canvas } from "fabric";
+import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
@@ -11,7 +12,11 @@ import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
+import { remapFabricAfterPageOps } from "@/lib/client/pdf-editor/remap-fabric-after-page-ops";
+import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
@@ -21,6 +26,7 @@ import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { PerformancePanel } from "./PerformancePanel";
 import { RightSidebar } from "./RightSidebar";
+import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
 
 function UploadScreen() {
@@ -56,7 +62,16 @@ function UploadScreen() {
 
 function EditorLayout() {
   const { error, isLoading } = usePdfLoader();
+  const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const isManagePagesOpen = usePdfEditorStore((s) => s.isManagePagesOpen);
+  const applyManagePagesSave = usePdfEditorStore((s) => s.applyManagePagesSave);
+  const file = usePdfEditorStore((s) => s.file);
+  const fabricJsonByPage = usePdfEditorStore((s) => s.fabricJsonByPage);
+  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
+  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  const reorderPages = usePdfEditorStore((s) => s.reorderPages);
+  const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -67,6 +82,69 @@ function EditorLayout() {
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
     [],
+  );
+
+  const handleReorderPages = useCallback(
+    (fromDisplay: number, toDisplay: number) => {
+      if (fabricCanvas) {
+        flushLiveFabricPage(currentPage, fabricCanvas);
+      }
+
+      reorderPages(fromDisplay, toDisplay);
+    },
+    [currentPage, fabricCanvas, reorderPages],
+  );
+
+  const handleManagePagesSave = useCallback(
+    async (snapshot: ManagePagesDraftSnapshot) => {
+      if (!file) return;
+
+      if (fabricCanvas) {
+        flushLiveFabricPage(currentPage, fabricCanvas);
+      }
+
+      try {
+        const sourceBytes = await file.arrayBuffer();
+        const bytes = await buildPdfFromDraft({
+          importedPdfs: snapshot.importedPdfs,
+          pages: snapshot.pages,
+          sourceBytes,
+        });
+        const newFile = new File([Uint8Array.from(bytes)], file.name, {
+          type: "application/pdf",
+        });
+        const remapped = remapFabricAfterPageOps({
+          newPages: snapshot.pages,
+          oldFabricJsonByPage: fabricJsonByPage,
+          oldHistoryByPage: historyByPage,
+          oldHistoryIndexByPage: historyIndexByPage,
+        });
+        const newPageCount = snapshot.pages.length;
+        const clampedPage = Math.min(currentPage, Math.max(1, newPageCount));
+
+        applyManagePagesSave({
+          currentPage: clampedPage,
+          fabricJsonByPage: remapped.fabricJsonByPage,
+          file: newFile,
+          historyByPage: remapped.historyByPage,
+          historyIndexByPage: remapped.historyIndexByPage,
+        });
+      } catch {
+        toast.error({
+          title: "Could not apply page changes",
+          description: "Saving your page edits failed. Please try again.",
+        });
+      }
+    },
+    [
+      applyManagePagesSave,
+      currentPage,
+      fabricCanvas,
+      fabricJsonByPage,
+      file,
+      historyByPage,
+      historyIndexByPage,
+    ],
   );
 
   if (isLoading) {
@@ -82,6 +160,14 @@ function EditorLayout() {
   }
 
   if (!pdfDocument) return null;
+
+  const managePagesModal = (
+    <ManagePagesModal
+      isOpen={isManagePagesOpen}
+      onClose={() => setIsManagePagesOpen(false)}
+      onSave={handleManagePagesSave}
+    />
+  );
 
   if (isMobile) {
     return (
@@ -99,7 +185,11 @@ function EditorLayout() {
             </div>
           </div>
         </div>
-        <BottomDock fabricCanvas={fabricCanvas} />
+        <BottomDock
+          fabricCanvas={fabricCanvas}
+          onReorderPages={handleReorderPages}
+        />
+        {managePagesModal}
       </>
     );
   }
@@ -109,7 +199,7 @@ function EditorLayout() {
       <EditorInfoBar />
       <EditorToolBar />
       <div className="relative flex flex-1 overflow-hidden">
-        <ThumbnailSidebar />
+        <ThumbnailSidebar onReorderPages={handleReorderPages} />
         <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
         <div aria-hidden className="w-44 shrink-0 bg-default-100" />
         <RightSidebar fabricCanvas={fabricCanvas} />
@@ -124,6 +214,7 @@ function EditorLayout() {
           </div>
         </div>
       </div>
+      {managePagesModal}
     </>
   );
 }
