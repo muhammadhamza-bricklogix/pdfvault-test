@@ -1,5 +1,6 @@
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
+import { appendPdfPage } from "@/lib/client/pdf-editor/append-pdf-page";
 import { degrees } from "pdf-lib";
 
 type BuildPdfInput = {
@@ -37,15 +38,11 @@ export async function buildPdfFromDraft({
     }
 
     if (entry.kind === "source") {
-      const [copied] = await outputPdf.copyPages(sourcePdf, [
-        entry.sourcePageIndex - 1,
-      ]);
-      const page = outputPdf.addPage(copied);
-
-      if (entry.rotation) {
-        page.setRotation(degrees(entry.rotation));
-      }
-
+      await appendPdfPage(outputPdf, sourcePdf, entry.sourcePageIndex - 1, {
+        heightPt: entry.heightPt,
+        rotation: entry.rotation,
+        widthPt: entry.widthPt,
+      });
       continue;
     }
 
@@ -54,14 +51,12 @@ export async function buildPdfFromDraft({
     if (!importBytes) continue;
 
     const importDoc = await PDFDocument.load(importBytes);
-    const [copied] = await outputPdf.copyPages(importDoc, [
-      entry.importPageIndex - 1,
-    ]);
-    const page = outputPdf.addPage(copied);
 
-    if (entry.rotation) {
-      page.setRotation(degrees(entry.rotation));
-    }
+    await appendPdfPage(outputPdf, importDoc, entry.importPageIndex - 1, {
+      heightPt: entry.heightPt,
+      rotation: entry.rotation,
+      widthPt: entry.widthPt,
+    });
   }
 
   return outputPdf.save();

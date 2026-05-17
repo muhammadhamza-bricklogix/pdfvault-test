@@ -14,6 +14,7 @@ import {
   RedoIcon,
   RotateLeft01Icon,
   RotateRight01Icon,
+  ThreeDScaleIcon,
   SearchAddIcon,
   SearchMinusIcon,
   SquareIcon,
@@ -26,6 +27,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useManagePagesDraft } from "@/lib/client/hooks/pdf-editor/use-manage-pages-draft";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { PageResizeDialog } from "./PageResizeDialog";
 import { SortablePageList } from "./ThumbnailSidebar";
 
 type ManagePagesModalProps = {
@@ -50,6 +52,7 @@ const LEFT_TOOLS: ToolbarItem[] = [
   { icon: Copy01Icon, id: "duplicate", label: "Duplicate" },
   { icon: RotateLeft01Icon, id: "rotate-left", label: "Rotate Left" },
   { icon: RotateRight01Icon, id: "rotate-right", label: "Rotate Right" },
+  { icon: ThreeDScaleIcon, id: "resize", label: "Resize Page" },
   { icon: ArrowLeftRightIcon, id: "move", label: "Move" },
   { icon: ArrowLeft01Icon, id: "move-before", label: "Move Before" },
   { icon: ArrowRight01Icon, id: "move-after", label: "Move After" },
@@ -107,6 +110,7 @@ export function ManagePagesModal({
   const storePageOrder = usePdfEditorStore((s) => s.pageOrder);
 
   const [gridZoom, setGridZoom] = useState(0.32);
+  const [isResizeOpen, setIsResizeOpen] = useState(false);
   const [movePrompt, setMovePrompt] = useState<MovePromptState>(null);
   const [moveTargetPage, setMoveTargetPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -145,6 +149,9 @@ export function ManagePagesModal({
           break;
         case "rotate-right":
           draft.rotateSelected(90);
+          break;
+        case "resize":
+          setIsResizeOpen(true);
           break;
         case "move-before":
           setMoveTargetPage(1);
@@ -189,6 +196,7 @@ export function ManagePagesModal({
       case "delete":
         return !canDelete;
       case "duplicate":
+      case "resize":
       case "rotate-left":
       case "rotate-right":
       case "move-before":
@@ -376,6 +384,15 @@ export function ManagePagesModal({
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+
+      <PageResizeDialog
+        isOpen={isResizeOpen}
+        selectedCount={draft.selectedCount}
+        onApply={(preset) => {
+          draft.resizeSelected(preset.widthPt, preset.heightPt);
+        }}
+        onClose={() => setIsResizeOpen(false)}
+      />
     </>
   );
 }

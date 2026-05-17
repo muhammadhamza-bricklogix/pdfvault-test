@@ -9,17 +9,21 @@ export type DraftPage =
       widthPt: number;
     }
   | {
+      heightPt?: number;
       id: string;
       importKey: string;
       importPageIndex: number;
       kind: "imported";
       rotation: PageRotation;
+      widthPt?: number;
     }
   | {
+      heightPt?: number;
       id: string;
       kind: "source";
       rotation: PageRotation;
       sourcePageIndex: number;
+      widthPt?: number;
     };
 
 export type ManagePagesDraftSnapshot = {

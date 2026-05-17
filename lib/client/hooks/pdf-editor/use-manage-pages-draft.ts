@@ -283,18 +283,22 @@ export function useManagePagesDraft({
 
         if (page.kind === "source") {
           next.push({
+            heightPt: page.heightPt,
             id: createId(),
             kind: "source",
             rotation: page.rotation,
             sourcePageIndex: page.sourcePageIndex,
+            widthPt: page.widthPt,
           });
         } else if (page.kind === "imported") {
           next.push({
+            heightPt: page.heightPt,
             id: createId(),
             importKey: page.importKey,
             importPageIndex: page.importPageIndex,
             kind: "imported",
             rotation: page.rotation,
+            widthPt: page.widthPt,
           });
         } else {
           next.push({
@@ -356,6 +360,26 @@ export function useManagePagesDraft({
               ...page,
               rotation: normalizeRotation(page.rotation + delta),
             };
+          }),
+        };
+      });
+    },
+    [applyChange],
+  );
+
+  const resizeSelected = useCallback(
+    (widthPt: number, heightPt: number) => {
+      applyChange((current) => {
+        if (current.selectedIds.length === 0) return current;
+
+        const selectedSet = new Set(current.selectedIds);
+
+        return {
+          ...current,
+          pages: current.pages.map((page) => {
+            if (!selectedSet.has(page.id)) return page;
+
+            return { ...page, heightPt, widthPt };
           }),
         };
       });
@@ -467,6 +491,7 @@ export function useManagePagesDraft({
     redo,
     reorder,
     resetDraft,
+    resizeSelected,
     rotateSelected,
     selectAll,
     selectNone,
