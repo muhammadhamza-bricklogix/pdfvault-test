@@ -121,17 +121,6 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         } as any) as IText;
 
         fabricCanvas.add(textObj);
-
-        // Normalize scaleX so Fabric's visual width matches the original PDF
-        // text width. Fabric auto-measures text using the browser font renderer,
-        // which produces different widths than the PDF's font metrics. Without
-        // this, bounding boxes drift and re-opening exported PDFs causes overflow.
-        const measuredWidth = textObj.getScaledWidth();
-
-        if (block.width > 0 && measuredWidth > 0) {
-          textObj.scaleX = block.width / measuredWidth;
-          textObj.setCoords();
-        }
       }
 
       fabricCanvas.renderAll();

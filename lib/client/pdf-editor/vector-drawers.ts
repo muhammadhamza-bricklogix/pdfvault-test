@@ -1,4 +1,4 @@
-import type { Color, PDFFont, PDFPage } from "pdf-lib";
+import type { Color, PDFPage } from "pdf-lib";
 import type { FontCache } from "./font-mapping";
 
 import {
@@ -82,8 +82,6 @@ export async function drawIText(
   // The object's bounding box width in Fabric units (what the user sees as the text container)
   const objWidth = ((obj.width as number) || 0) * objScaleX;
   const editorType = (obj.editorType as string) || "";
-  // Original PDF text width stored during extraction (before Fabric re-measures)
-  const pdfTextWidth = (obj.pdfTextWidth as number) || 0;
 
   const { left, top } = resolveTopLeft(obj);
 
@@ -106,28 +104,17 @@ export async function drawIText(
   const pdfX = toPdfX(left, ctx);
   const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY) - fontHeight;
 
-  // Compute what pdf-lib thinks the text width is vs what Fabric reported
+  // Compute what pdf-lib/fontkit thinks the text width is
   const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
+  // Use Fabric's obj.width as the target — it's what the user sees on screen.
+  // This correctly reflects both unedited text AND user edits (added/removed words).
+  // pdfTextWidth (original PDF metric) is only ~1px different for unedited text,
+  // and becomes stale/wrong after edits, so we don't use it as targetWidth.
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
-  // Use original PDF text width when available (more accurate than Fabric's
-  // re-measurement), falling back to Fabric's obj.width.
-  // However, if the user edited the text (made it longer), pdfTextWidth is
-  // stale and would squash the content. Detect this: if fontkit's measurement
-  // exceeds the stored width by more than 10%, the text was likely edited —
-  // fall back to fabricObjWidth which Fabric re-measured for the new content.
-  const pdfTextWidthPdf =
-    editorType === "editModeText" && pdfTextWidth > 0
-      ? toPdfDim(pdfTextWidth, ctx.scaleX)
-      : 0;
-  const textWasEdited =
-    pdfTextWidthPdf > 0 && pdfLibTextWidth > pdfTextWidthPdf * 1.1;
-  const targetWidth =
-    editorType === "editModeText" && pdfTextWidthPdf > 0 && !textWasEdited
-      ? pdfTextWidthPdf
-      : fabricObjWidth;
+  const targetWidth = fabricObjWidth;
 
   if (editorType === "editModeText") {
-    console.log(`[DrawIText] "${text.slice(0, 40)}" | pdfOrigWidth=${pdfTextWidth > 0 ? toPdfDim(pdfTextWidth, ctx.scaleX).toFixed(2) : "N/A"} fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`);
+    console.log(`[DrawIText] "${text.slice(0, 40)}" | scaleX=${objScaleX.toFixed(4)} fabricObjWidth=${fabricObjWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} gap=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`);
   }
 
   const lines = text.split("\n");
@@ -190,17 +177,11 @@ export async function drawIText(
           );
           const totalWordWidth = wordWidths.reduce((a, b) => a + b, 0);
 
-          // Count leading/trailing spaces to exclude from gap distribution
+          // Count leading spaces to offset the cursor start
           let leadingSpaces = 0;
-          let trailingSpaces = 0;
 
           for (let s = 0; s < words.length; s++) {
             if (words[s] === "") leadingSpaces++;
-            else break;
-          }
-
-          for (let s = words.length - 1; s >= 0; s--) {
-            if (words[s] === "") trailingSpaces++;
             else break;
           }
 
