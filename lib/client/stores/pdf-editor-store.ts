@@ -36,6 +36,8 @@ type PdfEditorStore = {
   /** Fabric JSON keyed by source PDF page number (stable across reorder). */
   fabricJsonByPage: Map<number, string>;
   file: File | null;
+  hasUnsavedChanges: boolean;
+  pendingCloudSaveAfterReload: boolean;
   fontDataByLoadedName: Map<string, FontData>;
   /** Undo stacks keyed by source PDF page number (stable across reorder). */
   historyByPage: Map<number, string[]>;
@@ -78,6 +80,9 @@ type PdfEditorStore = {
     historyByPage: Map<number, string[]>;
     historyIndexByPage: Map<number, number>;
   }) => void;
+  clearDocumentDirty: () => void;
+  clearPendingCloudSaveAfterReload: () => void;
+  markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
@@ -103,6 +108,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
+  hasUnsavedChanges: false,
+  pendingCloudSaveAfterReload: false,
   fontDataByLoadedName: new Map(),
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
@@ -145,6 +152,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       editorMode: "editText",
       fabricJsonByPage: new Map(),
       file: null,
+      hasUnsavedChanges: false,
+      pendingCloudSaveAfterReload: false,
       fontDataByLoadedName: new Map(),
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
@@ -212,6 +221,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
       return {
         currentPage: newCurrentPage,
+        hasUnsavedChanges: true,
         pageOrder: newOrder,
       };
     }),
@@ -225,6 +235,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
       return {
         currentPage: newCurrentPage > 0 ? newCurrentPage : 1,
+        hasUnsavedChanges: true,
         pageOrder: [...newOrder],
       };
     }),
@@ -275,7 +286,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
       newMap.set(source, json);
 
-      return { fabricJsonByPage: newMap };
+      return { fabricJsonByPage: newMap, hasUnsavedChanges: true };
     }),
 
   saveFabricJsonBySourcePage: (sourcePage, json) =>
@@ -284,8 +295,15 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
       newMap.set(sourcePage, json);
 
-      return { fabricJsonByPage: newMap };
+      return { fabricJsonByPage: newMap, hasUnsavedChanges: true };
     }),
+
+  markDocumentDirty: () => set({ hasUnsavedChanges: true }),
+
+  clearDocumentDirty: () => set({ hasUnsavedChanges: false }),
+
+  clearPendingCloudSaveAfterReload: () =>
+    set({ pendingCloudSaveAfterReload: false }),
 
   setActiveShapeType: (type) => set({ activeShapeType: type }),
   setActiveTool: (tool) => set({ activeTool: tool }),
@@ -309,8 +327,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       currentPage,
       fabricJsonByPage: new Map(fabricJsonByPage),
       file,
+      hasUnsavedChanges: true,
       historyByPage: new Map(historyByPage),
       historyIndexByPage: new Map(historyIndexByPage),
+      pendingCloudSaveAfterReload: true,
     }),
 
   setFile: (file) => set({ file }),

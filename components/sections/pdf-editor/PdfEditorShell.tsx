@@ -10,6 +10,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
+import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
+import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
@@ -77,6 +79,8 @@ function EditorLayout() {
   const isMobile = useIsMobile();
 
   useSaveEditor(fabricCanvas);
+  useEditorAutoPersist(fabricCanvas);
+  useEditorNavigationSave(fabricCanvas);
   useExportEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(

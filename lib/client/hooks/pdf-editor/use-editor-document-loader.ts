@@ -90,6 +90,7 @@ export function useEditorDocumentLoader() {
 
         setFile(loaded.file);
         setCurrentDocument({ id: loaded.id, name: loaded.name });
+        usePdfEditorStore.setState({ hasUnsavedChanges: false });
         lastHydratedDocumentId.current = id;
       })
       .catch((err) => {

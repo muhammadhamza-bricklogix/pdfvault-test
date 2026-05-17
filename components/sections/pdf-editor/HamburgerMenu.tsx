@@ -50,7 +50,11 @@ export function HamburgerMenu() {
 
           return;
         }
-        router.push(ROUTES.APP.DASHBOARD);
+        window.dispatchEvent(
+          new CustomEvent("editor:navigate-after-save", {
+            detail: { url: ROUTES.APP.DASHBOARD },
+          }),
+        );
         break;
     }
   };

@@ -5,116 +5,78 @@ import type { Canvas as FabricCanvas } from "fabric";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
-import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
-import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
-import { usePdfEditorStore } from "@/lib/client/stores";
+import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * Listens for `editor:save` (dispatched by the Save button) and runs the
- * flatten-and-upload pipeline:
- *   flush live page  →  merge overlays into PDF (pdf-lib)  →  upload via
- *   tracked-upload (upserts when documentId is known)  →  sync URL `?id=`.
+ * Listens for `editor:save` (dispatched by the Save button) and uploads the
+ * flattened PDF to the user's library.
  */
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { start } = useTrackedUpload();
 
-  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
-  const file = usePdfEditorStore((s) => s.file);
-  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-
-  // Mirror props/state into a ref so the callback always reads fresh values
-  // without re-binding the window listener on every render.
   const isSavingRef = useRef(false);
-  const stateRef = useRef({
-    currentDocumentId,
-    currentPage,
-    fabricCanvas,
-    file,
-    isSignedIn,
-  });
+  const fabricRef = useRef(fabricCanvas);
 
   useEffect(() => {
-    stateRef.current = {
-      currentDocumentId,
-      currentPage,
-      fabricCanvas,
-      file,
-      isSignedIn,
-    };
-  }, [currentDocumentId, currentPage, fabricCanvas, file, isSignedIn]);
+    fabricRef.current = fabricCanvas;
+  }, [fabricCanvas]);
 
   const handleSave = useCallback(async () => {
     if (isSavingRef.current) return;
 
-    const {
-      currentDocumentId: docId,
-      currentPage: page,
-      fabricCanvas: liveCanvas,
-      file: sourceFile,
-      isSignedIn: signedIn,
-    } = stateRef.current;
-
-    if (!sourceFile) {
-      toast.error({
-        title: "Nothing to save",
-        description: "Open a PDF before saving.",
-      });
-
-      return;
-    }
-
-    if (!signedIn) {
-      toast.error({
-        title: "Sign in required",
-        description: "Sign in to save your edits to the cloud.",
-      });
-
-      return;
-    }
-
     isSavingRef.current = true;
 
     try {
-      const savedBytes = await buildEditedPdfBytes({
-        currentPage: page,
-        fabricCanvas: liveCanvas,
-        file: sourceFile,
+      const result = await persistEditorDocument({
+        fabricCanvas: fabricRef.current,
       });
 
-      const savedFile = new File(
-        [savedBytes.buffer as ArrayBuffer],
-        sourceFile.name,
-        { type: "application/pdf" },
-      );
+      if (!result.ok) {
+        if (result.reason === "no-file") {
+          toast.error({
+            title: "Nothing to save",
+            description: "Open a PDF before saving.",
+          });
+        } else if (result.reason === "not-signed-in") {
+          toast.error({
+            title: "Sign in required",
+            description: "Sign in to save your edits to the cloud.",
+          });
+        } else if (result.reason === "not-loaded") {
+          toast.error({
+            title: "PDF still loading",
+            description: "Wait for the document to finish loading, then try again.",
+          });
+        } else {
+          toast.error({
+            title: "Save failed",
+            description: "We couldn't save your edits. Please try again.",
+          });
+        }
 
-      start({
-        documentId: docId ?? undefined,
-        file: savedFile,
-        onOpen: (id) => {
-          if (searchParams.get("id") !== id) {
-            const params = new URLSearchParams(searchParams.toString());
+        return;
+      }
 
-            params.set("id", id);
-            router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
-          }
-        },
-      });
-    } catch (err) {
-      logger.error("Failed to save PDF", err);
-      toast.error({
-        title: "Save failed",
-        description: "We couldn't save your edits. Please try again.",
+      const id = result.document.id;
+
+      if (searchParams.get("id") !== id) {
+        const params = new URLSearchParams(searchParams.toString());
+
+        params.set("id", id);
+        router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
+      }
+
+      toast.success({
+        title: "Saved",
+        description: "Your PDF was saved to your library.",
       });
     } finally {
       isSavingRef.current = false;
     }
-  }, [router, searchParams, start]);
+  }, [router, searchParams]);
 
   useEffect(() => {
     const onSave = () => {
