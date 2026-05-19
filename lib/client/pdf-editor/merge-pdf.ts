@@ -1,9 +1,9 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
-
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
 import type { FontData } from "./text-extraction";
+import type { WatermarkConfig } from "@/lib/client/stores/pdf-editor-store";
 
 import { createCoordinateContext } from "./coordinate-transform";
 import { FontCache } from "./font-mapping";
@@ -20,6 +20,11 @@ import {
   drawRect,
   drawTriangle,
 } from "./vector-drawers";
+import {
+  drawWatermarkOnPage,
+  resetWatermarkFontCache,
+} from "./watermark-drawer";
+import { shouldWatermarkPage } from "./watermark-utils";
 
 type FabricObj = Record<string, any>;
 
@@ -32,6 +37,8 @@ export type MergePdfInput = {
   pdfDocument: PDFDocumentProxy;
   /** Original PDF bytes. */
   sourceBytes: ArrayBuffer;
+  /** Watermark configuration — null means no watermark. */
+  watermarkConfig?: WatermarkConfig | null;
 };
 
 // pdf.js OPS constants for text rendering operations (31–49)
@@ -250,6 +257,7 @@ export async function mergeFabricEditsIntoPdf({
   fontDataMap,
   pdfDocument,
   sourceBytes,
+  watermarkConfig,
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
 
@@ -261,18 +269,76 @@ export async function mergeFabricEditsIntoPdf({
   const outputPdf = await PdfDoc.create();
   const fontCache = new FontCache(outputPdf, fontDataMap);
 
+  // Reset watermark font cache for fresh export
+  resetWatermarkFontCache();
+
+  const wm = watermarkConfig?.enabled ? watermarkConfig : null;
+
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-    if (!fabricJsonByPage.has(pageNum)) {
-      // No edits — copy original page as-is (preserves vectors, fonts, etc.)
-      const [copiedPage] = await outputPdf.copyPages(sourcePdf, [
-        pageNum - 1,
-      ]);
+    const hasEdits = fabricJsonByPage.has(pageNum);
+    const needsWatermark =
+      wm != null &&
+      shouldWatermarkPage(
+        pageNum,
+        totalPages,
+        wm.pageScope,
+        wm.customPageRange,
+      );
+    const isOverlay = wm?.layer === "overlay";
+
+    // ------------------------------------------------------------------
+    // Case 1: No edits, no watermark — copy as-is
+    // ------------------------------------------------------------------
+    if (!hasEdits && !needsWatermark) {
+      const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
 
       outputPdf.addPage(copiedPage);
       continue;
     }
 
-    // Page has edits — rasterize background + draw Fabric objects
+    // ------------------------------------------------------------------
+    // Case 2: No edits, but needs watermark overlay — copy + draw on top
+    // ------------------------------------------------------------------
+    if (!hasEdits && needsWatermark && isOverlay) {
+      const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
+
+      outputPdf.addPage(copiedPage);
+      const targetPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
+
+      await drawWatermarkOnPage(targetPage, outputPdf, wm);
+      continue;
+    }
+
+    // ------------------------------------------------------------------
+    // Case 3: No edits, but needs watermark underlay — rasterize + underlay
+    // ------------------------------------------------------------------
+    if (!hasEdits && needsWatermark && !isOverlay) {
+      const sourcePage = sourcePdf.getPage(pageNum - 1);
+      const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
+
+      const pdfjsPage = await pdfDocument.getPage(pageNum);
+      const pngBytes = await renderPageToPng(pdfjsPage);
+
+      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
+
+      // Draw watermark first (behind everything)
+      await drawWatermarkOnPage(newPage, outputPdf, wm);
+
+      // Draw rasterized original page on top
+      const bgImage = await outputPdf.embedPng(pngBytes);
+
+      newPage.drawImage(bgImage, {
+        height: pdfHeight,
+        width: pdfWidth,
+        x: 0,
+        y: 0,
+      });
+      continue;
+    }
+
+    // ------------------------------------------------------------------
+    // Case 4: Has edits (and possibly watermark)
+    // ------------------------------------------------------------------
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
 
@@ -283,7 +349,12 @@ export async function mergeFabricEditsIntoPdf({
     // 2. Create new page with same dimensions
     const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
 
-    // 3. Embed and draw rasterized background
+    // 3. Underlay watermark goes first (behind everything)
+    if (needsWatermark && !isOverlay) {
+      await drawWatermarkOnPage(newPage, outputPdf, wm!);
+    }
+
+    // 4. Embed and draw rasterized background
     const bgImage = await outputPdf.embedPng(pngBytes);
 
     newPage.drawImage(bgImage, {
@@ -293,7 +364,7 @@ export async function mergeFabricEditsIntoPdf({
       y: 0,
     });
 
-    // 4. Draw all Fabric objects on top
+    // 5. Draw all Fabric objects on top
     const json = fabricJsonByPage.get(pageNum)!;
     const parsed = parseFabricJson(json);
 
@@ -308,8 +379,6 @@ export async function mergeFabricEditsIntoPdf({
           pdfHeight,
         );
 
-        console.log(`[MergePDF] CoordinateContext: fabricW=${parsed.width} fabricH=${parsed.height} pdfW=${pdfWidth} pdfH=${pdfHeight} scaleX=${ctx.scaleX.toFixed(6)} scaleY=${ctx.scaleY.toFixed(6)}`);
-
         await processPageObjects(
           objects,
           parsed,
@@ -319,6 +388,11 @@ export async function mergeFabricEditsIntoPdf({
           fontCache,
         );
       }
+    }
+
+    // 6. Overlay watermark goes last (on top of everything)
+    if (needsWatermark && isOverlay) {
+      await drawWatermarkOnPage(newPage, outputPdf, wm!);
     }
   }
 

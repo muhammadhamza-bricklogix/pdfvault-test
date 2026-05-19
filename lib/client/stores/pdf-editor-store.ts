@@ -1,5 +1,4 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
-
 import type { FontData } from "@/lib/client/pdf-editor/text-extraction";
 
 import { create } from "zustand";
@@ -15,9 +14,54 @@ export type ActiveTool =
   | "shape"
   | "signature"
   | "text"
+  | "watermark"
   | "whiteout";
 export type EditorMode = "edit" | "editText";
 export type ShapeType = "arrow" | "ellipse" | "line" | "rect";
+
+export type WatermarkPosition =
+  | "bottom-left"
+  | "bottom-right"
+  | "center"
+  | "tiled"
+  | "top-left"
+  | "top-right";
+
+export type WatermarkConfig = {
+  color: string;
+  customPageRange: string;
+  enabled: boolean;
+  fontFamily: string;
+  fontSize: number;
+  imageData: string | null;
+  layer: "overlay" | "underlay";
+  opacity: number;
+  pageScope: "all" | "custom" | "even" | "odd";
+  position: WatermarkPosition;
+  rotation: number;
+  scaleToPage: boolean;
+  text: string;
+  tiledSpacing: number;
+  type: "image" | "text";
+};
+
+const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
+  color: "#888888",
+  customPageRange: "",
+  enabled: true,
+  fontFamily: "Helvetica",
+  fontSize: 48,
+  imageData: null,
+  layer: "overlay",
+  opacity: 0.3,
+  pageScope: "all",
+  position: "center",
+  rotation: -45,
+  scaleToPage: false,
+  text: "CONFIDENTIAL",
+  tiledSpacing: 200,
+  type: "text",
+};
 
 type PdfEditorStore = {
   activeShapeType: ShapeType;
@@ -43,6 +87,7 @@ type PdfEditorStore = {
   shapeFill: string;
   shapeStroke: string;
   shapeStrokeWidth: number;
+  watermarkConfig: WatermarkConfig;
   zoom: number;
 
   addFontData: (fonts: FontData[]) => void;
@@ -67,6 +112,7 @@ type PdfEditorStore = {
   setShapeFill: (color: string) => void;
   setShapeStroke: (color: string) => void;
   setShapeStrokeWidth: (width: number) => void;
+  setWatermarkConfig: (config: Partial<WatermarkConfig>) => void;
   setZoom: (zoom: number) => void;
   undo: (page: number) => string | undefined;
 };
@@ -95,6 +141,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   shapeFill: "transparent",
   shapeStroke: "#000000",
   shapeStrokeWidth: 2,
+  watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
   zoom: 1.0,
 
   addFontData: (fonts) =>
@@ -133,6 +180,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       shapeFill: "transparent",
       shapeStroke: "#000000",
       shapeStrokeWidth: 2,
+      watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
       zoom: 1.0,
     }),
 
@@ -216,6 +264,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setShapeFill: (color) => set({ shapeFill: color }),
   setShapeStroke: (color) => set({ shapeStroke: color }),
   setShapeStrokeWidth: (width) => set({ shapeStrokeWidth: width }),
+  setWatermarkConfig: (config) =>
+    set((state) => ({
+      watermarkConfig: { ...state.watermarkConfig, ...config },
+    })),
   setZoom: (zoom) => set({ zoom }),
 
   undo: (page) => {

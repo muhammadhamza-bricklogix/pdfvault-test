@@ -1,5 +1,4 @@
 import type { PDFDocument, PDFFont } from "pdf-lib";
-
 import type { FontData } from "./text-extraction";
 
 import fontkit from "@pdf-lib/fontkit";
@@ -98,7 +97,10 @@ export class FontCache {
 
         return font;
       } catch (err) {
-        console.error(`[FontCache] Custom font embedding failed for ${fontFamily}:`, err);
+        console.error(
+          `[FontCache] Custom font embedding failed for ${fontFamily}:`,
+          err,
+        );
       }
     }
 

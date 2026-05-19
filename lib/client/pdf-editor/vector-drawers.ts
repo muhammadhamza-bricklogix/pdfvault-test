@@ -114,7 +114,9 @@ export async function drawIText(
   const targetWidth = fabricObjWidth;
 
   if (editorType === "editModeText") {
-    console.log(`[DrawIText] "${text.slice(0, 40)}" | scaleX=${objScaleX.toFixed(4)} fabricObjWidth=${fabricObjWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} gap=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`);
+    console.log(
+      `[DrawIText] "${text.slice(0, 40)}" | scaleX=${objScaleX.toFixed(4)} fabricObjWidth=${fabricObjWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} gap=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
+    );
   }
 
   const lines = text.split("\n");
