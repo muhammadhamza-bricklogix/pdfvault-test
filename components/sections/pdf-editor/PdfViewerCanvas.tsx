@@ -15,6 +15,7 @@ import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
+import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
@@ -92,6 +93,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   useShapeTool({ fabricCanvas });
   const { handleModalClose } = useSignatureTool({ fabricCanvas });
 
+  useWatermarkTool({ fabricCanvas });
+
   const isSignatureModalOpen = usePdfEditorStore((s) => s.isSignatureModalOpen);
 
   // Wire active tool cursor + click handler
@@ -109,6 +112,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       shape: "crosshair",
       signature: "default",
       text: "text",
+      watermark: "default",
       whiteout: "crosshair",
     };
 

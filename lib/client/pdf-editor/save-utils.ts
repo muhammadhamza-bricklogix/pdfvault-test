@@ -22,8 +22,18 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
   const baseWidth = canvas.getWidth() / zoom;
   const baseHeight = canvas.getHeight() / zoom;
 
+  const json = canvas.toJSON() as Record<string, unknown>;
+
+  // Strip ephemeral watermark preview objects — they are visual-only and must
+  // never leak into persisted page state, history snapshots, or the export pipeline.
+  if (Array.isArray(json.objects)) {
+    json.objects = (json.objects as Record<string, unknown>[]).filter(
+      (obj) => obj.editorType !== "watermarkPreview",
+    );
+  }
+
   return JSON.stringify({
-    ...canvas.toJSON(),
+    ...json,
     height: baseHeight,
     width: baseWidth,
   });
@@ -152,8 +162,13 @@ export async function buildEditedPdfBytes({
     flushLiveFabricPage(currentPage, fabricCanvas);
   }
 
-  const { fabricJsonByPage, fontDataByLoadedName, pageOrder, pdfDocument } =
-    usePdfEditorStore.getState();
+  const {
+    fabricJsonByPage,
+    fontDataByLoadedName,
+    pageOrder,
+    pdfDocument,
+    watermarkConfig,
+  } = usePdfEditorStore.getState();
 
   if (!pdfDocument) {
     throw new Error("PDF document not loaded");
@@ -167,5 +182,6 @@ export async function buildEditedPdfBytes({
     pageOrder,
     pdfDocument,
     sourceBytes,
+    watermarkConfig: watermarkConfig.enabled ? watermarkConfig : null,
   });
 }

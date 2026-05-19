@@ -109,26 +109,6 @@ export function useFabricCanvas({
 
         // Restore zoom after loadFromJSON (which may reset it)
         fc.setZoom(zoom);
-
-        // Normalize scaleX for editModeText objects so Fabric's visual width
-        // matches the original PDF text width. Without this, re-opening an
-        // exported PDF causes text bounding boxes to overflow because Fabric
-        // re-measures text with the browser font renderer on deserialization.
-        for (const obj of fc.getObjects()) {
-          if ((obj as any).editorType !== "editModeText") continue;
-
-          const pdfTextWidth = (obj as any).pdfTextWidth as number | undefined;
-
-          if (!pdfTextWidth || pdfTextWidth <= 0) continue;
-
-          const measuredWidth = obj.getScaledWidth();
-
-          if (measuredWidth > 0) {
-            obj.scaleX = pdfTextWidth / measuredWidth;
-            obj.setCoords();
-          }
-        }
-
         fc.renderAll();
       }
 

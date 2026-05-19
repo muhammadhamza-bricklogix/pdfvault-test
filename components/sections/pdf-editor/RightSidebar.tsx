@@ -33,6 +33,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { HighlightPropertiesContent } from "./HighlightPropertiesContent";
 import {
   applyShapeFill,
   applyShapeStroke,
@@ -44,6 +45,7 @@ import {
   type ShapeFabricObject,
 } from "./shape-object-utils";
 import { ShapeLinkModal } from "./ShapeLinkModal";
+import { WatermarkPropertiesContent } from "./WatermarkPropertiesContent";
 
 type SelectedObjectProps = {
   fill: string;
@@ -784,6 +786,34 @@ export function ShapePropertiesContent({
 }
 
 export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
+
+  if (activeTool === "watermark") {
+    return (
+      <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
+        <Surface
+          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+          variant="default"
+        >
+          <WatermarkPropertiesContent />
+        </Surface>
+      </aside>
+    );
+  }
+
+  if (activeTool === "highlight") {
+    return (
+      <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
+        <Surface
+          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+          variant="default"
+        >
+          <HighlightPropertiesContent />
+        </Surface>
+      </aside>
+    );
+  }
+
   return (
     <ShapePropertiesContent
       fabricCanvas={fabricCanvas}

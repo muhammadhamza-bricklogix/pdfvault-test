@@ -1,0 +1,440 @@
+"use client";
+
+import type { Key } from "@heroui/react";
+import type { WatermarkPosition } from "@/lib/client/stores/pdf-editor-store";
+
+import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Button,
+  ColorArea,
+  ColorPicker,
+  ColorSlider,
+  ColorSwatch,
+  Input,
+  Label,
+  NumberField,
+  Slider,
+  Switch,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@heroui/react";
+import { useCallback, useRef } from "react";
+
+import { usePdfEditorStore } from "@/lib/client/stores";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const FONT_OPTIONS = [
+  { label: "Helvetica", value: "Helvetica" },
+  { label: "Times New Roman", value: "Times-Roman" },
+  { label: "Courier", value: "Courier" },
+] as const;
+
+const POSITION_OPTIONS = [
+  { label: "Center", value: "center" },
+  { label: "Top Left", value: "top-left" },
+  { label: "Top Right", value: "top-right" },
+  { label: "Bottom Left", value: "bottom-left" },
+  { label: "Bottom Right", value: "bottom-right" },
+  { label: "Tiled", value: "tiled" },
+] as const;
+
+const ROTATION_PRESETS = [
+  { label: "0", value: 0 },
+  { label: "-45", value: -45 },
+  { label: "45", value: 45 },
+] as const;
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function Section({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="space-y-2.5">
+      <h3 className="text-sm font-medium text-[var(--color-foreground)]">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+export function WatermarkPropertiesContent() {
+  const config = usePdfEditorStore((s) => s.watermarkConfig);
+  const setConfig = usePdfEditorStore((s) => s.setWatermarkConfig);
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+
+      if (!file) return;
+
+      // Cap at 2 MB
+      if (file.size > 2 * 1024 * 1024) return;
+
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        setConfig({ imageData: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+
+      // Reset so the same file can be re-selected
+      e.target.value = "";
+    },
+    [setConfig],
+  );
+
+  return (
+    <div className="flex max-h-[calc(100vh-10rem)] min-w-0 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Enable / Disable */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-[var(--color-foreground)]">
+          Watermark
+        </span>
+        <Switch
+          aria-label="Enable watermark"
+          isSelected={config.enabled}
+          size="sm"
+          onChange={() => setConfig({ enabled: !config.enabled })}
+        />
+      </div>
+
+      {!config.enabled ? null : (
+        <>
+          {/* Type toggle */}
+          <Section title="Type">
+            <ToggleButtonGroup
+              disallowEmptySelection
+              selectedKeys={new Set([config.type])}
+              selectionMode="single"
+              size="sm"
+              onSelectionChange={(keys: Set<Key>) => {
+                const key = [...keys][0] as "image" | "text" | undefined;
+
+                if (key) setConfig({ type: key });
+              }}
+            >
+              <ToggleButton id="text">Text</ToggleButton>
+              <ToggleButtonGroup.Separator />
+              <ToggleButton id="image">Image</ToggleButton>
+            </ToggleButtonGroup>
+          </Section>
+
+          {/* Text config */}
+          {config.type === "text" && (
+            <>
+              <Section title="Text">
+                <Input
+                  aria-label="Watermark text"
+                  className="text-sm"
+                  placeholder="e.g. CONFIDENTIAL"
+                  value={config.text}
+                  onChange={(e) => setConfig({ text: e.target.value })}
+                />
+              </Section>
+
+              <Section title="Font">
+                <ToggleButtonGroup
+                  disallowEmptySelection
+                  selectedKeys={new Set([config.fontFamily])}
+                  selectionMode="single"
+                  size="sm"
+                  onSelectionChange={(keys: Set<Key>) => {
+                    const key = [...keys][0] as string | undefined;
+
+                    if (key) setConfig({ fontFamily: key });
+                  }}
+                >
+                  {FONT_OPTIONS.map((opt, i) => (
+                    <ToggleButton key={opt.value} id={opt.value}>
+                      {i > 0 && <ToggleButtonGroup.Separator />}
+                      {opt.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Section>
+
+              <Section title="Font Size">
+                <NumberField
+                  aria-label="Font size"
+                  className="w-full"
+                  maxValue={200}
+                  minValue={8}
+                  value={config.fontSize}
+                  onChange={(val) => {
+                    if (Number.isFinite(val)) setConfig({ fontSize: val });
+                  }}
+                >
+                  <NumberField.Group>
+                    <NumberField.DecrementButton>
+                      <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+                    </NumberField.DecrementButton>
+                    <NumberField.Input />
+                    <NumberField.IncrementButton>
+                      <HugeiconsIcon icon={ArrowUp01Icon} size={16} />
+                    </NumberField.IncrementButton>
+                  </NumberField.Group>
+                </NumberField>
+              </Section>
+
+              <Section title="Color">
+                <ColorPicker
+                  value={config.color}
+                  onChange={(color) =>
+                    setConfig({ color: color.toString("hex") })
+                  }
+                >
+                  <ColorPicker.Trigger>
+                    <ColorSwatch
+                      aria-label="Watermark text color"
+                      shape="square"
+                      size="sm"
+                    />
+                  </ColorPicker.Trigger>
+                  <ColorPicker.Popover>
+                    <ColorArea
+                      aria-label="Color area"
+                      className="max-w-full"
+                      colorSpace="hsb"
+                      xChannel="saturation"
+                      yChannel="brightness"
+                    >
+                      <ColorArea.Thumb />
+                    </ColorArea>
+                    <ColorSlider
+                      channel="hue"
+                      className="gap-1 px-1"
+                      colorSpace="hsb"
+                    >
+                      <ColorSlider.Track>
+                        <ColorSlider.Thumb />
+                      </ColorSlider.Track>
+                    </ColorSlider>
+                  </ColorPicker.Popover>
+                </ColorPicker>
+              </Section>
+            </>
+          )}
+
+          {/* Image config */}
+          {config.type === "image" && (
+            <Section title="Image">
+              <input
+                ref={imageInputRef}
+                accept="image/png,image/jpeg,image/svg+xml"
+                className="hidden"
+                type="file"
+                onChange={handleImageUpload}
+              />
+              <div className="flex flex-col gap-2">
+                {config.imageData && (
+                  /* eslint-disable-next-line @next/next/no-img-element -- data URL thumbnail, not optimizable */
+                  <img
+                    alt="Watermark preview"
+                    className="max-h-16 max-w-full rounded border border-default-200 object-contain"
+                    src={config.imageData}
+                  />
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => imageInputRef.current?.click()}
+                >
+                  {config.imageData ? "Change Image" : "Upload Image"}
+                </Button>
+              </div>
+            </Section>
+          )}
+
+          {/* Opacity */}
+          <Section title="Opacity">
+            <Slider
+              aria-label="Opacity"
+              className="p-1"
+              maxValue={100}
+              minValue={0}
+              step={1}
+              value={Math.round(config.opacity * 100)}
+              onChange={(value) =>
+                setConfig({ opacity: (value as number) / 100 })
+              }
+            >
+              <Label className="text-xs text-default-500">Value</Label>
+              <Slider.Output className="text-xs text-default-500" />
+              <Slider.Track>
+                <Slider.Fill />
+                <Slider.Thumb />
+              </Slider.Track>
+            </Slider>
+          </Section>
+
+          {/* Rotation */}
+          <Section title="Rotation">
+            <div className="flex items-center gap-2">
+              {ROTATION_PRESETS.map((preset) => (
+                <Button
+                  key={preset.value}
+                  isIconOnly={false}
+                  size="sm"
+                  variant={
+                    config.rotation === preset.value ? "secondary" : "ghost"
+                  }
+                  onPress={() => setConfig({ rotation: preset.value })}
+                >
+                  {preset.label}&deg;
+                </Button>
+              ))}
+              <NumberField
+                aria-label="Rotation degrees"
+                className="w-20"
+                maxValue={360}
+                minValue={-360}
+                value={config.rotation}
+                onChange={(val) => {
+                  if (Number.isFinite(val)) setConfig({ rotation: val });
+                }}
+              >
+                <NumberField.Group>
+                  <NumberField.Input />
+                </NumberField.Group>
+              </NumberField>
+            </div>
+          </Section>
+
+          {/* Position */}
+          <Section title="Position">
+            <div className="grid grid-cols-3 gap-1.5">
+              {POSITION_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.value}
+                  aria-label={opt.label}
+                  size="sm"
+                  variant={
+                    config.position === opt.value ? "secondary" : "ghost"
+                  }
+                  onPress={() =>
+                    setConfig({ position: opt.value as WatermarkPosition })
+                  }
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+          </Section>
+
+          {/* Tiled spacing — only when position is tiled */}
+          {config.position === "tiled" && (
+            <Section title="Tile Spacing">
+              <NumberField
+                aria-label="Tile spacing"
+                className="w-full"
+                maxValue={800}
+                minValue={20}
+                value={config.tiledSpacing}
+                onChange={(val) => {
+                  if (Number.isFinite(val)) setConfig({ tiledSpacing: val });
+                }}
+              >
+                <NumberField.Group>
+                  <NumberField.DecrementButton>
+                    <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+                  </NumberField.DecrementButton>
+                  <NumberField.Input />
+                  <NumberField.IncrementButton>
+                    <HugeiconsIcon icon={ArrowUp01Icon} size={16} />
+                  </NumberField.IncrementButton>
+                </NumberField.Group>
+              </NumberField>
+            </Section>
+          )}
+
+          {/* Scale to page */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-default-500">Scale to page</span>
+            <Switch
+              aria-label="Scale to page"
+              isSelected={config.scaleToPage}
+              size="sm"
+              onChange={() => setConfig({ scaleToPage: !config.scaleToPage })}
+            />
+          </div>
+
+          {/* Layer */}
+          <Section title="Layer">
+            <ToggleButtonGroup
+              disallowEmptySelection
+              selectedKeys={new Set([config.layer])}
+              selectionMode="single"
+              size="sm"
+              onSelectionChange={(keys: Set<Key>) => {
+                const key = [...keys][0] as "overlay" | "underlay" | undefined;
+
+                if (key) setConfig({ layer: key });
+              }}
+            >
+              <ToggleButton id="overlay">Overlay</ToggleButton>
+              <ToggleButtonGroup.Separator />
+              <ToggleButton id="underlay">Underlay</ToggleButton>
+            </ToggleButtonGroup>
+          </Section>
+
+          {/* Page scope */}
+          <Section title="Pages">
+            <ToggleButtonGroup
+              disallowEmptySelection
+              selectedKeys={new Set([config.pageScope])}
+              selectionMode="single"
+              size="sm"
+              onSelectionChange={(keys: Set<Key>) => {
+                const key = [...keys][0] as
+                  | "all"
+                  | "custom"
+                  | "even"
+                  | "odd"
+                  | undefined;
+
+                if (key) setConfig({ pageScope: key });
+              }}
+            >
+              <ToggleButton id="all">All</ToggleButton>
+              <ToggleButtonGroup.Separator />
+              <ToggleButton id="odd">Odd</ToggleButton>
+              <ToggleButtonGroup.Separator />
+              <ToggleButton id="even">Even</ToggleButton>
+              <ToggleButtonGroup.Separator />
+              <ToggleButton id="custom">Range</ToggleButton>
+            </ToggleButtonGroup>
+          </Section>
+
+          {/* Custom page range */}
+          {config.pageScope === "custom" && (
+            <Input
+              aria-label="Custom page range"
+              className="text-sm"
+              placeholder="1-3, 5, 7-12"
+              value={config.customPageRange}
+              onChange={(e) => setConfig({ customPageRange: e.target.value })}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
