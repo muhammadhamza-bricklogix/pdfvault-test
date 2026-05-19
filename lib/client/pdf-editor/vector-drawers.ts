@@ -108,14 +108,12 @@ export async function drawIText(
   const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
   // Use Fabric's obj.width as the target — it's what the user sees on screen.
   // This correctly reflects both unedited text AND user edits (added/removed words).
-  // pdfTextWidth (original PDF metric) is only ~1px different for unedited text,
-  // and becomes stale/wrong after edits, so we don't use it as targetWidth.
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
   const targetWidth = fabricObjWidth;
 
   if (editorType === "editModeText") {
     console.log(
-      `[DrawIText] "${text.slice(0, 40)}" | pdfOrigWidth=${pdfTextWidth > 0 ? toPdfDim(pdfTextWidth, ctx.scaleX).toFixed(2) : "N/A"} fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
+      `[DrawIText] "${text.slice(0, 40)}" | fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
     );
   }
 
