@@ -297,42 +297,18 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // ------------------------------------------------------------------
-    // Case 2: No edits, but needs watermark overlay — copy + draw on top
+    // Case 2: No edits, needs watermark — copy page + draw watermark on top.
+    // For unedited pages, overlay and underlay produce the same visual result
+    // since there are no Fabric objects to layer against. The watermark is
+    // drawn on top of the original vector content (preserves quality).
     // ------------------------------------------------------------------
-    if (!hasEdits && needsWatermark && isOverlay) {
+    if (!hasEdits && needsWatermark) {
       const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
 
       outputPdf.addPage(copiedPage);
       const targetPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
 
       await drawWatermarkOnPage(targetPage, outputPdf, wm);
-      continue;
-    }
-
-    // ------------------------------------------------------------------
-    // Case 3: No edits, but needs watermark underlay — rasterize + underlay
-    // ------------------------------------------------------------------
-    if (!hasEdits && needsWatermark && !isOverlay) {
-      const sourcePage = sourcePdf.getPage(pageNum - 1);
-      const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
-
-      const pdfjsPage = await pdfDocument.getPage(pageNum);
-      const pngBytes = await renderPageToPng(pdfjsPage);
-
-      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
-
-      // Draw watermark first (behind everything)
-      await drawWatermarkOnPage(newPage, outputPdf, wm);
-
-      // Draw rasterized original page on top
-      const bgImage = await outputPdf.embedPng(pngBytes);
-
-      newPage.drawImage(bgImage, {
-        height: pdfHeight,
-        width: pdfWidth,
-        x: 0,
-        y: 0,
-      });
       continue;
     }
 
@@ -349,12 +325,7 @@ export async function mergeFabricEditsIntoPdf({
     // 2. Create new page with same dimensions
     const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
 
-    // 3. Underlay watermark goes first (behind everything)
-    if (needsWatermark && !isOverlay) {
-      await drawWatermarkOnPage(newPage, outputPdf, wm!);
-    }
-
-    // 4. Embed and draw rasterized background
+    // 3. Embed and draw rasterized background
     const bgImage = await outputPdf.embedPng(pngBytes);
 
     newPage.drawImage(bgImage, {
@@ -363,6 +334,12 @@ export async function mergeFabricEditsIntoPdf({
       x: 0,
       y: 0,
     });
+
+    // 4. Underlay watermark — between background and Fabric objects so it
+    //    appears behind user edits but on top of the original page content.
+    if (needsWatermark && !isOverlay) {
+      await drawWatermarkOnPage(newPage, outputPdf, wm!);
+    }
 
     // 5. Draw all Fabric objects on top
     const json = fabricJsonByPage.get(pageNum)!;

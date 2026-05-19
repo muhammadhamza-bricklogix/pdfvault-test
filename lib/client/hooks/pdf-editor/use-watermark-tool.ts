@@ -128,6 +128,24 @@ export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
             canvasHeight,
           );
         }
+
+        // Apply z-order based on layer setting — underlay sends watermark
+        // behind all other Fabric objects, overlay brings it to front.
+        const wmObjects = fabricCanvas
+          .getObjects()
+          .filter(
+            (obj) =>
+              (obj as FabricObject & { editorType?: string }).editorType ===
+              WATERMARK_EDITOR_TYPE,
+          );
+
+        for (const obj of wmObjects) {
+          if (config.layer === "underlay") {
+            fabricCanvas.sendObjectToBack(obj);
+          } else {
+            fabricCanvas.bringObjectToFront(obj);
+          }
+        }
       } finally {
         setIsRestoringHistory(false);
       }

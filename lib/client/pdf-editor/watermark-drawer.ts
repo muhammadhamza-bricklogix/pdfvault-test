@@ -123,7 +123,7 @@ async function drawTextWatermark(
     color: color ?? undefined,
     font,
     opacity: config.opacity,
-    rotate: degrees(config.rotation),
+    rotate: degrees(-config.rotation),
     size: config.fontSize,
   };
 
@@ -205,7 +205,7 @@ async function drawImageWatermark(
   const drawOpts = {
     height: scaledH,
     opacity: config.opacity,
-    rotate: degrees(config.rotation),
+    rotate: degrees(-config.rotation),
     width: scaledW,
   };
 

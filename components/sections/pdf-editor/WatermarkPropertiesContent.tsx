@@ -13,9 +13,7 @@ import {
   ColorSwatch,
   Input,
   Label,
-  ListBoxItem,
   NumberField,
-  Select,
   Slider,
   Switch,
   ToggleButton,
@@ -153,19 +151,24 @@ export function WatermarkPropertiesContent() {
               </Section>
 
               <Section title="Font">
-                <Select
-                  aria-label="Font family"
-                  selectedKey={config.fontFamily}
-                  onSelectionChange={(key) => {
-                    if (key) setConfig({ fontFamily: key as string });
+                <ToggleButtonGroup
+                  disallowEmptySelection
+                  selectedKeys={new Set([config.fontFamily])}
+                  selectionMode="single"
+                  size="sm"
+                  onSelectionChange={(keys: Set<Key>) => {
+                    const key = [...keys][0] as string | undefined;
+
+                    if (key) setConfig({ fontFamily: key });
                   }}
                 >
-                  {FONT_OPTIONS.map((opt) => (
-                    <ListBoxItem key={opt.value} id={opt.value}>
+                  {FONT_OPTIONS.map((opt, i) => (
+                    <ToggleButton key={opt.value} id={opt.value}>
+                      {i > 0 && <ToggleButtonGroup.Separator />}
                       {opt.label}
-                    </ListBoxItem>
+                    </ToggleButton>
                   ))}
-                </Select>
+                </ToggleButtonGroup>
               </Section>
 
               <Section title="Font Size">
@@ -317,19 +320,23 @@ export function WatermarkPropertiesContent() {
 
           {/* Position */}
           <Section title="Position">
-            <Select
-              aria-label="Watermark position"
-              selectedKey={config.position}
-              onSelectionChange={(key) => {
-                if (key) setConfig({ position: key as WatermarkPosition });
-              }}
-            >
+            <div className="grid grid-cols-3 gap-1.5">
               {POSITION_OPTIONS.map((opt) => (
-                <ListBoxItem key={opt.value} id={opt.value}>
+                <Button
+                  key={opt.value}
+                  aria-label={opt.label}
+                  size="sm"
+                  variant={
+                    config.position === opt.value ? "secondary" : "ghost"
+                  }
+                  onPress={() =>
+                    setConfig({ position: opt.value as WatermarkPosition })
+                  }
+                >
                   {opt.label}
-                </ListBoxItem>
+                </Button>
               ))}
-            </Select>
+            </div>
           </Section>
 
           {/* Tiled spacing — only when position is tiled */}
