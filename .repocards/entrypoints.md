@@ -28,6 +28,19 @@ Files where execution begins — servers, CLIs, library public API, scripts.
 
 - `lib/providers/query-provider.tsx`
 
+## `lib/client/upload-toasts/controller.ts`
+
+**Reason:** no-incoming-imports · **Language:** ts · **LOC:** 103
+
+**Exports:**
+
+- `type` **StartUploadToastInput** — [`lib/client/upload-toasts/controller.ts:10`](../lib/client/upload-toasts/controller.ts#L10)
+- `const` **uploadToasts** — [`lib/client/upload-toasts/controller.ts:24`](../lib/client/upload-toasts/controller.ts#L24)
+
+**Imports 1 local file:**
+
+- `lib/client/upload-toasts/queue.ts`
+
 ## `components/sections/dashboard/dashboard-home.tsx`
 
 **Reason:** no-incoming-imports · **Language:** tsx · **LOC:** 27
@@ -110,19 +123,6 @@ Files where execution begins — servers, CLIs, library public API, scripts.
 **Imports 1 local file:**
 
 - `components/ui/upload-toast/UploadToastRenderer.tsx`
-
-## `lib/client/upload-toasts/controller.ts`
-
-**Reason:** no-incoming-imports · **Language:** ts · **LOC:** 103
-
-**Exports:**
-
-- `type` **StartUploadToastInput** — [`lib/client/upload-toasts/controller.ts:10`](../lib/client/upload-toasts/controller.ts#L10)
-- `const` **uploadToasts** — [`lib/client/upload-toasts/controller.ts:24`](../lib/client/upload-toasts/controller.ts#L24)
-
-**Imports 1 local file:**
-
-- `lib/client/upload-toasts/queue.ts`
 
 ## npm scripts
 

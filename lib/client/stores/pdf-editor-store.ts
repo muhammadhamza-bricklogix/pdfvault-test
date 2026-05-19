@@ -48,7 +48,7 @@ export type WatermarkConfig = {
 const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
   color: "#888888",
   customPageRange: "",
-  enabled: true,
+  enabled: false,
   fontFamily: "Helvetica",
   fontSize: 48,
   imageData: null,
