@@ -257,7 +257,7 @@ async function processPageObjects(
 export async function mergeFabricEditsIntoPdf({
   fabricJsonByPage,
   fontDataMap,
-  pageOrder,
+  pageOrder: _pageOrder,
   pdfDocument,
   sourceBytes,
   watermarkConfig,
@@ -266,6 +266,7 @@ export async function mergeFabricEditsIntoPdf({
 
   // Load source for copying unedited pages
   const sourcePdf = await PdfDoc.load(sourceBytes);
+  const totalPages = sourcePdf.getPageCount();
 
   // Create a fresh output document
   const outputPdf = await PdfDoc.create();
@@ -315,13 +316,13 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // ------------------------------------------------------------------
-    // Case 4: Has edits (and possibly watermark)
+    // Case 3: Has edits (and possibly watermark)
     // ------------------------------------------------------------------
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
 
     // 1. Render original page to PNG (text-suppressed)
-    const pdfjsPage = await pdfDocument.getPage(sourcePageNum);
+    const pdfjsPage = await pdfDocument.getPage(pageNum);
     const pngBytes = await renderPageToPng(pdfjsPage);
 
     // 2. Create new page with same dimensions

@@ -1,5 +1,4 @@
 import type { Canvas as FabricCanvas } from "fabric";
-
 import type { Document } from "@/lib/shared/types/documents.types";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
@@ -45,11 +44,9 @@ export async function persistEditorDocument({
       file,
     });
 
-    const savedFile = new File(
-      [savedBytes.buffer as ArrayBuffer],
-      file.name,
-      { type: "application/pdf" },
-    );
+    const savedFile = new File([savedBytes.buffer as ArrayBuffer], file.name, {
+      type: "application/pdf",
+    });
 
     const document = await documentsService.uploadDocument({
       documentId: currentDocumentId ?? undefined,

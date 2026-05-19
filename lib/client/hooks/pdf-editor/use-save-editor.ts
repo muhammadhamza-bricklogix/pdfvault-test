@@ -48,7 +48,8 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         } else if (result.reason === "not-loaded") {
           toast.error({
             title: "PDF still loading",
-            description: "Wait for the document to finish loading, then try again.",
+            description:
+              "Wait for the document to finish loading, then try again.",
           });
         } else {
           toast.error({

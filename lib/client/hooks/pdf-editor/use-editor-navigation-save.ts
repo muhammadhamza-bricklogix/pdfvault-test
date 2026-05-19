@@ -61,7 +61,8 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       if (!result.ok && result.reason === "error") {
         toast.error({
           title: "Could not save",
-          description: "We couldn't save your PDF before leaving. Please try Save first.",
+          description:
+            "We couldn't save your PDF before leaving. Please try Save first.",
         });
 
         return;

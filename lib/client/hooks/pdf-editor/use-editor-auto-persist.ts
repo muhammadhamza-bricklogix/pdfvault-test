@@ -46,12 +46,14 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
         if (result.reason === "not-signed-in") {
           toast.info({
             title: "Sign in to save",
-            description: "Page changes are applied locally. Sign in to save to the cloud.",
+            description:
+              "Page changes are applied locally. Sign in to save to the cloud.",
           });
         } else if (result.reason === "error") {
           toast.error({
             title: "Could not save pages",
-            description: "Your page changes were applied but cloud save failed. Use Save to retry.",
+            description:
+              "Your page changes were applied but cloud save failed. Use Save to retry.",
           });
         }
 

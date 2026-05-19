@@ -1,9 +1,10 @@
 "use client";
 
+import type { PageSizePreset } from "@/lib/client/pdf-editor/page-size-presets";
+
 import { Button, Modal } from "@heroui/react";
 import { useState } from "react";
 
-import type { PageSizePreset } from "@/lib/client/pdf-editor/page-size-presets";
 import { PAGE_SIZE_PRESETS } from "@/lib/client/pdf-editor/page-size-presets";
 
 type PageResizeDialogProps = {
@@ -45,8 +46,10 @@ export function PageResizeDialog({
           <Modal.Body className="gap-4">
             <p className="text-sm text-default-500">
               Choose a page size for{" "}
-              {selectedCount === 1 ? "the selected page" : `${selectedCount} selected pages`}.
-              Content is scaled to fit and centered.
+              {selectedCount === 1
+                ? "the selected page"
+                : `${selectedCount} selected pages`}
+              . Content is scaled to fit and centered.
             </p>
             <div className="grid grid-cols-2 gap-2">
               {PAGE_SIZE_PRESETS.map((preset) => {
@@ -64,7 +67,9 @@ export function PageResizeDialog({
                     type="button"
                     onClick={() => setSelectedPresetId(preset.id)}
                   >
-                    <span className="font-medium text-foreground">{preset.label}</span>
+                    <span className="font-medium text-foreground">
+                      {preset.label}
+                    </span>
                     <span className="mt-0.5 block text-xs text-default-500">
                       {preset.widthPt} × {preset.heightPt} pt
                     </span>

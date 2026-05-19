@@ -1,7 +1,8 @@
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
-import { appendPdfPage } from "@/lib/client/pdf-editor/append-pdf-page";
 import { degrees } from "pdf-lib";
+
+import { appendPdfPage } from "@/lib/client/pdf-editor/append-pdf-page";
 
 type BuildPdfInput = {
   importedPdfs: Map<string, ArrayBuffer>;

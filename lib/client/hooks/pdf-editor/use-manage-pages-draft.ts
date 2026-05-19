@@ -5,10 +5,10 @@ import type {
   ManagePagesDraftSnapshot,
   PageRotation,
 } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
-import { DEFAULT_BLANK_PAGE } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useCallback, useReducer } from "react";
 
+import { DEFAULT_BLANK_PAGE } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 import { toast } from "@/lib/shared/utils/toast";
 
 const MAX_HISTORY = 50;
@@ -17,7 +17,9 @@ function createId() {
   return crypto.randomUUID();
 }
 
-function cloneSnapshot(snapshot: ManagePagesDraftSnapshot): ManagePagesDraftSnapshot {
+function cloneSnapshot(
+  snapshot: ManagePagesDraftSnapshot,
+): ManagePagesDraftSnapshot {
   return {
     importedPdfs: new Map(snapshot.importedPdfs),
     pages: snapshot.pages.map((p) => ({ ...p })),
@@ -25,7 +27,10 @@ function cloneSnapshot(snapshot: ManagePagesDraftSnapshot): ManagePagesDraftSnap
   };
 }
 
-function initPagesFromOrder(pageOrder: number[], pageCount: number): DraftPage[] {
+function initPagesFromOrder(
+  pageOrder: number[],
+  pageCount: number,
+): DraftPage[] {
   const order =
     pageOrder.length === pageCount
       ? pageOrder
@@ -239,7 +244,7 @@ export function useManagePagesDraft({
         if (next.has(id)) next.delete(id);
         else next.add(id);
 
-        return { ...current, selectedIds: [...next] };
+        return { ...current, selectedIds: Array.from(next) };
       });
     },
     [applyChange],
