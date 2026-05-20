@@ -112,6 +112,7 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           fontStyle: block.fontStyle,
           fontWeight: block.fontWeight,
           left: block.x,
+          objectCaching: false,
           originX: "left",
           originY: "top",
           // Store original PDF text width for accurate export spacing
