@@ -47,10 +47,15 @@ export const footerPaymentStripClass =
 
 /** Uniform slot for payment marks — same box for every brand. */
 export const footerPaymentLogoSlotClass =
-  "flex h-14 w-28 shrink-0 items-center justify-center sm:h-16 sm:w-32";
+  "flex h-12 w-20 shrink-0 items-center justify-center sm:h-14 sm:w-24";
 
+/**
+ * Each SVG is constrained to the slot via max-w/max-h:full + object-contain so
+ * every brand mark renders inside an identical box. Aspect ratios differ
+ * naturally; this ensures the visual footprint stays uniform across brands.
+ */
 export const footerPaymentIconClass =
-  "h-9 w-auto max-w-[5.25rem] shrink-0 object-contain sm:h-10 sm:max-w-28 [&_svg]:h-full [&_svg]:max-h-full [&_svg]:w-auto [&_svg_path]:fill-current";
+  "max-h-full max-w-full shrink-0 object-contain [&_svg]:max-h-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:w-auto [&_svg_path]:fill-current";
 
 export const footerLogoRowClass =
   "mt-8 flex justify-center border-t border-default-200/80 pt-6";

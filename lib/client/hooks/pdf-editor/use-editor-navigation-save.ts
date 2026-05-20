@@ -52,23 +52,31 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
       isNavigatingRef.current = true;
 
-      const result = await persistEditorDocument({
-        fabricCanvas: fabricRef.current,
+      const loadingKey = toast.loading({
+        title: "Saving…",
+        description: "Saving your PDF before opening your library.",
       });
 
-      isNavigatingRef.current = false;
-
-      if (!result.ok && result.reason === "error") {
-        toast.error({
-          title: "Could not save",
-          description:
-            "We couldn't save your PDF before leaving. Please try Save first.",
+      try {
+        const result = await persistEditorDocument({
+          fabricCanvas: fabricRef.current,
         });
 
-        return;
-      }
+        if (!result.ok && result.reason === "error") {
+          toast.error({
+            title: "Could not save",
+            description:
+              "We couldn't save your PDF before leaving. Please try Save first.",
+          });
 
-      router.push(detail.url);
+          return;
+        }
+
+        router.push(detail.url);
+      } finally {
+        toast.close(loadingKey);
+        isNavigatingRef.current = false;
+      }
     };
 
     window.addEventListener("editor:navigate-after-save", onNavigateAfterSave);

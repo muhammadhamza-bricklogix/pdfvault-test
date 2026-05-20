@@ -29,6 +29,11 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
 
     isSavingRef.current = true;
 
+    const loadingKey = toast.loading({
+      title: "Saving…",
+      description: "Saving your PDF to your library.",
+    });
+
     try {
       const result = await persistEditorDocument({
         fabricCanvas: fabricRef.current,
@@ -75,6 +80,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         description: "Your PDF was saved to your library.",
       });
     } finally {
+      toast.close(loadingKey);
       isSavingRef.current = false;
     }
   }, [router, searchParams]);
