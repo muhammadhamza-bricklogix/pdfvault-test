@@ -41,7 +41,6 @@ function clearWatermarkPreviews(canvas: Canvas) {
 }
 
 export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
-  const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const watermarkConfig = usePdfEditorStore((s) => s.watermarkConfig);
@@ -52,19 +51,24 @@ export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
     FabricText: typeof import("fabric").FabricText;
   } | null>(null);
 
-  // Clean up previews when the tool deactivates or canvas unmounts
+  // Clean up previews when watermark is disabled or canvas unmounts
   useEffect(() => {
+    if (fabricCanvas && !watermarkConfig.enabled) {
+      clearWatermarkPreviews(fabricCanvas);
+      fabricCanvas.renderAll();
+    }
+
     return () => {
       if (fabricCanvas) {
         clearWatermarkPreviews(fabricCanvas);
         fabricCanvas.renderAll();
       }
     };
-  }, [fabricCanvas, activeTool]);
+  }, [fabricCanvas, watermarkConfig.enabled]);
 
   // Main preview rendering effect
   useEffect(() => {
-    if (!fabricCanvas || activeTool !== "watermark") return;
+    if (!fabricCanvas || !watermarkConfig.enabled) return;
 
     let cancelled = false;
 
@@ -158,7 +162,7 @@ export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
     return () => {
       cancelled = true;
     };
-  }, [activeTool, currentPage, fabricCanvas, pageCount, watermarkConfig]);
+  }, [currentPage, fabricCanvas, pageCount, watermarkConfig]);
 }
 
 // ---------------------------------------------------------------------------
