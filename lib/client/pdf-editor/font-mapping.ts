@@ -1,5 +1,7 @@
 import type { PDFDocument, PDFFont } from "pdf-lib";
+import type { FontData } from "./text-extraction";
 
+import fontkit from "@pdf-lib/fontkit";
 import { StandardFonts } from "pdf-lib";
 
 type FontKey = `${string}|${string}|${string}`;
@@ -57,13 +59,19 @@ export function resolveStandardFont(
 /**
  * Caches embedded `PDFFont` instances to avoid re-embedding the same
  * font multiple times into the PDF document.
+ *
+ * Tries to embed real font bytes extracted from pdf.js first (via fontkit),
+ * falling back to the closest StandardFont if custom embedding fails.
  */
 export class FontCache {
   private cache = new Map<FontKey, PDFFont>();
+  private fontDataMap: Map<string, FontData>;
   private pdfDoc: PDFDocument;
 
-  constructor(pdfDoc: PDFDocument) {
+  constructor(pdfDoc: PDFDocument, fontDataMap: Map<string, FontData>) {
     this.pdfDoc = pdfDoc;
+    this.fontDataMap = fontDataMap;
+    pdfDoc.registerFontkit(fontkit);
   }
 
   async getFont(
@@ -76,6 +84,27 @@ export class FontCache {
 
     if (cached) return cached;
 
+    // Try real font bytes from pdf.js first
+    const fontData = this.fontDataMap.get(fontFamily);
+
+    if (fontData?.bytes) {
+      try {
+        const font = await this.pdfDoc.embedFont(fontData.bytes, {
+          subset: false,
+        });
+
+        this.cache.set(key, font);
+
+        return font;
+      } catch (err) {
+        console.error(
+          `[FontCache] Custom font embedding failed for ${fontFamily}:`,
+          err,
+        );
+      }
+    }
+
+    // Fallback: standard font
     const standardFont = resolveStandardFont(fontFamily, fontWeight, fontStyle);
     const font = await this.pdfDoc.embedFont(standardFont);
 

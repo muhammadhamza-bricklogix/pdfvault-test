@@ -15,6 +15,8 @@ import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
+import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
+import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
@@ -30,6 +32,16 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const backgroundImageConfig = usePdfEditorStore(
+    (s) => s.backgroundImageConfig,
+  );
+  const sourcePage = usePdfEditorStore((s) => {
+    const order = s.pageOrder;
+
+    if (!order.length) return s.currentPage;
+
+    return order[s.currentPage - 1] ?? s.currentPage;
+  });
   const zoom = usePdfEditorStore((s) => s.zoom);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,7 +55,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     let cancelled = false;
 
     pdfDocument
-      .getPage(currentPage)
+      .getPage(sourcePage)
       .then((p) => {
         if (!cancelled) setPage(p);
       })
@@ -55,7 +67,17 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, pdfDocument]);
+  }, [sourcePage, pdfDocument]);
+
+  const bgShouldShow =
+    backgroundImageConfig.enabled &&
+    !!backgroundImageConfig.imageData &&
+    shouldWatermarkPage(
+      currentPage,
+      pageCount,
+      backgroundImageConfig.pageScope,
+      backgroundImageConfig.customPageRange,
+    );
 
   const { renderedSize } = usePageRenderer({
     canvasRef,
@@ -63,6 +85,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     suppressText: true,
     zoom,
   });
+
+  const bgObjectFit: "contain" | "cover" | "fill" =
+    backgroundImageConfig.fit === "stretch"
+      ? "fill"
+      : backgroundImageConfig.fit;
 
   const { fabricCanvas, fabricRef } = useFabricCanvas({
     fabricCanvasRef,
@@ -85,6 +112,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   useShapeTool({ fabricCanvas });
   const { handleModalClose } = useSignatureTool({ fabricCanvas });
 
+  useWatermarkTool({ fabricCanvas });
+
   const isSignatureModalOpen = usePdfEditorStore((s) => s.isSignatureModalOpen);
 
   // Wire active tool cursor + click handler
@@ -102,6 +131,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       shape: "crosshair",
       signature: "default",
       text: "text",
+      watermark: "default",
       whiteout: "crosshair",
     };
 
@@ -180,11 +210,28 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   return (
     <div className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="shadow-lg">
-        <div ref={containerRef} className="relative">
+        <div ref={containerRef} className="relative bg-white">
+          {bgShouldShow && backgroundImageConfig.imageData && (
+            /* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not optimizable */
+            <img
+              aria-hidden
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              src={backgroundImageConfig.imageData}
+              style={{
+                objectFit: bgObjectFit,
+                opacity: backgroundImageConfig.opacity,
+              }}
+            />
+          )}
           <canvas
             ref={canvasRef}
             aria-label={`PDF page ${currentPage} of ${pageCount}`}
             role="img"
+            style={{
+              mixBlendMode: bgShouldShow ? "multiply" : undefined,
+              position: "relative",
+            }}
           />
           <canvas
             ref={fabricCanvasRef}

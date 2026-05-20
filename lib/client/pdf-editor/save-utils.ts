@@ -22,8 +22,18 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
   const baseWidth = canvas.getWidth() / zoom;
   const baseHeight = canvas.getHeight() / zoom;
 
+  const json = canvas.toJSON() as Record<string, unknown>;
+
+  // Strip ephemeral watermark preview objects — they are visual-only and must
+  // never leak into persisted page state, history snapshots, or the export pipeline.
+  if (Array.isArray(json.objects)) {
+    json.objects = (json.objects as Record<string, unknown>[]).filter(
+      (obj) => obj.editorType !== "watermarkPreview",
+    );
+  }
+
   return JSON.stringify({
-    ...canvas.toJSON(),
+    ...json,
     height: baseHeight,
     width: baseWidth,
   });
@@ -122,6 +132,16 @@ export function dataUrlToBytes(dataUrl: string): Uint8Array {
   return bytes;
 }
 
+/** Persists the live Fabric canvas into the store for a display slot. */
+export function flushLiveFabricPage(
+  displayPage: number,
+  fabricCanvas: FabricCanvas,
+) {
+  usePdfEditorStore
+    .getState()
+    .saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));
+}
+
 type BuildEditedPdfInput = {
   currentPage: number;
   fabricCanvas: FabricCanvas | null;
@@ -139,13 +159,34 @@ export async function buildEditedPdfBytes({
   file,
 }: BuildEditedPdfInput): Promise<Uint8Array> {
   if (fabricCanvas) {
-    usePdfEditorStore
-      .getState()
-      .saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+    flushLiveFabricPage(currentPage, fabricCanvas);
   }
 
-  const fabricJsonByPage = usePdfEditorStore.getState().fabricJsonByPage;
+  const {
+    backgroundImageConfig,
+    fabricJsonByPage,
+    fontDataByLoadedName,
+    pageOrder,
+    pdfDocument,
+    watermarkConfig,
+  } = usePdfEditorStore.getState();
+
+  if (!pdfDocument) {
+    throw new Error("PDF document not loaded");
+  }
+
   const sourceBytes = await file.arrayBuffer();
 
-  return mergeFabricEditsIntoPdf({ fabricJsonByPage, sourceBytes });
+  return mergeFabricEditsIntoPdf({
+    backgroundImageConfig:
+      backgroundImageConfig.enabled && backgroundImageConfig.imageData
+        ? backgroundImageConfig
+        : null,
+    fabricJsonByPage,
+    fontDataMap: fontDataByLoadedName,
+    pageOrder,
+    pdfDocument,
+    sourceBytes,
+    watermarkConfig: watermarkConfig.enabled ? watermarkConfig : null,
+  });
 }

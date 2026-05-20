@@ -5,6 +5,7 @@ import type { Canvas as FabricCanvas } from "fabric";
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
+  Layout03Icon,
   NoteIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,15 +15,18 @@ import { useState } from "react";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { ToolsContent } from "./EditorTopBar";
+import { MobileToolPropertiesModal } from "./MobileToolPropertiesModal";
 import { ShapePropertiesContent } from "./RightSidebar";
 import { ThumbnailStrip } from "./ThumbnailSidebar";
 
 type BottomDockProps = {
   fabricCanvas: FabricCanvas | null;
+  onReorderPages?: (fromDisplay: number, toDisplay: number) => void;
 };
 
-export function BottomDock({ fabricCanvas }: BottomDockProps) {
+export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
+  const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
 
   return (
@@ -41,6 +45,22 @@ export function BottomDock({ fabricCanvas }: BottomDockProps) {
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ToolsContent showLabels={false} toolIconSize={20} />
         </div>
+
+        {pageCount > 0 && (
+          <Tooltip delay={300}>
+            <Button
+              aria-label="Manage pages"
+              size="sm"
+              variant="tertiary"
+              onPress={() => setIsManagePagesOpen(true)}
+            >
+              <HugeiconsIcon icon={Layout03Icon} size={16} />
+            </Button>
+            <Tooltip.Content>
+              <p>Manage pages</p>
+            </Tooltip.Content>
+          </Tooltip>
+        )}
 
         {pageCount > 1 && (
           <Tooltip delay={300}>
@@ -66,9 +86,11 @@ export function BottomDock({ fabricCanvas }: BottomDockProps) {
 
       {isThumbsOpen && pageCount > 1 && (
         <div className="border-t border-default-200/70 bg-default-50/70">
-          <ThumbnailStrip />
+          <ThumbnailStrip onReorderPages={onReorderPages} />
         </div>
       )}
+
+      <MobileToolPropertiesModal />
     </div>
   );
 }

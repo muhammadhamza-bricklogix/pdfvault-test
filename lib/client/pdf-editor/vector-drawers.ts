@@ -1,7 +1,19 @@
 import type { Color, PDFPage } from "pdf-lib";
 import type { FontCache } from "./font-mapping";
 
-import { degrees, LineCapStyle, rgb } from "pdf-lib";
+import {
+  beginText,
+  degrees,
+  endText,
+  LineCapStyle,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+  setFillingColor,
+  setFontAndSize,
+  setTextMatrix,
+  showText,
+} from "pdf-lib";
 
 import { hexToPdfColor } from "./color-utils";
 import {
@@ -69,6 +81,7 @@ export async function drawIText(
 
   // The object's bounding box width in Fabric units (what the user sees as the text container)
   const objWidth = ((obj.width as number) || 0) * objScaleX;
+  const editorType = (obj.editorType as string) || "";
 
   const { left, top } = resolveTopLeft(obj);
 
@@ -77,30 +90,155 @@ export async function drawIText(
 
   const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
   const fontHeight = font.heightAtSize(pdfFontSize, { descender: false });
-  const pdfMaxWidth = objWidth > 0 ? toPdfDim(objWidth, ctx.scaleX) : undefined;
+
+  // For extracted PDF text items, skip maxWidth — their position is controlled
+  // by precise x/y coordinates, not text wrapping. maxWidth would cause pdf-lib
+  // to compress text when its font metrics differ from the original PDF's.
+  const pdfMaxWidth =
+    editorType === "editModeText"
+      ? undefined
+      : objWidth > 0
+        ? toPdfDim(objWidth, ctx.scaleX)
+        : undefined;
 
   const pdfX = toPdfX(left, ctx);
   const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY) - fontHeight;
+
+  // Compute what pdf-lib/fontkit thinks the text width is
+  const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
+  // Use Fabric's obj.width as the target — it's what the user sees on screen.
+  // This correctly reflects both unedited text AND user edits (added/removed words).
+  const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
+  const targetWidth = fabricObjWidth;
+
+  if (editorType === "editModeText") {
+    console.log(
+      `[DrawIText] "${text.slice(0, 40)}" | fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
+    );
+  }
 
   const lines = text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
   const pdfLineHeight = pdfFontSize * lineHeight;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  // For extracted PDF text, split by spaces and position each word individually.
+  // pdf.js font subsets often omit the space glyph (PDF uses positioning operators
+  // instead of space characters), so rendering the full string collapses spaces to
+  // zero width. Instead, we measure each word with fontkit, compute the leftover
+  // width (fabricWidth - totalWordWidth) and distribute it evenly as inter-word gaps.
+  if (editorType === "editModeText" && targetWidth > 0) {
+    const fontKey = page.node.newFontDictionary(font.name, font.ref);
 
-    if (!line) continue; // skip blank lines (Y still advances via index)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-    page.drawText(line, {
-      color,
-      font,
-      maxWidth: pdfMaxWidth,
-      opacity,
-      rotate: angle ? degrees(-angle) : undefined,
-      size: pdfFontSize,
-      x: pdfX,
-      y: pdfY - i * pdfLineHeight,
-    });
+      if (!line) continue;
+
+      const lineY = pdfY - i * pdfLineHeight;
+      const words = line.split(" ");
+
+      if (words.length <= 1) {
+        // Single word — no space issue, draw directly
+        page.pushOperators(
+          pushGraphicsState(),
+          beginText(),
+          setFillingColor(color),
+          setFontAndSize(fontKey, pdfFontSize),
+          setTextMatrix(1, 0, 0, 1, pdfX, lineY),
+          showText(font.encodeText(line)),
+          endText(),
+          popGraphicsState(),
+        );
+      } else {
+        // Multiple words — measure each, distribute remaining width as spaces.
+        // Filter out empty strings from split (leading/trailing spaces produce
+        // them) to avoid inflating the space count. Trailing space in the
+        // original text is positional padding between PDF fragments — it must
+        // NOT be redistributed among visible word gaps.
+        const nonEmptyWords = words.filter((w) => w.length > 0);
+
+        if (nonEmptyWords.length <= 1) {
+          // After filtering, only one word — draw directly
+          const singleWord = nonEmptyWords[0] || line;
+
+          page.pushOperators(
+            pushGraphicsState(),
+            beginText(),
+            setFillingColor(color),
+            setFontAndSize(fontKey, pdfFontSize),
+            setTextMatrix(1, 0, 0, 1, pdfX, lineY),
+            showText(font.encodeText(singleWord)),
+            endText(),
+            popGraphicsState(),
+          );
+        } else {
+          const wordWidths = nonEmptyWords.map((w) =>
+            font.widthOfTextAtSize(w, pdfFontSize),
+          );
+          const totalWordWidth = wordWidths.reduce((a, b) => a + b, 0);
+
+          // Count leading spaces to offset the cursor start
+          let leadingSpaces = 0;
+
+          for (let s = 0; s < words.length; s++) {
+            if (words[s] === "") leadingSpaces++;
+            else break;
+          }
+
+          // Estimate width of one space from the original text metrics:
+          // total spaces in text = words.length - 1 (from split)
+          // internal gaps = nonEmptyWords.length - 1
+          const totalSpaces = words.length - 1;
+          // Total space to fill = fabricWidth - word widths
+          const totalSpaceWidth = targetWidth - totalWordWidth;
+
+          // Distribute space width only among ALL original spaces (including
+          // leading/trailing) to compute per-space width, then use that for
+          // internal gaps. Leading/trailing spaces just offset the cursor.
+          const perSpaceWidth =
+            totalSpaces > 0 ? Math.max(0, totalSpaceWidth / totalSpaces) : 0;
+
+          let cursorX = pdfX + leadingSpaces * perSpaceWidth;
+
+          for (let w = 0; w < nonEmptyWords.length; w++) {
+            page.pushOperators(
+              pushGraphicsState(),
+              beginText(),
+              setFillingColor(color),
+              setFontAndSize(fontKey, pdfFontSize),
+              setTextMatrix(1, 0, 0, 1, cursorX, lineY),
+              showText(font.encodeText(nonEmptyWords[w])),
+              endText(),
+              popGraphicsState(),
+            );
+
+            // Advance cursor: word width + one space gap (except after last word)
+            cursorX += wordWidths[w];
+
+            if (w < nonEmptyWords.length - 1) {
+              cursorX += perSpaceWidth;
+            }
+          }
+        }
+      }
+    }
+  } else {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (!line) continue; // skip blank lines (Y still advances via index)
+
+      page.drawText(line, {
+        color,
+        font,
+        maxWidth: pdfMaxWidth,
+        opacity,
+        rotate: angle ? degrees(-angle) : undefined,
+        size: pdfFontSize,
+        x: pdfX,
+        y: pdfY - i * pdfLineHeight,
+      });
+    }
   }
 
   // Underline simulation

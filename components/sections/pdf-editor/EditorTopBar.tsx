@@ -5,16 +5,19 @@ import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
   ArrowDown01Icon,
+  BackgroundIcon,
   Cursor01Icon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
+  Layout03Icon,
   PaintBrush01Icon,
   PaintBucketIcon,
   RedoIcon,
   SaveMoneyDollarIcon,
   ShapesIcon,
   SignatureIcon,
+  Stamp01Icon,
   TextFontIcon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
@@ -281,13 +284,8 @@ const TOOLS = [
   { icon: PaintBucketIcon, id: "whiteout", label: "Whiteout" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: Image01Icon, id: "image", label: "Image" },
-] as const;
-
-const HIGHLIGHT_COLORS = [
-  { color: "#FFEB3B", label: "Yellow" },
-  { color: "#A5D6A7", label: "Green" },
-  { color: "#90CAF9", label: "Blue" },
-  { color: "#F48FB1", label: "Pink" },
+  { icon: Stamp01Icon, id: "watermark", label: "Watermark" },
+  { icon: BackgroundIcon, id: "backgroundImage", label: "Background" },
 ] as const;
 
 type ToolsContentProps = {
@@ -300,9 +298,7 @@ export function ToolsContent({
   showLabels = true,
 }: ToolsContentProps = {}) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
-  const highlightColor = usePdfEditorStore((s) => s.highlightColor);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
-  const setHighlightColor = usePdfEditorStore((s) => s.setHighlightColor);
 
   const handleToolChange = (keys: Set<Key>) => {
     const key = [...keys][0] as ActiveTool | undefined;
@@ -313,75 +309,69 @@ export function ToolsContent({
   };
 
   return (
-    <>
-      <Toolbar aria-label="Drawing tools">
-        <ToggleButtonGroup
-          disallowEmptySelection
-          selectedKeys={new Set([activeTool])}
-          selectionMode="single"
-          size="md"
-          onSelectionChange={handleToolChange}
-        >
-          {TOOLS.map((tool, i) =>
-            showLabels ? (
-              <ToggleButton
-                key={tool.id}
-                aria-label={tool.label}
-                className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
-                id={tool.id}
-              >
+    <Toolbar aria-label="Drawing tools">
+      <ToggleButtonGroup
+        disallowEmptySelection
+        selectedKeys={new Set([activeTool])}
+        selectionMode="single"
+        size="md"
+        onSelectionChange={handleToolChange}
+      >
+        {TOOLS.map((tool, i) =>
+          showLabels ? (
+            <ToggleButton
+              key={tool.id}
+              aria-label={tool.label}
+              className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+              id={tool.id}
+            >
+              {i > 0 && <ToggleButtonGroup.Separator />}
+              <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
+              <span className="text-[10px] leading-tight">{tool.label}</span>
+            </ToggleButton>
+          ) : (
+            <Tooltip key={tool.id} delay={300}>
+              <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
                 {i > 0 && <ToggleButtonGroup.Separator />}
                 <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
-                <span className="text-[10px] leading-tight">{tool.label}</span>
               </ToggleButton>
-            ) : (
-              <Tooltip key={tool.id} delay={300}>
-                <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
-                  {i > 0 && <ToggleButtonGroup.Separator />}
-                  <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
-                </ToggleButton>
-                <Tooltip.Content>
-                  <p>{tool.label}</p>
-                </Tooltip.Content>
-              </Tooltip>
-            ),
-          )}
-        </ToggleButtonGroup>
-      </Toolbar>
-
-      {/* Highlight color presets — visible only when highlight tool is active */}
-      {activeTool === "highlight" && (
-        <div className="flex items-center gap-1.5">
-          {HIGHLIGHT_COLORS.map((preset) => (
-            <Tooltip key={preset.color} delay={300}>
-              <button
-                aria-label={`${preset.label} highlight`}
-                aria-pressed={highlightColor === preset.color}
-                className="size-6 rounded-full border-2 transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: preset.color,
-                  borderColor:
-                    highlightColor === preset.color
-                      ? "var(--color-foreground)"
-                      : "transparent",
-                }}
-                onClick={() => setHighlightColor(preset.color)}
-              />
               <Tooltip.Content>
-                <p>{preset.label}</p>
+                <p>{tool.label}</p>
               </Tooltip.Content>
             </Tooltip>
-          ))}
-        </div>
-      )}
-    </>
+          ),
+        )}
+      </ToggleButtonGroup>
+    </Toolbar>
   );
 }
 
 export function EditorToolBar() {
+  const pageCount = usePdfEditorStore((s) => s.pageCount);
+  const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
+
+  const canManagePages = !!pdfDocument && pageCount > 0;
+
   return (
     <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
       <ToolsContent />
+      <Separator className="!h-6" orientation="vertical" />
+      <Tooltip delay={300}>
+        <Button
+          className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+          isDisabled={!canManagePages}
+          size="sm"
+          variant="tertiary"
+          onPress={() => setIsManagePagesOpen(true)}
+        >
+          <HugeiconsIcon icon={Layout03Icon} size={22} />
+          <span className="text-[10px] leading-tight">Manage Pages</span>
+        </Button>
+        <Tooltip.Content>
+          <p>Reorder and manage document pages</p>
+        </Tooltip.Content>
+      </Tooltip>
     </div>
   );
 }

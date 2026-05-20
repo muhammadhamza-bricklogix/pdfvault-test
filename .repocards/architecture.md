@@ -2,16 +2,16 @@
 
 **Package:** `pdfedits-frontend` v0.0.1
 
-**Stats:** 186 files · 4284 symbols · 633 imports.
+**Stats:** 198 files · 4392 symbols · 692 imports.
 
 ## Top-level layout
 
 | Directory | Files | LOC |
 |---|---:|---:|
-| `components/` | 75 | 10249 |
-| `lib/` | 74 | 5891 |
-| `app/` | 28 | 1010 |
-| `(root)` | 8 | 1627 |
+| `components/` | 82 | 10880 |
+| `lib/` | 79 | 7592 |
+| `app/` | 28 | 1027 |
+| `(root)` | 8 | 1640 |
 | `public/` | 1 | 31 |
 
 ## Hub files (most-connected)
@@ -20,28 +20,28 @@ These files sit at the center of the import graph. Changes here tend to ripple w
 
 | File | Imported by | Imports | Total |
 |---|---:|---:|---:|
+| [`lib/client/pdf-editor/merge-pdf.ts`](../lib/client/pdf-editor/merge-pdf.ts) | 1 | 7 | 8 |
 | [`components/sections/pdf-editor/PdfEditorShell.tsx`](../components/sections/pdf-editor/PdfEditorShell.tsx) | 0 | 8 | 8 |
 | [`components/sections/dashboard/documents-table.tsx`](../components/sections/dashboard/documents-table.tsx) | 1 | 5 | 6 |
-| [`lib/client/pdf-editor/merge-pdf.ts`](../lib/client/pdf-editor/merge-pdf.ts) | 1 | 4 | 5 |
+| [`components/sections/pdf-editor/RightSidebar.tsx`](../components/sections/pdf-editor/RightSidebar.tsx) | 2 | 4 | 6 |
 | [`lib/client/pdf-editor/vector-drawers.ts`](../lib/client/pdf-editor/vector-drawers.ts) | 1 | 4 | 5 |
+| [`lib/client/pdf-editor/watermark-drawer.ts`](../lib/client/pdf-editor/watermark-drawer.ts) | 1 | 4 | 5 |
+| [`lib/client/pdf-editor/font-mapping.ts`](../lib/client/pdf-editor/font-mapping.ts) | 3 | 1 | 4 |
 | [`components/sections/pdf-editor/BottomDock.tsx`](../components/sections/pdf-editor/BottomDock.tsx) | 1 | 3 | 4 |
 | [`components/sections/pdf-editor/PdfViewerCanvas.tsx`](../components/sections/pdf-editor/PdfViewerCanvas.tsx) | 1 | 3 | 4 |
-| [`components/sections/pdf-editor/RightSidebar.tsx`](../components/sections/pdf-editor/RightSidebar.tsx) | 2 | 2 | 4 |
-| [`components/sections/pdf-editor/EditorTopBar.tsx`](../components/sections/pdf-editor/EditorTopBar.tsx) | 2 | 1 | 3 |
-| [`components/ui/file-upload/file-upload.tsx`](../components/ui/file-upload/file-upload.tsx) | 0 | 3 | 3 |
-| [`components/sections/dashboard/dashboard-home.tsx`](../components/sections/dashboard/dashboard-home.tsx) | 0 | 2 | 2 |
+| [`lib/client/pdf-editor/save-utils.ts`](../lib/client/pdf-editor/save-utils.ts) | 2 | 1 | 3 |
 
 ## Entrypoints (summary)
 
 - [`app/layout.tsx`](../app/layout.tsx) — no-incoming-imports
 - [`lib/providers/app-providers.tsx`](../lib/providers/app-providers.tsx) — no-incoming-imports
+- [`lib/client/upload-toasts/controller.ts`](../lib/client/upload-toasts/controller.ts) — no-incoming-imports
 - [`components/sections/dashboard/dashboard-home.tsx`](../components/sections/dashboard/dashboard-home.tsx) — no-incoming-imports
 - [`components/sections/dashboard/dashboard-shell.tsx`](../components/sections/dashboard/dashboard-shell.tsx) — no-incoming-imports
 - [`components/sections/home/home-hero.tsx`](../components/sections/home/home-hero.tsx) — no-incoming-imports
 - [`components/sections/pdf-editor/PdfEditorShell.tsx`](../components/sections/pdf-editor/PdfEditorShell.tsx) — no-incoming-imports
 - [`components/ui/file-upload/file-upload.tsx`](../components/ui/file-upload/file-upload.tsx) — no-incoming-imports
 - [`components/ui/upload-toast/UploadToastProvider.tsx`](../components/ui/upload-toast/UploadToastProvider.tsx) — no-incoming-imports
-- [`lib/client/upload-toasts/controller.ts`](../lib/client/upload-toasts/controller.ts) — no-incoming-imports
 
 _See [entrypoints.md](./entrypoints.md) for full detail._
 

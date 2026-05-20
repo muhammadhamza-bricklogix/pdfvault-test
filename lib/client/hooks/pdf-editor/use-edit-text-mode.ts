@@ -6,6 +6,7 @@ import type { PDFPageProxy } from "pdfjs-dist";
 import { useEffect, useRef } from "react";
 
 import {
+  extractFontData,
   extractTextBlocks,
   type TextBlock,
 } from "@/lib/client/pdf-editor/text-extraction";
@@ -68,6 +69,14 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         if (cancelled) return;
 
         blocksCacheRef.current.set(currentPage, blocks);
+
+        // Extract and store font binary data for the export pipeline
+        const fontNames = new Set(blocks.map((b) => b.fontFamily));
+        const fonts = extractFontData(page, fontNames);
+
+        if (fonts.length > 0) {
+          usePdfEditorStore.getState().addFontData(fonts);
+        }
       }
 
       if (blocks.length === 0) {
@@ -106,6 +115,8 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           objectCaching: false,
           originX: "left",
           originY: "top",
+          // Store original PDF text width for accurate export spacing
+          pdfTextWidth: block.width,
           top: block.y,
         } as any) as IText;
 
