@@ -14,6 +14,8 @@ type UsePageRendererParams = {
   page: PDFPageProxy | null;
   /** When true, text operations are filtered out during rendering. Default false. */
   suppressText?: boolean;
+  /** When true, render against a transparent background. Default false. */
+  transparent?: boolean;
   zoom: number;
 };
 
@@ -23,6 +25,7 @@ export function usePageRenderer({
   canvasRef,
   page,
   suppressText = false,
+  transparent = false,
   zoom,
 }: UsePageRendererParams) {
   const [renderedSize, setRenderedSize] = useState<RenderedSize>(null);
@@ -48,8 +51,9 @@ export function usePageRenderer({
 
     const render = async () => {
       try {
+        let operationsFilter: ((i: number) => boolean) | undefined;
+
         if (suppressText) {
-          // Get operator list first to identify text operations by index
           const opList = await page.getOperatorList();
 
           if (cancelled) return;
@@ -63,16 +67,15 @@ export function usePageRenderer({
               textIndices.add(i);
             }
           }
-
-          // Render without text operations
-          renderTask = page.render({
-            canvas,
-            operationsFilter: (i: number) => !textIndices.has(i),
-            viewport,
-          });
-        } else {
-          renderTask = page.render({ canvas, viewport });
+          operationsFilter = (i: number) => !textIndices.has(i);
         }
+
+        renderTask = page.render({
+          ...(transparent ? { background: "rgba(0,0,0,0)" } : {}),
+          canvas,
+          ...(operationsFilter ? { operationsFilter } : {}),
+          viewport,
+        });
 
         await renderTask.promise;
 
@@ -96,7 +99,7 @@ export function usePageRenderer({
       cancelled = true;
       renderTask?.cancel();
     };
-  }, [canvasRef, page, zoom, suppressText]);
+  }, [canvasRef, page, zoom, suppressText, transparent]);
 
   return { renderedSize };
 }

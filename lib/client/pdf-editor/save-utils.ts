@@ -163,6 +163,7 @@ export async function buildEditedPdfBytes({
   }
 
   const {
+    backgroundImageConfig,
     fabricJsonByPage,
     fontDataByLoadedName,
     pageOrder,
@@ -177,6 +178,10 @@ export async function buildEditedPdfBytes({
   const sourceBytes = await file.arrayBuffer();
 
   return mergeFabricEditsIntoPdf({
+    backgroundImageConfig:
+      backgroundImageConfig.enabled && backgroundImageConfig.imageData
+        ? backgroundImageConfig
+        : null,
     fabricJsonByPage,
     fontDataMap: fontDataByLoadedName,
     pageOrder,

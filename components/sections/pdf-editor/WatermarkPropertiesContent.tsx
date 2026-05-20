@@ -196,9 +196,7 @@ export function WatermarkPropertiesContent() {
           <Section title="Color">
             <ColorPicker
               value={config.color}
-              onChange={(color) =>
-                setConfig({ color: color.toString("hex") })
-              }
+              onChange={(color) => setConfig({ color: color.toString("hex") })}
             >
               <ColorPicker.Trigger>
                 <ColorSwatch
@@ -271,9 +269,7 @@ export function WatermarkPropertiesContent() {
           minValue={0}
           step={1}
           value={Math.round(config.opacity * 100)}
-          onChange={(value) =>
-            setConfig({ opacity: (value as number) / 100 })
-          }
+          onChange={(value) => setConfig({ opacity: (value as number) / 100 })}
         >
           <Label className="text-xs text-default-500">Value</Label>
           <Slider.Output className="text-xs text-default-500" />
@@ -292,9 +288,7 @@ export function WatermarkPropertiesContent() {
               key={preset.value}
               isIconOnly={false}
               size="sm"
-              variant={
-                config.rotation === preset.value ? "secondary" : "ghost"
-              }
+              variant={config.rotation === preset.value ? "secondary" : "ghost"}
               onPress={() => setConfig({ rotation: preset.value })}
             >
               {preset.label}&deg;
@@ -325,9 +319,7 @@ export function WatermarkPropertiesContent() {
               key={opt.value}
               aria-label={opt.label}
               size="sm"
-              variant={
-                config.position === opt.value ? "secondary" : "ghost"
-              }
+              variant={config.position === opt.value ? "secondary" : "ghost"}
               onPress={() =>
                 setConfig({ position: opt.value as WatermarkPosition })
               }

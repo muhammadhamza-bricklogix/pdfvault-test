@@ -33,6 +33,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { BackgroundImagePropertiesContent } from "./BackgroundImagePropertiesContent";
 import { HighlightPropertiesContent } from "./HighlightPropertiesContent";
 import {
   applyShapeFill,
@@ -796,6 +797,19 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
           variant="default"
         >
           <WatermarkPropertiesContent />
+        </Surface>
+      </aside>
+    );
+  }
+
+  if (activeTool === "backgroundImage") {
+    return (
+      <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
+        <Surface
+          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+          variant="default"
+        >
+          <BackgroundImagePropertiesContent />
         </Surface>
       </aside>
     );

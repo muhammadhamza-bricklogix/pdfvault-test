@@ -3,7 +3,11 @@ import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
 import type { FontData } from "./text-extraction";
-import type { WatermarkConfig } from "@/lib/client/stores/pdf-editor-store";
+import type {
+  BackgroundImageConfig,
+  BackgroundImageFit,
+  WatermarkConfig,
+} from "@/lib/client/stores/pdf-editor-store";
 
 import { createCoordinateContext } from "./coordinate-transform";
 import { FontCache } from "./font-mapping";
@@ -41,6 +45,8 @@ export type MergePdfInput = {
   sourceBytes: ArrayBuffer;
   /** Watermark configuration — null means no watermark. */
   watermarkConfig?: WatermarkConfig | null;
+  /** Background image configuration — null means no background image. */
+  backgroundImageConfig?: BackgroundImageConfig | null;
 };
 
 // pdf.js OPS constants for text rendering operations (31–49)
@@ -75,7 +81,18 @@ function isVectorizable(obj: FabricObj): boolean {
 // Render a pdf.js page to PNG (text-suppressed) for use as raster background
 // ---------------------------------------------------------------------------
 
-async function renderPageToPng(page: PDFPageProxy): Promise<Uint8Array> {
+type RenderPageOptions = {
+  /** Suppress pdf.js text rendering ops (default true for legacy callers). */
+  suppressText?: boolean;
+  /** Render against a transparent background (default false). */
+  transparent?: boolean;
+};
+
+async function renderPageToPng(
+  page: PDFPageProxy,
+  options: RenderPageOptions = {},
+): Promise<Uint8Array> {
+  const { suppressText = true, transparent = false } = options;
   const viewport = page.getViewport({ scale: RASTER_SCALE });
 
   const canvas = document.createElement("canvas");
@@ -88,26 +105,29 @@ async function renderPageToPng(page: PDFPageProxy): Promise<Uint8Array> {
   document.body.appendChild(canvas);
 
   try {
-    // Identify text operations to suppress
-    const opList = await page.getOperatorList();
-    const textIndices = new Set<number>();
+    let operationsFilter: ((i: number) => boolean) | undefined;
 
-    for (let i = 0; i < opList.fnArray.length; i++) {
-      const op = opList.fnArray[i];
+    if (suppressText) {
+      const opList = await page.getOperatorList();
+      const textIndices = new Set<number>();
 
-      if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
-        textIndices.add(i);
+      for (let i = 0; i < opList.fnArray.length; i++) {
+        const op = opList.fnArray[i];
+
+        if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
+          textIndices.add(i);
+        }
       }
+      operationsFilter = (i: number) => !textIndices.has(i);
     }
 
-    // Render with text suppressed
     await page.render({
+      ...(transparent ? { background: "rgba(0,0,0,0)" } : {}),
       canvas,
-      operationsFilter: (i: number) => !textIndices.has(i),
+      ...(operationsFilter ? { operationsFilter } : {}),
       viewport,
     }).promise;
 
-    // Export as PNG bytes
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))),
@@ -121,6 +141,46 @@ async function renderPageToPng(page: PDFPageProxy): Promise<Uint8Array> {
       document.body.removeChild(canvas);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Background image — centered rect from user-supplied W/H (PDF points)
+// ---------------------------------------------------------------------------
+
+function computeBackgroundImageRect(
+  imageWidth: number,
+  imageHeight: number,
+  pageWidth: number,
+  pageHeight: number,
+  fit: BackgroundImageFit,
+): { height: number; width: number; x: number; y: number } {
+  if (fit === "stretch" || imageWidth <= 0 || imageHeight <= 0) {
+    return { height: pageHeight, width: pageWidth, x: 0, y: 0 };
+  }
+
+  const scaleX = pageWidth / imageWidth;
+  const scaleY = pageHeight / imageHeight;
+  const scale =
+    fit === "cover" ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
+
+  const width = imageWidth * scale;
+  const height = imageHeight * scale;
+
+  return {
+    height,
+    width,
+    x: (pageWidth - width) / 2,
+    y: (pageHeight - height) / 2,
+  };
+}
+
+async function embedBackgroundImage(pdfDoc: PDFDocument, dataUrl: string) {
+  const bytes = dataUrlToBytes(dataUrl);
+
+  return dataUrl.startsWith("data:image/jpeg") ||
+    dataUrl.startsWith("data:image/jpg")
+    ? pdfDoc.embedJpg(bytes)
+    : pdfDoc.embedPng(bytes);
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +321,7 @@ export async function mergeFabricEditsIntoPdf({
   pdfDocument,
   sourceBytes,
   watermarkConfig,
+  backgroundImageConfig,
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
 
@@ -276,6 +337,10 @@ export async function mergeFabricEditsIntoPdf({
   resetWatermarkFontCache();
 
   const wm = watermarkConfig?.enabled ? watermarkConfig : null;
+  const bg =
+    backgroundImageConfig?.enabled && backgroundImageConfig.imageData
+      ? backgroundImageConfig
+      : null;
 
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     const hasEdits = fabricJsonByPage.has(pageNum);
@@ -287,7 +352,89 @@ export async function mergeFabricEditsIntoPdf({
         wm.pageScope,
         wm.customPageRange,
       );
+    const needsBackground =
+      bg != null &&
+      shouldWatermarkPage(
+        pageNum,
+        totalPages,
+        bg.pageScope,
+        bg.customPageRange,
+      );
     const isOverlay = wm?.layer === "overlay";
+
+    // ------------------------------------------------------------------
+    // Case A: Background image applies — re-render source page with a
+    // transparent background, draw the bg image first, then place the
+    // transparent re-render on top so original content reads over the image.
+    // Watermark and fabric edits layer normally on top of that.
+    // ------------------------------------------------------------------
+    if (needsBackground) {
+      const sourcePage = sourcePdf.getPage(pageNum - 1);
+      const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
+      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
+
+      const bgImg = await embedBackgroundImage(outputPdf, bg!.imageData!);
+      const rect = computeBackgroundImageRect(
+        bgImg.width,
+        bgImg.height,
+        pdfWidth,
+        pdfHeight,
+        bg!.fit,
+      );
+
+      newPage.drawImage(bgImg, { ...rect, opacity: bg!.opacity });
+
+      const pdfjsPage = await pdfDocument.getPage(pageNum);
+      const transparentPng = await renderPageToPng(pdfjsPage, {
+        suppressText: hasEdits,
+        transparent: true,
+      });
+      const pageRender = await outputPdf.embedPng(transparentPng);
+
+      newPage.drawImage(pageRender, {
+        height: pdfHeight,
+        width: pdfWidth,
+        x: 0,
+        y: 0,
+      });
+
+      if (needsWatermark && !isOverlay) {
+        await drawWatermarkOnPage(newPage, outputPdf, wm!);
+      }
+
+      if (hasEdits) {
+        const json = fabricJsonByPage.get(pageNum)!;
+        const parsed = parseFabricJson(json);
+
+        if (parsed) {
+          const objects = (parsed.objects ?? []) as FabricObj[];
+
+          if (objects.length) {
+            const ctx = createCoordinateContext(
+              parsed.width,
+              parsed.height,
+              pdfWidth,
+              pdfHeight,
+            );
+
+            await processPageObjects(
+              objects,
+              parsed,
+              newPage,
+              outputPdf,
+              ctx,
+              fontCache,
+            );
+          }
+        }
+      }
+
+      if (needsWatermark && isOverlay) {
+        await drawWatermarkOnPage(newPage, outputPdf, wm!);
+      }
+
+      continue;
+    }
 
     // ------------------------------------------------------------------
     // Case 1: No edits, no watermark — copy as-is

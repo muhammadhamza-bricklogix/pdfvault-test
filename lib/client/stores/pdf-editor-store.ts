@@ -6,6 +6,7 @@ import { create } from "zustand";
 const MAX_HISTORY = 50;
 
 export type ActiveTool =
+  | "backgroundImage"
   | "draw"
   | "eraser"
   | "highlight"
@@ -69,6 +70,26 @@ const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
   type: "text",
 };
 
+export type BackgroundImageFit = "contain" | "cover" | "stretch";
+
+export type BackgroundImageConfig = {
+  customPageRange: string;
+  enabled: boolean;
+  fit: BackgroundImageFit;
+  imageData: string | null;
+  opacity: number;
+  pageScope: "all" | "custom" | "even" | "odd";
+};
+
+const DEFAULT_BACKGROUND_IMAGE_CONFIG: BackgroundImageConfig = {
+  customPageRange: "",
+  enabled: false,
+  fit: "cover",
+  imageData: null,
+  opacity: 1,
+  pageScope: "all",
+};
+
 type PdfEditorStore = {
   activeShapeType: ShapeType;
   activeTool: ActiveTool;
@@ -100,6 +121,7 @@ type PdfEditorStore = {
   shapeStroke: string;
   shapeStrokeWidth: number;
   watermarkConfig: WatermarkConfig;
+  backgroundImageConfig: BackgroundImageConfig;
   zoom: number;
 
   addFontData: (fonts: FontData[]) => void;
@@ -140,6 +162,7 @@ type PdfEditorStore = {
   setShapeStroke: (color: string) => void;
   setShapeStrokeWidth: (width: number) => void;
   setWatermarkConfig: (config: Partial<WatermarkConfig>) => void;
+  setBackgroundImageConfig: (config: Partial<BackgroundImageConfig>) => void;
   setZoom: (zoom: number) => void;
   undo: (page: number) => string | undefined;
 };
@@ -173,6 +196,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   shapeStroke: "#000000",
   shapeStrokeWidth: 2,
   watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
+  backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
   zoom: 1.0,
 
   addFontData: (fonts) =>
@@ -216,6 +240,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       shapeStroke: "#000000",
       shapeStrokeWidth: 2,
       watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
+      backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
       zoom: 1.0,
     }),
 
@@ -406,6 +431,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setWatermarkConfig: (config) =>
     set((state) => ({
       watermarkConfig: { ...state.watermarkConfig, ...config },
+    })),
+  setBackgroundImageConfig: (config) =>
+    set((state) => ({
+      backgroundImageConfig: { ...state.backgroundImageConfig, ...config },
     })),
   setZoom: (zoom) => set({ zoom }),
 

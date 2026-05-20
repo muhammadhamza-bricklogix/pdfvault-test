@@ -5,6 +5,7 @@ import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
   ArrowDown01Icon,
+  BackgroundIcon,
   Cursor01Icon,
   EraserIcon,
   HighlighterIcon,
@@ -284,6 +285,7 @@ const TOOLS = [
   { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: Image01Icon, id: "image", label: "Image" },
   { icon: Stamp01Icon, id: "watermark", label: "Watermark" },
+  { icon: BackgroundIcon, id: "backgroundImage", label: "Background" },
 ] as const;
 
 type ToolsContentProps = {
