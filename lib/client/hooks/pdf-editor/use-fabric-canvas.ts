@@ -48,10 +48,25 @@ export function useFabricCanvas({
   const baseWidth = renderedSize ? renderedSize.width / zoom : null;
   const baseHeight = renderedSize ? renderedSize.height / zoom : null;
 
+  // Latest renderedSize is read inside the mount effect via a ref so we don't
+  // re-mount Fabric on every zoom change. Only sourcePage changes trigger a
+  // full re-mount; zoom/size adjustments live in the resize effect below.
+  const renderedSizeRef = useRef(renderedSize);
+  const zoomRef = useRef(zoom);
+
+  useEffect(() => {
+    renderedSizeRef.current = renderedSize;
+    zoomRef.current = zoom;
+  }, [renderedSize, zoom]);
+
+  const hasRenderedSize = !!renderedSize;
+
   // --- Canvas creation & page-change lifecycle ---
   useEffect(() => {
-    if (!fabricCanvasRef.current || !renderedSize || !baseWidth || !baseHeight)
-      return;
+    if (!fabricCanvasRef.current) return;
+    const currentRenderedSize = renderedSizeRef.current;
+
+    if (!currentRenderedSize) return;
 
     let cancelled = false;
     let initDone: Promise<void> | undefined;
@@ -74,20 +89,18 @@ export function useFabricCanvas({
         }
       }
 
-      // Create canvas at CSS size (zoom-scaled) but set logical dimensions to base
       const fc = new FabricCanvas(fabricCanvasRef.current, {
         backgroundColor: "transparent",
         enableRetinaScaling: true,
-        height: renderedSize.height,
+        height: currentRenderedSize.height,
         selection: true,
-        width: renderedSize.width,
+        width: currentRenderedSize.width,
       });
 
-      // Apply Fabric zoom so objects are in base-coordinate space
-      fc.setZoom(zoom);
+      fc.setZoom(zoomRef.current);
 
       // Fabric wraps the canvas in a <div data-fabric="wrapper"> with position:relative.
-      // We need to make it overlay the PDF canvas with position:absolute instead.
+      // Make it overlay the PDF canvas with position:absolute instead.
       const wrapper = fc.getElement().parentElement;
 
       if (wrapper) {
@@ -99,7 +112,6 @@ export function useFabricCanvas({
       fabricRef.current = fc;
       mountedPageRef.current = sourcePage;
 
-      // Rehydrate saved JSON for this page
       const saved = getFabricJson(currentPage);
 
       if (saved) {
@@ -107,8 +119,7 @@ export function useFabricCanvas({
 
         if (cancelled) return;
 
-        // Restore zoom after loadFromJSON (which may reset it)
-        fc.setZoom(zoom);
+        fc.setZoom(zoomRef.current);
         fc.renderAll();
       }
 
@@ -139,15 +150,31 @@ export function useFabricCanvas({
         cleanup();
       }
     };
-  }, [renderedSize, sourcePage]);
+  }, [sourcePage, hasRenderedSize]);
 
-  // --- Update Fabric zoom when user changes zoom level ---
+  // --- Resize + zoom: keep the existing canvas, don't re-mount ---
+  // Critical for sharp text + smooth UX when the user zooms in/out.
   useEffect(() => {
-    if (!fabricRef.current) return;
+    const fc = fabricRef.current;
 
-    fabricRef.current.setZoom(zoom);
-    fabricRef.current.renderAll();
-  }, [zoom]);
+    if (!fc || !renderedSize) return;
+
+    fc.setDimensions({
+      height: renderedSize.height,
+      width: renderedSize.width,
+    });
+    fc.setZoom(zoom);
+
+    // Fabric caches a rasterized bitmap per object (text/groups especially).
+    // Without invalidation, that cached bitmap is just scaled when zoom
+    // changes — producing visible blur. Mark every object dirty so Fabric
+    // re-rasterizes them at the new zoom level.
+    for (const obj of fc.getObjects()) {
+      obj.dirty = true;
+    }
+
+    fc.renderAll();
+  }, [renderedSize, zoom, fabricCanvas]);
 
   return { fabricCanvas, fabricRef };
 }

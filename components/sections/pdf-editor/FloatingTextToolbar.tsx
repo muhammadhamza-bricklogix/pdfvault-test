@@ -140,14 +140,53 @@ export function FloatingTextToolbar({
 
     setStyle(next);
 
-    obj.set({
+    const fabricPatch: Record<string, unknown> = {
       fill: next.color,
       fontFamily: next.fontFamily,
       fontSize: next.fontSize,
       fontStyle: next.isItalic ? "italic" : "normal",
       fontWeight: next.isBold ? "bold" : "normal",
       underline: next.isUnderline,
-    });
+    };
+
+    // IText supports per-character styles which silently override
+    // object-level set() — apply to selection range when actively editing,
+    // and clear stale per-char fills/fonts otherwise so the change sticks.
+    const iText = obj as IText & {
+      isEditing?: boolean;
+      selectionEnd?: number;
+      selectionStart?: number;
+      setSelectionStyles?: (styles: Record<string, unknown>) => void;
+      styles?: Record<string, Record<string, Record<string, unknown>>>;
+    };
+    const hasRangeSelection =
+      iText.isEditing === true &&
+      typeof iText.selectionStart === "number" &&
+      typeof iText.selectionEnd === "number" &&
+      iText.selectionStart !== iText.selectionEnd &&
+      typeof iText.setSelectionStyles === "function";
+
+    if (hasRangeSelection) {
+      iText.setSelectionStyles!(fabricPatch);
+    } else {
+      obj.set(fabricPatch);
+
+      // Strip any per-character entries for the keys we just changed.
+      if (iText.styles) {
+        const keys = Object.keys(fabricPatch);
+
+        for (const line of Object.values(iText.styles)) {
+          for (const charStyle of Object.values(line)) {
+            const css = charStyle as Record<string, unknown>;
+
+            for (const k of keys) {
+              delete css[k];
+            }
+          }
+        }
+      }
+    }
+
     fabricCanvas.renderAll();
   };
 

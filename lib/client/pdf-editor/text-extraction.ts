@@ -101,11 +101,6 @@ function rgbToHex(r: number, g: number, b: number): string {
  * Extracts a flat sequential list of fill colors from the operator list —
  * one color per showText operation. Colors are tracked through save/restore
  * graphics state. The list is in document order.
- *
- * NOTE: Color-to-text-item mapping is not yet implemented. All text items
- * currently default to #000000. This will be addressed in a future update
- * once a reliable correlation strategy between showText ops and
- * getTextContent() items is established.
  */
 async function extractSequentialTextColors(
   page: PDFPageProxy,
@@ -125,17 +120,49 @@ async function extractSequentialTextColors(
       gsStack.push(currentFillColor);
     } else if (op === OPS.restore) {
       currentFillColor = gsStack.pop() ?? "#000000";
-    } else if (
-      op === OPS.setFillRGBColor ||
-      op === OPS.setFillGray ||
-      op === OPS.setFillCMYKColor
-    ) {
-      const colorArg = args[0];
+    } else if (op === OPS.setFillRGBColor) {
+      // pdf.js may pass either a pre-formatted "#rrggbb" string OR
+      // three separate 0–1 floats.
+      const a0 = args[0];
 
-      if (typeof colorArg === "string" && colorArg.startsWith("#")) {
-        currentFillColor = colorArg;
-      } else if (typeof colorArg === "number") {
-        currentFillColor = rgbToHex(colorArg, colorArg, colorArg);
+      if (typeof a0 === "string" && a0.startsWith("#")) {
+        currentFillColor = a0;
+      } else if (
+        typeof a0 === "number" &&
+        typeof args[1] === "number" &&
+        typeof args[2] === "number"
+      ) {
+        currentFillColor = rgbToHex(a0, args[1] as number, args[2] as number);
+      }
+    } else if (op === OPS.setFillGray) {
+      const g = args[0];
+
+      if (typeof g === "number") {
+        currentFillColor = rgbToHex(g, g, g);
+      } else if (typeof g === "string" && g.startsWith("#")) {
+        currentFillColor = g;
+      }
+    } else if (op === OPS.setFillCMYKColor) {
+      const a0 = args[0];
+
+      if (typeof a0 === "string" && a0.startsWith("#")) {
+        currentFillColor = a0;
+      } else if (
+        typeof a0 === "number" &&
+        typeof args[1] === "number" &&
+        typeof args[2] === "number" &&
+        typeof args[3] === "number"
+      ) {
+        // Quick CMYK→RGB conversion (no ICC profile).
+        const c = a0;
+        const m = args[1] as number;
+        const y = args[2] as number;
+        const k = args[3] as number;
+        const r = (1 - c) * (1 - k);
+        const gr = (1 - m) * (1 - k);
+        const b = (1 - y) * (1 - k);
+
+        currentFillColor = rgbToHex(r, gr, b);
       }
     } else if (
       op === OPS.showText ||
@@ -161,12 +188,24 @@ export async function extractTextBlocks(
   page: PDFPageProxy,
 ): Promise<TextBlock[]> {
   const viewport = page.getViewport({ scale: 1.0 });
-  const [textContent] = await Promise.all([
+  const [textContent, colors] = await Promise.all([
     page.getTextContent(),
-    // Color extraction runs but isn't mapped yet — keep the call so the
-    // pipeline is ready when mapping is implemented.
     extractSequentialTextColors(page),
   ]);
+
+  // Map showText-op colors → text items. We try 1:1 by item index when the
+  // counts line up; otherwise we fall back to the document-wide mode color
+  // (handles uniformly-colored docs) and finally to black.
+  const sameLength = colors.length === textContent.items.length;
+  const uniqueColors = new Set(colors);
+  const fallbackColor =
+    uniqueColors.size === 1 ? colors[0]! : "#000000";
+
+  const colorForItem = (itemIndex: number): string => {
+    if (sameLength) return colors[itemIndex] ?? fallbackColor;
+
+    return fallbackColor;
+  };
 
   const blocks: TextBlock[] = [];
 
@@ -206,7 +245,9 @@ export async function extractTextBlocks(
     }
   }
 
-  for (const item of textContent.items) {
+  for (let itemIndex = 0; itemIndex < textContent.items.length; itemIndex++) {
+    const item = textContent.items[itemIndex];
+
     if (!("str" in item)) continue;
 
     const textItem = item as TextItem;
@@ -245,7 +286,7 @@ export async function extractTextBlocks(
     );
 
     blocks.push({
-      color: "#000000",
+      color: colorForItem(itemIndex),
       fontFamily: resolvedFamily,
       fontSize,
       fontStyle: fontInfo.style,
