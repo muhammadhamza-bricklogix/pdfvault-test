@@ -204,12 +204,31 @@ function Thumbnail({
       ) : null}
       <div
         className={frameClass}
-        style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
+        style={{
+          ...(rotation ? { transform: `rotate(${rotation}deg)` } : {}),
+          ...(draftPage?.backgroundColor
+            ? { backgroundColor: draftPage.backgroundColor }
+            : {}),
+        }}
       >
         {isBlank ? (
-          <span className="text-[10px] text-default-400">Blank page</span>
+          <span
+            className="text-[10px]"
+            style={{
+              color: draftPage?.backgroundColor ? "rgba(0,0,0,0.5)" : undefined,
+            }}
+          >
+            Blank page
+          </span>
         ) : (
-          <canvas ref={canvasRef} />
+          <canvas
+            ref={canvasRef}
+            style={
+              draftPage?.backgroundColor
+                ? { mixBlendMode: "multiply" }
+                : undefined
+            }
+          />
         )}
       </div>
       {showPageLabel ? (

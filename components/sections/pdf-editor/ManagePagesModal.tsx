@@ -22,7 +22,16 @@ import {
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Label, Modal, NumberField, Tooltip } from "@heroui/react";
+import {
+  Button,
+  ColorArea,
+  ColorPicker,
+  ColorSlider,
+  Label,
+  Modal,
+  NumberField,
+  Tooltip,
+} from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useManagePagesDraft } from "@/lib/client/hooks/pdf-editor/use-manage-pages-draft";
@@ -117,7 +126,6 @@ export function ManagePagesModal({
   const [moveTargetPage, setMoveTargetPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
-  const colorInputRef = useRef<HTMLInputElement>(null);
 
   const draft = useManagePagesDraft({
     isOpen,
@@ -166,9 +174,6 @@ export function ManagePagesModal({
           break;
         case "import":
           importInputRef.current?.click();
-          break;
-        case "background-color":
-          colorInputRef.current?.click();
           break;
         case "undo":
           draft.undo();
@@ -267,13 +272,6 @@ export function ManagePagesModal({
         type="file"
         onChange={handleImportChange}
       />
-      <input
-        ref={colorInputRef}
-        aria-label="Background color"
-        className="hidden"
-        type="color"
-        onChange={(e) => draft.setSelectedBackgroundColor(e.target.value)}
-      />
 
       <Modal.Backdrop
         isOpen={isOpen}
@@ -291,15 +289,60 @@ export function ManagePagesModal({
 
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default-200 bg-[var(--color-background)] px-3 py-2">
               <div className="flex flex-wrap items-center gap-0.5">
-                {LEFT_TOOLS.map((tool) => (
-                  <ManagePagesToolbarButton
-                    key={tool.id}
-                    disabled={isToolDisabled(tool.id)}
-                    icon={tool.icon}
-                    label={tool.label}
-                    onPress={() => handleToolPress(tool.id)}
-                  />
-                ))}
+                {LEFT_TOOLS.map((tool) => {
+                  const disabled = isToolDisabled(tool.id);
+
+                  if (tool.id === "background-color") {
+                    return (
+                      <ColorPicker
+                        key={tool.id}
+                        onChange={(color) =>
+                          draft.setSelectedBackgroundColor(
+                            color.toString("hex"),
+                          )
+                        }
+                      >
+                        <ColorPicker.Trigger isDisabled={disabled}>
+                          <ManagePagesToolbarButton
+                            disabled={disabled}
+                            icon={tool.icon}
+                            label={tool.label}
+                          />
+                        </ColorPicker.Trigger>
+                        <ColorPicker.Popover>
+                          <ColorArea
+                            aria-label="Page background color"
+                            className="max-w-full"
+                            colorSpace="hsb"
+                            xChannel="saturation"
+                            yChannel="brightness"
+                          >
+                            <ColorArea.Thumb />
+                          </ColorArea>
+                          <ColorSlider
+                            channel="hue"
+                            className="gap-1 px-1"
+                            colorSpace="hsb"
+                          >
+                            <ColorSlider.Track>
+                              <ColorSlider.Thumb />
+                            </ColorSlider.Track>
+                          </ColorSlider>
+                        </ColorPicker.Popover>
+                      </ColorPicker>
+                    );
+                  }
+
+                  return (
+                    <ManagePagesToolbarButton
+                      key={tool.id}
+                      disabled={disabled}
+                      icon={tool.icon}
+                      label={tool.label}
+                      onPress={() => handleToolPress(tool.id)}
+                    />
+                  );
+                })}
               </div>
 
               <div className="flex flex-wrap items-center gap-0.5">
