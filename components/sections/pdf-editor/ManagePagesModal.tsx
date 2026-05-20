@@ -7,6 +7,7 @@ import {
   ArrowLeft01Icon,
   ArrowLeftRightIcon,
   ArrowRight01Icon,
+  ColorsIcon,
   Copy01Icon,
   Delete02Icon,
   FileImportIcon,
@@ -53,6 +54,7 @@ const LEFT_TOOLS: ToolbarItem[] = [
   { icon: RotateLeft01Icon, id: "rotate-left", label: "Rotate Left" },
   { icon: RotateRight01Icon, id: "rotate-right", label: "Rotate Right" },
   { icon: ThreeDScaleIcon, id: "resize", label: "Resize Page" },
+  { icon: ColorsIcon, id: "background-color", label: "Background Color" },
   { icon: ArrowLeftRightIcon, id: "move", label: "Move" },
   { icon: ArrowLeft01Icon, id: "move-before", label: "Move Before" },
   { icon: ArrowRight01Icon, id: "move-after", label: "Move After" },
@@ -115,6 +117,7 @@ export function ManagePagesModal({
   const [moveTargetPage, setMoveTargetPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   const draft = useManagePagesDraft({
     isOpen,
@@ -164,6 +167,9 @@ export function ManagePagesModal({
         case "import":
           importInputRef.current?.click();
           break;
+        case "background-color":
+          colorInputRef.current?.click();
+          break;
         case "undo":
           draft.undo();
           break;
@@ -195,6 +201,7 @@ export function ManagePagesModal({
         return false;
       case "delete":
         return !canDelete;
+      case "background-color":
       case "duplicate":
       case "resize":
       case "rotate-left":
@@ -259,6 +266,13 @@ export function ManagePagesModal({
         className="hidden"
         type="file"
         onChange={handleImportChange}
+      />
+      <input
+        ref={colorInputRef}
+        aria-label="Background color"
+        className="hidden"
+        type="color"
+        onChange={(e) => draft.setSelectedBackgroundColor(e.target.value)}
       />
 
       <Modal.Backdrop

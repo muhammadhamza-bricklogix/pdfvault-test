@@ -392,6 +392,26 @@ export function useManagePagesDraft({
     [applyChange],
   );
 
+  const setSelectedBackgroundColor = useCallback(
+    (color: string | null) => {
+      applyChange((current) => {
+        if (current.selectedIds.length === 0) return current;
+
+        const selectedSet = new Set(current.selectedIds);
+
+        return {
+          ...current,
+          pages: current.pages.map((page) => {
+            if (!selectedSet.has(page.id)) return page;
+
+            return { ...page, backgroundColor: color ?? undefined };
+          }),
+        };
+      });
+    },
+    [applyChange],
+  );
+
   const moveSelected = useCallback(
     (targetPage: number, position: "after" | "before") => {
       applyChange((current) => {
@@ -502,6 +522,7 @@ export function useManagePagesDraft({
     selectNone,
     selectedCount,
     selectedIds,
+    setSelectedBackgroundColor,
     toggleSelect,
     undo,
   };

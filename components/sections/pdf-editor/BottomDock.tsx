@@ -15,6 +15,7 @@ import { useState } from "react";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { ToolsContent } from "./EditorTopBar";
+import { MobileToolPropertiesModal } from "./MobileToolPropertiesModal";
 import { ShapePropertiesContent } from "./RightSidebar";
 import { ThumbnailStrip } from "./ThumbnailSidebar";
 
@@ -88,6 +89,8 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
           <ThumbnailStrip onReorderPages={onReorderPages} />
         </div>
       )}
+
+      <MobileToolPropertiesModal />
     </div>
   );
 }

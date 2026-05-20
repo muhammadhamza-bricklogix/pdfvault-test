@@ -112,6 +112,7 @@ function EditorLayout() {
         const bytes = await buildPdfFromDraft({
           importedPdfs: snapshot.importedPdfs,
           pages: snapshot.pages,
+          pdfDocument,
           sourceBytes,
         });
         const newFile = new File([Uint8Array.from(bytes)], file.name, {

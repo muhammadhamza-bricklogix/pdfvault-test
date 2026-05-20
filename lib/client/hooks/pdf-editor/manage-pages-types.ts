@@ -2,6 +2,7 @@ export type PageRotation = 0 | 90 | 180 | 270;
 
 export type DraftPage =
   | {
+      backgroundColor?: string;
       heightPt: number;
       id: string;
       kind: "blank";
@@ -9,6 +10,7 @@ export type DraftPage =
       widthPt: number;
     }
   | {
+      backgroundColor?: string;
       heightPt?: number;
       id: string;
       importKey: string;
@@ -18,6 +20,7 @@ export type DraftPage =
       widthPt?: number;
     }
   | {
+      backgroundColor?: string;
       heightPt?: number;
       id: string;
       kind: "source";
