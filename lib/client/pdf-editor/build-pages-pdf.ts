@@ -2,8 +2,6 @@ import type { PDFDocument as PdfLibDoc } from "pdf-lib";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
-import { degrees } from "pdf-lib";
-
 import { appendPdfPage } from "@/lib/client/pdf-editor/append-pdf-page";
 import { renderPageToPng } from "@/lib/client/pdf-editor/render-page-png";
 
@@ -37,7 +35,13 @@ async function appendColoredPageFromPdfJs(
 ): Promise<void> {
   const { BlendMode, rgb } = await import("pdf-lib");
   const pdfjsPage = await pdfjsDoc.getPage(pageIndex0 + 1);
-  const viewport = pdfjsPage.getViewport({ scale: 1 });
+  // Bake the rotation into the rendered viewport so the resulting PNG is
+  // already in the rotated layout. /Rotate metadata stays 0 on the output —
+  // editor reads the page as a normal landscape/portrait PDF.
+  const viewport = pdfjsPage.getViewport({
+    rotation: override.rotation ?? 0,
+    scale: 1,
+  });
 
   const widthPt = override.widthPt ?? viewport.width;
   const heightPt = override.heightPt ?? viewport.height;
@@ -54,12 +58,10 @@ async function appendColoredPageFromPdfJs(
     y: 0,
   });
 
-  // 2. Render the source page normally (opaque white background) and composite
-  //    on top using Multiply: white areas multiply with the color (color shows
-  //    through), dark content (text/lines) multiplies near 0 (stays dark).
-  //    This mirrors the live preview's mix-blend-mode approach and avoids the
-  //    unreliable transparent-canvas path in pdf.js (which renders as black).
+  // 2. Render the source page (rotation baked into the rendered viewport)
+  //    with opaque white background and composite on top using Multiply.
   const pngBytes = await renderPageToPng(pdfjsPage, {
+    rotation: override.rotation ?? 0,
     suppressText: false,
     transparent: false,
   });
@@ -72,10 +74,6 @@ async function appendColoredPageFromPdfJs(
     x: 0,
     y: 0,
   });
-
-  if (override.rotation) {
-    newPage.setRotation(degrees(override.rotation));
-  }
 }
 
 export async function buildPdfFromDraft({
@@ -113,11 +111,13 @@ export async function buildPdfFromDraft({
 
   for (const entry of pages) {
     if (entry.kind === "blank") {
-      const page = outputPdf.addPage([entry.widthPt, entry.heightPt]);
+      // Bake rotation into physical dimensions: 90/270 swap W/H. /Rotate
+      // metadata stays 0 so the editor reads this as a normal page.
+      const isSideways = entry.rotation === 90 || entry.rotation === 270;
+      const pageW = isSideways ? entry.heightPt : entry.widthPt;
+      const pageH = isSideways ? entry.widthPt : entry.heightPt;
 
-      if (entry.rotation) {
-        page.setRotation(degrees(entry.rotation));
-      }
+      const page = outputPdf.addPage([pageW, pageH]);
 
       const [r, g, b] = entry.backgroundColor
         ? hexToRgbFloats(entry.backgroundColor)
@@ -125,8 +125,8 @@ export async function buildPdfFromDraft({
 
       page.drawRectangle({
         color: rgb(r, g, b),
-        height: entry.heightPt,
-        width: entry.widthPt,
+        height: pageH,
+        width: pageW,
         x: 0,
         y: 0,
       });

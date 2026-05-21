@@ -198,8 +198,7 @@ export async function extractTextBlocks(
   // (handles uniformly-colored docs) and finally to black.
   const sameLength = colors.length === textContent.items.length;
   const uniqueColors = new Set(colors);
-  const fallbackColor =
-    uniqueColors.size === 1 ? colors[0]! : "#000000";
+  const fallbackColor = uniqueColors.size === 1 ? colors[0]! : "#000000";
 
   const colorForItem = (itemIndex: number): string => {
     if (sameLength) return colors[itemIndex] ?? fallbackColor;
