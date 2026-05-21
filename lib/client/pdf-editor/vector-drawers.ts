@@ -111,12 +111,6 @@ export async function drawIText(
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
   const targetWidth = fabricObjWidth;
 
-  if (editorType === "editModeText") {
-    console.log(
-      `[DrawIText] "${text.slice(0, 40)}" | fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
-    );
-  }
-
   const lines = text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
   const pdfLineHeight = pdfFontSize * lineHeight;

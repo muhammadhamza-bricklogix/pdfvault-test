@@ -22,14 +22,27 @@ import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
-import { CreatePdfModal } from "./CreatePdfModal";
+import dynamic from "next/dynamic";
+
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
-import { PerformancePanel } from "./PerformancePanel";
 import { RightSidebar } from "./RightSidebar";
-import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
+
+// Modals + dev panel render conditionally — split off the main editor bundle.
+const CreatePdfModal = dynamic(
+  () => import("./CreatePdfModal").then((m) => m.CreatePdfModal),
+  { ssr: false },
+);
+const ManagePagesModal = dynamic(
+  () => import("./ManagePagesModal").then((m) => m.ManagePagesModal),
+  { ssr: false },
+);
+const PerformancePanel = dynamic(
+  () => import("./PerformancePanel").then((m) => m.PerformancePanel),
+  { ssr: false },
+);
 
 function UploadScreen() {
   const setFile = usePdfEditorStore((s) => s.setFile);
@@ -166,13 +179,13 @@ function EditorLayout() {
 
   if (!pdfDocument) return null;
 
-  const managePagesModal = (
+  const managePagesModal = isManagePagesOpen ? (
     <ManagePagesModal
       isOpen={isManagePagesOpen}
       onClose={() => setIsManagePagesOpen(false)}
       onSave={handleManagePagesSave}
     />
-  );
+  ) : null;
 
   if (isMobile) {
     return (
@@ -257,11 +270,13 @@ export function PdfEditorShell() {
   return (
     <div className="flex h-full flex-col">
       {content}
-      <CreatePdfModal
-        key={createPdfModalKey}
-        isOpen={isCreatePdfModalOpen}
-        onClose={() => setIsCreatePdfModalOpen(false)}
-      />
+      {isCreatePdfModalOpen && (
+        <CreatePdfModal
+          key={createPdfModalKey}
+          isOpen={isCreatePdfModalOpen}
+          onClose={() => setIsCreatePdfModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
