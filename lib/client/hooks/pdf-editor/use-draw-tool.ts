@@ -24,6 +24,10 @@ export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
 
       if (cancelled) return;
 
+      // Fabric API requires passing the canvas to PencilBrush and mutating
+      // the canvas's drawing flags directly — by design, not a React state
+      // concern. Suppressing react-hooks/immutability for this block.
+      /* eslint-disable react-hooks/immutability */
       const brush = new PencilBrush(fabricCanvas);
 
       brush.color = "#000000";
@@ -33,6 +37,7 @@ export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
 
       fabricCanvas.freeDrawingBrush = brush;
       fabricCanvas.isDrawingMode = true;
+      /* eslint-enable react-hooks/immutability */
     };
 
     const onPathCreated = () => {

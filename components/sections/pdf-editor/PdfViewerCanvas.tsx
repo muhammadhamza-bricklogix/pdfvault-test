@@ -135,6 +135,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       whiteout: "crosshair",
     };
 
+    // Fabric requires mutating the canvas instance directly to change
+    // cursors / selection mode — the immutability rule doesn't apply here.
+    /* eslint-disable react-hooks/immutability */
     fc.defaultCursor = cursorMap[activeTool] ?? "default";
     fc.hoverCursor = activeTool === "select" ? "move" : fc.defaultCursor;
     fc.selection = activeTool === "select";
@@ -142,6 +145,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     if (activeTool !== "draw") {
       fc.isDrawingMode = false;
     }
+    /* eslint-enable react-hooks/immutability */
 
     const handleMouseDown = async (opt: TPointerEventInfo) => {
       if (activeTool !== "text") return;
@@ -164,6 +168,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         top: pointer.y,
       }) as IText;
 
+      // Remove the text object on exit if the user left it empty — otherwise
+      // every accidental click on the text tool leaves a phantom IText in the
+      // canvas JSON and inflates history snapshots.
+      const onEditingExited = () => {
+        if (!textObj.text || textObj.text.trim() === "") {
+          fc.remove(textObj);
+          fc.renderAll();
+        }
+        textObj.off("editing:exited", onEditingExited);
+      };
+
+      textObj.on("editing:exited", onEditingExited);
+
       fc.add(textObj);
       fc.setActiveObject(textObj);
       textObj.enterEditing();
@@ -183,6 +200,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const mod = e.metaKey || e.ctrlKey;
 
       if (!mod) return;
+
+      // Don't hijack Ctrl+Z when the user is typing in a sidebar input,
+      // watermark text field, range input, etc.
+      const active = document.activeElement;
+      const tag = active?.tagName;
+
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        (active as HTMLElement | null)?.isContentEditable
+      ) {
+        return;
+      }
 
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();

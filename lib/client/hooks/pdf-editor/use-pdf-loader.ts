@@ -52,7 +52,20 @@ export function usePdfLoader() {
         setPdfDocument(doc, doc.numPages);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load PDF");
+          // pdf.js throws PasswordException with `.name === "PasswordException"`
+          // when the PDF is encrypted. Show a friendly message instead of the
+          // raw "No password given" / "Incorrect password" technical strings.
+          const name = (err as { name?: string })?.name;
+
+          if (name === "PasswordException") {
+            setError(
+              "This PDF is password-protected. Remove the password from the PDF and try again.",
+            );
+          } else if (name === "InvalidPDFException") {
+            setError("This file is not a valid PDF or appears to be corrupt.");
+          } else {
+            setError(err instanceof Error ? err.message : "Failed to load PDF");
+          }
         }
       } finally {
         if (!cancelled) {

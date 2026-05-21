@@ -45,6 +45,41 @@ bun run lint         # lint and auto-fix (eslint --fix)
 - Unused imports are auto-removed; `no-console` is a warning
 - Blank line required before `return` and after variable declarations
 
+## PDF Editor
+
+The PDF editor is the most intricate part of this app. Before touching anything under `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, or `components/sections/pdf-editor/**`, **load the project skill** for an orientation map:
+
+```
+Skill({ skill: "pdf-editor-architecture" })
+```
+
+It lives at `.claude/skills/pdf-editor-architecture/SKILL.md` and documents the load→render→edit→save pipeline, the load-bearing invariants, and the parts of the code the user has explicitly flagged as off-limits.
+
+### Source layout
+
+| Folder | Purpose |
+|---|---|
+| `lib/client/pdf-editor/` | Pure logic — extraction, merge, build, vector drawers, color/coordinate helpers |
+| `lib/client/hooks/pdf-editor/` | React glue — loaders, tools, save/navigation, manage-pages draft state |
+| `components/sections/pdf-editor/` | UI — shell, viewer, toolbar, sidebars, modals |
+| `lib/client/stores/pdf-editor-store.ts` | Zustand store: file, pdfDocument, per-page Fabric JSON + history, watermark/bg-image config, page order |
+
+### Key invariants (skill has the full list)
+
+- Fabric coordinates are always at **zoom = 1** (base coords). `setZoom(zoom)` is applied for rendering only.
+- Zoom changes **resize** the Fabric canvas; they never re-mount it.
+- Manage-Pages rotation is **baked into the content stream** (`append-pdf-page.ts`), not `/Rotate` metadata.
+- Background image preview uses `mix-blend-mode: multiply` on the PDF canvas; export uses `BlendMode.Multiply` on `drawImage`.
+- Mobile renders the watermark + background-image config in a Modal (`MobileToolPropertiesModal`), not the right sidebar.
+- Editor modals (`CreatePdfModal`, `ManagePagesModal`, `PerformancePanel`) are lazy-loaded via `next/dynamic`.
+
+### Off-limits without explicit user approval
+
+- The watermark code in `lib/client/pdf-editor/merge-pdf.ts` (the inline `renderPageToPng` + `TEXT_OPS_MIN/MAX/RASTER_SCALE` constants stay there even though a shared util exists for `build-pages-pdf.ts`).
+- `objectCaching: false` on IText in `use-edit-text-mode.ts`.
+
+If a fix requires changing one of these, ask the user first.
+
 <!-- repocards:begin -->
 ## Repo context — repocards
 

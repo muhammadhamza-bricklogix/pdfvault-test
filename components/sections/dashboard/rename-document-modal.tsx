@@ -3,7 +3,7 @@
 import type { Document } from "@/lib/shared/types/documents.types";
 
 import { Button, Input, Label, Modal, TextField } from "@heroui/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 
@@ -13,13 +13,19 @@ type Props = {
 };
 
 export function RenameDocumentModal({ document: doc, onClose }: Props) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(doc?.filename ?? "");
+  // React docs' "adjust state during render" pattern — resets `name` whenever
+  // the modal is opened for a different document. Avoids the
+  // setState-in-effect anti-pattern.
+  const [lastDocId, setLastDocId] = useState<string | null>(doc?.id ?? null);
+
+  if ((doc?.id ?? null) !== lastDocId) {
+    setLastDocId(doc?.id ?? null);
+    setName(doc?.filename ?? "");
+  }
+
   const rename = useRenameDocumentMutation();
   const isOpen = !!doc;
-
-  useEffect(() => {
-    if (doc) setName(doc.filename);
-  }, [doc]);
 
   const handleSubmit = async () => {
     if (!doc) return;

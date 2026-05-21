@@ -342,6 +342,13 @@ export async function mergeFabricEditsIntoPdf({
       ? backgroundImageConfig
       : null;
 
+  // Embed the background image ONCE up front and reuse the same PDFImage on
+  // every matching page. Without this, a 200-page export with a 1 MB image
+  // ships ~200 MB of embedded bytes in the output PDF.
+  const bgImageOnce = bg
+    ? await embedBackgroundImage(outputPdf, bg.imageData!)
+    : null;
+
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     const hasEdits = fabricJsonByPage.has(pageNum);
     const needsWatermark =
@@ -373,7 +380,7 @@ export async function mergeFabricEditsIntoPdf({
       const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
       const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
 
-      const bgImg = await embedBackgroundImage(outputPdf, bg!.imageData!);
+      const bgImg = bgImageOnce!;
       const rect = computeBackgroundImageRect(
         bgImg.width,
         bgImg.height,
@@ -410,11 +417,17 @@ export async function mergeFabricEditsIntoPdf({
           const objects = (parsed.objects ?? []) as FabricObj[];
 
           if (objects.length) {
+            // Fabric canvas was sized to the ROTATED viewport for /Rotate
+            // pages, but sourcePage.getSize() returns MediaBox dims (always
+            // unrotated). Swap them when /Rotate is 90 or 270 so scaleX/Y
+            // line up with Fabric coords.
+            const srcRot = sourcePage.getRotation().angle;
+            const sideways = srcRot === 90 || srcRot === 270;
             const ctx = createCoordinateContext(
               parsed.width,
               parsed.height,
-              pdfWidth,
-              pdfHeight,
+              sideways ? pdfHeight : pdfWidth,
+              sideways ? pdfWidth : pdfHeight,
             );
 
             await processPageObjects(
@@ -499,11 +512,16 @@ export async function mergeFabricEditsIntoPdf({
       const objects = (parsed.objects ?? []) as FabricObj[];
 
       if (objects.length) {
+        // Fabric canvas was sized to the ROTATED viewport for /Rotate pages,
+        // but sourcePage.getSize() returns MediaBox dims (always unrotated).
+        // Swap them when /Rotate is 90 or 270.
+        const srcRot = sourcePage.getRotation().angle;
+        const sideways = srcRot === 90 || srcRot === 270;
         const ctx = createCoordinateContext(
           parsed.width,
           parsed.height,
-          pdfWidth,
-          pdfHeight,
+          sideways ? pdfHeight : pdfWidth,
+          sideways ? pdfWidth : pdfHeight,
         );
 
         await processPageObjects(

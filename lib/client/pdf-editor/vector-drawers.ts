@@ -9,6 +9,7 @@ import {
   popGraphicsState,
   pushGraphicsState,
   rgb,
+  rotateAndSkewTextDegreesAndTranslate,
   setFillingColor,
   setFontAndSize,
   setTextMatrix,
@@ -101,8 +102,43 @@ export async function drawIText(
         ? toPdfDim(objWidth, ctx.scaleX)
         : undefined;
 
-  const pdfX = toPdfX(left, ctx);
-  const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY) - fontHeight;
+  // For angle == 0 the original formula puts pdfY at fontHeight (font ascend
+  // height, NOT fontSize) below the top — preserving that for upright text
+  // avoids drift. For rotated text we apply the same ascend shift but along
+  // the rotated axis. `ascendFabric` is the ascend in Fabric units so that
+  // (top + ascendFabric) → top + fontHeight at PDF scale, matching the
+  // upright formula exactly when angle == 0.
+  const ascendFabric = fontHeight / ctx.scaleY;
+  let fabricBaselineX = left;
+  let fabricBaselineY = top + ascendFabric;
+
+  if (angle === 90) {
+    fabricBaselineX = left + ascendFabric;
+    fabricBaselineY = top;
+  } else if (angle === 180) {
+    fabricBaselineX = left;
+    fabricBaselineY = top - ascendFabric;
+  } else if (angle === 270) {
+    fabricBaselineX = left - ascendFabric;
+    fabricBaselineY = top;
+  }
+
+  const pdfX = toPdfX(fabricBaselineX, ctx);
+  const pdfY = ctx.pdfHeight - toPdfDim(fabricBaselineY, ctx.scaleY);
+
+  // Unit advance vector in PDF coords for the text-flow direction.
+  // For Fabric angle R (CW in screen), PDF math rotation is -R.
+  //   angle 0   → ( 1,  0)
+  //   angle 90  → ( 0, -1)
+  //   angle 180 → (-1,  0)
+  //   angle 270 → ( 0,  1)
+  const angleRad = (-angle * Math.PI) / 180;
+  const advanceX = Math.cos(angleRad);
+  const advanceY = Math.sin(angleRad);
+  // Next-line offset is the advance vector rotated −90° (lines flow below the
+  // current one in screen terms). 0: (0,-1); 90: (-1,0); 180: (0,1); 270: (1,0).
+  const nextLineX = advanceY;
+  const nextLineY = -advanceX;
 
   // Compute what pdf-lib/fontkit thinks the text width is
   const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
@@ -129,12 +165,23 @@ export async function drawIText(
   if (editorType === "editModeText" && targetWidth > 0) {
     const fontKey = page.node.newFontDictionary(font.name, font.ref);
 
+    // Text matrix factory: identity rotation for angle 0, rotation matrix
+    // otherwise. PDF rotations are CCW-positive while Fabric angle is
+    // CW-positive in screen, so we pass -angle.
+    const textMatrixAt = (x: number, y: number) =>
+      angle === 0
+        ? setTextMatrix(1, 0, 0, 1, x, y)
+        : rotateAndSkewTextDegreesAndTranslate(-angle, 0, 0, x, y);
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
       if (!line) continue;
 
-      const lineY = pdfY - i * pdfLineHeight;
+      // Per-line baseline: advance from (pdfX, pdfY) along the next-line
+      // direction. For angle 0 this collapses to pdfY - i * pdfLineHeight.
+      const lineX = pdfX + i * pdfLineHeight * nextLineX;
+      const lineY = pdfY + i * pdfLineHeight * nextLineY;
       const words = line.split(" ");
 
       if (words.length <= 1) {
@@ -144,7 +191,7 @@ export async function drawIText(
           beginText(),
           setFillingColor(color),
           setFontAndSize(fontKey, pdfFontSize),
-          setTextMatrix(1, 0, 0, 1, pdfX, lineY),
+          textMatrixAt(lineX, lineY),
           showText(font.encodeText(line)),
           endText(),
           popGraphicsState(),
@@ -166,7 +213,7 @@ export async function drawIText(
             beginText(),
             setFillingColor(color),
             setFontAndSize(fontKey, pdfFontSize),
-            setTextMatrix(1, 0, 0, 1, pdfX, lineY),
+            textMatrixAt(lineX, lineY),
             showText(font.encodeText(singleWord)),
             endText(),
             popGraphicsState(),
@@ -198,7 +245,10 @@ export async function drawIText(
           const perSpaceWidth =
             totalSpaces > 0 ? Math.max(0, totalSpaceWidth / totalSpaces) : 0;
 
-          let cursorX = pdfX + leadingSpaces * perSpaceWidth;
+          // 2D cursor — advances along the text-flow direction.
+          const startOffset = leadingSpaces * perSpaceWidth;
+          let cursorX = lineX + startOffset * advanceX;
+          let cursorY = lineY + startOffset * advanceY;
 
           for (let w = 0; w < nonEmptyWords.length; w++) {
             page.pushOperators(
@@ -206,18 +256,19 @@ export async function drawIText(
               beginText(),
               setFillingColor(color),
               setFontAndSize(fontKey, pdfFontSize),
-              setTextMatrix(1, 0, 0, 1, cursorX, lineY),
+              textMatrixAt(cursorX, cursorY),
               showText(font.encodeText(nonEmptyWords[w])),
               endText(),
               popGraphicsState(),
             );
 
             // Advance cursor: word width + one space gap (except after last word)
-            cursorX += wordWidths[w];
+            const step =
+              wordWidths[w] +
+              (w < nonEmptyWords.length - 1 ? perSpaceWidth : 0);
 
-            if (w < nonEmptyWords.length - 1) {
-              cursorX += perSpaceWidth;
-            }
+            cursorX += step * advanceX;
+            cursorY += step * advanceY;
           }
         }
       }

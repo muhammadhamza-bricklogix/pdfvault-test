@@ -301,7 +301,7 @@ export function ToolsContent({
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
 
   const handleToolChange = (keys: Set<Key>) => {
-    const key = [...keys][0] as ActiveTool | undefined;
+    const key = Array.from(keys)[0] as ActiveTool | undefined;
 
     if (!key) return;
 

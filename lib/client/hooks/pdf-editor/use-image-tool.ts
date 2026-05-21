@@ -5,12 +5,14 @@ import type { Canvas } from "fabric";
 import { useEffect, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { toast } from "@/lib/shared/utils/toast";
 
 type UseImageToolParams = {
   fabricCanvas: Canvas | null;
 };
 
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/svg+xml,image/webp";
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 export function useImageTool({ fabricCanvas }: UseImageToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
@@ -46,6 +48,17 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       const file = input.files?.[0];
 
       if (!file) {
+        setActiveTool("select");
+
+        return;
+      }
+
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error({
+          title: "Image too large",
+          description: "Pick an image under 10 MB.",
+        });
+        input.value = "";
         setActiveTool("select");
 
         return;

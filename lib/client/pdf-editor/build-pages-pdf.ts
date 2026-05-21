@@ -2,6 +2,8 @@ import type { PDFDocument as PdfLibDoc } from "pdf-lib";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
+import { degrees } from "pdf-lib";
+
 import { appendPdfPage } from "@/lib/client/pdf-editor/append-pdf-page";
 import { renderPageToPng } from "@/lib/client/pdf-editor/render-page-png";
 
@@ -35,13 +37,10 @@ async function appendColoredPageFromPdfJs(
 ): Promise<void> {
   const { BlendMode, rgb } = await import("pdf-lib");
   const pdfjsPage = await pdfjsDoc.getPage(pageIndex0 + 1);
-  // Bake the rotation into the rendered viewport so the resulting PNG is
-  // already in the rotated layout. /Rotate metadata stays 0 on the output —
-  // editor reads the page as a normal landscape/portrait PDF.
-  const viewport = pdfjsPage.getViewport({
-    rotation: override.rotation ?? 0,
-    scale: 1,
-  });
+  // Render at the source's native orientation; rotation is applied via the
+  // page's /Rotate metadata after compositing so the editor can still extract
+  // text in its native coordinate space.
+  const viewport = pdfjsPage.getViewport({ scale: 1 });
 
   const widthPt = override.widthPt ?? viewport.width;
   const heightPt = override.heightPt ?? viewport.height;
@@ -58,10 +57,9 @@ async function appendColoredPageFromPdfJs(
     y: 0,
   });
 
-  // 2. Render the source page (rotation baked into the rendered viewport)
-  //    with opaque white background and composite on top using Multiply.
+  // 2. Render the source page (white bg) and composite on top via Multiply
+  //    so the colored fill shows through whitespace.
   const pngBytes = await renderPageToPng(pdfjsPage, {
-    rotation: override.rotation ?? 0,
     suppressText: false,
     transparent: false,
   });
@@ -74,6 +72,14 @@ async function appendColoredPageFromPdfJs(
     x: 0,
     y: 0,
   });
+
+  // Compose draft delta with the source's existing /Rotate so a delta that
+  // visually returns the page to upright also writes /Rotate=0 here.
+  const sourceRotation = (pdfjsPage.rotate ?? 0) as number;
+  const finalRotation =
+    (((sourceRotation + (override.rotation ?? 0)) % 360) + 360) % 360;
+
+  newPage.setRotation(degrees(finalRotation));
 }
 
 export async function buildPdfFromDraft({
@@ -111,13 +117,11 @@ export async function buildPdfFromDraft({
 
   for (const entry of pages) {
     if (entry.kind === "blank") {
-      // Bake rotation into physical dimensions: 90/270 swap W/H. /Rotate
-      // metadata stays 0 so the editor reads this as a normal page.
-      const isSideways = entry.rotation === 90 || entry.rotation === 270;
-      const pageW = isSideways ? entry.heightPt : entry.widthPt;
-      const pageH = isSideways ? entry.widthPt : entry.heightPt;
+      const page = outputPdf.addPage([entry.widthPt, entry.heightPt]);
 
-      const page = outputPdf.addPage([pageW, pageH]);
+      if (entry.rotation) {
+        page.setRotation(degrees(entry.rotation));
+      }
 
       const [r, g, b] = entry.backgroundColor
         ? hexToRgbFloats(entry.backgroundColor)
@@ -125,8 +129,8 @@ export async function buildPdfFromDraft({
 
       page.drawRectangle({
         color: rgb(r, g, b),
-        height: pageH,
-        width: pageW,
+        height: entry.heightPt,
+        width: entry.widthPt,
         x: 0,
         y: 0,
       });
@@ -188,6 +192,12 @@ export async function buildPdfFromDraft({
       widthPt: entry.widthPt,
     });
   }
+
+  // Tear down any pdf.js workers we spun up for imported PDFs so the
+  // SharedArrayBuffer + message-channel memory is freed immediately.
+  Array.from(importedPdfjsCache.values()).forEach((proxy) => {
+    void proxy.destroy();
+  });
 
   return outputPdf.save();
 }
