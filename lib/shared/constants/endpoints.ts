@@ -9,3 +9,7 @@ export const DOCUMENTS = {
   DELETE: (id: string) => `/documents/${id}`,
   BULK_DELETE: "/documents/bulk-delete",
 } as const;
+
+export const CONVERSION = {
+  CONVERT: "/conversion",
+} as const;

@@ -37,5 +37,7 @@ export default async function ToolBySlugPage({ params }: PageProps) {
     notFound();
   }
 
-  return <ToolUploadSection tool={tool} />;
+  // `key={slug}` forces the client section to remount when the user navigates
+  // between tools, so per-slug file selection + mutation state can't leak.
+  return <ToolUploadSection key={slug} tool={tool} />;
 }

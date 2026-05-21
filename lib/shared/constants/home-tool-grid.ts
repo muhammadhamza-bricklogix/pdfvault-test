@@ -90,15 +90,10 @@ function iconForPdfToFormatTitle(title: string): HomeToolCardIcon {
 }
 
 function hrefForPdfToFormatTitle(title: string): string {
-  if (title === "PDF to DOC" || title === "PDF to DOCX") {
-    return ROUTES.TOOLS.PDF_TO_DOC;
-  }
+  // "PDF to DOCX" → "pdf-to-docx" → /tools/pdf-to-docx
+  const slug = title.toLowerCase().replace(/\s+/g, "-");
 
-  if (title === "PDF to XLS" || title === "PDF to XLSX") {
-    return ROUTES.TOOLS.PDF_TO_EXCEL;
-  }
-
-  return PDF_TOOLS_HUB;
+  return ROUTES.TOOLS.BY_SLUG(slug);
 }
 
 const PDF_TO_FORMAT_TITLES = [
@@ -118,7 +113,6 @@ const PDF_TO_FORMAT_TITLES = [
   "PDF to LRF",
   "PDF to MD",
   "PDF to MOBI",
-  "PDF to ODD",
   "PDF to OEB",
   "PDF to PDB",
   "PDF to PNG",
@@ -216,7 +210,7 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
   },
   {
     description: "Export slides to PDF for handouts and archiving.",
-    href: PDF_TOOLS_HUB,
+    href: ROUTES.TOOLS.BY_SLUG("pptx-to-pdf"),
     icon: ShapesIcon,
     title: "PPTX to PDF",
   },
@@ -228,13 +222,13 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
   },
   {
     description: "Combine raster images into a single lightweight PDF.",
-    href: PDF_TOOLS_HUB,
+    href: ROUTES.TOOLS.BY_SLUG("jpg-to-pdf"),
     icon: Image01Icon,
     title: "JPG to PDF",
   },
   {
     description: "Bundle lossless PNGs into one portable document.",
-    href: PDF_TOOLS_HUB,
+    href: ROUTES.TOOLS.BY_SLUG("png-to-pdf"),
     icon: PaintBucketIcon,
     title: "PNG to PDF",
   },

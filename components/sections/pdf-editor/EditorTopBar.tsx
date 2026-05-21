@@ -36,11 +36,24 @@ import {
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { toast } from "@/lib/shared/utils/toast";
 
 import { HamburgerMenu } from "./HamburgerMenu";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+// Format options shown in the Save dropdown. The editor only opens PDFs, so
+// every non-PDF entry routes through the `/conversion` backend
+// (pdf_to_<format>) via the editor:export event in use-export-editor.ts.
+const EXPORT_FORMATS = [
+  { id: "pdf", label: "PDF (.pdf)" },
+  { id: "docx", label: "Word (.docx)" },
+  { id: "xlsx", label: "Excel (.xlsx)" },
+  { id: "pptx", label: "PowerPoint (.pptx)" },
+  { id: "jpg", label: "JPG image" },
+  { id: "png", label: "PNG image" },
+  { id: "html", label: "HTML" },
+  { id: "txt", label: "Plain text (.txt)" },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, undo/redo
@@ -84,16 +97,9 @@ export function EditorInfoBar() {
       : "Save";
 
   const handleExportAction = (key: Key) => {
-    if (key === "pdf") {
-      window.dispatchEvent(new CustomEvent("editor:export"));
-
-      return;
-    }
-
-    toast.info({
-      title: "Coming soon",
-      description: "This export format isn't available yet.",
-    });
+    window.dispatchEvent(
+      new CustomEvent("editor:export", { detail: { format: String(key) } }),
+    );
   };
 
   return (
@@ -238,23 +244,20 @@ export function EditorInfoBar() {
               <ButtonGroup.Separator />
               <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
             </Button>
-            <Dropdown.Popover className="min-w-[180px]">
+            <Dropdown.Popover className="min-w-[200px]">
               <Dropdown.Menu
-                aria-label="Export options"
+                aria-label="Export format"
                 onAction={handleExportAction}
               >
-                <Dropdown.Item id="pdf" textValue="Export as PDF">
-                  <Label>Export as PDF</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="word" textValue="Export as Word">
-                  <Label>Export as Word</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="excel" textValue="Export as Excel">
-                  <Label>Export as Excel</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="image" textValue="Export as Image">
-                  <Label>Export as Image</Label>
-                </Dropdown.Item>
+                {EXPORT_FORMATS.map((fmt) => (
+                  <Dropdown.Item
+                    key={fmt.id}
+                    id={fmt.id}
+                    textValue={`Export as ${fmt.label}`}
+                  >
+                    <Label>{fmt.label}</Label>
+                  </Dropdown.Item>
+                ))}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>

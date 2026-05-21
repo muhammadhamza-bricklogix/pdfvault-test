@@ -4,12 +4,46 @@ import type { Canvas as FabricCanvas } from "fabric";
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
-function buildExportFilename(name: string): string {
+export type ExportFormat =
+  | "pdf"
+  | "docx"
+  | "xlsx"
+  | "pptx"
+  | "jpg"
+  | "png"
+  | "html"
+  | "txt";
+
+export type EditorExportEventDetail = {
+  format: ExportFormat;
+};
+
+const FORMAT_TO_CONVERSION_TYPE: Record<
+  Exclude<ExportFormat, "pdf">,
+  | "pdf_to_docx"
+  | "pdf_to_xlsx"
+  | "pdf_to_pptx"
+  | "pdf_to_jpg"
+  | "pdf_to_png"
+  | "pdf_to_html"
+  | "pdf_to_txt"
+> = {
+  docx: "pdf_to_docx",
+  html: "pdf_to_html",
+  jpg: "pdf_to_jpg",
+  png: "pdf_to_png",
+  pptx: "pdf_to_pptx",
+  txt: "pdf_to_txt",
+  xlsx: "pdf_to_xlsx",
+};
+
+function buildPdfExportFilename(name: string): string {
   const dot = name.lastIndexOf(".");
   const base = dot > 0 ? name.slice(0, dot) : name;
 
@@ -32,12 +66,15 @@ function downloadBytes(bytes: Uint8Array, filename: string) {
 }
 
 /**
- * Listens for `editor:export` (dispatched by the Export menu) and runs the
- * flatten-and-download pipeline locally. No upload, no auth.
+ * Listens for `editor:export` (dispatched by the Export menu) and either:
+ * - Runs the flatten-and-download PDF pipeline locally (format === "pdf"), or
+ * - Flattens to a PDF blob first, then routes it through the /conversion
+ *   backend to produce the requested non-PDF format.
  */
 export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
+  const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
   const stateRef = useRef({ currentPage, fabricCanvas, file });
@@ -46,7 +83,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     stateRef.current = { currentPage, fabricCanvas, file };
   }, [currentPage, fabricCanvas, file]);
 
-  const handleExport = useCallback(async () => {
+  const convertRef = useRef(convert);
+
+  useEffect(() => {
+    convertRef.current = convert;
+  }, [convert]);
+
+  const handleExport = useCallback(async (format: ExportFormat) => {
     if (isExportingRef.current) return;
 
     const {
@@ -73,12 +116,29 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         file: sourceFile,
       });
 
-      downloadBytes(bytes, buildExportFilename(sourceFile.name));
+      if (format === "pdf") {
+        downloadBytes(bytes, buildPdfExportFilename(sourceFile.name));
+        toast.success({
+          title: "Exported",
+          description: "Your edited PDF has been downloaded.",
+        });
 
-      toast.success({
-        title: "Exported",
-        description: "Your edited PDF has been downloaded.",
-      });
+        return;
+      }
+
+      const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
+      const baseName = sourceFile.name.replace(/\.[^.]+$/, "") || "document";
+      const pdfFile = new File(
+        [bytes.buffer as ArrayBuffer],
+        `${baseName}.pdf`,
+        {
+          type: "application/pdf",
+        },
+      );
+
+      // The mutation owns its own loading/success/error toasts + the
+      // browser download trigger.
+      convertRef.current.mutate({ file: pdfFile, type: conversionType });
     } catch (err) {
       logger.error("Failed to export PDF", err);
       toast.error({
@@ -91,8 +151,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   }, []);
 
   useEffect(() => {
-    const onExport = () => {
-      void handleExport();
+    const onExport = (event: Event) => {
+      const detail = (event as CustomEvent<EditorExportEventDetail>).detail;
+      const format = detail?.format ?? "pdf";
+
+      void handleExport(format);
     };
 
     window.addEventListener("editor:export", onExport);
