@@ -13,3 +13,9 @@ export const DOCUMENTS = {
 export const CONVERSION = {
   CONVERT: "/conversion",
 } as const;
+
+export const TOOLS = {
+  LIST: "/tools",
+  SUGGESTED: "/tools/suggested",
+  DETAIL: (id: string) => `/tools/${id}`,
+} as const;

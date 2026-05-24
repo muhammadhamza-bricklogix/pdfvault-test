@@ -7,6 +7,7 @@ import {
   ArrowDown01Icon,
   BackgroundIcon,
   Cursor01Icon,
+  DashboardSpeed01Icon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
@@ -33,11 +34,13 @@ import {
   Toolbar,
   Tooltip,
 } from "@heroui/react";
+import { useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { HamburgerMenu } from "./HamburgerMenu";
+import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -69,6 +72,8 @@ export function EditorInfoBar() {
   const zoom = usePdfEditorStore((s) => s.zoom);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
+
+  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
 
   const history = historyByPage.get(currentPage) ?? [];
   const idx = historyIndexByPage.get(currentPage) ?? -1;
@@ -103,10 +108,30 @@ export function EditorInfoBar() {
   };
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
-      {/* Left: menu + undo/redo + mode toggle */}
+    <>
+      <ToolsModal
+        isOpen={isToolsModalOpen}
+        onClose={() => setIsToolsModalOpen(false)}
+      />
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
+      {/* Left: menu + tools + undo/redo + mode toggle */}
       <div className="flex items-center gap-1">
         <HamburgerMenu />
+        <Tooltip delay={300}>
+          <Button
+            aria-label="Browse all tools"
+            size="sm"
+            variant="tertiary"
+            onPress={() => setIsToolsModalOpen(true)}
+          >
+            <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
+            <span className="hidden sm:inline">Tools</span>
+          </Button>
+          <Tooltip.Content>
+            <p>Browse PDF and image tools</p>
+          </Tooltip.Content>
+        </Tooltip>
+        <Separator className="!h-4" orientation="vertical" />
         <Toolbar aria-label="Actions">
           <ButtonGroup size="sm" variant="tertiary">
             <Tooltip delay={300}>
@@ -270,6 +295,7 @@ export function EditorInfoBar() {
         <ThemeToggle size="sm" variant="tertiary" />
       </div>
     </div>
+    </>
   );
 }
 

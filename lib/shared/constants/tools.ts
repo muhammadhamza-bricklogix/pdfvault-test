@@ -159,13 +159,42 @@ function buildTool(type: ConversionType): ToolConfig {
   };
 }
 
-export const TOOLS: Record<string, ToolConfig> = Object.fromEntries(
-  CONVERSION_TYPE_TO_TOOL.map((type) => {
-    const tool = buildTool(type);
+/**
+ * Friendly slug aliases used by the backend tools catalog (e.g. "pdf-to-word"
+ * instead of the CloudConvert-flavored "pdf-to-docx"). Each alias resolves to
+ * the same ToolConfig as the canonical entry, so either URL lands on the same
+ * page. Keep this in sync with the backend `TOOLS_CATALOG.route` values.
+ */
+const FRIENDLY_SLUG_ALIASES: Record<string, ConversionType> = {
+  "pdf-to-word": "pdf_to_docx",
+  "pdf-to-excel": "pdf_to_xlsx",
+  "pdf-to-powerpoint": "pdf_to_pptx",
+  "word-to-pdf": "docx_to_pdf",
+  "excel-to-pdf": "xlsx_to_pdf",
+  "powerpoint-to-pdf": "pptx_to_pdf",
+  "pdf-to-text": "pdf_to_txt",
+};
 
-    return [tool.slug, tool];
-  }),
+const canonicalToolEntries = CONVERSION_TYPE_TO_TOOL.map((type) => {
+  const tool = buildTool(type);
+
+  return [tool.slug, tool] as const;
+});
+
+const aliasToolEntries = Object.entries(FRIENDLY_SLUG_ALIASES).map(
+  ([friendlySlug, type]) => {
+    const canonical = buildTool(type);
+
+    // Reuse the canonical config but override the slug so the page renders
+    // with the URL the user actually visited.
+    return [friendlySlug, { ...canonical, slug: friendlySlug }] as const;
+  },
 );
+
+export const TOOLS: Record<string, ToolConfig> = Object.fromEntries([
+  ...canonicalToolEntries,
+  ...aliasToolEntries,
+]);
 
 /** Slug rule used by URL routing + home-grid hrefs + this file's tool map. */
 export function conversionTypeToSlug(type: ConversionType): string {
