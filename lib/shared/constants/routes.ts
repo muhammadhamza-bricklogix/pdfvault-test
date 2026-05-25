@@ -33,4 +33,15 @@ export const ROUTES = {
     PDF_TO_DOC: "/tools/pdf-to-docx",
     BY_SLUG: (slug: string) => `/tools/${slug}` as const,
   },
+  FORMS: {
+    W9: "/forms/w-9",
+    W9_FORM: "/w9-form",
+    W9_EDIT: "/forms/w-9/edit",
+    W4: "/forms/w-4",
+    NEC_1099: "/forms/1099-nec",
+    W7: "/forms/w-7",
+  },
+  STATIC: {
+    W9_BLANK_PDF: "/static/forms/fw9.pdf",
+  },
 } as const;

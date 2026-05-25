@@ -22,8 +22,7 @@ export const toolKeys = {
 
 export const auditKeys = {
   all: ["audit"] as const,
-  user: (pageSize: number) =>
-    [...auditKeys.all, "user", { pageSize }] as const,
+  user: (pageSize: number) => [...auditKeys.all, "user", { pageSize }] as const,
   document: (documentId: string, pageSize: number) =>
     [...auditKeys.all, "document", documentId, { pageSize }] as const,
 };

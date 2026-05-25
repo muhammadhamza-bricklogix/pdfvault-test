@@ -2,7 +2,14 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
-import { Dancing_Script, Playfair_Display } from "next/font/google";
+import {
+  Allura,
+  Dancing_Script,
+  Great_Vibes,
+  Pacifico,
+  Playfair_Display,
+  Sacramento,
+} from "next/font/google";
 
 const dancingScript = Dancing_Script({
   display: "swap",
@@ -16,6 +23,36 @@ const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-legal-serif",
   weight: ["400", "600", "700"],
+});
+
+// Signature-tab fonts. Loaded here (with display:swap) so the Type signature
+// preview canvas can use them without a runtime fetch.
+const greatVibes = Great_Vibes({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-great-vibes",
+  weight: ["400"],
+});
+
+const allura = Allura({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-allura",
+  weight: ["400"],
+});
+
+const sacramento = Sacramento({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-sacramento",
+  weight: ["400"],
+});
+
+const pacifico = Pacifico({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-pacifico",
+  weight: ["400"],
 });
 
 import { Providers } from "./providers";
@@ -48,7 +85,7 @@ export default function RootLayout({
   return (
     <html
       suppressHydrationWarning
-      className={`${dancingScript.variable} ${playfairDisplay.variable}`}
+      className={`${dancingScript.variable} ${playfairDisplay.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
       lang="en"
     >
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">

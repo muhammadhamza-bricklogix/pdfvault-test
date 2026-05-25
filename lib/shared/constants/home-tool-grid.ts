@@ -240,6 +240,19 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
   },
 ];
 
+// Tax forms — only the W-9 ships today. Other forms (W-4, 1099-NEC, W-7)
+// will be added when they go live; placeholders intentionally omitted so
+// the tab stays clean.
+const TAX_FORMS_CARDS: HomeToolCard[] = [
+  {
+    description:
+      "Get the latest IRS W-9 — fill it out, sign, and export a clean, printable PDF in minutes.",
+    href: ROUTES.FORMS.W9_FORM,
+    icon: File01Icon,
+    title: "W-9 Form",
+  },
+];
+
 export type HomeToolGridTabGroup = {
   cards: readonly HomeToolCard[];
   id: string;
@@ -261,6 +274,11 @@ export const HOME_TOOL_GRID_TAB_GROUPS: readonly HomeToolGridTabGroup[] = [
     cards: CONVERT_TO_PDF_CARDS,
     id: "convert-to-pdf",
     label: "Convert to PDF",
+  },
+  {
+    cards: TAX_FORMS_CARDS,
+    id: "tax-forms",
+    label: "Tax forms",
   },
 ];
 

@@ -40,6 +40,7 @@ type Props = {
 
 function HistoryRow({ event }: { event: AuditEvent }) {
   const Icon = ACTION_ICON[event.action];
+
   return (
     <li className="flex items-start gap-3 rounded-lg border border-default-200 p-3">
       <span
