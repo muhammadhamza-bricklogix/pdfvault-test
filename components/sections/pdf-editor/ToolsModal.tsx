@@ -11,12 +11,7 @@ import {
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Button,
-  Label,
-  Modal,
-  Tabs,
-} from "@heroui/react";
+import { Button, Label, Modal, Tabs } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 

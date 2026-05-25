@@ -18,6 +18,7 @@ export const ROUTES = {
   },
   APP: {
     DASHBOARD: "/dashboard",
+    ACTIVITY: "/dashboard/activity",
     SETTINGS: "/dashboard/settings",
     SETTINGS_GENERAL: "/dashboard/settings/general",
     SETTINGS_ACCOUNT: "/dashboard/settings/account",

@@ -10,7 +10,10 @@
 		"dev": "next dev --turbopack",
 		"build": "next build",
 		"start": "next start",
-		"lint": "eslint --fix"
+		"lint": "eslint --fix",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui",
+		"test:e2e:report": "playwright show-report"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^7.2.3",
@@ -50,6 +53,7 @@
 		"@eslint/eslintrc": "3.3.1",
 		"@eslint/js": "9.25.1",
 		"@next/eslint-plugin-next": "16.2.0",
+		"@playwright/test": "^1.60.0",
 		"@tailwindcss/postcss": "4.1.11",
 		"@types/node": "20.5.7",
 		"@types/react": "^19.0.0",

@@ -19,3 +19,8 @@ export const TOOLS = {
   SUGGESTED: "/tools/suggested",
   DETAIL: (id: string) => `/tools/${id}`,
 } as const;
+
+export const AUDIT = {
+  LIST: "/audit",
+  BY_DOCUMENT: (id: string) => `/audit/documents/${id}`,
+} as const;

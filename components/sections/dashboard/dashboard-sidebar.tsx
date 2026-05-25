@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Clock01Icon,
   File01Icon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
@@ -21,6 +22,11 @@ const PRIMARY_NAV = [
     href: ROUTES.APP.DASHBOARD,
     icon: File01Icon,
     label: "My Documents",
+  },
+  {
+    href: ROUTES.APP.ACTIVITY,
+    icon: Clock01Icon,
+    label: "Activity",
   },
 ] as const;
 
@@ -134,9 +140,7 @@ export function SidebarBody({ collapsed, onNavigate }: SidebarBodyProps) {
             collapsed={collapsed}
             href={item.href}
             icon={item.icon}
-            isActive={
-              pathname === ROUTES.APP.DASHBOARD && !item.href.includes("filter")
-            }
+            isActive={pathname === item.href}
             label={item.label}
             onNavigate={onNavigate}
           />

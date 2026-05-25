@@ -19,3 +19,11 @@ export const toolKeys = {
   suggested: () => [...toolKeys.all, "suggested"] as const,
   detail: (id: string) => [...toolKeys.all, "detail", id] as const,
 };
+
+export const auditKeys = {
+  all: ["audit"] as const,
+  user: (pageSize: number) =>
+    [...auditKeys.all, "user", { pageSize }] as const,
+  document: (documentId: string, pageSize: number) =>
+    [...auditKeys.all, "document", documentId, { pageSize }] as const,
+};

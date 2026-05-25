@@ -90,7 +90,9 @@ export async function buildPdfFromDraft({
 }: BuildPdfInput): Promise<Uint8Array> {
   const { PDFDocument, rgb } = await import("pdf-lib");
 
-  const sourcePdf = await PDFDocument.load(sourceBytes);
+  const sourcePdf = await PDFDocument.load(sourceBytes, {
+    ignoreEncryption: true,
+  });
   const outputPdf = await PDFDocument.create();
 
   // pdf.js docs for imported PDFs are loaded lazily and cached per importKey.
@@ -184,7 +186,9 @@ export async function buildPdfFromDraft({
       }
     }
 
-    const importDoc = await PDFDocument.load(importBytes);
+    const importDoc = await PDFDocument.load(importBytes, {
+      ignoreEncryption: true,
+    });
 
     await appendPdfPage(outputPdf, importDoc, entry.importPageIndex - 1, {
       heightPt: entry.heightPt,

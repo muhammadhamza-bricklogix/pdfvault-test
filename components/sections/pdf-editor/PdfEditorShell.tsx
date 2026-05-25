@@ -16,6 +16,7 @@ import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
 import { remapFabricAfterPageOps } from "@/lib/client/pdf-editor/remap-fabric-after-page-ops";
+import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { toast } from "@/lib/shared/utils/toast";
@@ -108,7 +109,10 @@ function EditorLayout() {
       }
 
       try {
-        const sourceBytes = await file.arrayBuffer();
+        const rawSourceBytes = await file.arrayBuffer();
+        const sourceBytes = pdfDocument
+          ? await sanitizeSourceBytesForPdfLib(rawSourceBytes, pdfDocument)
+          : rawSourceBytes;
         const bytes = await buildPdfFromDraft({
           importedPdfs: snapshot.importedPdfs,
           pages: snapshot.pages,
