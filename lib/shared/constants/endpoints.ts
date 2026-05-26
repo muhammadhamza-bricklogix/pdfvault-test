@@ -9,3 +9,18 @@ export const DOCUMENTS = {
   DELETE: (id: string) => `/documents/${id}`,
   BULK_DELETE: "/documents/bulk-delete",
 } as const;
+
+export const CONVERSION = {
+  CONVERT: "/conversion",
+} as const;
+
+export const TOOLS = {
+  LIST: "/tools",
+  SUGGESTED: "/tools/suggested",
+  DETAIL: (id: string) => `/tools/${id}`,
+} as const;
+
+export const AUDIT = {
+  LIST: "/audit",
+  BY_DOCUMENT: (id: string) => `/audit/documents/${id}`,
+} as const;

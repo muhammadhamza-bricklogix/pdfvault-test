@@ -325,8 +325,9 @@ export async function mergeFabricEditsIntoPdf({
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
 
-  // Load source for copying unedited pages
-  const sourcePdf = await PdfDoc.load(sourceBytes);
+  // Load source for copying unedited pages.
+  // ignoreEncryption: permission-flagged PDFs (no password) otherwise throw.
+  const sourcePdf = await PdfDoc.load(sourceBytes, { ignoreEncryption: true });
   const totalPages = sourcePdf.getPageCount();
 
   // Create a fresh output document

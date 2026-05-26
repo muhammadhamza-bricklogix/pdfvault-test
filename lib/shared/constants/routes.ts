@@ -18,6 +18,7 @@ export const ROUTES = {
   },
   APP: {
     DASHBOARD: "/dashboard",
+    ACTIVITY: "/dashboard/activity",
     SETTINGS: "/dashboard/settings",
     SETTINGS_GENERAL: "/dashboard/settings/general",
     SETTINGS_ACCOUNT: "/dashboard/settings/account",
@@ -26,9 +27,10 @@ export const ROUTES = {
   },
   TOOLS: {
     PDF_EDITOR: "/pdf-editor",
-    PDF_TO_EXCEL: "/tools/pdf-to-excel",
-    EXCEL_TO_PDF: "/tools/excel-to-pdf",
-    DOC_TO_PDF: "/tools/doc-to-pdf",
-    PDF_TO_DOC: "/tools/pdf-to-doc",
+    PDF_TO_EXCEL: "/tools/pdf-to-xlsx",
+    EXCEL_TO_PDF: "/tools/xlsx-to-pdf",
+    DOC_TO_PDF: "/tools/docx-to-pdf",
+    PDF_TO_DOC: "/tools/pdf-to-docx",
+    BY_SLUG: (slug: string) => `/tools/${slug}` as const,
   },
 } as const;

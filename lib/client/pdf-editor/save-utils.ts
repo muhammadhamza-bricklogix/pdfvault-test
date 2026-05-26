@@ -3,6 +3,7 @@ import type { Canvas as FabricCanvas } from "fabric";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { mergeFabricEditsIntoPdf } from "./merge-pdf";
+import { sanitizeSourceBytesForPdfLib } from "./sanitize-source-bytes";
 
 export type ParsedFabricJson = {
   height: number;
@@ -175,7 +176,11 @@ export async function buildEditedPdfBytes({
     throw new Error("PDF document not loaded");
   }
 
-  const sourceBytes = await file.arrayBuffer();
+  const rawSourceBytes = await file.arrayBuffer();
+  const sourceBytes = await sanitizeSourceBytesForPdfLib(
+    rawSourceBytes,
+    pdfDocument,
+  );
 
   return mergeFabricEditsIntoPdf({
     backgroundImageConfig:
