@@ -4,6 +4,7 @@ import type { Document } from "@/lib/shared/types/documents.types";
 
 import {
   ArrowRight01Icon,
+  Clock01Icon,
   Delete02Icon,
   Download01Icon,
   FileEditIcon,
@@ -11,10 +12,13 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
+
+import { DocumentHistoryDrawer } from "./document-history-drawer";
 
 type Props = {
   document: Document;
@@ -28,6 +32,7 @@ export function DocumentActionsMenu({
   onRename,
 }: Props) {
   const router = useRouter();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const handleOpen = () => {
     router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${doc.id}`);
@@ -79,6 +84,21 @@ export function DocumentActionsMenu({
       <Tooltip delay={300}>
         <Button
           isIconOnly
+          aria-label={`View history for ${doc.filename}`}
+          className="text-default-600"
+          size="sm"
+          variant="ghost"
+          onPress={() => setIsHistoryOpen(true)}
+        >
+          <HugeiconsIcon icon={Clock01Icon} size={16} />
+        </Button>
+        <Tooltip.Content>
+          <p>History</p>
+        </Tooltip.Content>
+      </Tooltip>
+      <Tooltip delay={300}>
+        <Button
+          isIconOnly
           aria-label={`Rename ${doc.filename}`}
           className="text-default-600"
           size="sm"
@@ -106,6 +126,12 @@ export function DocumentActionsMenu({
           <p className="text-danger">Delete</p>
         </Tooltip.Content>
       </Tooltip>
+      <DocumentHistoryDrawer
+        documentId={isHistoryOpen ? doc.id : null}
+        documentName={doc.filename}
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+      />
     </div>
   );
 }

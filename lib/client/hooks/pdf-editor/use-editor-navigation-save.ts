@@ -91,16 +91,37 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
   useEffect(() => {
     const onPageHide = () => {
-      if (document.visibilityState !== "hidden") return;
       if (!file || !isSignedIn || isNavigatingRef.current) return;
 
       void persistEditorDocument({ fabricCanvas: fabricRef.current });
     };
 
-    document.addEventListener("visibilitychange", onPageHide);
+    // `pagehide` fires reliably on iOS Safari + Android Chrome on tab close
+    // and navigation; `visibilitychange` does not. Keep both for redundancy.
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") onPageHide();
+    });
 
     return () => {
-      document.removeEventListener("visibilitychange", onPageHide);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, [file, isSignedIn]);
+
+  // Browser warning when leaving with unsaved edits. We don't have a way to
+  // hold the unload (async save can't complete during beforeunload), but we
+  // can prompt the user so they don't lose work to an accidental close.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (usePdfEditorStore.getState().hasUnsavedChanges) {
+        e.preventDefault();
+        // Setting returnValue is the legacy way to trigger the prompt.
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 }

@@ -36,7 +36,9 @@ export function ContactFormSection() {
       description: `If nothing opens, reach us directly at ${SUPPORT_EMAIL}.`,
       title: "Opening your email app…",
     });
-    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+    window.location.assign(
+      `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`,
+    );
   };
 
   return (

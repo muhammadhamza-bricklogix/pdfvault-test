@@ -18,7 +18,8 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
   useEffect(() => {
     if (!fabricCanvas || activeTool !== "eraser") return;
 
-    // Disable object selection — clicks should delete, not select
+    // Disable object selection — clicks should delete, not select.
+    // eslint-disable-next-line react-hooks/immutability -- Fabric canvas API mutates by design.
     fabricCanvas.selection = false;
 
     const onMouseDown = (opt: TPointerEventInfo) => {
@@ -36,6 +37,9 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
 
     return () => {
       fabricCanvas.off("mouse:down", onMouseDown);
+      // Restore selection so the rubber-band works again in the select tool.
+
+      fabricCanvas.selection = true;
     };
   }, [activeTool, currentPage, fabricCanvas, pushHistory]);
 }

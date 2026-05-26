@@ -7,6 +7,7 @@ import {
   ArrowDown01Icon,
   BackgroundIcon,
   Cursor01Icon,
+  DashboardSpeed01Icon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
@@ -33,14 +34,29 @@ import {
   Toolbar,
   Tooltip,
 } from "@heroui/react";
+import { useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { toast } from "@/lib/shared/utils/toast";
 
 import { HamburgerMenu } from "./HamburgerMenu";
+import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+// Format options shown in the Save dropdown. The editor only opens PDFs, so
+// every non-PDF entry routes through the `/conversion` backend
+// (pdf_to_<format>) via the editor:export event in use-export-editor.ts.
+const EXPORT_FORMATS = [
+  { id: "pdf", label: "PDF (.pdf)" },
+  { id: "docx", label: "Word (.docx)" },
+  { id: "xlsx", label: "Excel (.xlsx)" },
+  { id: "pptx", label: "PowerPoint (.pptx)" },
+  { id: "jpg", label: "JPG image" },
+  { id: "png", label: "PNG image" },
+  { id: "html", label: "HTML" },
+  { id: "txt", label: "Plain text (.txt)" },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, undo/redo
@@ -56,6 +72,8 @@ export function EditorInfoBar() {
   const zoom = usePdfEditorStore((s) => s.zoom);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
+
+  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
 
   const history = historyByPage.get(currentPage) ?? [];
   const idx = historyIndexByPage.get(currentPage) ?? -1;
@@ -84,189 +102,200 @@ export function EditorInfoBar() {
       : "Save";
 
   const handleExportAction = (key: Key) => {
-    if (key === "pdf") {
-      window.dispatchEvent(new CustomEvent("editor:export"));
-
-      return;
-    }
-
-    toast.info({
-      title: "Coming soon",
-      description: "This export format isn't available yet.",
-    });
+    window.dispatchEvent(
+      new CustomEvent("editor:export", { detail: { format: String(key) } }),
+    );
   };
 
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
-      {/* Left: menu + undo/redo + mode toggle */}
-      <div className="flex items-center gap-1">
-        <HamburgerMenu />
-        <Toolbar aria-label="Actions">
-          <ButtonGroup size="sm" variant="tertiary">
-            <Tooltip delay={300}>
-              <Button
-                isIconOnly
-                aria-label="Undo"
-                isDisabled={!canUndo}
-                onPress={() =>
-                  window.dispatchEvent(new CustomEvent("editor:undo"))
-                }
-              >
-                <HugeiconsIcon icon={UndoIcon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Undo</p>
-              </Tooltip.Content>
-            </Tooltip>
-            <Tooltip delay={300}>
-              <Button
-                isIconOnly
-                aria-label="Redo"
-                isDisabled={!canRedo}
-                onPress={() =>
-                  window.dispatchEvent(new CustomEvent("editor:redo"))
-                }
-              >
-                <ButtonGroup.Separator />
-                <HugeiconsIcon icon={RedoIcon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Redo</p>
-              </Tooltip.Content>
-            </Tooltip>
-          </ButtonGroup>
-        </Toolbar>
-      </div>
-
-      {/* Center: filename + page navigation */}
-      <div className="flex min-w-0 items-center gap-2 lg:gap-3">
-        <Tooltip delay={300}>
-          <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] sm:inline lg:max-w-40">
-            {fileName}
-          </span>
-          <Tooltip.Content>
-            <p>{fileName}</p>
-          </Tooltip.Content>
-        </Tooltip>
-
-        <Separator
-          className="!h-4 hidden self-center sm:block"
-          orientation="vertical"
-        />
-
+    <>
+      <ToolsModal
+        isOpen={isToolsModalOpen}
+        onClose={() => setIsToolsModalOpen(false)}
+      />
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
+        {/* Left: menu + tools + undo/redo + mode toggle */}
         <div className="flex items-center gap-1">
-          <Button
-            isDisabled={currentPage <= 1}
-            size="sm"
-            variant="ghost"
-            onPress={() => setCurrentPage(currentPage - 1)}
-          >
-            ‹
-          </Button>
-          <span className="min-w-16 text-center text-xs text-default-500 lg:min-w-24">
-            <span className="hidden sm:inline">Page </span>
-            {currentPage}
-            <span className="hidden sm:inline"> of</span>
-            <span className="sm:hidden">/</span> {pageCount}
-          </span>
-          <Button
-            isDisabled={currentPage >= pageCount}
-            size="sm"
-            variant="ghost"
-            onPress={() => setCurrentPage(currentPage + 1)}
-          >
-            ›
-          </Button>
-        </div>
-      </div>
-
-      {/* Right: zoom controls */}
-      <div className="flex items-center gap-1">
-        <Tooltip delay={300}>
-          <Button
-            className="hidden sm:inline-flex"
-            isDisabled={zoom <= ZOOM_PRESETS[0]}
-            size="sm"
-            variant="ghost"
-            onPress={zoomOut}
-          >
-            −
-          </Button>
-          <Tooltip.Content>
-            <p>Zoom out</p>
-          </Tooltip.Content>
-        </Tooltip>
-        <span className="hidden min-w-12 text-center text-xs tabular-nums text-default-500 sm:inline">
-          {Math.round(zoom * 100)}%
-        </span>
-        <Tooltip delay={300}>
-          <Button
-            className="hidden sm:inline-flex"
-            isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
-            size="sm"
-            variant="ghost"
-            onPress={zoomIn}
-          >
-            +
-          </Button>
-          <Tooltip.Content>
-            <p>Zoom in</p>
-          </Tooltip.Content>
-        </Tooltip>
-
-        <Separator
-          className="!h-4 hidden self-center sm:block"
-          orientation="vertical"
-        />
-        <ButtonGroup isDisabled={!file} size="sm" variant="primary">
+          <HamburgerMenu />
           <Tooltip delay={300}>
             <Button
-              isDisabled={!canSave}
-              onPress={() =>
-                window.dispatchEvent(new CustomEvent("editor:save"))
-              }
+              aria-label="Browse all tools"
+              size="sm"
+              variant="tertiary"
+              onPress={() => setIsToolsModalOpen(true)}
             >
-              <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
-              <span className="hidden sm:inline">Save</span>
+              <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
+              <span className="hidden sm:inline">Tools</span>
             </Button>
             <Tooltip.Content>
-              <p>{saveTooltip}</p>
+              <p>Browse PDF and image tools</p>
             </Tooltip.Content>
           </Tooltip>
-          <Dropdown>
-            <Button isIconOnly aria-label="Export options">
-              <ButtonGroup.Separator />
-              <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-            </Button>
-            <Dropdown.Popover className="min-w-[180px]">
-              <Dropdown.Menu
-                aria-label="Export options"
-                onAction={handleExportAction}
-              >
-                <Dropdown.Item id="pdf" textValue="Export as PDF">
-                  <Label>Export as PDF</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="word" textValue="Export as Word">
-                  <Label>Export as Word</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="excel" textValue="Export as Excel">
-                  <Label>Export as Excel</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="image" textValue="Export as Image">
-                  <Label>Export as Image</Label>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        </ButtonGroup>
+          <Separator className="!h-4" orientation="vertical" />
+          <Toolbar aria-label="Actions">
+            <ButtonGroup size="sm" variant="tertiary">
+              <Tooltip delay={300}>
+                <Button
+                  isIconOnly
+                  aria-label="Undo"
+                  isDisabled={!canUndo}
+                  onPress={() =>
+                    window.dispatchEvent(new CustomEvent("editor:undo"))
+                  }
+                >
+                  <HugeiconsIcon icon={UndoIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Undo</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <Tooltip delay={300}>
+                <Button
+                  isIconOnly
+                  aria-label="Redo"
+                  isDisabled={!canRedo}
+                  onPress={() =>
+                    window.dispatchEvent(new CustomEvent("editor:redo"))
+                  }
+                >
+                  <ButtonGroup.Separator />
+                  <HugeiconsIcon icon={RedoIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Redo</p>
+                </Tooltip.Content>
+              </Tooltip>
+            </ButtonGroup>
+          </Toolbar>
+        </div>
 
-        <Separator
-          className="!h-4 hidden self-center sm:block"
-          orientation="vertical"
-        />
-        <ThemeToggle size="sm" variant="tertiary" />
+        {/* Center: filename + page navigation */}
+        <div className="flex min-w-0 items-center gap-2 lg:gap-3">
+          <Tooltip delay={300}>
+            <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] sm:inline lg:max-w-40">
+              {fileName}
+            </span>
+            <Tooltip.Content>
+              <p>{fileName}</p>
+            </Tooltip.Content>
+          </Tooltip>
+
+          <Separator
+            className="!h-4 hidden self-center sm:block"
+            orientation="vertical"
+          />
+
+          <div className="flex items-center gap-1">
+            <Button
+              isDisabled={currentPage <= 1}
+              size="sm"
+              variant="ghost"
+              onPress={() => setCurrentPage(currentPage - 1)}
+            >
+              ‹
+            </Button>
+            <span className="min-w-16 text-center text-xs text-default-500 lg:min-w-24">
+              <span className="hidden sm:inline">Page </span>
+              {currentPage}
+              <span className="hidden sm:inline"> of</span>
+              <span className="sm:hidden">/</span> {pageCount}
+            </span>
+            <Button
+              isDisabled={currentPage >= pageCount}
+              size="sm"
+              variant="ghost"
+              onPress={() => setCurrentPage(currentPage + 1)}
+            >
+              ›
+            </Button>
+          </div>
+        </div>
+
+        {/* Right: zoom controls */}
+        <div className="flex items-center gap-1">
+          <Tooltip delay={300}>
+            <Button
+              className="hidden sm:inline-flex"
+              isDisabled={zoom <= ZOOM_PRESETS[0]}
+              size="sm"
+              variant="ghost"
+              onPress={zoomOut}
+            >
+              −
+            </Button>
+            <Tooltip.Content>
+              <p>Zoom out</p>
+            </Tooltip.Content>
+          </Tooltip>
+          <span className="hidden min-w-12 text-center text-xs tabular-nums text-default-500 sm:inline">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Tooltip delay={300}>
+            <Button
+              className="hidden sm:inline-flex"
+              isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+              size="sm"
+              variant="ghost"
+              onPress={zoomIn}
+            >
+              +
+            </Button>
+            <Tooltip.Content>
+              <p>Zoom in</p>
+            </Tooltip.Content>
+          </Tooltip>
+
+          <Separator
+            className="!h-4 hidden self-center sm:block"
+            orientation="vertical"
+          />
+          <ButtonGroup isDisabled={!file} size="sm" variant="primary">
+            <Tooltip delay={300}>
+              <Button
+                isDisabled={!canSave}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:save"))
+                }
+              >
+                <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
+                <span className="hidden sm:inline">Save</span>
+              </Button>
+              <Tooltip.Content>
+                <p>{saveTooltip}</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Dropdown>
+              <Button isIconOnly aria-label="Export options">
+                <ButtonGroup.Separator />
+                <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+              </Button>
+              <Dropdown.Popover className="min-w-[200px]">
+                <Dropdown.Menu
+                  aria-label="Export format"
+                  onAction={handleExportAction}
+                >
+                  {EXPORT_FORMATS.map((fmt) => (
+                    <Dropdown.Item
+                      key={fmt.id}
+                      id={fmt.id}
+                      textValue={`Export as ${fmt.label}`}
+                    >
+                      <Label>{fmt.label}</Label>
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
+          </ButtonGroup>
+
+          <Separator
+            className="!h-4 hidden self-center sm:block"
+            orientation="vertical"
+          />
+          <ThemeToggle size="sm" variant="tertiary" />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -301,7 +330,7 @@ export function ToolsContent({
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
 
   const handleToolChange = (keys: Set<Key>) => {
-    const key = [...keys][0] as ActiveTool | undefined;
+    const key = Array.from(keys)[0] as ActiveTool | undefined;
 
     if (!key) return;
 

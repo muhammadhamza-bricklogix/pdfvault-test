@@ -133,6 +133,10 @@ export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
           );
         }
 
+        // If the effect was cancelled mid-render (page switched, tool changed)
+        // the canvas may have been disposed — bail before reordering.
+        if (cancelled) return;
+
         // Apply z-order based on layer setting — underlay sends watermark
         // behind all other Fabric objects, overlay brings it to front.
         const wmObjects = fabricCanvas
@@ -153,6 +157,8 @@ export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
       } finally {
         setIsRestoringHistory(false);
       }
+
+      if (cancelled) return;
 
       fabricCanvas.renderAll();
     };

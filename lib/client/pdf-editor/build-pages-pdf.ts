@@ -37,6 +37,9 @@ async function appendColoredPageFromPdfJs(
 ): Promise<void> {
   const { BlendMode, rgb } = await import("pdf-lib");
   const pdfjsPage = await pdfjsDoc.getPage(pageIndex0 + 1);
+  // Render at the source's native orientation; rotation is applied via the
+  // page's /Rotate metadata after compositing so the editor can still extract
+  // text in its native coordinate space.
   const viewport = pdfjsPage.getViewport({ scale: 1 });
 
   const widthPt = override.widthPt ?? viewport.width;
@@ -54,11 +57,8 @@ async function appendColoredPageFromPdfJs(
     y: 0,
   });
 
-  // 2. Render the source page normally (opaque white background) and composite
-  //    on top using Multiply: white areas multiply with the color (color shows
-  //    through), dark content (text/lines) multiplies near 0 (stays dark).
-  //    This mirrors the live preview's mix-blend-mode approach and avoids the
-  //    unreliable transparent-canvas path in pdf.js (which renders as black).
+  // 2. Render the source page (white bg) and composite on top via Multiply
+  //    so the colored fill shows through whitespace.
   const pngBytes = await renderPageToPng(pdfjsPage, {
     suppressText: false,
     transparent: false,
@@ -73,9 +73,13 @@ async function appendColoredPageFromPdfJs(
     y: 0,
   });
 
-  if (override.rotation) {
-    newPage.setRotation(degrees(override.rotation));
-  }
+  // Compose draft delta with the source's existing /Rotate so a delta that
+  // visually returns the page to upright also writes /Rotate=0 here.
+  const sourceRotation = (pdfjsPage.rotate ?? 0) as number;
+  const finalRotation =
+    (((sourceRotation + (override.rotation ?? 0)) % 360) + 360) % 360;
+
+  newPage.setRotation(degrees(finalRotation));
 }
 
 export async function buildPdfFromDraft({
@@ -86,7 +90,9 @@ export async function buildPdfFromDraft({
 }: BuildPdfInput): Promise<Uint8Array> {
   const { PDFDocument, rgb } = await import("pdf-lib");
 
-  const sourcePdf = await PDFDocument.load(sourceBytes);
+  const sourcePdf = await PDFDocument.load(sourceBytes, {
+    ignoreEncryption: true,
+  });
   const outputPdf = await PDFDocument.create();
 
   // pdf.js docs for imported PDFs are loaded lazily and cached per importKey.
@@ -180,7 +186,9 @@ export async function buildPdfFromDraft({
       }
     }
 
-    const importDoc = await PDFDocument.load(importBytes);
+    const importDoc = await PDFDocument.load(importBytes, {
+      ignoreEncryption: true,
+    });
 
     await appendPdfPage(outputPdf, importDoc, entry.importPageIndex - 1, {
       heightPt: entry.heightPt,
@@ -188,6 +196,12 @@ export async function buildPdfFromDraft({
       widthPt: entry.widthPt,
     });
   }
+
+  // Tear down any pdf.js workers we spun up for imported PDFs so the
+  // SharedArrayBuffer + message-channel memory is freed immediately.
+  Array.from(importedPdfjsCache.values()).forEach((proxy) => {
+    void proxy.destroy();
+  });
 
   return outputPdf.save();
 }

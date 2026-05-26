@@ -8,6 +8,8 @@ const TEXT_OPS_MAX = 49;
 const RASTER_SCALE = 3;
 
 export type RenderPageOptions = {
+  /** Clockwise rotation in degrees applied to the rendered viewport (default 0). */
+  rotation?: number;
   /** Suppress pdf.js text rendering ops (default true). */
   suppressText?: boolean;
   /** Render against a transparent background (default false). */
@@ -15,17 +17,17 @@ export type RenderPageOptions = {
 };
 
 /**
- * Renders a pdf.js page to a PNG byte array. Supports text suppression and
- * transparent backgrounds — used both by the editor export (merge-pdf) and by
- * the manage-pages save pipeline (build-pages-pdf) when a colored background
- * is requested behind original page content.
+ * Renders a pdf.js page to a PNG byte array. Supports text suppression,
+ * transparent backgrounds, and explicit rotation — used by the manage-pages
+ * save pipeline (build-pages-pdf) to bake a user-applied rotation into the
+ * rendered output rather than relying on /Rotate metadata.
  */
 export async function renderPageToPng(
   page: PDFPageProxy,
   options: RenderPageOptions = {},
 ): Promise<Uint8Array> {
-  const { suppressText = true, transparent = false } = options;
-  const viewport = page.getViewport({ scale: RASTER_SCALE });
+  const { rotation = 0, suppressText = true, transparent = false } = options;
+  const viewport = page.getViewport({ rotation, scale: RASTER_SCALE });
 
   const canvas = document.createElement("canvas");
 

@@ -22,6 +22,10 @@ const PAGE_TITLES: { match: (pathname: string) => boolean; title: string }[] = [
     title: "Settings",
   },
   {
+    match: (p) => p === "/dashboard/activity",
+    title: "Activity",
+  },
+  {
     match: (p) => p === "/dashboard",
     title: "My Documents",
   },

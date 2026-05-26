@@ -44,10 +44,6 @@ export function useFabricCanvas({
   const mountedPageRef = useRef<number>(sourcePage);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
 
-  // Base dimensions = CSS size at zoom=1 (matches PDF page points)
-  const baseWidth = renderedSize ? renderedSize.width / zoom : null;
-  const baseHeight = renderedSize ? renderedSize.height / zoom : null;
-
   // Latest renderedSize is read inside the mount effect via a ref so we don't
   // re-mount Fabric on every zoom change. Only sourcePage changes trigger a
   // full re-mount; zoom/size adjustments live in the resize effect below.

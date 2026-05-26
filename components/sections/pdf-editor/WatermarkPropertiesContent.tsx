@@ -125,7 +125,7 @@ export function WatermarkPropertiesContent() {
           selectionMode="single"
           size="sm"
           onSelectionChange={(keys: Set<Key>) => {
-            const key = [...keys][0] as "image" | "text" | undefined;
+            const key = Array.from(keys)[0] as "image" | "text" | undefined;
 
             if (key) setConfig({ type: key });
           }}
@@ -156,7 +156,7 @@ export function WatermarkPropertiesContent() {
               selectionMode="single"
               size="sm"
               onSelectionChange={(keys: Set<Key>) => {
-                const key = [...keys][0] as string | undefined;
+                const key = Array.from(keys)[0] as string | undefined;
 
                 if (key) setConfig({ fontFamily: key });
               }}
@@ -235,7 +235,7 @@ export function WatermarkPropertiesContent() {
         <Section title="Image">
           <input
             ref={imageInputRef}
-            accept="image/png,image/jpeg,image/svg+xml"
+            accept="image/png,image/jpeg"
             className="hidden"
             type="file"
             onChange={handleImageUpload}
@@ -364,7 +364,10 @@ export function WatermarkPropertiesContent() {
           selectionMode="single"
           size="sm"
           onSelectionChange={(keys: Set<Key>) => {
-            const key = [...keys][0] as "overlay" | "underlay" | undefined;
+            const key = Array.from(keys)[0] as
+              | "overlay"
+              | "underlay"
+              | undefined;
 
             if (key) setConfig({ layer: key });
           }}
@@ -383,7 +386,7 @@ export function WatermarkPropertiesContent() {
           selectionMode="single"
           size="sm"
           onSelectionChange={(keys: Set<Key>) => {
-            const key = [...keys][0] as
+            const key = Array.from(keys)[0] as
               | "all"
               | "custom"
               | "even"

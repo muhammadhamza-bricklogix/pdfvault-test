@@ -18,6 +18,8 @@ export type TextBlock = {
   height: number;
   /** The real PDF font name (e.g. "JJMAVV+CMBX12") for reference */
   pdfFontName: string;
+  /** Page rotation (0/90/180/270) so the editor can rotate Fabric IText to match. */
+  rotation: 0 | 90 | 180 | 270;
   text: string;
   width: number;
   x: number;
@@ -188,6 +190,12 @@ export async function extractTextBlocks(
   page: PDFPageProxy,
 ): Promise<TextBlock[]> {
   const viewport = page.getViewport({ scale: 1.0 });
+  // Normalize page rotation to one of the four canonical PDF angles.
+  const rawRotation = (page.rotate ?? 0) as number;
+  const pageRotation: 0 | 90 | 180 | 270 =
+    rawRotation === 90 || rawRotation === 180 || rawRotation === 270
+      ? rawRotation
+      : 0;
   const [textContent, colors] = await Promise.all([
     page.getTextContent(),
     extractSequentialTextColors(page),
@@ -198,8 +206,7 @@ export async function extractTextBlocks(
   // (handles uniformly-colored docs) and finally to black.
   const sameLength = colors.length === textContent.items.length;
   const uniqueColors = new Set(colors);
-  const fallbackColor =
-    uniqueColors.size === 1 ? colors[0]! : "#000000";
+  const fallbackColor = uniqueColors.size === 1 ? colors[0]! : "#000000";
 
   const colorForItem = (itemIndex: number): string => {
     if (sameLength) return colors[itemIndex] ?? fallbackColor;
@@ -255,7 +262,12 @@ export async function extractTextBlocks(
 
     if (!str.trim()) continue;
 
-    const fontSize = Math.abs(transform[3]);
+    // Font size is the magnitude of the text matrix's d-axis (its y vector),
+    // i.e. `sqrt(c² + d²)`. For upright text d == fontSize and c == 0 so this
+    // collapses to `abs(d)`. For rotated text (e.g. pages from Manage Pages
+    // that bake a 90° transform), d collapses to 0 and the size lives in c —
+    // taking the hypot keeps the filter from skipping those items entirely.
+    const fontSize = Math.hypot(transform[2] as number, transform[3] as number);
 
     if (fontSize < 2) continue;
 
@@ -293,6 +305,7 @@ export async function extractTextBlocks(
       fontWeight: fontInfo.weight,
       height: vpHeight,
       pdfFontName: fontInfo.realName,
+      rotation: pageRotation,
       text: str,
       width: vpWidth,
       x: Math.round(vpX),
@@ -320,11 +333,14 @@ export function extractFontData(
 ): FontData[] {
   const result: FontData[] = [];
 
-  for (const fontName of fontNames) {
+  // Array.from() instead of `for...of` so we stay compatible with the
+  // project's TS `target: "es5"` (otherwise TS2802 trips on Set iteration).
+  Array.from(fontNames).forEach((fontName) => {
     try {
       if (!page.commonObjs.has(fontName)) {
         console.warn(`[FontExtract] commonObjs missing: ${fontName}`);
-        continue;
+
+        return;
       }
 
       // fontExtraProperties must be true in getDocument() options,
@@ -333,14 +349,16 @@ export function extractFontData(
 
       if (!fontObj) {
         console.warn(`[FontExtract] fontObj is null: ${fontName}`);
-        continue;
+
+        return;
       }
 
       const data = (fontObj as any).data as Uint8Array | undefined;
 
       if (!data || data.byteLength === 0) {
         console.warn(`[FontExtract] No binary data for: ${fontName}`);
-        continue;
+
+        return;
       }
 
       result.push({
@@ -352,7 +370,7 @@ export function extractFontData(
     } catch (err) {
       console.error(`[FontExtract] Error reading font ${fontName}:`, err);
     }
-  }
+  });
 
   return result;
 }

@@ -439,6 +439,17 @@ export function useManagePagesDraft({
 
   const importPdf = useCallback(
     async (file: File) => {
+      // 50 MB cap — the bytes are kept in React state, cloned on every undo
+      // snapshot, and copied again at build time. Larger imports OOM mobile.
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error({
+          title: "PDF too large to import",
+          description: "Pick a PDF under 50 MB.",
+        });
+
+        return;
+      }
+
       const bytes = await file.arrayBuffer();
       const importKey = createId();
 
