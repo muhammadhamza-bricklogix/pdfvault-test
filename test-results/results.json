@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 2
+      "actualWorkers": 4
     },
     "preserveOutput": "always",
     "projects": [
@@ -20,7 +20,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 4
         },
         "id": "setup",
         "name": "setup",
@@ -36,7 +36,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 4
         },
         "id": "chromium",
         "name": "chromium",
@@ -76,7 +76,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.60.0",
-    "workers": 2,
+    "workers": 4,
     "webServer": null
   },
   "suites": [
@@ -124,7 +124,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.410Z",
+                      "startTime": "2026-06-02T19:39:49.506Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -173,12 +173,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 4,
+                      "duration": 2,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.418Z",
+                      "startTime": "2026-06-02T19:39:49.524Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -224,15 +224,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "skipped",
-                      "duration": 0,
+                      "duration": 3,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.443Z",
+                      "startTime": "2026-06-02T19:39:49.534Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -278,15 +278,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "skipped",
-                      "duration": 1,
+                      "duration": 9,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.451Z",
+                      "startTime": "2026-06-02T19:39:49.522Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -340,7 +340,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.454Z",
+                      "startTime": "2026-06-02T19:39:49.543Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -393,15 +393,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 6976,
+                      "duration": 5923,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.488Z",
+                      "startTime": "2026-06-02T19:39:49.562Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -437,15 +437,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 4391,
+                      "duration": 5491,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.488Z",
+                      "startTime": "2026-06-02T19:39:49.571Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -471,659 +471,13 @@
           ]
         }
       ]
-    },
-    {
-      "title": "pdf-editor/controls.spec.ts",
-      "file": "pdf-editor/controls.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "PDF editor — top-bar controls",
-          "file": "pdf-editor/controls.spec.ts",
-          "line": 9,
-          "column": 6,
-          "specs": [
-            {
-              "title": "Redo button is disabled when there is nothing to redo",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3097,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:23.903Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "e301254aa141050c1d86-154d84f2672ae0e1d4ce",
-              "file": "pdf-editor/controls.spec.ts",
-              "line": 10,
-              "column": 3
-            },
-            {
-              "title": "zoom-in changes the zoom percentage",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3410,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:26.471Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "e301254aa141050c1d86-54743e38494fe314d5c8",
-              "file": "pdf-editor/controls.spec.ts",
-              "line": 18,
-              "column": 3
-            },
-            {
-              "title": "next-page button advances the page indicator",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3378,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:27.012Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "e301254aa141050c1d86-858eb93df30a706b7d75",
-              "file": "pdf-editor/controls.spec.ts",
-              "line": 30,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/manage-pages.spec.ts",
-      "file": "pdf-editor/manage-pages.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "PDF editor — Manage Pages",
-          "file": "pdf-editor/manage-pages.spec.ts",
-          "line": 9,
-          "column": 6,
-          "specs": [
-            {
-              "title": "modal opens without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3849,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:29.915Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "384f5fa235f4e18ca19d-780a46b0970277e2bd31",
-              "file": "pdf-editor/manage-pages.spec.ts",
-              "line": 10,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/save-export.spec.ts",
-      "file": "pdf-editor/save-export.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "PDF editor — Save dropdown",
-          "file": "pdf-editor/save-export.spec.ts",
-          "line": 20,
-          "column": 6,
-          "specs": [
-            {
-              "title": "Save button + Export options dropdown are present",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3797,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:30.428Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "63181d3227ec15740c58-a119e3aea50ced0625a8",
-              "file": "pdf-editor/save-export.spec.ts",
-              "line": 21,
-              "column": 3
-            },
-            {
-              "title": "Export menu lists all 8 formats",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3940,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:33.820Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "63181d3227ec15740c58-c7b5c7c9f651420c1b07",
-              "file": "pdf-editor/save-export.spec.ts",
-              "line": 30,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/tools.spec.ts",
-      "file": "pdf-editor/tools.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "PDF editor — tool activation",
-          "file": "pdf-editor/tools.spec.ts",
-          "line": 23,
-          "column": 6,
-          "specs": [
-            {
-              "title": "Select tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3471,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:34.265Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-40e386e6664aeb695b03",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Text tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 4480,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:37.760Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-c57c2c0f1a67936db10c",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Draw tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4342,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:37.787Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-1c6a6b78c7380b921d53",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Highlight tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3801,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:42.144Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-3677fd84711606a3f462",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Shapes tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3699,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:42.255Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-8ab1327134a70b94231e",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Eraser tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2888,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:45.968Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-a505cfd60fbf797a833c",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Whiteout tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 2847,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:45.968Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-7a9af2d7784f982b2938",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Signature tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3545,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:48.828Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-dd76a133bca237be5db3",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Image tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3396,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:48.873Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-7fea3120929ac26f4e70",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Watermark tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4239,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:52.323Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-225b80dfd26885980cee",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Background tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 4324,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:52.410Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-3082ab8fd7a720e83702",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            }
-          ]
-        }
-      ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-25T05:29:16.818Z",
-    "duration": 40170.189999999995,
-    "expected": 18,
+    "startTime": "2026-06-02T19:39:48.817Z",
+    "duration": 8367.629,
+    "expected": 1,
     "skipped": 6,
     "unexpected": 0,
     "flaky": 0
