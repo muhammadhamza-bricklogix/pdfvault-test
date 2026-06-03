@@ -35,10 +35,8 @@ const FONT_OPTIONS = [
 
 const POSITION_OPTIONS = [
   { label: "Center", value: "center" },
-  { label: "Top Left", value: "top-left" },
-  { label: "Top Right", value: "top-right" },
-  { label: "Bottom Left", value: "bottom-left" },
-  { label: "Bottom Right", value: "bottom-right" },
+  { label: "Top", value: "top" },
+  { label: "Bottom", value: "bottom" },
   { label: "Tiled", value: "tiled" },
 ] as const;
 
@@ -313,7 +311,7 @@ export function WatermarkPropertiesContent() {
 
       {/* Position */}
       <Section title="Position">
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {POSITION_OPTIONS.map((opt) => (
             <Button
               key={opt.value}

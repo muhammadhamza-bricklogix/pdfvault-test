@@ -42,6 +42,12 @@ export function useFabricCanvas({
 
   const fabricRef = useRef<Canvas | null>(null);
   const mountedPageRef = useRef<number>(sourcePage);
+  // Snapshot of the File at mount time. The unmount cleanup compares against
+  // the store's current file before persisting JSON — if the file was swapped
+  // (Create New PDF, Open Another), we MUST NOT write the previous canvas's
+  // objects into the new file's fabricJsonByPage map, or the freshly-mounted
+  // canvas would load the old file's text overlays back onto the new doc.
+  const mountedFileRef = useRef<File | null>(null);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
 
   // Latest renderedSize is read inside the mount effect via a ref so we don't
@@ -107,6 +113,7 @@ export function useFabricCanvas({
 
       fabricRef.current = fc;
       mountedPageRef.current = sourcePage;
+      mountedFileRef.current = usePdfEditorStore.getState().file;
 
       const saved = getFabricJson(currentPage);
 
@@ -131,9 +138,17 @@ export function useFabricCanvas({
 
       const cleanup = () => {
         if (fabricRef.current) {
-          const json = serializeFabricCanvas(fabricRef.current);
+          // Only persist objects back to the store if the file is still the
+          // same one that was loaded into this canvas. Otherwise we'd write
+          // the previous file's IText into the new file's page-1 slot.
+          const currentFile = usePdfEditorStore.getState().file;
 
-          saveFabricJsonBySourcePage(mountedPageRef.current, json);
+          if (currentFile && currentFile === mountedFileRef.current) {
+            const json = serializeFabricCanvas(fabricRef.current);
+
+            saveFabricJsonBySourcePage(mountedPageRef.current, json);
+          }
+
           fabricRef.current.dispose();
           fabricRef.current = null;
           setFabricCanvas(null);

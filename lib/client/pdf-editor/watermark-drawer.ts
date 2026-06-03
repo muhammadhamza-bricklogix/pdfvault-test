@@ -19,41 +19,74 @@ import { calculateTilePositions } from "./watermark-utils";
 
 const PADDING_PTS = 40; // padding from page edges in PDF points
 
-function resolveWatermarkPosition(
+// Dimensions of the axis-aligned bbox that wraps a w×h rect rotated by angleDeg
+// (sign-independent — only the magnitude matters for bbox size).
+function rotatedBboxSize(
+  w: number,
+  h: number,
+  angleDeg: number,
+): { height: number; width: number } {
+  const rad = (angleDeg * Math.PI) / 180;
+  const c = Math.abs(Math.cos(rad));
+  const s = Math.abs(Math.sin(rad));
+
+  return { height: w * s + h * c, width: w * c + h * s };
+}
+
+// pdf-lib's drawText/drawImage rotates around (x, y) — the unrotated lower-left
+// (origin). We want the rotated rect's CENTER to land on (cx, cy), so we solve
+// for the pivot. The PDF rotation angle is -screenAngle (Fabric/UI angle is
+// screen-CW positive; PDF is CCW positive).
+function pivotForCenter(
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  screenAngleDeg: number,
+): { x: number; y: number } {
+  const theta = (-screenAngleDeg * Math.PI) / 180;
+  const cosT = Math.cos(theta);
+  const sinT = Math.sin(theta);
+
+  return {
+    x: cx - (w / 2) * cosT + (h / 2) * sinT,
+    y: cy - (w / 2) * sinT - (h / 2) * cosT,
+  };
+}
+
+// Page-relative center for a non-tiled watermark, computed so the rotated bbox
+// sits fully inside the page minus PADDING_PTS on top/bottom edges.
+function centerForPosition(
   position: string,
   pageWidth: number,
   pageHeight: number,
-  elementWidth: number,
-  elementHeight: number,
-): { x: number; y: number } {
+  rotH: number,
+): { cx: number; cy: number } {
   switch (position) {
-    case "top-left":
-      return {
-        x: PADDING_PTS,
-        y: pageHeight - PADDING_PTS - elementHeight,
-      };
-    case "top-right":
-      return {
-        x: pageWidth - PADDING_PTS - elementWidth,
-        y: pageHeight - PADDING_PTS - elementHeight,
-      };
-    case "bottom-left":
-      return {
-        x: PADDING_PTS,
-        y: PADDING_PTS,
-      };
-    case "bottom-right":
-      return {
-        x: pageWidth - PADDING_PTS - elementWidth,
-        y: PADDING_PTS,
-      };
+    case "top":
+      return { cx: pageWidth / 2, cy: pageHeight - PADDING_PTS - rotH / 2 };
+    case "bottom":
+      return { cx: pageWidth / 2, cy: PADDING_PTS + rotH / 2 };
     case "center":
     default:
-      return {
-        x: (pageWidth - elementWidth) / 2,
-        y: (pageHeight - elementHeight) / 2,
-      };
+      return { cx: pageWidth / 2, cy: pageHeight / 2 };
   }
+}
+
+// Shrinks (w, h) uniformly until the rotated bbox fits in the page minus
+// padding on every side. Returns the scale factor (≤ 1).
+function fitScaleForRotated(
+  w: number,
+  h: number,
+  angleDeg: number,
+  pageWidth: number,
+  pageHeight: number,
+): number {
+  const { width: rotW, height: rotH } = rotatedBboxSize(w, h, angleDeg);
+  const maxW = Math.max(1, pageWidth - PADDING_PTS * 2);
+  const maxH = Math.max(1, pageHeight - PADDING_PTS * 2);
+
+  return Math.min(1, maxW / rotW, maxH / rotH);
 }
 
 // ---------------------------------------------------------------------------
@@ -145,25 +178,40 @@ async function drawTextWatermark(
       });
     }
   } else {
-    let effectiveWidth = textWidth;
-    let effectiveHeight = textHeight;
+    let effW = textWidth;
+    let effH = textHeight;
 
     if (config.scaleToPage) {
       const maxWidth = pageWidth - PADDING_PTS * 2;
       const scale = Math.min(1, maxWidth / textWidth);
 
-      effectiveWidth *= scale;
-      effectiveHeight *= scale;
+      effW *= scale;
+      effH *= scale;
       drawOpts.size = config.fontSize * scale;
     }
 
-    const { x, y } = resolveWatermarkPosition(
+    // Auto-fit: rotation can push the bbox past the page edge — shrink so the
+    // rotated bbox stays inside the page minus PADDING_PTS on every side.
+    const autoFit = fitScaleForRotated(
+      effW,
+      effH,
+      config.rotation,
+      pageWidth,
+      pageHeight,
+    );
+
+    effW *= autoFit;
+    effH *= autoFit;
+    drawOpts.size *= autoFit;
+
+    const { height: rotH } = rotatedBboxSize(effW, effH, config.rotation);
+    const { cx, cy } = centerForPosition(
       config.position,
       pageWidth,
       pageHeight,
-      effectiveWidth,
-      effectiveHeight,
+      rotH,
     );
+    const { x, y } = pivotForCenter(cx, cy, effW, effH, config.rotation);
 
     page.drawText(config.text, { ...drawOpts, x, y });
   }
@@ -226,13 +274,31 @@ async function drawImageWatermark(
       });
     }
   } else {
-    const { x, y } = resolveWatermarkPosition(
+    let effW = scaledW;
+    let effH = scaledH;
+
+    // Auto-fit so the rotated bbox stays inside the page minus PADDING_PTS.
+    const autoFit = fitScaleForRotated(
+      effW,
+      effH,
+      config.rotation,
+      pageWidth,
+      pageHeight,
+    );
+
+    effW *= autoFit;
+    effH *= autoFit;
+    drawOpts.width = effW;
+    drawOpts.height = effH;
+
+    const { height: rotH } = rotatedBboxSize(effW, effH, config.rotation);
+    const { cx, cy } = centerForPosition(
       config.position,
       pageWidth,
       pageHeight,
-      scaledW,
-      scaledH,
+      rotH,
     );
+    const { x, y } = pivotForCenter(cx, cy, effW, effH, config.rotation);
 
     page.drawImage(image, { ...drawOpts, x, y });
   }

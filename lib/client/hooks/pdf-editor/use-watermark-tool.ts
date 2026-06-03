@@ -224,10 +224,44 @@ async function renderTextPreviews(
       canvas.add(obj);
     }
   } else {
+    // Measure first so we can size the auto-fit + rotated bbox correctly.
+    const measure = new FabricText(config.text, {
+      fontFamily: config.fontFamily,
+      fontSize: config.fontSize,
+    });
+    let w = measure.width ?? 1;
+    let h = measure.height ?? 1;
+
+    let scaleFactor = 1;
+
+    if (config.scaleToPage) {
+      const maxWidth = canvasWidth - PADDING * 2;
+
+      scaleFactor = Math.min(1, maxWidth / w);
+    }
+
+    w *= scaleFactor;
+    h *= scaleFactor;
+
+    // Shrink further if the rotated bbox would extend past the canvas edges.
+    const autoFit = fitScaleForRotated(
+      w,
+      h,
+      config.rotation,
+      canvasWidth,
+      canvasHeight,
+    );
+
+    scaleFactor *= autoFit;
+    w *= autoFit;
+    h *= autoFit;
+
+    const { height: rotH } = rotatedBboxSize(w, h, config.rotation);
     const { left, originX, originY, top } = resolvePosition(
       config.position,
       canvasWidth,
       canvasHeight,
+      rotH,
     );
 
     const obj = new FabricText(config.text, {
@@ -238,11 +272,7 @@ async function renderTextPreviews(
       top,
     });
 
-    if (config.scaleToPage) {
-      const objWidth = obj.width ?? 1;
-      const maxWidth = canvasWidth - PADDING * 2;
-      const scaleFactor = Math.min(1, maxWidth / objWidth);
-
+    if (scaleFactor < 1) {
       obj.set({ scaleX: scaleFactor, scaleY: scaleFactor });
     }
 
@@ -316,10 +346,38 @@ async function renderImagePreviews(
       canvas.add(tileImg);
     }
   } else {
+    let scaleFactor = 1;
+
+    if (config.scaleToPage) {
+      scaleFactor = Math.min(
+        (canvasWidth - PADDING * 2) / imgWidth,
+        (canvasHeight - PADDING * 2) / imgHeight,
+        1,
+      );
+    }
+
+    let w = imgWidth * scaleFactor;
+    let h = imgHeight * scaleFactor;
+
+    // Shrink further so the rotated bbox stays inside the canvas.
+    const autoFit = fitScaleForRotated(
+      w,
+      h,
+      config.rotation,
+      canvasWidth,
+      canvasHeight,
+    );
+
+    scaleFactor *= autoFit;
+    w *= autoFit;
+    h *= autoFit;
+
+    const { height: rotH } = rotatedBboxSize(w, h, config.rotation);
     const { left, originX, originY, top } = resolvePosition(
       config.position,
       canvasWidth,
       canvasHeight,
+      rotH,
     );
 
     img.set({
@@ -330,13 +388,7 @@ async function renderImagePreviews(
       top,
     });
 
-    if (config.scaleToPage) {
-      const scaleFactor = Math.min(
-        (canvasWidth - PADDING * 2) / imgWidth,
-        (canvasHeight - PADDING * 2) / imgHeight,
-        1,
-      );
-
+    if (scaleFactor < 1) {
       img.set({ scaleX: scaleFactor, scaleY: scaleFactor });
     }
 
@@ -348,51 +400,70 @@ async function renderImagePreviews(
 // Position resolver
 // ---------------------------------------------------------------------------
 
+function rotatedBboxSize(
+  w: number,
+  h: number,
+  angleDeg: number,
+): { height: number; width: number } {
+  const rad = (angleDeg * Math.PI) / 180;
+  const c = Math.abs(Math.cos(rad));
+  const s = Math.abs(Math.sin(rad));
+
+  return { height: w * s + h * c, width: w * c + h * s };
+}
+
+function fitScaleForRotated(
+  w: number,
+  h: number,
+  angleDeg: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): number {
+  const { width: rotW, height: rotH } = rotatedBboxSize(w, h, angleDeg);
+  const maxW = Math.max(1, canvasWidth - PADDING * 2);
+  const maxH = Math.max(1, canvasHeight - PADDING * 2);
+
+  return Math.min(1, maxW / rotW, maxH / rotH);
+}
+
+// With originX="center" + originY="center", Fabric rotates the object around
+// its own center — so (left, top) IS the rotated bbox center. We just need to
+// pick that center so the rotated bbox sits inside the canvas minus PADDING.
 function resolvePosition(
   position: string,
   canvasWidth: number,
   canvasHeight: number,
+  rotH: number,
 ): {
   left: number;
   originX: TOriginX;
   originY: TOriginY;
   top: number;
 } {
+  const originX: TOriginX = "center";
+  const originY: TOriginY = "center";
+
   switch (position) {
-    case "top-left":
+    case "top":
       return {
-        left: PADDING,
-        originX: "left",
-        originY: "top",
-        top: PADDING,
+        left: canvasWidth / 2,
+        originX,
+        originY,
+        top: PADDING + rotH / 2,
       };
-    case "top-right":
+    case "bottom":
       return {
-        left: canvasWidth - PADDING,
-        originX: "right",
-        originY: "top",
-        top: PADDING,
-      };
-    case "bottom-left":
-      return {
-        left: PADDING,
-        originX: "left",
-        originY: "bottom",
-        top: canvasHeight - PADDING,
-      };
-    case "bottom-right":
-      return {
-        left: canvasWidth - PADDING,
-        originX: "right",
-        originY: "bottom",
-        top: canvasHeight - PADDING,
+        left: canvasWidth / 2,
+        originX,
+        originY,
+        top: canvasHeight - PADDING - rotH / 2,
       };
     case "center":
     default:
       return {
         left: canvasWidth / 2,
-        originX: "center",
-        originY: "center",
+        originX,
+        originY,
         top: canvasHeight / 2,
       };
   }

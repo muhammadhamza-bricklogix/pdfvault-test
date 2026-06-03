@@ -26,13 +26,7 @@ function resolveSourcePage(displayPage: number, pageOrder: number[]): number {
 
   return pageOrder[displayPage - 1] ?? displayPage;
 }
-export type WatermarkPosition =
-  | "bottom-left"
-  | "bottom-right"
-  | "center"
-  | "tiled"
-  | "top-left"
-  | "top-right";
+export type WatermarkPosition = "bottom" | "center" | "tiled" | "top";
 
 export type WatermarkConfig = {
   color: string;

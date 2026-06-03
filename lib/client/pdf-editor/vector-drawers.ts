@@ -182,7 +182,11 @@ export async function drawIText(
       // direction. For angle 0 this collapses to pdfY - i * pdfLineHeight.
       const lineX = pdfX + i * pdfLineHeight * nextLineX;
       const lineY = pdfY + i * pdfLineHeight * nextLineY;
-      const words = line.split(" ");
+      // Split on ANY whitespace (NBSP U+00A0, thin space U+2009, tab, etc.) —
+      // not just U+0020. Typographic PDFs frequently use NBSP between words,
+      // and the embedded subset font often lacks the NBSP glyph, so leaving it
+      // in the encoded string renders as a .notdef "tofu" box on every space.
+      const words = line.split(/\s/);
 
       if (words.length <= 1) {
         // Single word — no space issue, draw directly
