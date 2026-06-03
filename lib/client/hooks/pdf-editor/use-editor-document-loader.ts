@@ -65,12 +65,13 @@ export function useEditorDocumentLoader() {
       lastHydratedDocumentId.current = null;
     }
 
-    const alreadyHydratedThisUrl =
-      lastHydratedDocumentId.current === id &&
-      file != null &&
-      currentDocumentId === id;
+    const alreadyHydratedThisUrl = file != null && currentDocumentId === id;
 
-    if (alreadyHydratedThisUrl) return;
+    if (alreadyHydratedThisUrl) {
+      lastHydratedDocumentId.current = id;
+
+      return;
+    }
 
     let cancelled = false;
 

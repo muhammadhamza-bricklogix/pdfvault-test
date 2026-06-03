@@ -13,6 +13,10 @@ import { Button, Dropdown, Label, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
+import {
+  UPLOAD_ACCEPT_MIME,
+  uploadAsPdf,
+} from "@/lib/client/file-conversion/upload-to-pdf";
 import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -59,11 +63,34 @@ export function HamburgerMenu() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
 
     e.target.value = "";
-    if (!file) return;
+    if (!selected) return;
+
+    const isAlreadyPdf = selected.type === "application/pdf";
+    const loadingKey = isAlreadyPdf
+      ? null
+      : toast.loading({
+          description: `Preparing ${selected.name} for the editor.`,
+          title: "Converting to PDF",
+        });
+
+    let file: File;
+
+    try {
+      file = await uploadAsPdf(selected);
+    } catch (err) {
+      toast.error({
+        description: err instanceof Error ? err.message : undefined,
+        title: "Couldn't open file",
+      });
+
+      return;
+    } finally {
+      if (loadingKey) toast.close(loadingKey);
+    }
 
     if (isSignedIn) {
       // Cloud upload + open the new doc in this editor when ready.
@@ -115,7 +142,7 @@ export function HamburgerMenu() {
       <Separator className="!h-4" orientation="vertical" />
       <input
         ref={fileInputRef}
-        accept="application/pdf"
+        accept={UPLOAD_ACCEPT_MIME.join(",")}
         className="hidden"
         type="file"
         onChange={handleFileChange}

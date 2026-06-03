@@ -96,7 +96,7 @@ function ManagePagesToolbarButton({
         className={`flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
           disabled
             ? "cursor-not-allowed text-default-300"
-            : "text-default-600 hover:bg-default-100"
+            : "cursor-pointer text-default-600 hover:bg-default-100"
         }`}
         disabled={disabled}
         type="button"
@@ -376,7 +376,7 @@ export function ManagePagesModal({
               )}
             </Modal.Body>
 
-            <div className="flex shrink-0 items-center justify-between border-t border-default-200 bg-[var(--color-background)] px-4 py-3">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-default-200 bg-[var(--color-background)] px-4 py-3">
               <Button size="sm" variant="tertiary" onPress={onClose}>
                 Cancel
               </Button>

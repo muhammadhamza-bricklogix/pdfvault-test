@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -136,9 +137,15 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         },
       );
 
-      // The mutation owns its own loading/success/error toasts + the
-      // browser download trigger.
-      convertRef.current.mutate({ file: pdfFile, type: conversionType });
+      // The mutation owns its own loading/success/error toasts; we await the
+      // result here so we can trigger the browser download from the returned
+      // blob (otherwise the file is converted but never offered to the user).
+      const result = await convertRef.current.mutateAsync({
+        file: pdfFile,
+        type: conversionType,
+      });
+
+      triggerBlobDownload(result.blob, result.fileName);
     } catch (err) {
       logger.error("Failed to export PDF", err);
       toast.error({

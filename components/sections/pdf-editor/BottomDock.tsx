@@ -7,6 +7,8 @@ import {
   ArrowUp01Icon,
   Layout03Icon,
   NoteIcon,
+  RedoIcon,
+  UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
@@ -25,9 +27,17 @@ type BottomDockProps = {
 };
 
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
+  const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
+  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+
+  const history = historyByPage.get(currentPage) ?? [];
+  const idx = historyIndexByPage.get(currentPage) ?? -1;
+  const canUndo = idx > 0;
+  const canRedo = idx < history.length - 1;
 
   return (
     <div
@@ -42,6 +52,35 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
       />
 
       <div className="flex items-center gap-2 px-2 py-2">
+        <Tooltip delay={300}>
+          <Button
+            aria-label="Undo"
+            isDisabled={!canUndo}
+            size="sm"
+            variant="tertiary"
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
+          >
+            <HugeiconsIcon icon={UndoIcon} size={16} />
+          </Button>
+          <Tooltip.Content>
+            <p>Undo</p>
+          </Tooltip.Content>
+        </Tooltip>
+        <Tooltip delay={300}>
+          <Button
+            aria-label="Redo"
+            isDisabled={!canRedo}
+            size="sm"
+            variant="tertiary"
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+          >
+            <HugeiconsIcon icon={RedoIcon} size={16} />
+          </Button>
+          <Tooltip.Content>
+            <p>Redo</p>
+          </Tooltip.Content>
+        </Tooltip>
+
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ToolsContent showLabels={false} toolIconSize={20} />
         </div>
