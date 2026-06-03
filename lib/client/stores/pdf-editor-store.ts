@@ -102,6 +102,7 @@ type PdfEditorStore = {
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
   createPdfModalKey: number;
+  isCompressModalOpen: boolean;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
   isManagePagesOpen: boolean;
@@ -145,6 +146,7 @@ type PdfEditorStore = {
   clearPendingCloudSaveAfterReload: () => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
+  setIsCompressModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -177,6 +179,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
   createPdfModalKey: 0,
+  isCompressModalOpen: false,
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
   isManagePagesOpen: false,
@@ -222,6 +225,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       fontDataByLoadedName: new Map(),
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
+      isCompressModalOpen: false,
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
       isManagePagesOpen: false,
@@ -401,6 +405,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     }),
 
   setFile: (file) => set({ file }),
+  setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value

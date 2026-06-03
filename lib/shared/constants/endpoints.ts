@@ -20,6 +20,10 @@ export const TOOLS = {
   DETAIL: (id: string) => `/tools/${id}`,
 } as const;
 
+export const PDF_TOOLS = {
+  COMPRESS: "/pdf-tools/compress",
+} as const;
+
 export const AUDIT = {
   LIST: "/audit",
   BY_DOCUMENT: (id: string) => `/audit/documents/${id}`,

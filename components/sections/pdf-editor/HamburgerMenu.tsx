@@ -4,6 +4,7 @@ import type { Key } from "@heroui/react";
 
 import {
   Add01Icon,
+  FileMinusIcon,
   FolderOpenIcon,
   Menu01Icon,
   NoteIcon,
@@ -24,8 +25,12 @@ import { toast } from "@/lib/shared/utils/toast";
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
+  const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setIsCompressModalOpen = usePdfEditorStore(
+    (s) => s.setIsCompressModalOpen,
+  );
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
   );
@@ -59,6 +64,17 @@ export function HamburgerMenu() {
             detail: { url: ROUTES.APP.DASHBOARD },
           }),
         );
+        break;
+      case "compress":
+        if (!file) {
+          toast.info({
+            title: "No PDF open",
+            description: "Open or create a PDF before compressing.",
+          });
+
+          return;
+        }
+        setIsCompressModalOpen(true);
         break;
     }
   };
@@ -135,6 +151,10 @@ export function HamburgerMenu() {
             >
               <HugeiconsIcon icon={NoteIcon} size={14} />
               <Label>My PDFs</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="compress" textValue="Compress PDF">
+              <HugeiconsIcon icon={FileMinusIcon} size={14} />
+              <Label>Compress PDF</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>

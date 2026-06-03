@@ -27,6 +27,7 @@ import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
+import { CompressModal } from "./CompressModal";
 import { CreatePdfModal } from "./CreatePdfModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
@@ -293,6 +294,7 @@ export function PdfEditorShell() {
         isOpen={isCreatePdfModalOpen}
         onClose={() => setIsCreatePdfModalOpen(false)}
       />
+      <CompressModal />
     </div>
   );
 }
