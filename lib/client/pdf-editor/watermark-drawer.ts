@@ -149,7 +149,12 @@ async function drawTextWatermark(
   const { height: pageHeight, width: pageWidth } = page.getSize();
 
   const textWidth = font.widthOfTextAtSize(config.text, config.fontSize);
-  const textHeight = font.heightAtSize(config.fontSize);
+  // Use ascender-only height for positioning. heightAtSize() with the default
+  // (includes descender) puts the visual cap-height center BELOW cy because
+  // the descender region is empty for uppercase watermarks like "CONFIDENTIAL".
+  // Ascender height (~cap height) makes the rendered glyphs sit visually
+  // centered on cy.
+  const textHeight = font.heightAtSize(config.fontSize, { descender: false });
   const color = hexToPdfColor(config.color);
 
   const drawOpts = {
