@@ -8,10 +8,25 @@ import { logger } from "@/lib/shared/utils/logger";
 
 export type PersistEditorResult =
   | { document: Document; ok: true }
-  | { ok: false; reason: "error" | "no-file" | "not-signed-in" | "not-loaded" };
+  | {
+      ok: false;
+      reason:
+        | "error"
+        | "no-changes"
+        | "no-file"
+        | "not-signed-in"
+        | "not-loaded";
+    };
 
 type PersistEditorDocumentInput = {
   fabricCanvas?: FabricCanvas | null;
+  /**
+   * Bypasses the `hasUnsavedChanges` short-circuit. Set to `true` for code
+   * paths that produce a NEW source file even when the Fabric overlay is empty
+   * — e.g. Manage Pages reorder/import/rotate, which rebuilds the PDF bytes
+   * outside the dirty-flag system.
+   */
+  force?: boolean;
 };
 
 /**
@@ -20,10 +35,17 @@ type PersistEditorDocumentInput = {
  */
 export async function persistEditorDocument({
   fabricCanvas = null,
+  force = false,
 }: PersistEditorDocumentInput = {}): Promise<PersistEditorResult> {
   const state = usePdfEditorStore.getState();
-  const { currentDocumentId, currentPage, file, isSignedIn, pdfDocument } =
-    state;
+  const {
+    currentDocumentId,
+    currentPage,
+    file,
+    hasUnsavedChanges,
+    isSignedIn,
+    pdfDocument,
+  } = state;
 
   if (!file) {
     return { ok: false, reason: "no-file" };
@@ -35,6 +57,15 @@ export async function persistEditorDocument({
 
   if (!pdfDocument) {
     return { ok: false, reason: "not-loaded" };
+  }
+
+  // Skip the upload if nothing has changed since the last save AND a cloud
+  // document already exists. Without this, every Save/back-navigate/page-hide
+  // re-uploads byte-identical PDF bytes — wasteful and creates duplicate
+  // history entries on the server. The first save (no `currentDocumentId`
+  // yet) always proceeds so a fresh PDF gets uploaded once.
+  if (!force && !hasUnsavedChanges && currentDocumentId) {
+    return { ok: false, reason: "no-changes" };
   }
 
   try {

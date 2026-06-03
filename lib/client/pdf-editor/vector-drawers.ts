@@ -140,18 +140,10 @@ export async function drawIText(
   const nextLineX = advanceY;
   const nextLineY = -advanceX;
 
-  // Compute what pdf-lib/fontkit thinks the text width is
-  const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
   // Use Fabric's obj.width as the target — it's what the user sees on screen.
   // This correctly reflects both unedited text AND user edits (added/removed words).
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
   const targetWidth = fabricObjWidth;
-
-  if (editorType === "editModeText") {
-    console.log(
-      `[DrawIText] "${text.slice(0, 40)}" | fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
-    );
-  }
 
   const lines = text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;

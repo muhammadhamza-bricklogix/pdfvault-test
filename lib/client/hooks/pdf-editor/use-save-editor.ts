@@ -40,7 +40,12 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       });
 
       if (!result.ok) {
-        if (result.reason === "no-file") {
+        if (result.reason === "no-changes") {
+          toast.info({
+            title: "Already saved",
+            description: "No changes since your last save.",
+          });
+        } else if (result.reason === "no-file") {
           toast.error({
             title: "Nothing to save",
             description: "Open a PDF before saving.",

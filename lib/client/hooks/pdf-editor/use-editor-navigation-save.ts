@@ -50,6 +50,15 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
+      // Nothing to persist → skip the whole "Saving…" toast + upload roundtrip
+      // and navigate immediately. Avoids the misleading flash users were
+      // seeing on every back-to-library click even with no edits.
+      if (!usePdfEditorStore.getState().hasUnsavedChanges) {
+        router.push(detail.url);
+
+        return;
+      }
+
       isNavigatingRef.current = true;
 
       const loadingKey = toast.loading({
