@@ -2,22 +2,22 @@
 
 import type { ToolConfig } from "@/lib/shared/constants/tools";
 
+import { Download01Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@heroui/react";
 
 import { FileUpload } from "@/components/ui/file-upload";
 import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { triggerBlobDownload } from "@/lib/shared/utils/download";
 
 type ToolUploadSectionProps = {
   tool: ToolConfig;
 };
 
-// Keyed by tool.slug at the route level — Next.js re-mounts this component
-// when the user navigates to a different tool, so per-slug reset isn't
-// needed inside the component itself.
 export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
   const [file, setFile] = useState<File | null>(null);
   const router = useRouter();
@@ -30,17 +30,12 @@ export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
 
   const handleSelect = (selected: File) => {
     setFile(selected);
+    convert.reset();
 
-    if (isConversionTool && tool.conversionType) {
-      convert.mutate({ file: selected, type: tool.conversionType });
-
-      return;
-    }
+    if (isConversionTool) return;
 
     if (!isPdfInput) return;
 
-    // Non-conversion fallback: open the PDF in the editor (used by future
-    // editor-entry-point tools that don't go through CloudConvert).
     setCurrentDocument(null);
     setEditorFile(selected);
     router.push(ROUTES.TOOLS.PDF_EDITOR);
@@ -50,6 +45,23 @@ export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
     setFile(null);
     convert.reset();
   };
+
+  const handleConvert = () => {
+    if (!file || !tool.conversionType) return;
+    convert.mutate({ file, type: tool.conversionType });
+  };
+
+  const handleDownload = () => {
+    if (!convert.data) return;
+    triggerBlobDownload(convert.data.blob, convert.data.fileName);
+  };
+
+  const showConvertButton =
+    isConversionTool &&
+    Boolean(file) &&
+    !convert.isPending &&
+    !convert.isSuccess;
+  const showDownloadButton = isConversionTool && convert.isSuccess;
 
   return (
     <section className="flex w-full flex-col items-center py-4 sm:py-8">
@@ -73,6 +85,10 @@ export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
           onFileSelect={handleSelect}
         />
 
+        {showConvertButton ? (
+          <Button onPress={handleConvert}>Convert</Button>
+        ) : null}
+
         {isConversionTool && convert.isPending ? (
           <p
             aria-live="polite"
@@ -83,14 +99,30 @@ export function ToolUploadSection({ tool }: ToolUploadSectionProps) {
           </p>
         ) : null}
 
-        {isConversionTool && convert.isSuccess ? (
-          <div className="flex flex-col items-center gap-2">
+        {showDownloadButton ? (
+          <div className="flex flex-col items-center gap-3">
             <p className="text-sm text-success-600">
-              Conversion complete — your download has started.
+              Conversion complete — your file is ready.
             </p>
-            <Button variant="secondary" onPress={handleClear}>
-              Convert another file
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onPress={handleDownload}>
+                <HugeiconsIcon icon={Download01Icon} size={16} />
+                Download
+              </Button>
+              <Button variant="secondary" onPress={handleClear}>
+                <HugeiconsIcon icon={Refresh01Icon} size={16} />
+                Convert another file
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {isConversionTool && convert.isError ? (
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-danger-600">
+              Conversion failed. Please try again.
+            </p>
+            <Button onPress={handleConvert}>Retry</Button>
           </div>
         ) : null}
       </div>

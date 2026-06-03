@@ -34,6 +34,7 @@ const ACTION_TINT: Record<AuditAction, string> = {
 
 function ActivityRow({ event }: { event: AuditEvent }) {
   const Icon = ACTION_ICON[event.action];
+
   return (
     <li className="flex items-start gap-3 rounded-xl border border-default-200 bg-[var(--color-background)] p-4">
       <span

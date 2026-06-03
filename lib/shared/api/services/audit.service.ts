@@ -12,6 +12,7 @@ async function listAuditEvents(
   const { data } = await apiClient.get<AuditListResponse>(AUDIT.LIST, {
     params,
   });
+
   return data;
 }
 
@@ -23,6 +24,7 @@ async function listDocumentAuditEvents(
     AUDIT.BY_DOCUMENT(documentId),
     { params },
   );
+
   return data;
 }
 

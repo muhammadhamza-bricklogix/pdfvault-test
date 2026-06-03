@@ -29,6 +29,7 @@ export function useAuditQuery(options?: UseAuditQueryOptions) {
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const { page, totalPages } = lastPage.pagination;
+
       return page < totalPages ? page + 1 : undefined;
     },
     enabled: options?.enabled,
@@ -52,6 +53,7 @@ export function useDocumentAuditQuery(
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const { page, totalPages } = lastPage.pagination;
+
       return page < totalPages ? page + 1 : undefined;
     },
     enabled: Boolean(documentId) && options?.enabled !== false,
