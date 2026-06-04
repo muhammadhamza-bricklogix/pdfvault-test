@@ -111,10 +111,16 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     isExportingRef.current = true;
 
     try {
+      // Export bakes the watermark + bg image into the downloaded copy. The
+      // cloud-saved PDF intentionally does NOT have them baked (that's why
+      // Save passes `bakeOverlays: false` / default) — keeping the source
+      // file clean prevents per-save stacking and text-position drift. The
+      // user's downloaded copy is the only place we bake on demand.
       const bytes = await buildEditedPdfBytes({
         currentPage: page,
         fabricCanvas: liveCanvas,
         file: sourceFile,
+        bakeOverlays: true,
       });
 
       if (format === "pdf") {

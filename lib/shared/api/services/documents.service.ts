@@ -36,6 +36,9 @@ async function uploadDocument(
   if (input.trackingId) {
     formData.append("trackingId", input.trackingId);
   }
+  if (input.editorState) {
+    formData.append("editorState", input.editorState);
+  }
 
   const { data } = await apiClient.post<Document>(DOCUMENTS.UPLOAD, formData, {
     onUploadProgress: options?.onUploadProgress,
