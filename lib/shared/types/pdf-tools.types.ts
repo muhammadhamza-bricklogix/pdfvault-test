@@ -26,3 +26,35 @@ export type CompressFileResult = {
   blob: Blob;
   fileName: string;
 };
+
+/** Mirrors backend `EncryptKeyLength`. AES-256 preferred; AES-128 for legacy viewers. */
+export const ENCRYPT_KEY_LENGTHS = ["128", "256"] as const;
+export type EncryptKeyLength = (typeof ENCRYPT_KEY_LENGTHS)[number];
+
+export type EncryptFileInput = {
+  file: File;
+  userPassword: string;
+  ownerPassword?: string;
+  keyLength: EncryptKeyLength;
+  signal?: AbortSignal;
+};
+
+export type DecryptFileInput = {
+  file: File;
+  password: string;
+  signal?: AbortSignal;
+};
+
+export type PdfToolBlobResult = {
+  blob: Blob;
+  fileName: string;
+};
+
+export type FlattenFileInput = { file: File; signal?: AbortSignal };
+
+export type ExtractImagesFileInput = { file: File; signal?: AbortSignal };
+
+export type ExtractImagesResult = {
+  blob: Blob;
+  fileName: string;
+};

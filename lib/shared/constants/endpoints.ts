@@ -22,6 +22,10 @@ export const TOOLS = {
 
 export const PDF_TOOLS = {
   COMPRESS: "/pdf-tools/compress",
+  ENCRYPT: "/pdf-tools/encrypt",
+  DECRYPT: "/pdf-tools/decrypt",
+  FLATTEN: "/pdf-tools/flatten",
+  EXTRACT_IMAGES: "/pdf-tools/extract-images",
 } as const;
 
 export const AUDIT = {

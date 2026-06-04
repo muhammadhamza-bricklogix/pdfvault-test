@@ -29,6 +29,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { BottomDock } from "./BottomDock";
 import { CompressModal } from "./CompressModal";
 import { CreatePdfModal } from "./CreatePdfModal";
+import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
@@ -295,6 +296,7 @@ export function PdfEditorShell() {
         onClose={() => setIsCreatePdfModalOpen(false)}
       />
       <CompressModal />
+      <PasswordModal />
     </div>
   );
 }

@@ -4,8 +4,11 @@ import type { Key } from "@heroui/react";
 
 import {
   Add01Icon,
+  FileExportIcon,
   FileMinusIcon,
   FolderOpenIcon,
+  LayersIcon,
+  LockedIcon,
   Menu01Icon,
   NoteIcon,
 } from "@hugeicons/core-free-icons";
@@ -18,9 +21,14 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import {
+  useExtractImagesMutation,
+  useFlattenFileMutation,
+} from "@/lib/client/query/mutations";
 import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
 
 export function HamburgerMenu() {
@@ -31,12 +39,56 @@ export function HamburgerMenu() {
   const setIsCompressModalOpen = usePdfEditorStore(
     (s) => s.setIsCompressModalOpen,
   );
+  const setIsPasswordModalOpen = usePdfEditorStore(
+    (s) => s.setIsPasswordModalOpen,
+  );
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { start } = useTrackedUpload();
+  const flatten = useFlattenFileMutation();
+  const extractImages = useExtractImagesMutation();
+
+  const requireFile = (action: string): File | null => {
+    if (!file) {
+      toast.info({
+        title: "No PDF open",
+        description: `Open or create a PDF before ${action}.`,
+      });
+
+      return null;
+    }
+
+    return file;
+  };
+
+  const runFlatten = async () => {
+    const f = requireFile("flattening");
+
+    if (!f) return;
+    try {
+      const result = await flatten.mutateAsync({ file: f });
+
+      triggerBlobDownload(result.blob, result.fileName);
+    } catch {
+      // toast already shown by the mutation
+    }
+  };
+
+  const runExtractImages = async () => {
+    const f = requireFile("extracting images");
+
+    if (!f) return;
+    try {
+      const result = await extractImages.mutateAsync({ file: f });
+
+      triggerBlobDownload(result.blob, result.fileName);
+    } catch {
+      // toast already shown by the mutation
+    }
+  };
 
   const requireSignIn = () => {
     toast.info({
@@ -66,15 +118,18 @@ export function HamburgerMenu() {
         );
         break;
       case "compress":
-        if (!file) {
-          toast.info({
-            title: "No PDF open",
-            description: "Open or create a PDF before compressing.",
-          });
-
-          return;
-        }
+        if (!requireFile("compressing")) return;
         setIsCompressModalOpen(true);
+        break;
+      case "password":
+        if (!requireFile("setting a password")) return;
+        setIsPasswordModalOpen(true);
+        break;
+      case "flatten":
+        void runFlatten();
+        break;
+      case "extract-images":
+        void runExtractImages();
         break;
     }
   };
@@ -155,6 +210,18 @@ export function HamburgerMenu() {
             <Dropdown.Item id="compress" textValue="Compress PDF">
               <HugeiconsIcon icon={FileMinusIcon} size={14} />
               <Label>Compress PDF</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="password" textValue="Password protect">
+              <HugeiconsIcon icon={LockedIcon} size={14} />
+              <Label>Password protect</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="flatten" textValue="Flatten form fields">
+              <HugeiconsIcon icon={LayersIcon} size={14} />
+              <Label>Flatten form fields</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="extract-images" textValue="Extract images">
+              <HugeiconsIcon icon={FileExportIcon} size={14} />
+              <Label>Extract images (ZIP)</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>
