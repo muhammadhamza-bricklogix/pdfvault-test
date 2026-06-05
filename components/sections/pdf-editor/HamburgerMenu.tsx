@@ -11,6 +11,7 @@ import {
   LockedIcon,
   Menu01Icon,
   NoteIcon,
+  Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -42,6 +43,7 @@ export function HamburgerMenu() {
   const setIsPasswordModalOpen = usePdfEditorStore(
     (s) => s.setIsPasswordModalOpen,
   );
+  const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
   );
@@ -130,6 +132,10 @@ export function HamburgerMenu() {
         break;
       case "extract-images":
         void runExtractImages();
+        break;
+      case "find-replace":
+        if (!requireFile("searching")) return;
+        setIsFindReplaceOpen(true);
         break;
     }
   };
@@ -222,6 +228,10 @@ export function HamburgerMenu() {
             <Dropdown.Item id="extract-images" textValue="Extract images">
               <HugeiconsIcon icon={FileExportIcon} size={14} />
               <Label>Extract images (ZIP)</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="find-replace" textValue="Find and replace">
+              <HugeiconsIcon icon={Search01Icon} size={14} />
+              <Label>Find &amp; Replace (⌘F)</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>

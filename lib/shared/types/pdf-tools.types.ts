@@ -27,7 +27,11 @@ export type CompressFileResult = {
   fileName: string;
 };
 
-/** Mirrors backend `EncryptKeyLength`. AES-256 preferred; AES-128 for legacy viewers. */
+/**
+ * Mirrors backend `EncryptKeyLength`. The wire values are qpdf's `--encrypt N`
+ * argument — `"128"` means RC4-128 (PDF 1.4, legacy compatibility) and
+ * `"256"` means AES-256 (PDF 1.7+, the modern default).
+ */
 export const ENCRYPT_KEY_LENGTHS = ["128", "256"] as const;
 export type EncryptKeyLength = (typeof ENCRYPT_KEY_LENGTHS)[number];
 

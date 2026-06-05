@@ -92,7 +92,7 @@ export function CompressModal() {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[520px]">
+        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Compress PDF</Modal.Heading>

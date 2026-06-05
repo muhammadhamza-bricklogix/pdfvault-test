@@ -29,6 +29,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { BottomDock } from "./BottomDock";
 import { CompressModal } from "./CompressModal";
 import { CreatePdfModal } from "./CreatePdfModal";
+import { FindReplaceModal } from "./FindReplaceModal";
 import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
@@ -207,6 +208,10 @@ function EditorLayout() {
     />
   );
 
+  // Mounted inside EditorLayout (not the outer shell) because it needs the
+  // live `fabricCanvas` ref to mutate the current page's IText overlays.
+  const findReplaceModal = <FindReplaceModal fabricCanvas={fabricCanvas} />;
+
   if (isMobile) {
     return (
       <>
@@ -228,6 +233,7 @@ function EditorLayout() {
           onReorderPages={handleReorderPages}
         />
         {managePagesModal}
+        {findReplaceModal}
       </>
     );
   }
@@ -253,6 +259,7 @@ function EditorLayout() {
         </div>
       </div>
       {managePagesModal}
+      {findReplaceModal}
     </>
   );
 }

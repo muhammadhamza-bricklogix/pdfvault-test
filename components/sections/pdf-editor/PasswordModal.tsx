@@ -84,7 +84,7 @@ export function PasswordModal() {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[480px]">
+        <Modal.Dialog className="!w-[92vw] !max-w-[480px]">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Password protect</Modal.Heading>
@@ -154,9 +154,9 @@ export function PasswordModal() {
                 </div>
                 <div>
                   <Label className="mb-1 block text-xs text-default-500">
-                    Encryption strength
+                    Encryption
                   </Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       aria-pressed={keyLength === "256"}
                       size="sm"
@@ -171,9 +171,13 @@ export function PasswordModal() {
                       variant={keyLength === "128" ? "secondary" : "ghost"}
                       onPress={() => setKeyLength("128")}
                     >
-                      AES-128
+                      RC4-128 (legacy)
                     </Button>
                   </div>
+                  <p className="mt-1 text-[11px] text-default-400">
+                    AES-256 is the modern standard. Pick RC4-128 only if the
+                    file must open in older PDF viewers.
+                  </p>
                 </div>
               </div>
             ) : (

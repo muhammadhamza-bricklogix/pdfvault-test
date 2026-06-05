@@ -21,6 +21,7 @@ import {
   Stamp01Icon,
   TextFontIcon,
   UndoIcon,
+  ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -172,7 +173,6 @@ export function EditorInfoBar() {
         <div className="flex items-center gap-1">
           <Tooltip delay={300}>
             <Button
-              className="hidden sm:inline-flex"
               isDisabled={zoom <= ZOOM_PRESETS[0]}
               size="sm"
               variant="ghost"
@@ -184,12 +184,11 @@ export function EditorInfoBar() {
               <p>Zoom out</p>
             </Tooltip.Content>
           </Tooltip>
-          <span className="hidden min-w-12 text-center text-xs tabular-nums text-default-500 sm:inline">
+          <span className="min-w-10 text-center text-[10px] tabular-nums text-default-500 sm:min-w-12 sm:text-xs">
             {Math.round(zoom * 100)}%
           </span>
           <Tooltip delay={300}>
             <Button
-              className="hidden sm:inline-flex"
               isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
               size="sm"
               variant="ghost"
@@ -268,6 +267,7 @@ const TOOLS = [
   { icon: ShapesIcon, id: "shape", label: "Shapes" },
   { icon: EraserIcon, id: "eraser", label: "Eraser" },
   { icon: PaintBucketIcon, id: "whiteout", label: "Whiteout" },
+  { icon: ViewOffIcon, id: "redact", label: "Redact" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: Image01Icon, id: "image", label: "Image" },
   { icon: Stamp01Icon, id: "watermark", label: "Watermark" },

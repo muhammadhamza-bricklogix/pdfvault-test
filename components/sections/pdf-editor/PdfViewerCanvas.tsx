@@ -128,6 +128,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       highlight: "crosshair",
       image: "default",
       select: "default",
+      redact: "crosshair",
       shape: "crosshair",
       signature: "default",
       text: "text",
@@ -236,6 +237,71 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       window.removeEventListener("editor:redo", onRedoEvent);
     };
   }, [undo, redo]);
+
+  // Pinch-zoom (mobile) + wheel-zoom (desktop trackpad / Cmd-wheel).
+  // Both call `setZoom` directly on the store — `use-fabric-canvas.ts` already
+  // watches `zoom` and resizes the canvas in its resize effect (lines 153-173),
+  // so nothing else needs to know about gestures.
+  useEffect(() => {
+    const el = containerRef.current;
+
+    if (!el) return;
+
+    const MIN_ZOOM = 0.25;
+    const MAX_ZOOM = 4;
+    const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+
+    // Latest zoom is read off the store at gesture-start time so we don't
+    // close over a stale React-snapshot value.
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return; // bare wheel scrolls the page
+      e.preventDefault();
+      const current = usePdfEditorStore.getState().zoom;
+      // Multiplicative step — feels natural at any zoom level.
+      const factor = Math.exp(-e.deltaY * 0.001);
+
+      usePdfEditorStore.getState().setZoom(clamp(current * factor));
+    };
+
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+
+    const dist = (a: Touch, b: Touch) =>
+      Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return;
+      pinchStartDist = dist(e.touches[0], e.touches[1]);
+      pinchStartZoom = usePdfEditorStore.getState().zoom;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || pinchStartDist === 0) return;
+      e.preventDefault(); // suppress the page's native pinch
+      const d = dist(e.touches[0], e.touches[1]);
+      const ratio = d / pinchStartDist;
+
+      usePdfEditorStore.getState().setZoom(clamp(pinchStartZoom * ratio));
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+    };
+
+    // `passive: false` so preventDefault() is respected — otherwise iOS
+    // Safari will scroll the page out from under the pinch.
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
 
   return (
     <div className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

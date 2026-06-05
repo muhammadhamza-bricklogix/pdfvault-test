@@ -11,6 +11,7 @@ export type ActiveTool =
   | "eraser"
   | "highlight"
   | "image"
+  | "redact"
   | "select"
   | "shape"
   | "signature"
@@ -103,6 +104,7 @@ type PdfEditorStore = {
   historyIndexByPage: Map<number, number>;
   createPdfModalKey: number;
   isCompressModalOpen: boolean;
+  isFindReplaceOpen: boolean;
   isPasswordModalOpen: boolean;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
@@ -148,6 +150,7 @@ type PdfEditorStore = {
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
+  setIsFindReplaceOpen: (value: boolean) => void;
   setIsPasswordModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
@@ -182,6 +185,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   historyIndexByPage: new Map(),
   createPdfModalKey: 0,
   isCompressModalOpen: false,
+  isFindReplaceOpen: false,
   isPasswordModalOpen: false,
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
@@ -229,6 +233,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
       isCompressModalOpen: false,
+      isFindReplaceOpen: false,
       isPasswordModalOpen: false,
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
@@ -410,6 +415,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
   setFile: (file) => set({ file }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
+  setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsPasswordModalOpen: (value) => set({ isPasswordModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({

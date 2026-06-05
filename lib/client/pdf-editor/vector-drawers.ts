@@ -340,6 +340,12 @@ export function drawRect(
 
   if (editorType === "whiteout") {
     fillColor = rgb(1, 1, 1);
+  } else if (editorType === "redaction") {
+    // Solid black. The merge pipeline renders the source page with
+    // `suppressText: true` and embeds it as a raster, so glyphs underneath
+    // this rect are already pixels in the saved bytes — there's no text
+    // layer left to leak content. This is a permanent removal, not a cover.
+    fillColor = rgb(0, 0, 0);
   } else if (editorType === "highlight") {
     fillColor = hexToPdfColor(obj.fill as string);
   } else {
@@ -356,7 +362,9 @@ export function drawRect(
     borderWidth: borderWidth || undefined,
     color: fillColor ?? undefined,
     height: pdfH,
-    opacity,
+    // Redaction rectangles MUST be fully opaque — a translucent black box
+    // wouldn't conceal anything visually under the rasterized page render.
+    opacity: editorType === "redaction" ? 1 : opacity,
     rotate: angle ? degrees(-angle) : undefined,
     width: pdfW,
     x: pdfX,

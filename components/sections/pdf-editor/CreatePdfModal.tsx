@@ -374,7 +374,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[780px]">
+        <Modal.Dialog className="!w-[92vw] !max-w-[780px]">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Create new PDF document</Modal.Heading>
