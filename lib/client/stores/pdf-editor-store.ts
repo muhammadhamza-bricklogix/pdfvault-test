@@ -103,6 +103,20 @@ type PdfEditorStore = {
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
   createPdfModalKey: number;
+  /**
+   * Signatures of the watermark / background-image configs that were
+   * baked into the last successful save. Used by `buildEditedPdfBytes` to
+   * skip re-applying an overlay that's already in the source PDF — without
+   * this, every Save with `enabled: true` stacks another copy on top and
+   * the page degrades to jet-black after 3-4 round-trips.
+   *
+   * Reset to `null` whenever the user edits any non-`enabled` field of the
+   * corresponding config (so user-initiated changes always re-bake).
+   * Session-scoped — fresh page loads start at `null`, which is fine
+   * because the default config has `enabled: false` anyway.
+   */
+  lastBakedWatermarkSignature: string | null;
+  lastBakedBackgroundImageSignature: string | null;
   isCompressModalOpen: boolean;
   isFindReplaceOpen: boolean;
   isPasswordModalOpen: boolean;
@@ -184,6 +198,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
   createPdfModalKey: 0,
+  lastBakedWatermarkSignature: null,
+  lastBakedBackgroundImageSignature: null,
   isCompressModalOpen: false,
   isFindReplaceOpen: false,
   isPasswordModalOpen: false,
@@ -232,6 +248,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       fontDataByLoadedName: new Map(),
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
+      lastBakedWatermarkSignature: null,
+      lastBakedBackgroundImageSignature: null,
       isCompressModalOpen: false,
       isFindReplaceOpen: false,
       isPasswordModalOpen: false,
@@ -439,13 +457,39 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setShapeStroke: (color) => set({ shapeStroke: color }),
   setShapeStrokeWidth: (width) => set({ shapeStrokeWidth: width }),
   setWatermarkConfig: (config) =>
-    set((state) => ({
-      watermarkConfig: { ...state.watermarkConfig, ...config },
-    })),
+    set((state) => {
+      // Invalidate the last-baked signature whenever a render-affecting field
+      // changes, but NOT when the user is only flipping the Switch — toggle
+      // off and back on without other edits shouldn't force a re-bake.
+      const touchesSignature = Object.keys(config).some((k) => k !== "enabled");
+
+      return {
+        watermarkConfig: { ...state.watermarkConfig, ...config },
+        ...(touchesSignature ? { lastBakedWatermarkSignature: null } : {}),
+        // A render-affecting watermark change is a real document edit — mark
+        // dirty so persistEditorDocument's hasUnsavedChanges short-circuit
+        // (lines 71-73) doesn't return "no-changes" and silently swallow the
+        // first save after a watermark upload.
+        ...(touchesSignature ? { hasUnsavedChanges: true } : {}),
+      };
+    }),
   setBackgroundImageConfig: (config) =>
-    set((state) => ({
-      backgroundImageConfig: { ...state.backgroundImageConfig, ...config },
-    })),
+    set((state) => {
+      const touchesSignature = Object.keys(config).some((k) => k !== "enabled");
+
+      return {
+        backgroundImageConfig: {
+          ...state.backgroundImageConfig,
+          ...config,
+        },
+        ...(touchesSignature
+          ? { lastBakedBackgroundImageSignature: null }
+          : {}),
+        // Same dirty-flip as the watermark setter — without this the upload
+        // is silently skipped by the hasUnsavedChanges short-circuit.
+        ...(touchesSignature ? { hasUnsavedChanges: true } : {}),
+      };
+    }),
   setZoom: (zoom) => set({ zoom }),
 
   undo: (displayPage) => {

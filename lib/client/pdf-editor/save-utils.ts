@@ -147,6 +147,17 @@ type BuildEditedPdfInput = {
   currentPage: number;
   fabricCanvas: FabricCanvas | null;
   file: File;
+  /**
+   * Bake the watermark + background image overlays into the output bytes.
+   *
+   * - `false` (default, used by `persistEditorDocument` / cloud Save): keep
+   *   the cloud-saved PDF clean. Overlays live in `editorState` JSON only
+   *   and are re-applied as live previews each session. No stacking, no
+   *   per-save degradation, no PDF text drift.
+   * - `true` (used by `useExportEditor` / download): apply the overlays so
+   *   the downloaded copy carries them. The cloud original is untouched.
+   */
+  bakeOverlays?: boolean;
 };
 
 /**
@@ -158,6 +169,7 @@ export async function buildEditedPdfBytes({
   currentPage,
   fabricCanvas,
   file,
+  bakeOverlays = false,
 }: BuildEditedPdfInput): Promise<Uint8Array> {
   if (fabricCanvas) {
     flushLiveFabricPage(currentPage, fabricCanvas);
@@ -182,16 +194,24 @@ export async function buildEditedPdfBytes({
     pdfDocument,
   );
 
+  // Bake-overlays gate: when false (Save path) the cloud PDF stays clean —
+  // overlays are an editor-side render concern only, persisted as JSON in
+  // `editorState`. The downloaded Export path opts in to bake them into the
+  // output bytes so the user's downloaded file actually carries the watermark.
+  const wmShouldBake =
+    bakeOverlays && watermarkConfig.enabled && watermarkConfig.text;
+  const bgShouldBake =
+    bakeOverlays &&
+    backgroundImageConfig.enabled &&
+    !!backgroundImageConfig.imageData;
+
   return mergeFabricEditsIntoPdf({
-    backgroundImageConfig:
-      backgroundImageConfig.enabled && backgroundImageConfig.imageData
-        ? backgroundImageConfig
-        : null,
+    backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
     fabricJsonByPage,
     fontDataMap: fontDataByLoadedName,
     pageOrder,
     pdfDocument,
     sourceBytes,
-    watermarkConfig: watermarkConfig.enabled ? watermarkConfig : null,
+    watermarkConfig: wmShouldBake ? watermarkConfig : null,
   });
 }
