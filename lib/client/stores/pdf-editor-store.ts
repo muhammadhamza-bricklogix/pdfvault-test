@@ -11,6 +11,7 @@ export type ActiveTool =
   | "eraser"
   | "highlight"
   | "image"
+  | "redact"
   | "select"
   | "shape"
   | "signature"
@@ -26,13 +27,7 @@ function resolveSourcePage(displayPage: number, pageOrder: number[]): number {
 
   return pageOrder[displayPage - 1] ?? displayPage;
 }
-export type WatermarkPosition =
-  | "bottom-left"
-  | "bottom-right"
-  | "center"
-  | "tiled"
-  | "top-left"
-  | "top-right";
+export type WatermarkPosition = "bottom" | "center" | "tiled" | "top";
 
 export type WatermarkConfig = {
   color: string;
@@ -108,6 +103,9 @@ type PdfEditorStore = {
   historyByPage: Map<number, string[]>;
   historyIndexByPage: Map<number, number>;
   createPdfModalKey: number;
+  isCompressModalOpen: boolean;
+  isFindReplaceOpen: boolean;
+  isPasswordModalOpen: boolean;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
   isManagePagesOpen: boolean;
@@ -151,6 +149,9 @@ type PdfEditorStore = {
   clearPendingCloudSaveAfterReload: () => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
+  setIsCompressModalOpen: (value: boolean) => void;
+  setIsFindReplaceOpen: (value: boolean) => void;
+  setIsPasswordModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -183,6 +184,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
   createPdfModalKey: 0,
+  isCompressModalOpen: false,
+  isFindReplaceOpen: false,
+  isPasswordModalOpen: false,
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
   isManagePagesOpen: false,
@@ -228,6 +232,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       fontDataByLoadedName: new Map(),
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
+      isCompressModalOpen: false,
+      isFindReplaceOpen: false,
+      isPasswordModalOpen: false,
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
       isManagePagesOpen: false,
@@ -407,6 +414,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     }),
 
   setFile: (file) => set({ file }),
+  setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
+  setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
+  setIsPasswordModalOpen: (value) => set({ isPasswordModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value

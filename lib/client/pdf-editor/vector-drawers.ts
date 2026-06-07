@@ -140,18 +140,10 @@ export async function drawIText(
   const nextLineX = advanceY;
   const nextLineY = -advanceX;
 
-  // Compute what pdf-lib/fontkit thinks the text width is
-  const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
   // Use Fabric's obj.width as the target — it's what the user sees on screen.
   // This correctly reflects both unedited text AND user edits (added/removed words).
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
   const targetWidth = fabricObjWidth;
-
-  if (editorType === "editModeText") {
-    console.log(
-      `[DrawIText] "${text.slice(0, 40)}" | fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
-    );
-  }
 
   const lines = text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
@@ -182,7 +174,11 @@ export async function drawIText(
       // direction. For angle 0 this collapses to pdfY - i * pdfLineHeight.
       const lineX = pdfX + i * pdfLineHeight * nextLineX;
       const lineY = pdfY + i * pdfLineHeight * nextLineY;
-      const words = line.split(" ");
+      // Split on ANY whitespace (NBSP U+00A0, thin space U+2009, tab, etc.) —
+      // not just U+0020. Typographic PDFs frequently use NBSP between words,
+      // and the embedded subset font often lacks the NBSP glyph, so leaving it
+      // in the encoded string renders as a .notdef "tofu" box on every space.
+      const words = line.split(/\s/);
 
       if (words.length <= 1) {
         // Single word — no space issue, draw directly
@@ -344,6 +340,12 @@ export function drawRect(
 
   if (editorType === "whiteout") {
     fillColor = rgb(1, 1, 1);
+  } else if (editorType === "redaction") {
+    // Solid black. The merge pipeline renders the source page with
+    // `suppressText: true` and embeds it as a raster, so glyphs underneath
+    // this rect are already pixels in the saved bytes — there's no text
+    // layer left to leak content. This is a permanent removal, not a cover.
+    fillColor = rgb(0, 0, 0);
   } else if (editorType === "highlight") {
     fillColor = hexToPdfColor(obj.fill as string);
   } else {
@@ -360,7 +362,9 @@ export function drawRect(
     borderWidth: borderWidth || undefined,
     color: fillColor ?? undefined,
     height: pdfH,
-    opacity,
+    // Redaction rectangles MUST be fully opaque — a translucent black box
+    // wouldn't conceal anything visually under the rasterized page render.
+    opacity: editorType === "redaction" ? 1 : opacity,
     rotate: angle ? degrees(-angle) : undefined,
     width: pdfW,
     x: pdfX,

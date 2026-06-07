@@ -96,11 +96,9 @@ export class FontCache {
         this.cache.set(key, font);
 
         return font;
-      } catch (err) {
-        console.error(
-          `[FontCache] Custom font embedding failed for ${fontFamily}:`,
-          err,
-        );
+      } catch {
+        // Fall through to StandardFont fallback below — embedding can fail
+        // for fonts pdf.js couldn't reconstruct into valid OpenType bytes.
       }
     }
 

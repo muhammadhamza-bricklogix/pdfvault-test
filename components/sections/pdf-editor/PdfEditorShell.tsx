@@ -7,6 +7,10 @@ import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  UPLOAD_ACCEPT_MIME,
+  uploadAsPdf,
+} from "@/lib/client/file-conversion/upload-to-pdf";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
@@ -23,7 +27,10 @@ import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
+import { CompressModal } from "./CompressModal";
 import { CreatePdfModal } from "./CreatePdfModal";
+import { FindReplaceModal } from "./FindReplaceModal";
+import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
@@ -38,15 +45,38 @@ function UploadScreen() {
     (s) => s.setIsCreatePdfModalOpen,
   );
 
+  const handleSelect = async (file: File) => {
+    const isAlreadyPdf = file.type === "application/pdf";
+    const loadingKey = isAlreadyPdf
+      ? null
+      : toast.loading({
+          description: `Preparing ${file.name} for the editor.`,
+          title: "Converting to PDF",
+        });
+
+    try {
+      const pdfFile = await uploadAsPdf(file);
+
+      setFile(pdfFile);
+    } catch (err) {
+      toast.error({
+        description: err instanceof Error ? err.message : undefined,
+        title: "Couldn't open file",
+      });
+    } finally {
+      if (loadingKey) toast.close(loadingKey);
+    }
+  };
+
   return (
     <div className="flex flex-1 items-center justify-center p-8">
       <div className="w-full max-w-2xl space-y-4">
         <FileUpload
-          accept={["application/pdf"]}
-          acceptLabel="PDF"
-          description="Upload a PDF to open it in the editor."
-          heading="Drop your PDF here"
-          onFileSelect={setFile}
+          accept={UPLOAD_ACCEPT_MIME}
+          acceptLabel="PDF, Word, Excel, PowerPoint, Image"
+          description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
+          heading="Drop your file here"
+          onFileSelect={handleSelect}
         />
         <p className="text-center text-sm text-default-400">
           or{" "}
@@ -178,6 +208,10 @@ function EditorLayout() {
     />
   );
 
+  // Mounted inside EditorLayout (not the outer shell) because it needs the
+  // live `fabricCanvas` ref to mutate the current page's IText overlays.
+  const findReplaceModal = <FindReplaceModal fabricCanvas={fabricCanvas} />;
+
   if (isMobile) {
     return (
       <>
@@ -199,6 +233,7 @@ function EditorLayout() {
           onReorderPages={handleReorderPages}
         />
         {managePagesModal}
+        {findReplaceModal}
       </>
     );
   }
@@ -224,6 +259,7 @@ function EditorLayout() {
         </div>
       </div>
       {managePagesModal}
+      {findReplaceModal}
     </>
   );
 }
@@ -266,6 +302,8 @@ export function PdfEditorShell() {
         isOpen={isCreatePdfModalOpen}
         onClose={() => setIsCreatePdfModalOpen(false)}
       />
+      <CompressModal />
+      <PasswordModal />
     </div>
   );
 }

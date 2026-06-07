@@ -15,6 +15,7 @@ import {
 import { useCallback, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { toast } from "@/lib/shared/utils/toast";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -45,17 +46,57 @@ export function BackgroundImagePropertiesContent() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
 
+      // Reset early so the same file can be re-selected after an error.
+      e.target.value = "";
+
       if (!file) return;
-      if (file.size > MAX_IMAGE_BYTES) return;
+
+      const isAllowedType =
+        file.type === "image/png" || file.type === "image/jpeg";
+
+      if (!isAllowedType) {
+        toast.error({
+          title: "Unsupported image",
+          description: "Background images must be PNG or JPEG.",
+        });
+
+        return;
+      }
+
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error({
+          title: "Image too large",
+          description: "Background images must be 5 MB or smaller.",
+        });
+
+        return;
+      }
 
       const reader = new FileReader();
 
       reader.onload = () => {
-        setConfig({ imageData: reader.result as string });
+        const dataUrl = reader.result;
+
+        if (typeof dataUrl !== "string") {
+          toast.error({
+            title: "Upload failed",
+            description: "Could not read the selected image. Try another file.",
+          });
+
+          return;
+        }
+
+        // Auto-enable so users who upload without first flipping the Switch
+        // still see the image apply and get it baked into the saved PDF.
+        setConfig({ enabled: true, imageData: dataUrl });
+      };
+      reader.onerror = () => {
+        toast.error({
+          title: "Upload failed",
+          description: "Could not read the selected image. Try another file.",
+        });
       };
       reader.readAsDataURL(file);
-
-      e.target.value = "";
     },
     [setConfig],
   );

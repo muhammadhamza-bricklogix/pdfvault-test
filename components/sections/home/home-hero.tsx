@@ -7,6 +7,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { FileUpload } from "@/components/ui/file-upload";
+import {
+  UPLOAD_ACCEPT_MIME,
+  uploadAsPdf,
+} from "@/lib/client/file-conversion/upload-to-pdf";
 import { useUploadCloudDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -34,11 +38,30 @@ export function HomeHero() {
     );
   }, [router]);
 
-  const handleFileSelect = (file: File) => {
-    setCloudSelection(null);
-    setCurrentDocument(null);
-    setFile(file);
-    router.push(ROUTES.TOOLS.PDF_EDITOR);
+  const handleFileSelect = async (file: File) => {
+    const isAlreadyPdf = file.type === "application/pdf";
+    const loadingKey = isAlreadyPdf
+      ? null
+      : toast.loading({
+          description: `Preparing ${file.name} for the editor.`,
+          title: "Converting to PDF",
+        });
+
+    try {
+      const pdfFile = await uploadAsPdf(file);
+
+      setCloudSelection(null);
+      setCurrentDocument(null);
+      setFile(pdfFile);
+      router.push(ROUTES.TOOLS.PDF_EDITOR);
+    } catch (err) {
+      toast.error({
+        description: err instanceof Error ? err.message : undefined,
+        title: "Couldn't open file",
+      });
+    } finally {
+      if (loadingKey) toast.close(loadingKey);
+    }
   };
 
   const handleCloudUpload = async (selection: CloudSelectedFile) => {
@@ -80,7 +103,7 @@ export function HomeHero() {
         <div className="w-full max-w-5xl rounded-[2rem] border border-dashed border-[color-mix(in_oklab,var(--color-accent)_35%,transparent)] bg-[var(--color-background)]/75 p-5 backdrop-blur-sm dark:border-[color-mix(in_oklab,var(--color-accent)_25%,transparent)] sm:p-6">
           <FileUpload
             marketingGrouped
-            accept={["application/pdf"]}
+            accept={UPLOAD_ACCEPT_MIME}
             acceptLabel="PDF"
             appearance="marketing"
             heading="Drop your file here"

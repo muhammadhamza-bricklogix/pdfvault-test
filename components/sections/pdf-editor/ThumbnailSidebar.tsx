@@ -1,7 +1,7 @@
 "use client";
 
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
-import type { PDFPageProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
 import {
   DndContext,
@@ -98,17 +98,33 @@ function Thumbnail({
     if (!isVisible || isBlank) return;
 
     let cancelled = false;
+    let importedDoc: PDFDocumentProxy | null = null;
+    let importedTask: { destroy: () => void } | null = null;
 
     const loadPage = async () => {
-      if (isImported && importBytes) {
+      if (isImported && importBytes && draftPage) {
         const pdfjs = await import("pdfjs-dist");
         const task = pdfjs.getDocument({ data: importBytes.slice(0) });
-        const doc = await task.promise;
-        const p = await doc.getPage(draftPage.importPageIndex);
 
-        if (!cancelled) setPage(p);
-        doc.destroy();
-        task.destroy();
+        importedTask = task;
+        try {
+          const doc = await task.promise;
+
+          if (cancelled) {
+            doc.destroy();
+
+            return;
+          }
+          importedDoc = doc;
+          // Keep the document alive — pdf.js destroys pages when the doc is
+          // destroyed, which leaves usePageRenderer rendering against an
+          // invalidated proxy. Cleanup below disposes both on unmount.
+          const p = await doc.getPage(draftPage.importPageIndex);
+
+          if (!cancelled) setPage(p);
+        } catch {
+          // task was cancelled or document failed to load
+        }
 
         return;
       }
@@ -124,6 +140,8 @@ function Thumbnail({
 
     return () => {
       cancelled = true;
+      importedDoc?.destroy();
+      importedTask?.destroy();
     };
   }, [
     draftPage,

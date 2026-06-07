@@ -211,6 +211,7 @@ type Props = {
 export function CreatePdfModal({ isOpen, onClose }: Props) {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const setFileInStore = usePdfEditorStore((s) => s.setFile);
   const router = useRouter();
   const { start } = useTrackedUpload();
@@ -336,18 +337,27 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
         type: "application/pdf",
       });
 
+      // Replace the editor immediately with the new blank doc, regardless of
+      // sign-in state. Strip any `?id=…` first so the document loader doesn't
+      // re-fetch the previously opened cloud doc once `clearFile` runs.
+      router.replace(ROUTES.TOOLS.PDF_EDITOR, { scroll: false });
+      clearFile();
+      onClose();
+      setTimeout(() => setFileInStore(file), 0);
+
       if (isSignedIn) {
+        // Upload to the cloud in the background. When the new id is known,
+        // associate it with the already-loaded file and sync the URL — the
+        // loader skips re-fetching because the file+currentDocumentId match.
         start({
           file,
           onOpen: (id) => {
-            router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`);
+            setCurrentDocument({ id, name: fileName });
+            router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`, {
+              scroll: false,
+            });
           },
         });
-        onClose();
-      } else {
-        clearFile();
-        onClose();
-        setTimeout(() => setFileInStore(file), 0);
       }
     } finally {
       setIsGenerating(false);
@@ -364,7 +374,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[780px]">
+        <Modal.Dialog className="!w-[92vw] !max-w-[780px]">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Create new PDF document</Modal.Heading>

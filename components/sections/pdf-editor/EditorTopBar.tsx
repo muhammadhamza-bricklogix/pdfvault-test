@@ -21,6 +21,7 @@ import {
   Stamp01Icon,
   TextFontIcon,
   UndoIcon,
+  ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -59,14 +60,12 @@ const EXPORT_FORMATS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Info Bar — filename, page navigation, zoom, undo/redo
+// Info Bar — filename, page navigation, zoom, save
 // ---------------------------------------------------------------------------
 
 export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const zoom = usePdfEditorStore((s) => s.zoom);
@@ -74,11 +73,6 @@ export function EditorInfoBar() {
   const setZoom = usePdfEditorStore((s) => s.setZoom);
 
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
-
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
@@ -131,42 +125,6 @@ export function EditorInfoBar() {
               <p>Browse PDF and image tools</p>
             </Tooltip.Content>
           </Tooltip>
-          <Separator className="!h-4" orientation="vertical" />
-          <Toolbar aria-label="Actions">
-            <ButtonGroup size="sm" variant="tertiary">
-              <Tooltip delay={300}>
-                <Button
-                  isIconOnly
-                  aria-label="Undo"
-                  isDisabled={!canUndo}
-                  onPress={() =>
-                    window.dispatchEvent(new CustomEvent("editor:undo"))
-                  }
-                >
-                  <HugeiconsIcon icon={UndoIcon} size={16} />
-                </Button>
-                <Tooltip.Content>
-                  <p>Undo</p>
-                </Tooltip.Content>
-              </Tooltip>
-              <Tooltip delay={300}>
-                <Button
-                  isIconOnly
-                  aria-label="Redo"
-                  isDisabled={!canRedo}
-                  onPress={() =>
-                    window.dispatchEvent(new CustomEvent("editor:redo"))
-                  }
-                >
-                  <ButtonGroup.Separator />
-                  <HugeiconsIcon icon={RedoIcon} size={16} />
-                </Button>
-                <Tooltip.Content>
-                  <p>Redo</p>
-                </Tooltip.Content>
-              </Tooltip>
-            </ButtonGroup>
-          </Toolbar>
         </div>
 
         {/* Center: filename + page navigation */}
@@ -215,7 +173,6 @@ export function EditorInfoBar() {
         <div className="flex items-center gap-1">
           <Tooltip delay={300}>
             <Button
-              className="hidden sm:inline-flex"
               isDisabled={zoom <= ZOOM_PRESETS[0]}
               size="sm"
               variant="ghost"
@@ -227,12 +184,11 @@ export function EditorInfoBar() {
               <p>Zoom out</p>
             </Tooltip.Content>
           </Tooltip>
-          <span className="hidden min-w-12 text-center text-xs tabular-nums text-default-500 sm:inline">
+          <span className="min-w-10 text-center text-[10px] tabular-nums text-default-500 sm:min-w-12 sm:text-xs">
             {Math.round(zoom * 100)}%
           </span>
           <Tooltip delay={300}>
             <Button
-              className="hidden sm:inline-flex"
               isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
               size="sm"
               variant="ghost"
@@ -311,6 +267,7 @@ const TOOLS = [
   { icon: ShapesIcon, id: "shape", label: "Shapes" },
   { icon: EraserIcon, id: "eraser", label: "Eraser" },
   { icon: PaintBucketIcon, id: "whiteout", label: "Whiteout" },
+  { icon: ViewOffIcon, id: "redact", label: "Redact" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: Image01Icon, id: "image", label: "Image" },
   { icon: Stamp01Icon, id: "watermark", label: "Watermark" },
@@ -375,6 +332,50 @@ export function ToolsContent({
   );
 }
 
+function HistoryActions() {
+  const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
+  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+
+  const history = historyByPage.get(currentPage) ?? [];
+  const idx = historyIndexByPage.get(currentPage) ?? -1;
+  const canUndo = idx > 0;
+  const canRedo = idx < history.length - 1;
+
+  return (
+    <Toolbar aria-label="History actions">
+      <ButtonGroup size="sm" variant="tertiary">
+        <Tooltip delay={300}>
+          <Button
+            className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+            isDisabled={!canUndo}
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
+          >
+            <HugeiconsIcon icon={UndoIcon} size={22} />
+            <span className="text-[10px] leading-tight">Undo</span>
+          </Button>
+          <Tooltip.Content>
+            <p>Undo</p>
+          </Tooltip.Content>
+        </Tooltip>
+        <Tooltip delay={300}>
+          <Button
+            className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+            isDisabled={!canRedo}
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+          >
+            <HugeiconsIcon icon={RedoIcon} size={22} />
+            <span className="text-[10px] leading-tight">Redo</span>
+          </Button>
+          <Tooltip.Content>
+            <p>Redo</p>
+          </Tooltip.Content>
+        </Tooltip>
+      </ButtonGroup>
+    </Toolbar>
+  );
+}
+
 export function EditorToolBar() {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
@@ -384,6 +385,8 @@ export function EditorToolBar() {
 
   return (
     <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
+      <HistoryActions />
+      <Separator className="!h-6" orientation="vertical" />
       <ToolsContent />
       <Separator className="!h-6" orientation="vertical" />
       <Tooltip delay={300}>

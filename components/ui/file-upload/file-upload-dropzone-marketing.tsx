@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@heroui/react";
 
 export const DEFAULT_MARKETING_FOOTNOTE =
-  "Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT";
+  "Up to 100 MB for PDF and up to 20 MB for Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx), Image (.gif, .jpg, .jpeg, .png), HTML, or Plain Text (.txt)";
 
 type FileUploadDropzoneMarketingProps = {
   browseLabel?: string;

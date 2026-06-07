@@ -33,7 +33,6 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
   // reorder via the thumbnail strip serves stale text from the previously
   // selected slot. Pulled via getSourcePageIndex which respects pageOrder.
   const getSourcePageIndex = usePdfEditorStore((s) => s.getSourcePageIndex);
-  const fontWarningShownRef = useRef(false);
 
   // Cache extracted text blocks per SOURCE page (stable across reorder).
   const blocksCacheRef = useRef<Map<number, TextBlock[]>>(new Map());
@@ -43,7 +42,6 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
   useEffect(() => {
     blocksCacheRef.current.clear();
-    fontWarningShownRef.current = false;
   }, [file]);
 
   useEffect(() => {
@@ -111,16 +109,6 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         });
 
         return;
-      }
-
-      // Show font warning once per session
-      if (!fontWarningShownRef.current) {
-        fontWarningShownRef.current = true;
-        toast.info({
-          description:
-            "Some characters may not be available in the embedded font subset.",
-          title: "Embedded fonts loaded",
-        });
       }
 
       const { IText: FabricIText } = await import("fabric");

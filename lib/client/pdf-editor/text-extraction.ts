@@ -293,10 +293,6 @@ export async function extractTextBlocks(
 
     const resolvedFamily = resolveFontFamily(fontName, styleFontFamily);
 
-    console.log(
-      `[TextExtract] "${str.slice(0, 40)}" | font=${fontName} resolved=${resolvedFamily} real=${fontInfo.realName} w=${fontInfo.weight} s=${fontInfo.style} | transform=[${transform.map((v: number) => v.toFixed(2)).join(",")}] | pdfX=${(transform[4] as number).toFixed(2)} pdfY=${(transform[5] as number).toFixed(2)} | vpX=${vpX.toFixed(2)} vpY=${vpY.toFixed(2)} | fontSize=${fontSize.toFixed(2)} | textItem.width=${textItem.width.toFixed(2)} vpWidth=${vpWidth.toFixed(2)} vpHeight=${vpHeight.toFixed(2)} | finalX=${Math.round(vpX)} finalY=${Math.round(y)} | viewport.scale=${viewport.scale}`,
-    );
-
     blocks.push({
       color: colorForItem(itemIndex),
       fontFamily: resolvedFamily,
@@ -337,29 +333,17 @@ export function extractFontData(
   // project's TS `target: "es5"` (otherwise TS2802 trips on Set iteration).
   Array.from(fontNames).forEach((fontName) => {
     try {
-      if (!page.commonObjs.has(fontName)) {
-        console.warn(`[FontExtract] commonObjs missing: ${fontName}`);
-
-        return;
-      }
+      if (!page.commonObjs.has(fontName)) return;
 
       // fontExtraProperties must be true in getDocument() options,
       // otherwise pdf.js clears font data after loading into document.fonts.
       const fontObj = page.commonObjs.get(fontName) as Record<string, unknown>;
 
-      if (!fontObj) {
-        console.warn(`[FontExtract] fontObj is null: ${fontName}`);
-
-        return;
-      }
+      if (!fontObj) return;
 
       const data = (fontObj as any).data as Uint8Array | undefined;
 
-      if (!data || data.byteLength === 0) {
-        console.warn(`[FontExtract] No binary data for: ${fontName}`);
-
-        return;
-      }
+      if (!data || data.byteLength === 0) return;
 
       result.push({
         bold: ((fontObj as any).bold as boolean) ?? false,
@@ -367,8 +351,9 @@ export function extractFontData(
         italic: ((fontObj as any).italic as boolean) ?? false,
         loadedName: fontName,
       });
-    } catch (err) {
-      console.error(`[FontExtract] Error reading font ${fontName}:`, err);
+    } catch {
+      // Silently skip fonts we can't read — they fall back to StandardFonts
+      // during export. Logging per-page on every load was noisy.
     }
   });
 

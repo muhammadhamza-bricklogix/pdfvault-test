@@ -22,6 +22,7 @@ import {
 import { useCallback, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { toast } from "@/lib/shared/utils/toast";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -35,10 +36,8 @@ const FONT_OPTIONS = [
 
 const POSITION_OPTIONS = [
   { label: "Center", value: "center" },
-  { label: "Top Left", value: "top-left" },
-  { label: "Top Right", value: "top-right" },
-  { label: "Bottom Left", value: "bottom-left" },
-  { label: "Bottom Right", value: "bottom-right" },
+  { label: "Top", value: "top" },
+  { label: "Bottom", value: "bottom" },
   { label: "Tiled", value: "tiled" },
 ] as const;
 
@@ -83,20 +82,61 @@ export function WatermarkPropertiesContent() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
 
+      // Reset early so the same file can be re-selected after an error.
+      e.target.value = "";
+
       if (!file) return;
 
-      // Cap at 2 MB
-      if (file.size > 2 * 1024 * 1024) return;
+      // Validate MIME from magic bytes? Accept attr already restricts the
+      // picker, but a forced .png rename could slip through — for now we
+      // trust `accept`. Reject anything that isn't png/jpeg by extension too.
+      const isAllowedType =
+        file.type === "image/png" || file.type === "image/jpeg";
+
+      if (!isAllowedType) {
+        toast.error({
+          title: "Unsupported image",
+          description: "Watermark images must be PNG or JPEG.",
+        });
+
+        return;
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error({
+          title: "Image too large",
+          description: "Watermark images must be 2 MB or smaller.",
+        });
+
+        return;
+      }
 
       const reader = new FileReader();
 
       reader.onload = () => {
-        setConfig({ imageData: reader.result as string });
+        const dataUrl = reader.result;
+
+        if (typeof dataUrl !== "string") {
+          toast.error({
+            title: "Upload failed",
+            description: "Could not read the selected image. Try another file.",
+          });
+
+          return;
+        }
+
+        // Save the image bytes AND make sure the watermark is enabled +
+        // type-switched to "image", so users who upload before flipping the
+        // toggles still get a visible watermark on save/export.
+        setConfig({ enabled: true, imageData: dataUrl, type: "image" });
+      };
+      reader.onerror = () => {
+        toast.error({
+          title: "Upload failed",
+          description: "Could not read the selected image. Try another file.",
+        });
       };
       reader.readAsDataURL(file);
-
-      // Reset so the same file can be re-selected
-      e.target.value = "";
     },
     [setConfig],
   );
@@ -145,7 +185,11 @@ export function WatermarkPropertiesContent() {
               className="text-sm"
               placeholder="e.g. CONFIDENTIAL"
               value={config.text}
-              onChange={(e) => setConfig({ text: e.target.value })}
+              // Auto-enable on first edit so users who type a watermark
+              // without flipping the Switch still get it baked at save time.
+              onChange={(e) =>
+                setConfig({ enabled: true, text: e.target.value })
+              }
             />
           </Section>
 
@@ -313,7 +357,7 @@ export function WatermarkPropertiesContent() {
 
       {/* Position */}
       <Section title="Position">
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {POSITION_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
@@ -321,7 +365,10 @@ export function WatermarkPropertiesContent() {
               size="sm"
               variant={config.position === opt.value ? "secondary" : "ghost"}
               onPress={() =>
-                setConfig({ position: opt.value as WatermarkPosition })
+                setConfig({
+                  enabled: true,
+                  position: opt.value as WatermarkPosition,
+                })
               }
             >
               {opt.label}

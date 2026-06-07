@@ -38,8 +38,13 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
     clearPendingCloudSaveAfterReload();
 
     void (async () => {
+      // `force: true` — Manage Pages rebuilds the source PDF bytes outside of
+      // the hasUnsavedChanges system (it swaps `file` directly), so the cloud
+      // copy will be stale even though the flag may be false. Skipping here
+      // would lose the rebuilt pages.
       const result = await persistEditorDocument({
         fabricCanvas: fabricRef.current,
+        force: true,
       });
 
       if (!result.ok) {
