@@ -127,6 +127,18 @@ export function useFabricCanvas({
 
         if (cancelled) return;
 
+        // Wait for pdf.js's embedded fonts before painting any restored
+        // IText — see use-edit-text-mode.ts for the iOS Safari background.
+        if (typeof document !== "undefined" && document.fonts) {
+          try {
+            await document.fonts.ready;
+          } catch {
+            // Some FontFace failed; render anyway so successful fonts show.
+          }
+
+          if (cancelled) return;
+        }
+
         fc.setZoom(zoomRef.current);
         fc.renderAll();
       }

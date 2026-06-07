@@ -115,6 +115,23 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
       if (cancelled) return;
 
+      // Wait for pdf.js's embedded fonts to finish loading before drawing.
+      // iOS Safari paints `fillText` with no glyphs when the requested font
+      // is still in `loading` state, producing a blank text overlay even
+      // though shapes / table borders (rendered by the PDF canvas itself)
+      // remain visible. Chrome usually has fonts ready by this point, so
+      // this is essentially a no-op there.
+      if (typeof document !== "undefined" && document.fonts) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          // Font loading failed for some face — fall through; resolved fonts
+          // for the rest of the page will still render.
+        }
+
+        if (cancelled) return;
+      }
+
       // Place ALL text blocks as IText objects with real embedded fonts.
       // For rotated pages, Fabric `angle` rotates the IText around its
       // top-left anchor — we adjust (left, top) so the visual baseline-left
@@ -161,8 +178,25 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
     setup();
 
+    // Belt-and-braces re-render when any additional font finishes loading
+    // after the initial paint. pdf.js can lazy-load fonts mid-page on iOS
+    // Safari, leaving the first paint with blank glyphs for those runs.
+    const onFontsLoadingDone = () => {
+      if (cancelled || !fabricCanvas) return;
+
+      for (const obj of fabricCanvas.getObjects()) {
+        if ((obj as any).editorType === "editModeText") {
+          obj.dirty = true;
+        }
+      }
+      fabricCanvas.renderAll();
+    };
+
+    document.fonts?.addEventListener?.("loadingdone", onFontsLoadingDone);
+
     return () => {
       cancelled = true;
+      document.fonts?.removeEventListener?.("loadingdone", onFontsLoadingDone);
     };
   }, [fabricCanvas, page, currentPage]);
 }
