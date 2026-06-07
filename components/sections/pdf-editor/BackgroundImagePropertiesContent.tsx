@@ -15,6 +15,7 @@ import {
 import { useCallback, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { detectImageMagicBytes } from "@/lib/shared/utils/image-magic-bytes";
 import { toast } from "@/lib/shared/utils/toast";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -43,7 +44,7 @@ export function BackgroundImagePropertiesContent() {
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
 
       // Reset early so the same file can be re-selected after an error.
@@ -67,6 +68,21 @@ export function BackgroundImagePropertiesContent() {
         toast.error({
           title: "Image too large",
           description: "Background images must be 5 MB or smaller.",
+        });
+
+        return;
+      }
+
+      // Magic-byte verification — `file.type` is extension-driven and a
+      // renamed `payload.svg → bad.png` would otherwise reach Fabric's SVG
+      // pipeline (which executes <script> on Safari).
+      const detected = await detectImageMagicBytes(file);
+
+      if (!detected) {
+        toast.error({
+          title: "Unsupported image",
+          description:
+            "This file's contents don't look like a PNG or JPEG. Try another image.",
         });
 
         return;

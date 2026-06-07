@@ -22,6 +22,7 @@ import {
 import { useCallback, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { detectImageMagicBytes } from "@/lib/shared/utils/image-magic-bytes";
 import { toast } from "@/lib/shared/utils/toast";
 
 // ---------------------------------------------------------------------------
@@ -79,7 +80,7 @@ export function WatermarkPropertiesContent() {
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
 
       // Reset early so the same file can be re-selected after an error.
@@ -87,9 +88,7 @@ export function WatermarkPropertiesContent() {
 
       if (!file) return;
 
-      // Validate MIME from magic bytes? Accept attr already restricts the
-      // picker, but a forced .png rename could slip through — for now we
-      // trust `accept`. Reject anything that isn't png/jpeg by extension too.
+      // First-pass MIME guard — picker `accept` plus extension-driven type.
       const isAllowedType =
         file.type === "image/png" || file.type === "image/jpeg";
 
@@ -106,6 +105,23 @@ export function WatermarkPropertiesContent() {
         toast.error({
           title: "Image too large",
           description: "Watermark images must be 2 MB or smaller.",
+        });
+
+        return;
+      }
+
+      // Second-pass magic-byte verification. `file.type` is set from the
+      // extension and can be spoofed by a rename, but a real PNG/JPEG starts
+      // with the same bytes everywhere. Fabric's SVG path on Safari executes
+      // <script>, so letting `payload.svg` renamed to `bad.png` slip through
+      // would be a genuine XSS hole.
+      const detected = await detectImageMagicBytes(file);
+
+      if (!detected) {
+        toast.error({
+          title: "Unsupported image",
+          description:
+            "This file's contents don't look like a PNG or JPEG. Try another image.",
         });
 
         return;

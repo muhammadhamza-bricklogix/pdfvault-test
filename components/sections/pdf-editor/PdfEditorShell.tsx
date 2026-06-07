@@ -134,6 +134,18 @@ function EditorLayout() {
     async (snapshot: ManagePagesDraftSnapshot) => {
       if (!file) return;
 
+      // Refuse to start while ANY save flow (toolbar Save, navigation Save,
+      // pagehide Save, or another Manage Pages save) is mid-upload. Without
+      // this guard, two saves race the cloud and the later PUT silently wins.
+      if (usePdfEditorStore.getState().isSaving) {
+        toast.info({
+          title: "Save in progress",
+          description: "Try again in a moment.",
+        });
+
+        return;
+      }
+
       if (fabricCanvas) {
         flushLiveFabricPage(currentPage, fabricCanvas);
       }

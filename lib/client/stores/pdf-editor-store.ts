@@ -122,6 +122,14 @@ type PdfEditorStore = {
   isPasswordModalOpen: boolean;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
+  /**
+   * Set true while ANY save path (toolbar Save, Manage Pages auto-persist,
+   * navigation save, page-hide save) has an upload in flight. Every save
+   * entry point checks this and bails if true. Without a shared flag, two
+   * concurrent save flows raced to the cloud and last-write-wins silently
+   * overwrote one of them (audit pendant from 2026-05-22).
+   */
+  isSaving: boolean;
   isManagePagesOpen: boolean;
   isRestoringHistory: boolean;
   isSignatureModalOpen: boolean;
@@ -170,6 +178,7 @@ type PdfEditorStore = {
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
   setIsRestoringHistory: (value: boolean) => void;
+  setIsSaving: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   setPdfDocument: (doc: PDFDocumentProxy | null, pageCount: number) => void;
@@ -207,6 +216,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isCreatingShape: false,
   isManagePagesOpen: false,
   isRestoringHistory: false,
+  isSaving: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
   pageCount: 0,
@@ -257,6 +267,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isCreatingShape: false,
       isManagePagesOpen: false,
       isRestoringHistory: false,
+      isSaving: false,
       isSignatureModalOpen: false,
       pageCount: 0,
       pageOrder: [],
@@ -443,6 +454,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isCreatePdfModalOpen: value,
     })),
   setIsCreatingShape: (value) => set({ isCreatingShape: value }),
+  setIsSaving: (value) => set({ isSaving: value }),
   setIsManagePagesOpen: (value) => set({ isManagePagesOpen: value }),
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),

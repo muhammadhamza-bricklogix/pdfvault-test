@@ -6,18 +6,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
  * Listens for `editor:save` (dispatched by the Save button) and uploads the
  * flattened PDF to the user's library.
+ *
+ * The "currently saving" flag lives in the Zustand store (not a local ref)
+ * so the four save entry points — toolbar Save (this hook), Manage Pages
+ * auto-persist, navigation save, and pagehide save — all consult the same
+ * mutex. Previously each had its own local ref and could race the cloud.
  */
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const isSavingRef = useRef(false);
   const fabricRef = useRef(fabricCanvas);
 
   useEffect(() => {
@@ -25,9 +30,9 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   }, [fabricCanvas]);
 
   const handleSave = useCallback(async () => {
-    if (isSavingRef.current) return;
+    if (usePdfEditorStore.getState().isSaving) return;
 
-    isSavingRef.current = true;
+    usePdfEditorStore.getState().setIsSaving(true);
 
     const loadingKey = toast.loading({
       title: "Saving…",
@@ -86,7 +91,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       });
     } finally {
       toast.close(loadingKey);
-      isSavingRef.current = false;
+      usePdfEditorStore.getState().setIsSaving(false);
     }
   }, [router, searchParams]);
 

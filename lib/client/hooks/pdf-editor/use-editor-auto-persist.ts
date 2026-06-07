@@ -38,46 +38,56 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
     clearPendingCloudSaveAfterReload();
 
     void (async () => {
-      // `force: true` — Manage Pages rebuilds the source PDF bytes outside of
-      // the hasUnsavedChanges system (it swaps `file` directly), so the cloud
-      // copy will be stale even though the flag may be false. Skipping here
-      // would lose the rebuilt pages.
-      const result = await persistEditorDocument({
-        fabricCanvas: fabricRef.current,
-        force: true,
-      });
+      // Wait for any in-flight save to finish before our own rebuild-save runs
+      // — otherwise two PUTs collide on the same documentId and the later one
+      // silently overwrites the earlier one.
+      if (usePdfEditorStore.getState().isSaving) return;
+      usePdfEditorStore.getState().setIsSaving(true);
 
-      if (!result.ok) {
-        if (result.reason === "not-signed-in") {
-          toast.info({
-            title: "Sign in to save",
-            description:
-              "Page changes are applied locally. Sign in to save to the cloud.",
-          });
-        } else if (result.reason === "error") {
-          toast.error({
-            title: "Could not save pages",
-            description:
-              "Your page changes were applied but cloud save failed. Use Save to retry.",
-          });
+      try {
+        // `force: true` — Manage Pages rebuilds the source PDF bytes outside of
+        // the hasUnsavedChanges system (it swaps `file` directly), so the cloud
+        // copy will be stale even though the flag may be false. Skipping here
+        // would lose the rebuilt pages.
+        const result = await persistEditorDocument({
+          fabricCanvas: fabricRef.current,
+          force: true,
+        });
+
+        if (!result.ok) {
+          if (result.reason === "not-signed-in") {
+            toast.info({
+              title: "Sign in to save",
+              description:
+                "Page changes are applied locally. Sign in to save to the cloud.",
+            });
+          } else if (result.reason === "error") {
+            toast.error({
+              title: "Could not save pages",
+              description:
+                "Your page changes were applied but cloud save failed. Use Save to retry.",
+            });
+          }
+
+          return;
         }
 
-        return;
+        const id = result.document.id;
+
+        if (searchParams.get("id") !== id) {
+          const params = new URLSearchParams(searchParams.toString());
+
+          params.set("id", id);
+          router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
+        }
+
+        toast.success({
+          title: "Pages saved",
+          description: "Your page changes were saved to your library.",
+        });
+      } finally {
+        usePdfEditorStore.getState().setIsSaving(false);
       }
-
-      const id = result.document.id;
-
-      if (searchParams.get("id") !== id) {
-        const params = new URLSearchParams(searchParams.toString());
-
-        params.set("id", id);
-        router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
-      }
-
-      toast.success({
-        title: "Pages saved",
-        description: "Your page changes were saved to your library.",
-      });
     })();
   }, [
     clearPendingCloudSaveAfterReload,

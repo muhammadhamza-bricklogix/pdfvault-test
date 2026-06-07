@@ -59,7 +59,18 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
+      // Another save flow is already uploading — wait it out by navigating
+      // immediately. Without this guard, two saves race to the cloud and the
+      // later one's bytes silently overwrite the earlier one's. The current
+      // request will still finish via its own handler.
+      if (usePdfEditorStore.getState().isSaving) {
+        router.push(detail.url);
+
+        return;
+      }
+
       isNavigatingRef.current = true;
+      usePdfEditorStore.getState().setIsSaving(true);
 
       const loadingKey = toast.loading({
         title: "Saving…",
@@ -85,6 +96,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       } finally {
         toast.close(loadingKey);
         isNavigatingRef.current = false;
+        usePdfEditorStore.getState().setIsSaving(false);
       }
     };
 
@@ -101,6 +113,8 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
   useEffect(() => {
     const onPageHide = () => {
       if (!file || !isSignedIn || isNavigatingRef.current) return;
+      // Don't race another save flow already in flight.
+      if (usePdfEditorStore.getState().isSaving) return;
 
       void persistEditorDocument({ fabricCanvas: fabricRef.current });
     };
