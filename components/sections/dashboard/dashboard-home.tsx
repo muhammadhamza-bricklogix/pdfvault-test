@@ -14,10 +14,10 @@ export function DashboardHome() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+    <div className="flex flex-col gap-4 sm:gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             My Documents
           </h1>
           <p className="text-sm text-default-500">
@@ -27,7 +27,11 @@ export function DashboardHome() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onPress={() => setIsToolsOpen(true)}>
+          <Button
+            className="flex-1 sm:flex-none"
+            variant="secondary"
+            onPress={() => setIsToolsOpen(true)}
+          >
             <HugeiconsIcon icon={Configuration01Icon} size={16} />
             Tools
           </Button>

@@ -72,22 +72,34 @@ function detectWeightAndStyle(realFontName: string): {
  *      web-safe family based on the textContent style hint.
  */
 function resolveFontFamily(fontName: string, styleFontFamily: string): string {
-  // Check if pdf.js registered this font in document.fonts
-  let found = false;
+  const webSafeFallback =
+    styleFontFamily === "monospace"
+      ? "Courier New"
+      : styleFontFamily === "serif"
+        ? "Times New Roman"
+        : "Helvetica";
+
+  if (typeof document === "undefined" || !document.fonts) {
+    return webSafeFallback;
+  }
+
+  // Only return the pdf.js loadedName if its FontFace is *actually* loaded.
+  // Matching by family alone is unsafe: on iOS Safari, pdf.js registers a
+  // FontFace immediately but its binary may still be "unloaded" / "loading"
+  // when Fabric draws. Canvas `fillText` against an un-loaded face yields
+  // blank glyphs (no system fallback), producing the empty-page bug.
+  let loaded = false;
 
   document.fonts.forEach((face) => {
-    if (face.family === fontName || face.family === `"${fontName}"`) {
-      found = true;
+    if (
+      face.status === "loaded" &&
+      (face.family === fontName || face.family === `"${fontName}"`)
+    ) {
+      loaded = true;
     }
   });
 
-  if (found) return fontName;
-
-  // Fallback: use the generic family hint from textContent.styles
-  if (styleFontFamily === "monospace") return "Courier New";
-  if (styleFontFamily === "serif") return "Times New Roman";
-
-  return "Helvetica";
+  return loaded ? fontName : webSafeFallback;
 }
 
 function rgbToHex(r: number, g: number, b: number): string {

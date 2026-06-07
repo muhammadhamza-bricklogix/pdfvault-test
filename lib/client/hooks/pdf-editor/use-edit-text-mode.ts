@@ -11,6 +11,7 @@ import {
   type TextBlock,
 } from "@/lib/client/pdf-editor/text-extraction";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 type UseEditTextModeParams = {
@@ -86,12 +87,29 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
       if (cached) {
         blocks = cached;
+        logger.info("[PDFedits] text: cache-hit", {
+          sourcePage,
+          blocks: blocks.length,
+        });
       } else {
-        blocks = await extractTextBlocks(page);
+        try {
+          blocks = await extractTextBlocks(page);
+        } catch (err) {
+          logger.error("[PDFedits] text: extract failed", {
+            sourcePage,
+            err,
+          });
+
+          return;
+        }
 
         if (cancelled) return;
 
         blocksCacheRef.current.set(sourcePage, blocks);
+        logger.info("[PDFedits] text: extract ok", {
+          sourcePage,
+          blocks: blocks.length,
+        });
 
         // Extract and store font binary data for the export pipeline
         const fontNames = new Set(blocks.map((b) => b.fontFamily));
@@ -103,6 +121,9 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       }
 
       if (blocks.length === 0) {
+        logger.warn("[PDFedits] text: no blocks (scanned PDF?)", {
+          sourcePage,
+        });
         toast.info({
           description: "This page may be scanned or contain only images.",
           title: "No editable text found",
@@ -174,6 +195,11 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       }
 
       fabricCanvas.renderAll();
+      logger.info("[PDFedits] text: drew IText", {
+        sourcePage,
+        count: blocks.length,
+        sampleFont: blocks[0]?.fontFamily,
+      });
     };
 
     setup();

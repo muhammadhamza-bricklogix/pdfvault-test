@@ -37,9 +37,9 @@ export function UploadCta() {
         type="file"
         onChange={onChange}
       />
-      <Button onPress={onPick}>
+      <Button className="flex-1 sm:flex-none" onPress={onPick}>
         <HugeiconsIcon icon={Upload01Icon} size={16} />
-        Upload PDF
+        <span className="truncate">Upload PDF</span>
       </Button>
     </>
   );

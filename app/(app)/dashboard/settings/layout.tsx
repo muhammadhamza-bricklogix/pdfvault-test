@@ -4,7 +4,7 @@ import { SettingsNav } from "@/components/sections/dashboard/settings/settings-n
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-6 -my-6 flex h-[calc(100%+3rem)] flex-col sm:-mx-8 lg:flex-row">
+    <div className="-mx-4 -my-4 flex h-[calc(100%+2rem)] flex-col sm:-mx-6 sm:-my-6 sm:h-[calc(100%+3rem)] lg:-mx-8 lg:flex-row">
       {/* Desktop vertical rail */}
       <aside className="hidden shrink-0 bg-default-100/35 lg:block lg:w-64">
         <div className="sticky top-0 max-h-screen overflow-y-auto px-4 py-6">
@@ -18,7 +18,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Content column */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
+      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         <div className="max-w-2xl">{children}</div>
       </div>
     </div>

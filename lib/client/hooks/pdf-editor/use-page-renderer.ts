@@ -5,6 +5,8 @@ import type { RefObject } from "react";
 
 import { useEffect, useState } from "react";
 
+import { logger } from "@/lib/shared/utils/logger";
+
 // pdf.js OPS constants for text rendering operations (31–49)
 const TEXT_OPS_MIN = 31;
 const TEXT_OPS_MAX = 49;
@@ -80,6 +82,12 @@ export function usePageRenderer({
         await renderTask.promise;
 
         if (!cancelled) {
+          logger.info("[PDFedits] render: page", {
+            page: page.pageNumber,
+            cssWidth,
+            cssHeight,
+            suppressText,
+          });
           setRenderedSize((prev) => {
             if (prev && prev.width === cssWidth && prev.height === cssHeight) {
               return prev;
@@ -88,8 +96,16 @@ export function usePageRenderer({
             return { height: cssHeight, width: cssWidth };
           });
         }
-      } catch {
+      } catch (err) {
         // render was cancelled — expected on re-renders
+        const name = (err as { name?: string })?.name;
+
+        if (name !== "RenderingCancelledException") {
+          logger.warn("[PDFedits] render: failed", {
+            page: page.pageNumber,
+            err,
+          });
+        }
       }
     };
 

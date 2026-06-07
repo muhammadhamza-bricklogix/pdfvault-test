@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 
 export function usePdfLoader() {
   const file = usePdfEditorStore((s) => s.file);
@@ -27,6 +28,12 @@ export function usePdfLoader() {
       setIsLoading(true);
       setError(null);
 
+      logger.info("[PDFedits] load: start", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+
       try {
         // Dynamic import keeps pdfjs-dist out of the SSR bundle entirely
         const pdfjs = await import("pdfjs-dist");
@@ -49,8 +56,11 @@ export function usePdfLoader() {
           return;
         }
 
+        logger.info("[PDFedits] load: ok", { pages: doc.numPages });
         setPdfDocument(doc, doc.numPages);
       } catch (err) {
+        logger.error("[PDFedits] load: failed", err);
+
         if (!cancelled) {
           // pdf.js throws PasswordException with `.name === "PasswordException"`
           // when the PDF is encrypted. Show a friendly message instead of the

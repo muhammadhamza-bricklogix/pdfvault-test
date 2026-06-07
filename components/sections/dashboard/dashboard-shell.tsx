@@ -2,9 +2,9 @@
 
 import type { ReactNode } from "react";
 
-import { Menu01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Drawer } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
@@ -42,6 +42,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
     setMobileOpen(false);
   }, [pathname, setMobileOpen]);
 
+  // Lock background scroll when the mobile drawer is open.
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    const prev = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isMobileOpen]);
+
   const pageTitle =
     PAGE_TITLES.find((entry) => entry.match(pathname ?? ""))?.title ??
     "Dashboard";
@@ -57,19 +69,38 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <SidebarBody collapsed={isCollapsed} />
       </aside>
 
-      {/* Mobile drawer */}
-      <Drawer isOpen={isMobileOpen} onOpenChange={setMobileOpen}>
-        <Drawer.Backdrop>
-          <Drawer.Content placement="left">
-            <Drawer.Dialog className="!w-72">
+      {/* Mobile drawer — fixed overlay with backdrop. Custom rather than
+          HeroUI's <Drawer> because the latter occasionally renders inline on
+          iOS Safari, pushing page content instead of overlaying it. */}
+      {isMobileOpen ? (
+        <div aria-modal className="fixed inset-0 z-50 lg:hidden" role="dialog">
+          <button
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            type="button"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-[var(--color-background)] shadow-xl">
+            <div className="flex items-center justify-end px-2 pt-2">
+              <Button
+                isIconOnly
+                aria-label="Close navigation"
+                size="sm"
+                variant="ghost"
+                onPress={() => setMobileOpen(false)}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={18} />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
               <SidebarBody
                 collapsed={false}
                 onNavigate={() => setMobileOpen(false)}
               />
-            </Drawer.Dialog>
-          </Drawer.Content>
-        </Drawer.Backdrop>
-      </Drawer>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -87,7 +118,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <h1 className="truncate text-base font-semibold">{pageTitle}</h1>
         </div>
 
-        <main className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
+        <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
           {children}
         </main>
       </div>
