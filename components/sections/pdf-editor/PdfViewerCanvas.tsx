@@ -118,10 +118,15 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       backgroundImageConfig.customPageRange,
     );
 
+  // On mobile we render pdf.js text natively (suppressText=false) and skip
+  // the Fabric IText overlay. This is the only configuration that reliably
+  // shows text on iOS Safari — the Fabric overlay was leaving the layer blank
+  // on real devices. Trade-off: mobile is view-only for the text tool;
+  // everything else (draw/highlight/shapes/signatures/etc.) still works.
   const { renderedSize } = usePageRenderer({
     canvasRef,
     page,
-    suppressText: true,
+    suppressText: !isMobile,
     zoom,
   });
 
@@ -144,7 +149,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
-  useEditTextMode({ fabricCanvas, page });
+  // Skip the IText overlay on mobile — pdf.js painted the text directly so a
+  // second copy from Fabric would double-print and hijack pointer events.
+  useEditTextMode({ fabricCanvas: isMobile ? null : fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });
