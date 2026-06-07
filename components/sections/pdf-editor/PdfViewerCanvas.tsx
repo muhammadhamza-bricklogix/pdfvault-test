@@ -16,6 +16,7 @@ import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
 import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
+import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -47,7 +48,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewerScrollRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
+  const isMobile = useIsMobile();
+  const file = usePdfEditorStore((s) => s.file);
+  const fittedFileRef = useRef<File | null>(null);
 
   useEffect(() => {
     if (!pdfDocument) return;
@@ -68,6 +73,40 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       cancelled = true;
     };
   }, [sourcePage, pdfDocument]);
+
+  // Fit-to-width on mobile when a new file is opened. PDF pages (e.g.
+  // 612pt-wide US Letter) overflow narrow viewports at zoom=1.0, leaving the
+  // user staring at white margins until they pinch-zoom out. Mobile Safari
+  // also misrenders the Fabric IText overlay at the very small zoom values
+  // that aggressive pinching produces, so the page appears blank. Picking a
+  // fit-width zoom on first load keeps the experience close to desktop.
+  useEffect(() => {
+    if (!isMobile) {
+      fittedFileRef.current = null;
+
+      return;
+    }
+
+    if (!page || !file || !viewerScrollRef.current) return;
+    if (fittedFileRef.current === file) return;
+
+    // Match the `p-6` (24px) horizontal padding on the scroll container.
+    const HORIZONTAL_PADDING = 48;
+    const available = viewerScrollRef.current.clientWidth - HORIZONTAL_PADDING;
+
+    if (available <= 0) return;
+
+    const baseViewport = page.getViewport({ scale: 1 });
+    // 0.95 leaves a small visual breathing margin so the page doesn't butt
+    // against the scroll-area edge.
+    const fitZoom = (available / baseViewport.width) * 0.95;
+    const MIN_ZOOM = 0.5;
+    const MAX_ZOOM = 2;
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitZoom));
+
+    usePdfEditorStore.getState().setZoom(clamped);
+    fittedFileRef.current = file;
+  }, [isMobile, page, file]);
 
   const bgShouldShow =
     backgroundImageConfig.enabled &&
@@ -250,6 +289,13 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     const MIN_ZOOM = 0.25;
     const MAX_ZOOM = 4;
     const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+    // Pinch-zoom (mobile) is clamped tighter: below ~0.5 on iOS Safari the
+    // Fabric IText overlay stops rendering and the page goes blank, so we
+    // keep the mobile floor at the toolbar's preset minimum.
+    const PINCH_MIN_ZOOM = 0.5;
+    const PINCH_MAX_ZOOM = 2;
+    const clampPinch = (z: number) =>
+      Math.min(PINCH_MAX_ZOOM, Math.max(PINCH_MIN_ZOOM, z));
 
     // Latest zoom is read off the store at gesture-start time so we don't
     // close over a stale React-snapshot value.
@@ -281,7 +327,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const d = dist(e.touches[0], e.touches[1]);
       const ratio = d / pinchStartDist;
 
-      usePdfEditorStore.getState().setZoom(clamp(pinchStartZoom * ratio));
+      usePdfEditorStore.getState().setZoom(clampPinch(pinchStartZoom * ratio));
     };
 
     const onTouchEnd = (e: TouchEvent) => {
@@ -304,7 +350,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, []);
 
   return (
-    <div className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div
+      ref={viewerScrollRef}
+      className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       <div className="shadow-lg">
         <div ref={containerRef} className="relative bg-white">
           {bgShouldShow && backgroundImageConfig.imageData && (

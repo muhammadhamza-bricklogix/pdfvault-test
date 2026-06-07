@@ -1,0 +1,105 @@
+- generic [active]:
+  - generic [ref=e2]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - button "Editor menu" [ref=e17] [cursor=pointer]:
+          - img
+        - separator [ref=e18]
+        - button "Browse all tools" [ref=e19] [cursor=pointer]:
+          - img
+          - generic [ref=e20]: Tools
+      - generic [ref=e21]:
+        - generic [ref=e22]: sample.pdf
+        - separator [ref=e23]
+        - generic [ref=e24]:
+          - button "‹" [disabled]
+          - generic [ref=e25]: Page 1 of 3
+          - button "›" [ref=e26] [cursor=pointer]
+      - generic [ref=e27]:
+        - button "−" [ref=e28] [cursor=pointer]
+        - generic [ref=e29]: 100%
+        - button "+" [ref=e30] [cursor=pointer]
+        - separator [ref=e31]
+        - group [ref=e32]:
+          - button "Save" [disabled]:
+            - img
+            - generic: Save
+          - button "Export options" [ref=e33] [cursor=pointer]:
+            - img
+        - separator [ref=e34]
+        - button "Switch to dark mode" [ref=e35] [cursor=pointer]:
+          - img
+    - generic [ref=e36]:
+      - toolbar "History actions" [ref=e37]:
+        - group [ref=e38]:
+          - button "Undo" [ref=e39] [cursor=pointer]:
+            - img
+            - generic [ref=e40]: Undo
+          - button "Redo" [disabled]:
+            - img
+            - generic: Redo
+      - separator [ref=e41]
+      - toolbar "Drawing tools" [ref=e42]:
+        - radiogroup [ref=e43]:
+          - radio "Select" [checked] [ref=e44] [cursor=pointer]:
+            - img
+            - generic [ref=e45]: Select
+          - radio "Text" [ref=e46] [cursor=pointer]:
+            - img
+            - generic [ref=e47]: Text
+          - radio "Draw" [ref=e48] [cursor=pointer]:
+            - img
+            - generic [ref=e49]: Draw
+          - radio "Highlight" [ref=e50] [cursor=pointer]:
+            - img
+            - generic [ref=e51]: Highlight
+          - radio "Shapes" [ref=e52] [cursor=pointer]:
+            - img
+            - generic [ref=e53]: Shapes
+          - radio "Eraser" [ref=e54] [cursor=pointer]:
+            - img
+            - generic [ref=e55]: Eraser
+          - radio "Whiteout" [ref=e56] [cursor=pointer]:
+            - img
+            - generic [ref=e57]: Whiteout
+          - radio "Redact" [ref=e58] [cursor=pointer]:
+            - img
+            - generic [ref=e59]: Redact
+          - radio "Signature" [ref=e60] [cursor=pointer]:
+            - img
+            - generic [ref=e61]: Signature
+          - radio "Image" [ref=e62] [cursor=pointer]:
+            - img
+            - generic [ref=e63]: Image
+          - radio "Watermark" [ref=e64] [cursor=pointer]:
+            - img
+            - generic [ref=e65]: Watermark
+          - radio "Background" [ref=e66] [cursor=pointer]:
+            - img
+            - generic [ref=e67]: Background
+      - separator [ref=e68]
+      - button "Manage Pages" [ref=e69] [cursor=pointer]:
+        - img
+        - generic [ref=e70]: Manage Pages
+    - generic [ref=e71]:
+      - listbox "Page thumbnails" [ref=e72]:
+        - generic [ref=e73]:
+          - option "Page 1" [selected] [ref=e75] [cursor=pointer]:
+            - button "Drag to reorder page 1" [ref=e76]: ⋮⋮
+            - generic [ref=e79]: "1"
+          - option "Page 2" [ref=e81] [cursor=pointer]:
+            - button "Drag to reorder page 2" [ref=e82]: ⋮⋮
+            - generic [ref=e85]: "2"
+          - option "Page 3" [ref=e87] [cursor=pointer]:
+            - button "Drag to reorder page 3" [ref=e88]: ⋮⋮
+            - generic [ref=e91]: "3"
+        - status [ref=e92]
+      - generic [ref=e95]:
+        - img "PDF page 1 of 3" [ref=e96]
+        - application "PDF editing canvas, page 1 of 3" [ref=e98]
+      - button "Performance panel" [ref=e102] [cursor=pointer]:
+        - button "Performance panel" [ref=e103]:
+          - img
+  - button "Open Next.js Dev Tools" [ref=e109] [cursor=pointer]:
+    - img [ref=e110]
+  - alert [ref=e113]
