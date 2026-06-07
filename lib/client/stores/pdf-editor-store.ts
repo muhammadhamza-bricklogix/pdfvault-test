@@ -11,6 +11,7 @@ export type ActiveTool =
   | "eraser"
   | "highlight"
   | "image"
+  | "redact"
   | "select"
   | "shape"
   | "signature"
@@ -116,6 +117,9 @@ type PdfEditorStore = {
    */
   lastBakedWatermarkSignature: string | null;
   lastBakedBackgroundImageSignature: string | null;
+  isCompressModalOpen: boolean;
+  isFindReplaceOpen: boolean;
+  isPasswordModalOpen: boolean;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
   isManagePagesOpen: boolean;
@@ -159,6 +163,9 @@ type PdfEditorStore = {
   clearPendingCloudSaveAfterReload: () => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
+  setIsCompressModalOpen: (value: boolean) => void;
+  setIsFindReplaceOpen: (value: boolean) => void;
+  setIsPasswordModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -193,6 +200,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   createPdfModalKey: 0,
   lastBakedWatermarkSignature: null,
   lastBakedBackgroundImageSignature: null,
+  isCompressModalOpen: false,
+  isFindReplaceOpen: false,
+  isPasswordModalOpen: false,
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
   isManagePagesOpen: false,
@@ -240,6 +250,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       historyIndexByPage: new Map(),
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
+      isCompressModalOpen: false,
+      isFindReplaceOpen: false,
+      isPasswordModalOpen: false,
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
       isManagePagesOpen: false,
@@ -419,6 +432,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     }),
 
   setFile: (file) => set({ file }),
+  setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
+  setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
+  setIsPasswordModalOpen: (value) => set({ isPasswordModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value

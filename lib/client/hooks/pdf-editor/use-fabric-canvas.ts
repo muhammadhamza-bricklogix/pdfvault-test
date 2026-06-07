@@ -109,6 +109,11 @@ export function useFabricCanvas({
         wrapper.style.position = "absolute";
         wrapper.style.top = "0";
         wrapper.style.left = "0";
+        // iOS Safari's outer scroll container otherwise wins `touchstart` on
+        // every drag — Fabric's Draw/Highlight/Eraser strokes drop frames or
+        // get cancelled entirely. `touch-action: none` tells the browser
+        // "this region owns its touch events," handing them all to Fabric.
+        wrapper.style.touchAction = "none";
       }
 
       fabricRef.current = fc;

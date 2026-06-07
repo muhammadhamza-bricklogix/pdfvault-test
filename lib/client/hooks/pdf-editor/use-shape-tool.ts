@@ -45,7 +45,12 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
 
   useEffect(() => {
     if (!fabricCanvas) return;
-    if (activeTool !== "shape" && activeTool !== "whiteout") return;
+    if (
+      activeTool !== "shape" &&
+      activeTool !== "whiteout" &&
+      activeTool !== "redact"
+    )
+      return;
 
     let cancelled = false;
 
@@ -77,7 +82,11 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       setIsCreatingShape(true);
 
       const shapeType =
-        activeTool === "whiteout" ? "whiteout" : activeShapeType;
+        activeTool === "whiteout"
+          ? "whiteout"
+          : activeTool === "redact"
+            ? "redact"
+            : activeShapeType;
 
       let shape: FabricObject;
 
@@ -131,6 +140,24 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
           });
           break;
 
+        case "redact":
+          // Redaction: solid black rectangle on top of the rasterized page.
+          // The merge pipeline already renders the source page WITHOUT text
+          // (suppressText: true in renderPageToPng), so the glyphs underneath
+          // are gone in the saved bytes — this isn't a visual cover-up, it's
+          // genuine permanent removal.
+          shape = new FRect({
+            editorType: "redaction",
+            fill: "#000000",
+            height: 0,
+            left: pointer.x,
+            stroke: "transparent",
+            strokeWidth: 0,
+            top: pointer.y,
+            width: 0,
+          });
+          break;
+
         default:
           return;
       }
@@ -151,11 +178,16 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       const dy = pointer.y - sy;
 
       const shapeType =
-        activeTool === "whiteout" ? "whiteout" : activeShapeType;
+        activeTool === "whiteout"
+          ? "whiteout"
+          : activeTool === "redact"
+            ? "redact"
+            : activeShapeType;
 
       switch (shapeType) {
         case "rect":
         case "whiteout":
+        case "redact":
           tempShapeRef.current.set({
             height: Math.abs(dy),
             left: Math.min(sx, pointer.x),
@@ -204,7 +236,11 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       }
 
       const shapeType =
-        activeTool === "whiteout" ? "whiteout" : activeShapeType;
+        activeTool === "whiteout"
+          ? "whiteout"
+          : activeTool === "redact"
+            ? "redact"
+            : activeShapeType;
 
       let finalShape: FabricObject;
 

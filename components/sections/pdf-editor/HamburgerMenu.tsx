@@ -4,9 +4,14 @@ import type { Key } from "@heroui/react";
 
 import {
   Add01Icon,
+  FileExportIcon,
+  FileMinusIcon,
   FolderOpenIcon,
+  LayersIcon,
+  LockedIcon,
   Menu01Icon,
   NoteIcon,
+  Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -17,21 +22,75 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import {
+  useExtractImagesMutation,
+  useFlattenFileMutation,
+} from "@/lib/client/query/mutations";
 import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
+  const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setIsCompressModalOpen = usePdfEditorStore(
+    (s) => s.setIsCompressModalOpen,
+  );
+  const setIsPasswordModalOpen = usePdfEditorStore(
+    (s) => s.setIsPasswordModalOpen,
+  );
+  const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { start } = useTrackedUpload();
+  const flatten = useFlattenFileMutation();
+  const extractImages = useExtractImagesMutation();
+
+  const requireFile = (action: string): File | null => {
+    if (!file) {
+      toast.info({
+        title: "No PDF open",
+        description: `Open or create a PDF before ${action}.`,
+      });
+
+      return null;
+    }
+
+    return file;
+  };
+
+  const runFlatten = async () => {
+    const f = requireFile("flattening");
+
+    if (!f) return;
+    try {
+      const result = await flatten.mutateAsync({ file: f });
+
+      triggerBlobDownload(result.blob, result.fileName);
+    } catch {
+      // toast already shown by the mutation
+    }
+  };
+
+  const runExtractImages = async () => {
+    const f = requireFile("extracting images");
+
+    if (!f) return;
+    try {
+      const result = await extractImages.mutateAsync({ file: f });
+
+      triggerBlobDownload(result.blob, result.fileName);
+    } catch {
+      // toast already shown by the mutation
+    }
+  };
 
   const requireSignIn = () => {
     toast.info({
@@ -59,6 +118,24 @@ export function HamburgerMenu() {
             detail: { url: ROUTES.APP.DASHBOARD },
           }),
         );
+        break;
+      case "compress":
+        if (!requireFile("compressing")) return;
+        setIsCompressModalOpen(true);
+        break;
+      case "password":
+        if (!requireFile("setting a password")) return;
+        setIsPasswordModalOpen(true);
+        break;
+      case "flatten":
+        void runFlatten();
+        break;
+      case "extract-images":
+        void runExtractImages();
+        break;
+      case "find-replace":
+        if (!requireFile("searching")) return;
+        setIsFindReplaceOpen(true);
         break;
     }
   };
@@ -135,6 +212,26 @@ export function HamburgerMenu() {
             >
               <HugeiconsIcon icon={NoteIcon} size={14} />
               <Label>My PDFs</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="compress" textValue="Compress PDF">
+              <HugeiconsIcon icon={FileMinusIcon} size={14} />
+              <Label>Compress PDF</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="password" textValue="Password protect">
+              <HugeiconsIcon icon={LockedIcon} size={14} />
+              <Label>Password protect</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="flatten" textValue="Flatten form fields">
+              <HugeiconsIcon icon={LayersIcon} size={14} />
+              <Label>Flatten form fields</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="extract-images" textValue="Extract images">
+              <HugeiconsIcon icon={FileExportIcon} size={14} />
+              <Label>Extract images (ZIP)</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="find-replace" textValue="Find and replace">
+              <HugeiconsIcon icon={Search01Icon} size={14} />
+              <Label>Find &amp; Replace (⌘F)</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>
