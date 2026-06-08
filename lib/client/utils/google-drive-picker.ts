@@ -28,7 +28,12 @@ function loadScript(src: string): Promise<void> {
     script.onload = () => {
       resolve();
     };
-    script.onerror = () => {
+    script.onerror = (err) => {
+      // Surface load failures in the console — CSP blocks and offline
+      // states otherwise just produce a silent reject deep inside the
+      // picker promise chain.
+      // eslint-disable-next-line no-console
+      console.error("[google-drive-picker] script load failed:", src, err);
       reject(new Error(`Failed to load script: ${src}`));
     };
     document.head.appendChild(script);
@@ -90,7 +95,7 @@ export async function pickGoogleDrivePdfFiles(
   }
 
   const pickerNs = google.picker as {
-    Action: { CANCEL: string; PICKED: string };
+    Action: { CANCEL: string; LOADED: string; PICKED: string };
     DocsView: new () => {
       setIncludeFolders: (v: boolean) => unknown;
       setMimeTypes: (mime: string) => unknown;
@@ -119,47 +124,108 @@ export async function pickGoogleDrivePdfFiles(
 
   const PickerBuilderCtor = PickerBuilder as new () => PickerBuilderInstance;
 
-  return new Promise((resolve) => {
+  return new Promise<PickedGoogleDrivePdf[]>((resolve, reject) => {
+    // One-shot settle guard — Google Picker can fire multiple callbacks
+    // per lifecycle (e.g. "loaded" then "picked", or duplicate dispatches
+    // from browser quirks). We only want the first conclusive event
+    // (picked / cancel / error) to settle the promise.
+    let settled = false;
+    const settleResolve = (value: PickedGoogleDrivePdf[]) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const settleReject = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
     const view = new DocsViewCtor()
       .setIncludeFolders(true)
       .setMimeTypes("application/pdf");
 
-    new PickerBuilderCtor()
-      .addView(view)
-      .setOAuthToken(accessToken)
-      .setDeveloperKey(developerKey)
-      .setCallback((data: Record<string, unknown>) => {
-        const action = data.action as string | undefined;
+    try {
+      new PickerBuilderCtor()
+        .addView(view)
+        .setOAuthToken(accessToken)
+        .setDeveloperKey(developerKey)
+        .setCallback((data: Record<string, unknown>) => {
+          const action = data.action as string | undefined;
 
-        if (action === Action.PICKED) {
-          const raw = (data.docs ?? []) as Array<{
-            id?: string;
-            mimeType?: string;
-            name?: string;
-            sizeBytes?: number | string;
-          }>;
-          const mapped: PickedGoogleDrivePdf[] = raw
-            .filter((d) => d.id && d.name)
-            .map((d) => ({
-              accessToken,
-              id: d.id as string,
-              mimeType: d.mimeType,
-              name: d.name as string,
-              provider: "gdrive" as const,
-              size:
-                d.sizeBytes === undefined || d.sizeBytes === null
-                  ? undefined
-                  : Number(d.sizeBytes),
-            }));
+          // Picker UI finished mounting — fired BEFORE the user picks
+          // anything. Not an error, not a settle event. Log for dev
+          // visibility only.
+          if (action === Action.LOADED || action === "loaded") {
+            if (process.env.NODE_ENV !== "production") {
+              // eslint-disable-next-line no-console
+              console.info("[google-drive-picker] picker loaded");
+            }
 
-          resolve(mapped);
+            return;
+          }
 
-          return;
-        }
+          if (action === Action.PICKED || action === "picked") {
+            const raw = (data.docs ?? []) as Array<{
+              id?: string;
+              mimeType?: string;
+              name?: string;
+              sizeBytes?: number | string;
+            }>;
+            const mapped: PickedGoogleDrivePdf[] = raw
+              .filter((d) => d.id && d.name)
+              .map((d) => ({
+                accessToken,
+                id: d.id as string,
+                mimeType: d.mimeType,
+                name: d.name as string,
+                provider: "gdrive" as const,
+                size:
+                  d.sizeBytes === undefined || d.sizeBytes === null
+                    ? undefined
+                    : Number(d.sizeBytes),
+              }));
 
-        resolve([]);
-      })
-      .build()
-      .setVisible(true);
+            settleResolve(mapped);
+
+            return;
+          }
+
+          // User-initiated dismiss — empty selection is the correct answer.
+          if (action === Action.CANCEL || action === "cancel") {
+            settleResolve([]);
+
+            return;
+          }
+
+          // Anything else — "error" or any future lifecycle action we
+          // don't know about. The Picker doesn't always populate
+          // `data.error`; include the raw action name so the surfaced
+          // message is useful.
+          const dataError =
+            typeof data.error === "string" && data.error.length > 0
+              ? data.error
+              : null;
+          const message =
+            `Google Drive picker fired unexpected action ` +
+            `"${action ?? "(unknown)"}"` +
+            (dataError ? `: ${dataError}` : "");
+
+          // eslint-disable-next-line no-console
+          console.error("[google-drive-picker] picker callback error", {
+            action,
+            data,
+          });
+          settleReject(new Error(message));
+        })
+        .build()
+        .setVisible(true);
+    } catch (err) {
+      // Synchronous Picker construction error — origin / API key / SDK
+      // load problems can throw here.
+      // eslint-disable-next-line no-console
+      console.error("[google-drive-picker] PickerBuilder threw", err);
+      settleReject(err instanceof Error ? err : new Error(String(err)));
+    }
   });
 }

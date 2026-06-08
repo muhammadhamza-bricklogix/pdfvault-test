@@ -1,4 +1,4 @@
-import type { Color, PDFPage } from "pdf-lib";
+import type { Color, PDFFont, PDFPage } from "pdf-lib";
 import type { FontCache } from "./font-mapping";
 
 import {
@@ -15,6 +15,41 @@ import {
   setTextMatrix,
   showText,
 } from "pdf-lib";
+
+/**
+ * pdf-lib's StandardFonts use WinAnsi encoding and throw an exception
+ * the moment they encounter a character outside that range — e.g. `↔`
+ * (U+2194), `→`, en-dashes, emoji. The throw propagates all the way up
+ * through `mergeFabricEditsIntoPdf` → `persistEditorDocument` and aborts
+ * the entire save, including completely unrelated pages.
+ *
+ * Replace any character the resolved font can't encode with `?`. Losing
+ * a single glyph is a smaller harm than losing the whole save, and the
+ * fallback only kicks in when the StandardFont path was already taken
+ * (real PDF-extracted fonts via fontkit handle Unicode natively, so
+ * this is a no-op for them).
+ */
+function sanitizeTextForFont(font: PDFFont, text: string): string {
+  if (!text) return text;
+  try {
+    font.encodeText(text);
+
+    return text;
+  } catch {
+    let out = "";
+
+    for (const ch of text) {
+      try {
+        font.encodeText(ch);
+        out += ch;
+      } catch {
+        out += "?";
+      }
+    }
+
+    return out;
+  }
+}
 
 import { hexToPdfColor } from "./color-utils";
 import {
@@ -66,9 +101,9 @@ export async function drawIText(
   ctx: CoordinateContext,
   fontCache: FontCache,
 ): Promise<void> {
-  const text = obj.text as string | undefined;
+  const rawText = obj.text as string | undefined;
 
-  if (!text) return;
+  if (!rawText) return;
 
   const fontFamily = (obj.fontFamily as string) || "Helvetica";
   const fontWeight = (obj.fontWeight as string) || "normal";
@@ -87,6 +122,10 @@ export async function drawIText(
   const { left, top } = resolveTopLeft(obj);
 
   const font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+  // Pre-sanitize against the resolved font so every downstream
+  // `font.encodeText` / `font.widthOfTextAtSize` / `page.drawText` call
+  // sees only characters that font can represent.
+  const text = sanitizeTextForFont(font, rawText);
   const color = hexToPdfColor(obj.fill as string) ?? rgb(0, 0, 0);
 
   const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);

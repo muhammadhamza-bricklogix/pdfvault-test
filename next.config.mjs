@@ -12,6 +12,30 @@ const nextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  async headers() {
+    // The Google Drive / OneDrive picker opens an OAuth popup that
+    // navigates to a cross-origin auth page and back. Under the stricter
+    // `Cross-Origin-Opener-Policy: same-origin` (which Next.js / Vercel /
+    // hosting providers can ship as a default), the popup loses
+    // `window.opener` after the cross-origin navigation — our
+    // `/oauth-callback` page then can't `postMessage` the access token
+    // back to the parent and the picker hangs.
+    //
+    // `same-origin-allow-popups` keeps cross-origin isolation for the
+    // main app while letting popups we OPEN keep their opener pointer.
+    // It's the standard COOP value for OAuth flows.
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

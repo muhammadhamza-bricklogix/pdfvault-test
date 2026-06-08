@@ -121,6 +121,10 @@ Then manually verify in `bun run dev`:
 
 (Append new entries here as they're discovered + addressed. Newest first.)
 
+- **2026-06-09** — WinAnsi crash on save with Unicode IText glyphs: `drawIText` in `vector-drawers.ts` now pre-sanitises text against the resolved `PDFFont` (`sanitizeTextForFont` helper). Characters the font can't encode (e.g. `↔` U+2194, en-dash, emoji when the resolved font is a StandardFont fallback) are replaced with `?` before any `widthOfTextAtSize` / `encodeText` / `drawText` call. Custom embedded fonts via fontkit are still Unicode-complete; the sanitiser is a no-op for them. Prevents the whole save from aborting on a single bad glyph.
+
+- **2026-06-09** — Mobile text rendering: dropped the legacy "let pdf.js paint text + skip the Fabric overlay on mobile" branch in `PdfViewerCanvas.tsx`. The branch existed to work around an old iOS Safari issue where the Fabric layer rendered blank — post-2026-05 fixes (font-readiness await, pinch-zoom floor at 0.5, retina-scaling on the wrapper) resolved it. Keeping both layers on iOS was producing visible glyph doubling at DPR=3. Mobile now uses the same `suppressText: true` + Fabric IText pipeline as desktop, so the **text tool is editable on mobile** too. If iOS Safari ever regresses on the overlay, re-introduce the mobile fork here — not in `useEditTextMode`.
+
 - **2026-05-22 — Second-pass audit (mobile / a11y / security / concurrency)** — findings recorded, NOT yet actioned (loop cancelled before fix pass):
   - **CRITICAL**: Fabric wrapper `<div data-fabric="wrapper">` has no `touch-action: none` set in `use-fabric-canvas.ts:104-110`. The outer scroll container competes with Fabric for touch events on iOS Safari → draw/highlight/eraser are unreliable on mobile. Fix: add `wrapper.style.touchAction = "none"`.
   - **CRITICAL**: `EditorInfoBar` selects entire `historyByPage` / `historyIndexByPage` Maps (`EditorTopBar.tsx:52-53`). Every Fabric stroke re-creates the Map → component re-renders on every brush move on every page. Fix: derive `canUndo` / `canRedo` as booleans inside dedicated selectors.

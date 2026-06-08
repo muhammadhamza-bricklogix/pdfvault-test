@@ -2,7 +2,8 @@
 
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
-  ArrowUp01Icon,
+  HelpCircleIcon,
+  LegalDocumentIcon,
   Logout03Icon,
   PaintBucketIcon,
   Setting07Icon,
@@ -34,22 +35,34 @@ export function IdentityPopover({
   const fullName = user?.fullName ?? "User";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
 
+  const avatarSize = collapsed ? "size-8" : "size-9";
+  const avatarPx = collapsed ? 32 : 36;
   const avatar = user?.imageUrl ? (
     <img
       alt={fullName}
-      className="size-9 shrink-0 rounded-full object-cover"
+      className={`${avatarSize} shrink-0 rounded-full object-cover`}
       src={user.imageUrl}
     />
   ) : (
-    <HugeiconsIcon icon={UserCircleIcon} size={36} />
+    <HugeiconsIcon icon={UserCircleIcon} size={avatarPx} />
   );
 
   const handleAction = (key: React.Key) => {
-    if (key === "settings") {
+    const k = String(key);
+
+    if (k === "settings") {
       setIsOpen(false);
       router.push(ROUTES.APP.SETTINGS);
       onNavigate?.();
-    } else if (key === "logout") {
+    } else if (k === "terms") {
+      setIsOpen(false);
+      router.push(ROUTES.LEGAL.TERMS);
+      onNavigate?.();
+    } else if (k === "help") {
+      setIsOpen(false);
+      router.push(ROUTES.LEGAL.CONTACT);
+      onNavigate?.();
+    } else if (k === "logout") {
       setIsOpen(false);
       // Fire-and-forget the backend audit BEFORE Clerk destroys the JWT —
       // afterwards our axios interceptor wouldn't have a token to attach
@@ -64,43 +77,45 @@ export function IdentityPopover({
     <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger
         aria-label="Account menu"
-        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
-          collapsed ? "justify-center" : ""
-        }`}
+        className={
+          collapsed
+            ? // Sidebar variant — tight circular avatar button. `w-full` was
+              // breaking layouts when rendered inside flex/grid containers.
+              "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            : "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+        }
       >
         {avatar}
-        {!collapsed && (
-          <>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+      </Popover.Trigger>
+      <Popover.Content offset={8} placement="right">
+        <Popover.Dialog className="!min-w-[280px] !p-0">
+          {/* Profile details header — name + email, set apart from the
+              action list with bottom padding instead of a divider so the
+              popover reads as one calm group. */}
+          <div className="px-4 pb-3 pt-4">
+            <p className="text-sm font-semibold text-[var(--color-foreground)]">
+              Profile Details
+            </p>
+            {fullName !== "User" ? (
+              <p className="mt-0.5 truncate text-xs text-default-700">
                 {fullName}
               </p>
+            ) : null}
+            {email ? (
               <p className="truncate text-xs text-default-500">{email}</p>
-            </div>
-            <HugeiconsIcon
-              className="text-default-500"
-              icon={ArrowUp01Icon}
-              size={14}
-            />
-          </>
-        )}
-      </Popover.Trigger>
-      <Popover.Content offset={8} placement="bottom end">
-        <Popover.Dialog>
-          {email && (
-            <p className=" pb-2 pt-2 text-xs text-default-500">{email}</p>
-          )}
+            ) : null}
+          </div>
 
           <ListBox
             aria-label="Account actions"
-            className="p-0 pb-2"
+            className="px-2 pb-1"
             selectionMode="none"
             onAction={handleAction}
           >
             <ListBox.Item id="settings" textValue="Settings">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
-                  className="size-4 shrink-0 text-default-500"
+                  className="size-4 shrink-0 text-default-600"
                   icon={Setting07Icon}
                 />
               </div>
@@ -113,7 +128,7 @@ export function IdentityPopover({
             <ListBox.Item id="theme" textValue="Theme">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
-                  className="size-4 shrink-0 text-default-500"
+                  className="size-4 shrink-0 text-default-600"
                   icon={PaintBucketIcon}
                 />
               </div>
@@ -122,11 +137,31 @@ export function IdentityPopover({
                 <ThemeSegmented size="sm" />
               </div>
             </ListBox.Item>
+
+            <ListBox.Item id="help" textValue="Help">
+              <div className="flex h-8 items-center justify-center">
+                <HugeiconsIcon
+                  className="size-4 shrink-0 text-default-600"
+                  icon={HelpCircleIcon}
+                />
+              </div>
+              <Label>Help</Label>
+            </ListBox.Item>
+
+            <ListBox.Item id="terms" textValue="Terms and Conditions">
+              <div className="flex h-8 items-center justify-center">
+                <HugeiconsIcon
+                  className="size-4 shrink-0 text-default-600"
+                  icon={LegalDocumentIcon}
+                />
+              </div>
+              <Label>Terms and Conditions</Label>
+            </ListBox.Item>
           </ListBox>
 
           <ListBox
             aria-label="Session"
-            className="border-t border-default-200 p-0 pt-2"
+            className="border-t border-default-200 px-2 pb-2 pt-1"
             selectionMode="none"
             onAction={handleAction}
           >
@@ -137,9 +172,7 @@ export function IdentityPopover({
                   icon={Logout03Icon}
                 />
               </div>
-              <div className="flex flex-col">
-                <Label>Log out</Label>
-              </div>
+              <Label>Log out</Label>
             </ListBox.Item>
           </ListBox>
         </Popover.Dialog>

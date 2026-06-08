@@ -118,15 +118,20 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       backgroundImageConfig.customPageRange,
     );
 
-  // On mobile we render pdf.js text natively (suppressText=false) and skip
-  // the Fabric IText overlay. This is the only configuration that reliably
-  // shows text on iOS Safari — the Fabric overlay was leaving the layer blank
-  // on real devices. Trade-off: mobile is view-only for the text tool;
-  // everything else (draw/highlight/shapes/signatures/etc.) still works.
+  // Suppress pdf.js's native text rendering on every device. Glyphs come
+  // from the Fabric IText overlay instead (see `useEditTextMode` below).
+  //
+  // Previously mobile let pdf.js paint text itself and skipped the Fabric
+  // overlay — that worked around an old iOS Safari bug where the overlay
+  // rendered blank. With the post-2026-05 fixes (font-readiness await,
+  // pinch-zoom floor at 0.5, retina scaling on the wrapper) the overlay
+  // is reliable on real iOS devices. Keeping both layers on mobile was
+  // causing visible glyph doubling — pdf.js's text raster + the Fabric
+  // overlay drawing the same characters with sub-pixel offset under DPR=3.
   const { renderedSize } = usePageRenderer({
     canvasRef,
     page,
-    suppressText: !isMobile,
+    suppressText: true,
     zoom,
   });
 
@@ -149,9 +154,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
-  // Skip the IText overlay on mobile — pdf.js painted the text directly so a
-  // second copy from Fabric would double-print and hijack pointer events.
-  useEditTextMode({ fabricCanvas: isMobile ? null : fabricCanvas, page });
+  // Always run the IText overlay extraction — it's the editable text layer
+  // on every device now (mobile included). Pairs with `suppressText: true`
+  // above so pdf.js doesn't paint the glyphs underneath the overlay.
+  useEditTextMode({ fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });

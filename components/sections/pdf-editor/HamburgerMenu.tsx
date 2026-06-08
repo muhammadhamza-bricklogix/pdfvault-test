@@ -22,11 +22,12 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import {
   useExtractImagesMutation,
   useFlattenFileMutation,
 } from "@/lib/client/query/mutations";
-import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
+import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
@@ -49,7 +50,7 @@ export function HamburgerMenu() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { start } = useTrackedUpload();
+  const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
   const extractImages = useExtractImagesMutation();
 
@@ -171,7 +172,7 @@ export function HamburgerMenu() {
 
     if (isSignedIn) {
       // Cloud upload + open the new doc in this editor when ready.
-      start({
+      void start({
         file,
         onOpen: (id) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`),
       });
@@ -243,6 +244,11 @@ export function HamburgerMenu() {
         className="hidden"
         type="file"
         onChange={handleFileChange}
+      />
+      <DuplicateUploadModal
+        filename={duplicate?.filename ?? null}
+        onIgnore={duplicate?.onIgnore ?? (() => undefined)}
+        onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
       />
     </>
   );
