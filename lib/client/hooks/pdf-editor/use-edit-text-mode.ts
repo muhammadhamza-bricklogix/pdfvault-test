@@ -124,10 +124,16 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         logger.warn("[PDFedits] text: no blocks (scanned PDF?)", {
           sourcePage,
         });
-        toast.info({
-          description: "This page may be scanned or contain only images.",
-          title: "No editable text found",
-        });
+        const isCreatedBlank =
+          (file as (File & { __createdBlank?: boolean }) | null)
+            ?.__createdBlank === true;
+
+        if (!isCreatedBlank) {
+          toast.info({
+            description: "This page may be scanned or contain only images.",
+            title: "No editable text found",
+          });
+        }
 
         return;
       }

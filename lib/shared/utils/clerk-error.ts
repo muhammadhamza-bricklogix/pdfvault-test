@@ -15,6 +15,30 @@ type ClerkApiError = {
   meta?: { paramName?: string };
 };
 
+type ClerkErrorEnvelope = {
+  errors?: ClerkApiError[] | null;
+};
+
+function unwrapClerkErrors(
+  error:
+    | ClerkApiError
+    | ClerkApiError[]
+    | ClerkErrorEnvelope
+    | null
+    | undefined,
+): ClerkApiError[] {
+  if (!error) return [];
+  if (Array.isArray(error)) return error;
+
+  const envelope = error as ClerkErrorEnvelope;
+
+  if (Array.isArray(envelope.errors) && envelope.errors.length > 0) {
+    return envelope.errors;
+  }
+
+  return [error as ClerkApiError];
+}
+
 export const getClerkErrorMessage = (error?: ClerkFieldErrorLike) =>
   error?.longMessage ?? error?.message ?? null;
 
@@ -44,18 +68,25 @@ type ParsedClerkError = {
 };
 
 export function parseClerkError(
-  error: ClerkApiError | ClerkApiError[] | null | undefined,
+  error:
+    | ClerkApiError
+    | ClerkApiError[]
+    | ClerkErrorEnvelope
+    | null
+    | undefined,
 ): ParsedClerkError {
   const result: ParsedClerkError = { fieldErrors: {}, serverError: null };
+  const errors = unwrapClerkErrors(error);
 
-  if (!error) {
+  if (errors.length === 0) {
     return result;
   }
 
-  const errors = Array.isArray(error) ? error : [error];
-
   for (const err of errors) {
     const message = err.longMessage ?? err.message;
+
+    if (!message) continue;
+
     const paramName = err.meta?.paramName;
     const fieldName = paramName ? CLERK_PARAM_TO_FIELD[paramName] : null;
 
@@ -65,6 +96,17 @@ export function parseClerkError(
       result.serverError = result.serverError
         ? `${result.serverError} ${message}`
         : message;
+    }
+  }
+
+  // Fallback: if we extracted any field errors but no global error, surface the
+  // first field error globally too — covers UIs that don't visually pair every
+  // field with its error (custom OTP fields, etc.).
+  if (!result.serverError) {
+    const firstFieldError = Object.values(result.fieldErrors)[0];
+
+    if (firstFieldError) {
+      result.serverError = firstFieldError;
     }
   }
 

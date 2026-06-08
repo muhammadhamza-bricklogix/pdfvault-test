@@ -52,7 +52,12 @@ export default function RootLayout({
       lang="en"
     >
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
-        <ClerkProvider>
+        <ClerkProvider
+          signInFallbackRedirectUrl="/dashboard"
+          signInUrl="/sign-in"
+          signUpFallbackRedirectUrl="/dashboard"
+          signUpUrl="/sign-up"
+        >
           <Providers
             themeProps={{
               attribute: "data-theme",

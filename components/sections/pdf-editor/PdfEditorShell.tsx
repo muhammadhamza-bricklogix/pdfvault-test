@@ -299,6 +299,7 @@ export function PdfEditorShell() {
       {content}
       <CreatePdfModal
         key={createPdfModalKey}
+        fabricCanvas={fabricCanvas}
         isOpen={isCreatePdfModalOpen}
         onClose={() => setIsCreatePdfModalOpen(false)}
       />

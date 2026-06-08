@@ -70,10 +70,17 @@ function ToolCardGrid({ cards }: { cards: readonly HomeToolCard[] }) {
       {cards.map((card) => (
         <Link
           key={card.title}
-          className="group block rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"
+          // Stable card height (`min-h-[7.5rem]`) reserves space for the
+          // two-line description that appears under the title. Without it,
+          // tool cards whose descriptions wrap differently than their
+          // siblings produced a noticeable jitter when the hover
+          // border/shadow transition kicked in — QA flagged this as
+          // "flicker on rollover". A fixed minimum locks the layout so the
+          // transition only animates color, never size.
+          className="group block min-h-[7.5rem] rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"
           href={card.href}
         >
-          <div className="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-6 sm:py-4">
+          <div className="flex h-full min-h-[inherit] items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-6 sm:py-4">
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border-2 border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[var(--color-background)] sm:size-14">
               <HugeiconsIcon
                 className="text-[var(--color-accent)]"

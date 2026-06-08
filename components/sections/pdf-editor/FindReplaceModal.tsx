@@ -137,9 +137,12 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
 
       return;
     }
-    // Move to the next match (or wrap). The matches list refreshes via the
-    // memo dependency on fabricJsonByPage, so activeIndex may now point at
-    // a different occurrence — clamp it.
+    // "Replace Next" semantics — after the swap, the refreshed matches
+    // list (memo deps on `fabricJsonByPage` identity) drops the replaced
+    // occurrence. Keep `activeIndex` at the same position, which now
+    // points at the original "next" match; clamp to the new last index so
+    // a replace on the final occurrence wraps to the new last one instead
+    // of overflowing.
     setActiveIndex((i) => Math.min(i, Math.max(0, matches.length - 2)));
   };
 
@@ -304,7 +307,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
               size="sm"
               onPress={handleReplaceOne}
             >
-              Replace
+              Replace Next
             </Button>
             <Button
               isDisabled={matches.length === 0}

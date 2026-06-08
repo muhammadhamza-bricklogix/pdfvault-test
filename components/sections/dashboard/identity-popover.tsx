@@ -85,7 +85,7 @@ export function IdentityPopover({
           </>
         )}
       </Popover.Trigger>
-      <Popover.Content offset={8} placement={"top"}>
+      <Popover.Content offset={8} placement="bottom end">
         <Popover.Dialog>
           {email && (
             <p className=" pb-2 pt-2 text-xs text-default-500">{email}</p>

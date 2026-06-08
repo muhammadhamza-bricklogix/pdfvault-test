@@ -31,22 +31,18 @@ type CloudOption = {
 };
 
 const OPTIONS: readonly CloudOption[] = [
-  // Google Drive upload temporarily hidden — re-enable by uncommenting this
-  // entry. The cloud-import code paths (provider handlers, cloud-auth, etc.)
-  // are intentionally left in place so flipping it back on doesn't require
-  // any other change.
-  // {
-  //   brandClassName: "",
-  //   Glyph: null,
-  //   id: "gdrive",
-  //   label: "Upload from Google Drive",
-  // },
-  // {
-  //   brandClassName: "text-[#0061FF]",
-  //   Glyph: DeviceIcon,
-  //   id: "device",
-  //   label: "Upload from Device",
-  // },
+  {
+    brandClassName: "",
+    Glyph: null,
+    id: "gdrive",
+    label: "Upload from Google Drive",
+  },
+  {
+    brandClassName: "text-[#0061FF]",
+    Glyph: DeviceIcon,
+    id: "device",
+    label: "Upload from Device",
+  },
 ];
 
 type HomeCloudUploadRowProps = {

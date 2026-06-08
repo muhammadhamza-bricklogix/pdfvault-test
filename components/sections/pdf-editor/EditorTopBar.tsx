@@ -101,154 +101,191 @@ export function EditorInfoBar() {
     );
   };
 
+  const pageNav = (
+    <div className="flex items-center gap-1">
+      <Button
+        aria-label="Previous page"
+        className="!min-w-9"
+        isDisabled={currentPage <= 1}
+        size="sm"
+        variant="ghost"
+        onPress={() => setCurrentPage(currentPage - 1)}
+      >
+        ‹
+      </Button>
+      <span className="min-w-12 text-center text-xs text-default-500 sm:min-w-16 lg:min-w-24">
+        <span className="hidden sm:inline">Page </span>
+        {currentPage}
+        <span className="hidden sm:inline"> of</span>
+        <span className="sm:hidden">/</span> {pageCount}
+      </span>
+      <Button
+        aria-label="Next page"
+        className="!min-w-9"
+        isDisabled={currentPage >= pageCount}
+        size="sm"
+        variant="ghost"
+        onPress={() => setCurrentPage(currentPage + 1)}
+      >
+        ›
+      </Button>
+    </div>
+  );
+
+  const zoomNav = (
+    <div className="flex items-center gap-1">
+      <Tooltip delay={300}>
+        <Button
+          aria-label="Zoom out"
+          className="!min-w-9"
+          isDisabled={zoom <= ZOOM_PRESETS[0]}
+          size="sm"
+          variant="ghost"
+          onPress={zoomOut}
+        >
+          −
+        </Button>
+        <Tooltip.Content>
+          <p>Zoom out</p>
+        </Tooltip.Content>
+      </Tooltip>
+      <span className="min-w-10 text-center text-[10px] tabular-nums text-default-500 sm:min-w-12 sm:text-xs">
+        {Math.round(zoom * 100)}%
+      </span>
+      <Tooltip delay={300}>
+        <Button
+          aria-label="Zoom in"
+          className="!min-w-9"
+          isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+          size="sm"
+          variant="ghost"
+          onPress={zoomIn}
+        >
+          +
+        </Button>
+        <Tooltip.Content>
+          <p>Zoom in</p>
+        </Tooltip.Content>
+      </Tooltip>
+    </div>
+  );
+
   return (
     <>
       <ToolsModal
         isOpen={isToolsModalOpen}
         onClose={() => setIsToolsModalOpen(false)}
       />
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-2 lg:px-3">
-        {/* Left: menu + tools + undo/redo + mode toggle */}
-        <div className="flex items-center gap-1">
-          <HamburgerMenu />
-          <Tooltip delay={300}>
-            <Button
-              aria-label="Browse all tools"
-              size="sm"
-              variant="tertiary"
-              onPress={() => setIsToolsModalOpen(true)}
-            >
-              <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
-              <span className="hidden sm:inline">Tools</span>
-            </Button>
-            <Tooltip.Content>
-              <p>Browse PDF and image tools</p>
-            </Tooltip.Content>
-          </Tooltip>
-        </div>
-
-        {/* Center: filename + page navigation */}
-        <div className="flex min-w-0 items-center gap-2 lg:gap-3">
-          <Tooltip delay={300}>
-            <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] sm:inline lg:max-w-40">
-              {fileName}
-            </span>
-            <Tooltip.Content>
-              <p>{fileName}</p>
-            </Tooltip.Content>
-          </Tooltip>
-
-          <Separator
-            className="!h-4 hidden self-center sm:block"
-            orientation="vertical"
-          />
-
+      {/*
+        Mobile (<sm) gets a two-row layout: action bar on row 1, page + zoom
+        nav on row 2. The single-row variant crammed five button groups into
+        ~320px on narrow phones and QA reported the next-page `›` and zoom
+        `−` controls overlapping / clipping at the section boundary, making
+        them un-tappable. Splitting nav onto its own centered row gives both
+        groups full reach without sacrificing the desktop layout.
+      */}
+      <div className="flex flex-col gap-1 px-2 py-1 sm:h-10 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-0 lg:px-3">
+        {/* Action row: left actions + right save/theme. Doubles as the only
+            row on sm+ where the page nav sits between them. */}
+        <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
-            <Button
-              isDisabled={currentPage <= 1}
-              size="sm"
-              variant="ghost"
-              onPress={() => setCurrentPage(currentPage - 1)}
-            >
-              ‹
-            </Button>
-            <span className="min-w-16 text-center text-xs text-default-500 lg:min-w-24">
-              <span className="hidden sm:inline">Page </span>
-              {currentPage}
-              <span className="hidden sm:inline"> of</span>
-              <span className="sm:hidden">/</span> {pageCount}
-            </span>
-            <Button
-              isDisabled={currentPage >= pageCount}
-              size="sm"
-              variant="ghost"
-              onPress={() => setCurrentPage(currentPage + 1)}
-            >
-              ›
-            </Button>
+            <HamburgerMenu />
+            <Tooltip delay={300}>
+              <Button
+                aria-label="Browse all tools"
+                size="sm"
+                variant="tertiary"
+                onPress={() => setIsToolsModalOpen(true)}
+              >
+                <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
+                <span className="hidden sm:inline">Tools</span>
+              </Button>
+              <Tooltip.Content>
+                <p>Browse PDF and image tools</p>
+              </Tooltip.Content>
+            </Tooltip>
+          </div>
+
+          {/* Filename + page nav — sits in the middle on sm+, hidden on
+              mobile (the dedicated nav row below carries page navigation). */}
+          <div className="hidden min-w-0 items-center gap-2 sm:flex lg:gap-3">
+            <Tooltip delay={300}>
+              <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] sm:inline lg:max-w-40">
+                {fileName}
+              </span>
+              <Tooltip.Content>
+                <p>{fileName}</p>
+              </Tooltip.Content>
+            </Tooltip>
+
+            <Separator
+              className="!h-4 hidden self-center sm:block"
+              orientation="vertical"
+            />
+
+            {pageNav}
+          </div>
+
+          {/* Right: zoom (sm+ only) + save + theme. */}
+          <div className="flex items-center gap-1">
+            <div className="hidden sm:block">{zoomNav}</div>
+
+            <Separator
+              className="!h-4 hidden self-center sm:block"
+              orientation="vertical"
+            />
+            <ButtonGroup isDisabled={!file} size="sm" variant="primary">
+              <Tooltip delay={300}>
+                <Button
+                  isDisabled={!canSave}
+                  onPress={() =>
+                    window.dispatchEvent(new CustomEvent("editor:save"))
+                  }
+                >
+                  <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
+                  <span className="hidden sm:inline">Save</span>
+                </Button>
+                <Tooltip.Content>
+                  <p>{saveTooltip}</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <Dropdown>
+                <Button isIconOnly aria-label="Export options">
+                  <ButtonGroup.Separator />
+                  <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+                </Button>
+                <Dropdown.Popover className="min-w-[200px]">
+                  <Dropdown.Menu
+                    aria-label="Export format"
+                    onAction={handleExportAction}
+                  >
+                    {EXPORT_FORMATS.map((fmt) => (
+                      <Dropdown.Item
+                        key={fmt.id}
+                        id={fmt.id}
+                        textValue={`Export as ${fmt.label}`}
+                      >
+                        <Label>{fmt.label}</Label>
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
+            </ButtonGroup>
+
+            <Separator
+              className="!h-4 hidden self-center sm:block"
+              orientation="vertical"
+            />
+            <ThemeToggle size="sm" variant="tertiary" />
           </div>
         </div>
 
-        {/* Right: zoom controls */}
-        <div className="flex items-center gap-1">
-          <Tooltip delay={300}>
-            <Button
-              isDisabled={zoom <= ZOOM_PRESETS[0]}
-              size="sm"
-              variant="ghost"
-              onPress={zoomOut}
-            >
-              −
-            </Button>
-            <Tooltip.Content>
-              <p>Zoom out</p>
-            </Tooltip.Content>
-          </Tooltip>
-          <span className="min-w-10 text-center text-[10px] tabular-nums text-default-500 sm:min-w-12 sm:text-xs">
-            {Math.round(zoom * 100)}%
-          </span>
-          <Tooltip delay={300}>
-            <Button
-              isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
-              size="sm"
-              variant="ghost"
-              onPress={zoomIn}
-            >
-              +
-            </Button>
-            <Tooltip.Content>
-              <p>Zoom in</p>
-            </Tooltip.Content>
-          </Tooltip>
-
-          <Separator
-            className="!h-4 hidden self-center sm:block"
-            orientation="vertical"
-          />
-          <ButtonGroup isDisabled={!file} size="sm" variant="primary">
-            <Tooltip delay={300}>
-              <Button
-                isDisabled={!canSave}
-                onPress={() =>
-                  window.dispatchEvent(new CustomEvent("editor:save"))
-                }
-              >
-                <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
-                <span className="hidden sm:inline">Save</span>
-              </Button>
-              <Tooltip.Content>
-                <p>{saveTooltip}</p>
-              </Tooltip.Content>
-            </Tooltip>
-            <Dropdown>
-              <Button isIconOnly aria-label="Export options">
-                <ButtonGroup.Separator />
-                <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-              </Button>
-              <Dropdown.Popover className="min-w-[200px]">
-                <Dropdown.Menu
-                  aria-label="Export format"
-                  onAction={handleExportAction}
-                >
-                  {EXPORT_FORMATS.map((fmt) => (
-                    <Dropdown.Item
-                      key={fmt.id}
-                      id={fmt.id}
-                      textValue={`Export as ${fmt.label}`}
-                    >
-                      <Label>{fmt.label}</Label>
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
-          </ButtonGroup>
-
-          <Separator
-            className="!h-4 hidden self-center sm:block"
-            orientation="vertical"
-          />
-          <ThemeToggle size="sm" variant="tertiary" />
+        {/* Mobile-only navigation row: page + zoom side by side, centered. */}
+        <div className="flex items-center justify-center gap-3 sm:hidden">
+          {pageNav}
+          <Separator className="!h-4 self-center" orientation="vertical" />
+          {zoomNav}
         </div>
       </div>
     </>

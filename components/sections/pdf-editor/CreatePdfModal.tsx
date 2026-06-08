@@ -1,5 +1,7 @@
 "use client";
 
+import type { Canvas as FabricCanvas } from "fabric";
+
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
@@ -24,8 +26,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
+import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { toast } from "@/lib/shared/utils/toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -202,14 +206,16 @@ function PageColorSwatch({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type Props = {
+  fabricCanvas?: FabricCanvas | null;
   isOpen: boolean;
   onClose: () => void;
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CreatePdfModal({ isOpen, onClose }: Props) {
+export function CreatePdfModal({ fabricCanvas, isOpen, onClose }: Props) {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
+  const clearDocumentDirty = usePdfEditorStore((s) => s.clearDocumentDirty);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const setFileInStore = usePdfEditorStore((s) => s.setFile);
@@ -218,6 +224,10 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
 
   const [form, setForm] = useState<FormState>(() => buildDefault(++openCount));
   const [isGenerating, setIsGenerating] = useState(false);
+  const [unsavedPromptOpen, setUnsavedPromptOpen] = useState(false);
+  const [unsavedAction, setUnsavedAction] = useState<
+    null | "saving" | "discarding"
+  >(null);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -304,7 +314,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     patch(updates);
   };
 
-  const handleCreate = async () => {
+  const generateNewDocument = async () => {
     const trimmed = documentName.trim() || `Untitled-${openCount}`;
     const fileName = trimmed.endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
     const clampedPages = Math.min(Math.max(1, pageCount), PAGE_COUNT_MAX);
@@ -337,6 +347,11 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
         type: "application/pdf",
       });
 
+      // Mark this as a freshly created blank PDF so the text-edit hook can
+      // skip the "No editable text found" notice — a blank doc trivially has
+      // no text, and the toast just reads as noise on the Create-New flow.
+      (file as File & { __createdBlank?: boolean }).__createdBlank = true;
+
       // Replace the editor immediately with the new blank doc, regardless of
       // sign-in state. Strip any `?id=…` first so the document loader doesn't
       // re-fetch the previously opened cloud doc once `clearFile` runs.
@@ -361,6 +376,63 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       }
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    // Gate creation on unsaved edits in the current document. Switching to a
+    // blank PDF mid-edit would silently drop those changes.
+    const hasUnsaved = usePdfEditorStore.getState().hasUnsavedChanges;
+
+    if (hasUnsaved) {
+      setUnsavedPromptOpen(true);
+
+      return;
+    }
+
+    await generateNewDocument();
+  };
+
+  const handleSaveAndCreate = async () => {
+    if (unsavedAction) return;
+    setUnsavedAction("saving");
+
+    const loadingKey = toast.loading({
+      title: "Saving…",
+      description: "Saving your current PDF before creating a new one.",
+    });
+
+    try {
+      const result = await persistEditorDocument({ fabricCanvas });
+
+      if (!result.ok && result.reason === "error") {
+        toast.error({
+          title: "Could not save",
+          description:
+            "We couldn't save your current PDF. Try again or choose Discard.",
+        });
+
+        return;
+      }
+
+      setUnsavedPromptOpen(false);
+      await generateNewDocument();
+    } finally {
+      toast.close(loadingKey);
+      setUnsavedAction(null);
+    }
+  };
+
+  const handleDiscardAndCreate = async () => {
+    if (unsavedAction) return;
+    setUnsavedAction("discarding");
+
+    try {
+      clearDocumentDirty();
+      setUnsavedPromptOpen(false);
+      await generateNewDocument();
+    } finally {
+      setUnsavedAction(null);
     }
   };
 
@@ -677,6 +749,50 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>
+
+      <Modal.Backdrop
+        isOpen={unsavedPromptOpen}
+        onOpenChange={(open) => {
+          if (!open && !unsavedAction) setUnsavedPromptOpen(false);
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="!w-[92vw] !max-w-[440px]">
+            <Modal.Header>
+              <Modal.Heading>Unsaved changes</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <p className="text-sm text-default-700">
+                Your current PDF has unsaved changes. Save them to your library
+                before creating a new document, or discard to continue without
+                saving.
+              </p>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                isDisabled={unsavedAction !== null}
+                variant="ghost"
+                onPress={() => setUnsavedPromptOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                isDisabled={unsavedAction !== null}
+                variant="secondary"
+                onPress={() => void handleDiscardAndCreate()}
+              >
+                {unsavedAction === "discarding" ? "Discarding..." : "Discard"}
+              </Button>
+              <Button
+                isDisabled={unsavedAction !== null || !isSignedIn}
+                onPress={() => void handleSaveAndCreate()}
+              >
+                {unsavedAction === "saving" ? "Saving..." : "Save & Create"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal.Backdrop>
   );
 }

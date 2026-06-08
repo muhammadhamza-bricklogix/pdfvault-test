@@ -79,25 +79,32 @@ const RIGHT_TOOLS: ToolbarItem[] = [
   { icon: SearchAddIcon, id: "zoom-in", label: "Zoom In" },
 ];
 
+const TOOLBAR_BUTTON_CLASSES =
+  "flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors";
+
+function toolbarButtonStateClasses(disabled: boolean) {
+  return disabled
+    ? "cursor-not-allowed text-default-300"
+    : "cursor-pointer text-default-600 hover:bg-default-100";
+}
+
+type ManagePagesToolbarButtonProps = {
+  disabled?: boolean;
+  icon: ToolbarItem["icon"];
+  label: string;
+  onPress?: () => void;
+};
+
 function ManagePagesToolbarButton({
   disabled = false,
   icon,
   label,
   onPress,
-}: {
-  disabled?: boolean;
-  icon: ToolbarItem["icon"];
-  label: string;
-  onPress?: () => void;
-}) {
+}: ManagePagesToolbarButtonProps) {
   return (
     <Tooltip delay={300}>
       <button
-        className={`flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
-          disabled
-            ? "cursor-not-allowed text-default-300"
-            : "cursor-pointer text-default-600 hover:bg-default-100"
-        }`}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
         disabled={disabled}
         type="button"
         onClick={onPress}
@@ -105,6 +112,41 @@ function ManagePagesToolbarButton({
         <HugeiconsIcon icon={icon} size={18} />
         <span className="whitespace-nowrap leading-tight">{label}</span>
       </button>
+      <Tooltip.Content>
+        <p>{label}</p>
+      </Tooltip.Content>
+    </Tooltip>
+  );
+}
+
+// Visual-only variant used inside a parent that is already a button (e.g.
+// HeroUI's `ColorPicker.Trigger`). Renders a span so we don't create the
+// invalid `<button>` inside `<button>` DOM that triggers a React hydration
+// error.
+type ManagePagesToolbarButtonContentProps = {
+  ariaLabel?: string;
+  disabled?: boolean;
+  icon: ToolbarItem["icon"];
+  label: string;
+};
+
+function ManagePagesToolbarButtonContent({
+  ariaLabel,
+  disabled = false,
+  icon,
+  label,
+}: ManagePagesToolbarButtonContentProps) {
+  return (
+    <Tooltip delay={300}>
+      <span
+        aria-label={ariaLabel ?? label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
+        data-disabled={disabled || undefined}
+        role="presentation"
+      >
+        <HugeiconsIcon icon={icon} size={18} />
+        <span className="whitespace-nowrap leading-tight">{label}</span>
+      </span>
       <Tooltip.Content>
         <p>{label}</p>
       </Tooltip.Content>
@@ -302,8 +344,12 @@ export function ManagePagesModal({
                           )
                         }
                       >
-                        <ColorPicker.Trigger isDisabled={disabled}>
-                          <ManagePagesToolbarButton
+                        <ColorPicker.Trigger
+                          aria-label="Page background color"
+                          isDisabled={disabled}
+                        >
+                          <ManagePagesToolbarButtonContent
+                            ariaLabel="Page background color"
                             disabled={disabled}
                             icon={tool.icon}
                             label={tool.label}

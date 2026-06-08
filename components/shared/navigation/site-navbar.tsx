@@ -1,6 +1,6 @@
 "use client";
 
-import { Show } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { ArrowDown01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Dropdown, Label, Separator } from "@heroui/react";
@@ -25,6 +25,14 @@ const DRAWER_LINKS = [
 
 export function SiteNavbar() {
   const router = useRouter();
+  // `isLoaded` gates auth-conditional buttons so the server-rendered shell
+  // matches the first client render. Both branches are hidden until Clerk has
+  // hydrated, preventing the "scripts inside React components" warning that
+  // Clerk's `<Show>` component triggers and the auth-state flicker on slow
+  // connections.
+  const { isLoaded, isSignedIn } = useAuth();
+  const showSignedOut = isLoaded && !isSignedIn;
+  const showSignedIn = isLoaded && isSignedIn;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-default-200/80 bg-[var(--color-background)]/90 backdrop-blur-md dark:border-default-800/80">
@@ -79,23 +87,25 @@ export function SiteNavbar() {
                   <div className="flex flex-col gap-3 px-3">
                     <ThemeToggle />
 
-                    <Show when="signed-out">
-                      <Button
-                        className="w-full"
-                        variant="ghost"
-                        onPress={() => router.push(ROUTES.AUTH.SIGN_IN)}
-                      >
-                        Sign in
-                      </Button>
-                      <Button
-                        className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
-                        onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
-                      >
-                        Sign up free
-                      </Button>
-                    </Show>
+                    {showSignedOut ? (
+                      <>
+                        <Button
+                          className="w-full"
+                          variant="ghost"
+                          onPress={() => router.push(ROUTES.AUTH.SIGN_IN)}
+                        >
+                          Sign in
+                        </Button>
+                        <Button
+                          className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
+                          onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
+                        >
+                          Sign up free
+                        </Button>
+                      </>
+                    ) : null}
 
-                    <Show when="signed-in">
+                    {showSignedIn ? (
                       <Button
                         className="w-full"
                         variant="outline"
@@ -103,7 +113,7 @@ export function SiteNavbar() {
                       >
                         Dashboard
                       </Button>
-                    </Show>
+                    ) : null}
                   </div>
                 </Drawer.Body>
               </Drawer.Dialog>
@@ -160,22 +170,24 @@ export function SiteNavbar() {
             <ThemeToggle />
           </div>
 
-          <Show when="signed-out">
-            <Link
-              className="hidden px-2 text-sm font-medium text-default-600 transition-colors hover:text-foreground sm:inline-flex dark:text-default-400"
-              href={ROUTES.AUTH.SIGN_IN}
-            >
-              Sign in
-            </Link>
-            <Button
-              className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
-              onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
-            >
-              Sign up free
-            </Button>
-          </Show>
+          {showSignedOut ? (
+            <>
+              <Link
+                className="hidden px-2 text-sm font-medium text-default-600 transition-colors hover:text-foreground sm:inline-flex dark:text-default-400"
+                href={ROUTES.AUTH.SIGN_IN}
+              >
+                Sign in
+              </Link>
+              <Button
+                className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
+                onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
+              >
+                Sign up free
+              </Button>
+            </>
+          ) : null}
 
-          <Show when="signed-in">
+          {showSignedIn ? (
             <Button
               className="rounded-lg font-medium"
               variant="outline"
@@ -183,7 +195,7 @@ export function SiteNavbar() {
             >
               Dashboard
             </Button>
-          </Show>
+          ) : null}
         </div>
       </div>
     </header>
