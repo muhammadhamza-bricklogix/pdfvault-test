@@ -61,11 +61,13 @@ export function ControlledInputField<TFieldValues extends FieldValues>({
           <div className="relative w-full">
             <Input
               ref={field.ref}
+              // Boolean shorthand must come before keyed props per the
+              // project's `react/jsx-sort-props` rule.
+              fullWidth
               autoComplete={autoComplete}
               // Leave room on the right for the toggle so long passwords
               // don't crash into the eye icon.
               className={isPassword ? "pr-10" : undefined}
-              fullWidth
               placeholder={placeholder}
               type={effectiveType}
               value={typeof field.value === "string" ? field.value : ""}

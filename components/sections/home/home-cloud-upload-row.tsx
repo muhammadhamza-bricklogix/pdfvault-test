@@ -17,20 +17,37 @@ function DeviceIcon({ className }: { className?: string }) {
   return <HugeiconsIcon className={className} icon={Upload01Icon} size={28} />;
 }
 
-const OPTIONS = [
-  {
-    brandClassName: "",
-    Glyph: null,
-    id: "gdrive",
-    label: "Upload from Google Drive",
-  },
+/**
+ * Wider type for the OPTIONS list so commenting an entry out doesn't narrow
+ * `id` to the literal of the remaining entry and break the `id === "gdrive"`
+ * comparisons below.
+ */
+type OptionId = "gdrive" | "device";
+type CloudOption = {
+  brandClassName: string;
+  Glyph: ((props: { className?: string }) => React.ReactElement) | null;
+  id: OptionId;
+  label: string;
+};
+
+const OPTIONS: readonly CloudOption[] = [
+  // Google Drive upload temporarily hidden — re-enable by uncommenting this
+  // entry. The cloud-import code paths (provider handlers, cloud-auth, etc.)
+  // are intentionally left in place so flipping it back on doesn't require
+  // any other change.
+  // {
+  //   brandClassName: "",
+  //   Glyph: null,
+  //   id: "gdrive",
+  //   label: "Upload from Google Drive",
+  // },
   {
     brandClassName: "text-[#0061FF]",
     Glyph: DeviceIcon,
     id: "device",
     label: "Upload from Device",
   },
-] as const;
+];
 
 type HomeCloudUploadRowProps = {
   cloudImportAllowed: boolean;
