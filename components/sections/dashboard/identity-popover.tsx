@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ThemeSegmented } from "@/components/ui/theme/theme-segmented";
+import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 type IdentityPopoverProps = {
@@ -50,6 +51,11 @@ export function IdentityPopover({
       onNavigate?.();
     } else if (key === "logout") {
       setIsOpen(false);
+      // Fire-and-forget the backend audit BEFORE Clerk destroys the JWT —
+      // afterwards our axios interceptor wouldn't have a token to attach
+      // and the call would 401. Failure is intentionally swallowed: nothing
+      // should block the user from signing out.
+      void usersService.signOutAudit().catch(() => undefined);
       void signOut();
     }
   };

@@ -32,3 +32,11 @@ export const AUDIT = {
   LIST: "/audit",
   BY_DOCUMENT: (id: string) => `/audit/documents/${id}`,
 } as const;
+
+export const USERS = {
+  PROFILE: "/users/profile",
+  /** Idempotent provisioning — call once after sign-in completes. */
+  ME: "/users/me",
+  /** Pino audit hook — call right before `useClerk().signOut()`. */
+  SIGN_OUT: "/users/sign-out",
+} as const;

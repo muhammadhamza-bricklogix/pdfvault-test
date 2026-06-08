@@ -5,6 +5,7 @@ import type { EncryptKeyLength } from "@/lib/shared/types/pdf-tools.types";
 import { Button, Label, Modal } from "@heroui/react";
 import { useState } from "react";
 
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import {
   useDecryptFileMutation,
   useEncryptFileMutation,
@@ -25,6 +26,12 @@ export function PasswordModal() {
   const [unprotectPassword, setUnprotectPassword] = useState("");
   const [keyLength, setKeyLength] = useState<EncryptKeyLength>("256");
   const [mismatchError, setMismatchError] = useState(false);
+  // Reveal toggles — one per password field. Each reveals only its own
+  // input; protect mode keeps the Confirm field independently masked so the
+  // user can verify the strong password without exposing both fields at once.
+  const [revealUserPassword, setRevealUserPassword] = useState(false);
+  const [revealConfirmPassword, setRevealConfirmPassword] = useState(false);
+  const [revealUnprotectPassword, setRevealUnprotectPassword] = useState(false);
 
   const encrypt = useEncryptFileMutation();
   const decrypt = useDecryptFileMutation();
@@ -122,30 +129,42 @@ export function PasswordModal() {
                   <Label className="mb-1 block text-xs text-default-500">
                     Password
                   </Label>
-                  <input
-                    autoComplete="new-password"
-                    className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
-                    type="password"
-                    value={userPassword}
-                    onChange={(e) => setUserPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <input
+                      autoComplete="new-password"
+                      className="w-full rounded-md border border-default-200 px-3 py-2 pr-10 text-sm"
+                      type={revealUserPassword ? "text" : "password"}
+                      value={userPassword}
+                      onChange={(e) => setUserPassword(e.target.value)}
+                    />
+                    <PasswordRevealToggle
+                      revealed={revealUserPassword}
+                      onToggle={() => setRevealUserPassword((v) => !v)}
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label className="mb-1 block text-xs text-default-500">
                     Confirm password
                   </Label>
-                  <input
-                    autoComplete="new-password"
-                    className={`w-full rounded-md border px-3 py-2 text-sm ${
-                      mismatchError ? "border-red-500" : "border-default-200"
-                    }`}
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                      setMismatchError(false);
-                    }}
-                  />
+                  <div className="relative">
+                    <input
+                      autoComplete="new-password"
+                      className={`w-full rounded-md border px-3 py-2 pr-10 text-sm ${
+                        mismatchError ? "border-red-500" : "border-default-200"
+                      }`}
+                      type={revealConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setMismatchError(false);
+                      }}
+                    />
+                    <PasswordRevealToggle
+                      revealed={revealConfirmPassword}
+                      onToggle={() => setRevealConfirmPassword((v) => !v)}
+                    />
+                  </div>
                   {mismatchError && (
                     <p className="mt-1 text-xs text-red-500">
                       Passwords don&apos;t match.
@@ -185,13 +204,19 @@ export function PasswordModal() {
                 <Label className="mb-1 block text-xs text-default-500">
                   Current password
                 </Label>
-                <input
-                  autoComplete="current-password"
-                  className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
-                  type="password"
-                  value={unprotectPassword}
-                  onChange={(e) => setUnprotectPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    autoComplete="current-password"
+                    className="w-full rounded-md border border-default-200 px-3 py-2 pr-10 text-sm"
+                    type={revealUnprotectPassword ? "text" : "password"}
+                    value={unprotectPassword}
+                    onChange={(e) => setUnprotectPassword(e.target.value)}
+                  />
+                  <PasswordRevealToggle
+                    revealed={revealUnprotectPassword}
+                    onToggle={() => setRevealUnprotectPassword((v) => !v)}
+                  />
+                </div>
               </div>
             )}
           </Modal.Body>

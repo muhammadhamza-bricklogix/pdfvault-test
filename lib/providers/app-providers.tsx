@@ -6,6 +6,7 @@ import { Toast } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
+import { UserSyncBoot } from "@/components/shared/user-sync-boot";
 import { UploadToastProvider } from "@/components/ui/upload-toast";
 
 import { QueryProvider } from "./query-provider";
@@ -23,6 +24,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
         <Toast.Provider placement="top end" />
         <UploadToastProvider />
         <MobileDebugBoot />
+        <UserSyncBoot />
       </QueryProvider>
     </NextThemesProvider>
   );
