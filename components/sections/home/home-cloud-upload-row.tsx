@@ -41,12 +41,12 @@ const OPTIONS: readonly CloudOption[] = [
   //   id: "gdrive",
   //   label: "Upload from Google Drive",
   // },
-  {
-    brandClassName: "text-[#0061FF]",
-    Glyph: DeviceIcon,
-    id: "device",
-    label: "Upload from Device",
-  },
+  // {
+  //   brandClassName: "text-[#0061FF]",
+  //   Glyph: DeviceIcon,
+  //   id: "device",
+  //   label: "Upload from Device",
+  // },
 ];
 
 type HomeCloudUploadRowProps = {
