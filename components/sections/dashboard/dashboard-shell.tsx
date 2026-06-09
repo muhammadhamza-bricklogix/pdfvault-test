@@ -77,7 +77,7 @@ function SidebarBody({
         >
           <Image
             priority
-            alt="PDFedits"
+            alt="Content Clicks LLC"
             className="size-7 object-contain"
             height={28}
             src="/logo.svg"
@@ -244,7 +244,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         >
           <Image
             priority
-            alt="PDFedits logo"
+            alt="Content Clicks LLC logo"
             className="size-6 object-contain"
             height={24}
             src="/logo.svg"

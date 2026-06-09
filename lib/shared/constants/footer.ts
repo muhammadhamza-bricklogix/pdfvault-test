@@ -89,18 +89,18 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   },
 ];
 
-export const FOOTER_COMPANY_ENTITY = "Active Leadgen LLC";
+export const FOOTER_COMPANY_ENTITY = "Content Clicks LLC";
 
 export const FOOTER_COMPANY_ADDRESS_PLACEHOLDER =
   "Registered business address will be published before launch.";
 
-export const FOOTER_BRAND_NAME = "PDFedits";
+export const FOOTER_BRAND_NAME = "Content Clicks LLC";
 
 export const FOOTER_PUBLIC_DOMAIN = "pdfedits.io";
 
 /** Single primary copyright line for the marketing footer (no inline policy links). */
 export function formatFooterCopyrightLine(year: number): string {
-  return `© ${year}. Active Leadgen, LLC, UAE. All rights reserved.`;
+  return `© ${year}. Content Clicks LLC. All rights reserved.`;
 }
 
 export const FOOTER_LEGAL_STRIP_LINKS: FooterNavLink[] = [

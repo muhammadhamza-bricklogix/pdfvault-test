@@ -37,10 +37,10 @@ export function PrivacyPolicyContent() {
     <>
       <LegalSectionCard icon={SparklesIcon} id="p-3-1" title="Introduction">
         <p>
-          PDFedits (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is
-          committed to protecting your privacy. This Privacy Policy explains how
-          we collect, use, disclose, and protect your personal information when
-          you use our Service at pdfedits.io.
+          Content Clicks LLC (&quot;we,&quot; &quot;us,&quot; or
+          &quot;our&quot;) is committed to protecting your privacy. This Privacy
+          Policy explains how we collect, use, disclose, and protect your
+          personal information when you use our Service at pdfedits.io.
         </p>
       </LegalSectionCard>
 

@@ -40,9 +40,9 @@ export function TermsAndConditionsContent() {
     <>
       <LegalSectionCard icon={File01Icon} id="t-2-1" title="Agreement">
         <p>
-          By accessing or using PDFedits at pdfedits.io (&quot;Service&quot;),
-          you agree to be bound by these Terms and Conditions. If you do not
-          agree, do not use the Service.
+          By accessing or using Content Clicks LLC at pdfedits.io
+          (&quot;Service&quot;), you agree to be bound by these Terms and
+          Conditions. If you do not agree, do not use the Service.
         </p>
       </LegalSectionCard>
 
@@ -117,11 +117,11 @@ export function TermsAndConditionsContent() {
         <LegalCallout variant="emphasis">
           <p>
             The Service and its content (excluding your uploaded files) are
-            owned by PDFedits and protected by copyright, trademark, and other
-            laws. You retain full ownership of all files you upload. By
-            uploading files, you grant us a temporary, limited license solely to
-            process them and return results to you. We do not claim ownership of
-            your content.
+            owned by Content Clicks LLC and protected by copyright, trademark,
+            and other laws. You retain full ownership of all files you upload.
+            By uploading files, you grant us a temporary, limited license solely
+            to process them and return results to you. We do not claim ownership
+            of your content.
           </p>
         </LegalCallout>
       </LegalSectionCard>
@@ -152,11 +152,11 @@ export function TermsAndConditionsContent() {
       >
         <LegalCallout variant="emphasis">
           <p className="text-xs font-semibold uppercase leading-relaxed tracking-wide">
-            To the maximum extent permitted by law, PDFedits shall not be liable
-            for any indirect, incidental, special, consequential, or punitive
-            damages, including loss of data or profits, arising from your use of
-            the Service. Our total liability shall not exceed the amount you
-            paid in the 12 months preceding the claim.
+            To the maximum extent permitted by law, Content Clicks LLC shall not
+            be liable for any indirect, incidental, special, consequential, or
+            punitive damages, including loss of data or profits, arising from
+            your use of the Service. Our total liability shall not exceed the
+            amount you paid in the 12 months preceding the claim.
           </p>
         </LegalCallout>
       </LegalSectionCard>
@@ -167,10 +167,10 @@ export function TermsAndConditionsContent() {
         title="Indemnification"
       >
         <p>
-          You agree to indemnify and hold harmless PDFedits, its officers,
-          directors, employees, and agents from any claims, damages, or expenses
-          arising out of your use of the Service, your violation of these Terms,
-          or your violation of any third-party rights.
+          You agree to indemnify and hold harmless Content Clicks LLC, its
+          officers, directors, employees, and agents from any claims, damages,
+          or expenses arising out of your use of the Service, your violation of
+          these Terms, or your violation of any third-party rights.
         </p>
       </LegalSectionCard>
 

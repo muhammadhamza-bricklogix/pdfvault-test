@@ -55,7 +55,7 @@ export function SiteNavbar() {
                   <Drawer.Heading className="flex items-center gap-2">
                     <Image
                       priority
-                      alt="PDFedits logo"
+                      alt="Content Clicks LLC logo"
                       className="size-9 object-contain"
                       height={36}
                       src="/logo.svg"
@@ -127,7 +127,7 @@ export function SiteNavbar() {
         >
           <Image
             priority
-            alt="PDFedits logo"
+            alt="Content Clicks LLC logo"
             className="size-9 object-contain sm:size-10"
             height={40}
             src="/logo.svg"

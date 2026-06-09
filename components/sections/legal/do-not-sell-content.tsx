@@ -51,8 +51,8 @@ export function DoNotSellContent() {
         title="Our Current Practices"
       >
         <p>
-          PDFedits does not sell your personal information to third parties for
-          monetary compensation.
+          Content Clicks LLC does not sell your personal information to third
+          parties for monetary compensation.
         </p>
         <p className="mt-3">
           However, under the broad definitions of the CCPA/CPRA, certain data

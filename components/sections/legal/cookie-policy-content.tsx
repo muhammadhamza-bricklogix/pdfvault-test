@@ -37,7 +37,7 @@ export function CookiePolicyContent() {
         title="How We Use Cookies"
       >
         <p>
-          PDFedits uses cookies and similar technologies (web beacons, pixels,
+          Content Clicks LLC uses cookies and similar technologies (web beacons, pixels,
           local storage) on pdfedits.io. We use four categories of cookies:
         </p>
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">

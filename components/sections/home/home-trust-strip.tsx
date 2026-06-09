@@ -31,7 +31,7 @@ export function HomeTrustStrip() {
             HTTPS and TLS encryption on every visit
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-white/90 sm:text-base">
-            Your browser talks to PDFedits over HTTPS using modern TLS (the
+            Your browser talks to Content Clicks LLC over HTTPS using modern TLS (the
             standard that replaced legacy SSL), so traffic is encrypted in
             transit. We do not show Norton or other paid “verified site” seals
             unless we are enrolled in those programs—see how we protect data in

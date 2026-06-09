@@ -22,11 +22,11 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: {
-    default: "PDFedits",
-    template: "%s | PDFedits",
+    default: "Content Clicks LLC",
+    template: "%s | Content Clicks LLC",
   },
   description:
-    "PDFedits is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
+    "Content Clicks LLC is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
   icons: {
     apple: "/logo.svg",
     icon: "/logo.svg",

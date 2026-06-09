@@ -28,7 +28,7 @@ export function RefundPolicyContent() {
     <>
       <LegalSectionCard icon={SparklesIcon} id="r-5-1" title="Our Commitment">
         <p>
-          We want you to be satisfied with the PDF Edits App. Our refund policy
+          We want you to be satisfied with Content Clicks LLC. Our refund policy
           is designed to be <strong>fair and transparent</strong>.
         </p>
       </LegalSectionCard>
