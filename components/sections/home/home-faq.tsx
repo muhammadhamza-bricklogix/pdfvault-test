@@ -27,7 +27,8 @@ const ABOUT_FAQ: FaqEntry[] = [
     answer:
       "No. Open pdfedits.io in a modern browser, upload a file, and start working. We keep tightening editor tools over time, but there’s nothing to install for the web app itself.",
     id: "about-2",
-    question: "Do I need to download or install anything to use Content Clicks LLC?",
+    question:
+      "Do I need to download or install anything to use Content Clicks LLC?",
   },
   {
     answer:

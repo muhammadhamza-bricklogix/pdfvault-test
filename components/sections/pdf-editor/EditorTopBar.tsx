@@ -38,6 +38,7 @@ import {
 import { useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { HamburgerMenu } from "./HamburgerMenu";
@@ -420,6 +421,14 @@ export function EditorToolBar() {
 
   const canManagePages = !!pdfDocument && pageCount > 0;
 
+  const handleOpenManagePages = async () => {
+    const ok = await saveBeforeAction(
+      "Saving your edits before opening Manage Pages.",
+    );
+
+    if (ok) setIsManagePagesOpen(true);
+  };
+
   return (
     <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
       <HistoryActions />
@@ -432,7 +441,7 @@ export function EditorToolBar() {
           isDisabled={!canManagePages}
           size="sm"
           variant="tertiary"
-          onPress={() => setIsManagePagesOpen(true)}
+          onPress={() => void handleOpenManagePages()}
         >
           <HugeiconsIcon icon={Layout03Icon} size={22} />
           <span className="text-[10px] leading-tight">Manage Pages</span>

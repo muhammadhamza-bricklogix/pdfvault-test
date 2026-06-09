@@ -7,7 +7,8 @@ import {
 } from "@/components/sections/legal/terms-and-conditions-content";
 
 export const metadata: Metadata = {
-  description: "Terms and Conditions governing use of Content Clicks LLC at pdfedits.io.",
+  description:
+    "Terms and Conditions governing use of Content Clicks LLC at pdfedits.io.",
   title: "Terms and Conditions",
 };
 

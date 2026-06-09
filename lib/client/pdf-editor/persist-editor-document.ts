@@ -16,7 +16,7 @@ import { logger } from "@/lib/shared/utils/logger";
 const EDITOR_STATE_SOFT_LIMIT_BYTES = 800 * 1024;
 
 export type PersistEditorResult =
-  | { document: Document; ok: true }
+  | { document: Document; ok: true; savedFile: File }
   | {
       ok: false;
       reason:
@@ -108,7 +108,7 @@ export async function persistEditorDocument({
       hasUnsavedChanges: false,
     });
 
-    return { ok: true, document };
+    return { document, ok: true, savedFile };
   } catch (err) {
     logger.error("Failed to persist editor document", err);
 

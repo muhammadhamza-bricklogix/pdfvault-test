@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -125,12 +126,49 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         fabricCanvas: fabricRef.current,
       });
 
-      // `no-changes` is a benign short-circuit (dirty flag was already clean by
-      // the time the save ran). The caller should treat it as success — there's
-      // nothing to lose by proceeding.
-      const ok = result.ok || (!result.ok && result.reason === "no-changes");
+      if (result.ok) {
+        // Commit the saved bytes as the new editor baseline. Without this,
+        // downstream readers (Manage Pages thumbnails, exports) still see the
+        // pre-edit source PDF until the next full reload — the visible bug
+        // the user reported on Manage Pages.
+        const targetFile = result.savedFile;
 
-      onComplete({ ok });
+        usePdfEditorStore.getState().applyPostSaveReset(targetFile);
+
+        // Wait for `usePdfLoader` to finish reloading pdf.js against the new
+        // bytes before resolving. Otherwise the caller (e.g. Manage Pages)
+        // opens while `pdfDocument` is still null and renders an empty state
+        // for a frame.
+        await new Promise<void>((resolve) => {
+          const isReady = () => {
+            const s = usePdfEditorStore.getState();
+
+            return s.file === targetFile && s.pdfDocument != null;
+          };
+
+          if (isReady()) {
+            resolve();
+
+            return;
+          }
+
+          const unsub = usePdfEditorStore.subscribe(() => {
+            if (isReady()) {
+              unsub();
+              resolve();
+            }
+          });
+        });
+
+        onComplete({ ok: true });
+
+        return;
+      }
+
+      // `no-changes` is a benign short-circuit (dirty flag was already clean
+      // by the time the save ran). Treat as success — nothing to commit and
+      // nothing to lose by proceeding.
+      onComplete({ ok: result.reason === "no-changes" });
     };
 
     window.addEventListener(
