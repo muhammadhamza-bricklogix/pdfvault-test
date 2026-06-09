@@ -1,6 +1,6 @@
 "use client";
 
-import type { Canvas } from "fabric";
+import type { Canvas, FabricObject } from "fabric";
 import type { RefObject } from "react";
 
 import { useCallback, useEffect, useState } from "react";
@@ -20,6 +20,7 @@ export function useEditorHistory({
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const undoStore = usePdfEditorStore((s) => s.undo);
   const redoStore = usePdfEditorStore((s) => s.redo);
   const setIsRestoringHistory = usePdfEditorStore(
@@ -59,16 +60,47 @@ export function useEditorHistory({
       forceRender((n) => n + 1);
     };
 
+    // Dirty-tracking sibling of `snapshot`. Lives separately so we can skip
+    // dirty marks for the IText overlays that `use-edit-text-mode` adds during
+    // initial text extraction (those carry `editorType: "editModeText"` and
+    // are NOT a user edit). `object:modified`, `object:removed`, and
+    // `text:changed` always reflect user intent, so they pass through.
+    const markDirtyOnAdd = (e: { target: FabricObject }) => {
+      const state = usePdfEditorStore.getState();
+
+      if (state.isCreatingShape || state.isRestoringHistory) return;
+      const editorType = (e?.target as FabricObject & { editorType?: string })
+        ?.editorType;
+
+      if (editorType === "editModeText") return;
+      markDocumentDirty();
+    };
+
+    const markDirtyOnEdit = () => {
+      const state = usePdfEditorStore.getState();
+
+      if (state.isCreatingShape || state.isRestoringHistory) return;
+      markDocumentDirty();
+    };
+
     fc.on("object:added", snapshot);
     fc.on("object:modified", snapshot);
     fc.on("object:removed", snapshot);
+    fc.on("object:added", markDirtyOnAdd);
+    fc.on("object:modified", markDirtyOnEdit);
+    fc.on("object:removed", markDirtyOnEdit);
+    fc.on("text:changed", markDirtyOnEdit);
 
     return () => {
       fc.off("object:added", snapshot);
       fc.off("object:modified", snapshot);
       fc.off("object:removed", snapshot);
+      fc.off("object:added", markDirtyOnAdd);
+      fc.off("object:modified", markDirtyOnEdit);
+      fc.off("object:removed", markDirtyOnEdit);
+      fc.off("text:changed", markDirtyOnEdit);
     };
-  }, [fabricCanvas, currentPage, pushHistory]);
+  }, [fabricCanvas, currentPage, markDocumentDirty, pushHistory]);
 
   const idx = historyIndexByPage.get(currentPage) ?? -1;
   const history = historyByPage.get(currentPage) ?? [];

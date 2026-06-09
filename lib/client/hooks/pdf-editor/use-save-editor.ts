@@ -9,9 +9,21 @@ import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-do
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
+type SaveBeforeActionDetail = {
+  onComplete: (result: { ok: boolean }) => void;
+};
+
 /**
  * Listens for `editor:save` (dispatched by the Save button) and uploads the
  * flattened PDF to the user's library.
+ *
+ * Also listens for `editor:save-before-action`, used by flows that need to
+ * persist the live canvas state before doing something destructive to the
+ * editor (e.g. Hamburger → Create New). The event detail carries a callback
+ * that fires once the save completes (or fails) so the dispatcher can decide
+ * whether to proceed. This routes through here because `fabricCanvas` lives in
+ * `EditorLayout` — modals mounted at shell-level otherwise see `null` and
+ * silently upload stale `fabricJsonByPage` from the store.
  */
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
@@ -101,4 +113,36 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       window.removeEventListener("editor:save", onSave);
     };
   }, [handleSave]);
+
+  useEffect(() => {
+    const onSaveBeforeAction = async (event: Event) => {
+      const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
+      const onComplete = detail?.onComplete;
+
+      if (!onComplete) return;
+
+      const result = await persistEditorDocument({
+        fabricCanvas: fabricRef.current,
+      });
+
+      // `no-changes` is a benign short-circuit (dirty flag was already clean by
+      // the time the save ran). The caller should treat it as success — there's
+      // nothing to lose by proceeding.
+      const ok = result.ok || (!result.ok && result.reason === "no-changes");
+
+      onComplete({ ok });
+    };
+
+    window.addEventListener(
+      "editor:save-before-action",
+      onSaveBeforeAction as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "editor:save-before-action",
+        onSaveBeforeAction as EventListener,
+      );
+    };
+  }, []);
 }

@@ -31,6 +31,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
   const shapeFill = usePdfEditorStore((s) => s.shapeFill);
   const shapeStroke = usePdfEditorStore((s) => s.shapeStroke);
@@ -299,9 +300,12 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
 
       // Arrow gets history from object:added (isCreatingShape is already false).
       // Non-arrow shapes were added during mousedown while isCreatingShape was
-      // true, so we need a manual push here.
+      // true, so we need a manual push here. The history-hook's object:added
+      // listener was also gated by isCreatingShape, so the dirty flag never
+      // flipped for those shapes — mark dirty explicitly to match.
       if (shapeType !== "arrow") {
         pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+        markDocumentDirty();
       }
 
       fabricCanvas.renderAll();
@@ -332,6 +336,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
     activeTool,
     currentPage,
     fabricCanvas,
+    markDocumentDirty,
     pushHistory,
     shapeFill,
     shapeStroke,

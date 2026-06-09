@@ -1,7 +1,5 @@
 "use client";
 
-import type { Canvas as FabricCanvas } from "fabric";
-
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
@@ -27,7 +25,6 @@ import { useState } from "react";
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
-import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
@@ -207,14 +204,13 @@ function PageColorSwatch({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type Props = {
-  fabricCanvas?: FabricCanvas | null;
   isOpen: boolean;
   onClose: () => void;
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CreatePdfModal({ fabricCanvas, isOpen, onClose }: Props) {
+export function CreatePdfModal({ isOpen, onClose }: Props) {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const clearDocumentDirty = usePdfEditorStore((s) => s.clearDocumentDirty);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -404,9 +400,20 @@ export function CreatePdfModal({ fabricCanvas, isOpen, onClose }: Props) {
     });
 
     try {
-      const result = await persistEditorDocument({ fabricCanvas });
+      // Route the save through `editor:save-before-action` so it runs inside
+      // `useSaveEditor`, which holds the live Fabric canvas ref. Calling
+      // `persistEditorDocument` directly from here passes a null canvas and
+      // uploads stale `fabricJsonByPage` — the current page's edits never get
+      // flushed.
+      const { ok } = await new Promise<{ ok: boolean }>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:save-before-action", {
+            detail: { onComplete: resolve },
+          }),
+        );
+      });
 
-      if (!result.ok && result.reason === "error") {
+      if (!ok) {
         toast.error({
           title: "Could not save",
           description:
