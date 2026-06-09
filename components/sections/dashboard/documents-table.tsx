@@ -128,9 +128,17 @@ export function DocumentsTable() {
         enableGlobalFilter: false,
         enableSorting: false,
         header: "",
-        size: 64,
+        maxSize: 32,
+        minSize: 32,
+        size: 32,
+        mantineTableBodyCellProps: {
+          style: { paddingLeft: 0, paddingRight: 0 },
+        },
+        mantineTableHeadCellProps: {
+          style: { paddingLeft: 0, paddingRight: 0 },
+        },
         Cell: ({ row }) => (
-          <div className="flex w-full items-center justify-center">
+          <div className="flex w-full items-center justify-start">
             <DocumentThumbnail document={row.original} />
           </div>
         ),
@@ -192,8 +200,8 @@ export function DocumentsTable() {
         enableColumnFilter: false,
         enableGlobalFilter: false,
         enableSorting: false,
-        header: "",
-        size: 60,
+        header: "Actions",
+        size: 80,
         Cell: ({ row }) => (
           <div className="flex justify-end">
             <DocumentActionsMenu
@@ -329,6 +337,19 @@ export function DocumentsTable() {
                 enableRowSelection
                 columns={columns}
                 data={items}
+                displayColumnDefOptions={{
+                  "mrt-row-select": {
+                    maxSize: 24,
+                    minSize: 24,
+                    size: 24,
+                    mantineTableBodyCellProps: {
+                      style: { paddingLeft: 4, paddingRight: 0 },
+                    },
+                    mantineTableHeadCellProps: {
+                      style: { paddingLeft: 4, paddingRight: 0 },
+                    },
+                  },
+                }}
                 enableColumnActions={false}
                 enableColumnFilters={false}
                 enableDensityToggle={false}
