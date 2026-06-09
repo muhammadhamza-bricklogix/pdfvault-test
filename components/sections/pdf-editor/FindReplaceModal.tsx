@@ -10,6 +10,7 @@ import {
   applyReplaceAll,
   applyReplacement,
   findAllMatches,
+  previewReplacement,
 } from "@/lib/client/pdf-editor/find-replace";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { toast } from "@/lib/shared/utils/toast";
@@ -36,6 +37,14 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  // Snapshot of the most recently replaced IText so the match status field
+  // can show the user the new sentence they just produced — the replaced
+  // occurrence drops out of `matches` immediately (no longer matches the
+  // needle), so without this they'd jump straight to the next match.
+  const [lastReplaced, setLastReplaced] = useState<{
+    displayPage: number;
+    snippet: string;
+  } | null>(null);
 
   const options = useMemo(
     () => ({ caseSensitive, wholeWord }),
@@ -137,12 +146,15 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
 
       return;
     }
-    // "Replace Next" semantics — after the swap, the refreshed matches
-    // list (memo deps on `fabricJsonByPage` identity) drops the replaced
-    // occurrence. Keep `activeIndex` at the same position, which now
-    // points at the original "next" match; clamp to the new last index so
-    // a replace on the final occurrence wraps to the new last one instead
-    // of overflowing.
+    setLastReplaced({
+      displayPage: m.displayPage,
+      snippet: previewReplacement(m.snippet, needle, replacement, options),
+    });
+    // After the swap, the refreshed matches list (memo deps on
+    // `fabricJsonByPage` identity) drops the replaced occurrence. Keep
+    // `activeIndex` at the same position, which now points at the original
+    // "next" match; clamp to the new last index so a replace on the final
+    // occurrence wraps to the new last one instead of overflowing.
     setActiveIndex((i) => Math.min(i, Math.max(0, matches.length - 2)));
   };
 
@@ -161,6 +173,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
       saveFabricJsonBySourcePage,
     });
 
+    setLastReplaced(null);
     toast.success({
       title: "Replace complete",
       description:
@@ -200,6 +213,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
                 onChange={(e) => {
                   setNeedle(e.target.value);
                   setActiveIndex(0);
+                  setLastReplaced(null);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -257,31 +271,42 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
               </Switch>
             </div>
 
-            <div className="rounded-md border border-default-200 bg-default-50 px-3 py-2 text-xs text-default-500">
-              {needle.length === 0 ? (
-                "Type something to search."
-              ) : matches.length === 0 ? (
-                "No matches."
-              ) : (
-                <span>
-                  Match{" "}
-                  <span className="font-medium text-default-700">
-                    {activeIndex + 1}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-medium text-default-700">
-                    {matches.length}
+            <div className="space-y-1 rounded-md border border-default-200 bg-default-50 px-3 py-2 text-xs text-default-500">
+              <div>
+                {needle.length === 0 ? (
+                  "Type something to search."
+                ) : matches.length === 0 && !lastReplaced ? (
+                  "No matches."
+                ) : matches.length === 0 ? (
+                  <span>No more matches.</span>
+                ) : (
+                  <span>
+                    Match{" "}
+                    <span className="font-medium text-default-700">
+                      {activeIndex + 1}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium text-default-700">
+                      {matches.length}
+                    </span>
+                    {currentMatch ? (
+                      <>
+                        {" "}
+                        • page {currentMatch.displayPage} • &ldquo;
+                        {currentMatch.snippet.slice(0, 60)}
+                        {currentMatch.snippet.length > 60 ? "…" : ""}&rdquo;
+                      </>
+                    ) : null}
                   </span>
-                  {currentMatch ? (
-                    <>
-                      {" "}
-                      • page {currentMatch.displayPage} • &ldquo;
-                      {currentMatch.snippet.slice(0, 60)}
-                      {currentMatch.snippet.length > 60 ? "…" : ""}&rdquo;
-                    </>
-                  ) : null}
-                </span>
-              )}
+                )}
+              </div>
+              {lastReplaced ? (
+                <div className="text-success-600">
+                  Replaced on page {lastReplaced.displayPage} • &ldquo;
+                  {lastReplaced.snippet.slice(0, 80)}
+                  {lastReplaced.snippet.length > 80 ? "…" : ""}&rdquo;
+                </div>
+              ) : null}
             </div>
           </Modal.Body>
 
@@ -307,7 +332,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
               size="sm"
               onPress={handleReplaceOne}
             >
-              Replace Next
+              Replace
             </Button>
             <Button
               isDisabled={matches.length === 0}
