@@ -77,8 +77,16 @@ It lives at `.claude/skills/pdf-editor-architecture/SKILL.md` and documents the 
 
 ### Off-limits without explicit user approval
 
+The user considers the editor **stable as of 2026-06-10**. Several recent fixes are load-bearing — reverting them re-introduces user-visible regressions the user has already reported and we've already fixed. Do not modify any of these without asking first:
+
 - The watermark code in `lib/client/pdf-editor/merge-pdf.ts` (the inline `renderPageToPng` + `TEXT_OPS_MIN/MAX/RASTER_SCALE` constants stay there even though a shared util exists for `build-pages-pdf.ts`).
 - `objectCaching: false` on IText in `use-edit-text-mode.ts`.
+- **Mobile-touch trio in `lib/client/hooks/pdf-editor/use-fabric-canvas.ts`** — `allowTouchScrolling`, `upperCanvasEl.style.touchAction`, and wrapper `touchAction` are kept in sync per active tool. Drawing tools = `false / "none" / "none"`; everything else = `true / "pan-x pan-y" / "pan-x pan-y"`. Wrapper-only changes don't survive Fabric's upper-canvas overlay, and `allowTouchScrolling` alone doesn't update touch-action at runtime. Reverting any of the three freezes 1-finger pan when zoomed in on iOS Safari. See skill log 2026-06-10 (e).
+- **`mx-auto w-fit` scroll-container pattern in `components/sections/pdf-editor/PdfViewerCanvas.tsx`.** Don't replace with `flex justify-center`; flex centring traps the user at the centre of a zoomed-and-overflowing child on iOS Safari. See skill log 2026-06-10 (e).
+- **Shell-level `useExtractImagesEditor` hook + `editor:extract-images` event.** Don't fold image-extraction back into `HamburgerMenu.runExtractImages` — the menu has no `fabricCanvas` ref, so a direct mutation call ships the **original upload**, not the edits. Backend then returns 400 / "no images found." See skill log 2026-06-10 (f).
+- **Mobile text rendering**: `suppressText: !isMobile` and `fabricCanvas: isMobile ? null : fabricCanvas` in `PdfViewerCanvas.tsx`. Mobile is intentionally view-only for text because `getTextContent` throws on older iOS Safari WebKit. See skill log 2026-06-10 (c).
+
+For the full evidence trail (why each rule exists, what broke when we tried otherwise), open `.claude/skills/pdf-editor-architecture/SKILL.md` and read the "Known issues / decisions log" at the bottom — newest entries are at the top. **Always check that log before refactoring anything in `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, or `components/sections/pdf-editor/**`.**
 
 If a fix requires changing one of these, ask the user first.
 
