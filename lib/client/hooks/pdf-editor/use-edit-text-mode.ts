@@ -95,8 +95,13 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         try {
           blocks = await extractTextBlocks(page);
         } catch (err) {
+          // Inline message + stack so they're visible without expanding the
+          // Error object — mobile devtools often won't surface those props.
           logger.error("[PDFedits] text: extract failed", {
             sourcePage,
+            message: err instanceof Error ? err.message : String(err),
+            name: err instanceof Error ? err.name : undefined,
+            stack: err instanceof Error ? err.stack : undefined,
             err,
           });
 

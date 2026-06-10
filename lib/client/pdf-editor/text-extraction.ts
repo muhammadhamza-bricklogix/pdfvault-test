@@ -126,9 +126,18 @@ async function extractSequentialTextColors(
   const gsStack: string[] = [];
   const colors: string[] = [];
 
-  for (let i = 0; i < opList.fnArray.length; i++) {
-    const op = opList.fnArray[i];
-    const args = opList.argsArray[i];
+  const fnArray = opList?.fnArray;
+  const argsArray = opList?.argsArray;
+
+  if (!fnArray || !argsArray) return colors;
+
+  for (let i = 0; i < fnArray.length; i++) {
+    const op = fnArray[i];
+    // pdf.js v5 can emit null/undefined argsArray entries for ops it considers
+    // arg-less (and occasionally for compressed ops). Accessing `args[0]` on
+    // null throws TypeError and aborts the whole extraction. Coerce to an
+    // empty array so the typeof guards below short-circuit cleanly.
+    const args = argsArray[i] ?? [];
 
     if (op === OPS.save) {
       gsStack.push(currentFillColor);
@@ -208,15 +217,32 @@ export async function extractTextBlocks(
     rawRotation === 90 || rawRotation === 180 || rawRotation === 270
       ? rawRotation
       : 0;
-  const [textContent, colors] = await Promise.all([
-    page.getTextContent(),
-    extractSequentialTextColors(page),
-  ]);
+  // Run text + color extraction independently so a failure in the color
+  // walker (e.g. unexpected operator-list shape on mobile pdf.js builds)
+  // doesn't take down the whole text layer. Without colors we fall back to
+  // black/mode-color, which is far better than zero editable text.
+  const textContent = await page.getTextContent();
+  let colors: string[] = [];
+
+  try {
+    colors = await extractSequentialTextColors(page);
+  } catch {
+    colors = [];
+  }
+
+  // Defensive: pdf.js types say items/styles are always present, but a
+  // partially-initialized page proxy or a worker-side glitch can leave them
+  // undefined. Coerce so the indexers below never throw TypeError.
+  const items = Array.isArray(textContent?.items) ? textContent.items : [];
+  const styles =
+    textContent?.styles && typeof textContent.styles === "object"
+      ? textContent.styles
+      : ({} as Record<string, { fontFamily?: string }>);
 
   // Map showText-op colors → text items. We try 1:1 by item index when the
   // counts line up; otherwise we fall back to the document-wide mode color
   // (handles uniformly-colored docs) and finally to black.
-  const sameLength = colors.length === textContent.items.length;
+  const sameLength = colors.length === items.length;
   const uniqueColors = new Set(colors);
   const fallbackColor = uniqueColors.size === 1 ? colors[0]! : "#000000";
 
@@ -234,12 +260,12 @@ export async function extractTextBlocks(
     { realName: string; style: "italic" | "normal"; weight: "bold" | "normal" }
   >();
 
-  for (const item of textContent.items) {
-    if (!("fontName" in item)) continue;
+  for (const item of items) {
+    if (!item || !("fontName" in item)) continue;
 
     const { fontName } = item as TextItem;
 
-    if (fontInfoMap.has(fontName)) continue;
+    if (!fontName || fontInfoMap.has(fontName)) continue;
 
     try {
       if (page.commonObjs.has(fontName)) {
@@ -264,15 +290,19 @@ export async function extractTextBlocks(
     }
   }
 
-  for (let itemIndex = 0; itemIndex < textContent.items.length; itemIndex++) {
-    const item = textContent.items[itemIndex];
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    const item = items[itemIndex];
 
-    if (!("str" in item)) continue;
+    if (!item || !("str" in item)) continue;
 
     const textItem = item as TextItem;
     const { str, transform, fontName } = textItem;
 
-    if (!str.trim()) continue;
+    if (typeof str !== "string" || !str.trim()) continue;
+    // pdf.js usually emits a 6-element affine matrix here, but a malformed
+    // page or a marked-content artifact can leave `transform` null/short.
+    // Reading `transform[4]` on null throws TypeError and kills the page.
+    if (!Array.isArray(transform) || transform.length < 6) continue;
 
     // Font size is the magnitude of the text matrix's d-axis (its y vector),
     // i.e. `sqrt(c² + d²)`. For upright text d == fontSize and c == 0 so this
@@ -300,8 +330,7 @@ export async function extractTextBlocks(
       weight: "normal" as const,
     };
 
-    const styleFontFamily =
-      textContent.styles[fontName]?.fontFamily ?? "sans-serif";
+    const styleFontFamily = styles[fontName]?.fontFamily ?? "sans-serif";
 
     const resolvedFamily = resolveFontFamily(fontName, styleFontFamily);
 
