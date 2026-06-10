@@ -11,7 +11,7 @@ import { ControlledTextareaField } from "@/components/ui/form/controlled-textare
 import { contactFormSchema } from "@/lib/shared/schemas/contact.schema";
 import { toast } from "@/lib/shared/utils/toast";
 
-const SUPPORT_EMAIL = "support@pdfeditsapp.com";
+const SUPPORT_EMAIL = "support@pdfedits.io";
 
 export function ContactFormSection() {
   const form = useForm<ContactFormValues>({

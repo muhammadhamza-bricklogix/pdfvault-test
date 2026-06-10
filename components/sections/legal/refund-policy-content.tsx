@@ -105,8 +105,7 @@ export function RefundPolicyContent() {
       >
         <LegalCallout variant="emphasis">
           <p>
-            Email{" "}
-            <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>{" "}
+            Email <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>{" "}
             with subject line &quot;Refund Request&quot;, your account email,
             the date and amount of the charge, and (optional) your reason.
           </p>

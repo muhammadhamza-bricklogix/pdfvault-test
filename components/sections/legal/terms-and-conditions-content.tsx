@@ -73,8 +73,7 @@ export function TermsAndConditionsContent() {
           </li>
           <li>
             You must notify us immediately of any unauthorized use at{" "}
-            <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>
-            .
+            <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>.
           </li>
         </ul>
       </LegalSectionCard>

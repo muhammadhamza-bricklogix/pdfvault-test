@@ -207,10 +207,8 @@ export function PrivacyPolicyContent() {
           <LegalCallout variant="emphasis">
             <p>
               To exercise any of these rights, contact us at{" "}
-              <a href="mailto:support@pdfeditsapp.com">
-                support@pdfeditsapp.com
-              </a>
-              . We will respond within <strong>30 days</strong>.
+              <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>. We
+              will respond within <strong>30 days</strong>.
             </p>
           </LegalCallout>
         </div>
@@ -226,7 +224,7 @@ export function PrivacyPolicyContent() {
           do not knowingly collect personal information from children under 16.
           If you believe we have inadvertently collected such information,
           please contact us immediately at{" "}
-          <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>.
+          <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>.
         </p>
       </LegalSectionCard>
 

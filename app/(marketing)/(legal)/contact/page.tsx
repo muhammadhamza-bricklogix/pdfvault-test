@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "Contact Us",
 };
 
-const SUPPORT_EMAIL = "support@pdfeditsapp.com";
+const SUPPORT_EMAIL = "support@pdfedits.io";
 
 export default function ContactPage() {
   return (
