@@ -87,7 +87,7 @@ export function IdentityPopover({
       >
         {avatar}
       </Popover.Trigger>
-      <Popover.Content offset={8} placement="right">
+      <Popover.Content offset={8} placement="right-end">
         <Popover.Dialog className="!min-w-[280px] !p-0">
           {/* Profile details header — name + email, set apart from the
               action list with bottom padding instead of a divider so the
