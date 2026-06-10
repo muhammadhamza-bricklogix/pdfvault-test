@@ -110,7 +110,17 @@ export function useFabricCanvas({
         }
       }
 
+      // `allowTouchScrolling` controls TWO things inside Fabric:
+      //   1. The `touch-action` Fabric writes onto the upper-canvas
+      //      ("manipulation" when true, "none" when false).
+      //   2. Whether Fabric calls e.preventDefault() inside its own
+      //      touchstart handler — when true it does NOT preventDefault, so
+      //      the browser is free to pan/scroll the parent.
+      // We default to `true` here so 1-finger swipes pan the page on iOS
+      // Safari out of the box. The active-tool effect below flips this off
+      // (plus rewrites touch-action) whenever a drawing tool is active.
       const fc = new FabricCanvas(fabricCanvasRef.current, {
+        allowTouchScrolling: true,
         backgroundColor: "transparent",
         enableRetinaScaling: true,
         height: currentRenderedSize.height,
@@ -204,16 +214,36 @@ export function useFabricCanvas({
   }, [sourcePage, hasRenderedSize]);
 
   // --- Touch-action follows the active tool ---
-  // Drawing tools must own touchstart (`none`); everything else releases
-  // 1-finger gestures back to the outer scroll container so the user can
-  // swipe to pan a zoomed-in page.
+  // Drawing tools must own touchstart (`none` + Fabric preventDefaults so
+  // strokes don't drop frames). Every other tool releases 1-finger gestures
+  // to the outer scroll container so the user can swipe to pan a zoomed-in
+  // page on iOS Safari. This requires THREE things in sync:
+  //
+  //   1. `fc.allowTouchScrolling` — gates Fabric's internal
+  //      `e.preventDefault()` call in its touchstart handler.
+  //   2. `touch-action` on the upper-canvas — Fabric writes this in its
+  //      constructor based on `allowTouchScrolling`, so we re-write it
+  //      whenever the tool changes (the value is sticky otherwise).
+  //   3. `touch-action` on the wrapper div — defense in depth; some Safari
+  //      versions check it before the upper-canvas.
   useEffect(() => {
     const fc = fabricRef.current;
-    const wrapper = fc?.getElement().parentElement;
 
-    if (!wrapper) return;
+    if (!fc) return;
 
-    wrapper.style.touchAction = touchActionFor(activeTool);
+    const wrapper = fc.getElement().parentElement;
+    const isDrawTool = DRAW_TOOLS.has(activeTool);
+    const action = isDrawTool ? "none" : "pan-x pan-y";
+
+    fc.allowTouchScrolling = !isDrawTool;
+
+    // Fabric exposes `upperCanvasEl` as a getter on Canvas. Its inline
+    // `touch-action` style was set at construction time — overwrite it.
+    const upper = (fc as unknown as { upperCanvasEl?: HTMLCanvasElement })
+      .upperCanvasEl;
+
+    if (upper) upper.style.touchAction = action;
+    if (wrapper) wrapper.style.touchAction = action;
   }, [activeTool, fabricCanvas]);
 
   // --- Resize + zoom: keep the existing canvas, don't re-mount ---
