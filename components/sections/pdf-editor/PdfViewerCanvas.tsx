@@ -381,41 +381,41 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       <div className="mx-auto w-fit">
         <div className="shadow-lg">
           <div ref={containerRef} className="relative bg-white">
-          {bgShouldShow && backgroundImageConfig.imageData && (
-            /* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not optimizable */
-            <img
-              aria-hidden
-              alt=""
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              src={backgroundImageConfig.imageData}
+            {bgShouldShow && backgroundImageConfig.imageData && (
+              /* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not optimizable */
+              <img
+                aria-hidden
+                alt=""
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                src={backgroundImageConfig.imageData}
+                style={{
+                  objectFit: bgObjectFit,
+                  opacity: backgroundImageConfig.opacity,
+                }}
+              />
+            )}
+            <canvas
+              ref={canvasRef}
+              aria-label={`PDF page ${currentPage} of ${pageCount}`}
+              role="img"
               style={{
-                objectFit: bgObjectFit,
-                opacity: backgroundImageConfig.opacity,
+                mixBlendMode: bgShouldShow ? "multiply" : undefined,
+                position: "relative",
               }}
             />
-          )}
-          <canvas
-            ref={canvasRef}
-            aria-label={`PDF page ${currentPage} of ${pageCount}`}
-            role="img"
-            style={{
-              mixBlendMode: bgShouldShow ? "multiply" : undefined,
-              position: "relative",
-            }}
-          />
-          <canvas
-            ref={fabricCanvasRef}
-            aria-label={`PDF editing canvas, page ${currentPage} of ${pageCount}`}
-            role="application"
-          />
-          <FloatingTextToolbar
-            canvasContainerRef={containerRef}
-            fabricCanvas={fabricCanvas}
-          />
-          <FloatingShapeToolbar
-            canvasContainerRef={containerRef}
-            fabricCanvas={fabricCanvas}
-          />
+            <canvas
+              ref={fabricCanvasRef}
+              aria-label={`PDF editing canvas, page ${currentPage} of ${pageCount}`}
+              role="application"
+            />
+            <FloatingTextToolbar
+              canvasContainerRef={containerRef}
+              fabricCanvas={fabricCanvas}
+            />
+            <FloatingShapeToolbar
+              canvasContainerRef={containerRef}
+              fabricCanvas={fabricCanvas}
+            />
           </div>
         </div>
       </div>
