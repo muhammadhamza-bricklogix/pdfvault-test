@@ -95,20 +95,43 @@ export default function OAuthCallbackPage() {
       log("postMessage skipped (no opener) — storage fallback should fire");
     }
 
-    // Give both channels a tick to deliver, then close. Some browsers
-    // refuse `window.close()` when the popup wasn't opened by script;
-    // wrap in try/catch.
+    // Listen for an "ack" from the parent so we can close immediately
+    // once the token has been safely received.  This avoids the race
+    // where the popup closes before the parent's `storage` event fires.
+    const onAck = (event: MessageEvent) => {
+      if (
+        event.origin === window.location.origin &&
+        event.data?.source === "pdfedits-oauth-ack"
+      ) {
+        log("ack received from parent — closing popup now");
+        try {
+          window.close();
+        } catch {
+          // Ignore.
+        }
+      }
+    };
+    window.addEventListener("message", onAck);
+
+    // Give both channels plenty of time to deliver before auto-closing.
+    // The parent will send an ack via postMessage once it has resolved,
+    // which triggers the immediate close above.  If that fails (e.g.
+    // COOP severs opener) we still close after this timeout so the user
+    // isn't left with a dangling blank window.
     const timer = window.setTimeout(() => {
       // eslint-disable-next-line no-console
-      console.log("[oauth-callback] closing window");
+      console.log("[oauth-callback] auto-closing window");
       try {
         window.close();
       } catch {
         // Ignore.
       }
-    }, 200);
+    }, 1500);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("message", onAck);
+    };
   }, []);
 
   return (

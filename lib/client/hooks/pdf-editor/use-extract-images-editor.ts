@@ -88,7 +88,7 @@ export function useExtractImagesEditor(fabricCanvas: FabricCanvas | null) {
       logger.error("Failed to extract images", err);
       // Mutation's onError already surfaces a toast for HTTP failures; only
       // log here for the build-bytes path so the user isn't left silent if
-      // the merge step throws.
+      // the merge step throws.Okay can
     } finally {
       isRunningRef.current = false;
     }

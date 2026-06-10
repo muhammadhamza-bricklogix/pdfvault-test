@@ -113,7 +113,13 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
         }
       };
 
+      // Guard so the closedPoll interval doesn't reject after we have
+      // already received and processed the token.
+      let hasReceived = false;
+
       const handlePayload = (data: Partial<OAuthMessagePayload>) => {
+        if (hasReceived) return;
+        hasReceived = true;
         cleanup();
 
         if (data.error) {
@@ -132,6 +138,19 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
           reject(new Error("No access token was returned by the provider."));
 
           return;
+        }
+
+        // Notify the popup that we got the token so it can close
+        // immediately instead of waiting for the auto-close timeout.
+        try {
+          if (popup && !popup.closed) {
+            popup.postMessage(
+              { source: "pdfedits-oauth-ack" },
+              window.location.origin,
+            );
+          }
+        } catch {
+          // COOP may block postMessage to the popup — ignore.
         }
 
         resolve({
@@ -199,6 +218,11 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
       const closedPoll = window.setInterval(() => {
         try {
           if (popup.closed) {
+            // If we already received the token but the popup hasn't been
+            // closed by cleanup() yet, don't treat this as an error.
+            if (hasReceived) {
+              return;
+            }
             cleanup();
             reject(new Error("Sign-in popup was closed."));
           }

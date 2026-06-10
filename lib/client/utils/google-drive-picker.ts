@@ -86,6 +86,19 @@ export async function pickGoogleDrivePdfFiles(
   accessToken: string,
   developerKey: string,
 ): Promise<PickedGoogleDrivePdf[]> {
+  if (!developerKey || developerKey.length < 10) {
+    throw new Error(
+      "Google API Key is missing or looks invalid. " +
+        "Ensure NEXT_PUBLIC_GOOGLE_API_KEY is set and the Picker API is enabled in Google Cloud Console.",
+    );
+  }
+
+  if (!accessToken || accessToken.length < 10) {
+    throw new Error(
+      "Google OAuth access token is missing. Please try signing in again.",
+    );
+  }
+
   await ensureGooglePickerLoaded();
 
   const google = (window as unknown as { google?: { picker: unknown } }).google;
@@ -206,10 +219,35 @@ export async function pickGoogleDrivePdfFiles(
             typeof data.error === "string" && data.error.length > 0
               ? data.error
               : null;
-          const message =
-            `Google Drive picker fired unexpected action ` +
-            `"${action ?? "(unknown)"}"` +
-            (dataError ? `: ${dataError}` : "");
+
+          // Provide actionable messages for the most common failure modes.
+          let message: string;
+          if (action === "error") {
+            if (
+              dataError?.includes("origin") ||
+              dataError?.includes("referrer") ||
+              dataError?.includes("API key")
+            ) {
+              message =
+                `Google Drive picker failed because the API key is not ` +
+                `authorized for this origin (${window.location.origin}). ` +
+                `Go to Google Cloud Console → Credentials → API keys, ` +
+                `and add "${window.location.origin}/*" to the HTTP referrers.`;
+            } else if (dataError?.includes("token")) {
+              message =
+                `Google Drive picker failed due to an invalid OAuth token. ` +
+                `Please sign in again.`;
+            } else {
+              message =
+                `Google Drive picker encountered an error` +
+                (dataError ? `: ${dataError}` : "");
+            }
+          } else {
+            message =
+              `Google Drive picker fired unexpected action ` +
+              `"${action ?? "(unknown)"}"` +
+              (dataError ? `: ${dataError}` : "");
+          }
 
           // eslint-disable-next-line no-console
           console.error("[google-drive-picker] picker callback error", {
