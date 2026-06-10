@@ -111,6 +111,7 @@ export default function OAuthCallbackPage() {
         }
       }
     };
+
     window.addEventListener("message", onAck);
 
     // Give both channels plenty of time to deliver before auto-closing.

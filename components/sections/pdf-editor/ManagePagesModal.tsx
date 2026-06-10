@@ -52,10 +52,6 @@ type ToolbarItem = {
   label: string;
 };
 
-type MovePromptState = {
-  position: "after" | "before";
-} | null;
-
 const LEFT_TOOLS: ToolbarItem[] = [
   { icon: Add01Icon, id: "new-page", label: "New Page" },
   { icon: Delete02Icon, id: "delete", label: "Delete Pages" },
@@ -164,7 +160,7 @@ export function ManagePagesModal({
 
   const [gridZoom, setGridZoom] = useState(0.32);
   const [isResizeOpen, setIsResizeOpen] = useState(false);
-  const [movePrompt, setMovePrompt] = useState<MovePromptState>(null);
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [moveTargetPage, setMoveTargetPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +180,24 @@ export function ManagePagesModal({
   const canDelete = hasSelection && pageTotal - draft.selectedCount >= 1;
   const canZoomOut = gridZoom > 0.2;
   const canZoomIn = gridZoom < 0.5;
+
+  // Position of the selected block, used to disable the single-step move
+  // buttons once the block has reached the first / last slot.
+  const selectedIdSet = new Set(draft.selectedIds);
+  const firstSelectedIndex = draft.pages.findIndex((p) =>
+    selectedIdSet.has(p.id),
+  );
+  let lastSelectedIndex = -1;
+
+  for (let i = draft.pages.length - 1; i >= 0; i -= 1) {
+    if (selectedIdSet.has(draft.pages[i].id)) {
+      lastSelectedIndex = i;
+      break;
+    }
+  }
+  const canMoveBefore = hasSelection && firstSelectedIndex > 0;
+  const canMoveAfter =
+    hasSelection && lastSelectedIndex >= 0 && lastSelectedIndex < pageTotal - 1;
 
   const handleToolPress = useCallback(
     (toolId: string) => {
@@ -206,13 +220,18 @@ export function ManagePagesModal({
         case "resize":
           setIsResizeOpen(true);
           break;
+        case "move":
+          // Default the prompt to the selected page's current position.
+          setMoveTargetPage(
+            firstSelectedIndex >= 0 ? firstSelectedIndex + 1 : 1,
+          );
+          setIsMoveOpen(true);
+          break;
         case "move-before":
-          setMoveTargetPage(1);
-          setMovePrompt({ position: "before" });
+          draft.moveSelectedByStep(-1);
           break;
         case "move-after":
-          setMoveTargetPage(pageTotal);
-          setMovePrompt({ position: "after" });
+          draft.moveSelectedByStep(1);
           break;
         case "import":
           importInputRef.current?.click();
@@ -239,7 +258,7 @@ export function ManagePagesModal({
           break;
       }
     },
-    [draft, pageTotal],
+    [draft, firstSelectedIndex],
   );
 
   const isToolDisabled = (toolId: string) => {
@@ -253,11 +272,13 @@ export function ManagePagesModal({
       case "resize":
       case "rotate-left":
       case "rotate-right":
-      case "move-before":
-      case "move-after":
         return !hasSelection;
       case "move":
-        return true;
+        return !hasSelection;
+      case "move-before":
+        return !canMoveBefore;
+      case "move-after":
+        return !canMoveAfter;
       case "import":
         return false;
       case "undo":
@@ -288,10 +309,9 @@ export function ManagePagesModal({
   };
 
   const handleConfirmMove = () => {
-    if (!movePrompt) return;
-
-    draft.moveSelected(moveTargetPage, movePrompt.position);
-    setMovePrompt(null);
+    // "before" semantics with targetPage = N lands the selected page at page N.
+    draft.moveSelected(moveTargetPage, "before");
+    setIsMoveOpen(false);
   };
 
   const handleSave = async () => {
@@ -441,18 +461,15 @@ export function ManagePagesModal({
       </Modal.Backdrop>
 
       <Modal.Backdrop
-        isOpen={movePrompt !== null}
+        isOpen={isMoveOpen}
         onOpenChange={(open) => {
-          if (!open) setMovePrompt(null);
+          if (!open) setIsMoveOpen(false);
         }}
       >
         <Modal.Container className="max-w-sm">
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>
-                Move {movePrompt?.position === "before" ? "before" : "after"}{" "}
-                page
-              </Modal.Heading>
+              <Modal.Heading>Move to page</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="gap-4">
               <div className="flex flex-col gap-2">
@@ -477,7 +494,7 @@ export function ManagePagesModal({
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="tertiary" onPress={() => setMovePrompt(null)}>
+              <Button variant="tertiary" onPress={() => setIsMoveOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" onPress={handleConfirmMove}>

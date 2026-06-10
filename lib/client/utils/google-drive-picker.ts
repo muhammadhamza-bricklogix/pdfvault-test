@@ -222,6 +222,7 @@ export async function pickGoogleDrivePdfFiles(
 
           // Provide actionable messages for the most common failure modes.
           let message: string;
+
           if (action === "error") {
             if (
               dataError?.includes("origin") ||

@@ -438,6 +438,48 @@ export function useManagePagesDraft({
     [applyChange],
   );
 
+  // Nudge the selected page(s) one position toward the start (-1) or end (+1).
+  // The selected pages are treated as a single block (collapsed if scattered),
+  // mirroring `moveSelected`'s insert model. No-op at the edges so repeated
+  // clicks walk the block to the first/last slot and then stop.
+  const moveSelectedByStep = useCallback(
+    (direction: -1 | 1) => {
+      applyChange((current) => {
+        if (current.selectedIds.length === 0) return current;
+
+        const selectedSet = new Set(current.selectedIds);
+        const moving = current.pages.filter((p) => selectedSet.has(p.id));
+        const rest = current.pages.filter((p) => !selectedSet.has(p.id));
+
+        if (moving.length === 0 || rest.length === 0) return current;
+
+        // Insert index in `rest` that reproduces the current order = the count
+        // of non-selected pages preceding the first selected page.
+        const firstSelectedIndex = current.pages.findIndex((p) =>
+          selectedSet.has(p.id),
+        );
+        const currentInsertAt = current.pages
+          .slice(0, firstSelectedIndex)
+          .reduce((n, p) => (selectedSet.has(p.id) ? n : n + 1), 0);
+        const nextInsertAt = currentInsertAt + direction;
+
+        // Already at the first / last slot — nothing to do.
+        if (nextInsertAt < 0 || nextInsertAt > rest.length) return current;
+
+        const next = [...rest];
+
+        next.splice(nextInsertAt, 0, ...moving);
+
+        return {
+          ...current,
+          pages: next,
+          selectedIds: current.selectedIds.filter((id) => selectedSet.has(id)),
+        };
+      });
+    },
+    [applyChange],
+  );
+
   const importPdf = useCallback(
     async (file: File) => {
       // 50 MB cap — the bytes are kept in React state, cloned on every undo
@@ -524,6 +566,7 @@ export function useManagePagesDraft({
     importPdf,
     importedPdfs,
     moveSelected,
+    moveSelectedByStep,
     pages,
     redo,
     reorder,
