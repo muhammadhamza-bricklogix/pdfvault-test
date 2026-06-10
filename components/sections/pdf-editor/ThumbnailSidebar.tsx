@@ -24,6 +24,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 const DEFAULT_THUMBNAIL_ZOOM = 0.2;
@@ -103,8 +104,7 @@ function Thumbnail({
 
     const loadPage = async () => {
       if (isImported && importBytes && draftPage) {
-        // Legacy build — see comment in pdfjs-worker.ts for why.
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        const pdfjs = await loadPdfJs();
         const task = pdfjs.getDocument({ data: importBytes.slice(0) });
 
         importedTask = task;

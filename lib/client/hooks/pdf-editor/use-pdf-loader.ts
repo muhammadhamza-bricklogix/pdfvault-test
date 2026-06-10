@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
@@ -35,11 +36,9 @@ export function usePdfLoader() {
       });
 
       try {
-        // Dynamic import keeps pdfjs-dist out of the SSR bundle entirely.
-        // Legacy build — see comment in pdfjs-worker.ts. Required for older
-        // iOS Safari WebKit where the modern build's getTextContent throws
-        // "undefined is not a function (near '...t of e...')".
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        // loadPdfJs installs Safari polyfills and loads the legacy build.
+        // See lib/client/pdf-editor/load-pdfjs.ts and pdfjs-polyfills.ts.
+        const pdfjs = await loadPdfJs();
 
         pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 

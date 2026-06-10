@@ -118,20 +118,22 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       backgroundImageConfig.customPageRange,
     );
 
-  // Suppress pdf.js's native text rendering on every device. Glyphs come
-  // from the Fabric IText overlay instead (see `useEditTextMode` below).
+  // Desktop: suppress pdf.js's native text rendering and let the Fabric
+  // IText overlay (`useEditTextMode` below) own the text layer — that's
+  // what makes text click-to-edit work.
   //
-  // Previously mobile let pdf.js paint text itself and skipped the Fabric
-  // overlay — that worked around an old iOS Safari bug where the overlay
-  // rendered blank. With the post-2026-05 fixes (font-readiness await,
-  // pinch-zoom floor at 0.5, retina scaling on the wrapper) the overlay
-  // is reliable on real iOS devices. Keeping both layers on mobile was
-  // causing visible glyph doubling — pdf.js's text raster + the Fabric
-  // overlay drawing the same characters with sub-pixel offset under DPR=3.
+  // Mobile: paint text via pdf.js directly (no Fabric overlay). Older iOS
+  // Safari WebKit can throw inside pdf.js v5's `getTextContent` with
+  // `"undefined is not a function (near '...t of e...')"` from a feature
+  // it doesn't ship — that takes the whole text layer down, leaving the
+  // page blank. By rendering text the native pdf.js way on mobile we
+  // never call `getTextContent` for the overlay, so the page is always
+  // readable. Trade-off: mobile is view-only for the text tool; every
+  // other tool (draw, highlight, shapes, signatures, etc.) still works.
   const { renderedSize } = usePageRenderer({
     canvasRef,
     page,
-    suppressText: true,
+    suppressText: !isMobile,
     zoom,
   });
 
@@ -154,10 +156,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
-  // Always run the IText overlay extraction — it's the editable text layer
-  // on every device now (mobile included). Pairs with `suppressText: true`
-  // above so pdf.js doesn't paint the glyphs underneath the overlay.
-  useEditTextMode({ fabricCanvas, page });
+  // Skip the IText overlay on mobile — pdf.js paints text directly there
+  // (see `suppressText: !isMobile` above), so a second copy from Fabric
+  // would double-print and hijack pointer events. This also avoids ever
+  // calling pdf.js's `getTextContent` on mobile, which throws on older
+  // iOS Safari WebKit and was leaving the page blank.
+  useEditTextMode({ fabricCanvas: isMobile ? null : fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });

@@ -9,6 +9,7 @@ import type {
 import { useCallback, useReducer } from "react";
 
 import { DEFAULT_BLANK_PAGE } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { toast } from "@/lib/shared/utils/toast";
 
 const MAX_HISTORY = 50;
@@ -456,8 +457,7 @@ export function useManagePagesDraft({
       let pageTotal = 0;
 
       try {
-        // Legacy build — see comment in pdfjs-worker.ts for why.
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        const pdfjs = await loadPdfJs();
         const task = pdfjs.getDocument({ data: bytes.slice(0) });
 
         pageTotal = (await task.promise).numPages;

@@ -1,6 +1,8 @@
 import type { PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
+import { loadPdfJs } from "./load-pdfjs";
+
 export type FontData = {
   bold: boolean;
   bytes: Uint8Array;
@@ -119,10 +121,8 @@ function rgbToHex(r: number, g: number, b: number): string {
 async function extractSequentialTextColors(
   page: PDFPageProxy,
 ): Promise<string[]> {
-  // Legacy build — see comment in pdfjs-worker.ts. Critical here: the modern
-  // build's `getTextContent` throws on older iOS Safari, taking the whole
-  // text layer down.
-  const { OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // loadPdfJs installs Safari polyfills before pdf.js evaluates.
+  const { OPS } = await loadPdfJs();
   const opList = await page.getOperatorList();
 
   let currentFillColor = "#000000";

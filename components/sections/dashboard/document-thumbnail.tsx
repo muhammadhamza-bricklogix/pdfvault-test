@@ -6,6 +6,7 @@ import { File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 
 const cache = new Map<string, string>();
@@ -33,8 +34,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
 
     (async () => {
       try {
-        // Legacy build — see comment in pdfjs-worker.ts for why.
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        const pdfjs = await loadPdfJs();
 
         if (!pdfjs.GlobalWorkerOptions.workerSrc) {
           pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
