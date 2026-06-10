@@ -109,7 +109,8 @@ export async function buildPdfFromDraft({
 
     if (!bytes) return null;
 
-    const pdfjs = await import("pdfjs-dist");
+    // Legacy build — see comment in pdfjs-worker.ts for why.
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const proxy = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
 
     importedPdfjsCache.set(importKey, proxy);

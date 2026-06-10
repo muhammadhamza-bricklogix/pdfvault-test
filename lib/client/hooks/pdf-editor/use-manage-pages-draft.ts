@@ -456,7 +456,8 @@ export function useManagePagesDraft({
       let pageTotal = 0;
 
       try {
-        const pdfjs = await import("pdfjs-dist");
+        // Legacy build — see comment in pdfjs-worker.ts for why.
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const task = pdfjs.getDocument({ data: bytes.slice(0) });
 
         pageTotal = (await task.promise).numPages;

@@ -119,7 +119,10 @@ function rgbToHex(r: number, g: number, b: number): string {
 async function extractSequentialTextColors(
   page: PDFPageProxy,
 ): Promise<string[]> {
-  const { OPS } = await import("pdfjs-dist");
+  // Legacy build — see comment in pdfjs-worker.ts. Critical here: the modern
+  // build's `getTextContent` throws on older iOS Safari, taking the whole
+  // text layer down.
+  const { OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const opList = await page.getOperatorList();
 
   let currentFillColor = "#000000";

@@ -33,7 +33,8 @@ export function DocumentThumbnail({ document: doc }: Props) {
 
     (async () => {
       try {
-        const pdfjs = await import("pdfjs-dist");
+        // Legacy build — see comment in pdfjs-worker.ts for why.
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
         if (!pdfjs.GlobalWorkerOptions.workerSrc) {
           pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;

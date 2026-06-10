@@ -35,8 +35,11 @@ export function usePdfLoader() {
       });
 
       try {
-        // Dynamic import keeps pdfjs-dist out of the SSR bundle entirely
-        const pdfjs = await import("pdfjs-dist");
+        // Dynamic import keeps pdfjs-dist out of the SSR bundle entirely.
+        // Legacy build — see comment in pdfjs-worker.ts. Required for older
+        // iOS Safari WebKit where the modern build's getTextContent throws
+        // "undefined is not a function (near '...t of e...')".
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
         pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 

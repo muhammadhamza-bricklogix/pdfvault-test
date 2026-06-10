@@ -103,7 +103,8 @@ function Thumbnail({
 
     const loadPage = async () => {
       if (isImported && importBytes && draftPage) {
-        const pdfjs = await import("pdfjs-dist");
+        // Legacy build — see comment in pdfjs-worker.ts for why.
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const task = pdfjs.getDocument({ data: importBytes.slice(0) });
 
         importedTask = task;
