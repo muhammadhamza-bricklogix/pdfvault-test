@@ -1,5 +1,6 @@
 "use client";
 
+import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import type { Canvas } from "fabric";
 import type { RefObject } from "react";
 
@@ -12,6 +13,23 @@ type UseFabricCanvasParams = {
   fabricCanvasRef: RefObject<HTMLCanvasElement | null>;
   renderedSize: { height: number; width: number } | null;
 };
+
+// Tools that draw onto the Fabric overlay with a 1-finger gesture. Only these
+// need `touch-action: none` so iOS Safari hands the gesture to Fabric. For
+// every other tool (select, text, image, watermark, etc.) the wrapper must
+// allow `pan-x pan-y` so the user can swipe to pan a zoomed-in page.
+const DRAW_TOOLS: ReadonlySet<ActiveTool> = new Set<ActiveTool>([
+  "draw",
+  "eraser",
+  "highlight",
+  "redact",
+  "shape",
+  "whiteout",
+]);
+
+function touchActionFor(tool: ActiveTool): string {
+  return DRAW_TOOLS.has(tool) ? "none" : "pan-x pan-y";
+}
 
 /**
  * The Fabric canvas always uses "base" dimensions (zoom=1, i.e. the PDF page
@@ -35,6 +53,7 @@ export function useFabricCanvas({
     return order[s.currentPage - 1] ?? s.currentPage;
   });
   const zoom = usePdfEditorStore((s) => s.zoom);
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
   const getFabricJson = usePdfEditorStore((s) => s.getFabricJson);
   const saveFabricJsonBySourcePage = usePdfEditorStore(
     (s) => s.saveFabricJsonBySourcePage,
@@ -109,11 +128,15 @@ export function useFabricCanvas({
         wrapper.style.position = "absolute";
         wrapper.style.top = "0";
         wrapper.style.left = "0";
-        // iOS Safari's outer scroll container otherwise wins `touchstart` on
-        // every drag — Fabric's Draw/Highlight/Eraser strokes drop frames or
-        // get cancelled entirely. `touch-action: none` tells the browser
-        // "this region owns its touch events," handing them all to Fabric.
-        wrapper.style.touchAction = "none";
+        // For drawing tools, `touch-action: none` hands every gesture to
+        // Fabric (otherwise iOS Safari's scroll container steals touchstart
+        // and strokes drop frames or get cancelled). For select / text /
+        // image / watermark / etc. we set `pan-x pan-y` so the user can
+        // 1-finger swipe to pan a zoomed-in page. The active-tool effect
+        // below keeps this in sync as the user switches tools.
+        wrapper.style.touchAction = touchActionFor(
+          usePdfEditorStore.getState().activeTool,
+        );
       }
 
       fabricRef.current = fc;
@@ -179,6 +202,19 @@ export function useFabricCanvas({
       }
     };
   }, [sourcePage, hasRenderedSize]);
+
+  // --- Touch-action follows the active tool ---
+  // Drawing tools must own touchstart (`none`); everything else releases
+  // 1-finger gestures back to the outer scroll container so the user can
+  // swipe to pan a zoomed-in page.
+  useEffect(() => {
+    const fc = fabricRef.current;
+    const wrapper = fc?.getElement().parentElement;
+
+    if (!wrapper) return;
+
+    wrapper.style.touchAction = touchActionFor(activeTool);
+  }, [activeTool, fabricCanvas]);
 
   // --- Resize + zoom: keep the existing canvas, don't re-mount ---
   // Critical for sharp text + smooth UX when the user zooms in/out.
