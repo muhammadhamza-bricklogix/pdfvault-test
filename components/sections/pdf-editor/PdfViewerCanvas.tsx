@@ -369,10 +369,18 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   return (
     <div
       ref={viewerScrollRef}
-      className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex-1 touch-pan-x touch-pan-y overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div className="shadow-lg">
-        <div ref={containerRef} className="relative bg-white">
+      {/*
+        `w-fit mx-auto` sizes to the page and auto-centres horizontally.
+        Unlike a flex parent with `justify-center`, this lets the scroll
+        container reach the left/top edge of the page when zoomed in —
+        iOS Safari otherwise pins the centred child and 1-finger swipes
+        feel frozen.
+      */}
+      <div className="mx-auto w-fit">
+        <div className="shadow-lg">
+          <div ref={containerRef} className="relative bg-white">
           {bgShouldShow && backgroundImageConfig.imageData && (
             /* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not optimizable */
             <img
@@ -408,6 +416,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
             canvasContainerRef={containerRef}
             fabricCanvas={fabricCanvas}
           />
+          </div>
         </div>
       </div>
       <SignatureModal
