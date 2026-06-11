@@ -95,8 +95,13 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         try {
           blocks = await extractTextBlocks(page);
         } catch (err) {
+          // Inline message + stack so they're visible without expanding the
+          // Error object — mobile devtools often won't surface those props.
           logger.error("[PDFedits] text: extract failed", {
             sourcePage,
+            message: err instanceof Error ? err.message : String(err),
+            name: err instanceof Error ? err.name : undefined,
+            stack: err instanceof Error ? err.stack : undefined,
             err,
           });
 
@@ -124,10 +129,16 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         logger.warn("[PDFedits] text: no blocks (scanned PDF?)", {
           sourcePage,
         });
-        toast.info({
-          description: "This page may be scanned or contain only images.",
-          title: "No editable text found",
-        });
+        const isCreatedBlank =
+          (file as (File & { __createdBlank?: boolean }) | null)
+            ?.__createdBlank === true;
+
+        if (!isCreatedBlank) {
+          toast.info({
+            description: "This page may be scanned or contain only images.",
+            title: "No editable text found",
+          });
+        }
 
         return;
       }

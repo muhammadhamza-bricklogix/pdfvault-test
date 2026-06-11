@@ -7,22 +7,20 @@ import { conversionService } from "@/lib/shared/api/services/conversion.service"
 const EXT_TO_CONVERSION: Record<string, ConversionType> = {
   doc: "doc_to_pdf",
   docx: "docx_to_pdf",
+  gif: "gif_to_pdf",
+  htm: "html_to_pdf",
+  html: "html_to_pdf",
   jpeg: "jpg_to_pdf",
   jpg: "jpg_to_pdf",
   png: "png_to_pdf",
+  ppt: "ppt_to_pdf",
   pptx: "pptx_to_pdf",
+  txt: "txt_to_pdf",
   xls: "xls_to_pdf",
   xlsx: "xlsx_to_pdf",
 };
 
-const UNSUPPORTED_EXTENSIONS = new Set([
-  "bmp",
-  "gif",
-  "html",
-  "htm",
-  "ppt",
-  "txt",
-]);
+const UNSUPPORTED_EXTENSIONS = new Set(["bmp"]);
 
 export const UPLOAD_ACCEPT_MIME = [
   "application/pdf",
@@ -30,9 +28,13 @@ export const UPLOAD_ACCEPT_MIME = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "image/jpeg",
   "image/png",
+  "image/gif",
+  "text/html",
+  "text/plain",
 ];
 
 function getExtension(file: File): string {

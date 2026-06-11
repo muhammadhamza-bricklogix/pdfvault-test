@@ -12,6 +12,7 @@ import type { InfiniteData } from "@tanstack/react-query";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { toast } from "@/lib/shared/utils/toast";
@@ -28,6 +29,27 @@ type UploadVariables = UploadDocumentInput & {
 };
 
 /**
+ * Overwrite reconciliation. An overwrite re-uploads new bytes under the SAME
+ * `documentId`, so the editor navigates back to the same `?id=` it already has
+ * open. The document loader's "already hydrated this id" guard
+ * (`use-editor-document-loader.ts`) assumes same id ⇒ same bytes and skips the
+ * re-download — leaving the stale pre-overwrite file on screen. Dropping the
+ * in-memory copy here (the global store survives client-side navigation) forces
+ * the loader to re-fetch the freshly uploaded bytes. No-op for new uploads
+ * (`documentId` undefined) and for overwrites of a document that isn't the one
+ * currently open.
+ */
+function dropStaleEditorCopyOnOverwrite(documentId?: string) {
+  if (!documentId) return;
+
+  const editor = usePdfEditorStore.getState();
+
+  if (editor.currentDocumentId === documentId) {
+    editor.clearFile();
+  }
+}
+
+/**
  * Persists an upload to the cache. Surface-level UX (progress, success, error
  * toasts) is owned by the upload-toast controller via `useTrackedUpload`.
  * This mutation deliberately does not toast.
@@ -38,9 +60,10 @@ export function useUploadDocumentMutation() {
   return useMutation<Document, Error, UploadVariables>({
     mutationFn: ({ options, ...input }) =>
       documentsService.uploadDocument(input, options),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.setQueryData(documentKeys.detail(data.id), data);
+      dropStaleEditorCopyOnOverwrite(variables.documentId);
     },
   });
 }
@@ -52,9 +75,10 @@ export function useUploadCloudDocumentMutation() {
 
   return useMutation<Document, Error, UploadCloudVariables>({
     mutationFn: (input) => documentsService.uploadCloudDocument(input),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.setQueryData(documentKeys.detail(data.id), data);
+      dropStaleEditorCopyOnOverwrite(variables.documentId);
     },
   });
 }

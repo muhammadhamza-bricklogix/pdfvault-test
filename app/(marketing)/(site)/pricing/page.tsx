@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const metadata: Metadata = {
-  description: "Simple, transparent plans for PDFedits — details coming soon.",
+  description:
+    "Simple, transparent plans for Content Clicks LLC — details coming soon.",
   title: "Pricing",
 };
 
@@ -16,8 +17,9 @@ export default function PricingPage() {
         Pricing
       </h1>
       <p className="text-default-600 dark:text-default-400">
-        We are finalizing plans for PDFedits. Contact us for early access, team
-        pricing, or questions about what will be included in each tier.
+        We are finalizing plans for Content Clicks LLC. Contact us for early
+        access, team pricing, or questions about what will be included in each
+        tier.
       </p>
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link

@@ -6,12 +6,25 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
+
+type SaveBeforeActionDetail = {
+  onComplete: (result: { ok: boolean }) => void;
+};
 
 /**
  * Listens for `editor:save` (dispatched by the Save button) and uploads the
  * flattened PDF to the user's library.
+ *
+ * Also listens for `editor:save-before-action`, used by flows that need to
+ * persist the live canvas state before doing something destructive to the
+ * editor (e.g. Hamburger → Create New). The event detail carries a callback
+ * that fires once the save completes (or fails) so the dispatcher can decide
+ * whether to proceed. This routes through here because `fabricCanvas` lives in
+ * `EditorLayout` — modals mounted at shell-level otherwise see `null` and
+ * silently upload stale `fabricJsonByPage` from the store.
  */
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
@@ -101,4 +114,73 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       window.removeEventListener("editor:save", onSave);
     };
   }, [handleSave]);
+
+  useEffect(() => {
+    const onSaveBeforeAction = async (event: Event) => {
+      const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
+      const onComplete = detail?.onComplete;
+
+      if (!onComplete) return;
+
+      const result = await persistEditorDocument({
+        fabricCanvas: fabricRef.current,
+      });
+
+      if (result.ok) {
+        // Commit the saved bytes as the new editor baseline. Without this,
+        // downstream readers (Manage Pages thumbnails, exports) still see the
+        // pre-edit source PDF until the next full reload — the visible bug
+        // the user reported on Manage Pages.
+        const targetFile = result.savedFile;
+
+        usePdfEditorStore.getState().applyPostSaveReset(targetFile);
+
+        // Wait for `usePdfLoader` to finish reloading pdf.js against the new
+        // bytes before resolving. Otherwise the caller (e.g. Manage Pages)
+        // opens while `pdfDocument` is still null and renders an empty state
+        // for a frame.
+        await new Promise<void>((resolve) => {
+          const isReady = () => {
+            const s = usePdfEditorStore.getState();
+
+            return s.file === targetFile && s.pdfDocument != null;
+          };
+
+          if (isReady()) {
+            resolve();
+
+            return;
+          }
+
+          const unsub = usePdfEditorStore.subscribe(() => {
+            if (isReady()) {
+              unsub();
+              resolve();
+            }
+          });
+        });
+
+        onComplete({ ok: true });
+
+        return;
+      }
+
+      // `no-changes` is a benign short-circuit (dirty flag was already clean
+      // by the time the save ran). Treat as success — nothing to commit and
+      // nothing to lose by proceeding.
+      onComplete({ ok: result.reason === "no-changes" });
+    };
+
+    window.addEventListener(
+      "editor:save-before-action",
+      onSaveBeforeAction as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "editor:save-before-action",
+        onSaveBeforeAction as EventListener,
+      );
+    };
+  }, []);
 }

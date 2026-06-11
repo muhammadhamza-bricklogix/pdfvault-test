@@ -2,126 +2,264 @@
 
 import type { ReactNode } from "react";
 
-import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  Configuration01Icon,
+  File01Icon,
+  Menu01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { useDashboardUiStore } from "@/lib/client/stores";
+import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
-import { SidebarBody } from "./dashboard-sidebar";
+import { IdentityPopover } from "./identity-popover";
 
 type DashboardShellProps = {
   children: ReactNode;
 };
 
-const PAGE_TITLES: { match: (pathname: string) => boolean; title: string }[] = [
+type NavItem = {
+  href: string;
+  icon: typeof File01Icon;
+  isActive: (pathname: string) => boolean;
+  label: string;
+};
+
+const NAV_ITEMS: readonly NavItem[] = [
   {
-    match: (p) => p.startsWith("/dashboard/settings"),
-    title: "Settings",
+    href: ROUTES.APP.DASHBOARD,
+    icon: File01Icon,
+    isActive: (p) => p === ROUTES.APP.DASHBOARD,
+    label: "My files",
   },
   {
-    match: (p) => p === "/dashboard/activity",
-    title: "Activity",
-  },
-  {
-    match: (p) => p === "/dashboard",
-    title: "My Documents",
+    href: `${ROUTES.PUBLIC.HOME}#pdf-tools`,
+    icon: Configuration01Icon,
+    isActive: (p) => p.startsWith("/tools"),
+    label: "Tools",
   },
 ];
 
+type SidebarBodyProps = {
+  pathname: string;
+  /**
+   * Collapsed = icons only, no inline labels. Used for the mobile drawer
+   * so the rail stays a tight 64-px column instead of stacking "My files"
+   * / "Tools" text under each glyph. Desktop stays expanded.
+   */
+  collapsed?: boolean;
+  onNavigate?: () => void;
+};
+
+/**
+ * The sidebar's visible content. Shared between the persistent desktop
+ * rail and the mobile slide-in drawer so they can never drift apart.
+ */
+function SidebarBody({
+  pathname,
+  collapsed = false,
+  onNavigate,
+}: SidebarBodyProps) {
+  return (
+    <>
+      <div className="flex w-full flex-col items-center gap-6">
+        <Link
+          aria-label="Go to home"
+          className="flex size-9 items-center justify-center rounded-lg text-[var(--color-accent)] transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          href={ROUTES.PUBLIC.HOME}
+          onClick={onNavigate}
+        >
+          <Image
+            priority
+            alt="Content Clicks LLC"
+            className="size-7 object-contain"
+            height={28}
+            src="/logo.svg"
+            width={28}
+          />
+        </Link>
+
+        <nav
+          aria-label="Primary"
+          className="flex w-full flex-col items-center gap-1"
+        >
+          {NAV_ITEMS.map((item) => {
+            const active = item.isActive(pathname);
+
+            return (
+              <Tooltip key={item.label} delay={300}>
+                <Link
+                  aria-current={active ? "page" : undefined}
+                  aria-label={collapsed ? item.label : undefined}
+                  className={`flex w-full flex-col items-center ${collapsed ? "px-1 py-1.5" : "gap-1 px-1 py-2 text-[10px] font-medium"} transition-colors ${
+                    active
+                      ? "text-[var(--color-accent)]"
+                      : "text-default-500 hover:text-[var(--color-foreground)]"
+                  }`}
+                  href={item.href}
+                  onClick={onNavigate}
+                >
+                  <span
+                    className={`flex size-9 items-center justify-center rounded-lg transition-colors ${
+                      active
+                        ? "bg-[color-mix(in_oklab,var(--color-accent)_12%,transparent)]"
+                        : "group-hover:bg-default-100"
+                    }`}
+                  >
+                    <HugeiconsIcon icon={item.icon} size={18} />
+                  </span>
+                  {!collapsed && (
+                    <span className="leading-tight">{item.label}</span>
+                  )}
+                </Link>
+                <Tooltip.Content>
+                  <p>{item.label}</p>
+                </Tooltip.Content>
+              </Tooltip>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-4 flex w-full justify-center">
+        <IdentityPopover collapsed />
+      </div>
+    </>
+  );
+}
+
 export function DashboardShell({ children }: DashboardShellProps) {
-  const pathname = usePathname();
-  const isCollapsed = useDashboardUiStore((s) => s.isSidebarCollapsed);
-  const isMobileOpen = useDashboardUiStore((s) => s.isMobileDrawerOpen);
-  const setMobileOpen = useDashboardUiStore((s) => s.setMobileDrawerOpen);
+  const pathname = usePathname() ?? "";
+  const isMobile = useIsMobile();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Auto-close mobile drawer on route change.
+  // Auto-close the drawer when the user navigates so they aren't left
+  // staring at an opaque overlay after tapping a nav item. Pathname is
+  // an external signal — closing the drawer in response is the
+  // textbook valid use of an effect setState (the lint rule is over-broad
+  // here).
   useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname, setMobileOpen]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMobileOpen(false);
+  }, [pathname]);
 
-  // Lock background scroll when the mobile drawer is open.
+  // Lock background scroll while the drawer is open — otherwise tapping
+  // through the overlay reaches the page underneath on iOS Safari.
   useEffect(() => {
     if (!isMobileOpen) return;
-    const prev = document.body.style.overflow;
+    const previous = document.body.style.overflow;
 
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = previous;
     };
   }, [isMobileOpen]);
 
-  const pageTitle =
-    PAGE_TITLES.find((entry) => entry.match(pathname ?? ""))?.title ??
-    "Dashboard";
-
-  return (
-    <div className="flex h-screen w-full overflow-hidden bg-[var(--color-background)]">
-      {/* Desktop sidebar */}
-      <aside
-        className={`hidden shrink-0 bg-default-100/35 transition-[width] duration-200 lg:block ${
-          isCollapsed ? "w-16" : "w-60"
-        }`}
-      >
-        <SidebarBody collapsed={isCollapsed} />
-      </aside>
-
-      {/* Mobile drawer — fixed overlay with backdrop. Custom rather than
-          HeroUI's <Drawer> because the latter occasionally renders inline on
-          iOS Safari, pushing page content instead of overlaying it. */}
-      {isMobileOpen ? (
-        <div aria-modal className="fixed inset-0 z-50 lg:hidden" role="dialog">
-          <button
-            aria-label="Close navigation"
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            type="button"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-[var(--color-background)] shadow-xl">
-            <div className="flex items-center justify-end px-2 pt-2">
-              <Button
-                isIconOnly
-                aria-label="Close navigation"
-                size="sm"
-                variant="ghost"
-                onPress={() => setMobileOpen(false)}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={18} />
-              </Button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <SidebarBody
-                collapsed={false}
-                onNavigate={() => setMobileOpen(false)}
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar */}
-        <div className="flex h-14 shrink-0 items-center gap-3 bg-default-100/35 px-4 lg:hidden">
-          <Button
-            isIconOnly
-            aria-label="Open navigation"
-            size="sm"
-            variant="ghost"
-            onPress={() => setMobileOpen(true)}
-          >
-            <HugeiconsIcon icon={Menu01Icon} size={20} />
-          </Button>
-          <h1 className="truncate text-base font-semibold">{pageTitle}</h1>
-        </div>
-
+  // Render either the persistent rail (desktop) OR the drawer-pattern
+  // (mobile) — never both. Earlier the two were CSS-toggled via
+  // `hidden lg:flex` / `lg:hidden` but a stale Turbopack bundle was
+  // leaking the desktop aside through at narrow viewports. Conditional
+  // rendering on `useIsMobile()` is unambiguous: only one shell is
+  // mounted at any time.
+  if (!isMobile) {
+    return (
+      <div className="flex h-screen w-full overflow-hidden bg-default-50/40">
+        <aside className="relative flex h-full w-20 shrink-0 flex-col items-center border-r border-default-200 bg-[var(--color-background)] py-4">
+          <SidebarBody pathname={pathname} />
+        </aside>
         <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
           {children}
         </main>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-default-50/40">
+      {/* Mobile slide-in drawer + backdrop. Rendered always (so the open
+          transition is smooth) but the drawer is translated off-screen
+          when closed. */}
+      <button
+        aria-hidden={!isMobileOpen}
+        aria-label="Close navigation"
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${
+          isMobileOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+        tabIndex={isMobileOpen ? 0 : -1}
+        type="button"
+        onClick={() => setIsMobileOpen(false)}
+      />
+      <aside
+        aria-hidden={!isMobileOpen}
+        aria-label="Primary navigation"
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[20vw] flex-col items-center border-r border-default-200 bg-[var(--color-background)] py-4 shadow-xl transition-transform duration-200 ${
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <Button
+          isIconOnly
+          aria-label="Close navigation"
+          className="absolute right-2 top-2 !rounded-full"
+          size="sm"
+          variant="ghost"
+          onPress={() => setIsMobileOpen(false)}
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={18} />
+        </Button>
+        <SidebarBody
+          pathname={pathname}
+          onNavigate={() => setIsMobileOpen(false)}
+        />
+      </aside>
+
+      {/* Mobile top bar — hamburger + brand. */}
+      <div className="relative z-30 flex h-14 shrink-0 items-center gap-2 border-b border-default-200 bg-[var(--color-background)] px-3">
+        <Button
+          isIconOnly
+          aria-controls="dashboard-mobile-sidebar"
+          aria-expanded={isMobileOpen}
+          aria-label={isMobileOpen ? "Close navigation" : "Open navigation"}
+          size="sm"
+          variant="ghost"
+          onPress={() => setIsMobileOpen((open) => !open)}
+        >
+          <HugeiconsIcon
+            icon={isMobileOpen ? Cancel01Icon : Menu01Icon}
+            size={20}
+          />
+        </Button>
+        <Link
+          aria-label="Go to home"
+          className="flex items-center gap-2 text-base font-semibold tracking-tight"
+          href={ROUTES.PUBLIC.HOME}
+        >
+          <Image
+            priority
+            alt="Content Clicks LLC logo"
+            className="size-6 object-contain"
+            height={24}
+            src="/logo.svg"
+            width={24}
+          />
+          <span>
+            <span className="text-[var(--color-accent)]">PDF</span>
+            <span className="text-[var(--color-foreground)]">edits</span>
+          </span>
+        </Link>
+      </div>
+
+      <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+        {children}
+      </main>
     </div>
   );
 }

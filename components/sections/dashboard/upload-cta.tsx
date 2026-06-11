@@ -6,13 +6,15 @@ import { Button } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
-import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
+import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { ROUTES } from "@/lib/shared/constants/routes";
+
+import { DuplicateUploadModal } from "./duplicate-upload-modal";
 
 export function UploadCta() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { start } = useTrackedUpload();
+  const { duplicate, start } = useUploadWithDuplicateCheck();
 
   const onPick = () => inputRef.current?.click();
 
@@ -22,7 +24,7 @@ export function UploadCta() {
     e.target.value = "";
     if (!file) return;
 
-    start({
+    void start({
       file,
       onOpen: (id) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`),
     });
@@ -41,6 +43,11 @@ export function UploadCta() {
         <HugeiconsIcon icon={Upload01Icon} size={16} />
         <span className="truncate">Upload PDF</span>
       </Button>
+      <DuplicateUploadModal
+        filename={duplicate?.filename ?? null}
+        onIgnore={duplicate?.onIgnore ?? (() => undefined)}
+        onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
+      />
     </>
   );
 }

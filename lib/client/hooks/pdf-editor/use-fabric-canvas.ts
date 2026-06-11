@@ -1,5 +1,6 @@
 "use client";
 
+import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import type { Canvas } from "fabric";
 import type { RefObject } from "react";
 
@@ -12,6 +13,23 @@ type UseFabricCanvasParams = {
   fabricCanvasRef: RefObject<HTMLCanvasElement | null>;
   renderedSize: { height: number; width: number } | null;
 };
+
+// Tools that draw onto the Fabric overlay with a 1-finger gesture. Only these
+// need `touch-action: none` so iOS Safari hands the gesture to Fabric. For
+// every other tool (select, text, image, watermark, etc.) the wrapper must
+// allow `pan-x pan-y` so the user can swipe to pan a zoomed-in page.
+const DRAW_TOOLS: ReadonlySet<ActiveTool> = new Set<ActiveTool>([
+  "draw",
+  "eraser",
+  "highlight",
+  "redact",
+  "shape",
+  "whiteout",
+]);
+
+function touchActionFor(tool: ActiveTool): string {
+  return DRAW_TOOLS.has(tool) ? "none" : "pan-x pan-y";
+}
 
 /**
  * The Fabric canvas always uses "base" dimensions (zoom=1, i.e. the PDF page
@@ -35,6 +53,7 @@ export function useFabricCanvas({
     return order[s.currentPage - 1] ?? s.currentPage;
   });
   const zoom = usePdfEditorStore((s) => s.zoom);
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
   const getFabricJson = usePdfEditorStore((s) => s.getFabricJson);
   const saveFabricJsonBySourcePage = usePdfEditorStore(
     (s) => s.saveFabricJsonBySourcePage,
@@ -91,7 +110,17 @@ export function useFabricCanvas({
         }
       }
 
+      // `allowTouchScrolling` controls TWO things inside Fabric:
+      //   1. The `touch-action` Fabric writes onto the upper-canvas
+      //      ("manipulation" when true, "none" when false).
+      //   2. Whether Fabric calls e.preventDefault() inside its own
+      //      touchstart handler — when true it does NOT preventDefault, so
+      //      the browser is free to pan/scroll the parent.
+      // We default to `true` here so 1-finger swipes pan the page on iOS
+      // Safari out of the box. The active-tool effect below flips this off
+      // (plus rewrites touch-action) whenever a drawing tool is active.
       const fc = new FabricCanvas(fabricCanvasRef.current, {
+        allowTouchScrolling: true,
         backgroundColor: "transparent",
         enableRetinaScaling: true,
         height: currentRenderedSize.height,
@@ -109,11 +138,15 @@ export function useFabricCanvas({
         wrapper.style.position = "absolute";
         wrapper.style.top = "0";
         wrapper.style.left = "0";
-        // iOS Safari's outer scroll container otherwise wins `touchstart` on
-        // every drag — Fabric's Draw/Highlight/Eraser strokes drop frames or
-        // get cancelled entirely. `touch-action: none` tells the browser
-        // "this region owns its touch events," handing them all to Fabric.
-        wrapper.style.touchAction = "none";
+        // For drawing tools, `touch-action: none` hands every gesture to
+        // Fabric (otherwise iOS Safari's scroll container steals touchstart
+        // and strokes drop frames or get cancelled). For select / text /
+        // image / watermark / etc. we set `pan-x pan-y` so the user can
+        // 1-finger swipe to pan a zoomed-in page. The active-tool effect
+        // below keeps this in sync as the user switches tools.
+        wrapper.style.touchAction = touchActionFor(
+          usePdfEditorStore.getState().activeTool,
+        );
       }
 
       fabricRef.current = fc;
@@ -179,6 +212,39 @@ export function useFabricCanvas({
       }
     };
   }, [sourcePage, hasRenderedSize]);
+
+  // --- Touch-action follows the active tool ---
+  // Drawing tools must own touchstart (`none` + Fabric preventDefaults so
+  // strokes don't drop frames). Every other tool releases 1-finger gestures
+  // to the outer scroll container so the user can swipe to pan a zoomed-in
+  // page on iOS Safari. This requires THREE things in sync:
+  //
+  //   1. `fc.allowTouchScrolling` — gates Fabric's internal
+  //      `e.preventDefault()` call in its touchstart handler.
+  //   2. `touch-action` on the upper-canvas — Fabric writes this in its
+  //      constructor based on `allowTouchScrolling`, so we re-write it
+  //      whenever the tool changes (the value is sticky otherwise).
+  //   3. `touch-action` on the wrapper div — defense in depth; some Safari
+  //      versions check it before the upper-canvas.
+  useEffect(() => {
+    const fc = fabricRef.current;
+
+    if (!fc) return;
+
+    const wrapper = fc.getElement().parentElement;
+    const isDrawTool = DRAW_TOOLS.has(activeTool);
+    const action = isDrawTool ? "none" : "pan-x pan-y";
+
+    fc.allowTouchScrolling = !isDrawTool;
+
+    // Fabric exposes `upperCanvasEl` as a getter on Canvas. Its inline
+    // `touch-action` style was set at construction time — overwrite it.
+    const upper = (fc as unknown as { upperCanvasEl?: HTMLCanvasElement })
+      .upperCanvasEl;
+
+    if (upper) upper.style.touchAction = action;
+    if (wrapper) wrapper.style.touchAction = action;
+  }, [activeTool, fabricCanvas]);
 
   // --- Resize + zoom: keep the existing canvas, don't re-mount ---
   // Critical for sharp text + smooth UX when the user zooms in/out.

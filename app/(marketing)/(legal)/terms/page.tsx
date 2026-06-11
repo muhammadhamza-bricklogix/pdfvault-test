@@ -7,7 +7,8 @@ import {
 } from "@/components/sections/legal/terms-and-conditions-content";
 
 export const metadata: Metadata = {
-  description: "Terms and Conditions governing use of PDFedits at pdfedits.io.",
+  description:
+    "Terms and Conditions governing use of Content Clicks LLC at pdfedits.io.",
   title: "Terms and Conditions",
 };
 
@@ -15,7 +16,7 @@ export default function TermsPage() {
   return (
     <LegalDocumentLayout
       ctaEyebrow="FOR QUESTIONS ABOUT THESE TERMS"
-      description="The rules and guidelines that govern your use of PDFedits. Please read carefully before using the service."
+      description="The rules and guidelines that govern your use of Content Clicks LLC. Please read carefully before using the service."
       heroTitle="Terms and Conditions"
       tocEntries={termsTocEntries}
     >

@@ -22,11 +22,9 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
-import {
-  useExtractImagesMutation,
-  useFlattenFileMutation,
-} from "@/lib/client/query/mutations";
-import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
+import { useFlattenFileMutation } from "@/lib/client/query/mutations";
+import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
@@ -49,9 +47,8 @@ export function HamburgerMenu() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { start } = useTrackedUpload();
+  const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
-  const extractImages = useExtractImagesMutation();
 
   const requireFile = (action: string): File | null => {
     if (!file) {
@@ -79,17 +76,14 @@ export function HamburgerMenu() {
     }
   };
 
-  const runExtractImages = async () => {
-    const f = requireFile("extracting images");
-
-    if (!f) return;
-    try {
-      const result = await extractImages.mutateAsync({ file: f });
-
-      triggerBlobDownload(result.blob, result.fileName);
-    } catch {
-      // toast already shown by the mutation
-    }
+  const runExtractImages = () => {
+    if (!requireFile("extracting images")) return;
+    // Defer to the editor-shell-mounted hook (`useExtractImagesEditor`) so
+    // the request goes out against the user's CURRENT edited PDF (overlays
+    // baked) rather than the original upload. Without this any images the
+    // user added through the editor's image tool wouldn't be in the bytes
+    // we POST and the backend would return 400 / "no images found".
+    window.dispatchEvent(new CustomEvent("editor:extract-images"));
   };
 
   const requireSignIn = () => {
@@ -131,7 +125,7 @@ export function HamburgerMenu() {
         void runFlatten();
         break;
       case "extract-images":
-        void runExtractImages();
+        runExtractImages();
         break;
       case "find-replace":
         if (!requireFile("searching")) return;
@@ -171,7 +165,7 @@ export function HamburgerMenu() {
 
     if (isSignedIn) {
       // Cloud upload + open the new doc in this editor when ready.
-      start({
+      void start({
         file,
         onOpen: (id) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`),
       });
@@ -243,6 +237,11 @@ export function HamburgerMenu() {
         className="hidden"
         type="file"
         onChange={handleFileChange}
+      />
+      <DuplicateUploadModal
+        filename={duplicate?.filename ?? null}
+        onIgnore={duplicate?.onIgnore ?? (() => undefined)}
+        onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
       />
     </>
   );

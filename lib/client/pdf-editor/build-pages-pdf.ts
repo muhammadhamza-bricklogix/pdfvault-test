@@ -5,6 +5,7 @@ import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types
 import { degrees } from "pdf-lib";
 
 import { appendPdfPage } from "@/lib/client/pdf-editor/append-pdf-page";
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { renderPageToPng } from "@/lib/client/pdf-editor/render-page-png";
 
 type BuildPdfInput = {
@@ -109,7 +110,7 @@ export async function buildPdfFromDraft({
 
     if (!bytes) return null;
 
-    const pdfjs = await import("pdfjs-dist");
+    const pdfjs = await loadPdfJs();
     const proxy = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
 
     importedPdfjsCache.set(importKey, proxy);

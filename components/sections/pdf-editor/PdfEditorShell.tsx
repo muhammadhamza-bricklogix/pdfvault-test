@@ -13,6 +13,7 @@ import {
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
+import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extract-images-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
@@ -113,6 +114,7 @@ function EditorLayout() {
   useEditorAutoPersist(fabricCanvas);
   useEditorNavigationSave(fabricCanvas);
   useExportEditor(fabricCanvas);
+  useExtractImagesEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),

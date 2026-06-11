@@ -41,9 +41,13 @@ export const CONVERSION_TYPES = [
   "docx_to_pdf",
   "xls_to_pdf",
   "xlsx_to_pdf",
+  "ppt_to_pdf",
   "pptx_to_pdf",
   "jpg_to_pdf",
   "png_to_pdf",
+  "gif_to_pdf",
+  "html_to_pdf",
+  "txt_to_pdf",
 ] as const;
 
 export type ConversionType = (typeof CONVERSION_TYPES)[number];

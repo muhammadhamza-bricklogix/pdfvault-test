@@ -184,7 +184,15 @@ export function useSignInFlow() {
         );
       } catch (error) {
         logger.error("Sign-in submission failed", error);
-        showServerError("Something went wrong while signing you in.");
+        const parsed = parseClerkError(
+          error as Parameters<typeof parseClerkError>[0],
+        );
+
+        if (parsed.serverError) {
+          applyClerkError(error);
+        } else {
+          showServerError("Something went wrong while signing you in.");
+        }
       }
     },
   );
@@ -213,7 +221,15 @@ export function useSignInFlow() {
         showServerError("The verification step is not complete yet.");
       } catch (error) {
         logger.error("Sign-in verification failed", error);
-        showServerError("Something went wrong while verifying your code.");
+        const parsed = parseClerkError(
+          error as Parameters<typeof parseClerkError>[0],
+        );
+
+        if (parsed.serverError) {
+          applyClerkError(error);
+        } else {
+          showServerError("Something went wrong while verifying your code.");
+        }
       }
     },
   );

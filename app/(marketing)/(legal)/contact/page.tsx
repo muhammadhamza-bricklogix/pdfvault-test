@@ -6,11 +6,12 @@ import { ContactFormSection } from "@/components/sections/legal/contact-form-sec
 import { LegalDocumentLayout } from "@/components/sections/legal/legal-document-layout";
 
 export const metadata: Metadata = {
-  description: "Reach the PDFedits team — replies typically within 24 hours.",
+  description:
+    "Reach the Content Clicks LLC team — replies typically within 24 hours.",
   title: "Contact Us",
 };
 
-const SUPPORT_EMAIL = "support@pdfeditsapp.com";
+const SUPPORT_EMAIL = "support@pdfedits.io";
 
 export default function ContactPage() {
   return (

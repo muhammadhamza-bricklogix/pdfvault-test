@@ -118,11 +118,18 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       backgroundImageConfig.customPageRange,
     );
 
-  // On mobile we render pdf.js text natively (suppressText=false) and skip
-  // the Fabric IText overlay. This is the only configuration that reliably
-  // shows text on iOS Safari — the Fabric overlay was leaving the layer blank
-  // on real devices. Trade-off: mobile is view-only for the text tool;
-  // everything else (draw/highlight/shapes/signatures/etc.) still works.
+  // Desktop: suppress pdf.js's native text rendering and let the Fabric
+  // IText overlay (`useEditTextMode` below) own the text layer — that's
+  // what makes text click-to-edit work.
+  //
+  // Mobile: paint text via pdf.js directly (no Fabric overlay). Older iOS
+  // Safari WebKit can throw inside pdf.js v5's `getTextContent` with
+  // `"undefined is not a function (near '...t of e...')"` from a feature
+  // it doesn't ship — that takes the whole text layer down, leaving the
+  // page blank. By rendering text the native pdf.js way on mobile we
+  // never call `getTextContent` for the overlay, so the page is always
+  // readable. Trade-off: mobile is view-only for the text tool; every
+  // other tool (draw, highlight, shapes, signatures, etc.) still works.
   const { renderedSize } = usePageRenderer({
     canvasRef,
     page,
@@ -149,8 +156,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
-  // Skip the IText overlay on mobile — pdf.js painted the text directly so a
-  // second copy from Fabric would double-print and hijack pointer events.
+  // Skip the IText overlay on mobile — pdf.js paints text directly there
+  // (see `suppressText: !isMobile` above), so a second copy from Fabric
+  // would double-print and hijack pointer events. This also avoids ever
+  // calling pdf.js's `getTextContent` on mobile, which throws on older
+  // iOS Safari WebKit and was leaving the page blank.
   useEditTextMode({ fabricCanvas: isMobile ? null : fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
@@ -359,45 +369,54 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   return (
     <div
       ref={viewerScrollRef}
-      className="flex flex-1 items-start justify-center overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex-1 touch-pan-x touch-pan-y overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div className="shadow-lg">
-        <div ref={containerRef} className="relative bg-white">
-          {bgShouldShow && backgroundImageConfig.imageData && (
-            /* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not optimizable */
-            <img
-              aria-hidden
-              alt=""
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              src={backgroundImageConfig.imageData}
+      {/*
+        `w-fit mx-auto` sizes to the page and auto-centres horizontally.
+        Unlike a flex parent with `justify-center`, this lets the scroll
+        container reach the left/top edge of the page when zoomed in —
+        iOS Safari otherwise pins the centred child and 1-finger swipes
+        feel frozen.
+      */}
+      <div className="mx-auto w-fit">
+        <div className="shadow-lg">
+          <div ref={containerRef} className="relative bg-white">
+            {bgShouldShow && backgroundImageConfig.imageData && (
+              /* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not optimizable */
+              <img
+                aria-hidden
+                alt=""
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                src={backgroundImageConfig.imageData}
+                style={{
+                  objectFit: bgObjectFit,
+                  opacity: backgroundImageConfig.opacity,
+                }}
+              />
+            )}
+            <canvas
+              ref={canvasRef}
+              aria-label={`PDF page ${currentPage} of ${pageCount}`}
+              role="img"
               style={{
-                objectFit: bgObjectFit,
-                opacity: backgroundImageConfig.opacity,
+                mixBlendMode: bgShouldShow ? "multiply" : undefined,
+                position: "relative",
               }}
             />
-          )}
-          <canvas
-            ref={canvasRef}
-            aria-label={`PDF page ${currentPage} of ${pageCount}`}
-            role="img"
-            style={{
-              mixBlendMode: bgShouldShow ? "multiply" : undefined,
-              position: "relative",
-            }}
-          />
-          <canvas
-            ref={fabricCanvasRef}
-            aria-label={`PDF editing canvas, page ${currentPage} of ${pageCount}`}
-            role="application"
-          />
-          <FloatingTextToolbar
-            canvasContainerRef={containerRef}
-            fabricCanvas={fabricCanvas}
-          />
-          <FloatingShapeToolbar
-            canvasContainerRef={containerRef}
-            fabricCanvas={fabricCanvas}
-          />
+            <canvas
+              ref={fabricCanvasRef}
+              aria-label={`PDF editing canvas, page ${currentPage} of ${pageCount}`}
+              role="application"
+            />
+            <FloatingTextToolbar
+              canvasContainerRef={containerRef}
+              fabricCanvas={fabricCanvas}
+            />
+            <FloatingShapeToolbar
+              canvasContainerRef={containerRef}
+              fabricCanvas={fabricCanvas}
+            />
+          </div>
         </div>
       </div>
       <SignatureModal

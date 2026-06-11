@@ -14,6 +14,7 @@ export function useHighlightTool({ fabricCanvas }: UseHighlightToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const highlightColor = usePdfEditorStore((s) => s.highlightColor);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCreatingShape = usePdfEditorStore((s) => s.setIsCreatingShape);
@@ -104,6 +105,9 @@ export function useHighlightTool({ fabricCanvas }: UseHighlightToolParams) {
       tempShapeRef.current = null;
 
       pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+      // object:added fired during mousedown was gated by isCreatingShape, so
+      // mark dirty explicitly here now that the highlight is finalized.
+      markDocumentDirty();
       fabricCanvas.renderAll();
       setActiveTool("select");
     };
@@ -131,6 +135,7 @@ export function useHighlightTool({ fabricCanvas }: UseHighlightToolParams) {
     currentPage,
     fabricCanvas,
     highlightColor,
+    markDocumentDirty,
     pushHistory,
     setActiveTool,
     setIsCreatingShape,

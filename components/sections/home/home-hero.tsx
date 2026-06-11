@@ -70,10 +70,20 @@ export function HomeHero() {
       throw new Error("SIGN_IN_REQUIRED");
     }
 
+    // The Google Picker filters by mime type, so the file IS a PDF — but the
+    // Drive filename often has no `.pdf` extension. The backend derives the
+    // type from the filename extension, so an extension-less name routes
+    // through the conversion path and 400s. Force `.pdf` here.
+    const isPdfMime = selection.mimeType === "application/pdf";
+    const safeName =
+      isPdfMime && !/\.pdf$/i.test(selection.name)
+        ? `${selection.name}.pdf`
+        : selection.name;
+
     const uploaded = await uploadCloudMutation.mutateAsync({
       accessToken: selection.accessToken,
       fileId: selection.id,
-      fileName: selection.name,
+      fileName: safeName,
       mimeType: selection.mimeType,
       provider: selection.provider,
     });

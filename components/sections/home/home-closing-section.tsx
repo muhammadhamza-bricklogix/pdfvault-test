@@ -22,7 +22,8 @@ export function HomeClosingSection() {
             Edit and manage PDF documents with ease
           </h2>
           <p className="relative mx-auto mt-4 max-w-lg text-base text-white/80 sm:text-lg">
-            PDFedits meets all requirements to edit and manage PDF documents!
+            Content Clicks LLC meets all requirements to edit and manage PDF
+            documents!
           </p>
           <Link
             className="relative mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-bold text-[var(--color-accent)] shadow-lg transition-transform hover:scale-[1.03]"

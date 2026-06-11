@@ -167,6 +167,22 @@ export function findAllMatches({
 }
 
 /**
+ * Pure preview of what an IText's `text` field will look like after the
+ * replace is applied. Used by the modal to show the just-replaced sentence
+ * in the match status field — no canvas / store mutation.
+ */
+export function previewReplacement(
+  text: string,
+  needle: string,
+  replacement: string,
+  options: FindOptions,
+): string {
+  if (!needle) return text;
+
+  return text.replace(buildSearchRegex(needle, options), replacement);
+}
+
+/**
  * Replace `needle` → `replacement` on the matching IText for ONE match.
  *
  * - When the match is on the live page, mutates the Fabric IText directly so

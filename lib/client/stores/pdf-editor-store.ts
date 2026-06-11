@@ -161,6 +161,15 @@ type PdfEditorStore = {
   }) => void;
   clearDocumentDirty: () => void;
   clearPendingCloudSaveAfterReload: () => void;
+  /**
+   * Commits a freshly-saved file as the new editor baseline. Replaces `file`
+   * with the merged bytes pdf-lib just produced (so subsequent reads — Manage
+   * Pages thumbnails, exports, etc. — see the user's edits) and clears the
+   * Fabric overlay state that those bytes already encode. Without the clear
+   * we'd double-render any shapes/highlights: once via the baked PDF and
+   * again via the surviving Fabric overlay.
+   */
+  applyPostSaveReset: (savedFile: File) => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
@@ -399,6 +408,17 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   markDocumentDirty: () => set({ hasUnsavedChanges: true }),
 
   clearDocumentDirty: () => set({ hasUnsavedChanges: false }),
+
+  applyPostSaveReset: (savedFile) =>
+    set({
+      file: savedFile,
+      fabricJsonByPage: new Map(),
+      hasUnsavedChanges: false,
+      historyByPage: new Map(),
+      historyIndexByPage: new Map(),
+      lastBakedWatermarkSignature: null,
+      lastBakedBackgroundImageSignature: null,
+    }),
 
   clearPendingCloudSaveAfterReload: () =>
     set({ pendingCloudSaveAfterReload: false }),

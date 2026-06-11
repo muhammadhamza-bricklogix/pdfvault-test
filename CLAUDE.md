@@ -72,13 +72,58 @@ It lives at `.claude/skills/pdf-editor-architecture/SKILL.md` and documents the 
 - Background image preview uses `mix-blend-mode: multiply` on the PDF canvas; export uses `BlendMode.Multiply` on `drawImage`.
 - Mobile renders the watermark + background-image config in a Modal (`MobileToolPropertiesModal`), not the right sidebar.
 - Editor modals (`CreatePdfModal`, `ManagePagesModal`, `PerformancePanel`) are lazy-loaded via `next/dynamic`.
+- **Mobile is view-only for text.** `PdfViewerCanvas.tsx` passes `suppressText: !isMobile` to `usePageRenderer` AND `fabricCanvas: isMobile ? null : fabricCanvas` to `useEditTextMode`. Mobile lets pdf.js paint glyphs natively; desktop suppresses pdf.js text and renders editable Fabric IText on top. The reason isn't UX preference — it's that pdf.js v5's `getTextContent` throws on older iOS Safari WebKit (`"undefined is not a function (near '...t of e...')"`), and the only reliable way to keep the page from going blank is to never call it on mobile. Do not "unify" mobile + desktop here without a verified plan for the iOS Safari versions in staging.
+- **pdfjs-dist MUST be loaded through `lib/client/pdf-editor/load-pdfjs.ts` (`loadPdfJs()` helper).** That helper installs Safari polyfills (`Promise.withResolvers`, `Object.hasOwn`, `structuredClone`) BEFORE importing the legacy build (`pdfjs-dist/legacy/build/pdf.mjs`), and the worker URL points to `pdfjs-dist/legacy/build/pdf.worker.min.mjs`. The modern build + missing polyfills both break pdf.js on older iOS Safari WebKit. Type-only imports (`import type { … } from "pdfjs-dist"`) are fine to leave on the bare specifier since they're erased at build time.
 
 ### Off-limits without explicit user approval
 
+The user considers the editor **stable as of 2026-06-10**. Several recent fixes are load-bearing — reverting them re-introduces user-visible regressions the user has already reported and we've already fixed. Do not modify any of these without asking first:
+
 - The watermark code in `lib/client/pdf-editor/merge-pdf.ts` (the inline `renderPageToPng` + `TEXT_OPS_MIN/MAX/RASTER_SCALE` constants stay there even though a shared util exists for `build-pages-pdf.ts`).
 - `objectCaching: false` on IText in `use-edit-text-mode.ts`.
+- **Mobile-touch trio in `lib/client/hooks/pdf-editor/use-fabric-canvas.ts`** — `allowTouchScrolling`, `upperCanvasEl.style.touchAction`, and wrapper `touchAction` are kept in sync per active tool. Drawing tools = `false / "none" / "none"`; everything else = `true / "pan-x pan-y" / "pan-x pan-y"`. Wrapper-only changes don't survive Fabric's upper-canvas overlay, and `allowTouchScrolling` alone doesn't update touch-action at runtime. Reverting any of the three freezes 1-finger pan when zoomed in on iOS Safari. See skill log 2026-06-10 (e).
+- **`mx-auto w-fit` scroll-container pattern in `components/sections/pdf-editor/PdfViewerCanvas.tsx`.** Don't replace with `flex justify-center`; flex centring traps the user at the centre of a zoomed-and-overflowing child on iOS Safari. See skill log 2026-06-10 (e).
+- **Shell-level `useExtractImagesEditor` hook + `editor:extract-images` event.** Don't fold image-extraction back into `HamburgerMenu.runExtractImages` — the menu has no `fabricCanvas` ref, so a direct mutation call ships the **original upload**, not the edits. Backend then returns 400 / "no images found." See skill log 2026-06-10 (f).
+- **Mobile text rendering**: `suppressText: !isMobile` and `fabricCanvas: isMobile ? null : fabricCanvas` in `PdfViewerCanvas.tsx`. Mobile is intentionally view-only for text because `getTextContent` throws on older iOS Safari WebKit. See skill log 2026-06-10 (c).
+
+For the full evidence trail (why each rule exists, what broke when we tried otherwise), open `.claude/skills/pdf-editor-architecture/SKILL.md` and read the "Known issues / decisions log" at the bottom — newest entries are at the top. **Always check that log before refactoring anything in `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, or `components/sections/pdf-editor/**`.**
 
 If a fix requires changing one of these, ask the user first.
+
+## Mobile pre-push checklist (REQUIRED before any push or PR)
+
+Mobile (iOS Safari + Android Chrome) is the #1 regression surface in this app — the same code path can render fine on desktop and break completely on a real phone (the Fabric overlay, pdf.js fonts, touch-action, DPR, op-list shape, etc. all behave differently). Before claiming a change is ready to push, walk through this list. If you cannot run on a real mobile device, run in DevTools "Responsive" mode at iPhone 14 / Pixel 7 sizing AND say so explicitly in the summary — never claim mobile is verified when only desktop was tested.
+
+Run on a fresh page load each time (`bun run dev` → open with mobile device or DevTools mobile viewport):
+
+1. **PDF text loads on the FIRST page** — open a multi-page PDF, confirm every glyph is visible (not blank, not a partial render). Open the mobile devtools console and verify:
+   - `[PDFedits] load: ok` fires
+   - `[PDFedits] render: page` fires with `suppressText: true`
+   - `[PDFedits] text: extract ok` fires (NOT `text: extract failed`)
+   - `[PDFedits] text: drew IText` fires with `count > 0`
+   - If you see `text: extract failed` with a `TypeError`, capture the `message` / `stack` from the log and fix the extractor — DO NOT push.
+2. **Text loads on EVERY page** — paginate through the doc. Each page should log the same sequence above. No silent blanks.
+3. **Tap-to-edit text works** — tap any text run. An IText cursor must appear and the soft keyboard must open. Type a character; it must render with the same font as the surrounding text.
+4. **Pinch-zoom doesn't blank the page** — pinch out to ~2x then pinch in to the floor (~0.5x). Text + shapes stay sharp at both extremes. No blank flash at the zoom floor (iOS Safari regression).
+5. **Tools work under finger input** — draw, highlight, eraser, shape. Each tool must respond on first touch (not the second). If a tool needs two taps to engage, check `touch-action` on the Fabric wrapper.
+6. **Watermark + background image open in the bottom modal** — these tools must NOT try to render in the right sidebar on mobile (sidebar isn't mounted). Confirm `MobileToolPropertiesModal` opens and closing it returns `activeTool` to `select`.
+7. **Manage Pages flow** — Manage Pages button triggers the save-before-action toast, modal opens with thumbnails, rotate / reorder / delete works, Save closes the modal and reflects changes in the editor without a stale-pdf flash.
+8. **Save uploads the live edits** — make a visible edit, hit Save, watch for the loading toast, then a success toast. Re-open the saved file and confirm the edit is baked in.
+9. **No console errors during the above** — only the `[PDFedits]` info logs. Any uncaught error or red console line is a blocker.
+10. **Build is clean** — `bunx tsc --noEmit && bun run lint && bun run build` all pass.
+
+When reporting completion of a PDF-editor change, state which of these you verified and on what (real device vs DevTools). If something on this list couldn't be tested, say so — don't paper over it.
+
+Known mobile failure modes to watch for (these have all bitten us before):
+- **pdf.js `getTextContent` throws on older iOS Safari WebKit** with `"undefined is not a function (near '...t of e...')"`, entire text layer blank. Even the legacy build of pdf.js v5 uses `Promise.withResolvers` / `structuredClone` / `Object.hasOwn`, which the user's WebKit version doesn't ship. **Two safeguards are in place — both must stay:**
+  1. `PdfViewerCanvas` mobile branch — `suppressText: !isMobile` + skip Fabric overlay on mobile. Mobile never calls `getTextContent`, so it can't throw.
+  2. `loadPdfJs()` in `lib/client/pdf-editor/load-pdfjs.ts` installs polyfills (`pdfjs-polyfills.ts`) before importing pdf.js, in case the desktop Safari is also missing the APIs.
+  If this error reappears, check: (a) every dynamic pdfjs import still goes through `loadPdfJs()`, (b) the `isMobile` branch in `PdfViewerCanvas.tsx` hasn't been "unified", (c) the worker URL still points at `pdfjs-dist/legacy/build/pdf.worker.min.mjs`.
+- pdf.js operator-list `argsArray[i]` is `null` on certain ops → `args[0]` throws TypeError, the whole text layer is empty. Guarded in `extractSequentialTextColors`; don't undo the `?? []` coalesce.
+- pdf.js fonts loading after the first Fabric paint → glyphs render blank on iOS Safari. The `document.fonts.ready` await + `loadingdone` listener in `use-edit-text-mode.ts` fixes this; don't drop them.
+- Fabric wrapper without `touch-action: none` → draw/highlight/eraser feel "sticky" on iOS because the outer scroll container is competing for touch events.
+- Pinch-zoom below 0.5 → IText overlay disappears on iOS. The `PINCH_MIN_ZOOM = 0.5` floor in `PdfViewerCanvas` exists for this; don't lower it.
+- Both pdf.js native text rendering AND the Fabric IText overlay enabled at once → visible glyph doubling at DPR=3. `suppressText: true` is set unconditionally now; don't reintroduce the mobile branch that flipped it.
 
 <!-- repocards:begin -->
 ## Repo context — repocards

@@ -11,7 +11,7 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const metadata: Metadata = {
   description:
-    "How PDFedits collects, uses, and protects your personal information.",
+    "How Content Clicks LLC collects, uses, and protects your personal information.",
   title: "Privacy Policy",
 };
 

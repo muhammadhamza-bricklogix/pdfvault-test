@@ -51,8 +51,8 @@ export function DoNotSellContent() {
         title="Our Current Practices"
       >
         <p>
-          PDFedits does not sell your personal information to third parties for
-          monetary compensation.
+          Content Clicks LLC does not sell your personal information to third
+          parties for monetary compensation.
         </p>
         <p className="mt-3">
           However, under the broad definitions of the CCPA/CPRA, certain data
@@ -100,8 +100,8 @@ export function DoNotSellContent() {
           </li>
           <li>
             Emailing us at{" "}
-            <a href="mailto:support@pdfeditsapp.com?subject=CCPA%20Opt-Out%20Request">
-              support@pdfeditsapp.com
+            <a href="mailto:support@pdfedits.io?subject=CCPA%20Opt-Out%20Request">
+              support@pdfedits.io
             </a>{" "}
             with subject line &quot;CCPA Opt-Out Request&quot; and your account
             email address.
@@ -161,7 +161,7 @@ export function DoNotSellContent() {
       <LegalSectionCard icon={Mail01Icon} id="d-6-8" title="Contact">
         <p>
           For privacy rights requests or questions:{" "}
-          <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>
+          <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>
         </p>
       </LegalSectionCard>
 
@@ -175,8 +175,8 @@ export function DoNotSellContent() {
           Utah (UCPA), and other states with privacy laws have similar rights.
           We honor opt-out and deletion requests from users in all such
           jurisdictions. Contact us at{" "}
-          <a href="mailto:support@pdfeditsapp.com">support@pdfeditsapp.com</a>{" "}
-          to exercise your rights.
+          <a href="mailto:support@pdfedits.io">support@pdfedits.io</a> to
+          exercise your rights.
         </p>
       </LegalSectionCard>
     </>

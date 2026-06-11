@@ -14,6 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import { useState } from "react";
 
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { ToolsContent } from "./EditorTopBar";
@@ -38,6 +39,14 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const idx = historyIndexByPage.get(currentPage) ?? -1;
   const canUndo = idx > 0;
   const canRedo = idx < history.length - 1;
+
+  const handleOpenManagePages = async () => {
+    const ok = await saveBeforeAction(
+      "Saving your edits before opening Manage Pages.",
+    );
+
+    if (ok) setIsManagePagesOpen(true);
+  };
 
   return (
     <div
@@ -91,7 +100,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
               aria-label="Manage pages"
               size="sm"
               variant="tertiary"
-              onPress={() => setIsManagePagesOpen(true)}
+              onPress={() => void handleOpenManagePages()}
             >
               <HugeiconsIcon icon={Layout03Icon} size={16} />
             </Button>

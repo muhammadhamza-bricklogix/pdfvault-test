@@ -232,12 +232,12 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
     icon: PaintBucketIcon,
     title: "PNG to PDF",
   },
-  {
-    description: "Browse every import path and conversion preset in one hub.",
-    href: PDF_TOOLS_HUB,
-    icon: Add01Icon,
-    title: "View all",
-  },
+  // {
+  //   description: "Browse every import path and conversion preset in one hub.",
+  //   href: PDF_TOOLS_HUB,
+  //   icon: Add01Icon,
+  //   title: "View all",
+  // },
 ];
 
 export type HomeToolGridTabGroup = {

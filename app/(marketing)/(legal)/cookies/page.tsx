@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   description:
-    "How PDFedits uses cookies and similar technologies on pdfedits.io.",
+    "How Content Clicks LLC uses cookies and similar technologies on pdfedits.io.",
   title: "Cookie Policy",
 };
 
