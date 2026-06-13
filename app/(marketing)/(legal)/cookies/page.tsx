@@ -7,8 +7,7 @@ import {
 } from "@/components/sections/legal/cookie-policy-content";
 
 export const metadata: Metadata = {
-  description:
-    "How Content Clicks LLC uses cookies and similar technologies on pdfedits.io.",
+  description: "How PDFedits.io uses cookies and similar technologies.",
   title: "Cookie Policy",
 };
 

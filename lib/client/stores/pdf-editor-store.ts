@@ -122,7 +122,9 @@ type PdfEditorStore = {
   isPasswordModalOpen: boolean;
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
+  isFormFieldsModalOpen: boolean;
   isManagePagesOpen: boolean;
+  isPageNumbersModalOpen: boolean;
   isRestoringHistory: boolean;
   isSignatureModalOpen: boolean;
   isSignedIn: boolean;
@@ -174,6 +176,8 @@ type PdfEditorStore = {
   setFile: (file: File | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
+  setIsFormFieldsModalOpen: (value: boolean) => void;
+  setIsPageNumbersModalOpen: (value: boolean) => void;
   setIsPasswordModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
@@ -211,6 +215,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   lastBakedBackgroundImageSignature: null,
   isCompressModalOpen: false,
   isFindReplaceOpen: false,
+  isFormFieldsModalOpen: false,
+  isPageNumbersModalOpen: false,
   isPasswordModalOpen: false,
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
@@ -261,6 +267,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       lastBakedBackgroundImageSignature: null,
       isCompressModalOpen: false,
       isFindReplaceOpen: false,
+      isFormFieldsModalOpen: false,
+      isPageNumbersModalOpen: false,
       isPasswordModalOpen: false,
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
@@ -454,6 +462,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setFile: (file) => set({ file }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
+  setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
+  setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),
   setIsPasswordModalOpen: (value) => set({ isPasswordModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({

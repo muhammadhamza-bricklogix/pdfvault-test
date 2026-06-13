@@ -14,6 +14,8 @@ import {
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extract-images-editor";
+import { useFormFieldsEditor } from "@/lib/client/hooks/pdf-editor/use-form-fields-editor";
+import { usePageNumbersEditor } from "@/lib/client/hooks/pdf-editor/use-page-numbers-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
@@ -31,6 +33,8 @@ import { BottomDock } from "./BottomDock";
 import { CompressModal } from "./CompressModal";
 import { CreatePdfModal } from "./CreatePdfModal";
 import { FindReplaceModal } from "./FindReplaceModal";
+import { FormFieldsModal } from "./FormFieldsModal";
+import { PageNumbersModal } from "./PageNumbersModal";
 import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
@@ -115,6 +119,8 @@ function EditorLayout() {
   useEditorNavigationSave(fabricCanvas);
   useExportEditor(fabricCanvas);
   useExtractImagesEditor(fabricCanvas);
+  usePageNumbersEditor(fabricCanvas);
+  useFormFieldsEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
@@ -306,6 +312,8 @@ export function PdfEditorShell() {
       />
       <CompressModal />
       <PasswordModal />
+      <PageNumbersModal />
+      <FormFieldsModal />
     </div>
   );
 }

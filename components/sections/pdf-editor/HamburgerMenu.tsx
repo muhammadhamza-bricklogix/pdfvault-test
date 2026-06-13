@@ -12,6 +12,8 @@ import {
   Menu01Icon,
   NoteIcon,
   Search01Icon,
+  TaskDone01Icon,
+  TextNumberSignIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -44,6 +46,12 @@ export function HamburgerMenu() {
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
+  );
+  const setIsPageNumbersModalOpen = usePdfEditorStore(
+    (s) => s.setIsPageNumbersModalOpen,
+  );
+  const setIsFormFieldsModalOpen = usePdfEditorStore(
+    (s) => s.setIsFormFieldsModalOpen,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -130,6 +138,14 @@ export function HamburgerMenu() {
       case "find-replace":
         if (!requireFile("searching")) return;
         setIsFindReplaceOpen(true);
+        break;
+      case "page-numbers":
+        if (!requireFile("adding page numbers")) return;
+        setIsPageNumbersModalOpen(true);
+        break;
+      case "form-fields":
+        if (!requireFile("filling form fields")) return;
+        setIsFormFieldsModalOpen(true);
         break;
     }
   };
@@ -226,6 +242,14 @@ export function HamburgerMenu() {
             <Dropdown.Item id="find-replace" textValue="Find and replace">
               <HugeiconsIcon icon={Search01Icon} size={14} />
               <Label>Find &amp; Replace (⌘F)</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="page-numbers" textValue="Add page numbers">
+              <HugeiconsIcon icon={TextNumberSignIcon} size={14} />
+              <Label>Add page numbers</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="form-fields" textValue="Fill form fields">
+              <HugeiconsIcon icon={TaskDone01Icon} size={14} />
+              <Label>Fill form fields</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>
