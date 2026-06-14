@@ -20,15 +20,26 @@ type UseEditTextModeParams = {
 };
 
 /**
- * Always-on text replacement:
+ * On-demand text replacement (driven by the "Edit Text" toolbar tool):
  *
- * 1. The PDF canvas renders WITHOUT text (via operationsFilter in use-page-renderer)
- * 2. This hook extracts ALL text blocks and places them as Fabric.js IText objects
- *    using the actual embedded fonts loaded by pdf.js (via document.fonts)
- * 3. Users can click any text to edit it in-place
- * 4. Text objects are permanent — they ARE the text layer
+ * 1. By default the PDF canvas paints text natively — works on every
+ *    browser, including older iOS Safari WebKit where pdf.js's
+ *    `getTextContent` throws.
+ * 2. When the user activates the "Edit Text" tool for a page that hasn't
+ *    been extracted yet, this hook extracts ALL text blocks and places
+ *    them as Fabric.js IText objects using pdf.js's embedded fonts.
+ * 3. After successful extraction we call `markPageExtracted(sourcePage)`,
+ *    which flips `suppressText` on in `usePageRenderer` so the native
+ *    pdf.js text stops painting (avoids glyph doubling). The Fabric
+ *    IText layer now owns text rendering and accepts click-to-edit.
+ * 4. If extraction throws (older iOS Safari), we revert `activeTool` to
+ *    "select" + toast the user. The page stays readable via native
+ *    pdf.js text since `suppressText` was never flipped on.
+ * 5. Once a page is extracted, IText survives tool switches — users can
+ *    still tap any sentence to edit even after switching to Select etc.
  */
 export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   // Key the cache by SOURCE page index, not display slot — otherwise a page
   // reorder via the thumbnail strip serves stale text from the previously
@@ -50,6 +61,15 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
     let cancelled = false;
     const sourcePage = getSourcePageIndex(currentPage);
+    const alreadyExtracted = usePdfEditorStore
+      .getState()
+      .extractedPages.has(sourcePage);
+
+    // Only run when the user has explicitly armed text editing for this
+    // page (via the "Edit Text" toolbar tool), OR when we're returning
+    // to a page we've already extracted (so the rotation-mismatch reset
+    // below can re-extract if Manage Pages rotated the page).
+    if (!alreadyExtracted && activeTool !== "editText") return;
 
     const setup = async () => {
       const existingEditText = fabricCanvas
@@ -105,16 +125,17 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
             err,
           });
 
-          // If the user opted into mobile text editing and pdf.js
-          // `getTextContent` threw (older iOS Safari WebKit), flip the
-          // opt-in back off so the page reverts to native pdf.js text
-          // rendering instead of staying blank.
-          if (usePdfEditorStore.getState().mobileTextEditOptIn) {
-            usePdfEditorStore.getState().setMobileTextEditOptIn(false);
+          // pdf.js `getTextContent` can throw on older iOS Safari WebKit
+          // ("undefined is not a function (near '...t of e...')"). When
+          // that happens we revert to Select so the page keeps painting
+          // text natively (suppressText stays false — we never marked
+          // this page extracted), and toast the user.
+          if (usePdfEditorStore.getState().activeTool === "editText") {
+            usePdfEditorStore.getState().setActiveTool("select");
             toast.error({
               title: "Text editing not supported on this browser",
               description:
-                "Your browser version can't load the editable text layer. Reverting to view-only text.",
+                "Your browser version can't load the editable text layer for this PDF.",
             });
           }
 
@@ -219,6 +240,11 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       }
 
       fabricCanvas.renderAll();
+      // Flip suppressText on for this page (via PdfViewerCanvas reading
+      // extractedPages) now that IText is on the canvas — order matters
+      // so the user never sees a blank frame between "native pdf.js text
+      // disappears" and "Fabric IText appears".
+      usePdfEditorStore.getState().markPageExtracted(sourcePage);
       logger.info("[PDFedits] text: drew IText", {
         sourcePage,
         count: blocks.length,
@@ -248,5 +274,5 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       cancelled = true;
       document.fonts?.removeEventListener?.("loadingdone", onFontsLoadingDone);
     };
-  }, [fabricCanvas, page, currentPage]);
+  }, [fabricCanvas, page, currentPage, activeTool, getSourcePageIndex]);
 }

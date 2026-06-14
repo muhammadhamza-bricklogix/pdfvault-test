@@ -12,7 +12,6 @@ import {
   Menu01Icon,
   NoteIcon,
   Search01Icon,
-  TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -25,7 +24,6 @@ import {
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
-import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -47,11 +45,6 @@ export function HamburgerMenu() {
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
   );
-  const mobileTextEditOptIn = usePdfEditorStore((s) => s.mobileTextEditOptIn);
-  const setMobileTextEditOptIn = usePdfEditorStore(
-    (s) => s.setMobileTextEditOptIn,
-  );
-  const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
@@ -138,18 +131,6 @@ export function HamburgerMenu() {
         if (!requireFile("searching")) return;
         setIsFindReplaceOpen(true);
         break;
-      case "toggle-mobile-text-edit": {
-        const next = !mobileTextEditOptIn;
-
-        setMobileTextEditOptIn(next);
-        toast.info({
-          title: next ? "Text editing enabled" : "Text editing disabled",
-          description: next
-            ? "Tap any text to edit. If the page goes blank, your browser version isn't supported and this will turn off automatically."
-            : "Text is view-only. Re-enable any time from this menu.",
-        });
-        break;
-      }
     }
   };
 
@@ -246,23 +227,6 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={Search01Icon} size={14} />
               <Label>Find &amp; Replace (⌘F)</Label>
             </Dropdown.Item>
-            {isMobile && (
-              <Dropdown.Item
-                id="toggle-mobile-text-edit"
-                textValue={
-                  mobileTextEditOptIn
-                    ? "Disable text editing"
-                    : "Enable text editing"
-                }
-              >
-                <HugeiconsIcon icon={TextFontIcon} size={14} />
-                <Label>
-                  {mobileTextEditOptIn
-                    ? "Disable text editing"
-                    : "Enable text editing"}
-                </Label>
-              </Dropdown.Item>
-            )}
           </Dropdown.Menu>
         </Dropdown.Popover>
       </Dropdown>
