@@ -9,7 +9,7 @@
  * Apply these polyfills BEFORE the first `await import("pdfjs-dist/...")`
  * call. `load-pdfjs.ts` does this for every dynamic import in the editor.
  *
- * Specifically:
+ * Coverage:
  *   - `Promise.withResolvers` — Safari 17.4+. pdf.js uses it for its
  *      message-handler streams; missing it makes the stream reader return
  *      undefined and the next `for…of` over it throws.
@@ -17,6 +17,15 @@
  *   - `structuredClone` — Safari 15.4+. pdf.js uses it for transferable
  *      operator-list copies; a JSON-based fallback is fine here because
  *      pdf.js only clones plain data (no DOM nodes, no Maps).
+ *   - `Array.prototype.at` — Safari 15.4+. pdf.js v5 uses `arr.at(-1)`
+ *      in several token / operator-list helpers.
+ *   - `Array.prototype.findLast` / `findLastIndex` — Safari 15.4+. Used
+ *      by pdf.js v5 in its text-layer normalization pass; absence is a
+ *      candidate for the "`...t of e`" cryptic throw inside
+ *      `getTextContent`.
+ *   - `TypedArray.prototype.at` — same Safari floor as `Array#at`,
+ *      different prototype chain. pdf.js calls `.at()` on typed arrays
+ *      from the worker payload.
  *
  * These are no-ops on any browser that already implements the API.
  */
@@ -63,5 +72,83 @@ export function installPdfJsPolyfills(): void {
 
       return JSON.parse(JSON.stringify(value)) as T;
     };
+  }
+
+  // `at(idx)` — supports negative indexes counted from the end.
+  const atPolyfill = function at<T>(
+    this: ArrayLike<T>,
+    n: number,
+  ): T | undefined {
+    const len = this.length;
+    const idx = n < 0 ? len + n : n;
+
+    return idx >= 0 && idx < len ? this[idx] : undefined;
+  };
+
+  if (typeof Array.prototype.at !== "function") {
+    Object.defineProperty(Array.prototype, "at", {
+      configurable: true,
+      writable: true,
+      value: atPolyfill,
+    });
+  }
+
+  // Patch typed-array prototypes that pdf.js touches. Same shared base
+  // (`%TypedArray%.prototype.at`) on standards-compliant runtimes, but the
+  // older WebKit floors split them per concrete class.
+  const TYPED_ARRAYS = [
+    Uint8Array,
+    Uint8ClampedArray,
+    Int8Array,
+    Uint16Array,
+    Int16Array,
+    Uint32Array,
+    Int32Array,
+    Float32Array,
+    Float64Array,
+  ] as const;
+
+  for (const TA of TYPED_ARRAYS) {
+    if (TA && typeof TA.prototype.at !== "function") {
+      Object.defineProperty(TA.prototype, "at", {
+        configurable: true,
+        writable: true,
+        value: atPolyfill,
+      });
+    }
+  }
+
+  if (typeof Array.prototype.findLast !== "function") {
+    Object.defineProperty(Array.prototype, "findLast", {
+      configurable: true,
+      writable: true,
+      value: function findLast<T>(
+        this: T[],
+        cb: (value: T, index: number, arr: T[]) => unknown,
+      ): T | undefined {
+        for (let i = this.length - 1; i >= 0; i--) {
+          if (cb(this[i] as T, i, this)) return this[i];
+        }
+
+        return undefined;
+      },
+    });
+  }
+
+  if (typeof Array.prototype.findLastIndex !== "function") {
+    Object.defineProperty(Array.prototype, "findLastIndex", {
+      configurable: true,
+      writable: true,
+      value: function findLastIndex<T>(
+        this: T[],
+        cb: (value: T, index: number, arr: T[]) => unknown,
+      ): number {
+        for (let i = this.length - 1; i >= 0; i--) {
+          if (cb(this[i] as T, i, this)) return i;
+        }
+
+        return -1;
+      },
+    });
   }
 }

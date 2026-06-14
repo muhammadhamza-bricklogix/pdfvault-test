@@ -129,13 +129,22 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           // ("undefined is not a function (near '...t of e...')"). When
           // that happens we revert to Select so the page keeps painting
           // text natively (suppressText stays false — we never marked
-          // this page extracted), and toast the user.
+          // this page extracted), and toast the user. We include the raw
+          // error message in the description so users can share it for
+          // diagnosis — without this we can only guess at which polyfill
+          // is missing on their device.
           if (usePdfEditorStore.getState().activeTool === "editText") {
             usePdfEditorStore.getState().setActiveTool("select");
+            const rawMsg =
+              err instanceof Error ? err.message : String(err ?? "");
+            const truncated =
+              rawMsg.length > 160 ? `${rawMsg.slice(0, 157)}…` : rawMsg;
+
             toast.error({
               title: "Text editing not supported on this browser",
-              description:
-                "Your browser version can't load the editable text layer for this PDF.",
+              description: truncated
+                ? `Reason: ${truncated}`
+                : "The text layer couldn't be loaded for this PDF.",
             });
           }
 

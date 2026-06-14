@@ -224,7 +224,23 @@ export async function extractTextBlocks(
   // walker (e.g. unexpected operator-list shape on mobile pdf.js builds)
   // doesn't take down the whole text layer. Without colors we fall back to
   // black/mode-color, which is far better than zero editable text.
-  const textContent = await page.getTextContent();
+  //
+  // Wrap `getTextContent` in its own try so the rethrown error tells us
+  // which pdf.js API tripped — important for browsers where polyfill
+  // coverage is incomplete and the raw stack is opaque.
+  let textContent;
+
+  try {
+    textContent = await page.getTextContent();
+  } catch (err) {
+    const original = err instanceof Error ? err.message : String(err ?? "");
+    const wrapped = new Error(`getTextContent failed: ${original}`);
+
+    if (err instanceof Error && err.stack) {
+      wrapped.stack = err.stack;
+    }
+    throw wrapped;
+  }
   let colors: string[] = [];
 
   try {
