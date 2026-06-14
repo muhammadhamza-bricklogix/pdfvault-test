@@ -105,6 +105,19 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
             err,
           });
 
+          // If the user opted into mobile text editing and pdf.js
+          // `getTextContent` threw (older iOS Safari WebKit), flip the
+          // opt-in back off so the page reverts to native pdf.js text
+          // rendering instead of staying blank.
+          if (usePdfEditorStore.getState().mobileTextEditOptIn) {
+            usePdfEditorStore.getState().setMobileTextEditOptIn(false);
+            toast.error({
+              title: "Text editing not supported on this browser",
+              description:
+                "Your browser version can't load the editable text layer. Reverting to view-only text.",
+            });
+          }
+
           return;
         }
 

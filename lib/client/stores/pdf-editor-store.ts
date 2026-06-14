@@ -126,6 +126,15 @@ type PdfEditorStore = {
   isRestoringHistory: boolean;
   isSignatureModalOpen: boolean;
   isSignedIn: boolean;
+  /**
+   * Mobile-only opt-in for the click-to-edit text overlay. Default false:
+   * pdf.js paints text natively on mobile because `getTextContent` throws
+   * on older iOS Safari WebKit and takes the whole text layer down.
+   * Setting true switches mobile to the desktop pipeline (Fabric IText on
+   * top of a text-suppressed PDF canvas). If extraction throws we toast
+   * the user and flip this back off automatically.
+   */
+  mobileTextEditOptIn: boolean;
   pageCount: number;
   pageOrder: number[];
   pdfDocument: PDFDocumentProxy | null;
@@ -181,6 +190,7 @@ type PdfEditorStore = {
   setIsRestoringHistory: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
+  setMobileTextEditOptIn: (value: boolean) => void;
   setPdfDocument: (doc: PDFDocumentProxy | null, pageCount: number) => void;
   setShapeFill: (color: string) => void;
   setShapeStroke: (color: string) => void;
@@ -218,6 +228,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isRestoringHistory: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
+  mobileTextEditOptIn: false,
   pageCount: 0,
   pageOrder: [],
   pdfDocument: null,
@@ -267,6 +278,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isManagePagesOpen: false,
       isRestoringHistory: false,
       isSignatureModalOpen: false,
+      mobileTextEditOptIn: false,
       pageCount: 0,
       pageOrder: [],
       pdfDocument: null,
@@ -467,6 +479,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
+  setMobileTextEditOptIn: (value) => set({ mobileTextEditOptIn: value }),
   setPdfDocument: (doc, pageCount) =>
     set({
       pageOrder: Array.from({ length: pageCount }, (_, i) => i + 1),

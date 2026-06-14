@@ -44,6 +44,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return order[s.currentPage - 1] ?? s.currentPage;
   });
   const zoom = usePdfEditorStore((s) => s.zoom);
+  const mobileTextEditOptIn = usePdfEditorStore((s) => s.mobileTextEditOptIn);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -122,18 +123,20 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // IText overlay (`useEditTextMode` below) own the text layer — that's
   // what makes text click-to-edit work.
   //
-  // Mobile: paint text via pdf.js directly (no Fabric overlay). Older iOS
-  // Safari WebKit can throw inside pdf.js v5's `getTextContent` with
-  // `"undefined is not a function (near '...t of e...')"` from a feature
-  // it doesn't ship — that takes the whole text layer down, leaving the
-  // page blank. By rendering text the native pdf.js way on mobile we
-  // never call `getTextContent` for the overlay, so the page is always
-  // readable. Trade-off: mobile is view-only for the text tool; every
-  // other tool (draw, highlight, shapes, signatures, etc.) still works.
+  // Mobile (default): paint text via pdf.js directly (no Fabric overlay).
+  // Older iOS Safari WebKit can throw inside pdf.js v5's `getTextContent`
+  // with `"undefined is not a function (near '...t of e...')"` from a
+  // feature it doesn't ship — that takes the whole text layer down,
+  // leaving the page blank. So mobile stays view-only unless the user
+  // explicitly opts in via the "Enable text editing" menu item, which
+  // flips `mobileTextEditOptIn` and switches mobile to the desktop
+  // pipeline. If extraction throws on this device, `useEditTextMode`
+  // toasts and flips the opt-in back off automatically.
+  const textOverlayEnabled = !isMobile || mobileTextEditOptIn;
   const { renderedSize } = usePageRenderer({
     canvasRef,
     page,
-    suppressText: !isMobile,
+    suppressText: textOverlayEnabled,
     zoom,
   });
 
@@ -156,12 +159,17 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
-  // Skip the IText overlay on mobile — pdf.js paints text directly there
-  // (see `suppressText: !isMobile` above), so a second copy from Fabric
-  // would double-print and hijack pointer events. This also avoids ever
-  // calling pdf.js's `getTextContent` on mobile, which throws on older
-  // iOS Safari WebKit and was leaving the page blank.
-  useEditTextMode({ fabricCanvas: isMobile ? null : fabricCanvas, page });
+  // Skip the IText overlay on mobile by default — pdf.js paints text
+  // directly there (see `suppressText` above), so a second copy from
+  // Fabric would double-print and hijack pointer events. This also
+  // avoids calling pdf.js's `getTextContent`, which throws on older iOS
+  // Safari WebKit and was leaving the page blank. The user can flip the
+  // "Enable text editing" menu item to override on devices where
+  // `getTextContent` works.
+  useEditTextMode({
+    fabricCanvas: textOverlayEnabled ? fabricCanvas : null,
+    page,
+  });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });
