@@ -151,4 +151,46 @@ export function installPdfJsPolyfills(): void {
       },
     });
   }
+
+  // `ReadableStream.prototype[Symbol.asyncIterator]` — Safari shipped
+  // `ReadableStream` long before async-iteration on it (still missing in
+  // some Safari 15/16 builds). pdf.js v5's `getTextContent` does
+  // `for await (const v of readableStream)`, which looks up
+  // `Symbol.asyncIterator` on the stream and trips on
+  // `"undefined is not a function (near '...t of e...')"` when the
+  // prototype lacks it. Polyfill walks the stream via `getReader()`.
+  // This is the load-bearing fix that unblocks Edit Text on iOS Safari —
+  // see skill log 2026-06-14 (d).
+  const RS = (
+    globalThis as unknown as {
+      ReadableStream?: { prototype: Record<symbol, unknown> };
+    }
+  ).ReadableStream;
+
+  if (RS && typeof RS.prototype[Symbol.asyncIterator] !== "function") {
+    Object.defineProperty(RS.prototype, Symbol.asyncIterator, {
+      configurable: true,
+      writable: true,
+      value: function asyncIterator(this: ReadableStream) {
+        const reader = this.getReader();
+
+        return {
+          next(): Promise<IteratorResult<unknown>> {
+            return reader.read() as Promise<IteratorResult<unknown>>;
+          },
+          return(value?: unknown): Promise<IteratorResult<unknown>> {
+            reader.releaseLock();
+
+            return Promise.resolve({
+              value,
+              done: true,
+            } as IteratorResult<unknown>);
+          },
+          [Symbol.asyncIterator]() {
+            return this;
+          },
+        };
+      },
+    });
+  }
 }

@@ -131,6 +131,16 @@ Then manually verify in `bun run dev`:
 
 (Append new entries here as they're discovered + addressed. Newest first.)
 
+- **2026-06-14 (d) — Root cause of the "browser not supported" toast: `ReadableStream` async-iterator polyfill (THE fix).** User shared the wrapped error from (c)'s diagnostic toast: `getTextContent failed: undefined is not a function (near '...t of e...')`. Stack pointed at `getTextContent` in pdf.js's `pdf.mjs` calling `for await (const value of readableStream)` (line 22118 of v5.6.205's legacy build). `streamTextContent` returns `new ReadableStream({...})` from `sendWithStream`, so `for await…of` does a `Symbol.asyncIterator` lookup on the stream's prototype.
+  
+  **The bug**: Safari shipped `ReadableStream` long before `ReadableStream.prototype[Symbol.asyncIterator]` — the protocol is still missing on some Safari 15/16 builds. When `Symbol.asyncIterator` is undefined on the lookup chain, WebKit throws exactly `"undefined is not a function (near '...t of e...')"` with that cryptic minified-iteration error format. None of the other polyfills in (c) cover this — they patch `Array#at`, `findLast`, etc., not the stream prototype.
+  
+  **The fix**: `pdfjs-polyfills.ts` now also installs `ReadableStream.prototype[Symbol.asyncIterator]`, walking the stream via `getReader().read()` and exposing it as an `AsyncIterableIterator`. Standard polyfill shape — `next` delegates to `reader.read()`, `return` calls `reader.releaseLock()` and resolves `{ done: true }`. Installed inside `installPdfJsPolyfills()` so it runs before pdf.js consumes its first stream.
+  
+  **Diagnostic recipe** kept in place: the wrapped `getTextContent failed: ...` rethrow in `extractTextBlocks` + the err.message rendered in the toast (both shipped in (c)) — leave those alone, they're what made (d) possible in one round-trip with the user. Future "no editable text" reports should follow the same loop: read the toast, grep for the exact `for await`/`for of` call site in `pdf.mjs`, polyfill whichever Symbol method is undefined.
+  
+  Other polyfills added in (c) — `Array#at`, `findLast`, `findLastIndex`, typed-array `#at` — stay, since they cover other latent throw paths in pdf.js v5 that older WebKit users would hit on different documents.
+
 - **2026-06-14 (c) — Polyfill widening + error visibility for "browser not supported" reports.** User on mobile (Safari + Chrome) hit the (b) auto-revert toast immediately. We don't know yet which API throws, so:
   1. `pdfjs-polyfills.ts` widened with `Array.prototype.at`, `findLast`, `findLastIndex`, and `at` on the concrete typed-array prototypes (Safari floor < 15.4 ships none of these; pdf.js v5 uses `at(-1)` in its token helpers + `findLast` in text-layer normalization).
   2. `extractTextBlocks` now wraps `page.getTextContent()` in its own try and rethrows as `getTextContent failed: <original>` — so the toast description tells us which pdf.js API tripped instead of an opaque stack.
