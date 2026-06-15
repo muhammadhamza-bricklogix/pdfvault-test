@@ -12,13 +12,14 @@ import {
   Menu01Icon,
   NoteIcon,
   Search01Icon,
+  Share01Icon,
   TaskDone01Icon,
   TextNumberSignIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import {
   UPLOAD_ACCEPT_MIME,
@@ -31,6 +32,8 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
+
+import { ShareModal } from "./ShareModal";
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
@@ -54,6 +57,7 @@ export function HamburgerMenu() {
     (s) => s.setIsFormFieldsModalOpen,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -146,6 +150,15 @@ export function HamburgerMenu() {
       case "form-fields":
         if (!requireFile("filling form fields")) return;
         setIsFormFieldsModalOpen(true);
+        break;
+      case "share":
+        if (!requireFile("sharing")) return;
+        if (!isSignedIn) {
+          requireSignIn();
+
+          return;
+        }
+        setIsShareOpen(true);
         break;
     }
   };
@@ -251,6 +264,10 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={TaskDone01Icon} size={14} />
               <Label>Fill form fields</Label>
             </Dropdown.Item>
+            <Dropdown.Item id="share" textValue="Share via link">
+              <HugeiconsIcon icon={Share01Icon} size={14} />
+              <Label>Share via link</Label>
+            </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>
       </Dropdown>
@@ -266,6 +283,11 @@ export function HamburgerMenu() {
         filename={duplicate?.filename ?? null}
         onIgnore={duplicate?.onIgnore ?? (() => undefined)}
         onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
+      />
+      <ShareModal
+        file={file}
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
       />
     </>
   );

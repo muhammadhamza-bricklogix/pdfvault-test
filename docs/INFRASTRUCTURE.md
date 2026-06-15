@@ -2,7 +2,7 @@
 
 **Audience:** Project / product managers and non-engineering stakeholders.
 **Purpose:** Explain what the system is made of, how the pieces fit together, and what it depends on — without diving into code-level detail.
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-15
 
 ---
 
@@ -32,6 +32,7 @@ In short, three independent building blocks work together:
                          │  │  - Dashboard / library │   │
                          │  │  - PDF Editor          │   │
                          │  │  - PDF tools           │   │
+                         │  │  - Public share viewer │   │
                          │  └───────────────────────┘   │
                          └───────┬───────────┬──────────┘
                                  │           │
@@ -113,6 +114,7 @@ The product is organized into a few clear areas:
 | **Dashboard** | The signed-in user's home base: their document library, activity history, and account settings. |
 | **PDF Editor** | The flagship feature — a full editor for an opened document. |
 | **PDF Tools** | Conversion and utility tools (e.g., Word↔PDF, Excel↔PDF) and processing actions (compress, encrypt/decrypt, flatten, extract images). |
+| **Public share viewer** | A no-login page (`/share/<token>`) that anyone with the link can open to view a PDF the owner shared. Optional password gate. |
 
 ---
 
@@ -136,6 +138,12 @@ The product is organized into a few clear areas:
 **PDF utilities & conversion** (run on the backend)
 - Compress, password-protect (encrypt) / unlock (decrypt), flatten form fields, extract images.
 - Convert between PDF and Office formats (Word, Excel, PowerPoint) and images.
+
+**Public share links** (added 2026-06-15 — see `SHARE_LINKS_BACKEND_CONTRACT.md`)
+- A signed-in user can generate a public URL for the PDF they have open. They pick an expiry (1 hour to 30 days) and may optionally set a password. The URL can be opened by anyone — no sign-up, no PDFedits account required.
+- Recipients land on a clean read-only viewer with a built-in page navigator. If a password is set they're prompted for it before the file loads.
+- The owner can revoke a share at any time; revoked links return an "unavailable" page on the next access.
+- **Where this work lives today:** the entire user-facing flow ships from the web app's own server (Next.js route handlers under `/api/share/*`). State (signed tokens, password hashes, deny-list, bytes) currently lives **in-memory inside the web-app server process** — fine for a single-instance demo, but it resets on every deploy and doesn't survive horizontal scaling. The backend handoff is documented separately in [`SHARE_LINKS_BACKEND_CONTRACT.md`](./SHARE_LINKS_BACKEND_CONTRACT.md); once the backend implements the contract, the four stores swap from in-memory to persistent without any UX change.
 
 ---
 
@@ -176,6 +184,8 @@ The app is configured through a small set of environment settings (no secrets ar
 - **How to connect to Google Drive** (Google credentials, for the optional import feature).
 - **How to connect to Microsoft OneDrive** (Microsoft credentials, for the optional import feature).
 - **Which mode it's running in** (development vs. production).
+- **Public share signing secret** (`SHARE_SECRET`) — a long random string used to sign share-link tokens. Rotating it instantly invalidates every existing share link, so it should be set once per environment and only changed during a coordinated rotation. Generate with `openssl rand -base64 48`.
+- **Public app URL** (`NEXT_PUBLIC_APP_URL`) — the canonical address used when generating shareable links shown to users (e.g., `https://app.pdfedits.com`). If unset the app falls back to the request's host header.
 
 Typically there are separate configurations for **local development**, a **staging/test** environment, and **production**, each pointing at its own backend and credentials.
 
@@ -196,6 +206,7 @@ Typically there are separate configurations for **local development**, a **stagi
 - **Every backend request is authenticated** with a secure, time-limited token; if a token expires mid-session the app quietly refreshes it.
 - **Protected areas require login** — unauthenticated users can't reach the dashboard or a user's documents.
 - **Files are delivered via short-lived secure links** that expire automatically, rather than permanent public URLs.
+- **Public share links** are stateless HMAC-signed tokens (not JWTs — no algorithm-negotiation surface). Expiry is enforced server-side; optional passwords are bcrypt-hashed and the hash never leaves the server (it's not embedded in the URL); revocation is instant via a server-side deny-list; bytes are gated behind a separate short-lived HttpOnly cookie scoped to a single share. Share viewer pages are marked `noindex`, `no-store`, and `Referrer-Policy: no-referrer`.
 - **Compliance surface exists** — privacy policy, terms, cookies, "do not sell," and refund pages are part of the product.
 
 ---
@@ -224,6 +235,7 @@ Typically there are separate configurations for **local development**, a **stagi
 - **Third-party accounts are required** for authentication (Clerk) and cloud import (Google, Microsoft). Provisioning and key management for these should be tracked.
 - **Mobile (especially iOS Safari) is the #1 area to regression-test** before any release that touches the PDF editor.
 - **Storage and processing costs scale with usage** (number/size of documents and processing actions), and live on the backend/storage side rather than the web app.
+- **Public share links are demo-grade until the backend takes over storage.** The current implementation keeps share metadata and PDF bytes in the web-app server's memory. That means: (a) every deploy / restart wipes existing share URLs, (b) a multi-instance / autoscaling deployment will see each instance serving different shares, and (c) total share traffic is bounded by the web-app server's RAM. The contract for the backend to take over the four stores is documented in [`SHARE_LINKS_BACKEND_CONTRACT.md`](./SHARE_LINKS_BACKEND_CONTRACT.md). Until that lands, run shares on a single web-app instance with predictable restarts.
 
 ---
 
