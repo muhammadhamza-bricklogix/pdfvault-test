@@ -26,6 +26,7 @@ import {
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -151,15 +152,27 @@ export function HamburgerMenu() {
         if (!requireFile("filling form fields")) return;
         setIsFormFieldsModalOpen(true);
         break;
-      case "share":
+      case "share": {
         if (!requireFile("sharing")) return;
         if (!isSignedIn) {
           requireSignIn();
 
           return;
         }
-        setIsShareOpen(true);
+        // Bake current edits into the cloud-saved PDF FIRST. Without
+        // this the share modal would upload `store.file`, which is the
+        // original upload — recipients would see the un-edited PDF.
+        // `saveBeforeAction` short-circuits when there are no unsaved
+        // changes, so this is free if the user already saved.
+        void (async () => {
+          const ok = await saveBeforeAction(
+            "Saving your edits before generating a share link.",
+          );
+
+          if (ok) setIsShareOpen(true);
+        })();
         break;
+      }
     }
   };
 

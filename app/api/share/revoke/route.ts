@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 
 import { bytesStore } from "@/lib/server/share/bytes-store";
 import { denyList } from "@/lib/server/share/deny-list";
+import { metadataStore } from "@/lib/server/share/metadata-store";
 import { passwordStore } from "@/lib/server/share/password";
 import { verifyToken } from "@/lib/server/share/sign-token";
 
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   await denyList.revoke(verify.claims.jti, verify.claims.exp);
   await bytesStore.delete(verify.claims.jti);
   await passwordStore.delete(verify.claims.jti);
+  await metadataStore.delete(verify.claims.jti);
 
   return Response.json(
     { ok: true },
