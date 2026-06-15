@@ -44,6 +44,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return order[s.currentPage - 1] ?? s.currentPage;
   });
   const zoom = usePdfEditorStore((s) => s.zoom);
+  const isPageExtracted = usePdfEditorStore((s) =>
+    s.extractedPages.has(s.getSourcePageIndex(s.currentPage)),
+  );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,22 +121,22 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       backgroundImageConfig.customPageRange,
     );
 
-  // Desktop: suppress pdf.js's native text rendering and let the Fabric
-  // IText overlay (`useEditTextMode` below) own the text layer — that's
-  // what makes text click-to-edit work.
-  //
-  // Mobile: paint text via pdf.js directly (no Fabric overlay). Older iOS
-  // Safari WebKit can throw inside pdf.js v5's `getTextContent` with
-  // `"undefined is not a function (near '...t of e...')"` from a feature
-  // it doesn't ship — that takes the whole text layer down, leaving the
-  // page blank. By rendering text the native pdf.js way on mobile we
-  // never call `getTextContent` for the overlay, so the page is always
-  // readable. Trade-off: mobile is view-only for the text tool; every
-  // other tool (draw, highlight, shapes, signatures, etc.) still works.
+  // Text rendering is two-mode:
+  //   • Default: pdf.js paints text natively (suppressText=false). Works
+  //     everywhere, including older iOS Safari WebKit where pdf.js's
+  //     `getTextContent` throws — we just don't call it.
+  //   • After the user activates the "Edit Text" tool and extraction
+  //     succeeds for this source page (tracked via `extractedPages` in the
+  //     store): the page is in IText-overlay mode (suppressText=true). The
+  //     Fabric IText layer owns text rendering AND lets the user tap any
+  //     run to edit. Once a page is extracted, it stays extracted until
+  //     the file changes — so users don't have to re-arm Edit Text per
+  //     navigation.
+  // `useEditTextMode` is what flips the page from default → extracted.
   const { renderedSize } = usePageRenderer({
     canvasRef,
     page,
-    suppressText: !isMobile,
+    suppressText: isPageExtracted,
     zoom,
   });
 
@@ -156,12 +159,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [fabricCanvas, onFabricCanvasReady]);
 
   useDrawTool({ fabricCanvas });
-  // Skip the IText overlay on mobile — pdf.js paints text directly there
-  // (see `suppressText: !isMobile` above), so a second copy from Fabric
-  // would double-print and hijack pointer events. This also avoids ever
-  // calling pdf.js's `getTextContent` on mobile, which throws on older
-  // iOS Safari WebKit and was leaving the page blank.
-  useEditTextMode({ fabricCanvas: isMobile ? null : fabricCanvas, page });
+  // `useEditTextMode` decides internally whether to extract: it runs only
+  // when the user has activated the "Edit Text" toolbar tool for a page
+  // that hasn't been extracted yet. After a successful extraction it
+  // marks the source page in `extractedPages` (store), which is what
+  // flips `suppressText` above on. The Fabric overlay always receives the
+  // canvas — the hook itself guards work, so the IText objects stay
+  // tappable even when the user switches back to Select / Draw / etc.
+  useEditTextMode({ fabricCanvas, page });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });
@@ -180,6 +185,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     const cursorMap: Record<string, string> = {
       draw: "crosshair",
+      editText: "text",
       eraser: "pointer",
       highlight: "crosshair",
       image: "default",
@@ -196,8 +202,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     // cursors / selection mode — the immutability rule doesn't apply here.
     /* eslint-disable react-hooks/immutability */
     fc.defaultCursor = cursorMap[activeTool] ?? "default";
-    fc.hoverCursor = activeTool === "select" ? "move" : fc.defaultCursor;
-    fc.selection = activeTool === "select";
+    if (activeTool === "select") {
+      fc.hoverCursor = "move";
+    } else if (activeTool === "editText") {
+      fc.hoverCursor = "text";
+    } else {
+      fc.hoverCursor = fc.defaultCursor;
+    }
+    fc.selection = activeTool === "select" || activeTool === "editText";
 
     if (activeTool !== "draw") {
       fc.isDrawingMode = false;
@@ -205,6 +217,27 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     /* eslint-enable react-hooks/immutability */
 
     const handleMouseDown = async (opt: TPointerEventInfo) => {
+      // Edit Text tool — tap any IText sentence to start editing it.
+      // Without this handler users would need Fabric's default
+      // select-then-click sequence, which feels broken on touch.
+      if (activeTool === "editText") {
+        const target = opt.target as
+          | (import("fabric").FabricObject & { editorType?: string })
+          | null;
+
+        if (target && target.editorType === "editModeText") {
+          const { IText: FabricIText } = await import("fabric");
+
+          if (target instanceof FabricIText) {
+            fc.setActiveObject(target);
+            target.enterEditing();
+            fc.renderAll();
+          }
+        }
+
+        return;
+      }
+
       if (activeTool !== "text") return;
 
       // If clicking on an existing object, let Fabric handle it

@@ -8,6 +8,7 @@ const MAX_HISTORY = 50;
 export type ActiveTool =
   | "backgroundImage"
   | "draw"
+  | "editText"
   | "eraser"
   | "highlight"
   | "image"
@@ -128,6 +129,18 @@ type PdfEditorStore = {
   isRestoringHistory: boolean;
   isSignatureModalOpen: boolean;
   isSignedIn: boolean;
+  /**
+   * Source page indexes that have had their text successfully extracted
+   * into the Fabric IText overlay (driven by the "Edit Text" tool). Once
+   * a page is in this set we know:
+   *   • `usePageRenderer` must `suppressText` so pdf.js's native text
+   *     doesn't double-paint over our IText
+   *   • `useEditTextMode` must skip its extract effect (text is already
+   *     on the canvas)
+   * Cleared on `clearFile` and `applyPostSaveReset` since the underlying
+   * PDF bytes change in both cases.
+   */
+  extractedPages: Set<number>;
   pageCount: number;
   pageOrder: number[];
   pdfDocument: PDFDocumentProxy | null;
@@ -185,6 +198,7 @@ type PdfEditorStore = {
   setIsRestoringHistory: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
+  markPageExtracted: (sourcePage: number) => void;
   setPdfDocument: (doc: PDFDocumentProxy | null, pageCount: number) => void;
   setShapeFill: (color: string) => void;
   setShapeStroke: (color: string) => void;
@@ -224,6 +238,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isRestoringHistory: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
+  extractedPages: new Set(),
   pageCount: 0,
   pageOrder: [],
   pdfDocument: null,
@@ -275,6 +290,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isManagePagesOpen: false,
       isRestoringHistory: false,
       isSignatureModalOpen: false,
+      extractedPages: new Set(),
       pageCount: 0,
       pageOrder: [],
       pdfDocument: null,
@@ -426,6 +442,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       historyIndexByPage: new Map(),
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
+      extractedPages: new Set(),
     }),
 
   clearPendingCloudSaveAfterReload: () =>
@@ -477,6 +494,15 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
+  markPageExtracted: (sourcePage) =>
+    set((state) => {
+      if (state.extractedPages.has(sourcePage)) return {};
+      const next = new Set(state.extractedPages);
+
+      next.add(sourcePage);
+
+      return { extractedPages: next };
+    }),
   setPdfDocument: (doc, pageCount) =>
     set({
       pageOrder: Array.from({ length: pageCount }, (_, i) => i + 1),

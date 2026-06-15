@@ -14,6 +14,7 @@ import {
   Layout03Icon,
   PaintBrush01Icon,
   PaintBucketIcon,
+  PencilEdit01Icon,
   RedoIcon,
   SaveMoneyDollarIcon,
   ShapesIcon,
@@ -299,6 +300,7 @@ export function EditorInfoBar() {
 
 const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
+  { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
   { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
