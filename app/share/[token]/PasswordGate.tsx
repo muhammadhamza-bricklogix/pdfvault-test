@@ -3,6 +3,8 @@
 import { Button, Input, TextField } from "@heroui/react";
 import { useState } from "react";
 
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+
 import { ViewerClient } from "./ViewerClient";
 
 type PasswordGateProps = {
@@ -20,6 +22,7 @@ export function PasswordGate({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   if (unlocked) {
     return <ViewerClient bytesUrl={bytesUrl} name={name} token={token} />;
@@ -84,18 +87,27 @@ export function PasswordGate({
         <span className="font-medium text-foreground">{name}</span>.
       </p>
       <form className="flex w-full flex-col gap-3" onSubmit={onSubmit}>
-        <TextField
-          isDisabled={submitting}
-          value={password}
-          onChange={(v) => setPassword(v)}
-        >
-          <Input
-            autoFocus
-            aria-label="Password"
-            placeholder="Password"
-            type="password"
+        <div className="relative">
+          <TextField
+            isDisabled={submitting}
+            value={password}
+            onChange={(v) => setPassword(v)}
+          >
+            <Input
+              autoFocus
+              aria-label="Password"
+              // Right padding leaves room for the absolutely positioned
+              // reveal toggle so the caret never sits under the eye icon.
+              className="pr-10"
+              placeholder="Password"
+              type={revealed ? "text" : "password"}
+            />
+          </TextField>
+          <PasswordRevealToggle
+            revealed={revealed}
+            onToggle={() => setRevealed((v) => !v)}
           />
-        </TextField>
+        </div>
         {error && (
           <p className="text-sm text-danger" role="alert">
             {error}

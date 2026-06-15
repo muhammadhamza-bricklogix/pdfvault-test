@@ -352,6 +352,42 @@ export async function mergeFabricEditsIntoPdf({
 
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     const hasEdits = fabricJsonByPage.has(pageNum);
+    // Promote "page only has auto-extracted source-text IText" to "no
+    // edits" so Case 1/2 copy the source page as-is and preserve real
+    // PDF text objects.
+    //
+    // Why: `useEditTextMode` mirrors the source PDF's text content as
+    // Fabric IText (`editorType === "editModeText"`) so users can
+    // click-to-edit. Those overlays end up in `fabricJsonByPage` even
+    // when the user never touched them. Without this guard, every
+    // page with extractable text takes Case 3 (rasterize page to PNG,
+    // draw Fabric objects on top) — which makes the exported /
+    // shared / extract-images output image-only with zero selectable
+    // text. Bug surfaced 2026-06-15: user reported (a) blank text on
+    // PDF export, (b) "zoomed page rasters" from extract-images
+    // (Poppler's `pdfimages -all` was picking up the page PNGs we'd
+    // embedded). See skill log 2026-06-15 (c).
+    //
+    // editModeText carries no information the source PDF doesn't
+    // already have, so copying the original page byte-for-byte
+    // preserves identical text. Genuine user overlays (shapes,
+    // image-tool inserts, IText the user added themselves —
+    // `editorType !== "editModeText"`) still take Case 3.
+    const hasGenuineEdits = (() => {
+      if (!hasEdits) return false;
+      const json = fabricJsonByPage.get(pageNum);
+
+      if (!json) return false;
+      const parsed = parseFabricJson(json);
+      const objects = (parsed?.objects ?? []) as FabricObj[];
+
+      if (objects.length === 0) return false;
+
+      return !objects.every(
+        (o) => (o as { editorType?: string }).editorType === "editModeText",
+      );
+    })();
+
     const needsWatermark =
       wm != null &&
       shouldWatermarkPage(
@@ -394,7 +430,12 @@ export async function mergeFabricEditsIntoPdf({
 
       const pdfjsPage = await pdfDocument.getPage(pageNum);
       const transparentPng = await renderPageToPng(pdfjsPage, {
-        suppressText: hasEdits,
+        // Suppress pdf.js text only when we're going to draw the
+        // user's overlays on top — otherwise the bg path would double
+        // the text (once from the raster, once from the IText draw).
+        // For editModeText-only pages we want pdf.js to paint text
+        // into the raster, since we're NOT going to redraw it below.
+        suppressText: hasGenuineEdits,
         transparent: true,
       });
       const pageRender = await outputPdf.embedPng(transparentPng);
@@ -410,7 +451,7 @@ export async function mergeFabricEditsIntoPdf({
         await drawWatermarkOnPage(newPage, outputPdf, wm!);
       }
 
-      if (hasEdits) {
+      if (hasGenuineEdits) {
         const json = fabricJsonByPage.get(pageNum)!;
         const parsed = parseFabricJson(json);
 
@@ -453,7 +494,7 @@ export async function mergeFabricEditsIntoPdf({
     // ------------------------------------------------------------------
     // Case 1: No edits, no watermark — copy as-is
     // ------------------------------------------------------------------
-    if (!hasEdits && !needsWatermark) {
+    if (!hasGenuineEdits && !needsWatermark) {
       const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
 
       outputPdf.addPage(copiedPage);
@@ -466,7 +507,7 @@ export async function mergeFabricEditsIntoPdf({
     // since there are no Fabric objects to layer against. The watermark is
     // drawn on top of the original vector content (preserves quality).
     // ------------------------------------------------------------------
-    if (!hasEdits && needsWatermark) {
+    if (!hasGenuineEdits && needsWatermark) {
       const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
 
       outputPdf.addPage(copiedPage);

@@ -3,6 +3,7 @@
 import { Button, Input, Label, Modal, Switch, TextField } from "@heroui/react";
 import { useState } from "react";
 
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { createShare } from "@/lib/client/api/shares";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -34,6 +35,7 @@ export function ShareModal({
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [revealPassword, setRevealPassword] = useState(false);
 
   const reset = (): void => {
     setExpiry("7d");
@@ -42,6 +44,7 @@ export function ShareModal({
     setGenerated(null);
     setSubmitting(false);
     setCopyState("idle");
+    setRevealPassword(false);
   };
 
   const close = (): void => {
@@ -176,16 +179,26 @@ export function ShareModal({
                     </Switch.Content>
                   </Switch>
                   {withPassword && (
-                    <TextField
-                      value={password}
-                      onChange={(v) => setPassword(v)}
-                    >
-                      <Input
-                        aria-label="Share password"
-                        placeholder="Password (4–128 chars)"
-                        type="password"
+                    <div className="relative">
+                      <TextField
+                        value={password}
+                        onChange={(v) => setPassword(v)}
+                      >
+                        <Input
+                          aria-label="Share password"
+                          // Right padding leaves room for the absolutely
+                          // positioned reveal toggle so the caret never
+                          // sits under the eye icon.
+                          className="pr-10"
+                          placeholder="Password (4–128 chars)"
+                          type={revealPassword ? "text" : "password"}
+                        />
+                      </TextField>
+                      <PasswordRevealToggle
+                        revealed={revealPassword}
+                        onToggle={() => setRevealPassword((v) => !v)}
                       />
-                    </TextField>
+                    </div>
                   )}
                 </div>
               </>
