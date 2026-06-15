@@ -4,6 +4,7 @@ import type { Key } from "@heroui/react";
 
 import {
   Add01Icon,
+  Clock01Icon,
   FileExportIcon,
   FileMinusIcon,
   FolderOpenIcon,
@@ -34,6 +35,7 @@ import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { ShareModal } from "./ShareModal";
+import { VersionHistoryModal } from "./VersionHistoryModal";
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
@@ -53,8 +55,10 @@ export function HamburgerMenu() {
   const setIsPageNumbersModalOpen = usePdfEditorStore(
     (s) => s.setIsPageNumbersModalOpen,
   );
+  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -144,6 +148,25 @@ export function HamburgerMenu() {
         if (!requireFile("adding page numbers")) return;
         setIsPageNumbersModalOpen(true);
         break;
+      case "versions": {
+        if (!requireFile("viewing version history")) return;
+        if (!isSignedIn) {
+          requireSignIn();
+
+          return;
+        }
+        if (!currentDocumentId) {
+          toast.info({
+            title: "Save first",
+            description:
+              "Save the document to the cloud at least once to start a version history.",
+          });
+
+          return;
+        }
+        setIsVersionsOpen(true);
+        break;
+      }
       case "share": {
         if (!requireFile("sharing")) return;
         if (!isSignedIn) {
@@ -265,6 +288,10 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={TextNumberSignIcon} size={14} />
               <Label>Add page numbers</Label>
             </Dropdown.Item>
+            <Dropdown.Item id="versions" textValue="Version history">
+              <HugeiconsIcon icon={Clock01Icon} size={14} />
+              <Label>Version history</Label>
+            </Dropdown.Item>
             <Dropdown.Item id="share" textValue="Share via link">
               <HugeiconsIcon icon={Share01Icon} size={14} />
               <Label>Share via link</Label>
@@ -289,6 +316,19 @@ export function HamburgerMenu() {
         file={file}
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
+      />
+      <VersionHistoryModal
+        documentId={currentDocumentId}
+        isOpen={isVersionsOpen}
+        onClose={() => setIsVersionsOpen(false)}
+        onRestored={() => {
+          // After restore, the safest UX is to reload the editor so
+          // the new bytes are pulled cleanly from the cloud. The
+          // restored doc id is the same root id we're already on.
+          if (currentDocumentId) {
+            router.refresh();
+          }
+        }}
       />
     </>
   );

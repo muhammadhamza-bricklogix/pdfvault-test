@@ -8,6 +8,9 @@ export const DOCUMENTS = {
   RENAME: (id: string) => `/documents/${id}/rename`,
   DELETE: (id: string) => `/documents/${id}`,
   BULK_DELETE: "/documents/bulk-delete",
+  VERSIONS: (id: string) => `/documents/${id}/versions`,
+  RESTORE_VERSION: (id: string, versionId: string) =>
+    `/documents/${id}/restore/${versionId}`,
 } as const;
 
 export const CONVERSION = {
