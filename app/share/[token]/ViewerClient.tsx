@@ -10,6 +10,16 @@ import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 type ViewerClientProps = {
   bytesUrl: string;
   name: string;
+  /**
+   * The share token. Used to pre-flight `/api/share/resolve` from the
+   * BROWSER so the `share_view` cookie's `Set-Cookie` header actually
+   * reaches the user agent. Server-side fetches from `page.tsx` don't
+   * propagate Set-Cookie back to the outer page response in Next.js, so
+   * for password-less shares the cookie never gets minted from the
+   * server path — only from this client-side pre-flight (or, for
+   * password-protected shares, from the PasswordGate's verify call).
+   */
+  token: string;
 };
 
 /**
@@ -26,6 +36,7 @@ type ViewerClientProps = {
 export function ViewerClient({
   bytesUrl,
   name,
+  token,
 }: ViewerClientProps): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const docRef = useRef<PDFDocumentProxy | null>(null);
@@ -43,6 +54,17 @@ export function ViewerClient({
 
     const load = async (): Promise<void> => {
       try {
+        // Pre-flight resolve from the BROWSER so the `share_view` cookie
+        // actually lands. Next.js server-side `fetch` doesn't propagate
+        // Set-Cookie back to the outer page response, so this is the
+        // only path that mints the cookie for password-less shares.
+        // Idempotent: for password-protected shares, PasswordGate has
+        // already minted the cookie and this just refreshes it.
+        await fetch(`/api/share/resolve?t=${encodeURIComponent(token)}`, {
+          credentials: "same-origin",
+          cache: "no-store",
+        }).catch(() => undefined);
+
         const res = await fetch(bytesUrl, {
           credentials: "same-origin",
           cache: "no-store",
@@ -96,7 +118,7 @@ export function ViewerClient({
       docRef.current = null;
       task?.destroy?.();
     };
-  }, [bytesUrl]);
+  }, [bytesUrl, token]);
 
   // Render the current page whenever it changes.
   const renderPage = useCallback(async (): Promise<void> => {

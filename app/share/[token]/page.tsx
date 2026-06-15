@@ -96,6 +96,7 @@ export default async function SharePage({
     <ViewerClient
       bytesUrl={`/api/share/bytes/${encodeURIComponent(token)}`}
       name={result.name}
+      token={token}
     />
   );
 }

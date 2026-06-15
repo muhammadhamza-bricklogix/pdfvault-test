@@ -22,7 +22,7 @@ export function PasswordGate({
   const [unlocked, setUnlocked] = useState(false);
 
   if (unlocked) {
-    return <ViewerClient bytesUrl={bytesUrl} name={name} />;
+    return <ViewerClient bytesUrl={bytesUrl} name={name} token={token} />;
   }
 
   const onSubmit = async (e: React.FormEvent): Promise<void> => {
