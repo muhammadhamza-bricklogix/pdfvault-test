@@ -150,6 +150,109 @@ function ManagePagesToolbarButtonContent({
   );
 }
 
+/**
+ * Background-color picker for selected pages.
+ *
+ * Why this wraps `ColorPicker` instead of using its `onChange` directly:
+ * the underlying draft reducer pushes a new history entry on EVERY
+ * `applyChange` call, and `ColorPicker`'s `onChange` fires per
+ * drag-tick of the hue slider / SB area. Wiring the draft directly
+ * means hundreds of history entries per pick and "Undo" rolling back
+ * one micro-step at a time instead of one user action.
+ *
+ * Fix: hold the in-flight color in LOCAL state while the popover is
+ * open. Only call `onApply` once when the user presses Apply — that's
+ * the single history-pushing event the Undo button can roll back.
+ * Cancel discards the local state without ever touching the draft.
+ * (QA report 2026-06-16.)
+ */
+type BackgroundColorPickerControlProps = {
+  isDisabled: boolean;
+  /** Hex string the user committed. Called once per Apply press. */
+  onApply: (color: string) => void;
+  icon: ToolbarItem["icon"];
+  label: string;
+};
+
+function BackgroundColorPickerControl({
+  isDisabled,
+  onApply,
+  icon,
+  label,
+}: BackgroundColorPickerControlProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  // Initial pick — neutral mid-grey. The user can drag immediately;
+  // local state means the draft isn't touched until Apply.
+  const [draftColor, setDraftColor] = useState<string>("#808080");
+
+  const onPopoverOpenChange = (open: boolean): void => {
+    setIsOpen(open);
+    if (open) {
+      // Reset to neutral whenever the popover reopens so a previous
+      // cancelled session doesn't leak forward.
+      setDraftColor("#808080");
+    }
+  };
+
+  const handleApply = (): void => {
+    onApply(draftColor);
+    setIsOpen(false);
+  };
+
+  return (
+    <ColorPicker
+      value={draftColor}
+      onChange={(color) => setDraftColor(color.toString("hex"))}
+    >
+      <ColorPicker.Trigger aria-label={label} isDisabled={isDisabled}>
+        <ManagePagesToolbarButtonContent
+          ariaLabel={label}
+          disabled={isDisabled}
+          icon={icon}
+          label={label}
+        />
+      </ColorPicker.Trigger>
+      <ColorPicker.Popover isOpen={isOpen} onOpenChange={onPopoverOpenChange}>
+        <div className="flex flex-col gap-3 p-2">
+          <ColorArea
+            aria-label={label}
+            className="max-w-full"
+            colorSpace="hsb"
+            xChannel="saturation"
+            yChannel="brightness"
+          >
+            <ColorArea.Thumb />
+          </ColorArea>
+          <ColorSlider channel="hue" className="gap-1 px-1" colorSpace="hsb">
+            <ColorSlider.Track>
+              <ColorSlider.Thumb />
+            </ColorSlider.Track>
+          </ColorSlider>
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <span
+              aria-hidden
+              className="h-6 w-12 rounded border border-default-300"
+              style={{ backgroundColor: draftColor }}
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onPress={() => setIsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button size="sm" onPress={handleApply}>
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
+      </ColorPicker.Popover>
+    </ColorPicker>
+  );
+}
+
 export function ManagePagesModal({
   isOpen,
   onClose,
@@ -356,46 +459,15 @@ export function ManagePagesModal({
 
                   if (tool.id === "background-color") {
                     return (
-                      <ColorPicker
+                      <BackgroundColorPickerControl
                         key={tool.id}
-                        onChange={(color) =>
-                          draft.setSelectedBackgroundColor(
-                            color.toString("hex"),
-                          )
+                        icon={tool.icon}
+                        isDisabled={disabled}
+                        label={tool.label}
+                        onApply={(color) =>
+                          draft.setSelectedBackgroundColor(color)
                         }
-                      >
-                        <ColorPicker.Trigger
-                          aria-label="Page background color"
-                          isDisabled={disabled}
-                        >
-                          <ManagePagesToolbarButtonContent
-                            ariaLabel="Page background color"
-                            disabled={disabled}
-                            icon={tool.icon}
-                            label={tool.label}
-                          />
-                        </ColorPicker.Trigger>
-                        <ColorPicker.Popover>
-                          <ColorArea
-                            aria-label="Page background color"
-                            className="max-w-full"
-                            colorSpace="hsb"
-                            xChannel="saturation"
-                            yChannel="brightness"
-                          >
-                            <ColorArea.Thumb />
-                          </ColorArea>
-                          <ColorSlider
-                            channel="hue"
-                            className="gap-1 px-1"
-                            colorSpace="hsb"
-                          >
-                            <ColorSlider.Track>
-                              <ColorSlider.Thumb />
-                            </ColorSlider.Track>
-                          </ColorSlider>
-                        </ColorPicker.Popover>
-                      </ColorPicker>
+                      />
                     );
                   }
 
