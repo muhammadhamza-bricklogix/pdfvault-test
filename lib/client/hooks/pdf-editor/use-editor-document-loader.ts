@@ -1,10 +1,12 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -59,6 +61,8 @@ function loadDocument(id: string): Promise<LoadedDoc> {
  * Fetches the signed download URL, downloads the bytes, and seeds the store.
  */
 export function useEditorDocumentLoader() {
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const file = usePdfEditorStore((s) => s.file);
@@ -72,6 +76,31 @@ export function useEditorDocumentLoader() {
     if (!id) {
       lastHydratedDocumentId.current = null;
 
+      return;
+    }
+
+    // Sign-in gate for ?id=<doc>. `/pdf-editor` is intentionally a
+    // public route (the editor works in local-only mode without an
+    // account), but fetching an existing document from the cloud
+    // needs a signed-in user. Without this guard, signed-out visitors
+    // hitting a share-style URL just see a "Couldn't open document"
+    // toast over a blank editor — reported by QA 2026-06-16. Wait
+    // for Clerk to finish loading before deciding so we don't bounce
+    // signed-in users on first paint.
+    if (authLoaded && !isSignedIn) {
+      const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
+
+      router.replace(
+        `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(back)}`,
+      );
+
+      return;
+    }
+
+    if (!authLoaded) {
+      // Clerk still booting — don't fire the doc fetch yet (it would
+      // 401 anyway without a session token), and don't bounce to
+      // sign-in (the user might be authenticated).
       return;
     }
 
@@ -121,17 +150,45 @@ export function useEditorDocumentLoader() {
       })
       .catch((err) => {
         if (cancelled) return;
+
+        // Belt-and-braces 401 handling: if Clerk reported signed-in
+        // but the backend rejected the request (expired session,
+        // revoked user, etc.), bounce to sign-in with a return path
+        // instead of just toasting onto a blank editor.
+        const message = err instanceof Error ? err.message : String(err);
+        const isAuthError = /\b401\b|unauthori[sz]ed/i.test(message);
+
+        if (isAuthError) {
+          const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
+
+          router.replace(
+            `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(back)}`,
+          );
+
+          return;
+        }
+
         logger.error("Failed to load document for editor", err);
         toast.error({
           title: "Couldn't open document",
-          description: err instanceof Error ? err.message : undefined,
+          description: message,
         });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [id, file, currentDocumentId, clearFile, setFile, setCurrentDocument]);
+  }, [
+    id,
+    file,
+    currentDocumentId,
+    clearFile,
+    setFile,
+    setCurrentDocument,
+    authLoaded,
+    isSignedIn,
+    router,
+  ]);
 }
 
 /**
