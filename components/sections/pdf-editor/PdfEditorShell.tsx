@@ -11,6 +11,7 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotations-editor";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extract-images-editor";
@@ -121,6 +122,7 @@ function EditorLayout() {
   useExtractImagesEditor(fabricCanvas);
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
+  useAnnotationsEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),

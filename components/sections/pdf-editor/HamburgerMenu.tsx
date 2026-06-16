@@ -14,6 +14,7 @@ import {
   NoteIcon,
   Search01Icon,
   Share01Icon,
+  Stamp01Icon,
   TextNumberSignIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -34,6 +35,7 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
 
+import { AnnotationsModal } from "./AnnotationsModal";
 import { ShareModal } from "./ShareModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 
@@ -59,6 +61,7 @@ export function HamburgerMenu() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
+  const [isAnnotationsOpen, setIsAnnotationsOpen] = useState(false);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -167,6 +170,10 @@ export function HamburgerMenu() {
         setIsVersionsOpen(true);
         break;
       }
+      case "annotations":
+        if (!requireFile("adding annotations")) return;
+        setIsAnnotationsOpen(true);
+        break;
       case "share": {
         if (!requireFile("sharing")) return;
         if (!isSignedIn) {
@@ -288,6 +295,10 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={TextNumberSignIcon} size={14} />
               <Label>Add page numbers</Label>
             </Dropdown.Item>
+            <Dropdown.Item id="annotations" textValue="Annotations">
+              <HugeiconsIcon icon={Stamp01Icon} size={14} />
+              <Label>Annotations</Label>
+            </Dropdown.Item>
             <Dropdown.Item id="versions" textValue="Version history">
               <HugeiconsIcon icon={Clock01Icon} size={14} />
               <Label>Version history</Label>
@@ -329,6 +340,10 @@ export function HamburgerMenu() {
             router.refresh();
           }
         }}
+      />
+      <AnnotationsModal
+        isOpen={isAnnotationsOpen}
+        onClose={() => setIsAnnotationsOpen(false)}
       />
     </>
   );
