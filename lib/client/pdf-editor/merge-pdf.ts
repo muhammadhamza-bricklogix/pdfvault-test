@@ -434,12 +434,11 @@ export async function mergeFabricEditsIntoPdf({
 
       const pdfjsPage = await pdfDocument.getPage(pageNum);
       const transparentPng = await renderPageToPng(pdfjsPage, {
-        // Suppress pdf.js text only when we're going to draw the
-        // user's overlays on top — otherwise the bg path would double
-        // the text (once from the raster, once from the IText draw).
-        // For editModeText-only pages we want pdf.js to paint text
-        // into the raster, since we're NOT going to redraw it below.
-        suppressText: hasGenuineEdits,
+        // Always keep source text in the raster — re-drawing it via
+        // pdf-lib produced □ glyph fallbacks + visual duplication
+        // (2026-06-16). Only NON-editModeText overlays are drawn on
+        // top below.
+        suppressText: false,
         transparent: true,
       });
       const pageRender = await outputPdf.embedPng(transparentPng);
@@ -460,7 +459,11 @@ export async function mergeFabricEditsIntoPdf({
         const parsed = parseFabricJson(json);
 
         if (parsed) {
-          const objects = (parsed.objects ?? []) as FabricObj[];
+          // Same editModeText filter as Case 3 — see comment there.
+          const allObjects = (parsed.objects ?? []) as FabricObj[];
+          const objects = allObjects.filter(
+            (o) => (o as { editorType?: string }).editorType !== "editModeText",
+          );
 
           if (objects.length) {
             // Fabric canvas was sized to the ROTATED viewport for /Rotate
@@ -527,9 +530,18 @@ export async function mergeFabricEditsIntoPdf({
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
 
-    // 1. Render original page to PNG (text-suppressed)
+    // 1. Render original page to PNG WITH source text included.
+    //    Previously we suppressed text and re-drew it via pdf-lib's
+    //    `drawIText` from the IText overlays. That produced □ tofu
+    //    chars + visual duplication on save (QA report 2026-06-16)
+    //    because pdf-lib's font fallback didn't match the source
+    //    font for every glyph. Now the raster carries text verbatim
+    //    and we only draw NON-editModeText overlays on top — clean
+    //    output, no duplicates.
     const pdfjsPage = await pdfDocument.getPage(pageNum);
-    const pngBytes = await renderPageToPng(pdfjsPage);
+    const pngBytes = await renderPageToPng(pdfjsPage, {
+      suppressText: false,
+    });
 
     // 2. Create new page with same dimensions
     const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
@@ -550,12 +562,21 @@ export async function mergeFabricEditsIntoPdf({
       await drawWatermarkOnPage(newPage, outputPdf, wm!);
     }
 
-    // 5. Draw all Fabric objects on top
+    // 5. Draw user-added Fabric objects on top of the raster.
+    //    `editModeText` (the auto-extracted source-text IText) is
+    //    filtered out — its text is already in the raster from step 1.
+    //    Re-drawing it via pdf-lib `drawIText` previously caused
+    //    duplicate text + □ glyph fallbacks (2026-06-16). User-added
+    //    text (text tool, page numbers, annotations) does NOT have
+    //    `editorType: "editModeText"`, so it still draws normally.
     const json = fabricJsonByPage.get(pageNum)!;
     const parsed = parseFabricJson(json);
 
     if (parsed) {
-      const objects = (parsed.objects ?? []) as FabricObj[];
+      const allObjects = (parsed.objects ?? []) as FabricObj[];
+      const objects = allObjects.filter(
+        (o) => (o as { editorType?: string }).editorType !== "editModeText",
+      );
 
       if (objects.length) {
         // Fabric canvas was sized to the ROTATED viewport for /Rotate pages,
