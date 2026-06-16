@@ -23,6 +23,11 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
   const baseWidth = canvas.getWidth() / zoom;
   const baseHeight = canvas.getHeight() / zoom;
 
+  // Fabric v6's `toJSON()` preserves own-properties set at object
+  // construction (including our `editorType`, `pristine`,
+  // `pdfTextWidth`). It's null-arg in v6 — passing a propertiesToInclude
+  // list throws TS2554. If a custom prop ever stops surviving the
+  // round-trip, register it via `FabricObject.customProperties` instead.
   const json = canvas.toJSON() as Record<string, unknown>;
 
   // Strip ephemeral watermark preview objects — they are visual-only and must

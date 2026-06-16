@@ -373,24 +373,41 @@ export async function mergeFabricEditsIntoPdf({
     // preserves identical text. Genuine user overlays (shapes,
     // image-tool inserts, IText the user added themselves —
     // `editorType !== "editModeText"`) still take Case 3.
-    // Simple rule: if `fabricJsonByPage` has ANY entry for this page,
-    // bake everything into the output via Case 3. No more clever
-    // pristine/editorType filtering. Reasons (2026-06-16 — user
-    // pushback):
-    //   • Previous optimization fell through to Case 1 when only
-    //     auto-extracted source-text IText (`editorType ===
-    //     "editModeText"`, `pristine: true`) existed. That preserved
-    //     selectable text — but if ANY edit slipped through without
-    //     flipping `pristine` (custom-prop stripping during
-    //     serialization, edit paths that don't fire object:modified
-    //     /text:changed, etc.), the user's edit was silently dropped
-    //     and `applyPostSaveReset` then reloaded the un-edited source
-    //     on top of the live canvas → "my edits disappeared on save".
-    //   • Trade-off accepted: pages with overlays get rasterized in
-    //     the saved bytes. editModeText is still drawn separately via
-    //     pdf-lib `drawText` so the output's text remains selectable
-    //     for those runs.
     const hasGenuineEdits = hasEdits;
+
+    // Per-page render strategy decision (2026-06-16, simplified):
+    //
+    //   • If the page has ANY `editModeText` overlay → user activated
+    //     the Edit Text tool for it. Suppress source text in the raster
+    //     and re-draw IText via pdf-lib so any modification (typing,
+    //     moving, resizing) makes it into the saved bytes. The cost
+    //     is some pdf-lib font fallback, but the user's edits are
+    //     guaranteed to persist.
+    //
+    //   • Otherwise (overlays exist but no editModeText) — keep source
+    //     text in the raster + only draw non-editModeText overlays
+    //     (shapes, annotations, page numbers) on top. Clean rendering
+    //     of source text, no duplication.
+    //
+    // Previous version tried to use a per-object `pristine` flag to
+    // distinguish modified-vs-untouched editModeText. That flag didn't
+    // reliably survive Fabric's `toJSON()` serialization, so user
+    // edits silently slipped through and got filtered out — "my text
+    // edits revert after save." The simple rule above is a reliable
+    // fix: at the cost of rasterizing pages where the user activated
+    // Edit Text, the edits ALWAYS persist.
+    const hasModifiedSourceText = (() => {
+      if (!hasEdits) return false;
+      const json = fabricJsonByPage.get(pageNum);
+
+      if (!json) return false;
+      const parsed = parseFabricJson(json);
+      const objects = (parsed?.objects ?? []) as FabricObj[];
+
+      return objects.some(
+        (o) => (o as { editorType?: string }).editorType === "editModeText",
+      );
+    })();
 
     const needsWatermark =
       wm != null &&
@@ -434,11 +451,9 @@ export async function mergeFabricEditsIntoPdf({
 
       const pdfjsPage = await pdfDocument.getPage(pageNum);
       const transparentPng = await renderPageToPng(pdfjsPage, {
-        // Always keep source text in the raster — re-drawing it via
-        // pdf-lib produced □ glyph fallbacks + visual duplication
-        // (2026-06-16). Only NON-editModeText overlays are drawn on
-        // top below.
-        suppressText: false,
+        // Same per-page strategy as Case 3 — keep source text in the
+        // raster unless the user actually modified some editModeText.
+        suppressText: hasModifiedSourceText,
         transparent: true,
       });
       const pageRender = await outputPdf.embedPng(transparentPng);
@@ -459,11 +474,17 @@ export async function mergeFabricEditsIntoPdf({
         const parsed = parseFabricJson(json);
 
         if (parsed) {
-          // Same editModeText filter as Case 3 — see comment there.
+          // Same per-page strategy as Case 3 — include all overlays
+          // when raster suppressed source text (user modified some
+          // editModeText), otherwise skip the pristine editModeText
+          // since its text is already painted in the raster.
           const allObjects = (parsed.objects ?? []) as FabricObj[];
-          const objects = allObjects.filter(
-            (o) => (o as { editorType?: string }).editorType !== "editModeText",
-          );
+          const objects = hasModifiedSourceText
+            ? allObjects
+            : allObjects.filter(
+                (o) =>
+                  (o as { editorType?: string }).editorType !== "editModeText",
+              );
 
           if (objects.length) {
             // Fabric canvas was sized to the ROTATED viewport for /Rotate
@@ -530,17 +551,16 @@ export async function mergeFabricEditsIntoPdf({
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
 
-    // 1. Render original page to PNG WITH source text included.
-    //    Previously we suppressed text and re-drew it via pdf-lib's
-    //    `drawIText` from the IText overlays. That produced □ tofu
-    //    chars + visual duplication on save (QA report 2026-06-16)
-    //    because pdf-lib's font fallback didn't match the source
-    //    font for every glyph. Now the raster carries text verbatim
-    //    and we only draw NON-editModeText overlays on top — clean
-    //    output, no duplicates.
+    // 1. Render original page to PNG.
+    //    Default path: raster KEEPS source text (clean, no font
+    //      fallback) — only non-editModeText overlays drawn on top.
+    //    Modified-source-text path: raster SUPPRESSES source text so
+    //      the re-drawn (user-edited) IText doesn't visually duplicate
+    //      against the original text. Some pdf-lib font fallback may
+    //      occur but the user's edit is preserved.
     const pdfjsPage = await pdfDocument.getPage(pageNum);
     const pngBytes = await renderPageToPng(pdfjsPage, {
-      suppressText: false,
+      suppressText: hasModifiedSourceText,
     });
 
     // 2. Create new page with same dimensions
@@ -563,20 +583,20 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // 5. Draw user-added Fabric objects on top of the raster.
-    //    `editModeText` (the auto-extracted source-text IText) is
-    //    filtered out — its text is already in the raster from step 1.
-    //    Re-drawing it via pdf-lib `drawIText` previously caused
-    //    duplicate text + □ glyph fallbacks (2026-06-16). User-added
-    //    text (text tool, page numbers, annotations) does NOT have
-    //    `editorType: "editModeText"`, so it still draws normally.
+    //    When source text is in the raster (default), we filter out
+    //    `editModeText` since its text is already painted. When the
+    //    raster suppressed text (because the user modified some
+    //    editModeText), draw ALL IText so the user's edits land.
     const json = fabricJsonByPage.get(pageNum)!;
     const parsed = parseFabricJson(json);
 
     if (parsed) {
       const allObjects = (parsed.objects ?? []) as FabricObj[];
-      const objects = allObjects.filter(
-        (o) => (o as { editorType?: string }).editorType !== "editModeText",
-      );
+      const objects = hasModifiedSourceText
+        ? allObjects
+        : allObjects.filter(
+            (o) => (o as { editorType?: string }).editorType !== "editModeText",
+          );
 
       if (objects.length) {
         // Fabric canvas was sized to the ROTATED viewport for /Rotate pages,

@@ -9,6 +9,7 @@ import {
   extractFontData,
   extractTextBlocks,
   type TextBlock,
+  waitForFontFamily,
 } from "@/lib/client/pdf-editor/text-extraction";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
@@ -206,6 +207,22 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
         if (cancelled) return;
       }
+
+      // Per-family wait for any font referenced by the text blocks
+      // that hasn't yet reached `loaded` state. pdf.js can lazy-load
+      // fonts as it streams the page, so `document.fonts.ready` alone
+      // isn't sufficient — it resolves on the INITIAL font set. Without
+      // this, the first paint of the IText overlay shows Helvetica
+      // fallback (the "fonts change when I click Edit Text" report
+      // 2026-06-16); the per-family wait makes the swap visually
+      // identical to the pdf.js native rendering it replaces.
+      const uniqueFamilies = Array.from(
+        new Set(blocks.map((b) => b.fontFamily).filter(Boolean)),
+      );
+
+      await Promise.all(uniqueFamilies.map((f) => waitForFontFamily(f, 2000)));
+
+      if (cancelled) return;
 
       // Place ALL text blocks as IText objects with real embedded fonts.
       // For rotated pages, Fabric `angle` rotates the IText around its

@@ -85,23 +85,77 @@ function resolveFontFamily(fontName: string, styleFontFamily: string): string {
     return webSafeFallback;
   }
 
-  // Only return the pdf.js loadedName if its FontFace is *actually* loaded.
-  // Matching by family alone is unsafe: on iOS Safari, pdf.js registers a
-  // FontFace immediately but its binary may still be "unloaded" / "loading"
-  // when Fabric draws. Canvas `fillText` against an un-loaded face yields
-  // blank glyphs (no system fallback), producing the empty-page bug.
-  let loaded = false;
+  // Always prefer the pdf.js-managed loadedName at extract time.
+  // `use-edit-text-mode.ts` calls `waitForFontFamily` BEFORE placing the
+  // IText, so by render time the font is guaranteed loaded (or the
+  // wait timed out and we accept a visual fallback rather than a blank
+  // glyph). Falling back here would lock the IText to web-safe even
+  // when the pdf.js font subsequently loads — the "fonts change when
+  // I click Edit Text" bug.
+  if (fontName) return fontName;
 
-  document.fonts.forEach((face) => {
-    if (
-      face.status === "loaded" &&
-      (face.family === fontName || face.family === `"${fontName}"`)
-    ) {
-      loaded = true;
-    }
+  return webSafeFallback;
+}
+
+/**
+ * Wait for a specific font family to reach `loaded` status in
+ * `document.fonts`. Returns true on success, false on timeout.
+ *
+ * pdf.js registers FontFaces as it streams page content, so a font
+ * referenced by a text block may still be in `unloaded` / `loading`
+ * state when `useEditTextMode` first runs. Drawing IText against an
+ * unloaded face yields blank glyphs on iOS Safari and Helvetica-fallback
+ * on every other browser — both produce the visual jump users complain
+ * about when entering Edit Text mode.
+ *
+ * Implementation notes:
+ *   • Exact-match against `face.family` and the quoted variant pdf.js
+ *     sometimes uses internally.
+ *   • Re-checks on every `loadingdone` event so we don't poll.
+ *   • 2-second default timeout — pdf.js fonts almost always resolve
+ *     well under 500ms in practice. Past that the user is better off
+ *     seeing fallback than a stalled editor.
+ */
+export async function waitForFontFamily(
+  family: string,
+  timeoutMs = 2000,
+): Promise<boolean> {
+  if (typeof document === "undefined" || !document.fonts) return false;
+
+  const fonts = document.fonts;
+  const isLoaded = (): boolean => {
+    let ok = false;
+
+    fonts.forEach((face) => {
+      if (
+        face.status === "loaded" &&
+        (face.family === family || face.family === `"${family}"`)
+      ) {
+        ok = true;
+      }
+    });
+
+    return ok;
+  };
+
+  if (isLoaded()) return true;
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (val: boolean): void => {
+      if (settled) return;
+      settled = true;
+      fonts.removeEventListener?.("loadingdone", check);
+      clearTimeout(timer);
+      resolve(val);
+    };
+    const check = (): void => {
+      if (isLoaded()) finish(true);
+    };
+    const timer = setTimeout(() => finish(isLoaded()), timeoutMs);
+
+    fonts.addEventListener?.("loadingdone", check);
   });
-
-  return loaded ? fontName : webSafeFallback;
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
