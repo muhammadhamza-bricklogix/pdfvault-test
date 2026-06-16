@@ -230,7 +230,16 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
           if (target instanceof FabricIText) {
             fc.setActiveObject(target);
-            target.enterEditing();
+            target.enterEditing(opt.e);
+            // Position the caret at the tapped glyph. `enterEditing()` only
+            // flips editing on — it leaves selectionStart at 0, so the first
+            // keystroke would insert at the START of the run instead of where
+            // the user tapped (reported as "typing starts a few chars before
+            // my cursor"). Fabric's built-in click-to-edit flow calls
+            // `setCursorByClick`; because we shortcut straight into editing on
+            // the first tap, we have to do the same ourselves.
+            target.setCursorByClick(opt.e);
+            target.initDelayedCursor(true);
             fc.renderAll();
           }
         }

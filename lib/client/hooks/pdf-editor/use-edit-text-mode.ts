@@ -231,6 +231,15 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         const textObj = new FabricIText(block.text, {
           angle: block.rotation,
           editorType: "editModeText",
+          // `pristine: true` marks the IText as "matches source PDF
+          // unchanged from extraction". `useEditorHistory` clears
+          // this flag on `object:modified` / `text:changed`. The
+          // merge pipeline uses it to decide whether the page is
+          // still effectively un-edited (copy source as-is, preserve
+          // selectable text) or whether the user actually modified
+          // some text (Case 3 rasterize + draw overlays — without
+          // this we lose the user's typed-in changes on save).
+          pristine: true,
           fill: block.color,
           fontFamily: block.fontFamily,
           fontSize: block.fontSize,

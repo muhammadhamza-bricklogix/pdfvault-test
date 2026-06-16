@@ -84,10 +84,28 @@ export async function persistEditorDocument({
     // overlay metadata and are re-applied at view-time and at Export.
     // Keeping them out of the saved bytes prevents per-save stacking and the
     // text-position drift caused by re-rasterizing the page on every save.
+    const sourceSize = file.size;
+    const fabricKeys = Array.from(
+      usePdfEditorStore.getState().fabricJsonByPage.keys(),
+    );
+
+    logger.info("[PDFedits] save: pre-merge", {
+      sourceFileBytes: sourceSize,
+      fabricJsonPages: fabricKeys,
+      currentPage,
+      fabricCanvasPresent: !!fabricCanvas,
+    });
+
     const savedBytes = await buildEditedPdfBytes({
       currentPage,
       fabricCanvas,
       file,
+    });
+
+    logger.info("[PDFedits] save: post-merge", {
+      sourceFileBytes: sourceSize,
+      mergedBytes: savedBytes.byteLength,
+      bytesIdenticalToSource: savedBytes.byteLength === sourceSize,
     });
 
     const savedFile = new File([savedBytes.buffer as ArrayBuffer], file.name, {
@@ -100,6 +118,12 @@ export async function persistEditorDocument({
       documentId: currentDocumentId ?? undefined,
       file: savedFile,
       editorState,
+    });
+
+    logger.info("[PDFedits] save: uploaded", {
+      documentId: document.id,
+      backendSizeBytes: document.sizeBytes,
+      backendVersion: document.version,
     });
 
     usePdfEditorStore.setState({

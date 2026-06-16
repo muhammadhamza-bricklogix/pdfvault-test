@@ -262,7 +262,7 @@ function PageNumbersModalContent() {
               Cancel
             </Button>
             <Button isDisabled={!file} onPress={handleApply}>
-              Add &amp; download
+              Add
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

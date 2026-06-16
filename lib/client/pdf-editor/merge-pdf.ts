@@ -373,20 +373,24 @@ export async function mergeFabricEditsIntoPdf({
     // preserves identical text. Genuine user overlays (shapes,
     // image-tool inserts, IText the user added themselves —
     // `editorType !== "editModeText"`) still take Case 3.
-    const hasGenuineEdits = (() => {
-      if (!hasEdits) return false;
-      const json = fabricJsonByPage.get(pageNum);
-
-      if (!json) return false;
-      const parsed = parseFabricJson(json);
-      const objects = (parsed?.objects ?? []) as FabricObj[];
-
-      if (objects.length === 0) return false;
-
-      return !objects.every(
-        (o) => (o as { editorType?: string }).editorType === "editModeText",
-      );
-    })();
+    // Simple rule: if `fabricJsonByPage` has ANY entry for this page,
+    // bake everything into the output via Case 3. No more clever
+    // pristine/editorType filtering. Reasons (2026-06-16 — user
+    // pushback):
+    //   • Previous optimization fell through to Case 1 when only
+    //     auto-extracted source-text IText (`editorType ===
+    //     "editModeText"`, `pristine: true`) existed. That preserved
+    //     selectable text — but if ANY edit slipped through without
+    //     flipping `pristine` (custom-prop stripping during
+    //     serialization, edit paths that don't fire object:modified
+    //     /text:changed, etc.), the user's edit was silently dropped
+    //     and `applyPostSaveReset` then reloaded the un-edited source
+    //     on top of the live canvas → "my edits disappeared on save".
+    //   • Trade-off accepted: pages with overlays get rasterized in
+    //     the saved bytes. editModeText is still drawn separately via
+    //     pdf-lib `drawText` so the output's text remains selectable
+    //     for those runs.
+    const hasGenuineEdits = hasEdits;
 
     const needsWatermark =
       wm != null &&

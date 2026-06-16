@@ -138,6 +138,24 @@ export function flushLiveFabricPage(
   displayPage: number,
   fabricCanvas: FabricCanvas,
 ) {
+  // Diagnostic: log what's actually on the live canvas at flush time.
+  // Helps debug "edits weren't saved" reports — if `objects` is empty
+  // here the canvas had nothing to flush in the first place; if
+  // populated, look at the merge logs to see why they weren't baked.
+  const liveObjects = fabricCanvas.getObjects();
+  const summary = liveObjects.map((o) => ({
+    type: (o as { type?: string }).type,
+    editorType: (o as { editorType?: string }).editorType,
+    pristine: (o as { pristine?: boolean }).pristine,
+  }));
+
+  /* eslint-disable-next-line no-console */
+  console.info("[PDFedits] flush: live canvas →", {
+    displayPage,
+    objectCount: liveObjects.length,
+    types: summary,
+  });
+
   usePdfEditorStore
     .getState()
     .saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));

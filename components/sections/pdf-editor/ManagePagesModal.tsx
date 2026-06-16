@@ -25,11 +25,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Button,
   ColorArea,
-  ColorPicker,
   ColorSlider,
   Label,
   Modal,
   NumberField,
+  Popover,
   Tooltip,
 } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -115,41 +115,6 @@ function ManagePagesToolbarButton({
   );
 }
 
-// Visual-only variant used inside a parent that is already a button (e.g.
-// HeroUI's `ColorPicker.Trigger`). Renders a span so we don't create the
-// invalid `<button>` inside `<button>` DOM that triggers a React hydration
-// error.
-type ManagePagesToolbarButtonContentProps = {
-  ariaLabel?: string;
-  disabled?: boolean;
-  icon: ToolbarItem["icon"];
-  label: string;
-};
-
-function ManagePagesToolbarButtonContent({
-  ariaLabel,
-  disabled = false,
-  icon,
-  label,
-}: ManagePagesToolbarButtonContentProps) {
-  return (
-    <Tooltip delay={300}>
-      <span
-        aria-label={ariaLabel ?? label}
-        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
-        data-disabled={disabled || undefined}
-        role="presentation"
-      >
-        <HugeiconsIcon icon={icon} size={18} />
-        <span className="whitespace-nowrap leading-tight">{label}</span>
-      </span>
-      <Tooltip.Content>
-        <p>{label}</p>
-      </Tooltip.Content>
-    </Tooltip>
-  );
-}
-
 /**
  * Background-color picker for selected pages.
  *
@@ -185,13 +150,11 @@ function BackgroundColorPickerControl({
   // local state means the draft isn't touched until Apply.
   const [draftColor, setDraftColor] = useState<string>("#808080");
 
-  const onPopoverOpenChange = (open: boolean): void => {
+  // Reset draft on every (re)open so a previously cancelled session
+  // doesn't leak forward.
+  const handleOpenChange = (open: boolean): void => {
     setIsOpen(open);
-    if (open) {
-      // Reset to neutral whenever the popover reopens so a previous
-      // cancelled session doesn't leak forward.
-      setDraftColor("#808080");
-    }
+    if (open) setDraftColor("#808080");
   };
 
   const handleApply = (): void => {
@@ -199,57 +162,87 @@ function BackgroundColorPickerControl({
     setIsOpen(false);
   };
 
+  // Switched away from `ColorPicker` + `ColorPicker.Popover` because
+  // RAC's `ColorPicker` doesn't expose top-level `isOpen` and the
+  // `Trigger` couldn't drive the controlled popover state (clicks
+  // didn't open the menu — QA-reported 2026-06-16). The regular
+  // `<Popover>` follows the controlled pattern used in
+  // `identity-popover.tsx` and gives us full open-state control plus
+  // Apply / Cancel.
+  // When disabled, render the button-styled visual without the
+  // Popover so taps don't open an empty colour picker against
+  // nothing-selected pages.
+  if (isDisabled) {
+    return (
+      <span
+        aria-disabled
+        aria-label={label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(true)}`}
+        role="button"
+      >
+        <HugeiconsIcon icon={icon} size={18} />
+        <span className="whitespace-nowrap leading-tight">{label}</span>
+      </span>
+    );
+  }
+
   return (
-    <ColorPicker
-      value={draftColor}
-      onChange={(color) => setDraftColor(color.toString("hex"))}
-    >
-      <ColorPicker.Trigger aria-label={label} isDisabled={isDisabled}>
-        <ManagePagesToolbarButtonContent
-          ariaLabel={label}
-          disabled={isDisabled}
-          icon={icon}
-          label={label}
-        />
-      </ColorPicker.Trigger>
-      <ColorPicker.Popover isOpen={isOpen} onOpenChange={onPopoverOpenChange}>
-        <div className="flex flex-col gap-3 p-2">
-          <ColorArea
-            aria-label={label}
-            className="max-w-full"
-            colorSpace="hsb"
-            xChannel="saturation"
-            yChannel="brightness"
-          >
-            <ColorArea.Thumb />
-          </ColorArea>
-          <ColorSlider channel="hue" className="gap-1 px-1" colorSpace="hsb">
-            <ColorSlider.Track>
-              <ColorSlider.Thumb />
-            </ColorSlider.Track>
-          </ColorSlider>
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <span
-              aria-hidden
-              className="h-6 w-12 rounded border border-default-300"
-              style={{ backgroundColor: draftColor }}
-            />
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onPress={() => setIsOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button size="sm" onPress={handleApply}>
-                Apply
-              </Button>
+    <Popover isOpen={isOpen} onOpenChange={handleOpenChange}>
+      <Popover.Trigger
+        aria-label={label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(false)}`}
+      >
+        <HugeiconsIcon icon={icon} size={18} />
+        <span className="whitespace-nowrap leading-tight">{label}</span>
+      </Popover.Trigger>
+      <Popover.Content offset={8} placement="bottom">
+        <Popover.Dialog className="!min-w-[260px] !p-3">
+          <div className="flex flex-col gap-3">
+            <ColorArea
+              aria-label={label}
+              className="max-w-full"
+              colorSpace="hsb"
+              value={draftColor}
+              xChannel="saturation"
+              yChannel="brightness"
+              onChange={(color) => setDraftColor(color.toString("hex"))}
+            >
+              <ColorArea.Thumb />
+            </ColorArea>
+            <ColorSlider
+              channel="hue"
+              className="gap-1 px-1"
+              colorSpace="hsb"
+              value={draftColor}
+              onChange={(color) => setDraftColor(color.toString("hex"))}
+            >
+              <ColorSlider.Track>
+                <ColorSlider.Thumb />
+              </ColorSlider.Track>
+            </ColorSlider>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <span
+                aria-hidden
+                className="h-6 w-12 rounded border border-default-300"
+                style={{ backgroundColor: draftColor }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => setIsOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onPress={handleApply}>
+                  Apply
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </ColorPicker.Popover>
-    </ColorPicker>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
   );
 }
 

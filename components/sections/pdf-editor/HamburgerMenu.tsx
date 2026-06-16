@@ -333,12 +333,18 @@ export function HamburgerMenu() {
         isOpen={isVersionsOpen}
         onClose={() => setIsVersionsOpen(false)}
         onRestored={() => {
-          // After restore, the safest UX is to reload the editor so
-          // the new bytes are pulled cleanly from the cloud. The
-          // restored doc id is the same root id we're already on.
-          if (currentDocumentId) {
-            router.refresh();
-          }
+          // The backend already swapped the root document's s3Key to
+          // point at the restored version's bytes, BUT
+          // `useEditorDocumentLoader` short-circuits when
+          // `currentDocumentId === id && file != null` and so the
+          // editor keeps showing the in-memory file. `router.refresh()`
+          // only re-runs server components — it doesn't refetch the
+          // bytes. Clearing the store forces the loader's effect to
+          // re-run, which re-calls `documentsService.getDocument(id)`
+          // and pulls the NEW signed URL.
+          // (QA report 2026-06-16: "restore says success but PDF
+          // doesn't change.")
+          clearFile();
         }}
       />
       <AnnotationsModal
