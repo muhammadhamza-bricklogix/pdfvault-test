@@ -3,12 +3,14 @@
 import type { Canvas, IText } from "fabric";
 
 import {
+  Delete02Icon,
   TextBoldIcon,
   TextItalicIcon,
   TextUnderlineIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Button,
   ColorArea,
   ColorPicker,
   ColorSlider,
@@ -20,6 +22,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Toolbar,
+  Tooltip,
 } from "@heroui/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -319,6 +322,39 @@ export function FloatingTextToolbar({
             </ColorSlider>
           </ColorPicker.Popover>
         </ColorPicker>
+
+        <Separator />
+
+        {/* Delete the currently-selected IText (annotation, signature
+            stamp, user-added text, page number, etc.). Keyboard
+            Delete/Backspace also works via PdfViewerCanvas, but a
+            visible button is required on mobile where there is no
+            keyboard and on desktop for discoverability. Pressing this
+            removes the object, clears the active selection so the
+            toolbar hides itself, and re-renders the canvas. */}
+        <Tooltip>
+          <Button
+            isIconOnly
+            aria-label="Delete"
+            className="text-danger"
+            size="sm"
+            variant="ghost"
+            onPress={() => {
+              const fc = fabricCanvas;
+              const obj = activeObjRef.current;
+
+              if (!fc || !obj) return;
+              fc.remove(obj);
+              fc.discardActiveObject();
+              fc.requestRenderAll();
+            }}
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} />
+          </Button>
+          <Tooltip.Content>
+            <p>Delete</p>
+          </Tooltip.Content>
+        </Tooltip>
       </Toolbar>
     </div>
   );

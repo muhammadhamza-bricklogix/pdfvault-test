@@ -1,6 +1,6 @@
 "use client";
 
-import type { IText, TPointerEventInfo } from "fabric";
+import type { FabricObject, IText, TPointerEventInfo } from "fabric";
 import type { PDFPageProxy } from "pdfjs-dist";
 
 import { useEffect, useRef, useState } from "react";
@@ -296,25 +296,64 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     };
   }, [activeTool, fabricCanvas]);
 
-  // Keyboard undo/redo + toolbar button events
+  // Keyboard undo/redo + delete + toolbar button events
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Don't hijack keys when the user is typing in a sidebar input,
+      // watermark text field, range input, etc. Also skip when an IText
+      // is in edit mode — its own keydown handles backspace/delete to
+      // edit text rather than delete the whole object.
+      const active = document.activeElement;
+      const tag = active?.tagName;
+      const inTextField =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        (active as HTMLElement | null)?.isContentEditable;
+
+      const fc = fabricCanvas;
+      const activeObj = fc?.getActiveObject() as
+        | (FabricObject & { isEditing?: boolean })
+        | undefined;
+      const isITextEditing = !!activeObj && activeObj.isEditing === true;
+
+      // Delete / Backspace removes the currently-selected Fabric object
+      // (annotation, shape, signature, watermark stamp, page number, etc.).
+      // Multiple objects are removed when an ActiveSelection is the target.
+      // Guarded against typing in form fields and against an IText edit
+      // session — there the keys belong to the text editor.
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        !inTextField &&
+        !isITextEditing &&
+        fc &&
+        activeObj
+      ) {
+        e.preventDefault();
+        const sel = activeObj as FabricObject & {
+          type?: string;
+          getObjects?: () => FabricObject[];
+        };
+
+        if (
+          (sel.type === "activeselection" ||
+            sel.type === "activeSelection") &&
+          typeof sel.getObjects === "function"
+        ) {
+          for (const obj of sel.getObjects()) fc.remove(obj);
+        } else {
+          fc.remove(activeObj);
+        }
+        fc.discardActiveObject();
+        fc.requestRenderAll();
+
+        return;
+      }
+
       const mod = e.metaKey || e.ctrlKey;
 
       if (!mod) return;
 
-      // Don't hijack Ctrl+Z when the user is typing in a sidebar input,
-      // watermark text field, range input, etc.
-      const active = document.activeElement;
-      const tag = active?.tagName;
-
-      if (
-        tag === "INPUT" ||
-        tag === "TEXTAREA" ||
-        (active as HTMLElement | null)?.isContentEditable
-      ) {
-        return;
-      }
+      if (inTextField) return;
 
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();
@@ -337,7 +376,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       window.removeEventListener("editor:undo", onUndoEvent);
       window.removeEventListener("editor:redo", onRedoEvent);
     };
-  }, [undo, redo]);
+  }, [undo, redo, fabricCanvas]);
 
   // Pinch-zoom (mobile) + wheel-zoom (desktop trackpad / Cmd-wheel).
   // Both call `setZoom` directly on the store — `use-fabric-canvas.ts` already

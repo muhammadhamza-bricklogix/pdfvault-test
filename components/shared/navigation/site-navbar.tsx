@@ -6,8 +6,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Dropdown, Label, Separator } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -46,6 +46,22 @@ export function SiteNavbar() {
     setIsDrawerOpen(false);
     router.push(href);
   };
+
+  // Close the drawer whenever the route changes. The explicit
+  // `setIsDrawerOpen(false)` inside `navigateAndCloseDrawer` already
+  // covers Button/Link onPress paths, but Sign In / Sign Up Free targets
+  // (/sign-in, /sign-up) sit inside the SAME `(marketing)` layout group
+  // as the home page, so the navbar — and the drawer's React state —
+  // persists across the transition. If the click → state update race
+  // loses to Next.js's navigation cycle on iOS Safari (reported by QA
+  // 2026-06-17), the drawer can stay visually open over the auth page.
+  // A pathname-driven sync close makes the drawer fully predictable:
+  // any route change clears it, regardless of which path got us there.
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsDrawerOpen(false);
+  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-default-200/80 bg-[var(--color-background)]/90 backdrop-blur-md dark:border-default-800/80">
