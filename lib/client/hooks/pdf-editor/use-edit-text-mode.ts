@@ -5,6 +5,7 @@ import type { PDFPageProxy } from "pdfjs-dist";
 
 import { useEffect, useRef } from "react";
 
+import { installFabricCustomizations } from "@/lib/client/pdf-editor/fabric-customizations";
 import {
   extractFontData,
   extractTextBlocks,
@@ -56,6 +57,15 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
   useEffect(() => {
     blocksCacheRef.current.clear();
   }, [file]);
+
+  // Install Fabric custom-property serialization patch once at mount. Without
+  // this, `canvas.toJSON()` drops `originalText` / `originalLeft` / `pristine`
+  // / `editorType`, breaking the merge pipeline's "did the user actually
+  // modify source text?" detection and forcing every editModeText page into
+  // the rasterise branch. See `fabric-customizations.ts` for the full story.
+  useEffect(() => {
+    void installFabricCustomizations();
+  }, []);
 
   useEffect(() => {
     if (!fabricCanvas || !page) return;
@@ -260,6 +270,18 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           originalText: block.text,
           originalLeft: left,
           originalTop: top,
+          // Snapshot the source-text's bounding box at extraction time.
+          // The merge pipeline uses this to whiteout the original text
+          // BEFORE drawing the user's modified IText on top, so the page
+          // stays text-editable on reload (no rasterisation) AND the
+          // edit replaces — not stacks on top of — the source word.
+          // `block.width` is the pdf.js advance width (good proxy);
+          // `block.height` is the font cap-height. Fabric will recompute
+          // its own `.width`/`.height` for the live object; we store the
+          // original explicitly because Fabric's value drifts as the user
+          // types and we need the SOURCE bbox to cover the source text.
+          originalWidth: block.width,
+          originalHeight: block.height,
           fill: block.color,
           fontFamily: block.fontFamily,
           fontSize: block.fontSize,

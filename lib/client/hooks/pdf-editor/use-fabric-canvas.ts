@@ -97,13 +97,29 @@ export function useFabricCanvas({
 
       if (cancelled || !fabricCanvasRef.current) return;
 
-      // Register custom properties so they survive toJSON() / loadFromJSON()
+      // Register custom properties so they survive toJSON() / loadFromJSON().
+      // `pristine` + `originalText` + `original*` are critical for the
+      // merge pipeline's "did the user actually modify this source text?"
+      // check (see `merge-pdf.ts::isModifiedEditModeText`) AND for the
+      // post-save snapshot reuse (see `applyPostSaveReset`). Without them
+      // in this list, Fabric v6's loadFromJSON discards them, the IText
+      // restored on canvas remount has no `editorType`, and
+      // `useEditTextMode` falls through to re-extracting from pdf.js,
+      // which surfaces both the source text (under the whiteout) AND the
+      // edit drawn on top → visible double layer in the editor after
+      // save (QA report 2026-06-17).
       for (const property of [
         "editorType",
         "noteText",
         "linkUrl",
         "pdfTextWidth",
         "shapeAspectLocked",
+        "pristine",
+        "originalText",
+        "originalLeft",
+        "originalTop",
+        "originalWidth",
+        "originalHeight",
       ]) {
         if (!FabricObject.customProperties.includes(property)) {
           FabricObject.customProperties.push(property);

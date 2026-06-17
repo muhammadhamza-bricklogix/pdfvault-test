@@ -1,0 +1,145 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e179] [cursor=pointer]:
+    - img [ref=e180]
+  - alert [ref=e176]
+  - generic [ref=e194]:
+    - complementary [ref=e195]:
+      - generic [ref=e196]:
+        - link "Go to home" [ref=e197] [cursor=pointer]:
+          - /url: /
+          - img "PDFedits.io" [ref=e198]
+        - navigation "Primary" [ref=e199]:
+          - link "My files" [ref=e200] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e202]
+            - generic [ref=e204]: My files
+          - link "Tools" [ref=e205] [cursor=pointer]:
+            - /url: /#pdf-tools
+            - img [ref=e207]
+            - generic [ref=e210]: Tools
+      - button "Account menu" [ref=e212] [cursor=pointer]:
+        - img "User" [ref=e213]
+    - main [ref=e214]:
+      - generic [ref=e215]:
+        - generic [ref=e216]:
+          - generic [ref=e217]:
+            - heading "My files" [level=1] [ref=e218]
+            - paragraph [ref=e219]: Open, rename, download, or delete your saved PDFs.
+          - button "Upload PDF" [ref=e220] [cursor=pointer]:
+            - img
+            - generic [ref=e221]: Upload PDF
+        - generic [ref=e222]:
+          - link "Convert PDF PDF → Word, Excel, image, and more." [ref=e223] [cursor=pointer]:
+            - /url: /#pdf-tools
+            - img [ref=e225]
+            - generic [ref=e228]:
+              - paragraph [ref=e229]: Convert PDF
+              - paragraph [ref=e230]: PDF → Word, Excel, image, and more.
+          - link "Word to PDF Word, Excel, PPT, and images to PDF." [ref=e231] [cursor=pointer]:
+            - /url: /tools/docx-to-pdf
+            - img [ref=e233]
+            - generic [ref=e236]:
+              - paragraph [ref=e237]: Word to PDF
+              - paragraph [ref=e238]: Word, Excel, PPT, and images to PDF.
+          - link "Edit PDF Edit text, draw, highlight, and annotate." [ref=e239] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e241]
+            - generic [ref=e244]:
+              - paragraph [ref=e245]: Edit PDF
+              - paragraph [ref=e246]: Edit text, draw, highlight, and annotate.
+          - link "Sign & Watermark Sign and watermark with vector strokes." [ref=e247] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e249]
+            - generic [ref=e252]:
+              - paragraph [ref=e253]: Sign & Watermark
+              - paragraph [ref=e254]: Sign and watermark with vector strokes.
+          - link "Organize Pages Reorder, rotate, split, and merge pages." [ref=e255] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e257]
+            - generic [ref=e259]:
+              - paragraph [ref=e260]: Organize Pages
+              - paragraph [ref=e261]: Reorder, rotate, split, and merge pages.
+          - link "Protect PDF Add or remove password protection." [ref=e262] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e264]
+            - generic [ref=e268]:
+              - paragraph [ref=e269]: Protect PDF
+              - paragraph [ref=e270]: Add or remove password protection.
+        - generic [ref=e271]:
+          - generic [ref=e272]:
+            - generic [ref=e274]: Showing 1 of 1
+            - generic [ref=e275]:
+              - generic [ref=e276]: Updated
+              - generic [ref=e277]:
+                - textbox "Updated from" [ref=e279]
+                - generic [ref=e280]: to
+                - textbox "Updated to" [ref=e282]
+          - generic [ref=e285]:
+            - generic [ref=e291]:
+              - generic:
+                - img
+              - textbox "Search by name..." [ref=e292]
+            - table [ref=e294]:
+              - rowgroup [ref=e295]:
+                - row "Toggle select all Name Sort by Name ascending Size Sort by Size descending Updated Sort by Updated descending Actions" [ref=e296]:
+                  - columnheader "Toggle select all" [ref=e297]:
+                    - generic [ref=e304]:
+                      - checkbox "Toggle select all" [ref=e305]
+                      - img
+                  - columnheader [ref=e306]
+                  - columnheader "Name Sort by Name ascending" [ref=e307]:
+                    - generic [ref=e309] [cursor=pointer]:
+                      - generic "Name" [ref=e310]
+                      - button "Sort by Name ascending" [ref=e312]:
+                        - img [ref=e313]
+                  - columnheader "Size Sort by Size descending" [ref=e316]:
+                    - generic [ref=e318] [cursor=pointer]:
+                      - generic "Size" [ref=e319]
+                      - button "Sort by Size descending" [ref=e321]:
+                        - img [ref=e322]
+                  - columnheader "Updated Sort by Updated descending" [ref=e325]:
+                    - generic [ref=e327] [cursor=pointer]:
+                      - generic "Updated" [ref=e328]
+                      - button "Sort by Updated descending" [ref=e330]:
+                        - img [ref=e331]
+                  - columnheader "Actions" [ref=e334]:
+                    - generic "Actions" [ref=e337]
+              - rowgroup [ref=e338]:
+                - row "Toggle select row sample.pdf 98 KB Jun 8, 2026 Open sample.pdf Download sample.pdf View history for sample.pdf Rename sample.pdf Delete sample.pdf" [ref=e339]:
+                  - cell "Toggle select row" [ref=e340]:
+                    - generic [ref=e344]:
+                      - checkbox "Toggle select row" [ref=e345]
+                      - img
+                  - cell [ref=e346]
+                  - cell "sample.pdf" [ref=e349]:
+                    - link "sample.pdf" [ref=e350] [cursor=pointer]:
+                      - /url: /pdf-editor?id=4ba344c5-148a-40e3-8edc-9b08c99db441
+                  - cell "98 KB" [ref=e351]
+                  - cell "Jun 8, 2026" [ref=e352]
+                  - cell "Open sample.pdf Download sample.pdf View history for sample.pdf Rename sample.pdf Delete sample.pdf" [ref=e353]:
+                    - generic [ref=e355]:
+                      - button "Open sample.pdf" [ref=e356] [cursor=pointer]:
+                        - img
+                      - button "Download sample.pdf" [ref=e357] [cursor=pointer]:
+                        - img
+                      - button "View history for sample.pdf" [ref=e358] [cursor=pointer]:
+                        - img
+                      - button "Rename sample.pdf" [ref=e359] [cursor=pointer]:
+                        - img
+                      - button "Delete sample.pdf" [ref=e360] [cursor=pointer]:
+                        - img
+              - rowgroup
+            - generic [ref=e364]:
+              - generic [ref=e365]:
+                - generic [ref=e366]: Rows per page
+                - combobox [ref=e367]:
+                  - generic [ref=e368]:
+                    - searchbox "Rows per page" [ref=e369] [cursor=pointer]: "10"
+                    - generic:
+                      - img
+              - generic [ref=e370]: 1-1 of 1
+              - generic [ref=e371]:
+                - button "Go to previous page" [disabled]:
+                  - img
+                - button "Go to next page" [disabled]:
+                  - img

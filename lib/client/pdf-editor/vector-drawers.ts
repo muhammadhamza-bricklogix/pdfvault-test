@@ -101,9 +101,41 @@ export async function drawIText(
   ctx: CoordinateContext,
   fontCache: FontCache,
 ): Promise<void> {
-  const rawText = obj.text as string | undefined;
+  const editorTypeEarly = (obj.editorType as string) || "";
+  let rawText = obj.text as string | undefined;
 
   if (!rawText) return;
+
+  if (editorTypeEarly === "editModeText") {
+    /* eslint-disable-next-line no-console */
+    console.info("[PDFedits] drawIText: editModeText drawing", {
+      text: rawText.slice(0, 30),
+      textLen: rawText.length,
+      pristine: (obj as { pristine?: boolean }).pristine,
+      originalText:
+        typeof (obj as { originalText?: string }).originalText === "string"
+          ? (obj as { originalText?: string }).originalText!.slice(0, 30)
+          : null,
+      left: obj.left,
+      top: obj.top,
+      originalLeft: (obj as { originalLeft?: number }).originalLeft,
+      originalTop: (obj as { originalTop?: number }).originalTop,
+    });
+  }
+
+  // editModeText overlays mirror pdf.js's extracted text runs, which often
+  // carry a trailing space (pdf.js exposes word breaks via the `str` field
+  // of each TextItem). Inter-word spacing in PDFs is normally produced by
+  // explicit advance operators, not by drawing a space glyph — so embedded
+  // SUBSET fonts often omit the space glyph entirely. `drawText`-ing that
+  // trailing space then renders as the font's `.notdef` glyph (a small
+  // box `□`), producing the "trailing-box after every word" symptom
+  // reported 2026-06-17. Strip trailing whitespace for editModeText only;
+  // positions on the source page already encode the spacing.
+  if (editorTypeEarly === "editModeText") {
+    rawText = rawText.replace(/\s+$/, "");
+    if (!rawText) return;
+  }
 
   const fontFamily = (obj.fontFamily as string) || "Helvetica";
   const fontWeight = (obj.fontWeight as string) || "normal";
@@ -117,7 +149,7 @@ export async function drawIText(
 
   // The object's bounding box width in Fabric units (what the user sees as the text container)
   const objWidth = ((obj.width as number) || 0) * objScaleX;
-  const editorType = (obj.editorType as string) || "";
+  const editorType = editorTypeEarly;
 
   const { left, top } = resolveTopLeft(obj);
 

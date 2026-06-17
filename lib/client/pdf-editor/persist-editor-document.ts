@@ -15,6 +15,70 @@ import { logger } from "@/lib/shared/utils/logger";
 // loses the source data URL until the user re-uploads.
 const EDITOR_STATE_SOFT_LIMIT_BYTES = 800 * 1024;
 
+/**
+ * Walks the in-store `fabricJsonByPage` and, for every editModeText whose
+ * `pristine !== true`, snaps `originalText/originalLeft/originalTop/...` to
+ * the current values and flips `pristine` to true. Mutates each page's JSON
+ * string in place (rebuilds the Map).
+ *
+ * Why: the merge pipeline just baked those modifications into the saved
+ * bytes via whiteout + drawText. The user's NEXT save (or a reload that
+ * reuses the snapshot) must treat those entries as "no modification
+ * pending" — otherwise the whiteout-and-redraw runs again, stacking on
+ * top of the already-baked text in the saved file (and producing a visual
+ * mess in the editor where pdf.js's text-extraction sees both layers).
+ */
+function markBakedEditModeTextAsPristine(): void {
+  const state = usePdfEditorStore.getState();
+  const next = new Map<number, string>();
+  let mutatedCount = 0;
+
+  state.fabricJsonByPage.forEach((json, page) => {
+    let parsed: Record<string, unknown>;
+
+    try {
+      parsed = JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      next.set(page, json);
+
+      return;
+    }
+
+    const objs = parsed.objects;
+
+    if (!Array.isArray(objs)) {
+      next.set(page, json);
+
+      return;
+    }
+
+    let changed = false;
+
+    for (const obj of objs as Record<string, unknown>[]) {
+      if (obj.editorType !== "editModeText") continue;
+      if (obj.pristine === true) continue;
+      obj.originalText = obj.text;
+      obj.originalLeft = obj.left;
+      obj.originalTop = obj.top;
+
+      if (obj.width !== undefined) obj.originalWidth = obj.width;
+      if (obj.height !== undefined) obj.originalHeight = obj.height;
+      obj.pristine = true;
+      changed = true;
+      mutatedCount++;
+    }
+
+    next.set(page, changed ? JSON.stringify(parsed) : json);
+  });
+
+  if (mutatedCount > 0) {
+    logger.info("[PDFedits] save: re-pristined post-merge", {
+      mutatedCount,
+    });
+    usePdfEditorStore.setState({ fabricJsonByPage: next });
+  }
+}
+
 export type PersistEditorResult =
   | { document: Document; ok: true; savedFile: File }
   | {
@@ -107,6 +171,18 @@ export async function persistEditorDocument({
       mergedBytes: savedBytes.byteLength,
       bytesIdenticalToSource: savedBytes.byteLength === sourceSize,
     });
+
+    // Mark every editModeText that the merge just baked as `pristine: true`,
+    // and snap its `originalText` / `originalLeft` / `originalTop` etc. to
+    // the current values. Reason: the saved bytes now contain the modified
+    // text drawn on top of a whiteout, so on the NEXT save we should NOT
+    // re-whiteout + re-draw (that would double-bake). Also lets
+    // `applyPostSaveReset` preserve `fabricJsonByPage` without dragging
+    // the "modified" flag forward into a second whiteout cycle, AND keeps
+    // the editor's Fabric overlay in sync with the just-saved file so the
+    // user doesn't see a double-text artefact from pdf.js re-extracting
+    // both the source word (under the whiteout) and our redraw.
+    markBakedEditModeTextAsPristine();
 
     const savedFile = new File([savedBytes.buffer as ArrayBuffer], file.name, {
       type: "application/pdf",

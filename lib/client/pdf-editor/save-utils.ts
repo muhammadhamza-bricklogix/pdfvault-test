@@ -23,11 +23,14 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
   const baseWidth = canvas.getWidth() / zoom;
   const baseHeight = canvas.getHeight() / zoom;
 
-  // Fabric v6's `toJSON()` preserves own-properties set at object
-  // construction (including our `editorType`, `pristine`,
-  // `pdfTextWidth`). It's null-arg in v6 — passing a propertiesToInclude
-  // list throws TS2554. If a custom prop ever stops surviving the
-  // round-trip, register it via `FabricObject.customProperties` instead.
+  // Fabric v6's `toJSON()` only serializes class-registered properties.
+  // The `installFabricCustomizations()` toObject patch should extend that,
+  // but we also explicitly copy custom props from each live object below
+  // as a belt-and-braces measure. The merge pipeline's `pristine` check
+  // is the sole signal that decides whether the source word is whited
+  // out + redrawn vs. left untouched on Save — dropping it on the
+  // round-trip produces the "every word on the edited line shows
+  // duplicated" symptom (QA report 2026-06-17).
   const json = canvas.toJSON() as Record<string, unknown>;
 
   // Strip ephemeral watermark preview objects — they are visual-only and must
@@ -36,6 +39,62 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
     json.objects = (json.objects as Record<string, unknown>[]).filter(
       (obj) => obj.editorType !== "watermarkPreview",
     );
+  }
+
+  // Explicit copy of custom props from live Fabric objects → JSON.
+  // Pairs each serialized object with its live Fabric counterpart and
+  // overlays the live values for our custom keys. Order is preserved
+  // because Fabric's toJSON emits objects in `getObjects()` order, and
+  // we filtered the same way. If anything ever desyncs the order we
+  // fall back to the toJSON value (so this can never silently corrupt).
+  const liveObjects = canvas.getObjects().filter((o) => {
+    return (o as { editorType?: string }).editorType !== "watermarkPreview";
+  });
+
+  if (Array.isArray(json.objects) && json.objects.length === liveObjects.length) {
+    const objs = json.objects as Record<string, unknown>[];
+
+    for (let i = 0; i < objs.length; i++) {
+      const live = liveObjects[i] as unknown as Record<string, unknown>;
+
+      for (const k of [
+        "editorType",
+        "pristine",
+        "originalText",
+        "originalLeft",
+        "originalTop",
+        "originalWidth",
+        "originalHeight",
+        "pdfTextWidth",
+      ]) {
+        if (live[k] !== undefined) objs[i][k] = live[k];
+      }
+    }
+
+    // DEBUG: serialized editModeText summary — used to confirm `pristine`
+    // and `originalText` survive the toJSON round-trip into the JSON that
+    // the merge pipeline reads.
+    const eds = objs.filter((o) => o.editorType === "editModeText");
+    const modifiedCount = eds.filter((o) => o.pristine !== true).length;
+
+    /* eslint-disable-next-line no-console */
+    console.info("[PDFedits] serialize: editModeText breakdown", {
+      total: eds.length,
+      modified: modifiedCount,
+      pristine: eds.length - modifiedCount,
+      samples: eds.slice(0, 5).map((o) => ({
+        text: typeof o.text === "string" ? o.text.slice(0, 24) : null,
+        textLen: typeof o.text === "string" ? o.text.length : null,
+        originalText:
+          typeof o.originalText === "string"
+            ? o.originalText.slice(0, 24)
+            : null,
+        textMatches: o.text === o.originalText,
+        pristine: o.pristine,
+        left: o.left,
+        originalLeft: o.originalLeft,
+      })),
+    });
   }
 
   return JSON.stringify({

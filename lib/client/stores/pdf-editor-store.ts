@@ -434,16 +434,29 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   clearDocumentDirty: () => set({ hasUnsavedChanges: false }),
 
   applyPostSaveReset: (savedFile) =>
-    set({
+    set((state) => ({
       file: savedFile,
-      fabricJsonByPage: new Map(),
+      // KEEP fabricJsonByPage + extractedPages. The merge pipeline whites-out
+      // the source word and draws the modified text on top, which makes the
+      // saved file VISUALLY correct in any PDF viewer — but pdf.js's text
+      // extraction can still SEE the source text under the whiteout (it lives
+      // in the content stream). Re-extracting after save would surface both
+      // the source word AND the modified one as Fabric ITexts at the same
+      // position → visible double layer in the editor.
+      //
+      // By preserving the pre-save Fabric snapshot (with modified entries
+      // already marked pristine by `markBakedEditModeTextAsPristine` inside
+      // `persistEditorDocument`), the editor reuses the in-memory ITexts
+      // instead of re-extracting, so the visible state matches what the
+      // user just saved. See QA report 2026-06-17.
+      fabricJsonByPage: state.fabricJsonByPage,
+      extractedPages: state.extractedPages,
       hasUnsavedChanges: false,
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
-      extractedPages: new Set(),
-    }),
+    })),
 
   clearPendingCloudSaveAfterReload: () =>
     set({ pendingCloudSaveAfterReload: false }),
