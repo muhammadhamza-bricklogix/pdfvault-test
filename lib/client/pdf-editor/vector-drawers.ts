@@ -154,27 +154,34 @@ export async function drawIText(
   const { left, top } = resolveTopLeft(obj);
 
   let font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
-  // If the embedded source font can't encode every character in the
-  // text — most often because it's a SUBSET that omits the regular
-  // space glyph (PDFs use Tj advance operators for spacing) — fall
-  // back to the WinAnsi StandardFont equivalent for the WHOLE string.
-  // Otherwise `sanitizeTextForFont` would silently turn unencodable
-  // characters into "?", and a user typing "  myword" sees "??myword"
-  // in the saved PDF (QA report 2026-06-17).
-  let canEncodeAll = true;
+  // For editModeText where the user CHANGED the text (text !==
+  // originalText), the new characters they typed are very likely NOT in
+  // the source PDF's subset font — typing "test" into a word that
+  // didn't contain `t/e/s` means those glyphs simply aren't embedded.
+  // pdf-lib's `encodeText` silently maps unknown codepoints to the
+  // `.notdef` glyph (it doesn't throw), so a try/catch can't detect
+  // the miss — the saved PDF renders the missing chars as `?` boxes
+  // (QA report 2026-06-17: "I added 4 characters and the version
+  // preview shows 4 ????").
+  //
+  // Fix: detect the text-change case and switch the WHOLE string to
+  // the StandardFont equivalent (Helvetica / Times / Courier per the
+  // family). StandardFonts are full WinAnsi so they cover ASCII +
+  // common Latin reliably. Trade-off is a tiny font-metric drift from
+  // the surrounding source text — far better than `????`. Unmodified
+  // text (text === originalText, just moved/resized) keeps the
+  // embedded font because every glyph it needs is guaranteed to be
+  // in the subset.
+  if (editorTypeEarly === "editModeText") {
+    const originalText = (obj as { originalText?: string }).originalText;
 
-  try {
-    font.encodeText(rawText);
-  } catch {
-    canEncodeAll = false;
-  }
-
-  if (!canEncodeAll) {
-    font = await fontCache.getStandardFallback(
-      fontFamily,
-      fontWeight,
-      fontStyle,
-    );
+    if (typeof originalText === "string" && rawText !== originalText) {
+      font = await fontCache.getStandardFallback(
+        fontFamily,
+        fontWeight,
+        fontStyle,
+      );
+    }
   }
 
   // Pre-sanitize against the resolved font so every downstream
