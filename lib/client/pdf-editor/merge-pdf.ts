@@ -9,7 +9,13 @@ import type {
   WatermarkConfig,
 } from "@/lib/client/stores/pdf-editor-store";
 
-import { createCoordinateContext } from "./coordinate-transform";
+import { rgb } from "pdf-lib";
+
+import {
+  createCoordinateContext,
+  toPdfX,
+  toPdfY,
+} from "./coordinate-transform";
 import { FontCache } from "./font-mapping";
 import {
   dataUrlToBytes,
@@ -578,9 +584,17 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // Draw user-added Fabric overlays on top of the copied page.
-    // Source-text editModeText IText is dropped (the source page
-    // already carries that text). User-added text (text tool, page
-    // numbers, annotations, shapes, image inserts) all keep going.
+    //
+    //   editModeText (auto-extracted source text) is FILTERED OUT.
+    //   The whiteout+redraw approach (2026-06-17 v3) produced visible
+    //   duplication: white rects covered some of the original text but
+    //   pdf-lib's drawText replacement landed at a different size /
+    //   baseline, so the original text peeked out under/around the
+    //   redrawn version. Trade-off accepted for the demo: typing into
+    //   an existing text run does NOT persist on save. To change
+    //   existing text the user uses Whiteout → Text tool. Adds,
+    //   shapes, annotations, page numbers, and new text via the Text
+    //   tool DO persist (they have a different editorType).
     const json = fabricJsonByPage.get(pageNum)!;
     const parsed = parseFabricJson(json);
 
