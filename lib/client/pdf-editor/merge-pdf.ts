@@ -387,27 +387,35 @@ export async function mergeFabricEditsIntoPdf({
     // `editorType !== "editModeText"`) still take Case 3.
     const hasGenuineEdits = hasEdits;
 
-    // Per-page render strategy decision (2026-06-16, simplified):
+    // Per-page render strategy decision (2026-06-17, robust comparison
+    // version):
     //
-    //   • If the page has ANY `editModeText` overlay → user activated
-    //     the Edit Text tool for it. Suppress source text in the raster
-    //     and re-draw IText via pdf-lib so any modification (typing,
-    //     moving, resizing) makes it into the saved bytes. The cost
-    //     is some pdf-lib font fallback, but the user's edits are
-    //     guaranteed to persist.
+    //   • If the page has at least one editModeText whose `text`,
+    //     `left`, or `top` differs from the originals captured at
+    //     extraction time, the user actually MODIFIED some source
+    //     text. We suppress source text in the raster and redraw all
+    //     IText via pdf-lib so the user's typing makes it into the
+    //     saved bytes. Some pdf-lib font fallback may produce
+    //     question marks / boxes for non-WinAnsi characters — the
+    //     trade-off for preserving edits.
     //
-    //   • Otherwise (overlays exist but no editModeText) — keep source
-    //     text in the raster + only draw non-editModeText overlays
-    //     (shapes, annotations, page numbers) on top. Clean rendering
-    //     of source text, no duplication.
+    //   • Otherwise — keep source text in the raster (clean,
+    //     pixel-perfect, no boxes) and filter out editModeText from
+    //     the overlay-draw step. Only user-added non-editModeText
+    //     overlays (shapes, annotations, page numbers) draw on top.
     //
-    // Previous version tried to use a per-object `pristine` flag to
-    // distinguish modified-vs-untouched editModeText. That flag didn't
-    // reliably survive Fabric's `toJSON()` serialization, so user
-    // edits silently slipped through and got filtered out — "my text
-    // edits revert after save." The simple rule above is a reliable
-    // fix: at the cost of rasterizing pages where the user activated
-    // Edit Text, the edits ALWAYS persist.
+    // Why this beats the pristine-flag approach (2026-06-16):
+    //   pristine is a boolean custom prop that Fabric's `toJSON()`
+    //   can drop on round-trip. Strings + numbers (text, left, top)
+    //   round-trip reliably. Comparison against `originalText` etc.
+    //   is the trustworthy signal.
+    //
+    // Why this beats "any editModeText = modified" (2026-06-16 v2):
+    //   that path rasterised + redrew text on EVERY page the user
+    //   activated Edit Text on, even pages they only peeked at.
+    //   The pdf-lib redraw produced □ tofu boxes for non-WinAnsi
+    //   chars (special spaces, smart quotes, etc.) in source text
+    //   the user never modified — QA report 2026-06-17.
     const hasModifiedSourceText = (() => {
       if (!hasEdits) return false;
       const json = fabricJsonByPage.get(pageNum);
@@ -416,9 +424,46 @@ export async function mergeFabricEditsIntoPdf({
       const parsed = parseFabricJson(json);
       const objects = (parsed?.objects ?? []) as FabricObj[];
 
-      return objects.some(
-        (o) => (o as { editorType?: string }).editorType === "editModeText",
-      );
+      return objects.some((o) => {
+        if ((o as { editorType?: string }).editorType !== "editModeText") {
+          return false;
+        }
+        const o2 = o as {
+          text?: string;
+          originalText?: string;
+          left?: number;
+          top?: number;
+          originalLeft?: number;
+          originalTop?: number;
+        };
+
+        // Be defensive: if `originalText` / `originalLeft` /
+        // `originalTop` is missing on a serialized object (older
+        // sessions, third-party extension), fall back to treating
+        // the object as modified so we don't accidentally lose an
+        // edit. Better to over-bake than to silently drop a change.
+        if (o2.originalText === undefined) return true;
+        if (o2.text !== o2.originalText) return true;
+
+        const tol = 0.5;
+
+        if (
+          o2.originalLeft !== undefined &&
+          o2.left !== undefined &&
+          Math.abs((o2.left ?? 0) - (o2.originalLeft ?? 0)) > tol
+        ) {
+          return true;
+        }
+        if (
+          o2.originalTop !== undefined &&
+          o2.top !== undefined &&
+          Math.abs((o2.top ?? 0) - (o2.originalTop ?? 0)) > tol
+        ) {
+          return true;
+        }
+
+        return false;
+      });
     })();
 
     const needsWatermark =

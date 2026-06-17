@@ -248,15 +248,18 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         const textObj = new FabricIText(block.text, {
           angle: block.rotation,
           editorType: "editModeText",
-          // `pristine: true` marks the IText as "matches source PDF
-          // unchanged from extraction". `useEditorHistory` clears
-          // this flag on `object:modified` / `text:changed`. The
-          // merge pipeline uses it to decide whether the page is
-          // still effectively un-edited (copy source as-is, preserve
-          // selectable text) or whether the user actually modified
-          // some text (Case 3 rasterize + draw overlays — without
-          // this we lose the user's typed-in changes on save).
+          // `pristine: true` is a fast-path hint cleared by
+          // `useEditorHistory` on `object:modified` / `text:changed`.
+          // The merge pipeline DOES NOT rely on it alone any more —
+          // Fabric's `toJSON()` can drop the boolean on round-trip.
+          // The robust signal the merge uses is `text !== originalText`
+          // (and `left !== originalLeft`, `top !== originalTop`) —
+          // those are always preserved because pdf-lib's serialiser
+          // handles strings + numbers reliably.
           pristine: true,
+          originalText: block.text,
+          originalLeft: left,
+          originalTop: top,
           fill: block.color,
           fontFamily: block.fontFamily,
           fontSize: block.fontSize,
