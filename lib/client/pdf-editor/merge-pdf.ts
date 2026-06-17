@@ -74,6 +74,18 @@ const VECTOR_TYPES = new Set([
 // "path" and "image" go through raster (PNG at multiplier:3)
 
 function isVectorizable(obj: FabricObj): boolean {
+  // Annotation glyphs (✓ ✗ → ★ ⚑ ¶ etc.) live in IText objects with
+  // `editorType: "annotation"`. The vector path runs them through
+  // pdf-lib's `drawText` with a StandardFont, which can't encode
+  // those unicode glyphs — `sanitizeTextForFont` replaces them with
+  // "?" so the user sees question marks in the saved PDF (QA report
+  // 2026-06-17). Forcing them through the raster batch path renders
+  // each as a PNG, preserving the glyph faithfully regardless of
+  // font encoding.
+  if ((obj as { editorType?: string }).editorType === "annotation") {
+    return false;
+  }
+
   return VECTOR_TYPES.has((obj.type as string).toLowerCase());
 }
 
