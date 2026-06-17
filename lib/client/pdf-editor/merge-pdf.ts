@@ -9,13 +9,7 @@ import type {
   WatermarkConfig,
 } from "@/lib/client/stores/pdf-editor-store";
 
-import { rgb } from "pdf-lib";
-
-import {
-  createCoordinateContext,
-  toPdfX,
-  toPdfY,
-} from "./coordinate-transform";
+import { createCoordinateContext } from "./coordinate-transform";
 import { FontCache } from "./font-mapping";
 import {
   dataUrlToBytes,
@@ -81,14 +75,18 @@ const VECTOR_TYPES = new Set([
 
 function isVectorizable(obj: FabricObj): boolean {
   // Annotation glyphs (✓ ✗ → ★ ⚑ ¶ etc.) live in IText objects with
-  // `editorType: "annotation"`. The vector path runs them through
-  // pdf-lib's `drawText` with a StandardFont, which can't encode
-  // those unicode glyphs — `sanitizeTextForFont` replaces them with
-  // "?" so the user sees question marks in the saved PDF (QA report
-  // 2026-06-17). Forcing them through the raster batch path renders
-  // each as a PNG, preserving the glyph faithfully regardless of
-  // font encoding.
-  if ((obj as { editorType?: string }).editorType === "annotation") {
+  // `editorType: "annotation"`. Annotations + editModeText both
+  // contain arbitrary user / source-PDF unicode. pdf-lib's `drawText`
+  // uses StandardFonts (WinAnsi-encoded only) and silently replaces
+  // unencodable glyphs with "?" via `sanitizeTextForFont`.
+  // Forcing them through the raster batch path renders each via the
+  // browser's canvas (full Unicode), preserving every glyph as a
+  // PNG. editModeText is routed here only on pages where we're
+  // already rasterizing — Case 3 strips it from the object list on
+  // copyPages-style pages (no rasterization, source text intact).
+  const editorType = (obj as { editorType?: string }).editorType;
+
+  if (editorType === "annotation" || editorType === "editModeText") {
     return false;
   }
 
@@ -553,61 +551,62 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // ------------------------------------------------------------------
-    // Case 3: Has edits (and possibly watermark) — COPY page + draw
-    //         overlays on top (2026-06-17).
+    // Case 3: Has edits (and possibly watermark) — two sub-paths.
     //
-    // Previously this branch rasterised the whole page into a PNG
-    // and embedded it as a background. That destroyed the source
-    // text-object layer in the saved bytes — `getTextContent` on the
-    // reloaded file returned nothing → useEditTextMode reported
-    // "No editable text found / scanned PDF". User reported it as a
-    // demo-blocker.
+    // The branch hinges on whether the page has editModeText overlays
+    // (auto-extracted source text that the user activated Edit Text
+    // on). Those overlays MAY have been modified by the user — to
+    // preserve the modification we have to bake them into the saved
+    // bytes. We do that via the raster batch (PNG render of the
+    // Fabric IText via browser canvas — full Unicode, no boxes) and
+    // suppress the source text in the page raster so the modification
+    // doesn't duplicate against the original.
     //
-    // The new path uses pdf-lib `copyPages` (same primitive Cases 1
-    // and 2 use) so the source text stays as real PDF text objects.
-    // User overlays are drawn on top — annotations route through the
-    // raster batch path (isVectorizable returns false for them), so
-    // their unicode glyphs survive. editModeText is filtered out
-    // because the source text it mirrors is already on the copied
-    // page (would otherwise duplicate / box-up via pdf-lib redraw).
+    //   • Path A — page has editModeText overlays:
+    //       Render the source page to PNG with text suppressed,
+    //       embed as background, draw ALL Fabric objects on top.
+    //       Both editModeText and annotations route through raster
+    //       (per `isVectorizable`), preserving every Unicode glyph.
+    //       Cost: source text on this page becomes an image (not
+    //       selectable after save). User edits persist exactly.
+    //
+    //   • Path B — page has no editModeText overlays:
+    //       `copyPages` the source verbatim (text preserved), draw
+    //       user overlays on top. No rasterization. Source text
+    //       stays selectable. This is the common case for "add
+    //       annotation/shape/page number without touching text."
     // ------------------------------------------------------------------
-    const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
-
-    outputPdf.addPage(copiedPage);
-    const newPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
 
-    // Underlay watermark — between source content and user overlays.
-    if (needsWatermark && !isOverlay) {
-      await drawWatermarkOnPage(newPage, outputPdf, wm!);
-    }
-
-    // Draw user-added Fabric overlays on top of the copied page.
-    //
-    //   editModeText (auto-extracted source text) is FILTERED OUT.
-    //   The whiteout+redraw approach (2026-06-17 v3) produced visible
-    //   duplication: white rects covered some of the original text but
-    //   pdf-lib's drawText replacement landed at a different size /
-    //   baseline, so the original text peeked out under/around the
-    //   redrawn version. Trade-off accepted for the demo: typing into
-    //   an existing text run does NOT persist on save. To change
-    //   existing text the user uses Whiteout → Text tool. Adds,
-    //   shapes, annotations, page numbers, and new text via the Text
-    //   tool DO persist (they have a different editorType).
     const json = fabricJsonByPage.get(pageNum)!;
     const parsed = parseFabricJson(json);
+    const allObjects = (parsed?.objects ?? []) as FabricObj[];
+    const hasEditModeText = allObjects.some(
+      (o) => (o as { editorType?: string }).editorType === "editModeText",
+    );
 
-    if (parsed) {
-      const allObjects = (parsed.objects ?? []) as FabricObj[];
-      const objects = allObjects.filter(
-        (o) => (o as { editorType?: string }).editorType !== "editModeText",
-      );
+    if (hasEditModeText) {
+      // Path A: rasterize source without text, draw all overlays.
+      const pdfjsPage = await pdfDocument.getPage(pageNum);
+      const pngBytes = await renderPageToPng(pdfjsPage, {
+        suppressText: true,
+      });
+      const bgImage = await outputPdf.embedPng(pngBytes);
+      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
 
-      if (objects.length) {
-        // Fabric canvas was sized to the ROTATED viewport for /Rotate pages,
-        // but sourcePage.getSize() returns MediaBox dims (always unrotated).
-        // Swap them when /Rotate is 90 or 270.
+      newPage.drawImage(bgImage, {
+        height: pdfHeight,
+        width: pdfWidth,
+        x: 0,
+        y: 0,
+      });
+
+      if (needsWatermark && !isOverlay) {
+        await drawWatermarkOnPage(newPage, outputPdf, wm!);
+      }
+
+      if (parsed && allObjects.length) {
         const srcRot = sourcePage.getRotation().angle;
         const sideways = srcRot === 90 || srcRot === 270;
         const ctx = createCoordinateContext(
@@ -618,7 +617,7 @@ export async function mergeFabricEditsIntoPdf({
         );
 
         await processPageObjects(
-          objects,
+          allObjects,
           parsed,
           newPage,
           outputPdf,
@@ -626,9 +625,45 @@ export async function mergeFabricEditsIntoPdf({
           fontCache,
         );
       }
+
+      if (needsWatermark && isOverlay) {
+        await drawWatermarkOnPage(newPage, outputPdf, wm!);
+      }
+
+      continue;
     }
 
-    // Overlay watermark goes last (on top of everything)
+    // Path B: copy source page verbatim, draw non-editModeText
+    // overlays on top. Source text remains real PDF text.
+    const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
+
+    outputPdf.addPage(copiedPage);
+    const newPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
+
+    if (needsWatermark && !isOverlay) {
+      await drawWatermarkOnPage(newPage, outputPdf, wm!);
+    }
+
+    if (parsed && allObjects.length) {
+      const srcRot = sourcePage.getRotation().angle;
+      const sideways = srcRot === 90 || srcRot === 270;
+      const ctx = createCoordinateContext(
+        parsed.width,
+        parsed.height,
+        sideways ? pdfHeight : pdfWidth,
+        sideways ? pdfWidth : pdfHeight,
+      );
+
+      await processPageObjects(
+        allObjects,
+        parsed,
+        newPage,
+        outputPdf,
+        ctx,
+        fontCache,
+      );
+    }
+
     if (needsWatermark && isOverlay) {
       await drawWatermarkOnPage(newPage, outputPdf, wm!);
     }
