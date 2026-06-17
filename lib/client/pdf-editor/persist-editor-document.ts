@@ -112,7 +112,11 @@ export async function persistEditorDocument({
       type: "application/pdf",
     });
 
-    const editorState = buildEditorStateJson(state);
+    // `buildEditedPdfBytes` flushes the *current* page into
+    // `fabricJsonByPage`, so the state snapshot captured at the top of this
+    // function is stale. Re-read the store to make sure `editorState` carries
+    // the edits we just merged (QA report 2026-06-17).
+    const editorState = buildEditorStateJson(usePdfEditorStore.getState());
 
     const document = await documentsService.uploadDocument({
       documentId: currentDocumentId ?? undefined,

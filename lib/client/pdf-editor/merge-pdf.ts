@@ -146,6 +146,15 @@ function hasModifiedSourceText(
   });
 }
 
+type RenderPagePngResult = {
+  /** Raw PNG bytes. */
+  png: Uint8Array;
+  /** Rendered width in PDF points (viewport width / render scale). */
+  width: number;
+  /** Rendered height in PDF points (viewport height / render scale). */
+  height: number;
+};
+
 // ---------------------------------------------------------------------------
 // Render a pdf.js page to PNG (text-suppressed) for use as raster background
 // ---------------------------------------------------------------------------
@@ -160,7 +169,7 @@ type RenderPageOptions = {
 async function renderPageToPng(
   page: PDFPageProxy,
   options: RenderPageOptions = {},
-): Promise<Uint8Array> {
+): Promise<RenderPagePngResult> {
   const { suppressText = true, transparent = false } = options;
   const viewport = page.getViewport({ scale: RASTER_SCALE });
 
@@ -204,7 +213,11 @@ async function renderPageToPng(
       );
     });
 
-    return new Uint8Array(await blob.arrayBuffer());
+    return {
+      height: viewport.height / RASTER_SCALE,
+      png: new Uint8Array(await blob.arrayBuffer()),
+      width: viewport.width / RASTER_SCALE,
+    };
   } finally {
     if (document.body.contains(canvas)) {
       document.body.removeChild(canvas);
@@ -495,13 +508,13 @@ export async function mergeFabricEditsIntoPdf({
       newPage.drawImage(bgImg, { ...rect, opacity: bg!.opacity });
 
       const pdfjsPage = await pdfDocument.getPage(pageNum);
-      const transparentPng = await renderPageToPng(pdfjsPage, {
+      const transparentRender = await renderPageToPng(pdfjsPage, {
         // Same per-page strategy as Case 3 — keep source text in the
         // raster unless the user actually modified some editModeText.
         suppressText: pageHasModifiedSourceText,
         transparent: true,
       });
-      const pageRender = await outputPdf.embedPng(transparentPng);
+      const pageRender = await outputPdf.embedPng(transparentRender.png);
 
       newPage.drawImage(pageRender, {
         height: pdfHeight,
@@ -596,31 +609,46 @@ export async function mergeFabricEditsIntoPdf({
     // If the user actually modified source text, we rasterize the page
     // through the browser canvas so the edit survives as pixels. This
     // bypasses pdf-lib's WinAnsi text encoding, which replaced non-Latin
-    // characters with boxes (QA report 2026-06-17). For all other edits
-    // we keep the source text as real PDF objects and draw only the
-    // non-source-text overlays on top.
+    // characters with boxes (QA report 2026-06-17). It also works for
+    // rotated pages because the source-page PNG and Fabric overlay are
+    // composited with the /Rotate undone, then placed on an upright page
+    // of the same MediaBox size.
+    //
+    // For all other edits we keep the source text as real PDF objects and
+    // draw only the non-source-text overlays on top.
     // ------------------------------------------------------------------
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
     const srcRot = sourcePage.getRotation().angle;
 
-    // Raster path gives the cleanest result for modified source text (no
-    // pdf-lib font boxes), but only for upright pages. Rotated pages fall
-    // back to the vector path to avoid image/dimension mismatch.
-    if (pageHasModifiedSourceText && srcRot === 0) {
-      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
+    if (pageHasModifiedSourceText) {
       const pdfjsPage = await pdfDocument.getPage(pageNum);
 
       // Source page graphics only — original text is suppressed because
       // the Fabric overlay carries the user's modified text.
-      const pagePng = await renderPageToPng(pdfjsPage, {
+      const pageRender = await renderPageToPng(pdfjsPage, {
         suppressText: true,
       });
-      const pageImage = await outputPdf.embedPng(pagePng);
+
+      const json = fabricJsonByPage.get(pageNum)!;
+      const parsed = parseFabricJson(json);
+      let overlayDataUrl: string | null = null;
+
+      if (parsed) {
+        overlayDataUrl = await renderFabricJsonToPng(parsed);
+      }
+
+      // Use the rendered viewport dimensions as the output page size. For
+      // rotated pages pdf.js's viewport is already swapped, so this keeps the
+      // exported page visually identical to the source (no image/dimension
+      // mismatch). For upright pages the dims match MediaBox exactly.
+      const newPage = outputPdf.addPage([pageRender.width, pageRender.height]);
+
+      const pageImage = await outputPdf.embedPng(pageRender.png);
 
       newPage.drawImage(pageImage, {
-        height: pdfHeight,
-        width: pdfWidth,
+        height: pageRender.height,
+        width: pageRender.width,
         x: 0,
         y: 0,
       });
@@ -629,66 +657,16 @@ export async function mergeFabricEditsIntoPdf({
         await drawWatermarkOnPage(newPage, outputPdf, wm!);
       }
 
-      const json = fabricJsonByPage.get(pageNum)!;
-      const parsed = parseFabricJson(json);
-
-      if (parsed) {
-        const overlayUrl = await renderFabricJsonToPng(parsed);
-        const overlayBytes = dataUrlToBytes(overlayUrl);
+      if (overlayDataUrl) {
+        const overlayBytes = dataUrlToBytes(overlayDataUrl);
         const overlayImage = await outputPdf.embedPng(overlayBytes);
 
         newPage.drawImage(overlayImage, {
-          height: pdfHeight,
-          width: pdfWidth,
+          height: pageRender.height,
+          width: pageRender.width,
           x: 0,
           y: 0,
         });
-      }
-
-      if (needsWatermark && isOverlay) {
-        await drawWatermarkOnPage(newPage, outputPdf, wm!);
-      }
-
-      continue;
-    }
-
-    // Rotated pages with modified source text fall back to the vector path.
-    // The edit survives; very rarely some non-Latin glyphs may be replaced by
-    // boxes because pdf-lib's StandardFont path is used.
-    if (pageHasModifiedSourceText) {
-      const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
-
-      outputPdf.addPage(copiedPage);
-      const newPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
-
-      if (needsWatermark && !isOverlay) {
-        await drawWatermarkOnPage(newPage, outputPdf, wm!);
-      }
-
-      const json = fabricJsonByPage.get(pageNum)!;
-      const parsed = parseFabricJson(json);
-
-      if (parsed) {
-        const allObjects = (parsed.objects ?? []) as FabricObj[];
-
-        if (allObjects.length) {
-          const sideways = srcRot === 90 || srcRot === 270;
-          const ctx = createCoordinateContext(
-            parsed.width,
-            parsed.height,
-            sideways ? pdfHeight : pdfWidth,
-            sideways ? pdfWidth : pdfHeight,
-          );
-
-          await processPageObjects(
-            allObjects,
-            parsed,
-            newPage,
-            outputPdf,
-            ctx,
-            fontCache,
-          );
-        }
       }
 
       if (needsWatermark && isOverlay) {

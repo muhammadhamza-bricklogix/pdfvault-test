@@ -2,17 +2,17 @@
 
 **Package:** `pdfedits-frontend` v0.0.1
 
-**Stats:** 292 files · 4840 symbols · 1062 imports.
+**Stats:** 294 files · 4852 symbols · 1072 imports.
 
 ## Top-level layout
 
 | Directory | Files | LOC |
 |---|---:|---:|
-| `lib/` | 126 | 15215 |
-| `components/` | 101 | 16687 |
+| `lib/` | 127 | 15302 |
+| `components/` | 101 | 16690 |
 | `app/` | 38 | 2169 |
 | `(root)` | 12 | 3099 |
-| `tests/` | 10 | 589 |
+| `tests/` | 11 | 913 |
 | `docs/` | 3 | 768 |
 | `public/` | 1 | 31 |
 | `scripts/` | 1 | 116 |
@@ -25,8 +25,8 @@ These files sit at the center of the import graph. Changes here tend to ripple w
 |---|---:|---:|---:|
 | [`components/sections/pdf-editor/PdfEditorShell.tsx`](../components/sections/pdf-editor/PdfEditorShell.tsx) | 0 | 14 | 14 |
 | [`lib/client/pdf-editor/merge-pdf.ts`](../lib/client/pdf-editor/merge-pdf.ts) | 1 | 7 | 8 |
+| [`tests/helpers/editor.ts`](../tests/helpers/editor.ts) | 7 | 0 | 7 |
 | [`components/sections/pdf-editor/RightSidebar.tsx`](../components/sections/pdf-editor/RightSidebar.tsx) | 2 | 5 | 7 |
-| [`tests/helpers/editor.ts`](../tests/helpers/editor.ts) | 6 | 0 | 6 |
 | [`components/sections/dashboard/documents-table.tsx`](../components/sections/dashboard/documents-table.tsx) | 1 | 5 | 6 |
 | [`components/sections/pdf-editor/BottomDock.tsx`](../components/sections/pdf-editor/BottomDock.tsx) | 1 | 4 | 5 |
 | [`lib/client/pdf-editor/save-utils.ts`](../lib/client/pdf-editor/save-utils.ts) | 3 | 2 | 5 |

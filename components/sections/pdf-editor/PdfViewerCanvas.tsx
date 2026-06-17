@@ -15,6 +15,7 @@ import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
+import { useTestHarness } from "@/lib/client/hooks/pdf-editor/use-test-harness";
 import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
@@ -157,6 +158,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     return () => onFabricCanvasReady?.(null);
   }, [fabricCanvas, onFabricCanvasReady]);
+
+  useTestHarness(fabricCanvas);
 
   useDrawTool({ fabricCanvas });
   // `useEditTextMode` decides internally whether to extract: it runs only

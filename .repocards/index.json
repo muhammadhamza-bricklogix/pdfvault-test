@@ -29,6 +29,12 @@
       "line": 7,
       "kind": "const",
       "exported": false
+    },
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 14,
+      "kind": "const",
+      "exported": false
     }
   ],
   "__dirname": [
@@ -53,6 +59,12 @@
     {
       "file": "tests/helpers/editor.ts",
       "line": 7,
+      "kind": "const",
+      "exported": false
+    },
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 15,
       "kind": "const",
       "exported": false
     }
@@ -195,6 +207,12 @@
       "exported": true
     },
     {
+      "file": "app/(app)/dashboard/activity/page.tsx",
+      "line": 5,
+      "kind": "const",
+      "exported": true
+    },
+    {
       "file": "app/(marketing)/(legal)/contact/page.tsx",
       "line": 8,
       "kind": "const",
@@ -233,12 +251,6 @@
     {
       "file": "app/(marketing)/(site)/pricing/page.tsx",
       "line": 7,
-      "kind": "const",
-      "exported": true
-    },
-    {
-      "file": "app/(app)/dashboard/activity/page.tsx",
-      "line": 5,
       "kind": "const",
       "exported": true
     }
@@ -22821,6 +22833,12 @@
       "line": 31,
       "kind": "class",
       "exported": false
+    },
+    {
+      "file": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+      "line": 10,
+      "kind": "interface",
+      "exported": false
     }
   ],
   "Xdc": [
@@ -28097,6 +28115,22 @@
       "exported": false
     }
   ],
+  "AppLayoutProps": [
+    {
+      "file": "app/(app)/layout.tsx",
+      "line": 5,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "AppLayout": [
+    {
+      "file": "app/(app)/layout.tsx",
+      "line": 9,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "Error": [
     {
       "file": "app/(marketing)/error.tsx",
@@ -28161,22 +28195,6 @@
     {
       "file": "app/(marketing)/layout.tsx",
       "line": 13,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "AppLayoutProps": [
-    {
-      "file": "app/(app)/layout.tsx",
-      "line": 5,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "AppLayout": [
-    {
-      "file": "app/(app)/layout.tsx",
-      "line": 9,
       "kind": "function",
       "exported": true
     }
@@ -28323,6 +28341,54 @@
       "exported": true
     }
   ],
+  "EDITED_MARKER": [
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 17,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "armEditTextAndWait": [
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 19,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "replaceFirstEditText": [
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 34,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "exportPdfDownload": [
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 59,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "Captured": [
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 133,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "parseMultipart": [
+    {
+      "file": "tests/pdf-editor/edit-text-export.spec.ts",
+      "line": 287,
+      "kind": "function",
+      "exported": false
+    }
+  ],
   "EXPORT_FORMATS": [
     {
       "file": "tests/pdf-editor/save-export.spec.ts",
@@ -28363,6 +28429,30 @@
       "exported": true
     }
   ],
+  "DashboardPage": [
+    {
+      "file": "app/(app)/dashboard/page.tsx",
+      "line": 3,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorLayout": [
+    {
+      "file": "app/(tools)/pdf-editor/layout.tsx",
+      "line": 1,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PdfEditorPage": [
+    {
+      "file": "app/(tools)/pdf-editor/page.tsx",
+      "line": 11,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "LegalSegmentLayoutProps": [
     {
       "file": "app/(marketing)/(legal)/layout.tsx",
@@ -28399,30 +28489,6 @@
     {
       "file": "app/(marketing)/(site)/page.tsx",
       "line": 7,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "DashboardPage": [
-    {
-      "file": "app/(app)/dashboard/page.tsx",
-      "line": 3,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PdfEditorLayout": [
-    {
-      "file": "app/(tools)/pdf-editor/layout.tsx",
-      "line": 1,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PdfEditorPage": [
-    {
-      "file": "app/(tools)/pdf-editor/page.tsx",
-      "line": 11,
       "kind": "function",
       "exported": true
     }
@@ -29978,7 +30044,7 @@
   "PdfViewerCanvasProps": [
     {
       "file": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
-      "line": 27,
+      "line": 28,
       "kind": "type",
       "exported": false
     }
@@ -31313,6 +31379,46 @@
       "exported": true
     }
   ],
+  "CreateShareInput": [
+    {
+      "file": "lib/client/api/shares.ts",
+      "line": 18,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "CreateShareResult": [
+    {
+      "file": "lib/client/api/shares.ts",
+      "line": 27,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "CreateShareError": [
+    {
+      "file": "lib/client/api/shares.ts",
+      "line": 33,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "createShare": [
+    {
+      "file": "lib/client/api/shares.ts",
+      "line": 44,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "revokeShare": [
+    {
+      "file": "lib/client/api/shares.ts",
+      "line": 81,
+      "kind": "function",
+      "exported": true
+    }
+  ],
   "ClerkGlobal": [
     {
       "file": "lib/client/auth/get-auth-token.ts",
@@ -31466,7 +31572,7 @@
     },
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 225,
+      "line": 233,
       "kind": "function",
       "exported": false
     }
@@ -31915,10 +32021,18 @@
       "exported": false
     }
   ],
+  "RenderPagePngResult": [
+    {
+      "file": "lib/client/pdf-editor/merge-pdf.ts",
+      "line": 149,
+      "kind": "type",
+      "exported": false
+    }
+  ],
   "RenderPageOptions": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 153,
+      "line": 162,
       "kind": "type",
       "exported": false
     },
@@ -31932,7 +32046,7 @@
   "renderPageToPng": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 160,
+      "line": 169,
       "kind": "function",
       "exported": false
     },
@@ -31946,7 +32060,7 @@
   "computeBackgroundImageRect": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 219,
+      "line": 232,
       "kind": "function",
       "exported": false
     }
@@ -31954,7 +32068,7 @@
   "embedBackgroundImage": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 246,
+      "line": 259,
       "kind": "function",
       "exported": false
     }
@@ -31962,7 +32076,7 @@
   "flushRasterBatch": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 259,
+      "line": 272,
       "kind": "function",
       "exported": false
     }
@@ -31970,7 +32084,7 @@
   "drawVectorObject": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 282,
+      "line": 295,
       "kind": "function",
       "exported": false
     }
@@ -31978,7 +32092,7 @@
   "processPageObjects": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 331,
+      "line": 344,
       "kind": "function",
       "exported": false
     }
@@ -31986,7 +32100,7 @@
   "mergeFabricEditsIntoPdf": [
     {
       "file": "lib/client/pdf-editor/merge-pdf.ts",
-      "line": 386,
+      "line": 399,
       "kind": "function",
       "exported": true
     }
@@ -32074,7 +32188,7 @@
   "buildEditorStateJson": [
     {
       "file": "lib/client/pdf-editor/persist-editor-document.ts",
-      "line": 149,
+      "line": 153,
       "kind": "function",
       "exported": false
     }
@@ -32280,7 +32394,7 @@
     },
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 267,
+      "line": 275,
       "kind": "function",
       "exported": false
     }
@@ -32727,94 +32841,6 @@
       "exported": true
     }
   ],
-  "SUCCESS_AUTO_DISMISS_MS": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 8,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "StartUploadToastInput": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 10,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "uploadToasts": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 24,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "start": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 25,
-      "kind": "method",
-      "exported": false
-    }
-  ],
-  "beginActive": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 46,
-      "kind": "method",
-      "exported": false
-    }
-  ],
-  "setProgress": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 53,
-      "kind": "method",
-      "exported": false
-    }
-  ],
-  "succeed": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 69,
-      "kind": "method",
-      "exported": false
-    }
-  ],
-  "fail": [
-    {
-      "file": "lib/client/upload-toasts/controller.ts",
-      "line": 85,
-      "kind": "method",
-      "exported": false
-    }
-  ],
-  "UploadToastContent": [
-    {
-      "file": "lib/client/upload-toasts/queue.ts",
-      "line": 17,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "uploadToastQueue": [
-    {
-      "file": "lib/client/upload-toasts/queue.ts",
-      "line": 21,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "applyProgressEvent": [
-    {
-      "file": "lib/client/upload-toasts/queue.ts",
-      "line": 25,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "documentSelectionKey": [
     {
       "file": "lib/client/utils/document-selection-key.ts",
@@ -32939,46 +32965,6 @@
     {
       "file": "lib/client/utils/trigger-document-download.ts",
       "line": 15,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "CreateShareInput": [
-    {
-      "file": "lib/client/api/shares.ts",
-      "line": 18,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "CreateShareResult": [
-    {
-      "file": "lib/client/api/shares.ts",
-      "line": 27,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "CreateShareError": [
-    {
-      "file": "lib/client/api/shares.ts",
-      "line": 33,
-      "kind": "type",
-      "exported": true
-    }
-  ],
-  "createShare": [
-    {
-      "file": "lib/client/api/shares.ts",
-      "line": 44,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "revokeShare": [
-    {
-      "file": "lib/client/api/shares.ts",
-      "line": 81,
       "kind": "function",
       "exported": true
     }
@@ -33725,6 +33711,22 @@
       "exported": true
     }
   ],
+  "contactFormSchema": [
+    {
+      "file": "lib/shared/schemas/contact.schema.ts",
+      "line": 3,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "ContactFormValues": [
+    {
+      "file": "lib/shared/schemas/contact.schema.ts",
+      "line": 13,
+      "kind": "type",
+      "exported": true
+    }
+  ],
   "ApiResponse": [
     {
       "file": "lib/shared/types/api.types.ts",
@@ -34371,19 +34373,115 @@
       "exported": true
     }
   ],
-  "contactFormSchema": [
+  "SUCCESS_AUTO_DISMISS_MS": [
     {
-      "file": "lib/shared/schemas/contact.schema.ts",
-      "line": 3,
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 8,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "StartUploadToastInput": [
+    {
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 10,
+      "kind": "type",
+      "exported": true
+    }
+  ],
+  "uploadToasts": [
+    {
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 24,
       "kind": "const",
       "exported": true
     }
   ],
-  "ContactFormValues": [
+  "start": [
     {
-      "file": "lib/shared/schemas/contact.schema.ts",
-      "line": 13,
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 25,
+      "kind": "method",
+      "exported": false
+    }
+  ],
+  "beginActive": [
+    {
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 46,
+      "kind": "method",
+      "exported": false
+    }
+  ],
+  "setProgress": [
+    {
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 53,
+      "kind": "method",
+      "exported": false
+    }
+  ],
+  "succeed": [
+    {
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 69,
+      "kind": "method",
+      "exported": false
+    }
+  ],
+  "fail": [
+    {
+      "file": "lib/client/upload-toasts/controller.ts",
+      "line": 85,
+      "kind": "method",
+      "exported": false
+    }
+  ],
+  "UploadToastContent": [
+    {
+      "file": "lib/client/upload-toasts/queue.ts",
+      "line": 17,
       "kind": "type",
+      "exported": true
+    }
+  ],
+  "uploadToastQueue": [
+    {
+      "file": "lib/client/upload-toasts/queue.ts",
+      "line": 21,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "applyProgressEvent": [
+    {
+      "file": "lib/client/upload-toasts/queue.ts",
+      "line": 25,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ActivityPage": [
+    {
+      "file": "app/(app)/dashboard/activity/page.tsx",
+      "line": 9,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SettingsLayout": [
+    {
+      "file": "app/(app)/dashboard/settings/layout.tsx",
+      "line": 5,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SettingsIndexPage": [
+    {
+      "file": "app/(app)/dashboard/settings/page.tsx",
+      "line": 5,
+      "kind": "function",
       "exported": true
     }
   ],
@@ -34469,70 +34567,6 @@
     {
       "file": "app/(marketing)/(site)/sso-callback/page.tsx",
       "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ActivityPage": [
-    {
-      "file": "app/(app)/dashboard/activity/page.tsx",
-      "line": 9,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SettingsLayout": [
-    {
-      "file": "app/(app)/dashboard/settings/layout.tsx",
-      "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SettingsIndexPage": [
-    {
-      "file": "app/(app)/dashboard/settings/page.tsx",
-      "line": 5,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SettingsSection": [
-    {
-      "file": "components/sections/dashboard/settings/settings-nav.tsx",
-      "line": 14,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "SETTINGS_SECTIONS": [
-    {
-      "file": "components/sections/dashboard/settings/settings-nav.tsx",
-      "line": 23,
-      "kind": "const",
-      "exported": true
-    }
-  ],
-  "resolveActiveId": [
-    {
-      "file": "components/sections/dashboard/settings/settings-nav.tsx",
-      "line": 55,
-      "kind": "const",
-      "exported": false
-    }
-  ],
-  "SettingsNavProps": [
-    {
-      "file": "components/sections/dashboard/settings/settings-nav.tsx",
-      "line": 61,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "SettingsNav": [
-    {
-      "file": "components/sections/dashboard/settings/settings-nav.tsx",
-      "line": 65,
       "kind": "function",
       "exported": true
     }
@@ -34633,6 +34667,46 @@
       "line": 32,
       "kind": "function",
       "exported": false
+    }
+  ],
+  "SettingsSection": [
+    {
+      "file": "components/sections/dashboard/settings/settings-nav.tsx",
+      "line": 14,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "SETTINGS_SECTIONS": [
+    {
+      "file": "components/sections/dashboard/settings/settings-nav.tsx",
+      "line": 23,
+      "kind": "const",
+      "exported": true
+    }
+  ],
+  "resolveActiveId": [
+    {
+      "file": "components/sections/dashboard/settings/settings-nav.tsx",
+      "line": 55,
+      "kind": "const",
+      "exported": false
+    }
+  ],
+  "SettingsNavProps": [
+    {
+      "file": "components/sections/dashboard/settings/settings-nav.tsx",
+      "line": 61,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "SettingsNav": [
+    {
+      "file": "components/sections/dashboard/settings/settings-nav.tsx",
+      "line": 65,
+      "kind": "function",
+      "exported": true
     }
   ],
   "SignInStep": [
@@ -35148,7 +35222,7 @@
   "createMeasureContext": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 202,
+      "line": 210,
       "kind": "function",
       "exported": false
     }
@@ -35156,7 +35230,7 @@
   "getPageBaseDimensions": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 215,
+      "line": 223,
       "kind": "function",
       "exported": false
     }
@@ -35164,7 +35238,7 @@
   "computeFabricPosition": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 244,
+      "line": 252,
       "kind": "function",
       "exported": false
     }
@@ -35172,7 +35246,7 @@
   "appendOverlayToStoredJson": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 276,
+      "line": 284,
       "kind": "function",
       "exported": false
     }
@@ -35180,7 +35254,15 @@
   "serializeForPage": [
     {
       "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-      "line": 329,
+      "line": 337,
+      "kind": "function",
+      "exported": false
+    }
+  ],
+  "removeExistingPageNumbers": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
+      "line": 352,
       "kind": "function",
       "exported": false
     }
@@ -35269,6 +35351,14 @@
     {
       "file": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
       "line": 13,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "useTestHarness": [
+    {
+      "file": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+      "line": 24,
       "kind": "function",
       "exported": true
     }
@@ -36131,54 +36221,6 @@
       "exported": true
     }
   ],
-  "SignInPage": [
-    {
-      "file": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-      "line": 8,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "SignUpPage": [
-    {
-      "file": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-      "line": 7,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "PageProps": [
-    {
-      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-      "line": 8,
-      "kind": "type",
-      "exported": false
-    }
-  ],
-  "generateStaticParams": [
-    {
-      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-      "line": 12,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "generateMetadata": [
-    {
-      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-      "line": 16,
-      "kind": "function",
-      "exported": true
-    }
-  ],
-  "ToolBySlugPage": [
-    {
-      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-      "line": 32,
-      "kind": "function",
-      "exported": true
-    }
-  ],
   "AccountSettingsPage": [
     {
       "file": "app/(app)/dashboard/settings/account/page.tsx",
@@ -36239,6 +36281,54 @@
     {
       "file": "app/(app)/dashboard/settings/language/page.tsx",
       "line": 53,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SignInPage": [
+    {
+      "file": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+      "line": 8,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "SignUpPage": [
+    {
+      "file": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+      "line": 7,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "PageProps": [
+    {
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 8,
+      "kind": "type",
+      "exported": false
+    }
+  ],
+  "generateStaticParams": [
+    {
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 12,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "generateMetadata": [
+    {
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 16,
+      "kind": "function",
+      "exported": true
+    }
+  ],
+  "ToolBySlugPage": [
+    {
+      "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "line": 32,
       "kind": "function",
       "exported": true
     }

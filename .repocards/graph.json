@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-06-17T12:10:58.216Z",
+  "generated_at": "2026-06-17T13:47:59.584Z",
   "stats": {
-    "files": 292,
-    "symbols": 4840,
-    "imports": 1062,
-    "durationMs": 1833
+    "files": 294,
+    "symbols": 4852,
+    "imports": 1072,
+    "durationMs": 2236
   },
   "files": {
     "CONVERSION_TEST_REPORT.md": {
@@ -34340,6 +34340,50 @@
         }
       ]
     },
+    "app/(app)/layout.tsx": {
+      "path": "app/(app)/layout.tsx",
+      "lang": "tsx",
+      "loc": 12,
+      "hash": "1c408b8e5c50402242f447cce4a11a285dfafd1e542817e1bef8f82c9d80b3d2",
+      "symbols": [
+        {
+          "id": "app/(app)/layout.tsx#type:AppLayoutProps:5",
+          "name": "AppLayoutProps",
+          "kind": "type",
+          "file": "app/(app)/layout.tsx",
+          "line": 5,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "app/(app)/layout.tsx#function:AppLayout:9",
+          "name": "AppLayout",
+          "kind": "function",
+          "file": "app/(app)/layout.tsx",
+          "line": 9,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(app)/layout.tsx",
+          "source": "react",
+          "names": [
+            "ReactNode"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(app)/layout.tsx",
+          "source": "@/components/sections/dashboard/dashboard-shell",
+          "names": [
+            "DashboardShell"
+          ],
+          "line": 3
+        }
+      ]
+    },
     "app/(marketing)/error.tsx": {
       "path": "app/(marketing)/error.tsx",
       "lang": "tsx",
@@ -34433,50 +34477,6 @@
             "SiteNavbar"
           ],
           "line": 4
-        }
-      ]
-    },
-    "app/(app)/layout.tsx": {
-      "path": "app/(app)/layout.tsx",
-      "lang": "tsx",
-      "loc": 12,
-      "hash": "1c408b8e5c50402242f447cce4a11a285dfafd1e542817e1bef8f82c9d80b3d2",
-      "symbols": [
-        {
-          "id": "app/(app)/layout.tsx#type:AppLayoutProps:5",
-          "name": "AppLayoutProps",
-          "kind": "type",
-          "file": "app/(app)/layout.tsx",
-          "line": 5,
-          "col": 1,
-          "exported": false
-        },
-        {
-          "id": "app/(app)/layout.tsx#function:AppLayout:9",
-          "name": "AppLayout",
-          "kind": "function",
-          "file": "app/(app)/layout.tsx",
-          "line": 9,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(app)/layout.tsx",
-          "source": "react",
-          "names": [
-            "ReactNode"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(app)/layout.tsx",
-          "source": "@/components/sections/dashboard/dashboard-shell",
-          "names": [
-            "DashboardShell"
-          ],
-          "line": 3
         }
       ]
     },
@@ -35039,7 +35039,7 @@
       "path": "tests/pdf-editor/controls.spec.ts",
       "lang": "ts",
       "loc": 44,
-      "hash": "338133e7ebced667b175ef3f75efe432b22d6f8d000fe267542110e3dcc98ca1",
+      "hash": "aab6f04c435b2caa544ba4ee23620abbb9a29c41cd6d0b4b2875ac645c245739",
       "symbols": [],
       "imports": [
         {
@@ -35059,6 +35059,142 @@
             "waitForPdfReady"
           ],
           "line": 3,
+          "resolved": "tests/helpers/editor.ts"
+        }
+      ]
+    },
+    "tests/pdf-editor/edit-text-export.spec.ts": {
+      "path": "tests/pdf-editor/edit-text-export.spec.ts",
+      "lang": "ts",
+      "loc": 324,
+      "hash": "e8cb2aeecc771718a88baa5f8a19ffb9720c9f523106bfc6c6c30d0e5973ed96",
+      "symbols": [
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#const:__filename:14",
+          "name": "__filename",
+          "kind": "const",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 14,
+          "col": 7,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#const:__dirname:15",
+          "name": "__dirname",
+          "kind": "const",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 15,
+          "col": 7,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#const:EDITED_MARKER:17",
+          "name": "EDITED_MARKER",
+          "kind": "const",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 17,
+          "col": 7,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#function:armEditTextAndWait:19",
+          "name": "armEditTextAndWait",
+          "kind": "function",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 19,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#function:replaceFirstEditText:34",
+          "name": "replaceFirstEditText",
+          "kind": "function",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 34,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#function:exportPdfDownload:59",
+          "name": "exportPdfDownload",
+          "kind": "function",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 59,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#type:Captured:133",
+          "name": "Captured",
+          "kind": "type",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 133,
+          "col": 7,
+          "exported": false
+        },
+        {
+          "id": "tests/pdf-editor/edit-text-export.spec.ts#function:parseMultipart:287",
+          "name": "parseMultipart",
+          "kind": "function",
+          "file": "tests/pdf-editor/edit-text-export.spec.ts",
+          "line": 287,
+          "col": 1,
+          "exported": false
+        }
+      ],
+      "imports": [
+        {
+          "from": "tests/pdf-editor/edit-text-export.spec.ts",
+          "source": "@playwright/test",
+          "names": [
+            "test",
+            "expect"
+          ],
+          "line": 1
+        },
+        {
+          "from": "tests/pdf-editor/edit-text-export.spec.ts",
+          "source": "pdf-lib",
+          "names": [
+            "PDFDocument",
+            "StandardFonts",
+            "degrees",
+            "rgb"
+          ],
+          "line": 2
+        },
+        {
+          "from": "tests/pdf-editor/edit-text-export.spec.ts",
+          "source": "node:fs",
+          "names": [
+            "fs"
+          ],
+          "line": 8
+        },
+        {
+          "from": "tests/pdf-editor/edit-text-export.spec.ts",
+          "source": "node:path",
+          "names": [
+            "path"
+          ],
+          "line": 9
+        },
+        {
+          "from": "tests/pdf-editor/edit-text-export.spec.ts",
+          "source": "node:url",
+          "names": [
+            "fileURLToPath"
+          ],
+          "line": 10
+        },
+        {
+          "from": "tests/pdf-editor/edit-text-export.spec.ts",
+          "source": "../helpers/editor",
+          "names": [
+            "openSamplePdfInEditor",
+            "waitForPdfReady"
+          ],
+          "line": 12,
           "resolved": "tests/helpers/editor.ts"
         }
       ]
@@ -35161,6 +35297,103 @@
           ],
           "line": 3,
           "resolved": "tests/helpers/editor.ts"
+        }
+      ]
+    },
+    "app/(app)/dashboard/page.tsx": {
+      "path": "app/(app)/dashboard/page.tsx",
+      "lang": "tsx",
+      "loc": 6,
+      "hash": "2bb04286959f904969177fdac6dc5225287f2ed25689d2f37196902d03cea746",
+      "symbols": [
+        {
+          "id": "app/(app)/dashboard/page.tsx#function:DashboardPage:3",
+          "name": "DashboardPage",
+          "kind": "function",
+          "file": "app/(app)/dashboard/page.tsx",
+          "line": 3,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(app)/dashboard/page.tsx",
+          "source": "@/components/sections/dashboard/dashboard-home",
+          "names": [
+            "DashboardHome"
+          ],
+          "line": 1
+        }
+      ]
+    },
+    "app/(tools)/pdf-editor/layout.tsx": {
+      "path": "app/(tools)/pdf-editor/layout.tsx",
+      "lang": "tsx",
+      "loc": 12,
+      "hash": "ec5989a38c4660168437314ce135392c773f860a459a22bfbec03352c9d67747",
+      "symbols": [
+        {
+          "id": "app/(tools)/pdf-editor/layout.tsx#function:PdfEditorLayout:1",
+          "name": "PdfEditorLayout",
+          "kind": "function",
+          "file": "app/(tools)/pdf-editor/layout.tsx",
+          "line": 1,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": []
+    },
+    "app/(tools)/pdf-editor/page.tsx": {
+      "path": "app/(tools)/pdf-editor/page.tsx",
+      "lang": "tsx",
+      "loc": 18,
+      "hash": "ba959c931453e0c6c05de36c2d8edf476d24abc6c4f6529562c9659f509e105a",
+      "symbols": [
+        {
+          "id": "app/(tools)/pdf-editor/page.tsx#const:metadata:7",
+          "name": "metadata",
+          "kind": "const",
+          "file": "app/(tools)/pdf-editor/page.tsx",
+          "line": 7,
+          "col": 14,
+          "exported": true
+        },
+        {
+          "id": "app/(tools)/pdf-editor/page.tsx#function:PdfEditorPage:11",
+          "name": "PdfEditorPage",
+          "kind": "function",
+          "file": "app/(tools)/pdf-editor/page.tsx",
+          "line": 11,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(tools)/pdf-editor/page.tsx",
+          "source": "next",
+          "names": [
+            "Metadata"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(tools)/pdf-editor/page.tsx",
+          "source": "react",
+          "names": [
+            "Suspense"
+          ],
+          "line": 3
+        },
+        {
+          "from": "app/(tools)/pdf-editor/page.tsx",
+          "source": "@/components/sections/pdf-editor/PdfEditorShell",
+          "names": [
+            "PdfEditorShell"
+          ],
+          "line": 5
         }
       ]
     },
@@ -35290,103 +35523,6 @@
           "source": "@/components/sections/home/home-trust-strip",
           "names": [
             "HomeTrustStrip"
-          ],
-          "line": 5
-        }
-      ]
-    },
-    "app/(app)/dashboard/page.tsx": {
-      "path": "app/(app)/dashboard/page.tsx",
-      "lang": "tsx",
-      "loc": 6,
-      "hash": "2bb04286959f904969177fdac6dc5225287f2ed25689d2f37196902d03cea746",
-      "symbols": [
-        {
-          "id": "app/(app)/dashboard/page.tsx#function:DashboardPage:3",
-          "name": "DashboardPage",
-          "kind": "function",
-          "file": "app/(app)/dashboard/page.tsx",
-          "line": 3,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(app)/dashboard/page.tsx",
-          "source": "@/components/sections/dashboard/dashboard-home",
-          "names": [
-            "DashboardHome"
-          ],
-          "line": 1
-        }
-      ]
-    },
-    "app/(tools)/pdf-editor/layout.tsx": {
-      "path": "app/(tools)/pdf-editor/layout.tsx",
-      "lang": "tsx",
-      "loc": 12,
-      "hash": "ec5989a38c4660168437314ce135392c773f860a459a22bfbec03352c9d67747",
-      "symbols": [
-        {
-          "id": "app/(tools)/pdf-editor/layout.tsx#function:PdfEditorLayout:1",
-          "name": "PdfEditorLayout",
-          "kind": "function",
-          "file": "app/(tools)/pdf-editor/layout.tsx",
-          "line": 1,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": []
-    },
-    "app/(tools)/pdf-editor/page.tsx": {
-      "path": "app/(tools)/pdf-editor/page.tsx",
-      "lang": "tsx",
-      "loc": 18,
-      "hash": "ba959c931453e0c6c05de36c2d8edf476d24abc6c4f6529562c9659f509e105a",
-      "symbols": [
-        {
-          "id": "app/(tools)/pdf-editor/page.tsx#const:metadata:7",
-          "name": "metadata",
-          "kind": "const",
-          "file": "app/(tools)/pdf-editor/page.tsx",
-          "line": 7,
-          "col": 14,
-          "exported": true
-        },
-        {
-          "id": "app/(tools)/pdf-editor/page.tsx#function:PdfEditorPage:11",
-          "name": "PdfEditorPage",
-          "kind": "function",
-          "file": "app/(tools)/pdf-editor/page.tsx",
-          "line": 11,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(tools)/pdf-editor/page.tsx",
-          "source": "next",
-          "names": [
-            "Metadata"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(tools)/pdf-editor/page.tsx",
-          "source": "react",
-          "names": [
-            "Suspense"
-          ],
-          "line": 3
-        },
-        {
-          "from": "app/(tools)/pdf-editor/page.tsx",
-          "source": "@/components/sections/pdf-editor/PdfEditorShell",
-          "names": [
-            "PdfEditorShell"
           ],
           "line": 5
         }
@@ -40949,15 +41085,15 @@
     "components/sections/pdf-editor/PdfViewerCanvas.tsx": {
       "path": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
       "lang": "tsx",
-      "loc": 472,
-      "hash": "1bbb8570da5d4a9a9a5f523d929e4dea8e8eb0942e1c42c847385aae59a223b9",
+      "loc": 475,
+      "hash": "047893ea3f12fef1c3696b4eeeabfc98c8ae0c6739dab472035b85200648f9b0",
       "symbols": [
         {
-          "id": "components/sections/pdf-editor/PdfViewerCanvas.tsx#type:PdfViewerCanvasProps:27",
+          "id": "components/sections/pdf-editor/PdfViewerCanvas.tsx#type:PdfViewerCanvasProps:28",
           "name": "PdfViewerCanvasProps",
           "kind": "type",
           "file": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
-          "line": 27,
+          "line": 28,
           "col": 1,
           "exported": false
         }
@@ -41072,11 +41208,19 @@
         },
         {
           "from": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
+          "source": "@/lib/client/hooks/pdf-editor/use-test-harness",
+          "names": [
+            "useTestHarness"
+          ],
+          "line": 18
+        },
+        {
+          "from": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
           "source": "@/lib/client/hooks/pdf-editor/use-watermark-tool",
           "names": [
             "useWatermarkTool"
           ],
-          "line": 18
+          "line": 19
         },
         {
           "from": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
@@ -41084,7 +41228,7 @@
           "names": [
             "useIsMobile"
           ],
-          "line": 19
+          "line": 20
         },
         {
           "from": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
@@ -41092,7 +41236,7 @@
           "names": [
             "shouldWatermarkPage"
           ],
-          "line": 20
+          "line": 21
         },
         {
           "from": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
@@ -41100,7 +41244,7 @@
           "names": [
             "usePdfEditorStore"
           ],
-          "line": 21
+          "line": 22
         },
         {
           "from": "components/sections/pdf-editor/PdfViewerCanvas.tsx",
@@ -41108,7 +41252,7 @@
           "names": [
             "FloatingTextToolbar"
           ],
-          "line": 23,
+          "line": 24,
           "resolved": "components/sections/pdf-editor/FloatingTextToolbar.tsx"
         },
         {
@@ -41117,7 +41261,7 @@
           "names": [
             "FloatingShapeToolbar"
           ],
-          "line": 24,
+          "line": 25,
           "resolved": "components/sections/pdf-editor/FloatingShapeToolbar.tsx"
         },
         {
@@ -41126,7 +41270,7 @@
           "names": [
             "SignatureModal"
           ],
-          "line": 25,
+          "line": 26,
           "resolved": "components/sections/pdf-editor/SignatureModal.tsx"
         }
       ]
@@ -44688,6 +44832,60 @@
         }
       ]
     },
+    "lib/client/api/shares.ts": {
+      "path": "lib/client/api/shares.ts",
+      "lang": "ts",
+      "loc": 95,
+      "hash": "683391c7e4eac9b30f478735c18d74c1ed9bc06db78324425bc206e8ba8be260",
+      "symbols": [
+        {
+          "id": "lib/client/api/shares.ts#type:CreateShareInput:18",
+          "name": "CreateShareInput",
+          "kind": "type",
+          "file": "lib/client/api/shares.ts",
+          "line": 18,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "lib/client/api/shares.ts#type:CreateShareResult:27",
+          "name": "CreateShareResult",
+          "kind": "type",
+          "file": "lib/client/api/shares.ts",
+          "line": 27,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "lib/client/api/shares.ts#type:CreateShareError:33",
+          "name": "CreateShareError",
+          "kind": "type",
+          "file": "lib/client/api/shares.ts",
+          "line": 33,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "lib/client/api/shares.ts#function:createShare:44",
+          "name": "createShare",
+          "kind": "function",
+          "file": "lib/client/api/shares.ts",
+          "line": 44,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "lib/client/api/shares.ts#function:revokeShare:81",
+          "name": "revokeShare",
+          "kind": "function",
+          "file": "lib/client/api/shares.ts",
+          "line": 81,
+          "col": 8,
+          "exported": true
+        }
+      ],
+      "imports": []
+    },
     "lib/client/auth/get-auth-token.ts": {
       "path": "lib/client/auth/get-auth-token.ts",
       "lang": "ts",
@@ -45626,8 +45824,8 @@
     "lib/client/pdf-editor/merge-pdf.ts": {
       "path": "lib/client/pdf-editor/merge-pdf.ts",
       "lang": "ts",
-      "loc": 750,
-      "hash": "82d6ce226846b133176a840fd446ac3cd181d743c53b50229b915e7ba5504473",
+      "loc": 728,
+      "hash": "2ca91c283134ccdeaa7a18323db435508d2502710d3ab8dc153b0b4abc727fb2",
       "symbols": [
         {
           "id": "lib/client/pdf-editor/merge-pdf.ts#type:FabricObj:34",
@@ -45702,44 +45900,44 @@
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#type:RenderPageOptions:153",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#type:RenderPagePngResult:149",
+          "name": "RenderPagePngResult",
+          "kind": "type",
+          "file": "lib/client/pdf-editor/merge-pdf.ts",
+          "line": 149,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "lib/client/pdf-editor/merge-pdf.ts#type:RenderPageOptions:162",
           "name": "RenderPageOptions",
           "kind": "type",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 153,
+          "line": 162,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:renderPageToPng:160",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:renderPageToPng:169",
           "name": "renderPageToPng",
           "kind": "function",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 160,
+          "line": 169,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:computeBackgroundImageRect:219",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:computeBackgroundImageRect:232",
           "name": "computeBackgroundImageRect",
           "kind": "function",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 219,
+          "line": 232,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:embedBackgroundImage:246",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:embedBackgroundImage:259",
           "name": "embedBackgroundImage",
-          "kind": "function",
-          "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 246,
-          "col": 1,
-          "exported": false
-        },
-        {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:flushRasterBatch:259",
-          "name": "flushRasterBatch",
           "kind": "function",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
           "line": 259,
@@ -45747,29 +45945,38 @@
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:drawVectorObject:282",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:flushRasterBatch:272",
+          "name": "flushRasterBatch",
+          "kind": "function",
+          "file": "lib/client/pdf-editor/merge-pdf.ts",
+          "line": 272,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:drawVectorObject:295",
           "name": "drawVectorObject",
           "kind": "function",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 282,
+          "line": 295,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:processPageObjects:331",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:processPageObjects:344",
           "name": "processPageObjects",
           "kind": "function",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 331,
+          "line": 344,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/pdf-editor/merge-pdf.ts#function:mergeFabricEditsIntoPdf:386",
+          "id": "lib/client/pdf-editor/merge-pdf.ts#function:mergeFabricEditsIntoPdf:399",
           "name": "mergeFabricEditsIntoPdf",
           "kind": "function",
           "file": "lib/client/pdf-editor/merge-pdf.ts",
-          "line": 386,
+          "line": 399,
           "col": 8,
           "exported": true
         }
@@ -45988,8 +46195,8 @@
     "lib/client/pdf-editor/persist-editor-document.ts": {
       "path": "lib/client/pdf-editor/persist-editor-document.ts",
       "lang": "ts",
-      "loc": 185,
-      "hash": "4bbe987294cdd792298ec38bb0af22a464a538c55d69046e543ca1be2cc6657c",
+      "loc": 189,
+      "hash": "583909ac9b4a92e76dec07c8f4437e11b0826d4943f5c6148ab04fe3b505f47f",
       "symbols": [
         {
           "id": "lib/client/pdf-editor/persist-editor-document.ts#const:EDITOR_STATE_SOFT_LIMIT_BYTES:16",
@@ -46028,11 +46235,11 @@
           "exported": true
         },
         {
-          "id": "lib/client/pdf-editor/persist-editor-document.ts#function:buildEditorStateJson:149",
+          "id": "lib/client/pdf-editor/persist-editor-document.ts#function:buildEditorStateJson:153",
           "name": "buildEditorStateJson",
           "kind": "function",
           "file": "lib/client/pdf-editor/persist-editor-document.ts",
-          "line": 149,
+          "line": 153,
           "col": 1,
           "exported": false
         }
@@ -46939,6 +47146,14 @@
       ],
       "imports": []
     },
+    "lib/client/query/index.ts": {
+      "path": "lib/client/query/index.ts",
+      "lang": "ts",
+      "loc": 3,
+      "hash": "96cb6ed8102d19e8a14fdd37c4bb8ef421931e0ce5cb8b4a3e296d51f7c52b6a",
+      "symbols": [],
+      "imports": []
+    },
     "lib/client/sse/fetch-event-source.ts": {
       "path": "lib/client/sse/fetch-event-source.ts",
       "lang": "ts",
@@ -47018,14 +47233,6 @@
           "line": 2
         }
       ]
-    },
-    "lib/client/query/index.ts": {
-      "path": "lib/client/query/index.ts",
-      "lang": "ts",
-      "loc": 3,
-      "hash": "96cb6ed8102d19e8a14fdd37c4bb8ef421931e0ce5cb8b4a3e296d51f7c52b6a",
-      "symbols": [],
-      "imports": []
     },
     "lib/client/stores/index.ts": {
       "path": "lib/client/stores/index.ts",
@@ -47319,193 +47526,6 @@
         }
       ]
     },
-    "lib/client/upload-toasts/controller.ts": {
-      "path": "lib/client/upload-toasts/controller.ts",
-      "lang": "ts",
-      "loc": 103,
-      "hash": "2a6325ccea9e0e9b44ddbf460781c8b2a72e2ec687062708b7080b861fec7f77",
-      "symbols": [
-        {
-          "id": "lib/client/upload-toasts/controller.ts#const:SUCCESS_AUTO_DISMISS_MS:8",
-          "name": "SUCCESS_AUTO_DISMISS_MS",
-          "kind": "const",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 8,
-          "col": 7,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#type:StartUploadToastInput:10",
-          "name": "StartUploadToastInput",
-          "kind": "type",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 10,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#function:add:20",
-          "name": "add",
-          "kind": "function",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 20,
-          "col": 1,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#const:uploadToasts:24",
-          "name": "uploadToasts",
-          "kind": "const",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 24,
-          "col": 14,
-          "exported": true
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#method:start:25",
-          "name": "start",
-          "kind": "method",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 25,
-          "col": 3,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#method:beginActive:46",
-          "name": "beginActive",
-          "kind": "method",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 46,
-          "col": 3,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#method:setProgress:53",
-          "name": "setProgress",
-          "kind": "method",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 53,
-          "col": 3,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#method:succeed:69",
-          "name": "succeed",
-          "kind": "method",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 69,
-          "col": 3,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#method:fail:85",
-          "name": "fail",
-          "kind": "method",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 85,
-          "col": 3,
-          "exported": false
-        },
-        {
-          "id": "lib/client/upload-toasts/controller.ts#method:close:95",
-          "name": "close",
-          "kind": "method",
-          "file": "lib/client/upload-toasts/controller.ts",
-          "line": 95,
-          "col": 3,
-          "exported": false
-        }
-      ],
-      "imports": [
-        {
-          "from": "lib/client/upload-toasts/controller.ts",
-          "source": "@/lib/shared/types/documents.types",
-          "names": [
-            "Document"
-          ],
-          "line": 3
-        },
-        {
-          "from": "lib/client/upload-toasts/controller.ts",
-          "source": "@/lib/shared/types/upload-progress.types",
-          "names": [
-            "UploadStage"
-          ],
-          "line": 4
-        },
-        {
-          "from": "lib/client/upload-toasts/controller.ts",
-          "source": "./queue",
-          "names": [
-            "uploadToastQueue",
-            "useUploadToastStore"
-          ],
-          "line": 6,
-          "resolved": "lib/client/upload-toasts/queue.ts"
-        }
-      ]
-    },
-    "lib/client/upload-toasts/queue.ts": {
-      "path": "lib/client/upload-toasts/queue.ts",
-      "lang": "ts",
-      "loc": 35,
-      "hash": "7cecf70672c06141daa07763e59dc76da26ff62afe748ba5753ad78f8365b282",
-      "symbols": [
-        {
-          "id": "lib/client/upload-toasts/queue.ts#type:UploadToastContent:17",
-          "name": "UploadToastContent",
-          "kind": "type",
-          "file": "lib/client/upload-toasts/queue.ts",
-          "line": 17,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "lib/client/upload-toasts/queue.ts#const:uploadToastQueue:21",
-          "name": "uploadToastQueue",
-          "kind": "const",
-          "file": "lib/client/upload-toasts/queue.ts",
-          "line": 21,
-          "col": 14,
-          "exported": true
-        },
-        {
-          "id": "lib/client/upload-toasts/queue.ts#function:applyProgressEvent:25",
-          "name": "applyProgressEvent",
-          "kind": "function",
-          "file": "lib/client/upload-toasts/queue.ts",
-          "line": 25,
-          "col": 8,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "lib/client/upload-toasts/queue.ts",
-          "source": "@/lib/shared/types/upload-progress.types",
-          "names": [
-            "UploadProgressEvent"
-          ],
-          "line": 3
-        },
-        {
-          "from": "lib/client/upload-toasts/queue.ts",
-          "source": "@heroui/react",
-          "names": [
-            "ToastQueue"
-          ],
-          "line": 5
-        },
-        {
-          "from": "lib/client/upload-toasts/queue.ts",
-          "source": "@/lib/client/stores/upload-toasts-store",
-          "names": [
-            "useUploadToastStore"
-          ],
-          "line": 7
-        }
-      ]
-    },
     "lib/client/utils/document-selection-key.ts": {
       "path": "lib/client/utils/document-selection-key.ts",
       "lang": "ts",
@@ -47720,60 +47740,6 @@
           "line": 3
         }
       ]
-    },
-    "lib/client/api/shares.ts": {
-      "path": "lib/client/api/shares.ts",
-      "lang": "ts",
-      "loc": 95,
-      "hash": "683391c7e4eac9b30f478735c18d74c1ed9bc06db78324425bc206e8ba8be260",
-      "symbols": [
-        {
-          "id": "lib/client/api/shares.ts#type:CreateShareInput:18",
-          "name": "CreateShareInput",
-          "kind": "type",
-          "file": "lib/client/api/shares.ts",
-          "line": 18,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "lib/client/api/shares.ts#type:CreateShareResult:27",
-          "name": "CreateShareResult",
-          "kind": "type",
-          "file": "lib/client/api/shares.ts",
-          "line": 27,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "lib/client/api/shares.ts#type:CreateShareError:33",
-          "name": "CreateShareError",
-          "kind": "type",
-          "file": "lib/client/api/shares.ts",
-          "line": 33,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "lib/client/api/shares.ts#function:createShare:44",
-          "name": "createShare",
-          "kind": "function",
-          "file": "lib/client/api/shares.ts",
-          "line": 44,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "lib/client/api/shares.ts#function:revokeShare:81",
-          "name": "revokeShare",
-          "kind": "function",
-          "file": "lib/client/api/shares.ts",
-          "line": 81,
-          "col": 8,
-          "exported": true
-        }
-      ],
-      "imports": []
     },
     "lib/server/share/bytes-store.ts": {
       "path": "lib/server/share/bytes-store.ts",
@@ -48956,6 +48922,42 @@
         }
       ]
     },
+    "lib/shared/schemas/contact.schema.ts": {
+      "path": "lib/shared/schemas/contact.schema.ts",
+      "lang": "ts",
+      "loc": 14,
+      "hash": "29ae32c019190a6eba2a627218436ec8e566db3a541b9ba89b0787745207bce1",
+      "symbols": [
+        {
+          "id": "lib/shared/schemas/contact.schema.ts#const:contactFormSchema:3",
+          "name": "contactFormSchema",
+          "kind": "const",
+          "file": "lib/shared/schemas/contact.schema.ts",
+          "line": 3,
+          "col": 14,
+          "exported": true
+        },
+        {
+          "id": "lib/shared/schemas/contact.schema.ts#type:ContactFormValues:13",
+          "name": "ContactFormValues",
+          "kind": "type",
+          "file": "lib/shared/schemas/contact.schema.ts",
+          "line": 13,
+          "col": 8,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "lib/shared/schemas/contact.schema.ts",
+          "source": "zod",
+          "names": [
+            "z"
+          ],
+          "line": 1
+        }
+      ]
+    },
     "lib/shared/types/api.types.ts": {
       "path": "lib/shared/types/api.types.ts",
       "lang": "ts",
@@ -49927,39 +49929,304 @@
         }
       ]
     },
-    "lib/shared/schemas/contact.schema.ts": {
-      "path": "lib/shared/schemas/contact.schema.ts",
+    "lib/client/upload-toasts/controller.ts": {
+      "path": "lib/client/upload-toasts/controller.ts",
       "lang": "ts",
-      "loc": 14,
-      "hash": "29ae32c019190a6eba2a627218436ec8e566db3a541b9ba89b0787745207bce1",
+      "loc": 103,
+      "hash": "2a6325ccea9e0e9b44ddbf460781c8b2a72e2ec687062708b7080b861fec7f77",
       "symbols": [
         {
-          "id": "lib/shared/schemas/contact.schema.ts#const:contactFormSchema:3",
-          "name": "contactFormSchema",
+          "id": "lib/client/upload-toasts/controller.ts#const:SUCCESS_AUTO_DISMISS_MS:8",
+          "name": "SUCCESS_AUTO_DISMISS_MS",
           "kind": "const",
-          "file": "lib/shared/schemas/contact.schema.ts",
-          "line": 3,
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 8,
+          "col": 7,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#type:StartUploadToastInput:10",
+          "name": "StartUploadToastInput",
+          "kind": "type",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 10,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#function:add:20",
+          "name": "add",
+          "kind": "function",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 20,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#const:uploadToasts:24",
+          "name": "uploadToasts",
+          "kind": "const",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 24,
           "col": 14,
           "exported": true
         },
         {
-          "id": "lib/shared/schemas/contact.schema.ts#type:ContactFormValues:13",
-          "name": "ContactFormValues",
+          "id": "lib/client/upload-toasts/controller.ts#method:start:25",
+          "name": "start",
+          "kind": "method",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 25,
+          "col": 3,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#method:beginActive:46",
+          "name": "beginActive",
+          "kind": "method",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 46,
+          "col": 3,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#method:setProgress:53",
+          "name": "setProgress",
+          "kind": "method",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 53,
+          "col": 3,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#method:succeed:69",
+          "name": "succeed",
+          "kind": "method",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 69,
+          "col": 3,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#method:fail:85",
+          "name": "fail",
+          "kind": "method",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 85,
+          "col": 3,
+          "exported": false
+        },
+        {
+          "id": "lib/client/upload-toasts/controller.ts#method:close:95",
+          "name": "close",
+          "kind": "method",
+          "file": "lib/client/upload-toasts/controller.ts",
+          "line": 95,
+          "col": 3,
+          "exported": false
+        }
+      ],
+      "imports": [
+        {
+          "from": "lib/client/upload-toasts/controller.ts",
+          "source": "@/lib/shared/types/documents.types",
+          "names": [
+            "Document"
+          ],
+          "line": 3
+        },
+        {
+          "from": "lib/client/upload-toasts/controller.ts",
+          "source": "@/lib/shared/types/upload-progress.types",
+          "names": [
+            "UploadStage"
+          ],
+          "line": 4
+        },
+        {
+          "from": "lib/client/upload-toasts/controller.ts",
+          "source": "./queue",
+          "names": [
+            "uploadToastQueue",
+            "useUploadToastStore"
+          ],
+          "line": 6,
+          "resolved": "lib/client/upload-toasts/queue.ts"
+        }
+      ]
+    },
+    "lib/client/upload-toasts/queue.ts": {
+      "path": "lib/client/upload-toasts/queue.ts",
+      "lang": "ts",
+      "loc": 35,
+      "hash": "7cecf70672c06141daa07763e59dc76da26ff62afe748ba5753ad78f8365b282",
+      "symbols": [
+        {
+          "id": "lib/client/upload-toasts/queue.ts#type:UploadToastContent:17",
+          "name": "UploadToastContent",
           "kind": "type",
-          "file": "lib/shared/schemas/contact.schema.ts",
-          "line": 13,
+          "file": "lib/client/upload-toasts/queue.ts",
+          "line": 17,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "lib/client/upload-toasts/queue.ts#const:uploadToastQueue:21",
+          "name": "uploadToastQueue",
+          "kind": "const",
+          "file": "lib/client/upload-toasts/queue.ts",
+          "line": 21,
+          "col": 14,
+          "exported": true
+        },
+        {
+          "id": "lib/client/upload-toasts/queue.ts#function:applyProgressEvent:25",
+          "name": "applyProgressEvent",
+          "kind": "function",
+          "file": "lib/client/upload-toasts/queue.ts",
+          "line": 25,
           "col": 8,
           "exported": true
         }
       ],
       "imports": [
         {
-          "from": "lib/shared/schemas/contact.schema.ts",
-          "source": "zod",
+          "from": "lib/client/upload-toasts/queue.ts",
+          "source": "@/lib/shared/types/upload-progress.types",
           "names": [
-            "z"
+            "UploadProgressEvent"
+          ],
+          "line": 3
+        },
+        {
+          "from": "lib/client/upload-toasts/queue.ts",
+          "source": "@heroui/react",
+          "names": [
+            "ToastQueue"
+          ],
+          "line": 5
+        },
+        {
+          "from": "lib/client/upload-toasts/queue.ts",
+          "source": "@/lib/client/stores/upload-toasts-store",
+          "names": [
+            "useUploadToastStore"
+          ],
+          "line": 7
+        }
+      ]
+    },
+    "app/(app)/dashboard/activity/page.tsx": {
+      "path": "app/(app)/dashboard/activity/page.tsx",
+      "lang": "tsx",
+      "loc": 12,
+      "hash": "3ee414350ca4d603c880c303794ae3722c10e4603113f2c4e20a4f0fa8074082",
+      "symbols": [
+        {
+          "id": "app/(app)/dashboard/activity/page.tsx#const:metadata:5",
+          "name": "metadata",
+          "kind": "const",
+          "file": "app/(app)/dashboard/activity/page.tsx",
+          "line": 5,
+          "col": 14,
+          "exported": true
+        },
+        {
+          "id": "app/(app)/dashboard/activity/page.tsx#function:ActivityPage:9",
+          "name": "ActivityPage",
+          "kind": "function",
+          "file": "app/(app)/dashboard/activity/page.tsx",
+          "line": 9,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(app)/dashboard/activity/page.tsx",
+          "source": "next",
+          "names": [
+            "Metadata"
           ],
           "line": 1
+        },
+        {
+          "from": "app/(app)/dashboard/activity/page.tsx",
+          "source": "@/components/sections/dashboard/activity-feed",
+          "names": [
+            "ActivityFeed"
+          ],
+          "line": 3
+        }
+      ]
+    },
+    "app/(app)/dashboard/settings/layout.tsx": {
+      "path": "app/(app)/dashboard/settings/layout.tsx",
+      "lang": "tsx",
+      "loc": 27,
+      "hash": "0f1af583300d430c8736e808a139e408262da2d4335e31a7dc997193c8d4b84b",
+      "symbols": [
+        {
+          "id": "app/(app)/dashboard/settings/layout.tsx#function:SettingsLayout:5",
+          "name": "SettingsLayout",
+          "kind": "function",
+          "file": "app/(app)/dashboard/settings/layout.tsx",
+          "line": 5,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(app)/dashboard/settings/layout.tsx",
+          "source": "react",
+          "names": [
+            "ReactNode"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(app)/dashboard/settings/layout.tsx",
+          "source": "@/components/sections/dashboard/settings/settings-nav",
+          "names": [
+            "SettingsNav"
+          ],
+          "line": 3
+        }
+      ]
+    },
+    "app/(app)/dashboard/settings/page.tsx": {
+      "path": "app/(app)/dashboard/settings/page.tsx",
+      "lang": "tsx",
+      "loc": 8,
+      "hash": "9bd1380b398429e48fcad5225a8406489e71df1949624cf8bccac021b479a746",
+      "symbols": [
+        {
+          "id": "app/(app)/dashboard/settings/page.tsx#function:SettingsIndexPage:5",
+          "name": "SettingsIndexPage",
+          "kind": "function",
+          "file": "app/(app)/dashboard/settings/page.tsx",
+          "line": 5,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(app)/dashboard/settings/page.tsx",
+          "source": "next/navigation",
+          "names": [
+            "redirect"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(app)/dashboard/settings/page.tsx",
+          "source": "@/lib/shared/constants/routes",
+          "names": [
+            "ROUTES"
+          ],
+          "line": 3
         }
       ]
     },
@@ -50437,211 +50704,6 @@
         }
       ]
     },
-    "app/(app)/dashboard/activity/page.tsx": {
-      "path": "app/(app)/dashboard/activity/page.tsx",
-      "lang": "tsx",
-      "loc": 12,
-      "hash": "3ee414350ca4d603c880c303794ae3722c10e4603113f2c4e20a4f0fa8074082",
-      "symbols": [
-        {
-          "id": "app/(app)/dashboard/activity/page.tsx#const:metadata:5",
-          "name": "metadata",
-          "kind": "const",
-          "file": "app/(app)/dashboard/activity/page.tsx",
-          "line": 5,
-          "col": 14,
-          "exported": true
-        },
-        {
-          "id": "app/(app)/dashboard/activity/page.tsx#function:ActivityPage:9",
-          "name": "ActivityPage",
-          "kind": "function",
-          "file": "app/(app)/dashboard/activity/page.tsx",
-          "line": 9,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(app)/dashboard/activity/page.tsx",
-          "source": "next",
-          "names": [
-            "Metadata"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(app)/dashboard/activity/page.tsx",
-          "source": "@/components/sections/dashboard/activity-feed",
-          "names": [
-            "ActivityFeed"
-          ],
-          "line": 3
-        }
-      ]
-    },
-    "app/(app)/dashboard/settings/layout.tsx": {
-      "path": "app/(app)/dashboard/settings/layout.tsx",
-      "lang": "tsx",
-      "loc": 27,
-      "hash": "0f1af583300d430c8736e808a139e408262da2d4335e31a7dc997193c8d4b84b",
-      "symbols": [
-        {
-          "id": "app/(app)/dashboard/settings/layout.tsx#function:SettingsLayout:5",
-          "name": "SettingsLayout",
-          "kind": "function",
-          "file": "app/(app)/dashboard/settings/layout.tsx",
-          "line": 5,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(app)/dashboard/settings/layout.tsx",
-          "source": "react",
-          "names": [
-            "ReactNode"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(app)/dashboard/settings/layout.tsx",
-          "source": "@/components/sections/dashboard/settings/settings-nav",
-          "names": [
-            "SettingsNav"
-          ],
-          "line": 3
-        }
-      ]
-    },
-    "app/(app)/dashboard/settings/page.tsx": {
-      "path": "app/(app)/dashboard/settings/page.tsx",
-      "lang": "tsx",
-      "loc": 8,
-      "hash": "9bd1380b398429e48fcad5225a8406489e71df1949624cf8bccac021b479a746",
-      "symbols": [
-        {
-          "id": "app/(app)/dashboard/settings/page.tsx#function:SettingsIndexPage:5",
-          "name": "SettingsIndexPage",
-          "kind": "function",
-          "file": "app/(app)/dashboard/settings/page.tsx",
-          "line": 5,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(app)/dashboard/settings/page.tsx",
-          "source": "next/navigation",
-          "names": [
-            "redirect"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(app)/dashboard/settings/page.tsx",
-          "source": "@/lib/shared/constants/routes",
-          "names": [
-            "ROUTES"
-          ],
-          "line": 3
-        }
-      ]
-    },
-    "components/sections/dashboard/settings/settings-nav.tsx": {
-      "path": "components/sections/dashboard/settings/settings-nav.tsx",
-      "lang": "tsx",
-      "loc": 145,
-      "hash": "e5510eaeeeb60b789a55ff3dd2ff5553fd8f9b186d78c70efccbfb1d52a19c41",
-      "symbols": [
-        {
-          "id": "components/sections/dashboard/settings/settings-nav.tsx#type:SettingsSection:14",
-          "name": "SettingsSection",
-          "kind": "type",
-          "file": "components/sections/dashboard/settings/settings-nav.tsx",
-          "line": 14,
-          "col": 1,
-          "exported": false
-        },
-        {
-          "id": "components/sections/dashboard/settings/settings-nav.tsx#const:SETTINGS_SECTIONS:23",
-          "name": "SETTINGS_SECTIONS",
-          "kind": "const",
-          "file": "components/sections/dashboard/settings/settings-nav.tsx",
-          "line": 23,
-          "col": 14,
-          "exported": true
-        },
-        {
-          "id": "components/sections/dashboard/settings/settings-nav.tsx#const:resolveActiveId:55",
-          "name": "resolveActiveId",
-          "kind": "const",
-          "file": "components/sections/dashboard/settings/settings-nav.tsx",
-          "line": 55,
-          "col": 7,
-          "exported": false
-        },
-        {
-          "id": "components/sections/dashboard/settings/settings-nav.tsx#type:SettingsNavProps:61",
-          "name": "SettingsNavProps",
-          "kind": "type",
-          "file": "components/sections/dashboard/settings/settings-nav.tsx",
-          "line": 61,
-          "col": 1,
-          "exported": false
-        },
-        {
-          "id": "components/sections/dashboard/settings/settings-nav.tsx#function:SettingsNav:65",
-          "name": "SettingsNav",
-          "kind": "function",
-          "file": "components/sections/dashboard/settings/settings-nav.tsx",
-          "line": 65,
-          "col": 8,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "components/sections/dashboard/settings/settings-nav.tsx",
-          "source": "@hugeicons/core-free-icons",
-          "names": [
-            "AlertCircleIcon",
-            "Globe02Icon",
-            "Setting07Icon",
-            "UserCircleIcon"
-          ],
-          "line": 3
-        },
-        {
-          "from": "components/sections/dashboard/settings/settings-nav.tsx",
-          "source": "@hugeicons/react",
-          "names": [
-            "HugeiconsIcon"
-          ],
-          "line": 9
-        },
-        {
-          "from": "components/sections/dashboard/settings/settings-nav.tsx",
-          "source": "next/navigation",
-          "names": [
-            "usePathname",
-            "useRouter"
-          ],
-          "line": 10
-        },
-        {
-          "from": "components/sections/dashboard/settings/settings-nav.tsx",
-          "source": "@/lib/shared/constants/routes",
-          "names": [
-            "ROUTES"
-          ],
-          "line": 12
-        }
-      ]
-    },
     "app/api/share/create/route.ts": {
       "path": "app/api/share/create/route.ts",
       "lang": "ts",
@@ -51042,6 +51104,97 @@
             "VIEW_COOKIE_NAME"
           ],
           "line": 6
+        }
+      ]
+    },
+    "components/sections/dashboard/settings/settings-nav.tsx": {
+      "path": "components/sections/dashboard/settings/settings-nav.tsx",
+      "lang": "tsx",
+      "loc": 145,
+      "hash": "e5510eaeeeb60b789a55ff3dd2ff5553fd8f9b186d78c70efccbfb1d52a19c41",
+      "symbols": [
+        {
+          "id": "components/sections/dashboard/settings/settings-nav.tsx#type:SettingsSection:14",
+          "name": "SettingsSection",
+          "kind": "type",
+          "file": "components/sections/dashboard/settings/settings-nav.tsx",
+          "line": 14,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "components/sections/dashboard/settings/settings-nav.tsx#const:SETTINGS_SECTIONS:23",
+          "name": "SETTINGS_SECTIONS",
+          "kind": "const",
+          "file": "components/sections/dashboard/settings/settings-nav.tsx",
+          "line": 23,
+          "col": 14,
+          "exported": true
+        },
+        {
+          "id": "components/sections/dashboard/settings/settings-nav.tsx#const:resolveActiveId:55",
+          "name": "resolveActiveId",
+          "kind": "const",
+          "file": "components/sections/dashboard/settings/settings-nav.tsx",
+          "line": 55,
+          "col": 7,
+          "exported": false
+        },
+        {
+          "id": "components/sections/dashboard/settings/settings-nav.tsx#type:SettingsNavProps:61",
+          "name": "SettingsNavProps",
+          "kind": "type",
+          "file": "components/sections/dashboard/settings/settings-nav.tsx",
+          "line": 61,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "components/sections/dashboard/settings/settings-nav.tsx#function:SettingsNav:65",
+          "name": "SettingsNav",
+          "kind": "function",
+          "file": "components/sections/dashboard/settings/settings-nav.tsx",
+          "line": 65,
+          "col": 8,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "components/sections/dashboard/settings/settings-nav.tsx",
+          "source": "@hugeicons/core-free-icons",
+          "names": [
+            "AlertCircleIcon",
+            "Globe02Icon",
+            "Setting07Icon",
+            "UserCircleIcon"
+          ],
+          "line": 3
+        },
+        {
+          "from": "components/sections/dashboard/settings/settings-nav.tsx",
+          "source": "@hugeicons/react",
+          "names": [
+            "HugeiconsIcon"
+          ],
+          "line": 9
+        },
+        {
+          "from": "components/sections/dashboard/settings/settings-nav.tsx",
+          "source": "next/navigation",
+          "names": [
+            "usePathname",
+            "useRouter"
+          ],
+          "line": 10
+        },
+        {
+          "from": "components/sections/dashboard/settings/settings-nav.tsx",
+          "source": "@/lib/shared/constants/routes",
+          "names": [
+            "ROUTES"
+          ],
+          "line": 12
         }
       ]
     },
@@ -52750,8 +52903,8 @@
     "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts": {
       "path": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
       "lang": "ts",
-      "loc": 336,
-      "hash": "9f3b0cb8033af6f028f6a5d4555b8896666a7001bb237f28f29de9f1bc2f39f4",
+      "loc": 407,
+      "hash": "f9340d2091e5f78a77506a6feb1e9de673983cd7847b1ce8693e5a90b454c42d",
       "symbols": [
         {
           "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#type:PageNumbersEventDetail:17",
@@ -52772,65 +52925,74 @@
           "exported": true
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:createMeasureContext:202",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:createMeasureContext:210",
           "name": "createMeasureContext",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 202,
+          "line": 210,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:getPageBaseDimensions:215",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:getPageBaseDimensions:223",
           "name": "getPageBaseDimensions",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 215,
+          "line": 223,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:formatLabel:225",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:formatLabel:233",
           "name": "formatLabel",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 225,
+          "line": 233,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:computeFabricPosition:244",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:computeFabricPosition:252",
           "name": "computeFabricPosition",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 244,
+          "line": 252,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:rgbToHex:267",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:rgbToHex:275",
           "name": "rgbToHex",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 267,
+          "line": 275,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:appendOverlayToStoredJson:276",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:appendOverlayToStoredJson:284",
           "name": "appendOverlayToStoredJson",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 276,
+          "line": 284,
           "col": 1,
           "exported": false
         },
         {
-          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:serializeForPage:329",
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:serializeForPage:337",
           "name": "serializeForPage",
           "kind": "function",
           "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
-          "line": 329,
+          "line": 337,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts#function:removeExistingPageNumbers:352",
+          "name": "removeExistingPageNumbers",
+          "kind": "function",
+          "file": "lib/client/hooks/pdf-editor/use-page-numbers-editor.ts",
+          "line": 352,
           "col": 1,
           "exported": false
         }
@@ -53249,6 +53411,58 @@
         },
         {
           "from": "lib/client/hooks/pdf-editor/use-signature-tool.ts",
+          "source": "@/lib/client/stores",
+          "names": [
+            "usePdfEditorStore"
+          ],
+          "line": 7
+        }
+      ]
+    },
+    "lib/client/hooks/pdf-editor/use-test-harness.ts": {
+      "path": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+      "lang": "ts",
+      "loc": 34,
+      "hash": "b198b23b0b563d2d6dac0bc33b2abec09611766aa5d43e428732a79faaa64bae",
+      "symbols": [
+        {
+          "id": "lib/client/hooks/pdf-editor/use-test-harness.ts#interface:Window:10",
+          "name": "Window",
+          "kind": "interface",
+          "file": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+          "line": 10,
+          "col": 3,
+          "exported": false
+        },
+        {
+          "id": "lib/client/hooks/pdf-editor/use-test-harness.ts#function:useTestHarness:24",
+          "name": "useTestHarness",
+          "kind": "function",
+          "file": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+          "line": 24,
+          "col": 8,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+          "source": "fabric",
+          "names": [
+            "Canvas"
+          ],
+          "line": 3
+        },
+        {
+          "from": "lib/client/hooks/pdf-editor/use-test-harness.ts",
+          "source": "react",
+          "names": [
+            "useEffect"
+          ],
+          "line": 5
+        },
+        {
+          "from": "lib/client/hooks/pdf-editor/use-test-harness.ts",
           "source": "@/lib/client/stores",
           "names": [
             "usePdfEditorStore"
@@ -55164,194 +55378,6 @@
         }
       ]
     },
-    "app/(marketing)/(site)/(auth)/sign-in/page.tsx": {
-      "path": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-      "lang": "tsx",
-      "loc": 21,
-      "hash": "d52bb4632e40fb623d1ae8cbd6ea862f37bef0ead4db5ab1eea7976da5ebbaa1",
-      "symbols": [
-        {
-          "id": "app/(marketing)/(site)/(auth)/sign-in/page.tsx#function:SignInPage:8",
-          "name": "SignInPage",
-          "kind": "function",
-          "file": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-          "line": 8,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-          "source": "@clerk/nextjs/server",
-          "names": [
-            "auth"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-          "source": "next/navigation",
-          "names": [
-            "redirect"
-          ],
-          "line": 2
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-          "source": "react",
-          "names": [
-            "Suspense"
-          ],
-          "line": 3
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-          "source": "@/components/sections/auth/sign-in-section",
-          "names": [
-            "SignInSection"
-          ],
-          "line": 5
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
-          "source": "@/lib/shared/constants/routes",
-          "names": [
-            "ROUTES"
-          ],
-          "line": 6
-        }
-      ]
-    },
-    "app/(marketing)/(site)/(auth)/sign-up/page.tsx": {
-      "path": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-      "lang": "tsx",
-      "loc": 16,
-      "hash": "ee7e4b78d26d23797f83b4dec8917205eea7fcecb2d480667132b626aee0d8ac",
-      "symbols": [
-        {
-          "id": "app/(marketing)/(site)/(auth)/sign-up/page.tsx#function:SignUpPage:7",
-          "name": "SignUpPage",
-          "kind": "function",
-          "file": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-          "line": 7,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-          "source": "@clerk/nextjs/server",
-          "names": [
-            "auth"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-          "source": "next/navigation",
-          "names": [
-            "redirect"
-          ],
-          "line": 2
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-          "source": "@/components/sections/auth/sign-up-section",
-          "names": [
-            "SignUpSection"
-          ],
-          "line": 4
-        },
-        {
-          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
-          "source": "@/lib/shared/constants/routes",
-          "names": [
-            "ROUTES"
-          ],
-          "line": 5
-        }
-      ]
-    },
-    "app/(marketing)/(site)/tools/[slug]/page.tsx": {
-      "path": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-      "lang": "tsx",
-      "loc": 44,
-      "hash": "8cec3e52e6d394e9d5a4ee9e0a9c83f167c7855d071c6f5a0c4dd2c4b8669d9f",
-      "symbols": [
-        {
-          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#type:PageProps:8",
-          "name": "PageProps",
-          "kind": "type",
-          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "line": 8,
-          "col": 1,
-          "exported": false
-        },
-        {
-          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#function:generateStaticParams:12",
-          "name": "generateStaticParams",
-          "kind": "function",
-          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "line": 12,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#function:generateMetadata:16",
-          "name": "generateMetadata",
-          "kind": "function",
-          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "line": 16,
-          "col": 8,
-          "exported": true
-        },
-        {
-          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#function:ToolBySlugPage:32",
-          "name": "ToolBySlugPage",
-          "kind": "function",
-          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "line": 32,
-          "col": 16,
-          "exported": true
-        }
-      ],
-      "imports": [
-        {
-          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "source": "next",
-          "names": [
-            "Metadata"
-          ],
-          "line": 1
-        },
-        {
-          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "source": "next/navigation",
-          "names": [
-            "notFound"
-          ],
-          "line": 3
-        },
-        {
-          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "source": "@/components/sections/tools/tool-upload-section",
-          "names": [
-            "ToolUploadSection"
-          ],
-          "line": 5
-        },
-        {
-          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
-          "source": "@/lib/shared/constants/tools",
-          "names": [
-            "TOOLS"
-          ],
-          "line": 6
-        }
-      ]
-    },
     "app/(app)/dashboard/settings/account/page.tsx": {
       "path": "app/(app)/dashboard/settings/account/page.tsx",
       "lang": "tsx",
@@ -55607,6 +55633,194 @@
         }
       ]
     },
+    "app/(marketing)/(site)/(auth)/sign-in/page.tsx": {
+      "path": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+      "lang": "tsx",
+      "loc": 21,
+      "hash": "d52bb4632e40fb623d1ae8cbd6ea862f37bef0ead4db5ab1eea7976da5ebbaa1",
+      "symbols": [
+        {
+          "id": "app/(marketing)/(site)/(auth)/sign-in/page.tsx#function:SignInPage:8",
+          "name": "SignInPage",
+          "kind": "function",
+          "file": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+          "line": 8,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+          "source": "@clerk/nextjs/server",
+          "names": [
+            "auth"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+          "source": "next/navigation",
+          "names": [
+            "redirect"
+          ],
+          "line": 2
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+          "source": "react",
+          "names": [
+            "Suspense"
+          ],
+          "line": 3
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+          "source": "@/components/sections/auth/sign-in-section",
+          "names": [
+            "SignInSection"
+          ],
+          "line": 5
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-in/page.tsx",
+          "source": "@/lib/shared/constants/routes",
+          "names": [
+            "ROUTES"
+          ],
+          "line": 6
+        }
+      ]
+    },
+    "app/(marketing)/(site)/(auth)/sign-up/page.tsx": {
+      "path": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+      "lang": "tsx",
+      "loc": 16,
+      "hash": "ee7e4b78d26d23797f83b4dec8917205eea7fcecb2d480667132b626aee0d8ac",
+      "symbols": [
+        {
+          "id": "app/(marketing)/(site)/(auth)/sign-up/page.tsx#function:SignUpPage:7",
+          "name": "SignUpPage",
+          "kind": "function",
+          "file": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+          "line": 7,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+          "source": "@clerk/nextjs/server",
+          "names": [
+            "auth"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+          "source": "next/navigation",
+          "names": [
+            "redirect"
+          ],
+          "line": 2
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+          "source": "@/components/sections/auth/sign-up-section",
+          "names": [
+            "SignUpSection"
+          ],
+          "line": 4
+        },
+        {
+          "from": "app/(marketing)/(site)/(auth)/sign-up/page.tsx",
+          "source": "@/lib/shared/constants/routes",
+          "names": [
+            "ROUTES"
+          ],
+          "line": 5
+        }
+      ]
+    },
+    "app/(marketing)/(site)/tools/[slug]/page.tsx": {
+      "path": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+      "lang": "tsx",
+      "loc": 44,
+      "hash": "8cec3e52e6d394e9d5a4ee9e0a9c83f167c7855d071c6f5a0c4dd2c4b8669d9f",
+      "symbols": [
+        {
+          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#type:PageProps:8",
+          "name": "PageProps",
+          "kind": "type",
+          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "line": 8,
+          "col": 1,
+          "exported": false
+        },
+        {
+          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#function:generateStaticParams:12",
+          "name": "generateStaticParams",
+          "kind": "function",
+          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "line": 12,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#function:generateMetadata:16",
+          "name": "generateMetadata",
+          "kind": "function",
+          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "line": 16,
+          "col": 8,
+          "exported": true
+        },
+        {
+          "id": "app/(marketing)/(site)/tools/[slug]/page.tsx#function:ToolBySlugPage:32",
+          "name": "ToolBySlugPage",
+          "kind": "function",
+          "file": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "line": 32,
+          "col": 16,
+          "exported": true
+        }
+      ],
+      "imports": [
+        {
+          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "source": "next",
+          "names": [
+            "Metadata"
+          ],
+          "line": 1
+        },
+        {
+          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "source": "next/navigation",
+          "names": [
+            "notFound"
+          ],
+          "line": 3
+        },
+        {
+          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "source": "@/components/sections/tools/tool-upload-section",
+          "names": [
+            "ToolUploadSection"
+          ],
+          "line": 5
+        },
+        {
+          "from": "app/(marketing)/(site)/tools/[slug]/page.tsx",
+          "source": "@/lib/shared/constants/tools",
+          "names": [
+            "TOOLS"
+          ],
+          "line": 6
+        }
+      ]
+    },
     "app/api/share/bytes/[token]/route.ts": {
       "path": "app/api/share/bytes/[token]/route.ts",
       "lang": "ts",
@@ -55710,9 +55924,9 @@
     "scripts/playwright-report-md.mjs": [],
     "tests/README.md": [],
     "tests/auth.setup.ts": [],
+    "app/(app)/layout.tsx": [],
     "app/(marketing)/error.tsx": [],
     "app/(marketing)/layout.tsx": [],
-    "app/(app)/layout.tsx": [],
     "components/shared/mobile-debug-boot.tsx": [],
     "components/shared/user-sync-boot.tsx": [],
     "lib/config/api-client.ts": [],
@@ -55733,20 +55947,22 @@
       "tests/conversion/tool-pages.spec.ts",
       "tests/conversion/tools-modal.spec.ts",
       "tests/pdf-editor/controls.spec.ts",
+      "tests/pdf-editor/edit-text-export.spec.ts",
       "tests/pdf-editor/manage-pages.spec.ts",
       "tests/pdf-editor/save-export.spec.ts",
       "tests/pdf-editor/tools.spec.ts"
     ],
     "tests/pdf-editor/controls.spec.ts": [],
+    "tests/pdf-editor/edit-text-export.spec.ts": [],
     "tests/pdf-editor/manage-pages.spec.ts": [],
     "tests/pdf-editor/save-export.spec.ts": [],
     "tests/pdf-editor/tools.spec.ts": [],
-    "app/(marketing)/(legal)/layout.tsx": [],
-    "app/(marketing)/(site)/layout.tsx": [],
-    "app/(marketing)/(site)/page.tsx": [],
     "app/(app)/dashboard/page.tsx": [],
     "app/(tools)/pdf-editor/layout.tsx": [],
     "app/(tools)/pdf-editor/page.tsx": [],
+    "app/(marketing)/(legal)/layout.tsx": [],
+    "app/(marketing)/(site)/layout.tsx": [],
+    "app/(marketing)/(site)/page.tsx": [],
     "app/share/[token]/PasswordGate.tsx": [
       "app/share/[token]/page.tsx"
     ],
@@ -55956,6 +56172,7 @@
     "components/ui/upload-toast/upload-illustration.tsx": [
       "components/ui/upload-toast/UploadToastRenderer.tsx"
     ],
+    "lib/client/api/shares.ts": [],
     "lib/client/auth/get-auth-token.ts": [],
     "lib/client/file-conversion/upload-to-pdf.ts": [],
     "lib/client/hooks/use-is-mobile.ts": [],
@@ -56019,21 +56236,16 @@
       "lib/client/pdf-editor/merge-pdf.ts",
       "lib/client/pdf-editor/watermark-drawer.ts"
     ],
-    "lib/client/sse/fetch-event-source.ts": [],
     "lib/client/query/index.ts": [],
+    "lib/client/sse/fetch-event-source.ts": [],
     "lib/client/stores/index.ts": [],
     "lib/client/stores/pdf-editor-store.ts": [],
     "lib/client/stores/preferences-store.ts": [],
     "lib/client/stores/upload-toasts-store.ts": [],
-    "lib/client/upload-toasts/controller.ts": [],
-    "lib/client/upload-toasts/queue.ts": [
-      "lib/client/upload-toasts/controller.ts"
-    ],
     "lib/client/utils/document-selection-key.ts": [],
     "lib/client/utils/documents-table-display.ts": [],
     "lib/client/utils/google-drive-picker.ts": [],
     "lib/client/utils/trigger-document-download.ts": [],
-    "lib/client/api/shares.ts": [],
     "lib/server/share/bytes-store.ts": [],
     "lib/server/share/deny-list.ts": [],
     "lib/server/share/metadata-store.ts": [
@@ -56051,6 +56263,7 @@
     "lib/shared/constants/query-keys.ts": [],
     "lib/shared/constants/routes.ts": [],
     "lib/shared/constants/tools.ts": [],
+    "lib/shared/schemas/contact.schema.ts": [],
     "lib/shared/types/api.types.ts": [],
     "lib/shared/types/audit.types.ts": [],
     "lib/shared/types/conversion.types.ts": [],
@@ -56067,7 +56280,13 @@
     "lib/shared/utils/logger.ts": [],
     "lib/shared/utils/media-queries.ts": [],
     "lib/shared/utils/toast.ts": [],
-    "lib/shared/schemas/contact.schema.ts": [],
+    "lib/client/upload-toasts/controller.ts": [],
+    "lib/client/upload-toasts/queue.ts": [
+      "lib/client/upload-toasts/controller.ts"
+    ],
+    "app/(app)/dashboard/activity/page.tsx": [],
+    "app/(app)/dashboard/settings/layout.tsx": [],
+    "app/(app)/dashboard/settings/page.tsx": [],
     "app/(marketing)/(legal)/contact/page.tsx": [],
     "app/(marketing)/(legal)/cookies/page.tsx": [],
     "app/(marketing)/(legal)/do-not-sell/page.tsx": [],
@@ -56077,14 +56296,11 @@
     "app/(marketing)/(site)/oauth-callback/page.tsx": [],
     "app/(marketing)/(site)/pricing/page.tsx": [],
     "app/(marketing)/(site)/sso-callback/page.tsx": [],
-    "app/(app)/dashboard/activity/page.tsx": [],
-    "app/(app)/dashboard/settings/layout.tsx": [],
-    "app/(app)/dashboard/settings/page.tsx": [],
-    "components/sections/dashboard/settings/settings-nav.tsx": [],
     "app/api/share/create/route.ts": [],
     "app/api/share/resolve/route.ts": [],
     "app/api/share/revoke/route.ts": [],
     "app/api/share/verify-password/route.ts": [],
+    "components/sections/dashboard/settings/settings-nav.tsx": [],
     "lib/client/hooks/auth/index.ts": [],
     "lib/client/hooks/auth/use-sign-in-flow.ts": [],
     "lib/client/hooks/auth/use-sign-up-flow.ts": [],
@@ -56111,6 +56327,7 @@
     "lib/client/hooks/pdf-editor/use-save-editor.ts": [],
     "lib/client/hooks/pdf-editor/use-shape-tool.ts": [],
     "lib/client/hooks/pdf-editor/use-signature-tool.ts": [],
+    "lib/client/hooks/pdf-editor/use-test-harness.ts": [],
     "lib/client/hooks/pdf-editor/use-watermark-tool.ts": [],
     "lib/client/hooks/upload/use-cloud-upload.ts": [],
     "lib/client/hooks/upload/use-tracked-upload.ts": [
@@ -56135,13 +56352,13 @@
     "lib/shared/schemas/auth/sign-in.schema.ts": [],
     "lib/shared/schemas/auth/sign-up.schema.ts": [],
     "lib/shared/schemas/auth/verification-code.schema.ts": [],
-    "app/(marketing)/(site)/(auth)/sign-in/page.tsx": [],
-    "app/(marketing)/(site)/(auth)/sign-up/page.tsx": [],
-    "app/(marketing)/(site)/tools/[slug]/page.tsx": [],
     "app/(app)/dashboard/settings/account/page.tsx": [],
     "app/(app)/dashboard/settings/danger/page.tsx": [],
     "app/(app)/dashboard/settings/general/page.tsx": [],
     "app/(app)/dashboard/settings/language/page.tsx": [],
+    "app/(marketing)/(site)/(auth)/sign-in/page.tsx": [],
+    "app/(marketing)/(site)/(auth)/sign-up/page.tsx": [],
+    "app/(marketing)/(site)/tools/[slug]/page.tsx": [],
     "app/api/share/bytes/[token]/route.ts": []
   },
   "imports_out": {
@@ -56168,9 +56385,9 @@
     "scripts/playwright-report-md.mjs": [],
     "tests/README.md": [],
     "tests/auth.setup.ts": [],
+    "app/(app)/layout.tsx": [],
     "app/(marketing)/error.tsx": [],
     "app/(marketing)/layout.tsx": [],
-    "app/(app)/layout.tsx": [],
     "components/shared/mobile-debug-boot.tsx": [],
     "components/shared/user-sync-boot.tsx": [],
     "lib/config/api-client.ts": [],
@@ -56194,6 +56411,9 @@
     "tests/pdf-editor/controls.spec.ts": [
       "tests/helpers/editor.ts"
     ],
+    "tests/pdf-editor/edit-text-export.spec.ts": [
+      "tests/helpers/editor.ts"
+    ],
     "tests/pdf-editor/manage-pages.spec.ts": [
       "tests/helpers/editor.ts"
     ],
@@ -56203,12 +56423,12 @@
     "tests/pdf-editor/tools.spec.ts": [
       "tests/helpers/editor.ts"
     ],
-    "app/(marketing)/(legal)/layout.tsx": [],
-    "app/(marketing)/(site)/layout.tsx": [],
-    "app/(marketing)/(site)/page.tsx": [],
     "app/(app)/dashboard/page.tsx": [],
     "app/(tools)/pdf-editor/layout.tsx": [],
     "app/(tools)/pdf-editor/page.tsx": [],
+    "app/(marketing)/(legal)/layout.tsx": [],
+    "app/(marketing)/(site)/layout.tsx": [],
+    "app/(marketing)/(site)/page.tsx": [],
     "app/share/[token]/PasswordGate.tsx": [
       "app/share/[token]/ViewerClient.tsx"
     ],
@@ -56390,6 +56610,7 @@
     ],
     "components/ui/upload-toast/index.ts": [],
     "components/ui/upload-toast/upload-illustration.tsx": [],
+    "lib/client/api/shares.ts": [],
     "lib/client/auth/get-auth-token.ts": [],
     "lib/client/file-conversion/upload-to-pdf.ts": [],
     "lib/client/hooks/use-is-mobile.ts": [],
@@ -56448,21 +56669,16 @@
       "lib/client/pdf-editor/watermark-utils.ts"
     ],
     "lib/client/pdf-editor/watermark-utils.ts": [],
-    "lib/client/sse/fetch-event-source.ts": [],
     "lib/client/query/index.ts": [],
+    "lib/client/sse/fetch-event-source.ts": [],
     "lib/client/stores/index.ts": [],
     "lib/client/stores/pdf-editor-store.ts": [],
     "lib/client/stores/preferences-store.ts": [],
     "lib/client/stores/upload-toasts-store.ts": [],
-    "lib/client/upload-toasts/controller.ts": [
-      "lib/client/upload-toasts/queue.ts"
-    ],
-    "lib/client/upload-toasts/queue.ts": [],
     "lib/client/utils/document-selection-key.ts": [],
     "lib/client/utils/documents-table-display.ts": [],
     "lib/client/utils/google-drive-picker.ts": [],
     "lib/client/utils/trigger-document-download.ts": [],
-    "lib/client/api/shares.ts": [],
     "lib/server/share/bytes-store.ts": [],
     "lib/server/share/deny-list.ts": [],
     "lib/server/share/metadata-store.ts": [
@@ -56480,6 +56696,7 @@
     "lib/shared/constants/query-keys.ts": [],
     "lib/shared/constants/routes.ts": [],
     "lib/shared/constants/tools.ts": [],
+    "lib/shared/schemas/contact.schema.ts": [],
     "lib/shared/types/api.types.ts": [],
     "lib/shared/types/audit.types.ts": [],
     "lib/shared/types/conversion.types.ts": [],
@@ -56496,7 +56713,13 @@
     "lib/shared/utils/logger.ts": [],
     "lib/shared/utils/media-queries.ts": [],
     "lib/shared/utils/toast.ts": [],
-    "lib/shared/schemas/contact.schema.ts": [],
+    "lib/client/upload-toasts/controller.ts": [
+      "lib/client/upload-toasts/queue.ts"
+    ],
+    "lib/client/upload-toasts/queue.ts": [],
+    "app/(app)/dashboard/activity/page.tsx": [],
+    "app/(app)/dashboard/settings/layout.tsx": [],
+    "app/(app)/dashboard/settings/page.tsx": [],
     "app/(marketing)/(legal)/contact/page.tsx": [],
     "app/(marketing)/(legal)/cookies/page.tsx": [],
     "app/(marketing)/(legal)/do-not-sell/page.tsx": [],
@@ -56506,14 +56729,11 @@
     "app/(marketing)/(site)/oauth-callback/page.tsx": [],
     "app/(marketing)/(site)/pricing/page.tsx": [],
     "app/(marketing)/(site)/sso-callback/page.tsx": [],
-    "app/(app)/dashboard/activity/page.tsx": [],
-    "app/(app)/dashboard/settings/layout.tsx": [],
-    "app/(app)/dashboard/settings/page.tsx": [],
-    "components/sections/dashboard/settings/settings-nav.tsx": [],
     "app/api/share/create/route.ts": [],
     "app/api/share/resolve/route.ts": [],
     "app/api/share/revoke/route.ts": [],
     "app/api/share/verify-password/route.ts": [],
+    "components/sections/dashboard/settings/settings-nav.tsx": [],
     "lib/client/hooks/auth/index.ts": [],
     "lib/client/hooks/auth/use-sign-in-flow.ts": [],
     "lib/client/hooks/auth/use-sign-up-flow.ts": [],
@@ -56540,6 +56760,7 @@
     "lib/client/hooks/pdf-editor/use-save-editor.ts": [],
     "lib/client/hooks/pdf-editor/use-shape-tool.ts": [],
     "lib/client/hooks/pdf-editor/use-signature-tool.ts": [],
+    "lib/client/hooks/pdf-editor/use-test-harness.ts": [],
     "lib/client/hooks/pdf-editor/use-watermark-tool.ts": [],
     "lib/client/hooks/upload/use-cloud-upload.ts": [],
     "lib/client/hooks/upload/use-tracked-upload.ts": [],
@@ -56564,13 +56785,13 @@
     "lib/shared/schemas/auth/sign-in.schema.ts": [],
     "lib/shared/schemas/auth/sign-up.schema.ts": [],
     "lib/shared/schemas/auth/verification-code.schema.ts": [],
-    "app/(marketing)/(site)/(auth)/sign-in/page.tsx": [],
-    "app/(marketing)/(site)/(auth)/sign-up/page.tsx": [],
-    "app/(marketing)/(site)/tools/[slug]/page.tsx": [],
     "app/(app)/dashboard/settings/account/page.tsx": [],
     "app/(app)/dashboard/settings/danger/page.tsx": [],
     "app/(app)/dashboard/settings/general/page.tsx": [],
     "app/(app)/dashboard/settings/language/page.tsx": [],
+    "app/(marketing)/(site)/(auth)/sign-in/page.tsx": [],
+    "app/(marketing)/(site)/(auth)/sign-up/page.tsx": [],
+    "app/(marketing)/(site)/tools/[slug]/page.tsx": [],
     "app/api/share/bytes/[token]/route.ts": []
   },
   "entrypoints": [
@@ -56637,16 +56858,16 @@
       "degree": 8
     },
     {
+      "file": "tests/helpers/editor.ts",
+      "importedBy": 7,
+      "imports": 0,
+      "degree": 7
+    },
+    {
       "file": "components/sections/pdf-editor/RightSidebar.tsx",
       "importedBy": 2,
       "imports": 5,
       "degree": 7
-    },
-    {
-      "file": "tests/helpers/editor.ts",
-      "importedBy": 6,
-      "imports": 0,
-      "degree": 6
     },
     {
       "file": "components/sections/dashboard/documents-table.tsx",
