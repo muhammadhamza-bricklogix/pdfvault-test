@@ -156,6 +156,7 @@ function buildEditorStateJson(
     watermarkConfig: state.watermarkConfig,
     backgroundImageConfig: state.backgroundImageConfig,
     fabricJsonByPage,
+    extractedPages: Array.from(state.extractedPages),
   };
   const serialized = JSON.stringify(full);
 
@@ -174,6 +175,7 @@ function buildEditorStateJson(
       imageData: null,
     },
     fabricJsonByPage,
+    extractedPages: Array.from(state.extractedPages),
   };
 
   logger.warn?.("editorState exceeded soft cap; dropped inline imageData URLs");

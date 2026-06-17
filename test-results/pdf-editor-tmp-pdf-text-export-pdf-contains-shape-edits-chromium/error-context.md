@@ -1,0 +1,263 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: pdf-editor/tmp-pdf-text.spec.ts >> export pdf contains shape edits
+- Location: tests/pdf-editor/tmp-pdf-text.spec.ts:79:1
+
+# Error details
+
+```
+Error: page.evaluate: TypeError: Failed to resolve module specifier 'pdfjs-dist'
+    at eval (eval at evaluate (:302:30), <anonymous>:6:19)
+    at UtilityScript.evaluate (<anonymous>:304:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+```
+
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - button "Editor menu" [ref=e6] [cursor=pointer]:
+          - img
+        - separator [ref=e7]
+        - button "Browse all tools" [ref=e8] [cursor=pointer]:
+          - img
+          - generic [ref=e9]: Tools
+      - generic [ref=e10]:
+        - generic [ref=e11]: sample.pdf
+        - separator [ref=e12]
+        - generic [ref=e13]:
+          - button "Previous page" [disabled]: ‹
+          - generic [ref=e14]: Page 1 of 3
+          - button "Next page" [ref=e15] [cursor=pointer]: ›
+      - generic [ref=e16]:
+        - generic [ref=e18]:
+          - button "Zoom out" [ref=e19] [cursor=pointer]: −
+          - generic [ref=e20]: 100%
+          - button "Zoom in" [ref=e21] [cursor=pointer]: +
+        - separator [ref=e22]
+        - group [ref=e23]:
+          - button "Save" [disabled]:
+            - img
+            - generic: Save
+          - button "Export options" [active] [ref=e24] [cursor=pointer]:
+            - img
+        - separator [ref=e25]
+        - button "Switch to dark mode" [ref=e26] [cursor=pointer]:
+          - img
+    - generic [ref=e27]:
+      - toolbar "History actions" [ref=e28]:
+        - group [ref=e29]:
+          - button "Undo" [ref=e30] [cursor=pointer]:
+            - img
+            - generic [ref=e31]: Undo
+          - button "Redo" [disabled]:
+            - img
+            - generic: Redo
+      - separator [ref=e32]
+      - toolbar "Drawing tools" [ref=e33]:
+        - radiogroup [ref=e34]:
+          - radio "Select" [checked] [ref=e35] [cursor=pointer]:
+            - img
+            - generic [ref=e36]: Select
+          - radio "Edit Text" [ref=e37] [cursor=pointer]:
+            - img
+            - generic [ref=e38]: Edit Text
+          - radio "Text" [ref=e39] [cursor=pointer]:
+            - img
+            - generic [ref=e40]: Text
+          - radio "Draw" [ref=e41] [cursor=pointer]:
+            - img
+            - generic [ref=e42]: Draw
+          - radio "Highlight" [ref=e43] [cursor=pointer]:
+            - img
+            - generic [ref=e44]: Highlight
+          - radio "Shapes" [ref=e45] [cursor=pointer]:
+            - img
+            - generic [ref=e46]: Shapes
+          - radio "Eraser" [ref=e47] [cursor=pointer]:
+            - img
+            - generic [ref=e48]: Eraser
+          - radio "Whiteout" [ref=e49] [cursor=pointer]:
+            - img
+            - generic [ref=e50]: Whiteout
+          - radio "Redact" [ref=e51] [cursor=pointer]:
+            - img
+            - generic [ref=e52]: Redact
+          - radio "Signature" [ref=e53] [cursor=pointer]:
+            - img
+            - generic [ref=e54]: Signature
+          - radio "Image" [ref=e55] [cursor=pointer]:
+            - img
+            - generic [ref=e56]: Image
+          - radio "Watermark" [ref=e57] [cursor=pointer]:
+            - img
+            - generic [ref=e58]: Watermark
+          - radio "Background" [ref=e59] [cursor=pointer]:
+            - img
+            - generic [ref=e60]: Background
+      - separator [ref=e61]
+      - button "Manage Pages" [ref=e62] [cursor=pointer]:
+        - img
+        - generic [ref=e63]: Manage Pages
+    - generic [ref=e64]:
+      - listbox "Page thumbnails" [ref=e65]:
+        - generic [ref=e66]:
+          - option "Page 1" [selected] [ref=e68] [cursor=pointer]:
+            - button "Drag to reorder page 1" [ref=e69]: ⋮⋮
+            - generic [ref=e72]: "1"
+          - option "Page 2" [ref=e74] [cursor=pointer]:
+            - button "Drag to reorder page 2" [ref=e75]: ⋮⋮
+            - generic [ref=e78]: "2"
+          - option "Page 3" [ref=e80] [cursor=pointer]:
+            - button "Drag to reorder page 3" [ref=e81]: ⋮⋮
+            - generic [ref=e84]: "3"
+        - status [ref=e85]
+      - generic [ref=e89]:
+        - img "PDF page 1 of 3" [ref=e90]
+        - application "PDF editing canvas, page 1 of 3" [ref=e92]
+        - toolbar "Shape actions" [ref=e95]:
+          - group [ref=e96]:
+            - button "Toggle aspect ratio lock" [ref=e97] [cursor=pointer]:
+              - img
+            - button "Duplicate shape" [ref=e98] [cursor=pointer]:
+              - img
+            - button "Edit shape link" [ref=e99] [cursor=pointer]:
+              - img
+            - button "Delete shape" [ref=e100] [cursor=pointer]:
+              - img
+      - complementary [ref=e102]:
+        - generic [ref=e104]:
+          - generic [ref=e106]:
+            - heading "Shape" [level=3] [ref=e107]
+            - generic [ref=e108]:
+              - button "Rectangle" [ref=e109] [cursor=pointer]:
+                - img
+              - button "Ellipse" [ref=e110] [cursor=pointer]:
+                - img
+              - button "Line" [ref=e111] [cursor=pointer]:
+                - img
+              - button "Arrow" [ref=e112] [cursor=pointer]:
+                - img
+          - generic [ref=e114]:
+            - heading "Background" [level=3] [ref=e115]
+            - generic [ref=e116]:
+              - button "Transparent" [pressed] [ref=e117]:
+                - img "Transparent, Transparent" [ref=e118]
+              - button "White" [ref=e119]:
+                - img "White, White" [ref=e120]
+              - button "Red" [ref=e121]:
+                - img "Red, Red" [ref=e122]
+              - button "Green" [ref=e123]:
+                - img "Green, Green" [ref=e124]
+              - button "Blue" [ref=e125]:
+                - img "Blue, Blue" [ref=e126]
+              - button "white, Custom background color" [ref=e128] [cursor=pointer]:
+                - img "white, Custom background color" [ref=e129]
+          - generic [ref=e131]:
+            - heading "Stroke" [level=3] [ref=e132]
+            - generic [ref=e133]:
+              - button "Black" [pressed] [ref=e134]:
+                - img "Black, Black" [ref=e135]
+              - button "Red" [ref=e136]:
+                - img "Red, Red" [ref=e137]
+              - button "Green" [ref=e138]:
+                - img "Green, Green" [ref=e139]
+              - button "Blue" [ref=e140]:
+                - img "Blue, Blue" [ref=e141]
+              - button "black, Custom stroke color" [ref=e143] [cursor=pointer]:
+                - img "black, Custom stroke color" [ref=e144]
+          - generic [ref=e146]:
+            - heading "Stroke thickness" [level=3] [ref=e147]
+            - generic [ref=e148]:
+              - button "1px stroke" [ref=e149] [cursor=pointer]
+              - button "2px stroke" [ref=e151] [cursor=pointer]
+              - button "4px stroke" [ref=e153] [cursor=pointer]
+              - button "No stroke" [ref=e155] [cursor=pointer]
+          - generic [ref=e159]:
+            - heading "Link" [level=3] [ref=e160]
+            - generic [ref=e161]:
+              - img [ref=e162]
+              - button "Add +" [ref=e165] [cursor=pointer]:
+                - text: Add
+                - generic [ref=e166]: +
+          - generic [ref=e168]:
+            - heading "Layers" [level=3] [ref=e169]
+            - generic [ref=e170]:
+              - button "Send to back" [ref=e171] [cursor=pointer]:
+                - img
+              - button "Send backward" [ref=e172] [cursor=pointer]:
+                - img
+              - button "Bring forward" [ref=e173] [cursor=pointer]:
+                - img
+              - button "Bring to front" [ref=e174] [cursor=pointer]:
+                - img
+          - generic [ref=e176]:
+            - heading "Opacity" [level=3] [ref=e177]
+            - group "Opacity Value" [ref=e178]:
+              - generic [ref=e179]: Value
+              - status [ref=e180]: "100"
+              - slider "Value" [ref=e184]: "100"
+          - generic [ref=e186]:
+            - heading "Position" [level=3] [ref=e187]
+            - generic [ref=e188]:
+              - generic [ref=e189]:
+                - generic [ref=e190]: X
+                - group [ref=e191]:
+                  - button "Decrease X" [ref=e192] [cursor=pointer]:
+                    - img [ref=e193]
+                  - textbox "X X" [ref=e195]: "183"
+                  - button "Increase X" [ref=e196] [cursor=pointer]:
+                    - img [ref=e197]
+              - generic [ref=e199]:
+                - generic [ref=e200]: "Y"
+                - group [ref=e201]:
+                  - button "Decrease Y" [ref=e202] [cursor=pointer]:
+                    - img [ref=e203]
+                  - textbox "Y Y" [ref=e205]: "237"
+                  - button "Increase Y" [ref=e206] [cursor=pointer]:
+                    - img [ref=e207]
+          - generic [ref=e210]:
+            - heading "Size" [level=3] [ref=e211]
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]: W
+                - group [ref=e215]:
+                  - button "Decrease W" [ref=e216] [cursor=pointer]:
+                    - img [ref=e217]
+                  - textbox "W W" [ref=e219]: "184"
+                  - button "Increase W" [ref=e220] [cursor=pointer]:
+                    - img [ref=e221]
+              - generic [ref=e223]:
+                - generic [ref=e224]: H
+                - group [ref=e225]:
+                  - button "Decrease H" [ref=e226] [cursor=pointer]:
+                    - img [ref=e227]
+                  - textbox "H H" [ref=e229]: "159"
+                  - button "Increase H" [ref=e230] [cursor=pointer]:
+                    - img [ref=e231]
+      - button "Performance panel" [ref=e234] [cursor=pointer]:
+        - button "Performance panel" [ref=e235]:
+          - img
+  - button "Open Next.js Dev Tools" [ref=e241] [cursor=pointer]:
+    - img [ref=e242]
+  - alert [ref=e245]
+  - region "1 notification.":
+    - list:
+      - listitem:
+        - alertdialog "Exported" [ref=e246]:
+          - img [ref=e248]
+          - alert [ref=e250]:
+            - generic [ref=e251]: Exported
+            - generic [ref=e252]: Your edited PDF has been downloaded.
+          - button "Close":
+            - img
+```

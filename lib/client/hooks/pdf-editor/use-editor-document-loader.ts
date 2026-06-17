@@ -22,6 +22,7 @@ type EditorStateEnvelope = {
   watermarkConfig?: Record<string, unknown>;
   backgroundImageConfig?: Record<string, unknown>;
   fabricJsonByPage?: Record<string, string>;
+  extractedPages?: number[];
 };
 
 // Module-scope in-flight cache so React StrictMode's double-invocation (and
@@ -254,6 +255,12 @@ function rehydrateEditorState(editorState: string | null) {
       }
     }
     patch.fabricJsonByPage = restoredMap;
+  }
+
+  if (Array.isArray(parsed.extractedPages)) {
+    patch.extractedPages = new Set(
+      parsed.extractedPages.filter((p): p is number => Number.isFinite(p)),
+    );
   }
 
   if (Object.keys(patch).length > 0) {

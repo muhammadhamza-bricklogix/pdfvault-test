@@ -14,6 +14,7 @@ import { FontCache } from "./font-mapping";
 import {
   dataUrlToBytes,
   parseFabricJson,
+  renderFabricJsonToPng,
   renderFabricSubsetToPng,
 } from "./save-utils";
 import {
@@ -74,16 +75,12 @@ const VECTOR_TYPES = new Set([
 // "path" and "image" go through raster (PNG at multiplier:3)
 
 function isVectorizable(obj: FabricObj): boolean {
-  // Annotation glyphs (✓ ✗ → ★ ⚑ ¶ etc.) live in IText objects with
-  // `editorType: "annotation"`. Annotations + editModeText both
-  // contain arbitrary user / source-PDF unicode. pdf-lib's `drawText`
-  // uses StandardFonts (WinAnsi-encoded only) and silently replaces
-  // unencodable glyphs with "?" via `sanitizeTextForFont`.
-  // Forcing them through the raster batch path renders each via the
-  // browser's canvas (full Unicode), preserving every glyph as a
-  // PNG. editModeText is routed here only on pages where we're
-  // already rasterizing — Case 3 strips it from the object list on
-  // copyPages-style pages (no rasterization, source text intact).
+  // Annotation glyphs and source-text IText overlays contain arbitrary
+  // Unicode. pdf-lib's `drawText` uses StandardFonts (WinAnsi-encoded
+  // only) and silently replaces unencodable glyphs with "?" via
+  // `sanitizeTextForFont`. Routing them through the raster batch path
+  // renders each via the browser canvas (full Unicode), preserving every
+  // glyph as a PNG.
   const editorType = (obj as { editorType?: string }).editorType;
 
   if (editorType === "annotation" || editorType === "editModeText") {
@@ -91,6 +88,62 @@ function isVectorizable(obj: FabricObj): boolean {
   }
 
   return VECTOR_TYPES.has((obj.type as string).toLowerCase());
+}
+
+/**
+ * Detects whether any auto-extracted source-text IText on this page was
+ * actually modified by the user. We compare against the originals captured
+ * at extraction time (text, left, top). If nothing changed, the source PDF
+ * can be copied as-is and its real text objects are preserved. If something
+ * changed, we must rasterize the page so the user's edit survives.
+ */
+function hasModifiedSourceText(
+  pageNum: number,
+  fabricJsonByPage: Map<number, string>,
+): boolean {
+  const json = fabricJsonByPage.get(pageNum);
+
+  if (!json) return false;
+  const parsed = parseFabricJson(json);
+  const objects = (parsed?.objects ?? []) as FabricObj[];
+
+  return objects.some((o) => {
+    if ((o as { editorType?: string }).editorType !== "editModeText") {
+      return false;
+    }
+    const o2 = o as {
+      text?: string;
+      originalText?: string;
+      left?: number;
+      top?: number;
+      originalLeft?: number;
+      originalTop?: number;
+    };
+
+    // Missing originals can happen for legacy/overlaid objects — treat as
+    // modified so we don't silently drop a user edit.
+    if (o2.originalText === undefined) return true;
+    if (o2.text !== o2.originalText) return true;
+
+    const tol = 0.5;
+
+    if (
+      o2.originalLeft !== undefined &&
+      o2.left !== undefined &&
+      Math.abs((o2.left ?? 0) - (o2.originalLeft ?? 0)) > tol
+    ) {
+      return true;
+    }
+    if (
+      o2.originalTop !== undefined &&
+      o2.top !== undefined &&
+      Math.abs((o2.top ?? 0) - (o2.originalTop ?? 0)) > tol
+    ) {
+      return true;
+    }
+
+    return false;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -391,28 +444,15 @@ export async function mergeFabricEditsIntoPdf({
     // `editorType !== "editModeText"`) still take Case 3.
     const hasGenuineEdits = hasEdits;
 
-    // Hardcoded `false` (2026-06-17). Source text is ALWAYS kept in
-    // the raster — pdf-lib never touches the source text — so its
-    // WinAnsi encoding can never produce □ tofu boxes for non-WinAnsi
-    // characters in the source (special spaces, smart quotes, etc.).
-    // QA report 2026-06-17: "after save I'm getting empty boxes
-    // between my characters."
-    //
-    // Trade-off (accepted): typing into an existing editModeText
-    // IText to modify source text does NOT persist through Save —
-    // the editModeText overlay is filtered out before drawing, the
-    // raster's original text is what shows up in the output. To
-    // actually CHANGE existing text the user has to whiteout the old
-    // text and type the replacement via the Text tool (which lands
-    // as a non-editModeText IText and draws over the whited-out
-    // area). 100% reliable, no boxes.
-    //
-    // If in-place text modification ever needs to be supported
-    // again, the right way is to (a) register `originalText` /
-    // `originalLeft` / `originalTop` via `FabricObject.customProperties`
-    // so they survive `toJSON()` round-tripping, and (b) re-enable
-    // the per-object comparison below. Until then, this stays false.
-    const hasModifiedSourceText = false;
+    // Detect pages where the user actually changed existing source text.
+    // When true we rasterize the page through the browser canvas so the
+    // edit survives without pdf-lib's StandardFont WinAnsi replacement
+    // turning non-Latin characters into boxes (QA report 2026-06-17).
+    // Unmodified pages keep the source text as real PDF objects.
+    const pageHasModifiedSourceText = hasModifiedSourceText(
+      pageNum,
+      fabricJsonByPage,
+    );
 
     const needsWatermark =
       wm != null &&
@@ -458,7 +498,7 @@ export async function mergeFabricEditsIntoPdf({
       const transparentPng = await renderPageToPng(pdfjsPage, {
         // Same per-page strategy as Case 3 — keep source text in the
         // raster unless the user actually modified some editModeText.
-        suppressText: hasModifiedSourceText,
+        suppressText: pageHasModifiedSourceText,
         transparent: true,
       });
       const pageRender = await outputPdf.embedPng(transparentPng);
@@ -484,7 +524,7 @@ export async function mergeFabricEditsIntoPdf({
           // editModeText), otherwise skip the pristine editModeText
           // since its text is already painted in the raster.
           const allObjects = (parsed.objects ?? []) as FabricObj[];
-          const objects = hasModifiedSourceText
+          const objects = pageHasModifiedSourceText
             ? allObjects
             : allObjects.filter(
                 (o) =>
@@ -551,51 +591,34 @@ export async function mergeFabricEditsIntoPdf({
     }
 
     // ------------------------------------------------------------------
-    // Case 3: Has edits (and possibly watermark) — two sub-paths.
+    // Case 3: Has edits.
     //
-    // The branch hinges on whether the page has editModeText overlays
-    // (auto-extracted source text that the user activated Edit Text
-    // on). Those overlays MAY have been modified by the user — to
-    // preserve the modification we have to bake them into the saved
-    // bytes. We do that via the raster batch (PNG render of the
-    // Fabric IText via browser canvas — full Unicode, no boxes) and
-    // suppress the source text in the page raster so the modification
-    // doesn't duplicate against the original.
-    //
-    //   • Path A — page has editModeText overlays:
-    //       Render the source page to PNG with text suppressed,
-    //       embed as background, draw ALL Fabric objects on top.
-    //       Both editModeText and annotations route through raster
-    //       (per `isVectorizable`), preserving every Unicode glyph.
-    //       Cost: source text on this page becomes an image (not
-    //       selectable after save). User edits persist exactly.
-    //
-    //   • Path B — page has no editModeText overlays:
-    //       `copyPages` the source verbatim (text preserved), draw
-    //       user overlays on top. No rasterization. Source text
-    //       stays selectable. This is the common case for "add
-    //       annotation/shape/page number without touching text."
+    // If the user actually modified source text, we rasterize the page
+    // through the browser canvas so the edit survives as pixels. This
+    // bypasses pdf-lib's WinAnsi text encoding, which replaced non-Latin
+    // characters with boxes (QA report 2026-06-17). For all other edits
+    // we keep the source text as real PDF objects and draw only the
+    // non-source-text overlays on top.
     // ------------------------------------------------------------------
     const sourcePage = sourcePdf.getPage(pageNum - 1);
     const { height: pdfHeight, width: pdfWidth } = sourcePage.getSize();
+    const srcRot = sourcePage.getRotation().angle;
 
-    const json = fabricJsonByPage.get(pageNum)!;
-    const parsed = parseFabricJson(json);
-    const allObjects = (parsed?.objects ?? []) as FabricObj[];
-    const hasEditModeText = allObjects.some(
-      (o) => (o as { editorType?: string }).editorType === "editModeText",
-    );
-
-    if (hasEditModeText) {
-      // Path A: rasterize source without text, draw all overlays.
+    // Raster path gives the cleanest result for modified source text (no
+    // pdf-lib font boxes), but only for upright pages. Rotated pages fall
+    // back to the vector path to avoid image/dimension mismatch.
+    if (pageHasModifiedSourceText && srcRot === 0) {
+      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
       const pdfjsPage = await pdfDocument.getPage(pageNum);
-      const pngBytes = await renderPageToPng(pdfjsPage, {
+
+      // Source page graphics only — original text is suppressed because
+      // the Fabric overlay carries the user's modified text.
+      const pagePng = await renderPageToPng(pdfjsPage, {
         suppressText: true,
       });
-      const bgImage = await outputPdf.embedPng(pngBytes);
-      const newPage = outputPdf.addPage([pdfWidth, pdfHeight]);
+      const pageImage = await outputPdf.embedPng(pagePng);
 
-      newPage.drawImage(bgImage, {
+      newPage.drawImage(pageImage, {
         height: pdfHeight,
         width: pdfWidth,
         x: 0,
@@ -606,24 +629,20 @@ export async function mergeFabricEditsIntoPdf({
         await drawWatermarkOnPage(newPage, outputPdf, wm!);
       }
 
-      if (parsed && allObjects.length) {
-        const srcRot = sourcePage.getRotation().angle;
-        const sideways = srcRot === 90 || srcRot === 270;
-        const ctx = createCoordinateContext(
-          parsed.width,
-          parsed.height,
-          sideways ? pdfHeight : pdfWidth,
-          sideways ? pdfWidth : pdfHeight,
-        );
+      const json = fabricJsonByPage.get(pageNum)!;
+      const parsed = parseFabricJson(json);
 
-        await processPageObjects(
-          allObjects,
-          parsed,
-          newPage,
-          outputPdf,
-          ctx,
-          fontCache,
-        );
+      if (parsed) {
+        const overlayUrl = await renderFabricJsonToPng(parsed);
+        const overlayBytes = dataUrlToBytes(overlayUrl);
+        const overlayImage = await outputPdf.embedPng(overlayBytes);
+
+        newPage.drawImage(overlayImage, {
+          height: pdfHeight,
+          width: pdfWidth,
+          x: 0,
+          y: 0,
+        });
       }
 
       if (needsWatermark && isOverlay) {
@@ -633,37 +652,94 @@ export async function mergeFabricEditsIntoPdf({
       continue;
     }
 
-    // Path B: copy source page verbatim, draw non-editModeText
-    // overlays on top. Source text remains real PDF text.
+    // Rotated pages with modified source text fall back to the vector path.
+    // The edit survives; very rarely some non-Latin glyphs may be replaced by
+    // boxes because pdf-lib's StandardFont path is used.
+    if (pageHasModifiedSourceText) {
+      const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
+
+      outputPdf.addPage(copiedPage);
+      const newPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
+
+      if (needsWatermark && !isOverlay) {
+        await drawWatermarkOnPage(newPage, outputPdf, wm!);
+      }
+
+      const json = fabricJsonByPage.get(pageNum)!;
+      const parsed = parseFabricJson(json);
+
+      if (parsed) {
+        const allObjects = (parsed.objects ?? []) as FabricObj[];
+
+        if (allObjects.length) {
+          const sideways = srcRot === 90 || srcRot === 270;
+          const ctx = createCoordinateContext(
+            parsed.width,
+            parsed.height,
+            sideways ? pdfHeight : pdfWidth,
+            sideways ? pdfWidth : pdfHeight,
+          );
+
+          await processPageObjects(
+            allObjects,
+            parsed,
+            newPage,
+            outputPdf,
+            ctx,
+            fontCache,
+          );
+        }
+      }
+
+      if (needsWatermark && isOverlay) {
+        await drawWatermarkOnPage(newPage, outputPdf, wm!);
+      }
+
+      continue;
+    }
+
+    // Non-modified edits: copy the source page (preserves selectable text)
+    // and draw user overlays that are not mirrored source text.
     const [copiedPage] = await outputPdf.copyPages(sourcePdf, [pageNum - 1]);
 
     outputPdf.addPage(copiedPage);
     const newPage = outputPdf.getPage(outputPdf.getPageCount() - 1);
 
+    // Underlay watermark — between source content and user overlays.
     if (needsWatermark && !isOverlay) {
       await drawWatermarkOnPage(newPage, outputPdf, wm!);
     }
 
-    if (parsed && allObjects.length) {
-      const srcRot = sourcePage.getRotation().angle;
-      const sideways = srcRot === 90 || srcRot === 270;
-      const ctx = createCoordinateContext(
-        parsed.width,
-        parsed.height,
-        sideways ? pdfHeight : pdfWidth,
-        sideways ? pdfWidth : pdfHeight,
+    const json = fabricJsonByPage.get(pageNum)!;
+    const parsed = parseFabricJson(json);
+
+    if (parsed) {
+      const allObjects = (parsed.objects ?? []) as FabricObj[];
+      const objects = allObjects.filter(
+        (o) => (o as { editorType?: string }).editorType !== "editModeText",
       );
 
-      await processPageObjects(
-        allObjects,
-        parsed,
-        newPage,
-        outputPdf,
-        ctx,
-        fontCache,
-      );
+      if (objects.length) {
+        const sideways = srcRot === 90 || srcRot === 270;
+        const ctx = createCoordinateContext(
+          parsed.width,
+          parsed.height,
+          sideways ? pdfHeight : pdfWidth,
+          sideways ? pdfWidth : pdfHeight,
+        );
+
+        await processPageObjects(
+          objects,
+          parsed,
+          newPage,
+          outputPdf,
+          ctx,
+          fontCache,
+        );
+      }
     }
 
+    // Overlay watermark goes last (on top of everything)
     if (needsWatermark && isOverlay) {
       await drawWatermarkOnPage(newPage, outputPdf, wm!);
     }
