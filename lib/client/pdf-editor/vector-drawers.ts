@@ -153,7 +153,30 @@ export async function drawIText(
 
   const { left, top } = resolveTopLeft(obj);
 
-  const font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+  let font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+  // If the embedded source font can't encode every character in the
+  // text — most often because it's a SUBSET that omits the regular
+  // space glyph (PDFs use Tj advance operators for spacing) — fall
+  // back to the WinAnsi StandardFont equivalent for the WHOLE string.
+  // Otherwise `sanitizeTextForFont` would silently turn unencodable
+  // characters into "?", and a user typing "  myword" sees "??myword"
+  // in the saved PDF (QA report 2026-06-17).
+  let canEncodeAll = true;
+
+  try {
+    font.encodeText(rawText);
+  } catch {
+    canEncodeAll = false;
+  }
+
+  if (!canEncodeAll) {
+    font = await fontCache.getStandardFallback(
+      fontFamily,
+      fontWeight,
+      fontStyle,
+    );
+  }
+
   // Pre-sanitize against the resolved font so every downstream
   // `font.encodeText` / `font.widthOfTextAtSize` / `page.drawText` call
   // sees only characters that font can represent.
