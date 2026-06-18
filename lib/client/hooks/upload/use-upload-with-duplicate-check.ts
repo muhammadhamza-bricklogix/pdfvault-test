@@ -29,7 +29,12 @@ export type DuplicatePrompt = {
   onOverwrite: () => void;
 };
 
-async function findDuplicateByFilename(
+/**
+ * Walk the user's documents list looking for an exact filename match.
+ * Exported so non-tracked-upload paths (cloud picker, etc.) can run the
+ * same duplicate-name guard without depending on the upload hook.
+ */
+export async function findDuplicateByFilename(
   filename: string,
 ): Promise<Document | null> {
   for (let page = 1; page <= DUPLICATE_CHECK_MAX_PAGES; page += 1) {

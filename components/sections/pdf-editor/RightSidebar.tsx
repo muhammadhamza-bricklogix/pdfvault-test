@@ -729,9 +729,19 @@ export function ShapePropertiesContent({
 
           <div className={sectionWrapperClass}>
             <Section title="Position">
+              {/* Horizontal strip (mobile bottom dock): stack X over Y in
+                  a single column. Two NumberFields side-by-side in the
+                  ~160px the strip allotted per section were squeezed
+                  below HeroUI's group minimum, causing the increment
+                  buttons to visually bleed into the next field. Vertical
+                  stack at `w-32` keeps each field at full readable width
+                  while staying compact horizontally. Desktop right rail
+                  keeps the 2-col grid since the sidebar is wide enough. */}
               <div
                 className={
-                  isHorizontal ? "flex w-40 gap-2" : "grid grid-cols-2 gap-2"
+                  isHorizontal
+                    ? "flex w-32 flex-col gap-2"
+                    : "grid grid-cols-2 gap-2"
                 }
               >
                 <DimensionField
@@ -756,7 +766,9 @@ export function ShapePropertiesContent({
             <Section title="Size">
               <div
                 className={
-                  isHorizontal ? "flex w-40 gap-2" : "grid grid-cols-2 gap-2"
+                  isHorizontal
+                    ? "flex w-32 flex-col gap-2"
+                    : "grid grid-cols-2 gap-2"
                 }
               >
                 <DimensionField

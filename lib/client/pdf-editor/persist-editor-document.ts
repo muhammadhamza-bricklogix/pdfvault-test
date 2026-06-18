@@ -32,6 +32,7 @@ function markBakedEditModeTextAsPristine(): void {
   const state = usePdfEditorStore.getState();
   const next = new Map<number, string>();
   let mutatedCount = 0;
+  let strippedPageNumbers = 0;
 
   state.fabricJsonByPage.forEach((json, page) => {
     let parsed: Record<string, unknown>;
@@ -53,8 +54,32 @@ function markBakedEditModeTextAsPristine(): void {
     }
 
     let changed = false;
+    const objsArr = objs as Record<string, unknown>[];
 
-    for (const obj of objs as Record<string, unknown>[]) {
+    // Strip page-number overlays. Reason: the merge just baked them
+    // into the source PDF as drawn text. Keeping the IText overlays
+    // in `fabricJsonByPage` means the NEXT save (and the editor
+    // viewer that re-mounts after `applyPostSaveReset`) will render
+    // both the baked copy AND the overlay copy — producing the
+    // duplicated / overlapping page-number labels QA reported
+    // 2026-06-18. pageNumber objects have no whiteout semantics like
+    // editModeText does (there's no "source word underneath" to
+    // cover), so the only safe way to prevent double-baking is to
+    // drop the overlay once it's in the source. If the user wants to
+    // edit / renumber later they can re-run the Page Numbers tool,
+    // which clears + re-stamps from scratch.
+    const filteredObjs = objsArr.filter((obj) => {
+      if (obj.editorType === "pageNumber") {
+        strippedPageNumbers++;
+        changed = true;
+
+        return false;
+      }
+
+      return true;
+    });
+
+    for (const obj of filteredObjs) {
       if (obj.editorType !== "editModeText") continue;
       if (obj.pristine === true) continue;
       obj.originalText = obj.text;
@@ -68,12 +93,18 @@ function markBakedEditModeTextAsPristine(): void {
       mutatedCount++;
     }
 
-    next.set(page, changed ? JSON.stringify(parsed) : json);
+    if (changed) {
+      parsed.objects = filteredObjs;
+      next.set(page, JSON.stringify(parsed));
+    } else {
+      next.set(page, json);
+    }
   });
 
-  if (mutatedCount > 0) {
-    logger.info("[PDFedits] save: re-pristined post-merge", {
-      mutatedCount,
+  if (mutatedCount > 0 || strippedPageNumbers > 0) {
+    logger.info("[PDFedits] save: post-merge fabricJsonByPage cleanup", {
+      pristinedEditModeText: mutatedCount,
+      strippedPageNumbers,
     });
     usePdfEditorStore.setState({ fabricJsonByPage: next });
   }
