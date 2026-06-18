@@ -169,11 +169,19 @@ export function useEditorDocumentLoader() {
           return;
         }
 
+        // Document doesn't exist / forbidden / any non-auth error → toast
+        // then bounce to Dashboard so the user isn't stranded on a blank
+        // editor. Reported 2026-06-18: pasting an invalid `?id=` URL
+        // left a permanently blank page in both web and mobile views.
+        // 404 / 403 / network errors all funnel here; the toast carries
+        // the specific reason while the redirect ensures the user has a
+        // place to go next.
         logger.error("Failed to load document for editor", err);
         toast.error({
           title: "Couldn't open document",
           description: message,
         });
+        router.replace(ROUTES.APP.DASHBOARD);
       });
 
     return () => {

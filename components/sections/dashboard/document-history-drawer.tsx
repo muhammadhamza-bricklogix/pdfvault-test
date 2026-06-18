@@ -1,35 +1,16 @@
 "use client";
 
-import type { AuditAction, AuditEvent } from "@/lib/shared/types/audit.types";
+import type { Document } from "@/lib/shared/types/documents.types";
 
-import {
-  Delete02Icon,
-  Download01Icon,
-  Edit01Icon,
-  Upload01Icon,
-} from "@hugeicons/core-free-icons";
+import { Edit01Icon, Upload01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Drawer } from "@heroui/react";
+import { Button, Drawer, toast } from "@heroui/react";
+import { useEffect, useState } from "react";
 
-import { useDocumentAuditQuery } from "@/lib/client/query/queries/audit.query";
-import {
-  describeAuditEvent,
-  formatRelativeTime,
-} from "@/lib/shared/utils/audit-format";
-
-const ACTION_ICON: Record<AuditAction, typeof Upload01Icon> = {
-  DOCUMENT_CREATED: Upload01Icon,
-  DOCUMENT_UPDATED: Edit01Icon,
-  DOCUMENT_DOWNLOADED: Download01Icon,
-  DOCUMENT_DELETED: Delete02Icon,
-};
-
-const ACTION_TINT: Record<AuditAction, string> = {
-  DOCUMENT_CREATED: "bg-blue-500/10 text-blue-500",
-  DOCUMENT_UPDATED: "bg-amber-500/10 text-amber-500",
-  DOCUMENT_DOWNLOADED: "bg-emerald-500/10 text-emerald-500",
-  DOCUMENT_DELETED: "bg-rose-500/10 text-rose-500",
-};
+import { VersionPreviewModal } from "@/components/sections/pdf-editor/VersionPreviewModal";
+import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { formatRelativeTime } from "@/lib/shared/utils/audit-format";
+import { logger } from "@/lib/shared/utils/logger";
 
 type Props = {
   documentId: string | null;
@@ -38,33 +19,22 @@ type Props = {
   onClose: () => void;
 };
 
-function HistoryRow({ event }: { event: AuditEvent }) {
-  const Icon = ACTION_ICON[event.action];
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 
-  return (
-    <li className="flex items-start gap-3 rounded-lg border border-default-200 p-3">
-      <span
-        className={`flex size-9 shrink-0 items-center justify-center rounded-md ${ACTION_TINT[event.action]}`}
-      >
-        <HugeiconsIcon icon={Icon} size={16} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{describeAuditEvent(event)}</p>
-        <p className="text-xs text-default-500">
-          <time dateTime={event.createdAt}>
-            {formatRelativeTime(event.createdAt)}
-          </time>
-          {event.ipAddress ? ` · ${event.ipAddress}` : ""}
-        </p>
-      </div>
-    </li>
-  );
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /**
- * Slide-in drawer showing the audit trail for a single document. Mounted
- * by parent components conditionally (lazy-loads `useInfiniteQuery` only
- * when `isOpen && documentId` are both truthy via `enabled` flag).
+ * Slide-in drawer that shows the per-document save history. Until the
+ * backend exposes a dedicated audit-event read API, we hydrate this
+ * drawer from `listVersions` — each version snapshot is one entry in the
+ * timeline, ordered newest-first. The "Current" row at the top reflects
+ * the live document state so users see a continuous timeline rather
+ * than an empty list when the backend's `/audit` endpoint isn't wired
+ * up. See `audit.service.ts` for the legacy audit hook (kept around so
+ * we can swap back when the audit-read API ships).
  */
 export function DocumentHistoryDrawer({
   documentId,
@@ -72,16 +42,72 @@ export function DocumentHistoryDrawer({
   isOpen,
   onClose,
 }: Props) {
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-  } = useDocumentAuditQuery(documentId, { enabled: isOpen });
+  const [versions, setVersions] = useState<Document[]>([]);
+  const [current, setCurrent] = useState<Document | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
 
-  const events = data?.pages.flatMap((p) => p.items) ?? [];
+  // Compare-with-current modal state. `previewVersion` is the version
+  // the user clicked "Compare" on; we pair it with the live `current`
+  // doc inside the modal and let the user paginate both side-by-side.
+  const [previewVersion, setPreviewVersion] = useState<Document | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen || !documentId) {
+      setStatus("idle");
+      setVersions([]);
+      setCurrent(null);
+
+      return;
+    }
+
+    let cancelled = false;
+
+    setStatus("loading");
+    void (async () => {
+      try {
+        const [versionList, currentDoc] = await Promise.all([
+          documentsService.listVersions(documentId),
+          documentsService.getDocument(documentId),
+        ]);
+
+        if (cancelled) return;
+        setVersions(versionList);
+        setCurrent(currentDoc);
+        setStatus("ready");
+      } catch (err) {
+        if (cancelled) return;
+        logger.error("Failed to load document history", err);
+        setStatus("error");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, documentId, reloadKey]);
+
+  const handleConfirmRestore = async () => {
+    if (!documentId || !previewVersion) return;
+    setRestoring(true);
+    try {
+      await documentsService.restoreVersion(documentId, previewVersion.id);
+      toast(`Restored to version ${previewVersion.version}.`);
+      setPreviewVersion(null);
+      // Re-fetch the version list + current so the drawer reflects the
+      // post-restore state (current is now the restored bytes; the prior
+      // state has been snapshotted as a new version per backend rules).
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      logger.error("Failed to restore version", err);
+      toast.danger("Couldn't restore that version. Please try again.");
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   return (
     <Drawer
@@ -100,37 +126,82 @@ export function DocumentHistoryDrawer({
               </p>
             </Drawer.Header>
             <Drawer.Body className="flex flex-col gap-3 p-4">
-              {isLoading && (
+              {status === "loading" && (
                 <p className="py-6 text-center text-sm text-default-500">
                   Loading history…
                 </p>
               )}
-              {isError && (
+              {status === "error" && (
                 <p className="py-6 text-center text-sm text-danger">
                   Failed to load history.
                 </p>
               )}
-              {!isLoading && !isError && events.length === 0 && (
+              {status === "ready" && versions.length === 0 && !current && (
                 <p className="py-6 text-center text-sm text-default-500">
                   No history yet for this document.
                 </p>
               )}
-              {events.length > 0 && (
+              {status === "ready" && (current || versions.length > 0) && (
                 <ul className="flex flex-col gap-2">
-                  {events.map((event) => (
-                    <HistoryRow key={event.id} event={event} />
-                  ))}
+                  {current && (
+                    <li className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
+                        <HugeiconsIcon icon={Edit01Icon} size={16} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">
+                          Current · v{current.version}
+                        </p>
+                        <p className="text-xs text-default-500">
+                          <time dateTime={current.updatedAt}>
+                            {formatRelativeTime(current.updatedAt)}
+                          </time>
+                          {` · ${formatSize(current.sizeBytes)}`}
+                        </p>
+                      </div>
+                    </li>
+                  )}
+                  {versions.map((v) => {
+                    const isInitial = v.version === 1;
+                    const Icon = isInitial ? Upload01Icon : Edit01Icon;
+                    const tint = isInitial
+                      ? "bg-blue-500/10 text-blue-500"
+                      : "bg-amber-500/10 text-amber-500";
+
+                    return (
+                      <li
+                        key={v.id}
+                        className="flex items-start gap-3 rounded-lg border border-default-200 p-3"
+                      >
+                        <span
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-md ${tint}`}
+                        >
+                          <HugeiconsIcon icon={Icon} size={16} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">
+                            {isInitial ? "Original upload" : `Version ${v.version}`}
+                          </p>
+                          <p className="text-xs text-default-500">
+                            <time dateTime={v.createdAt}>
+                              {formatRelativeTime(v.createdAt)}
+                            </time>
+                            {` · ${formatSize(v.sizeBytes)}`}
+                          </p>
+                        </div>
+                        <Button
+                          aria-label={`Compare version ${v.version} with current`}
+                          className="shrink-0"
+                          size="sm"
+                          variant="tertiary"
+                          onPress={() => setPreviewVersion(v)}
+                        >
+                          Compare
+                        </Button>
+                      </li>
+                    );
+                  })}
                 </ul>
-              )}
-              {hasNextPage && (
-                <Button
-                  isDisabled={isFetchingNextPage}
-                  size="sm"
-                  variant="tertiary"
-                  onPress={() => fetchNextPage()}
-                >
-                  {isFetchingNextPage ? "Loading…" : "Load more"}
-                </Button>
               )}
             </Drawer.Body>
             <Drawer.Footer>
@@ -141,6 +212,23 @@ export function DocumentHistoryDrawer({
           </Drawer.Dialog>
         </Drawer.Content>
       </Drawer.Backdrop>
+      <VersionPreviewModal
+        currentUrl={current?.url ?? null}
+        isOpen={!!previewVersion}
+        onClose={() => {
+          if (!restoring) setPreviewVersion(null);
+        }}
+        onConfirmRestore={handleConfirmRestore}
+        restoring={restoring}
+        versionLabel={
+          previewVersion
+            ? previewVersion.version === 1
+              ? "Original upload"
+              : `Version ${previewVersion.version}`
+            : ""
+        }
+        versionUrl={previewVersion?.url ?? null}
+      />
     </Drawer>
   );
 }

@@ -301,6 +301,7 @@ export function EditorInfoBar() {
 const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
+  { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
@@ -308,7 +309,6 @@ const TOOLS = [
   { icon: EraserIcon, id: "eraser", label: "Eraser" },
   { icon: PaintBucketIcon, id: "whiteout", label: "Whiteout" },
   { icon: ViewOffIcon, id: "redact", label: "Redact" },
-  { icon: SignatureIcon, id: "signature", label: "Signature" },
   { icon: Image01Icon, id: "image", label: "Image" },
   { icon: Stamp01Icon, id: "watermark", label: "Watermark" },
   { icon: BackgroundIcon, id: "backgroundImage", label: "Background" },
