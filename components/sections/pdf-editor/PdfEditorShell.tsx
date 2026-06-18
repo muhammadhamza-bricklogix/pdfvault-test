@@ -24,6 +24,7 @@ import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
 import { remapFabricAfterPageOps } from "@/lib/client/pdf-editor/remap-fabric-after-page-ops";
+import { renumberPageNumbersInFabricJson } from "@/lib/client/pdf-editor/renumber-page-numbers";
 import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -168,12 +169,20 @@ function EditorLayout() {
           oldHistoryByPage: historyByPage,
           oldHistoryIndexByPage: historyIndexByPage,
         });
+        // Reordering / deleting / duplicating pages leaves the
+        // page-number IText labels stale ("Page 5 of 10" stuck on what
+        // is now slot 2). Renumber overlays here so the labels match
+        // the new slot order. No-op when no page-number overlays exist
+        // — returns the same Map by reference.
+        const renumberedFabricJson = renumberPageNumbersInFabricJson(
+          remapped.fabricJsonByPage,
+        );
         const newPageCount = snapshot.pages.length;
         const clampedPage = Math.min(currentPage, Math.max(1, newPageCount));
 
         applyManagePagesSave({
           currentPage: clampedPage,
-          fabricJsonByPage: remapped.fabricJsonByPage,
+          fabricJsonByPage: renumberedFabricJson,
           file: newFile,
           historyByPage: remapped.historyByPage,
           historyIndexByPage: remapped.historyIndexByPage,
