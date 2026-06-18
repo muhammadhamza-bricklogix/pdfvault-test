@@ -162,6 +162,7 @@ type PdfEditorStore = {
   redo: (page: number) => string | undefined;
   saveFabricJson: (page: number, json: string) => void;
   saveFabricJsonBySourcePage: (sourcePage: number, json: string) => void;
+  replaceFabricJsonByPage: (map: Map<number, string>) => void;
   setActiveShapeType: (type: ShapeType) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setEditorMode: (mode: EditorMode) => void;
@@ -428,6 +429,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
       return { fabricJsonByPage: newMap, hasUnsavedChanges: true };
     }),
+
+  replaceFabricJsonByPage: (map) =>
+    set({ fabricJsonByPage: new Map(map), hasUnsavedChanges: true }),
 
   markDocumentDirty: () => set({ hasUnsavedChanges: true }),
 

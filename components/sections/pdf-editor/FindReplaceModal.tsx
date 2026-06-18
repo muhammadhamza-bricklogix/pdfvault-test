@@ -151,11 +151,23 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
       snippet: previewReplacement(m.snippet, needle, replacement, options),
     });
     // After the swap, the refreshed matches list (memo deps on
-    // `fabricJsonByPage` identity) drops the replaced occurrence. Keep
-    // `activeIndex` at the same position, which now points at the original
-    // "next" match; clamp to the new last index so a replace on the final
-    // occurrence wraps to the new last one instead of overflowing.
-    setActiveIndex((i) => Math.min(i, Math.max(0, matches.length - 2)));
+    // `fabricJsonByPage` identity) drops the replaced occurrence. The
+    // dual "Replace Next" action means: replace the current match, then
+    // move the cursor to the next one. Two cases:
+    //
+    //   • The user was at the LAST match → wrap to index 0 (matching IDE
+    //     convention: VS Code, IntelliJ, etc. all wrap on Replace Next).
+    //   • Otherwise → keep `activeIndex` unchanged; since the replaced
+    //     match drops out, the same index now points at what was
+    //     previously the next match.
+    setActiveIndex((i) => {
+      const newLength = matches.length - 1;
+
+      if (newLength <= 0) return 0;
+      if (i >= newLength) return 0;
+
+      return i;
+    });
   };
 
   const handleReplaceAll = () => {
@@ -328,11 +340,12 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
               Next
             </Button>
             <Button
+              aria-label="Replace current match and jump to the next match"
               isDisabled={matches.length === 0}
               size="sm"
               onPress={handleReplaceOne}
             >
-              Replace
+              Replace Next
             </Button>
             <Button
               isDisabled={matches.length === 0}

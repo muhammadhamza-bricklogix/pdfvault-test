@@ -92,27 +92,52 @@ type ParsedFabric = {
 };
 
 /**
- * Rewrite page-number overlay labels in the remapped Fabric JSON so
- * they reflect each page's new display slot. Returns a new Map only if
+ * Maps a Fabric-JSON-map KEY to its current display slot. Two callers:
+ *   - Manage Pages save: the map is already keyed by display slot →
+ *     identity resolver (default).
+ *   - Sidebar thumbnail drag: the map is keyed by SOURCE page index;
+ *     resolver is `(sourceKey) => pageOrder.indexOf(sourceKey) + 1`.
+ *
+ * Returning `null` from the resolver marks the entry as "not visible
+ * in the current arrangement" — the entry is skipped (its label isn't
+ * renumbered and isn't counted toward the running total).
+ */
+export type SlotResolver = (mapKey: number) => number | null;
+
+const identitySlotResolver: SlotResolver = (key) => key;
+
+/**
+ * Rewrite page-number overlay labels in the Fabric JSON map so they
+ * reflect each page's CURRENT display slot. Returns a new Map only if
  * something actually changed; otherwise returns the input map by
  * reference (callers can shallow-compare to skip downstream work).
+ *
+ * @param fabricJsonByPage Map keyed however the caller stores fabric
+ *   JSON (display slot OR source page index).
+ * @param resolveSlot Optional mapper from map-key → current display
+ *   slot. Defaults to identity.
  */
 export function renumberPageNumbersInFabricJson(
   fabricJsonByPage: Map<number, string>,
+  resolveSlot: SlotResolver = identitySlotResolver,
 ): Map<number, string> {
   if (fabricJsonByPage.size === 0) return fabricJsonByPage;
 
   type Entry = {
+    mapKey: number;
     slot: number;
     objectIndex: number;
     detected: DetectedLabel;
   };
 
   const entries: Entry[] = [];
-  const parsedBySlot = new Map<number, ParsedFabric>();
+  const parsedByKey = new Map<number, ParsedFabric>();
 
-  fabricJsonByPage.forEach((json, slot) => {
+  fabricJsonByPage.forEach((json, mapKey) => {
     if (!json) return;
+    const slot = resolveSlot(mapKey);
+
+    if (slot === null || !Number.isFinite(slot)) return;
     let parsed: ParsedFabric;
 
     try {
@@ -128,10 +153,10 @@ export function renumberPageNumbersInFabricJson(
       const detected = detectFormat(String(obj.text ?? ""));
 
       if (!detected) return;
-      entries.push({ slot, objectIndex: idx, detected });
+      entries.push({ mapKey, slot, objectIndex: idx, detected });
     });
 
-    parsedBySlot.set(slot, parsed);
+    parsedByKey.set(mapKey, parsed);
   });
 
   if (entries.length === 0) return fabricJsonByPage;
@@ -153,7 +178,7 @@ export function renumberPageNumbersInFabricJson(
   entries.forEach((entry, i) => {
     const newN = startNumber + i;
     const newLabel = formatLabel(entry.detected.format, newN, totalLabel);
-    const parsed = parsedBySlot.get(entry.slot);
+    const parsed = parsedByKey.get(entry.mapKey);
 
     if (!parsed?.objects) return;
     const obj = parsed.objects[entry.objectIndex];
@@ -168,9 +193,16 @@ export function renumberPageNumbersInFabricJson(
 
   const next = new Map(fabricJsonByPage);
 
-  parsedBySlot.forEach((parsed, slot) => {
-    next.set(slot, JSON.stringify(parsed));
+  parsedByKey.forEach((parsed, mapKey) => {
+    next.set(mapKey, JSON.stringify(parsed));
   });
 
   return next;
 }
+
+// Re-export the format helpers so callers that need to update a LIVE
+// Fabric canvas (where the IText objects already exist) can detect /
+// rewrite labels without parsing JSON.
+export { detectFormat as detectPageNumberFormat };
+export { formatLabel as formatPageNumberLabel };
+export type { PageNumberFormat };
