@@ -103,7 +103,13 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       // identical to each other (the bug reported 2026-06-16). The
       // save-before-action path (Share / Manage Pages / Create New)
       // was already doing this; the regular Save button was missing.
-      usePdfEditorStore.getState().applyPostSaveReset(result.savedFile);
+      //
+      // `remappedState` is present iff the user had drag-dropped pages in
+      // the sidebar — it swaps the source-page-keyed editor state for the
+      // new display-slot-keyed state that matches the just-saved bytes.
+      usePdfEditorStore
+        .getState()
+        .applyPostSaveReset(result.savedFile, result.remappedState);
 
       if (searchParams.get("id") !== id) {
         const params = new URLSearchParams(searchParams.toString());
@@ -152,7 +158,9 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         // the user reported on Manage Pages.
         const targetFile = result.savedFile;
 
-        usePdfEditorStore.getState().applyPostSaveReset(targetFile);
+        usePdfEditorStore
+          .getState()
+          .applyPostSaveReset(targetFile, result.remappedState);
 
         // Wait for `usePdfLoader` to finish reloading pdf.js against the new
         // bytes before resolving. Otherwise the caller (e.g. Manage Pages)

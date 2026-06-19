@@ -1,6 +1,6 @@
 "use client";
 
-import type { Canvas, IText } from "fabric";
+import type { Canvas, Textbox } from "fabric";
 import type { PDFPageProxy } from "pdfjs-dist";
 
 import { useEffect, useRef } from "react";
@@ -50,12 +50,17 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
 
   // Cache extracted text blocks per SOURCE page (stable across reorder).
   const blocksCacheRef = useRef<Map<number, TextBlock[]>>(new Map());
+  // Pages where extraction threw (older iOS Safari WebKit `getTextContent`).
+  // Once a source page lands here we don't retry — otherwise every tool
+  // switch / page navigation would re-fire the error toast.
+  const failedPagesRef = useRef<Set<number>>(new Set());
 
-  // Clear cache on file change
+  // Clear caches on file change
   const file = usePdfEditorStore((s) => s.file);
 
   useEffect(() => {
     blocksCacheRef.current.clear();
+    failedPagesRef.current.clear();
   }, [file]);
 
   // Install Fabric custom-property serialization patch once at mount. Without
@@ -76,11 +81,25 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       .getState()
       .extractedPages.has(sourcePage);
 
-    // Only run when the user has explicitly armed text editing for this
-    // page (via the "Edit Text" toolbar tool), OR when we're returning
-    // to a page we've already extracted (so the rotation-mismatch reset
-    // below can re-extract if Manage Pages rotated the page).
-    if (!alreadyExtracted && activeTool !== "editText") return;
+    // Trigger extraction in two cases:
+    //   1. User explicitly armed text editing via the "Edit Text" tool.
+    //   2. Default Select tool on a fresh load — so users can click any
+    //      run on the page and have it act as a Fabric object straight
+    //      away (no Edit Text → click → Select toggle dance).
+    // Already-extracted pages still flow through so the rotation-mismatch
+    // reset below can re-extract if Manage Pages rotated the page.
+    if (
+      !alreadyExtracted &&
+      activeTool !== "editText" &&
+      activeTool !== "select"
+    ) {
+      return;
+    }
+
+    // If `getTextContent` previously threw on this page (older Safari
+    // WebKit), don't retry — the user has already seen the toast and
+    // native pdf.js text is still painting the page.
+    if (!alreadyExtracted && failedPagesRef.current.has(sourcePage)) return;
 
     const setup = async () => {
       const existingEditText = fabricCanvas
@@ -137,27 +156,28 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           });
 
           // pdf.js `getTextContent` can throw on older iOS Safari WebKit
-          // ("undefined is not a function (near '...t of e...')"). When
-          // that happens we revert to Select so the page keeps painting
-          // text natively (suppressText stays false — we never marked
-          // this page extracted), and toast the user. We include the raw
-          // error message in the description so users can share it for
-          // diagnosis — without this we can only guess at which polyfill
-          // is missing on their device.
+          // ("undefined is not a function (near '...t of e...')"). Mark
+          // this source page as failed so we don't retry on every tool
+          // switch / page navigation, then revert from Edit Text to
+          // Select (no-op if already on Select via auto-extract). Native
+          // pdf.js text keeps painting because suppressText was never
+          // flipped on. The raw error message is included so users can
+          // share it for diagnosis.
+          failedPagesRef.current.add(sourcePage);
           if (usePdfEditorStore.getState().activeTool === "editText") {
             usePdfEditorStore.getState().setActiveTool("select");
-            const rawMsg =
-              err instanceof Error ? err.message : String(err ?? "");
-            const truncated =
-              rawMsg.length > 160 ? `${rawMsg.slice(0, 157)}…` : rawMsg;
-
-            toast.error({
-              title: "Text editing not supported on this browser",
-              description: truncated
-                ? `Reason: ${truncated}`
-                : "The text layer couldn't be loaded for this PDF.",
-            });
           }
+
+          const rawMsg = err instanceof Error ? err.message : String(err ?? "");
+          const truncated =
+            rawMsg.length > 160 ? `${rawMsg.slice(0, 157)}…` : rawMsg;
+
+          toast.error({
+            title: "Text editing not supported on this browser",
+            description: truncated
+              ? `Reason: ${truncated}`
+              : "The text layer couldn't be loaded for this PDF.",
+          });
 
           return;
         }
@@ -197,7 +217,7 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         return;
       }
 
-      const { IText: FabricIText } = await import("fabric");
+      const { Textbox: FabricTextbox } = await import("fabric");
 
       if (cancelled) return;
 
@@ -255,7 +275,7 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           top = block.y + h;
         }
 
-        const textObj = new FabricIText(block.text, {
+        const textObj = new FabricTextbox(block.text, {
           angle: block.rotation,
           editorType: "editModeText",
           // `pristine: true` is a fast-path hint cleared by
@@ -272,14 +292,11 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           originalTop: top,
           // Snapshot the source-text's bounding box at extraction time.
           // The merge pipeline uses this to whiteout the original text
-          // BEFORE drawing the user's modified IText on top, so the page
-          // stays text-editable on reload (no rasterisation) AND the
-          // edit replaces — not stacks on top of — the source word.
+          // BEFORE drawing the user's modified Textbox on top, so the
+          // page stays text-editable on reload (no rasterisation) AND
+          // the edit replaces — not stacks on top of — the source word.
           // `block.width` is the pdf.js advance width (good proxy);
-          // `block.height` is the font cap-height. Fabric will recompute
-          // its own `.width`/`.height` for the live object; we store the
-          // original explicitly because Fabric's value drifts as the user
-          // types and we need the SOURCE bbox to cover the source text.
+          // `block.height` is the font cap-height.
           originalWidth: block.width,
           originalHeight: block.height,
           fill: block.color,
@@ -288,13 +305,28 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           fontStyle: block.fontStyle,
           fontWeight: block.fontWeight,
           left,
+          // Off-limits per CLAUDE.md — keep caching off.
           objectCaching: false,
           originX: "left",
           originY: "top",
-          // Store original PDF text width for accurate export spacing
+          // Store original PDF text width for accurate export spacing.
           pdfTextWidth: block.width,
+          // Textbox uses `width` as the wrap point — fixed at the source
+          // run's advance width so typed text wraps inside the box
+          // instead of overflowing the original glyph bounds.
+          //
+          // `splitByGrapheme: true` (NOT false) — extracted runs are
+          // often short single words ("Hello", "Page", "Total"), so
+          // word-wrap has nothing to break on; appending characters then
+          // overflows the page horizontally because no whitespace gets
+          // introduced. Grapheme wrap guarantees containment regardless
+          // of the typed content's whitespace, and is also the correct
+          // wrap mode for CJK if/when extraction supports it. drawIText
+          // reads `_textLines` to round-trip wrapped lines through save.
+          splitByGrapheme: true,
           top,
-        } as any) as IText;
+          width: Math.max(8, block.width),
+        } as any) as Textbox;
 
         fabricCanvas.add(textObj);
       }

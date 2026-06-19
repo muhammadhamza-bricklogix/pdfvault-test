@@ -48,11 +48,13 @@ export async function installFabricCustomizations(): Promise<void> {
   const fabric = await import("fabric");
   // FabricObject is the common ancestor — patching its prototype
   // covers IText, Rect, Image, etc. without per-class boilerplate.
-  const proto = (fabric.FabricObject as unknown as {
-    prototype: {
-      toObject: (propertiesToInclude?: string[]) => Record<string, unknown>;
-    };
-  }).prototype;
+  const proto = (
+    fabric.FabricObject as unknown as {
+      prototype: {
+        toObject: (propertiesToInclude?: string[]) => Record<string, unknown>;
+      };
+    }
+  ).prototype;
 
   const original = proto.toObject;
 

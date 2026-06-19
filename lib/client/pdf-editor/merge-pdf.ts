@@ -1,6 +1,4 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
-
-import { rgb } from "pdf-lib";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
@@ -11,7 +9,13 @@ import type {
   WatermarkConfig,
 } from "@/lib/client/stores/pdf-editor-store";
 
-import { createCoordinateContext, toPdfDim, toPdfX } from "./coordinate-transform";
+import { rgb } from "pdf-lib";
+
+import {
+  createCoordinateContext,
+  toPdfDim,
+  toPdfX,
+} from "./coordinate-transform";
 import { FontCache } from "./font-mapping";
 import {
   dataUrlToBytes,
@@ -257,7 +261,6 @@ function whiteoutSourceText(
     pdfH,
   });
 }
-
 
 type RenderPagePngResult = {
   /** Raw PNG bytes. */

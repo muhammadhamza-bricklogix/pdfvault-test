@@ -2,6 +2,10 @@ import type { Canvas as FabricCanvas } from "fabric";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import {
+  isIdentityOrder,
+  materializeSidebarReorder,
+} from "./materialize-page-order";
 import { mergeFabricEditsIntoPdf } from "./merge-pdf";
 import { sanitizeSourceBytesForPdfLib } from "./sanitize-source-bytes";
 
@@ -51,7 +55,10 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
     return (o as { editorType?: string }).editorType !== "watermarkPreview";
   });
 
-  if (Array.isArray(json.objects) && json.objects.length === liveObjects.length) {
+  if (
+    Array.isArray(json.objects) &&
+    json.objects.length === liveObjects.length
+  ) {
     const objs = json.objects as Record<string, unknown>[];
 
     for (let i = 0; i < objs.length; i++) {
@@ -243,24 +250,56 @@ type BuildEditedPdfInput = {
 };
 
 /**
+ * Page-order-aware state returned to the caller when the sidebar reorder was
+ * materialized into the source bytes. `merge-pdf.ts` is off-limits and does
+ * NOT consume `pageOrder`, so when the user has drag-dropped pages in the
+ * sidebar we rebuild source bytes in the new order BEFORE the merge (using
+ * the proven Manage Pages rebuild path). That rebuild rekeys all the
+ * source-page-indexed editor state — Fabric JSON, history, extracted pages —
+ * which the caller must commit via `applyPostSaveReset` once the cloud
+ * upload succeeds. Shape mirrors the Map/Set types in the store.
+ */
+export type BuildEditedPdfRemappedState = {
+  extractedPages: Set<number>;
+  fabricJsonByPage: Map<number, string>;
+  historyByPage: Map<number, string[]>;
+  historyIndexByPage: Map<number, number>;
+};
+
+export type BuildEditedPdfResult = {
+  bytes: Uint8Array;
+  /** Present iff sidebar reorder was materialized this save. */
+  remappedState?: BuildEditedPdfRemappedState;
+};
+
+/**
  * Flushes the active page's live canvas into the store, then merges every
  * page's Fabric overlay into the source PDF and returns the saved bytes.
  * Shared by the save (upload) and export (download) pipelines.
+ *
+ * When `pageOrder` is non-identity (the user drag-dropped thumbnails in the
+ * sidebar), the source bytes are rebuilt in the new order first and the
+ * source-keyed editor state is remapped to the new display slots; the
+ * remapped state is returned alongside the merged bytes so the caller can
+ * commit it post-upload.
  */
 export async function buildEditedPdfBytes({
   currentPage,
   fabricCanvas,
   file,
   bakeOverlays = false,
-}: BuildEditedPdfInput): Promise<Uint8Array> {
+}: BuildEditedPdfInput): Promise<BuildEditedPdfResult> {
   if (fabricCanvas) {
     flushLiveFabricPage(currentPage, fabricCanvas);
   }
 
   const {
     backgroundImageConfig,
+    extractedPages,
     fabricJsonByPage,
     fontDataByLoadedName,
+    historyByPage,
+    historyIndexByPage,
     pageOrder,
     pdfDocument,
     watermarkConfig,
@@ -271,10 +310,50 @@ export async function buildEditedPdfBytes({
   }
 
   const rawSourceBytes = await file.arrayBuffer();
-  const sourceBytes = await sanitizeSourceBytesForPdfLib(
+  const sanitizedSourceBytes = await sanitizeSourceBytesForPdfLib(
     rawSourceBytes,
     pdfDocument,
   );
+
+  let mergeSourceBytes: ArrayBuffer = sanitizedSourceBytes;
+  let mergeFabricJsonByPage: Map<number, string> = fabricJsonByPage;
+  let remappedState: BuildEditedPdfRemappedState | undefined;
+
+  if (pageOrder.length > 0 && !isIdentityOrder(pageOrder)) {
+    const materialized = await materializeSidebarReorder({
+      extractedPages,
+      fabricJsonByPage,
+      historyByPage,
+      historyIndexByPage,
+      pageOrder,
+      pdfDocument,
+      sourceBytes: sanitizedSourceBytes,
+    });
+
+    // First-stage upload: bake ONLY the reorder into the bytes. Overlays
+    // (Fabric edits, page-number labels, edited text) stay as JSON in the
+    // remapped state. This mirrors the Manage Pages two-stage save model
+    // — the caller flips `pendingCloudSaveAfterReload` after `applyPostSaveReset`,
+    // and `useEditorAutoPersist` fires a second save on the reloaded
+    // identity-order file which goes through the normal merge + sweep path
+    // and bakes the overlays.
+    //
+    // Why not bake here directly: the in-place bake on materialized bytes
+    // hides QA-reported edge cases (`pageNumber` labels disappearing when
+    // edit-text suppression is also active on the page — pdf.js's native
+    // text paint is off so the baked label is hidden behind the empty
+    // Fabric overlay that the sweep just stripped). Routing through the
+    // proven identity-bake path on the reload avoids the whole class of
+    // bugs at the cost of one extra cloud upload per sidebar reorder.
+    mergeSourceBytes = materialized.sourceBytes.buffer as ArrayBuffer;
+    mergeFabricJsonByPage = new Map();
+    remappedState = {
+      extractedPages: materialized.extractedPages,
+      fabricJsonByPage: materialized.fabricJsonByPage,
+      historyByPage: materialized.historyByPage,
+      historyIndexByPage: materialized.historyIndexByPage,
+    };
+  }
 
   // Bake-overlays gate: when false (Save path) the cloud PDF stays clean —
   // overlays are an editor-side render concern only, persisted as JSON in
@@ -287,13 +366,22 @@ export async function buildEditedPdfBytes({
     backgroundImageConfig.enabled &&
     !!backgroundImageConfig.imageData;
 
-  return mergeFabricEditsIntoPdf({
+  // After materialize, source bytes already carry the reorder, so the merge
+  // walks pages 1..N as identity. Pass an identity pageOrder of the same
+  // length so the merge sees a consistent (currently unused) parameter.
+  const mergePageOrder = remappedState
+    ? Array.from({ length: pageOrder.length }, (_, i) => i + 1)
+    : pageOrder;
+
+  const bytes = await mergeFabricEditsIntoPdf({
     backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
-    fabricJsonByPage,
+    fabricJsonByPage: mergeFabricJsonByPage,
     fontDataMap: fontDataByLoadedName,
-    pageOrder,
+    pageOrder: mergePageOrder,
     pdfDocument,
-    sourceBytes,
+    sourceBytes: mergeSourceBytes,
     watermarkConfig: wmShouldBake ? watermarkConfig : null,
   });
+
+  return { bytes, remappedState };
 }
