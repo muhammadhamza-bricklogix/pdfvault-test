@@ -5,6 +5,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import {
   isIdentityOrder,
   materializeSidebarReorder,
+  stripPageNumberOverlays,
 } from "./materialize-page-order";
 import { mergeFabricEditsIntoPdf } from "./merge-pdf";
 import { sanitizeSourceBytesForPdfLib } from "./sanitize-source-bytes";
@@ -330,23 +331,13 @@ export async function buildEditedPdfBytes({
       sourceBytes: sanitizedSourceBytes,
     });
 
-    // First-stage upload: bake ONLY the reorder into the bytes. Overlays
-    // (Fabric edits, page-number labels, edited text) stay as JSON in the
-    // remapped state. This mirrors the Manage Pages two-stage save model
-    // — the caller flips `pendingCloudSaveAfterReload` after `applyPostSaveReset`,
-    // and `useEditorAutoPersist` fires a second save on the reloaded
-    // identity-order file which goes through the normal merge + sweep path
-    // and bakes the overlays.
-    //
-    // Why not bake here directly: the in-place bake on materialized bytes
-    // hides QA-reported edge cases (`pageNumber` labels disappearing when
-    // edit-text suppression is also active on the page — pdf.js's native
-    // text paint is off so the baked label is hidden behind the empty
-    // Fabric overlay that the sweep just stripped). Routing through the
-    // proven identity-bake path on the reload avoids the whole class of
-    // bugs at the cost of one extra cloud upload per sidebar reorder.
+    // Single-shot save: the rebuilt bytes carry the reorder AND the merge
+    // below bakes overlays into the same output, so one upload covers
+    // everything. The remapped (display-slot-keyed) Fabric map flows through
+    // both the merge here AND the post-save commit, so the editor's overlay
+    // state matches the cloud file on reload.
     mergeSourceBytes = materialized.sourceBytes.buffer as ArrayBuffer;
-    mergeFabricJsonByPage = new Map();
+    mergeFabricJsonByPage = materialized.fabricJsonByPage;
     remappedState = {
       extractedPages: materialized.extractedPages,
       fabricJsonByPage: materialized.fabricJsonByPage,
@@ -366,6 +357,18 @@ export async function buildEditedPdfBytes({
     backgroundImageConfig.enabled &&
     !!backgroundImageConfig.imageData;
 
+  // Save path (`bakeOverlays === false`): keep `pageNumber` overlays OUT of
+  // the merge input so they're NOT drawn into the PDF content stream. They
+  // continue to live in `fabricJsonByPage` (cloud `editorState` payload) and
+  // the editor renders them as Fabric IText on reload, regardless of whether
+  // `suppressText` is on for the page. The download/Export path leaves them
+  // in so the user's downloaded PDF carries the labels. See skill log
+  // 2026-06-19 (d) for why the bake-then-strip pattern broke for users who
+  // had also extracted text on the same pages.
+  const mergeJsonForBake = bakeOverlays
+    ? mergeFabricJsonByPage
+    : stripPageNumberOverlays(mergeFabricJsonByPage);
+
   // After materialize, source bytes already carry the reorder, so the merge
   // walks pages 1..N as identity. Pass an identity pageOrder of the same
   // length so the merge sees a consistent (currently unused) parameter.
@@ -375,7 +378,7 @@ export async function buildEditedPdfBytes({
 
   const bytes = await mergeFabricEditsIntoPdf({
     backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
-    fabricJsonByPage: mergeFabricJsonByPage,
+    fabricJsonByPage: mergeJsonForBake,
     fontDataMap: fontDataByLoadedName,
     pageOrder: mergePageOrder,
     pdfDocument,

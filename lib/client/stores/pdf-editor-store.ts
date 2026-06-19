@@ -467,14 +467,17 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       // instead of re-extracting, so the visible state matches what the
       // user just saved. See QA report 2026-06-17.
       //
-      // When `remappedState` is provided (sidebar-reorder save), the saved
-      // file carries the new page order but NO overlays — bake was deferred
-      // to the auto-fired second save. Swap in the display-slot-keyed
-      // remapped state (overlays untouched) so the editor still shows
-      // pageNumber labels / IText / shapes between the two saves, and flip
-      // `pendingCloudSaveAfterReload` so `useEditorAutoPersist` runs the
-      // second save once the new file finishes loading. This is the same
-      // two-stage mechanism Manage Pages already uses successfully.
+      // When `remappedState` is provided (sidebar-reorder save), the merge
+      // just produced bytes carrying the new page order PLUS overlays baked
+      // (except `pageNumber`, which is overlay-only per 2026-06-19 (d)). The
+      // source-page-keyed editor state in `state.*` no longer matches the
+      // file — swap in the display-slot-keyed remapped state.
+      //
+      // No `pendingCloudSaveAfterReload` flip: the single upload above
+      // already carries the user's full save (reorder + edits + page-number
+      // overlays via `editorState`). Manage Pages still sets this flag
+      // separately because its `applyManagePagesSave` doesn't upload at all
+      // — it relies on `useEditorAutoPersist` to drive the only cloud save.
       fabricJsonByPage: remappedState
         ? new Map(remappedState.fabricJsonByPage)
         : state.fabricJsonByPage,
@@ -482,9 +485,6 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
         ? new Set(remappedState.extractedPages)
         : state.extractedPages,
       hasUnsavedChanges: false,
-      pendingCloudSaveAfterReload: remappedState
-        ? true
-        : state.pendingCloudSaveAfterReload,
       // History is cleared on identity saves anyway, but when remapped the
       // pre-save history was keyed by old source pages — swap to the remapped
       // version so undo/redo references the right pages of the new file.

@@ -31,6 +31,65 @@ export function isIdentityOrder(pageOrder: number[]): boolean {
 }
 
 /**
+ * Returns a copy of `fabricJsonByPage` with every `editorType === "pageNumber"`
+ * object removed. Used by the cloud Save path so `mergeFabricEditsIntoPdf` does
+ * NOT draw the page-number labels into the PDF content stream — they stay as
+ * Fabric overlays, restored from `editorState.fabricJsonByPage` on reload.
+ *
+ * Why never bake on Save: the bake-then-strip approach (2026-06-18) breaks on
+ * pages in `extractedPages` where `PdfViewerCanvas` sets `suppressText: true`
+ * to hide pdf.js's native text — baked `pageNumber` text gets suppressed
+ * along with everything else and the user sees nothing. Treating page numbers
+ * as overlay-only avoids that entire failure mode. Trade-off: cloud-saved PDF
+ * opened in a third-party reader won't show page numbers (only the editor
+ * renders them via Fabric). The download/Export path bypasses this strip
+ * (`bakeOverlays: true` keeps the labels in the merge input) so downloaded
+ * PDFs DO carry them. See skill log 2026-06-19 (d).
+ */
+export function stripPageNumberOverlays(
+  fabricJsonByPage: Map<number, string>,
+): Map<number, string> {
+  if (fabricJsonByPage.size === 0) return fabricJsonByPage;
+
+  const next = new Map<number, string>();
+  let mutated = false;
+
+  fabricJsonByPage.forEach((json, page) => {
+    try {
+      const parsed = JSON.parse(json) as {
+        objects?: { editorType?: string }[];
+        [k: string]: unknown;
+      };
+
+      if (!Array.isArray(parsed.objects)) {
+        next.set(page, json);
+
+        return;
+      }
+
+      const filtered = parsed.objects.filter(
+        (obj) => obj.editorType !== "pageNumber",
+      );
+
+      if (filtered.length === parsed.objects.length) {
+        next.set(page, json);
+
+        return;
+      }
+
+      mutated = true;
+      next.set(page, JSON.stringify({ ...parsed, objects: filtered }));
+    } catch {
+      // Bad JSON — leave it untouched; the merge will skip the page via
+      // its own `parseFabricJson` null-check.
+      next.set(page, json);
+    }
+  });
+
+  return mutated ? next : fabricJsonByPage;
+}
+
+/**
  * Bakes a non-identity `pageOrder` (set by sidebar drag-drop) into a rebuilt
  * source PDF so the downstream merge can run with identity ordering. Reuses
  * the proven Manage Pages rebuild pipeline (`buildPdfFromDraft` +

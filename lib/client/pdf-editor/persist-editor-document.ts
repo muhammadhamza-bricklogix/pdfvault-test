@@ -48,7 +48,11 @@ function applyPristineSweep(
 ): PristineSweepResult {
   const next = new Map<number, string>();
   let mutatedCount = 0;
-  let strippedPageNumbers = 0;
+  // Retained on the return shape so existing callers' log fields stay typed,
+  // but always 0 now — `pageNumber` overlays are never baked (the strip lives
+  // in `buildEditedPdfBytes` pre-merge instead, see skill 2026-06-19 (d)) so
+  // there's nothing to strip post-merge.
+  const strippedPageNumbers = 0;
 
   fabricJsonByPage.forEach((json, page) => {
     let parsed: Record<string, unknown>;
@@ -72,30 +76,7 @@ function applyPristineSweep(
     let changed = false;
     const objsArr = objs as Record<string, unknown>[];
 
-    // Strip page-number overlays. Reason: the merge just baked them
-    // into the source PDF as drawn text. Keeping the IText overlays
-    // in `fabricJsonByPage` means the NEXT save (and the editor
-    // viewer that re-mounts after `applyPostSaveReset`) will render
-    // both the baked copy AND the overlay copy — producing the
-    // duplicated / overlapping page-number labels QA reported
-    // 2026-06-18. pageNumber objects have no whiteout semantics like
-    // editModeText does (there's no "source word underneath" to
-    // cover), so the only safe way to prevent double-baking is to
-    // drop the overlay once it's in the source. If the user wants to
-    // edit / renumber later they can re-run the Page Numbers tool,
-    // which clears + re-stamps from scratch.
-    const filteredObjs = objsArr.filter((obj) => {
-      if (obj.editorType === "pageNumber") {
-        strippedPageNumbers++;
-        changed = true;
-
-        return false;
-      }
-
-      return true;
-    });
-
-    for (const obj of filteredObjs) {
+    for (const obj of objsArr) {
       if (obj.editorType !== "editModeText") continue;
       if (obj.pristine === true) continue;
       obj.originalText = obj.text;
@@ -110,14 +91,14 @@ function applyPristineSweep(
     }
 
     if (changed) {
-      parsed.objects = filteredObjs;
+      parsed.objects = objsArr;
       next.set(page, JSON.stringify(parsed));
     } else {
       next.set(page, json);
     }
   });
 
-  const mutated = mutatedCount > 0 || strippedPageNumbers > 0;
+  const mutated = mutatedCount > 0;
 
   return { map: next, mutated, mutatedCount, strippedPageNumbers };
 }
@@ -236,24 +217,40 @@ export async function persistEditorDocument({
     // a double-text artefact from pdf.js re-extracting both the source word
     // (under the whiteout) and our redraw.
     //
+    // `pageNumber` overlays are NOT touched here — they were stripped from the
+    // merge input upstream in `buildEditedPdfBytes` (so they were never baked
+    // into the bytes) and must survive in `fabricJsonByPage` so the editor
+    // renders them via Fabric on reload. See skill log 2026-06-19 (d).
+    //
     // Two paths:
-    //   • Identity pageOrder: the merge just baked everything, so sweep the
-    //     store map (pristines editModeText, strips pageNumber) and commit
-    //     back to the store so the editorState built below carries pristine
-    //     flags.
-    //   • Materialized reorder: the merge passed an EMPTY fabricJsonByPage
-    //     (see `buildEditedPdfBytes`), so NOTHING was baked into the bytes
-    //     this round. Overlays survive untouched in `remappedState.fabricJsonByPage`
-    //     and will be baked on the second auto-save (`useEditorAutoPersist`
-    //     wakes on the reload). Skipping the sweep here preserves the page-
-    //     number labels + unmodified editModeText so they're still on the
-    //     canvas when the user looks at the editor between the two saves.
+    //   • Identity pageOrder: sweep the store map, commit back to the store
+    //     so the editorState built below carries pristine flags.
+    //   • Materialized reorder: sweep the remapped (display-slot-keyed) map
+    //     in-memory and thread it through `remappedState` so the post-upload
+    //     `applyPostSaveReset` lands the pristined version atomically. The
+    //     store still holds the OLD source-keyed map until that commit so an
+    //     upload failure leaves the editor in a recoverable state.
     let finalRemappedState: BuildEditedPdfRemappedState | undefined;
     let editorStateMap: Map<number, string>;
 
     if (remappedState) {
-      finalRemappedState = remappedState;
-      editorStateMap = remappedState.fabricJsonByPage;
+      const swept = applyPristineSweep(remappedState.fabricJsonByPage);
+
+      if (swept.mutated) {
+        logger.info(
+          "[PDFedits] save: post-merge fabricJsonByPage cleanup (remapped)",
+          {
+            pristinedEditModeText: swept.mutatedCount,
+          },
+        );
+      }
+      finalRemappedState = {
+        extractedPages: remappedState.extractedPages,
+        fabricJsonByPage: swept.map,
+        historyByPage: remappedState.historyByPage,
+        historyIndexByPage: remappedState.historyIndexByPage,
+      };
+      editorStateMap = swept.map;
     } else {
       const storeMap = usePdfEditorStore.getState().fabricJsonByPage;
       const swept = applyPristineSweep(storeMap);
@@ -261,7 +258,6 @@ export async function persistEditorDocument({
       if (swept.mutated) {
         logger.info("[PDFedits] save: post-merge fabricJsonByPage cleanup", {
           pristinedEditModeText: swept.mutatedCount,
-          strippedPageNumbers: swept.strippedPageNumbers,
         });
         usePdfEditorStore.setState({ fabricJsonByPage: swept.map });
       }
