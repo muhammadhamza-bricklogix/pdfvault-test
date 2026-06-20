@@ -34,6 +34,32 @@ const nextConfig = {
           },
         ],
       },
+      // Public share viewer + bytes endpoint: never cache, never index,
+      // never leak referrers. The `/share/[token]` page renders the
+      // viewer; `/api/share/bytes/...` streams the PDF.
+      {
+        source: "/share/:token*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          {
+            key: "Cache-Control",
+            value: "private, no-store, max-age=0, must-revalidate",
+          },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+      {
+        source: "/api/share/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, no-store, max-age=0, must-revalidate",
+          },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
     ];
   },
 };

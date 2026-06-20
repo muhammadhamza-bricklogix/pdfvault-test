@@ -24,6 +24,10 @@ export function UploadCta() {
     e.target.value = "";
     if (!file) return;
 
+    // Size-cap check + over-limit toast live inside `start()` (see
+    // `useUploadWithDuplicateCheck`) so every upload entry point —
+    // dashboard CTA, editor "Open file" — gets the same gate without
+    // repeating the check per caller.
     void start({
       file,
       onOpen: (id) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`),

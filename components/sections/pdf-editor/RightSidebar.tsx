@@ -6,6 +6,8 @@ import type { ShapeType } from "@/lib/client/stores/pdf-editor-store";
 import {
   ArrowDown01Icon,
   ArrowDownRight01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
   ArrowUp01Icon,
   CircleIcon,
   LayerBringForwardIcon,
@@ -31,6 +33,7 @@ import {
 } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { BackgroundImagePropertiesContent } from "./BackgroundImagePropertiesContent";
@@ -121,21 +124,45 @@ function Section({
 }
 
 function DimensionField({
+  axis,
   label,
   minValue,
   onChange,
+  step,
   value,
 }: {
+  /**
+   * "x" → decrement is ← (move left), increment is → (move right).
+   * "y" → decrement is ↑ (move up — Fabric `top` decreases upward),
+   *       increment is ↓ (move down).
+   * undefined → default ↑/↓ for size-style fields (W/H).
+   */
+  axis?: "x" | "y";
   label: string;
   minValue?: number;
   onChange: (value: number) => void;
+  step?: number;
   value: number;
 }) {
+  const decrementIcon =
+    axis === "x"
+      ? ArrowLeft01Icon
+      : axis === "y"
+        ? ArrowUp01Icon
+        : ArrowDown01Icon;
+  const incrementIcon =
+    axis === "x"
+      ? ArrowRight01Icon
+      : axis === "y"
+        ? ArrowDown01Icon
+        : ArrowUp01Icon;
+
   return (
     <NumberField
       aria-label={label}
       className={"w-full p-0.5"}
       minValue={minValue}
+      step={step}
       value={value}
       onChange={(next) => {
         if (Number.isFinite(next)) onChange(next);
@@ -144,11 +171,11 @@ function DimensionField({
       <Label className="text-xs text-default-500">{label}</Label>
       <NumberField.Group>
         <NumberField.DecrementButton>
-          <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+          <HugeiconsIcon icon={decrementIcon} size={16} />
         </NumberField.DecrementButton>
         <NumberField.Input />
         <NumberField.IncrementButton>
-          <HugeiconsIcon icon={ArrowUp01Icon} size={16} />
+          <HugeiconsIcon icon={incrementIcon} size={16} />
         </NumberField.IncrementButton>
       </NumberField.Group>
     </NumberField>
@@ -209,6 +236,12 @@ export function ShapePropertiesContent({
   const setShapeFill = usePdfEditorStore((s) => s.setShapeFill);
   const setShapeStroke = usePdfEditorStore((s) => s.setShapeStroke);
   const setShapeStrokeWidth = usePdfEditorStore((s) => s.setShapeStrokeWidth);
+  const isMobile = useIsMobile();
+  // Touch targets are big and imprecise compared to a mouse — moving an
+  // annotation 1px per tap means a user has to tap the arrow ~50 times to
+  // shift it a noticeable amount. Bump the step on mobile so each tap is
+  // ~one finger-tip's worth of movement; keep desktop at 1 for precision.
+  const positionStep = isMobile ? 10 : 1;
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [selectedProps, setSelectedProps] =
     useState<SelectedObjectProps | null>(null);
@@ -696,18 +729,32 @@ export function ShapePropertiesContent({
 
           <div className={sectionWrapperClass}>
             <Section title="Position">
+              {/* Horizontal strip (mobile bottom dock): stack X over Y in
+                  a single column. Two NumberFields side-by-side in the
+                  ~160px the strip allotted per section were squeezed
+                  below HeroUI's group minimum, causing the increment
+                  buttons to visually bleed into the next field. Vertical
+                  stack at `w-32` keeps each field at full readable width
+                  while staying compact horizontally. Desktop right rail
+                  keeps the 2-col grid since the sidebar is wide enough. */}
               <div
                 className={
-                  isHorizontal ? "flex w-40 gap-2" : "grid grid-cols-2 gap-2"
+                  isHorizontal
+                    ? "flex w-32 flex-col gap-2"
+                    : "grid grid-cols-2 gap-2"
                 }
               >
                 <DimensionField
+                  axis="x"
                   label="X"
+                  step={positionStep}
                   value={selectedProps.left}
                   onChange={(left) => applyToSelectedObject({ left })}
                 />
                 <DimensionField
+                  axis="y"
                   label="Y"
+                  step={positionStep}
                   value={selectedProps.top}
                   onChange={(top) => applyToSelectedObject({ top })}
                 />
@@ -719,7 +766,9 @@ export function ShapePropertiesContent({
             <Section title="Size">
               <div
                 className={
-                  isHorizontal ? "flex w-40 gap-2" : "grid grid-cols-2 gap-2"
+                  isHorizontal
+                    ? "flex w-32 flex-col gap-2"
+                    : "grid grid-cols-2 gap-2"
                 }
               >
                 <DimensionField

@@ -11,9 +11,12 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotations-editor";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extract-images-editor";
+import { useFormFieldsEditor } from "@/lib/client/hooks/pdf-editor/use-form-fields-editor";
+import { usePageNumbersEditor } from "@/lib/client/hooks/pdf-editor/use-page-numbers-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
@@ -21,6 +24,11 @@ import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
 import { remapFabricAfterPageOps } from "@/lib/client/pdf-editor/remap-fabric-after-page-ops";
+import {
+  detectPageNumberFormat,
+  formatPageNumberLabel,
+  renumberPageNumbersInFabricJson,
+} from "@/lib/client/pdf-editor/renumber-page-numbers";
 import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -31,6 +39,8 @@ import { BottomDock } from "./BottomDock";
 import { CompressModal } from "./CompressModal";
 import { CreatePdfModal } from "./CreatePdfModal";
 import { FindReplaceModal } from "./FindReplaceModal";
+import { FormFieldsModal } from "./FormFieldsModal";
+import { PageNumbersModal } from "./PageNumbersModal";
 import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
@@ -105,6 +115,9 @@ function EditorLayout() {
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const reorderPages = usePdfEditorStore((s) => s.reorderPages);
+  const replaceFabricJsonByPage = usePdfEditorStore(
+    (s) => s.replaceFabricJsonByPage,
+  );
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
@@ -115,6 +128,9 @@ function EditorLayout() {
   useEditorNavigationSave(fabricCanvas);
   useExportEditor(fabricCanvas);
   useExtractImagesEditor(fabricCanvas);
+  usePageNumbersEditor(fabricCanvas);
+  useFormFieldsEditor(fabricCanvas);
+  useAnnotationsEditor(fabricCanvas);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
@@ -128,8 +144,71 @@ function EditorLayout() {
       }
 
       reorderPages(fromDisplay, toDisplay);
+
+      // After the reorder, page-number IText overlays on each page
+      // still read the OLD display number ("Page 3 of 10" stuck on
+      // what is now slot 1). The store's reorder doesn't touch overlay
+      // contents — it only permutes `pageOrder`. Walk the (source-keyed)
+      // fabricJsonByPage and rewrite each detected page-number label
+      // to match its NEW display slot. No-op when no page-number
+      // overlays exist.
+      const afterState = usePdfEditorStore.getState();
+      const newPageOrder = afterState.pageOrder;
+      const sourceToDisplay = new Map<number, number>();
+
+      newPageOrder.forEach((sourceIdx, i) => {
+        sourceToDisplay.set(sourceIdx, i + 1);
+      });
+
+      const renumbered = renumberPageNumbersInFabricJson(
+        afterState.fabricJsonByPage,
+        (sourceKey) => sourceToDisplay.get(sourceKey) ?? null,
+      );
+
+      if (renumbered !== afterState.fabricJsonByPage) {
+        replaceFabricJsonByPage(renumbered);
+
+        // The stored JSON now matches the new arrangement, but the
+        // LIVE canvas (currently mounted on whatever source page the
+        // user was viewing) still holds the old IText instance with
+        // the stale label. If that source page has a page-number
+        // overlay, update its `text` in place so the user sees the
+        // new number without a remount.
+        if (fabricCanvas) {
+          const currentSource =
+            afterState.pageOrder[afterState.currentPage - 1];
+          const currentSlot = sourceToDisplay.get(currentSource);
+          const totalPages = newPageOrder.length;
+
+          if (currentSlot !== undefined) {
+            fabricCanvas.getObjects().forEach((obj) => {
+              const editorType = (obj as { editorType?: string }).editorType;
+
+              if (editorType !== "pageNumber") return;
+              const iText = obj as unknown as {
+                text?: string;
+                set: (key: string, value: unknown) => void;
+                dirty?: boolean;
+              };
+              const detected = detectPageNumberFormat(String(iText.text ?? ""));
+
+              if (!detected) return;
+              const newLabel = formatPageNumberLabel(
+                detected.format,
+                currentSlot,
+                totalPages,
+              );
+
+              if (iText.text === newLabel) return;
+              iText.set("text", newLabel);
+              iText.dirty = true;
+            });
+            fabricCanvas.requestRenderAll();
+          }
+        }
+      }
     },
-    [currentPage, fabricCanvas, reorderPages],
+    [currentPage, fabricCanvas, replaceFabricJsonByPage, reorderPages],
   );
 
   const handleManagePagesSave = useCallback(
@@ -160,12 +239,20 @@ function EditorLayout() {
           oldHistoryByPage: historyByPage,
           oldHistoryIndexByPage: historyIndexByPage,
         });
+        // Reordering / deleting / duplicating pages leaves the
+        // page-number IText labels stale ("Page 5 of 10" stuck on what
+        // is now slot 2). Renumber overlays here so the labels match
+        // the new slot order. No-op when no page-number overlays exist
+        // — returns the same Map by reference.
+        const renumberedFabricJson = renumberPageNumbersInFabricJson(
+          remapped.fabricJsonByPage,
+        );
         const newPageCount = snapshot.pages.length;
         const clampedPage = Math.min(currentPage, Math.max(1, newPageCount));
 
         applyManagePagesSave({
           currentPage: clampedPage,
-          fabricJsonByPage: remapped.fabricJsonByPage,
+          fabricJsonByPage: renumberedFabricJson,
           file: newFile,
           historyByPage: remapped.historyByPage,
           historyIndexByPage: remapped.historyIndexByPage,
@@ -306,6 +393,8 @@ export function PdfEditorShell() {
       />
       <CompressModal />
       <PasswordModal />
+      <PageNumbersModal />
+      <FormFieldsModal />
     </div>
   );
 }

@@ -210,6 +210,32 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
         }
       };
 
+      // Last-chance recovery: drain localStorage synchronously and try to
+      // settle from a payload that's already been written there. Used when
+      // the popup closes (or the timer fires) before the `storage` event
+      // had a chance to deliver — which we've seen happen on Chrome under
+      // strict COOP, where Google's own redirect handling can race the
+      // popup close with our event-loop turn. Returns true if a usable
+      // payload was found and consumed.
+      const drainStoredPayload = (): boolean => {
+        try {
+          const raw = window.localStorage.getItem(OAUTH_STORAGE_KEY);
+
+          if (!raw) return false;
+          const data = JSON.parse(raw) as Partial<OAuthMessagePayload> | null;
+
+          if (!data || data.source !== "pdfedits-oauth") return false;
+          log("recovered payload from localStorage on fallback");
+          handlePayload(data);
+
+          return hasReceived;
+        } catch (err) {
+          log("localStorage drain failed", err);
+
+          return false;
+        }
+      };
+
       // Best-effort "user closed the popup" detector. Under strict COOP
       // `popup.closed` reads throw a SecurityError DOMException — caught
       // + silently dropped. Anything else (genuinely unexpected) gets
@@ -223,8 +249,20 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
             if (hasReceived) {
               return;
             }
-            cleanup();
-            reject(new Error("Sign-in popup was closed."));
+            // Race: the popup wrote its token to localStorage right
+            // before closing, but the `storage` event hasn't reached us
+            // yet (or never will — Chrome occasionally drops `storage`
+            // events when the writing window unloads in the same task).
+            // Give the event loop a brief grace, then drain localStorage
+            // synchronously. If a payload is there, we settle via that;
+            // otherwise treat it as a genuine cancel.
+            window.clearInterval(closedPoll);
+            window.setTimeout(() => {
+              if (hasReceived) return;
+              if (drainStoredPayload()) return;
+              cleanup();
+              reject(new Error("Sign-in popup was closed."));
+            }, 300);
           }
         } catch (err) {
           if (
@@ -245,6 +283,10 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
       }, 500);
 
       const timer = window.setTimeout(() => {
+        // Same recovery path as the popup-close branch: a slow OAuth
+        // round-trip may have written the token to storage but missed the
+        // event. Don't time out without checking.
+        if (drainStoredPayload()) return;
         cleanup();
         reject(new Error("Sign-in timed out. Please try again."));
       }, timeoutMs);

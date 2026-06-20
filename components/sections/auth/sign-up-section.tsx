@@ -31,7 +31,7 @@ export function SignUpSection() {
       alternateLabel="Sign in"
       alternateText="Already have an account?"
       description="Create your account with email and password, then confirm the verification code we send before you land back in the app."
-      title="Create your Content Clicks LLC account"
+      title="Create your PDFedits.io account"
     >
       {verificationMode ? (
         <Form onSubmit={handleVerificationSubmit}>

@@ -6,7 +6,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Dropdown, Label, Separator } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -34,10 +35,38 @@ export function SiteNavbar() {
   const showSignedOut = isLoaded && !isSignedIn;
   const showSignedIn = isLoaded && isSignedIn;
 
+  // Mobile drawer is controlled so every action that navigates can
+  // explicitly close it before pushing the route. The previous
+  // uncontrolled drawer just navigated under the open backdrop, which
+  // on mobile left the menu covering the new page (QA report
+  // 2026-06-16). `Drawer.CloseTrigger` (the × button) still works via
+  // the same `setIsDrawerOpen(false)`.
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const navigateAndCloseDrawer = (href: string): void => {
+    setIsDrawerOpen(false);
+    router.push(href);
+  };
+
+  // Close the drawer whenever the route changes. The explicit
+  // `setIsDrawerOpen(false)` inside `navigateAndCloseDrawer` already
+  // covers Button/Link onPress paths, but Sign In / Sign Up Free targets
+  // (/sign-in, /sign-up) sit inside the SAME `(marketing)` layout group
+  // as the home page, so the navbar — and the drawer's React state —
+  // persists across the transition. If the click → state update race
+  // loses to Next.js's navigation cycle on iOS Safari (reported by QA
+  // 2026-06-17), the drawer can stay visually open over the auth page.
+  // A pathname-driven sync close makes the drawer fully predictable:
+  // any route change clears it, regardless of which path got us there.
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsDrawerOpen(false);
+  }, [pathname]);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-default-200/80 bg-[var(--color-background)]/90 backdrop-blur-md dark:border-default-800/80">
       <div className="mx-auto flex w-full max-w-[min(100%,104rem)] items-center gap-4 px-6 py-3.5 sm:px-8">
-        <Drawer>
+        <Drawer isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <Button
             isIconOnly
             aria-label="Open navigation menu"
@@ -55,7 +84,7 @@ export function SiteNavbar() {
                   <Drawer.Heading className="flex items-center gap-2">
                     <Image
                       priority
-                      alt="Content Clicks LLC logo"
+                      alt="PDFedits.io logo"
                       className="size-9 object-contain"
                       height={36}
                       src="/logo.svg"
@@ -76,6 +105,10 @@ export function SiteNavbar() {
                         key={item.href}
                         className="rounded-lg px-3 py-2 text-sm font-medium text-default-500 transition-colors hover:bg-default-100 hover:text-foreground"
                         href={item.href}
+                        // `<Link>` doesn't trigger our React state — close
+                        // the drawer manually on tap. Without this the
+                        // drawer overlays the destination page.
+                        onClick={() => setIsDrawerOpen(false)}
                       >
                         {item.label}
                       </Link>
@@ -92,13 +125,17 @@ export function SiteNavbar() {
                         <Button
                           className="w-full"
                           variant="ghost"
-                          onPress={() => router.push(ROUTES.AUTH.SIGN_IN)}
+                          onPress={() =>
+                            navigateAndCloseDrawer(ROUTES.AUTH.SIGN_IN)
+                          }
                         >
                           Sign in
                         </Button>
                         <Button
                           className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
-                          onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
+                          onPress={() =>
+                            navigateAndCloseDrawer(ROUTES.AUTH.SIGN_UP)
+                          }
                         >
                           Sign up free
                         </Button>
@@ -109,7 +146,9 @@ export function SiteNavbar() {
                       <Button
                         className="w-full"
                         variant="outline"
-                        onPress={() => router.push(ROUTES.APP.DASHBOARD)}
+                        onPress={() =>
+                          navigateAndCloseDrawer(ROUTES.APP.DASHBOARD)
+                        }
                       >
                         Dashboard
                       </Button>
@@ -127,7 +166,7 @@ export function SiteNavbar() {
         >
           <Image
             priority
-            alt="Content Clicks LLC logo"
+            alt="PDFedits.io logo"
             className="size-9 object-contain sm:size-10"
             height={40}
             src="/logo.svg"

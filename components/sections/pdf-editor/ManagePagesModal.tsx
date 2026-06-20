@@ -25,11 +25,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Button,
   ColorArea,
-  ColorPicker,
   ColorSlider,
   Label,
   Modal,
   NumberField,
+  Popover,
   Tooltip,
 } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -115,38 +115,134 @@ function ManagePagesToolbarButton({
   );
 }
 
-// Visual-only variant used inside a parent that is already a button (e.g.
-// HeroUI's `ColorPicker.Trigger`). Renders a span so we don't create the
-// invalid `<button>` inside `<button>` DOM that triggers a React hydration
-// error.
-type ManagePagesToolbarButtonContentProps = {
-  ariaLabel?: string;
-  disabled?: boolean;
+/**
+ * Background-color picker for selected pages.
+ *
+ * Why this wraps `ColorPicker` instead of using its `onChange` directly:
+ * the underlying draft reducer pushes a new history entry on EVERY
+ * `applyChange` call, and `ColorPicker`'s `onChange` fires per
+ * drag-tick of the hue slider / SB area. Wiring the draft directly
+ * means hundreds of history entries per pick and "Undo" rolling back
+ * one micro-step at a time instead of one user action.
+ *
+ * Fix: hold the in-flight color in LOCAL state while the popover is
+ * open. Only call `onApply` once when the user presses Apply — that's
+ * the single history-pushing event the Undo button can roll back.
+ * Cancel discards the local state without ever touching the draft.
+ * (QA report 2026-06-16.)
+ */
+type BackgroundColorPickerControlProps = {
+  isDisabled: boolean;
+  /** Hex string the user committed. Called once per Apply press. */
+  onApply: (color: string) => void;
   icon: ToolbarItem["icon"];
   label: string;
 };
 
-function ManagePagesToolbarButtonContent({
-  ariaLabel,
-  disabled = false,
+function BackgroundColorPickerControl({
+  isDisabled,
+  onApply,
   icon,
   label,
-}: ManagePagesToolbarButtonContentProps) {
-  return (
-    <Tooltip delay={300}>
+}: BackgroundColorPickerControlProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  // Initial pick — neutral mid-grey. The user can drag immediately;
+  // local state means the draft isn't touched until Apply.
+  const [draftColor, setDraftColor] = useState<string>("#808080");
+
+  // Reset draft on every (re)open so a previously cancelled session
+  // doesn't leak forward.
+  const handleOpenChange = (open: boolean): void => {
+    setIsOpen(open);
+    if (open) setDraftColor("#808080");
+  };
+
+  const handleApply = (): void => {
+    onApply(draftColor);
+    setIsOpen(false);
+  };
+
+  // Switched away from `ColorPicker` + `ColorPicker.Popover` because
+  // RAC's `ColorPicker` doesn't expose top-level `isOpen` and the
+  // `Trigger` couldn't drive the controlled popover state (clicks
+  // didn't open the menu — QA-reported 2026-06-16). The regular
+  // `<Popover>` follows the controlled pattern used in
+  // `identity-popover.tsx` and gives us full open-state control plus
+  // Apply / Cancel.
+  // When disabled, render the button-styled visual without the
+  // Popover so taps don't open an empty colour picker against
+  // nothing-selected pages.
+  if (isDisabled) {
+    return (
       <span
-        aria-label={ariaLabel ?? label}
-        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
-        data-disabled={disabled || undefined}
-        role="presentation"
+        aria-disabled
+        aria-label={label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(true)}`}
+        role="button"
       >
         <HugeiconsIcon icon={icon} size={18} />
         <span className="whitespace-nowrap leading-tight">{label}</span>
       </span>
-      <Tooltip.Content>
-        <p>{label}</p>
-      </Tooltip.Content>
-    </Tooltip>
+    );
+  }
+
+  return (
+    <Popover isOpen={isOpen} onOpenChange={handleOpenChange}>
+      <Popover.Trigger
+        aria-label={label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(false)}`}
+      >
+        <HugeiconsIcon icon={icon} size={18} />
+        <span className="whitespace-nowrap leading-tight">{label}</span>
+      </Popover.Trigger>
+      <Popover.Content offset={8} placement="bottom">
+        <Popover.Dialog className="!min-w-[260px] !p-3">
+          <div className="flex flex-col gap-3">
+            <ColorArea
+              aria-label={label}
+              className="max-w-full"
+              colorSpace="hsb"
+              value={draftColor}
+              xChannel="saturation"
+              yChannel="brightness"
+              onChange={(color) => setDraftColor(color.toString("hex"))}
+            >
+              <ColorArea.Thumb />
+            </ColorArea>
+            <ColorSlider
+              channel="hue"
+              className="gap-1 px-1"
+              colorSpace="hsb"
+              value={draftColor}
+              onChange={(color) => setDraftColor(color.toString("hex"))}
+            >
+              <ColorSlider.Track>
+                <ColorSlider.Thumb />
+              </ColorSlider.Track>
+            </ColorSlider>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <span
+                aria-hidden
+                className="h-6 w-12 rounded border border-default-300"
+                style={{ backgroundColor: draftColor }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => setIsOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onPress={handleApply}>
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
   );
 }
 
@@ -356,46 +452,15 @@ export function ManagePagesModal({
 
                   if (tool.id === "background-color") {
                     return (
-                      <ColorPicker
+                      <BackgroundColorPickerControl
                         key={tool.id}
-                        onChange={(color) =>
-                          draft.setSelectedBackgroundColor(
-                            color.toString("hex"),
-                          )
+                        icon={tool.icon}
+                        isDisabled={disabled}
+                        label={tool.label}
+                        onApply={(color) =>
+                          draft.setSelectedBackgroundColor(color)
                         }
-                      >
-                        <ColorPicker.Trigger
-                          aria-label="Page background color"
-                          isDisabled={disabled}
-                        >
-                          <ManagePagesToolbarButtonContent
-                            ariaLabel="Page background color"
-                            disabled={disabled}
-                            icon={tool.icon}
-                            label={tool.label}
-                          />
-                        </ColorPicker.Trigger>
-                        <ColorPicker.Popover>
-                          <ColorArea
-                            aria-label="Page background color"
-                            className="max-w-full"
-                            colorSpace="hsb"
-                            xChannel="saturation"
-                            yChannel="brightness"
-                          >
-                            <ColorArea.Thumb />
-                          </ColorArea>
-                          <ColorSlider
-                            channel="hue"
-                            className="gap-1 px-1"
-                            colorSpace="hsb"
-                          >
-                            <ColorSlider.Track>
-                              <ColorSlider.Thumb />
-                            </ColorSlider.Track>
-                          </ColorSlider>
-                        </ColorPicker.Popover>
-                      </ColorPicker>
+                      />
                     );
                   }
 

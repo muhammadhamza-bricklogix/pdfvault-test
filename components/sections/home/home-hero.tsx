@@ -6,14 +6,17 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { useUploadCloudDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { HomeCloudUploadRow } from "./home-cloud-upload-row";
@@ -27,6 +30,17 @@ export function HomeHero() {
   const uploadCloudMutation = useUploadCloudDocumentMutation();
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  // Holds the cloud upload waiting on a duplicate-name decision from the
+  // user. Same UX as the device upload's `useUploadWithDuplicateCheck`:
+  // we surface the existing filename in a modal and let the user pick
+  // overwrite (re-uploads targeting `existingDocumentId`) or ignore
+  // (drops the upload). Cleared when the modal closes either way.
+  const [pendingCloudDuplicate, setPendingCloudDuplicate] = useState<{
+    existingDocumentId: string;
+    filename: string;
+    selection: CloudSelectedFile;
+    safeName: string;
+  } | null>(null);
 
   const requireSignInForCloud = useCallback(() => {
     toast.info({
@@ -64,6 +78,27 @@ export function HomeHero() {
     }
   };
 
+  const finalizeCloudUpload = async (
+    selection: CloudSelectedFile,
+    safeName: string,
+    documentId?: string,
+  ) => {
+    const uploaded = await uploadCloudMutation.mutateAsync({
+      accessToken: selection.accessToken,
+      documentId,
+      fileId: selection.id,
+      fileName: safeName,
+      mimeType: selection.mimeType,
+      provider: selection.provider,
+    });
+
+    setFile(null);
+    setCurrentDocument({ id: uploaded.id, name: uploaded.filename });
+    setCloudSelection(selection);
+    toast.info({ title: "Opening imported document..." });
+    router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${uploaded.id}`);
+  };
+
   const handleCloudUpload = async (selection: CloudSelectedFile) => {
     if (!isSignedIn) {
       requireSignInForCloud();
@@ -80,19 +115,53 @@ export function HomeHero() {
         ? `${selection.name}.pdf`
         : selection.name;
 
-    const uploaded = await uploadCloudMutation.mutateAsync({
-      accessToken: selection.accessToken,
-      fileId: selection.id,
-      fileName: safeName,
-      mimeType: selection.mimeType,
-      provider: selection.provider,
-    });
+    // Duplicate-name guard — same UX as the device upload path
+    // (`useUploadWithDuplicateCheck`). Cloud uploads were skipping this
+    // check entirely (QA report 2026-06-18: "while uploading the file
+    // from google drive it failed to check the duplicate file name").
+    // On match: stash the pending upload, surface the modal, and let
+    // the user pick overwrite vs ignore. If the lookup itself fails
+    // (network / auth), fall through to the upload so a transient
+    // error doesn't block the user.
+    try {
+      const existing = await findDuplicateByFilename(safeName);
 
-    setFile(null);
-    setCurrentDocument({ id: uploaded.id, name: uploaded.filename });
-    setCloudSelection(selection);
-    toast.info({ title: "Opening imported document..." });
-    router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${uploaded.id}`);
+      if (existing) {
+        setPendingCloudDuplicate({
+          existingDocumentId: existing.id,
+          filename: existing.filename,
+          selection,
+          safeName,
+        });
+
+        return;
+      }
+    } catch (err) {
+      logger.error("Cloud duplicate-name check failed", err);
+    }
+
+    await finalizeCloudUpload(selection, safeName);
+  };
+
+  const handleCloudDuplicateOverwrite = () => {
+    if (!pendingCloudDuplicate) return;
+    const pending = pendingCloudDuplicate;
+
+    setPendingCloudDuplicate(null);
+    void finalizeCloudUpload(
+      pending.selection,
+      pending.safeName,
+      pending.existingDocumentId,
+    ).catch((err: unknown) => {
+      toast.error({
+        title: "Cloud upload failed",
+        description: err instanceof Error ? err.message : undefined,
+      });
+    });
+  };
+
+  const handleCloudDuplicateIgnore = () => {
+    setPendingCloudDuplicate(null);
   };
 
   const cloudImportAllowed = isLoaded && Boolean(isSignedIn);
@@ -142,6 +211,11 @@ export function HomeHero() {
 
         <HomeStats />
       </div>
+      <DuplicateUploadModal
+        filename={pendingCloudDuplicate?.filename ?? null}
+        onIgnore={handleCloudDuplicateIgnore}
+        onOverwrite={handleCloudDuplicateOverwrite}
+      />
     </section>
   );
 }

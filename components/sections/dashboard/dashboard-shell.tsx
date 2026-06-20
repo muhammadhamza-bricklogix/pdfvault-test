@@ -36,7 +36,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     href: ROUTES.APP.DASHBOARD,
     icon: File01Icon,
     isActive: (p) => p === ROUTES.APP.DASHBOARD,
-    label: "My files",
+    label: "My PDFs",
   },
   {
     href: `${ROUTES.PUBLIC.HOME}#pdf-tools`,
@@ -77,7 +77,7 @@ function SidebarBody({
         >
           <Image
             priority
-            alt="Content Clicks LLC"
+            alt="PDFedits.io"
             className="size-7 object-contain"
             height={28}
             src="/logo.svg"
@@ -244,7 +244,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         >
           <Image
             priority
-            alt="Content Clicks LLC logo"
+            alt="PDFedits.io logo"
             className="size-6 object-contain"
             height={24}
             src="/logo.svg"

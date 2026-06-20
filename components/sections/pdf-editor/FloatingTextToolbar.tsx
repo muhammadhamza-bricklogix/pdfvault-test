@@ -3,12 +3,14 @@
 import type { Canvas, IText } from "fabric";
 
 import {
+  Delete02Icon,
   TextBoldIcon,
   TextItalicIcon,
   TextUnderlineIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Button,
   ColorArea,
   ColorPicker,
   ColorSlider,
@@ -20,8 +22,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Toolbar,
+  Tooltip,
 } from "@heroui/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+const TOOLBAR_GAP = 12;
 
 type TextStyle = {
   color: string;
@@ -62,6 +67,12 @@ export function FloatingTextToolbar({
 }: FloatingTextToolbarProps) {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
+  const [anchor, setAnchor] = useState({
+    boundBottom: 0,
+    boundTop: 0,
+    left: 0,
+  });
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
   const [style, setStyle] = useState<TextStyle>({
     color: "#000000",
     fontFamily: "Helvetica",
@@ -106,9 +117,10 @@ export function FloatingTextToolbar({
         ? canvasRect.top - (containerRect?.top ?? 0)
         : 0;
 
-      setPosition({
+      setAnchor({
+        boundBottom: offsetY + bound.top + bound.height,
+        boundTop: offsetY + bound.top,
         left: offsetX + bound.left,
-        top: offsetY + bound.top - 48, // 48px above the object
       });
       setVisible(true);
     };
@@ -130,6 +142,19 @@ export function FloatingTextToolbar({
       fabricCanvas.off("object:moving", showToolbar);
     };
   }, [canvasContainerRef, fabricCanvas]);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const el = toolbarRef.current;
+
+    if (!el) return;
+
+    const height = el.offsetHeight || 36;
+    const aboveTop = anchor.boundTop - height - TOOLBAR_GAP;
+    const top = aboveTop >= 0 ? aboveTop : anchor.boundBottom + TOOLBAR_GAP;
+
+    setPosition({ left: anchor.left, top });
+  }, [anchor, visible]);
 
   const applyStyle = (patch: Partial<TextStyle>) => {
     const obj = activeObjRef.current;
@@ -200,14 +225,15 @@ export function FloatingTextToolbar({
 
   return (
     <div
+      ref={toolbarRef}
       className="pointer-events-auto absolute z-50"
       style={{ left: position.left, top: Math.max(0, position.top) }}
     >
-      <Toolbar isAttached aria-label="Text formatting">
+      <Toolbar isAttached aria-label="Text formatting" className="py-0.5">
         {/* Font family */}
         <Select
           aria-label="Font family"
-          className="w-36"
+          className="w-32"
           selectedKey={style.fontFamily}
           onSelectionChange={(key) => applyStyle({ fontFamily: key as string })}
         >
@@ -232,7 +258,7 @@ export function FloatingTextToolbar({
         {/* Font size */}
         <input
           aria-label="Font size"
-          className="w-14 rounded border border-default-200 bg-transparent px-2 py-1 text-sm"
+          className="h-7 w-12 rounded border border-default-200 bg-transparent px-1.5 text-xs"
           max={200}
           min={6}
           type="number"
@@ -256,15 +282,15 @@ export function FloatingTextToolbar({
           }}
         >
           <ToggleButton isIconOnly aria-label="Bold" id="bold">
-            <HugeiconsIcon icon={TextBoldIcon} size={16} />
+            <HugeiconsIcon icon={TextBoldIcon} size={14} />
           </ToggleButton>
           <ToggleButton isIconOnly aria-label="Italic" id="italic">
             <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={TextItalicIcon} size={16} />
+            <HugeiconsIcon icon={TextItalicIcon} size={14} />
           </ToggleButton>
           <ToggleButton isIconOnly aria-label="Underline" id="underline">
             <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={TextUnderlineIcon} size={16} />
+            <HugeiconsIcon icon={TextUnderlineIcon} size={14} />
           </ToggleButton>
         </ToggleButtonGroup>
 
@@ -296,6 +322,39 @@ export function FloatingTextToolbar({
             </ColorSlider>
           </ColorPicker.Popover>
         </ColorPicker>
+
+        <Separator />
+
+        {/* Delete the currently-selected IText (annotation, signature
+            stamp, user-added text, page number, etc.). Keyboard
+            Delete/Backspace also works via PdfViewerCanvas, but a
+            visible button is required on mobile where there is no
+            keyboard and on desktop for discoverability. Pressing this
+            removes the object, clears the active selection so the
+            toolbar hides itself, and re-renders the canvas. */}
+        <Tooltip>
+          <Button
+            isIconOnly
+            aria-label="Delete"
+            className="text-danger"
+            size="sm"
+            variant="ghost"
+            onPress={() => {
+              const fc = fabricCanvas;
+              const obj = activeObjRef.current;
+
+              if (!fc || !obj) return;
+              fc.remove(obj);
+              fc.discardActiveObject();
+              fc.requestRenderAll();
+            }}
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} />
+          </Button>
+          <Tooltip.Content>
+            <p>Delete</p>
+          </Tooltip.Content>
+        </Tooltip>
       </Toolbar>
     </div>
   );

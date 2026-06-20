@@ -7,7 +7,7 @@ import { LegalDocumentLayout } from "@/components/sections/legal/legal-document-
 
 export const metadata: Metadata = {
   description:
-    "Reach the Content Clicks LLC team — replies typically within 24 hours.",
+    "Reach the PDFedits.io team — replies typically within 24 hours.",
   title: "Contact Us",
 };
 

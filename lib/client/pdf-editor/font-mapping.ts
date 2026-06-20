@@ -110,4 +110,25 @@ export class FontCache {
 
     return font;
   }
+
+  /**
+   * Returns ONLY the StandardFont fallback for the given family/weight/style
+   * combo. Used by `drawIText` when the user's edit introduces characters
+   * the embedded source font can't encode — most commonly the regular space
+   * character, which PDFs render via advance operators rather than a real
+   * glyph, so subset fonts often omit it entirely. Without this escape
+   * hatch, `sanitizeTextForFont` replaces those characters with "?", and
+   * the user sees `??` at the start of a word they typed with leading
+   * spaces (QA report 2026-06-17). Helvetica/Times/Courier StandardFonts
+   * are WinAnsi-encoded so they always carry space + ASCII punctuation.
+   */
+  async getStandardFallback(
+    fontFamily: string,
+    fontWeight: string,
+    fontStyle: string,
+  ): Promise<PDFFont> {
+    const standardFont = resolveStandardFont(fontFamily, fontWeight, fontStyle);
+
+    return this.pdfDoc.embedFont(standardFont);
+  }
 }

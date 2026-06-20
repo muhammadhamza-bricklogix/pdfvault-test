@@ -94,7 +94,7 @@ export const FOOTER_COMPANY_ENTITY = "Content Clicks LLC";
 export const FOOTER_COMPANY_ADDRESS_PLACEHOLDER =
   "Registered business address will be published before launch.";
 
-export const FOOTER_BRAND_NAME = "Content Clicks LLC";
+export const FOOTER_BRAND_NAME = "PDFedits.io";
 
 export const FOOTER_PUBLIC_DOMAIN = "pdfedits.io";
 

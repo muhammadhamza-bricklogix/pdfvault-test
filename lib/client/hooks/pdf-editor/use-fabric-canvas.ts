@@ -97,13 +97,29 @@ export function useFabricCanvas({
 
       if (cancelled || !fabricCanvasRef.current) return;
 
-      // Register custom properties so they survive toJSON() / loadFromJSON()
+      // Register custom properties so they survive toJSON() / loadFromJSON().
+      // `pristine` + `originalText` + `original*` are critical for the
+      // merge pipeline's "did the user actually modify this source text?"
+      // check (see `merge-pdf.ts::isModifiedEditModeText`) AND for the
+      // post-save snapshot reuse (see `applyPostSaveReset`). Without them
+      // in this list, Fabric v6's loadFromJSON discards them, the IText
+      // restored on canvas remount has no `editorType`, and
+      // `useEditTextMode` falls through to re-extracting from pdf.js,
+      // which surfaces both the source text (under the whiteout) AND the
+      // edit drawn on top → visible double layer in the editor after
+      // save (QA report 2026-06-17).
       for (const property of [
         "editorType",
         "noteText",
         "linkUrl",
         "pdfTextWidth",
         "shapeAspectLocked",
+        "pristine",
+        "originalText",
+        "originalLeft",
+        "originalTop",
+        "originalWidth",
+        "originalHeight",
       ]) {
         if (!FabricObject.customProperties.includes(property)) {
           FabricObject.customProperties.push(property);
@@ -245,6 +261,62 @@ export function useFabricCanvas({
     if (upper) upper.style.touchAction = action;
     if (wrapper) wrapper.style.touchAction = action;
   }, [activeTool, fabricCanvas]);
+
+  // --- Mobile drag of selected objects ---
+  // On non-draw tools we keep `touch-action: pan-x pan-y` so the user
+  // can 1-finger swipe to pan a zoomed-in page on iOS Safari (see the
+  // trio comment above). The downside: when the touch starts ON A
+  // FABRIC OBJECT (annotation, IText, shape stamp, etc.), the browser
+  // also wants to pan — Fabric ends up wrestling with the browser for
+  // the gesture and the object doesn't follow the finger. Reported
+  // 2026-06-17: annotations couldn't be dragged on mobile even though
+  // tap-to-select worked.
+  //
+  // Fix: on touchstart, hit-test the canvas. If the touch lands on a
+  // selectable object, call `preventDefault()` synchronously so iOS
+  // hands the remaining touchmove events to Fabric (the existing
+  // mouse:move handler then drags the object). Empty-area touches are
+  // unaffected — they still pan the page as before.
+  useEffect(() => {
+    const fc = fabricRef.current;
+
+    if (!fc) return;
+    const upper = (fc as unknown as { upperCanvasEl?: HTMLCanvasElement })
+      .upperCanvasEl;
+
+    if (!upper) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+
+      if (!t) return;
+      // Fabric v6's `findTarget` reads clientX/Y off the event arg.
+      // Synthesising a partial MouseEvent is enough — it doesn't need a
+      // full event object.
+      const target = (
+        fc as unknown as {
+          findTarget: (e: { clientX: number; clientY: number }) => unknown;
+        }
+      ).findTarget({ clientX: t.clientX, clientY: t.clientY });
+
+      if (!target) return;
+      // Don't interfere when an IText is being edited — its own pointer
+      // handling owns the touch for cursor placement.
+      const isITextEditing =
+        (target as { isEditing?: boolean }).isEditing === true;
+      const isSelectable =
+        (target as { selectable?: boolean }).selectable !== false;
+
+      if (isSelectable && !isITextEditing) e.preventDefault();
+    };
+
+    upper.addEventListener("touchstart", onTouchStart, { passive: false });
+
+    return () => {
+      upper.removeEventListener("touchstart", onTouchStart);
+    };
+  }, [fabricCanvas]);
 
   // --- Resize + zoom: keep the existing canvas, don't re-mount ---
   // Critical for sharp text + smooth UX when the user zooms in/out.

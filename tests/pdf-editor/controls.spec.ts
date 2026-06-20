@@ -19,7 +19,7 @@ test.describe("PDF editor — top-bar controls", () => {
     const zoomLabel = page.locator("text=/^\\d+%$/").first();
     const before = (await zoomLabel.textContent())?.trim();
 
-    await page.getByRole("button", { name: /^\+$/ }).first().click();
+    await page.getByRole("button", { name: /zoom in/i }).first().click();
     await page.waitForTimeout(150);
 
     const after = (await zoomLabel.textContent())?.trim();
@@ -33,7 +33,7 @@ test.describe("PDF editor — top-bar controls", () => {
     const label = page.getByText(/Page\s*\d+/i).first();
     const before = (await label.innerText())?.trim();
 
-    await page.getByRole("button", { name: /^›$/ }).first().click();
+    await page.getByRole("button", { name: /next page/i }).first().click();
     await page.waitForTimeout(200);
 
     const after = (await label.innerText())?.trim();

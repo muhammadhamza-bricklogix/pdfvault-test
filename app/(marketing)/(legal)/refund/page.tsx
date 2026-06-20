@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   description:
-    "Refund policy and 14-day money-back guarantee for Content Clicks LLC subscriptions.",
+    "Refund policy and 14-day money-back guarantee for PDFedits.io subscriptions.",
   title: "Refund Policy",
 };
 
@@ -16,7 +16,7 @@ export default function RefundPage() {
   return (
     <LegalDocumentLayout
       ctaEyebrow="FOR ANY REFUND CONCERNS"
-      description="Our commitment to fair and transparent refunds for Content Clicks LLC subscriptions."
+      description="Our commitment to fair and transparent refunds for PDFedits.io subscriptions."
       heroTitle="Refund Policy"
       tocEntries={refundTocEntries}
     >

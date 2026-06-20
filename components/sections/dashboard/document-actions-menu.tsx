@@ -11,14 +11,15 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { toast } from "@/lib/shared/utils/toast";
-
-import { DocumentHistoryDrawer } from "./document-history-drawer";
 
 type Props = {
   document: Document;
@@ -32,6 +33,7 @@ export function DocumentActionsMenu({
   onRename,
 }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const handleOpen = () => {
@@ -126,11 +128,23 @@ export function DocumentActionsMenu({
           <p className="text-danger">Delete</p>
         </Tooltip.Content>
       </Tooltip>
-      <DocumentHistoryDrawer
+      <VersionHistoryModal
         documentId={isHistoryOpen ? doc.id : null}
-        documentName={doc.filename}
         isOpen={isHistoryOpen}
+        // After a successful restore, refresh the documents table so
+        // updatedAt / size / version on this row reflect the restored
+        // state (mirrors the editor's onRestored which reloads the
+        // editor with the new bytes). Also refresh the per-doc detail
+        // cache used by other dashboard surfaces.
         onClose={() => setIsHistoryOpen(false)}
+        onRestored={() => {
+          void queryClient.invalidateQueries({
+            queryKey: documentKeys.lists(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: documentKeys.detail(doc.id),
+          });
+        }}
       />
     </div>
   );

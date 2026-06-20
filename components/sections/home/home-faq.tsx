@@ -19,28 +19,27 @@ type FaqEntry = {
 const ABOUT_FAQ: FaqEntry[] = [
   {
     answer:
-      "Content Clicks LLC is an online workspace to view, edit, annotate, merge, compress, and convert PDFs in your browser — without installing desktop software.",
+      "PDFedits.io is an online workspace to view, edit, annotate, merge, compress, and convert PDFs in your browser — without installing desktop software.",
     id: "about-1",
-    question: "What is Content Clicks LLC?",
+    question: "What is PDFedits.io?",
   },
   {
     answer:
       "No. Open pdfedits.io in a modern browser, upload a file, and start working. We keep tightening editor tools over time, but there’s nothing to install for the web app itself.",
     id: "about-2",
-    question:
-      "Do I need to download or install anything to use Content Clicks LLC?",
+    question: "Do I need to download or install anything to use PDFedits.io?",
   },
   {
     answer:
       "We treat your files seriously. Sessions run over HTTPS; documents you open locally stay in your browser until you choose to save or upload. Always sign out on shared devices.",
     id: "about-3",
-    question: "Is Content Clicks LLC safe to use?",
+    question: "Is PDFedits.io safe to use?",
   },
   {
     answer:
       "Yes. You can combine PDFs and organize pages from the editor — merge multiple files into one document and reorder thumbnails before exporting.",
     id: "about-4",
-    question: "Can I merge PDF files with Content Clicks LLC?",
+    question: "Can I merge PDF files with PDFedits.io?",
   },
   {
     answer:
@@ -67,7 +66,7 @@ const BILLING_FAQ: FaqEntry[] = [
     answer:
       "The product is under active development. Many flows are free during early access; when we introduce paid tiers, we’ll list plans clearly before any charge.",
     id: "bill-1",
-    question: "Is Content Clicks LLC free?",
+    question: "Is PDFedits.io free?",
   },
   {
     answer:
@@ -112,12 +111,12 @@ const SECURITY_FAQ: FaqEntry[] = [
     answer:
       "Cookies help auth, preferences, and analytics. You control non-essential cookies via our cookie notice and Cookie Policy.",
     id: "sec-4",
-    question: "What cookies does Content Clicks LLC use?",
+    question: "What cookies does PDFedits.io use?",
   },
 ];
 
 const TAB_CONFIG = [
-  { id: "about", items: ABOUT_FAQ, label: "About Content Clicks LLC" },
+  { id: "about", items: ABOUT_FAQ, label: "About PDFedits.io" },
   {
     id: "billing",
     items: BILLING_FAQ,
@@ -188,7 +187,7 @@ export function HomeFaq() {
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-base text-default-600 sm:text-lg dark:text-default-400">
           Got questions? Here are the answers to the most common ones about
-          Content Clicks LLC.
+          PDFedits.io.
         </p>
       </div>
 

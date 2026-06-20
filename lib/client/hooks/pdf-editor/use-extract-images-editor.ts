@@ -5,7 +5,6 @@ import type { Canvas as FabricCanvas } from "fabric";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useExtractImagesMutation } from "@/lib/client/query/mutations/pdf-tools.mutation";
-import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -13,33 +12,48 @@ import { toast } from "@/lib/shared/utils/toast";
 
 /**
  * Listens for `editor:extract-images` (dispatched by HamburgerMenu) and
- * runs the extract-images backend call against the user's CURRENT edited
- * PDF — not the original upload.
+ * POSTs the user's `store.file` directly to the extract-images backend.
  *
- * The original bug: `HamburgerMenu.runExtractImages` sent the store's raw
- * `file` straight to the backend. Any images the user added through the
- * editor's image tool live only as Fabric overlay objects until a Save
- * bakes them into the PDF. The backend therefore saw the unedited bytes
- * and either returned 400 (`no images`) or an empty zip — manifesting on
- * the client as "I added images but it says none found."
+ * Why so plain — history of three failed approaches:
  *
- * This hook lives inside the editor shell where the live `fabricCanvas` is
- * available, mirrors `useExportEditor`, and uses `buildEditedPdfBytes`
- * with `bakeOverlays: true` so every user-added image becomes a real
- * embedded image in the bytes we POST.
+ *   1. **Original** (before 2026-06-10 f): posted `store.file` directly.
+ *      Bug: any image the user added in-session via the image tool
+ *      lived only as a Fabric overlay, so the backend never saw it and
+ *      either returned 400 or an empty zip.
+ *
+ *   2. **Inline `buildEditedPdfBytes({ bakeOverlays: true })`** (the (f)
+ *      fix): baked overlays into a fresh buffer, posted that. Bug:
+ *      `mergeFabricEditsIntoPdf` calls `pdfDocument.getPage(n).render({
+ *      operationsFilter })` on the SAME pdf.js doc that `usePageRenderer`
+ *      uses for the live editor canvas. Concurrent renders on a shared
+ *      `PDFPageProxy` race in pdf.js v5 → live canvas drops text, only
+ *      the rasterized layer left.
+ *
+ *   3. **`saveBeforeAction` then post `store.file`** (2026-06-15 a): no
+ *      shared-doc race, but the save flow itself takes Case 3 in
+ *      `mergeFabricEditsIntoPdf` for every page that has any Fabric
+ *      overlay (including the IText layer that `useEditTextMode`
+ *      created from the source text). Case 3 rasterizes the original
+ *      page to PNG and draws Fabric objects on top — selectable text
+ *      becomes pixels. After save, `store.file` is image-only.
+ *      Exporting it gives a PDF with no selectable text. User saw this
+ *      and pushed back hard.
+ *
+ * So we're back to **post `store.file` directly** — accepting the
+ * (1) trade-off: an image the user added in-session is NOT in the
+ * extracted zip unless they hit Save first themselves. That's an
+ * explicit user choice — Save flattens text, so we don't auto-trigger
+ * it from extract-images. If the trade-off bites later we should make
+ * Save preserve text-object pages (Case 1 always for `editModeText`-only
+ * overlays); that's a `merge-pdf.ts` change that needs careful review
+ * because the file is flagged off-limits.
  */
-export function useExtractImagesEditor(fabricCanvas: FabricCanvas | null) {
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
-  const file = usePdfEditorStore((s) => s.file);
+export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
+  // fabricCanvas isn't read directly — the live canvas isn't touched.
+  // Argument retained for call-site signature stability.
   const extractImages = useExtractImagesMutation();
 
   const isRunningRef = useRef(false);
-  const stateRef = useRef({ currentPage, fabricCanvas, file });
-
-  useEffect(() => {
-    stateRef.current = { currentPage, fabricCanvas, file };
-  }, [currentPage, fabricCanvas, file]);
-
   const extractRef = useRef(extractImages);
 
   useEffect(() => {
@@ -49,11 +63,7 @@ export function useExtractImagesEditor(fabricCanvas: FabricCanvas | null) {
   const handleExtract = useCallback(async () => {
     if (isRunningRef.current) return;
 
-    const {
-      currentPage: page,
-      fabricCanvas: liveCanvas,
-      file: sourceFile,
-    } = stateRef.current;
+    const sourceFile = usePdfEditorStore.getState().file;
 
     if (!sourceFile) {
       toast.error({
@@ -67,28 +77,14 @@ export function useExtractImagesEditor(fabricCanvas: FabricCanvas | null) {
     isRunningRef.current = true;
 
     try {
-      // Bake overlays so user-added images (image tool, signature, watermark
-      // image) become real embedded images that the backend will recognise.
-      const bytes = await buildEditedPdfBytes({
-        bakeOverlays: true,
-        currentPage: page,
-        fabricCanvas: liveCanvas,
+      const result = await extractRef.current.mutateAsync({
         file: sourceFile,
       });
-      const baseName = sourceFile.name.replace(/\.[^.]+$/, "") || "document";
-      const pdfFile = new File(
-        [bytes.buffer as ArrayBuffer],
-        `${baseName}.pdf`,
-        { type: "application/pdf" },
-      );
-      const result = await extractRef.current.mutateAsync({ file: pdfFile });
 
       triggerBlobDownload(result.blob, result.fileName);
     } catch (err) {
       logger.error("Failed to extract images", err);
-      // Mutation's onError already surfaces a toast for HTTP failures; only
-      // log here for the build-bytes path so the user isn't left silent if
-      // the merge step throws.Okay can
+      // Mutation's onError already surfaces a toast for HTTP failures.
     } finally {
       isRunningRef.current = false;
     }

@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   description:
-    "California Consumer Privacy Act (CCPA/CPRA) opt-out information for Content Clicks LLC.",
+    "California Consumer Privacy Act (CCPA/CPRA) opt-out information for PDFedits.io.",
   title: "Do Not Sell or Share My Personal Information",
 };
 
