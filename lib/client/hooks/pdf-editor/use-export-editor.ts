@@ -116,7 +116,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       // Save passes `bakeOverlays: false` / default) — keeping the source
       // file clean prevents per-save stacking and text-position drift. The
       // user's downloaded copy is the only place we bake on demand.
-      const bytes = await buildEditedPdfBytes({
+      // Export discards `remappedState`. The download is a one-shot file —
+      // there's no in-app editor state to keep in sync with the rebuilt
+      // page order, just bytes the browser will save to disk. The store
+      // stays on the original `file` until the user explicitly hits Save.
+      const { bytes } = await buildEditedPdfBytes({
         currentPage: page,
         fabricCanvas: liveCanvas,
         file: sourceFile,

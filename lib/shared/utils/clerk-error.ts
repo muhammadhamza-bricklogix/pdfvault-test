@@ -62,6 +62,15 @@ const CLERK_PARAM_TO_FIELD: Record<string, string> = {
   code: "code",
 };
 
+// Custom copy for specific Clerk error codes. Clerk's default messages are
+// curt and unhelpful ("That email address is taken. Please try another.");
+// these overrides match the product's friendlier voice and point users at
+// the next action (sign in / reset).
+const CLERK_CODE_MESSAGE_OVERRIDES: Record<string, string> = {
+  form_identifier_exists:
+    "An account with this email already exists. Would you like to log in or reset your password?",
+};
+
 type ParsedClerkError = {
   fieldErrors: Record<string, string>;
   serverError: string | null;
@@ -83,7 +92,10 @@ export function parseClerkError(
   }
 
   for (const err of errors) {
-    const message = err.longMessage ?? err.message;
+    const override = err.code
+      ? CLERK_CODE_MESSAGE_OVERRIDES[err.code]
+      : undefined;
+    const message = override ?? err.longMessage ?? err.message;
 
     if (!message) continue;
 

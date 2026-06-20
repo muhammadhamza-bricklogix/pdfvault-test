@@ -1,6 +1,6 @@
 "use client";
 
-import type { FabricObject, IText, TPointerEventInfo } from "fabric";
+import type { FabricObject, Textbox, TPointerEventInfo } from "fabric";
 import type { PDFPageProxy } from "pdfjs-dist";
 
 import { useEffect, useRef, useState } from "react";
@@ -229,11 +229,18 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           | null;
 
         if (target && target.editorType === "editModeText") {
-          const { IText: FabricIText } = await import("fabric");
+          // Structural check — extracted text is now a Textbox (extends
+          // IText). `enterEditing` exists on both, so the instanceof
+          // check we previously had against IText would miss Textbox.
+          const editable = target as unknown as {
+            enterEditing?: (e?: Event) => void;
+            setCursorByClick?: (e?: Event) => void;
+            initDelayedCursor?: (restart?: boolean) => void;
+          };
 
-          if (target instanceof FabricIText) {
+          if (typeof editable.enterEditing === "function") {
             fc.setActiveObject(target);
-            target.enterEditing(opt.e);
+            editable.enterEditing(opt.e);
             // Position the caret at the tapped glyph. `enterEditing()` only
             // flips editing on — it leaves selectionStart at 0, so the first
             // keystroke would insert at the START of the run instead of where
@@ -241,8 +248,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
             // my cursor"). Fabric's built-in click-to-edit flow calls
             // `setCursorByClick`; because we shortcut straight into editing on
             // the first tap, we have to do the same ourselves.
-            target.setCursorByClick(opt.e);
-            target.initDelayedCursor(true);
+            editable.setCursorByClick?.(opt.e);
+            editable.initDelayedCursor?.(true);
             fc.renderAll();
           }
         }
@@ -258,17 +265,32 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       if (activeObj) return;
 
       const pointer = fc.getScenePoint(opt.e);
-      const { IText: FabricIText } = await import("fabric");
+      const { Textbox: FabricTextbox } = await import("fabric");
 
-      const textObj = new FabricIText("", {
+      // Default new text boxes to ~240pt wide (a comfortable paragraph
+      // width on US Letter / A4), but clamp so the box never starts
+      // wider than the remaining space on the page from the click point.
+      // Wrap is grapheme-based so typed content can never overflow
+      // horizontally, regardless of whether the text contains
+      // whitespace (the page's right edge always wins). Textbox's
+      // built-in Y-scaling lock keeps fontSize stable while still
+      // allowing the user to drag the right-side handle to widen the
+      // box; height auto-grows to fit wrapped lines.
+      const pageW = fc.getWidth();
+      const widthBudget = Math.max(
+        80,
+        Math.min(240, pageW - pointer.x - 16),
+      );
+
+      const textObj = new FabricTextbox("", {
         fill: "#000000",
         fontFamily: "Helvetica",
         fontSize: 16,
         left: pointer.x,
-        lockScalingX: true,
-        lockScalingY: true,
+        splitByGrapheme: true,
         top: pointer.y,
-      }) as IText;
+        width: widthBudget,
+      }) as Textbox;
 
       // Remove the text object on exit if the user left it empty — otherwise
       // every accidental click on the text tool leaves a phantom IText in the
@@ -289,10 +311,50 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       fc.renderAll();
     };
 
+    // Resize handles must change the bounding box, NOT the rendered font
+    // size. Fabric's default behaviour multiplies the visible glyphs by
+    // scaleX/scaleY when the user drags corners — the user perceives this
+    // as "the font got bigger". Fold the scale into width/height instead
+    // and reset scaleX/scaleY to 1. Textbox (used for extracted source
+    // text) consumes the new width as its wrap point, so the box's text
+    // re-wraps without the font growing. We hook both `object:scaling`
+    // for live preview and `object:modified` to commit the final state
+    // when the user releases the handle.
+    const handleScaling = (opt: { target?: FabricObject }) => {
+      const t = opt.target as
+        | (FabricObject & {
+            editorType?: string;
+            width?: number;
+            height?: number;
+          })
+        | undefined;
+
+      if (!t || t.editorType !== "editModeText") return;
+
+      const sx = (t.scaleX as number) ?? 1;
+      const sy = (t.scaleY as number) ?? 1;
+
+      if (sx === 1 && sy === 1) return;
+
+      const newWidth = Math.max(8, ((t.width as number) ?? 0) * sx);
+      const newHeight = Math.max(8, ((t.height as number) ?? 0) * sy);
+
+      t.set({
+        height: newHeight,
+        scaleX: 1,
+        scaleY: 1,
+        width: newWidth,
+      });
+    };
+
     fc.on("mouse:down", handleMouseDown);
+    fc.on("object:scaling", handleScaling);
+    fc.on("object:modified", handleScaling);
 
     return () => {
       fc.off("mouse:down", handleMouseDown);
+      fc.off("object:scaling", handleScaling);
+      fc.off("object:modified", handleScaling);
     };
   }, [activeTool, fabricCanvas]);
 
@@ -335,8 +397,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         };
 
         if (
-          (sel.type === "activeselection" ||
-            sel.type === "activeSelection") &&
+          (sel.type === "activeselection" || sel.type === "activeSelection") &&
           typeof sel.getObjects === "function"
         ) {
           for (const obj of sel.getObjects()) fc.remove(obj);

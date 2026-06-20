@@ -154,6 +154,7 @@ export async function drawIText(
   const { left, top } = resolveTopLeft(obj);
 
   let font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+
   // For editModeText where the user CHANGED the text (text !==
   // originalText), the new characters they typed are very likely NOT in
   // the source PDF's subset font — typing "test" into a word that
@@ -246,7 +247,21 @@ export async function drawIText(
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
   const targetWidth = fabricObjWidth;
 
-  const lines = text.split("\n");
+  // Textbox stores wrapped lines on `_textLines` (each entry is a grapheme
+  // array). `text` is the unwrapped string with hard \n only — splitting
+  // on \n alone collapses visually-wrapped Textbox content to one line in
+  // the saved PDF (overflowing the original bbox). Prefer the wrapped
+  // representation when present; fall back to the \n split for IText
+  // (annotations, page numbers, watermark, text tool) so their behaviour
+  // is unchanged.
+  const wrapped = obj as {
+    _textLines?: ReadonlyArray<ReadonlyArray<string> | string>;
+  };
+  const visualLines: string[] | undefined = Array.isArray(wrapped._textLines)
+    ? wrapped._textLines.map((l) => (Array.isArray(l) ? l.join("") : String(l)))
+    : undefined;
+  const lines =
+    visualLines && visualLines.length > 0 ? visualLines : text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
   const pdfLineHeight = pdfFontSize * lineHeight;
 
