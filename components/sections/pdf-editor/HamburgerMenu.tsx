@@ -4,6 +4,7 @@ import type { Key } from "@heroui/react";
 
 import {
   Add01Icon,
+  Clock01Icon,
   FileExportIcon,
   FileMinusIcon,
   FolderOpenIcon,
@@ -13,6 +14,7 @@ import {
   NoteIcon,
   Search01Icon,
   Share01Icon,
+  Stamp01Icon,
   TextNumberSignIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -33,7 +35,9 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
 
+import { AnnotationsModal } from "./AnnotationsModal";
 import { ShareModal } from "./ShareModal";
+import { VersionHistoryModal } from "./VersionHistoryModal";
 
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
@@ -53,8 +57,11 @@ export function HamburgerMenu() {
   const setIsPageNumbersModalOpen = usePdfEditorStore(
     (s) => s.setIsPageNumbersModalOpen,
   );
+  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isVersionsOpen, setIsVersionsOpen] = useState(false);
+  const [isAnnotationsOpen, setIsAnnotationsOpen] = useState(false);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -143,6 +150,29 @@ export function HamburgerMenu() {
       case "page-numbers":
         if (!requireFile("adding page numbers")) return;
         setIsPageNumbersModalOpen(true);
+        break;
+      case "versions": {
+        if (!requireFile("viewing version history")) return;
+        if (!isSignedIn) {
+          requireSignIn();
+
+          return;
+        }
+        if (!currentDocumentId) {
+          toast.info({
+            title: "Save first",
+            description:
+              "Save the document to the cloud at least once to start a version history.",
+          });
+
+          return;
+        }
+        setIsVersionsOpen(true);
+        break;
+      }
+      case "annotations":
+        if (!requireFile("adding annotations")) return;
+        setIsAnnotationsOpen(true);
         break;
       case "share": {
         if (!requireFile("sharing")) return;
@@ -265,6 +295,14 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={TextNumberSignIcon} size={14} />
               <Label>Add page numbers</Label>
             </Dropdown.Item>
+            <Dropdown.Item id="annotations" textValue="Annotations">
+              <HugeiconsIcon icon={Stamp01Icon} size={14} />
+              <Label>Annotations</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="versions" textValue="Version history">
+              <HugeiconsIcon icon={Clock01Icon} size={14} />
+              <Label>Version history</Label>
+            </Dropdown.Item>
             <Dropdown.Item id="share" textValue="Share via link">
               <HugeiconsIcon icon={Share01Icon} size={14} />
               <Label>Share via link</Label>
@@ -289,6 +327,29 @@ export function HamburgerMenu() {
         file={file}
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
+      />
+      <VersionHistoryModal
+        documentId={currentDocumentId}
+        isOpen={isVersionsOpen}
+        onClose={() => setIsVersionsOpen(false)}
+        onRestored={() => {
+          // The backend already swapped the root document's s3Key to
+          // point at the restored version's bytes, BUT
+          // `useEditorDocumentLoader` short-circuits when
+          // `currentDocumentId === id && file != null` and so the
+          // editor keeps showing the in-memory file. `router.refresh()`
+          // only re-runs server components — it doesn't refetch the
+          // bytes. Clearing the store forces the loader's effect to
+          // re-run, which re-calls `documentsService.getDocument(id)`
+          // and pulls the NEW signed URL.
+          // (QA report 2026-06-16: "restore says success but PDF
+          // doesn't change.")
+          clearFile();
+        }}
+      />
+      <AnnotationsModal
+        isOpen={isAnnotationsOpen}
+        onClose={() => setIsAnnotationsOpen(false)}
       />
     </>
   );

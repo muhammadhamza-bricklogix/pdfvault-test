@@ -95,7 +95,7 @@ export function DashboardHome() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            My files
+            My PDFs
           </h1>
           <p className="mt-1 text-sm text-default-500">
             Open, rename, download, or delete your saved PDFs.

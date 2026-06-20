@@ -6,7 +6,12 @@ import type { Document } from "@/lib/shared/types/documents.types";
 import { useCallback, useState } from "react";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import {
+  formatFileSize,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/shared/utils/file-upload.utils";
 import { logger } from "@/lib/shared/utils/logger";
+import { toast } from "@/lib/shared/utils/toast";
 
 import { useTrackedUpload } from "./use-tracked-upload";
 
@@ -24,7 +29,12 @@ export type DuplicatePrompt = {
   onOverwrite: () => void;
 };
 
-async function findDuplicateByFilename(
+/**
+ * Walk the user's documents list looking for an exact filename match.
+ * Exported so non-tracked-upload paths (cloud picker, etc.) can run the
+ * same duplicate-name guard without depending on the upload hook.
+ */
+export async function findDuplicateByFilename(
   filename: string,
 ): Promise<Document | null> {
   for (let page = 1; page <= DUPLICATE_CHECK_MAX_PAGES; page += 1) {
@@ -47,6 +57,21 @@ export function useUploadWithDuplicateCheck() {
 
   const start = useCallback(
     async (input: StartUploadInput): Promise<StartUploadResult | null> => {
+      // Hard size cap, enforced client-side before kicking off any
+      // network work. Without this the user sees a multi-minute upload
+      // bar that eventually fails at the backend's request-size limit;
+      // the immediate toast is much better feedback. Constant lives in
+      // `file-upload.utils.ts` so the editor drop-zone uses the same
+      // ceiling.
+      if (input.file.size > MAX_UPLOAD_BYTES) {
+        toast.error({
+          title: "File too large",
+          description: `"${input.file.name}" is ${formatFileSize(input.file.size)}. The limit is ${formatFileSize(MAX_UPLOAD_BYTES)}.`,
+        });
+
+        return null;
+      }
+
       // Re-uploads to an existing document skip the duplicate check — the
       // caller is intentionally targeting that document.
       if (input.documentId) {

@@ -48,8 +48,17 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     });
 
     try {
+      // Force the upload on explicit user click — bypasses the
+      // `hasUnsavedChanges` short-circuit so the current editor state
+      // is GUARANTEED to land as a fresh version on the backend, even
+      // if some edit path (page numbers / annotations / Manage Pages /
+      // restore-from-version) didn't flip the dirty flag. Auto-saves
+      // and navigation saves keep the short-circuit (force omitted).
+      // QA report 2026-06-16: "even the most recent changes are not
+      // saved in the version."
       const result = await persistEditorDocument({
         fabricCanvas: fabricRef.current,
+        force: true,
       });
 
       if (!result.ok) {
@@ -85,6 +94,22 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       }
 
       const id = result.document.id;
+
+      // Commit the just-uploaded merged bytes as the new editor
+      // baseline. Without this the local `store.file` stays as the
+      // original upload, `fabricJsonByPage` keeps accumulating, and
+      // every subsequent Save uploads bytes built from stale source +
+      // duplicated overlays → cloud versions look functionally
+      // identical to each other (the bug reported 2026-06-16). The
+      // save-before-action path (Share / Manage Pages / Create New)
+      // was already doing this; the regular Save button was missing.
+      //
+      // `remappedState` is present iff the user had drag-dropped pages in
+      // the sidebar — it swaps the source-page-keyed editor state for the
+      // new display-slot-keyed state that matches the just-saved bytes.
+      usePdfEditorStore
+        .getState()
+        .applyPostSaveReset(result.savedFile, result.remappedState);
 
       if (searchParams.get("id") !== id) {
         const params = new URLSearchParams(searchParams.toString());
@@ -133,7 +158,9 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         // the user reported on Manage Pages.
         const targetFile = result.savedFile;
 
-        usePdfEditorStore.getState().applyPostSaveReset(targetFile);
+        usePdfEditorStore
+          .getState()
+          .applyPostSaveReset(targetFile, result.remappedState);
 
         // Wait for `usePdfLoader` to finish reloading pdf.js against the new
         // bytes before resolving. Otherwise the caller (e.g. Manage Pages)

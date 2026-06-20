@@ -36,7 +36,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     href: ROUTES.APP.DASHBOARD,
     icon: File01Icon,
     isActive: (p) => p === ROUTES.APP.DASHBOARD,
-    label: "My files",
+    label: "My PDFs",
   },
   {
     href: `${ROUTES.PUBLIC.HOME}#pdf-tools`,

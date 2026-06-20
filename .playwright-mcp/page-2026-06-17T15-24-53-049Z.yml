@@ -1,0 +1,14 @@
+- generic [active]:
+  - generic [ref=e4]:
+    - button "File upload dropzone" [ref=e6] [cursor=pointer]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: +
+        - paragraph [ref=e10]: Drop your file here
+        - paragraph [ref=e11]: Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first.
+        - generic [ref=e12]: PDF, Word, Excel, PowerPoint, Image · Up to 100.0 MB
+    - paragraph [ref=e13]:
+      - text: or
+      - button "create a blank PDF" [ref=e14]
+  - button "Open Next.js Dev Tools" [ref=e20] [cursor=pointer]:
+    - img [ref=e21]
+  - alert [ref=e24]

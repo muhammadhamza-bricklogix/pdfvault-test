@@ -21,10 +21,10 @@ const POSITIONS: { id: PageNumberPosition; label: string }[] = [
 
 const FORMATS: { id: PageNumberFormat; label: string; sample: string }[] = [
   { id: "n", label: "Number only", sample: "1" },
-  { id: "page-n", label: "Page n", sample: "Page 1" },
-  { id: "n-of-N", label: "n of N", sample: "1 of 10" },
-  { id: "page-n-of-N", label: "Page n of N", sample: "Page 1 of 10" },
-  { id: "n-slash-N", label: "n / N", sample: "1/10" },
+  { id: "page-n", label: "Page Number", sample: "Page 1" },
+  { id: "n-of-N", label: "Number of Number", sample: "1 of 10" },
+  { id: "page-n-of-N", label: "Page Number of Number", sample: "Page 1 of 10" },
+  { id: "n-slash-N", label: "Number / Number", sample: "1/10" },
 ];
 
 function hexToRgb01(hex: string): { b: number; g: number; r: number } {
@@ -262,7 +262,7 @@ function PageNumbersModalContent() {
               Cancel
             </Button>
             <Button isDisabled={!file} onPress={handleApply}>
-              Add &amp; download
+              Add
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

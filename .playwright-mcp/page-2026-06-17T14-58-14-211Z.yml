@@ -1,0 +1,178 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "PDFedits.io logo PDFedits" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img "PDFedits.io logo" [ref=e6]
+          - generic [ref=e7]: PDFedits
+        - generic [ref=e8]:
+          - button "All PDF tools" [ref=e10] [cursor=pointer]:
+            - text: All PDF tools
+            - img
+          - button "Switch to dark mode" [ref=e12] [cursor=pointer]:
+            - img
+    - main [ref=e13]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - heading "Sign in to your PDFedits.io workspace" [level=1] [ref=e17]
+          - paragraph [ref=e18]: Use your email address and password to get into PDFedits.io. If Clerk asks for an extra check, we keep that verification inside this route.
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - generic [ref=e21]: Welcome back
+            - button "Google Continue with Google" [ref=e22] [cursor=pointer]:
+              - img "Google" [ref=e23]
+              - text: Continue with Google
+            - generic [ref=e24]:
+              - separator [ref=e25]
+              - generic [ref=e26]: or
+              - separator [ref=e27]
+            - group [ref=e29]:
+              - generic [ref=e30]:
+                - generic [ref=e31]:
+                  - generic [ref=e32]: Email address
+                  - textbox "Email address" [ref=e34]:
+                    - /placeholder: you@example.com
+                - generic [ref=e35]:
+                  - generic [ref=e36]: Password
+                  - generic [ref=e37]:
+                    - textbox "Password" [ref=e38]:
+                      - /placeholder: Enter your password
+                    - button "Show password" [ref=e39]:
+                      - img [ref=e40]
+              - button "Sign in" [ref=e44] [cursor=pointer]
+          - paragraph [ref=e45]:
+            - text: Need an account?
+            - link "Create one" [ref=e46] [cursor=pointer]:
+              - /url: /sign-up
+    - contentinfo [ref=e47]:
+      - generic [ref=e48]:
+        - region "Product, Help, and Account" [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - img [ref=e54]
+                - heading "Edit PDF" [level=4] [ref=e56]
+              - list [ref=e57]:
+                - listitem [ref=e58]:
+                  - link "Edit PDF" [ref=e59] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=e60]:
+                  - link "Sign PDF" [ref=e61] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=e62]:
+                  - link "Split PDF" [ref=e63] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=e64]:
+                  - link "Add image to PDF" [ref=e65] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=e66]:
+                  - link "Delete pages" [ref=e67] [cursor=pointer]:
+                    - /url: /pdf-editor
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - img [ref=e71]
+                - heading "Convert from PDF" [level=4] [ref=e73]
+              - list [ref=e74]:
+                - listitem [ref=e75]:
+                  - link "PDF to Word" [ref=e76] [cursor=pointer]:
+                    - /url: /tools/pdf-to-docx
+                - listitem [ref=e77]:
+                  - link "PDF to PPTX" [ref=e78] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=e79]:
+                  - link "PDF to Excel" [ref=e80] [cursor=pointer]:
+                    - /url: /tools/pdf-to-xlsx
+                - listitem [ref=e81]:
+                  - link "PDF to JPG" [ref=e82] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=e83]:
+                  - link "PDF to PNG" [ref=e84] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=e85]:
+                  - link "View all" [ref=e86] [cursor=pointer]:
+                    - /url: /#pdf-tools
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - img [ref=e90]
+                - heading "Convert to PDF" [level=4] [ref=e92]
+              - list [ref=e93]:
+                - listitem [ref=e94]:
+                  - link "Word to PDF" [ref=e95] [cursor=pointer]:
+                    - /url: /tools/docx-to-pdf
+                - listitem [ref=e96]:
+                  - link "PPTX to PDF" [ref=e97] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=e98]:
+                  - link "Excel to PDF" [ref=e99] [cursor=pointer]:
+                    - /url: /tools/xlsx-to-pdf
+                - listitem [ref=e100]:
+                  - link "JPG to PDF" [ref=e101] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=e102]:
+                  - link "PNG to PDF" [ref=e103] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=e104]:
+                  - link "View all" [ref=e105] [cursor=pointer]:
+                    - /url: /#pdf-tools
+            - generic [ref=e106]:
+              - heading "Help" [level=3] [ref=e107]:
+                - img [ref=e109]
+                - generic [ref=e112]: Help
+              - list [ref=e113]:
+                - listitem [ref=e114]:
+                  - link "Contact us" [ref=e115] [cursor=pointer]:
+                    - /url: /contact
+                - listitem [ref=e116]:
+                  - link "FAQ" [ref=e117] [cursor=pointer]:
+                    - /url: /#faq
+                - listitem [ref=e118]:
+                  - link "Pricing" [ref=e119] [cursor=pointer]:
+                    - /url: /pricing
+            - generic [ref=e120]:
+              - heading "Account" [level=3] [ref=e121]:
+                - img [ref=e123]
+                - generic [ref=e126]: Account
+              - list [ref=e127]:
+                - listitem [ref=e128]:
+                  - link "Sign In" [ref=e129] [cursor=pointer]:
+                    - /url: /sign-in
+                - listitem [ref=e130]:
+                  - link "Register" [ref=e131] [cursor=pointer]:
+                    - /url: /sign-up
+                - listitem [ref=e132]:
+                  - link "Unsubscribe" [ref=e133] [cursor=pointer]:
+                    - /url: /contact
+        - generic [ref=e134]:
+          - paragraph [ref=e135]: © 2026. Content Clicks LLC. All rights reserved.
+          - navigation "Legal policies" [ref=e136]:
+            - link "Privacy Policy" [ref=e138] [cursor=pointer]:
+              - /url: /privacy
+            - generic [ref=e139]:
+              - generic [ref=e140]: ·
+              - link "Terms of Use" [ref=e141] [cursor=pointer]:
+                - /url: /terms
+            - generic [ref=e142]:
+              - generic [ref=e143]: ·
+              - link "Cookie Policy" [ref=e144] [cursor=pointer]:
+                - /url: /cookies
+            - generic [ref=e145]:
+              - generic [ref=e146]: ·
+              - link "Subscription Policy" [ref=e147] [cursor=pointer]:
+                - /url: /refund
+          - paragraph [ref=e149]:
+            - text: PDFedits.io is an independent service and is not affiliated with, endorsed by, or approved by any governmental authority, agency, or public institution of any kind, including but not limited to the Internal Revenue Service (IRS), the Social Security Administration (SSA), or U.S. Citizenship and Immigration Services (USCIS).
+            - text: PDFedits.io is also not associated with, connected to, or endorsed by any other editors or brands.
+        - group "Accepted payment methods" [ref=e150]:
+          - img [ref=e152]
+          - img [ref=e155]
+          - img [ref=e158]
+          - img [ref=e161]
+  - button "Open Next.js Dev Tools" [ref=e168] [cursor=pointer]:
+    - generic [ref=e171]:
+      - text: Compiling
+      - generic [ref=e172]:
+        - generic [ref=e173]: .
+        - generic [ref=e174]: .
+        - generic [ref=e175]: .
+  - alert [ref=e176]

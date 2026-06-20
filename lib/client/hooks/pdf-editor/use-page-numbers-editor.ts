@@ -86,6 +86,14 @@ export function usePageNumbersEditor(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
+      // Remove any existing page-number overlays before adding the
+      // new set. Without this, every "Add" pressed on the modal
+      // ACCUMULATES page numbers — open it twice and you end up with
+      // two sets of numbers on each page (different positions /
+      // formats / colours). Users expect "Add" to REPLACE the current
+      // page numbers, not stack new ones on top.
+      removeExistingPageNumbers(liveCanvas, page);
+
       // Compute labels first so the totalN in "X of N" matches the
       // number of pages in the selected range (not the whole doc).
       const labelTotal = last - first + 1 + (options.startNumber - 1);
@@ -332,4 +340,67 @@ function serializeForPage(canvas: FabricCanvas): string {
   // `serializeFabricCanvas` lives in save-utils but we don't want a
   // cyclic dep just for that.
   return JSON.stringify(canvas.toJSON());
+}
+
+/**
+ * Strips every `editorType: "pageNumber"` overlay from BOTH the live
+ * canvas (so the user immediately sees the old number disappear) and
+ * from `fabricJsonByPage` for every page (so navigating away/back
+ * doesn't surface stale numbers). Called at the top of `handleAdd` so
+ * "Add" is replace-not-append.
+ */
+function removeExistingPageNumbers(
+  liveCanvas: FabricCanvas | null,
+  currentDisplayPage: number,
+): void {
+  // 1. Remove from the live canvas so the current page repaints clean.
+  if (liveCanvas) {
+    const toRemove = liveCanvas
+      .getObjects()
+      .filter(
+        (obj) => (obj as { editorType?: string }).editorType === "pageNumber",
+      );
+
+    for (const obj of toRemove) {
+      liveCanvas.remove(obj);
+    }
+    if (toRemove.length) liveCanvas.renderAll();
+  }
+
+  // 2. Strip page-number objects from every stored page's JSON.
+  const store = usePdfEditorStore.getState();
+  const map = store.fabricJsonByPage;
+
+  if (!(map instanceof Map) || map.size === 0) return;
+
+  // Array.from for TS `--target` compatibility on Map iteration.
+  Array.from(map.entries()).forEach(([page, json]) => {
+    if (!json) return;
+    try {
+      const parsed = JSON.parse(json) as {
+        objects?: { editorType?: string }[];
+        [k: string]: unknown;
+      };
+      const objects = parsed.objects ?? [];
+      const filtered = objects.filter((o) => o.editorType !== "pageNumber");
+
+      if (filtered.length === objects.length) return;
+
+      const next = { ...parsed, objects: filtered };
+
+      store.saveFabricJson(page, JSON.stringify(next));
+    } catch {
+      // Bad JSON — leave it alone. Next save will overwrite via the
+      // live-canvas flush anyway.
+    }
+  });
+
+  // 3. If we ALSO have the live canvas, flush it to overwrite the
+  // current page's stored JSON with the now-clean canvas state.
+  if (liveCanvas) {
+    store.saveFabricJson(
+      currentDisplayPage,
+      JSON.stringify(liveCanvas.toJSON()),
+    );
+  }
 }

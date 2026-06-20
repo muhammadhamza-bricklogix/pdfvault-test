@@ -162,6 +162,7 @@ type PdfEditorStore = {
   redo: (page: number) => string | undefined;
   saveFabricJson: (page: number, json: string) => void;
   saveFabricJsonBySourcePage: (sourcePage: number, json: string) => void;
+  replaceFabricJsonByPage: (map: Map<number, string>) => void;
   setActiveShapeType: (type: ShapeType) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setEditorMode: (mode: EditorMode) => void;
@@ -183,8 +184,21 @@ type PdfEditorStore = {
    * Fabric overlay state that those bytes already encode. Without the clear
    * we'd double-render any shapes/highlights: once via the baked PDF and
    * again via the surviving Fabric overlay.
+   *
+   * When the save materialized a sidebar reorder, the caller passes
+   * `remappedState` to atomically swap the source-keyed editor state with
+   * the new display-slot-keyed state that matches the just-saved bytes.
+   * Without this, the next save would re-materialize using a stale Map.
    */
-  applyPostSaveReset: (savedFile: File) => void;
+  applyPostSaveReset: (
+    savedFile: File,
+    remappedState?: {
+      extractedPages: Set<number>;
+      fabricJsonByPage: Map<number, string>;
+      historyByPage: Map<number, string[]>;
+      historyIndexByPage: Map<number, number>;
+    },
+  ) => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
@@ -429,21 +443,60 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       return { fabricJsonByPage: newMap, hasUnsavedChanges: true };
     }),
 
+  replaceFabricJsonByPage: (map) =>
+    set({ fabricJsonByPage: new Map(map), hasUnsavedChanges: true }),
+
   markDocumentDirty: () => set({ hasUnsavedChanges: true }),
 
   clearDocumentDirty: () => set({ hasUnsavedChanges: false }),
 
-  applyPostSaveReset: (savedFile) =>
-    set({
+  applyPostSaveReset: (savedFile, remappedState) =>
+    set((state) => ({
       file: savedFile,
-      fabricJsonByPage: new Map(),
+      // KEEP fabricJsonByPage + extractedPages. The merge pipeline whites-out
+      // the source word and draws the modified text on top, which makes the
+      // saved file VISUALLY correct in any PDF viewer — but pdf.js's text
+      // extraction can still SEE the source text under the whiteout (it lives
+      // in the content stream). Re-extracting after save would surface both
+      // the source word AND the modified one as Fabric ITexts at the same
+      // position → visible double layer in the editor.
+      //
+      // By preserving the pre-save Fabric snapshot (with modified entries
+      // already marked pristine by `applyPristineSweep` inside
+      // `persistEditorDocument`), the editor reuses the in-memory ITexts
+      // instead of re-extracting, so the visible state matches what the
+      // user just saved. See QA report 2026-06-17.
+      //
+      // When `remappedState` is provided (sidebar-reorder save), the merge
+      // just produced bytes carrying the new page order PLUS overlays baked
+      // (except `pageNumber`, which is overlay-only per 2026-06-19 (d)). The
+      // source-page-keyed editor state in `state.*` no longer matches the
+      // file — swap in the display-slot-keyed remapped state.
+      //
+      // No `pendingCloudSaveAfterReload` flip: the single upload above
+      // already carries the user's full save (reorder + edits + page-number
+      // overlays via `editorState`). Manage Pages still sets this flag
+      // separately because its `applyManagePagesSave` doesn't upload at all
+      // — it relies on `useEditorAutoPersist` to drive the only cloud save.
+      fabricJsonByPage: remappedState
+        ? new Map(remappedState.fabricJsonByPage)
+        : state.fabricJsonByPage,
+      extractedPages: remappedState
+        ? new Set(remappedState.extractedPages)
+        : state.extractedPages,
       hasUnsavedChanges: false,
-      historyByPage: new Map(),
-      historyIndexByPage: new Map(),
+      // History is cleared on identity saves anyway, but when remapped the
+      // pre-save history was keyed by old source pages — swap to the remapped
+      // version so undo/redo references the right pages of the new file.
+      historyByPage: remappedState
+        ? new Map(remappedState.historyByPage)
+        : new Map(),
+      historyIndexByPage: remappedState
+        ? new Map(remappedState.historyIndexByPage)
+        : new Map(),
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
-      extractedPages: new Set(),
-    }),
+    })),
 
   clearPendingCloudSaveAfterReload: () =>
     set({ pendingCloudSaveAfterReload: false }),
