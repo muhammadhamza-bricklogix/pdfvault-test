@@ -4,6 +4,12 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import {
+  putPdfBytes,
+  readCachedDocument,
+  readPdfBytes,
+  upsertCachedDocument,
+} from "@/lib/client/offline";
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -29,25 +35,102 @@ type EditorStateEnvelope = {
 // any concurrent mounts) share a single network round-trip per document id.
 const inflight = new Map<string, Promise<LoadedDoc>>();
 
-function loadDocument(id: string): Promise<LoadedDoc> {
+/**
+ * Read the doc from the IDB offline cache. Returns null if either the bytes
+ * blob or the metadata entry is missing — partial cache hits aren't enough
+ * to construct a `LoadedDoc` (we need filename + contentType from bytes and
+ * editorState from metadata).
+ */
+async function loadFromOfflineCache(
+  userId: string | null | undefined,
+  id: string,
+): Promise<LoadedDoc | null> {
+  if (!userId) return null;
+
+  const bytes = await readPdfBytes(userId, id);
+
+  if (!bytes) return null;
+
+  const meta = await readCachedDocument(userId, id);
+  const file = new File([bytes.blob], bytes.filename, {
+    type: bytes.contentType,
+  });
+
+  return {
+    file,
+    id,
+    name: bytes.filename,
+    editorState: meta?.editorState ?? null,
+  };
+}
+
+function loadDocument(
+  id: string,
+  userId: string | null | undefined,
+): Promise<LoadedDoc> {
   const existing = inflight.get(id);
 
   if (existing) return existing;
 
   const promise = (async () => {
-    const doc = await documentsService.getDocument(id);
-    const res = await fetch(doc.url);
+    const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
 
-    if (!res.ok) throw new Error(`Failed to fetch PDF (${res.status})`);
-    const blob = await res.blob();
-    const file = new File([blob], doc.filename, { type: doc.contentType });
+    // Offline branch — cache or bust. We don't even attempt the network
+    // since fetch(doc.url) would throw and then we'd still fall back here.
+    if (!isOnline) {
+      const cached = await loadFromOfflineCache(userId, id);
 
-    return {
-      file,
-      id: doc.id,
-      name: doc.filename,
-      editorState: doc.editorState ?? null,
-    };
+      if (cached) return cached;
+      throw new Error(
+        "This document isn't available offline. Connect to the internet to open it.",
+      );
+    }
+
+    try {
+      const doc = await documentsService.getDocument(id);
+      const res = await fetch(doc.url);
+
+      if (!res.ok) throw new Error(`Failed to fetch PDF (${res.status})`);
+      const blob = await res.blob();
+      const file = new File([blob], doc.filename, { type: doc.contentType });
+
+      // Write-through: stash the bytes + freshen metadata so the next
+      // offline open of this doc works without network. Failures here are
+      // logged but don't surface — the in-session experience is fine.
+      if (userId) {
+        await Promise.all([
+          putPdfBytes(userId, {
+            id: doc.id,
+            blob,
+            filename: doc.filename,
+            contentType: doc.contentType,
+          }),
+          upsertCachedDocument(userId, doc),
+        ]);
+      }
+
+      return {
+        file,
+        id: doc.id,
+        name: doc.filename,
+        editorState: doc.editorState ?? null,
+      };
+    } catch (err) {
+      // Network failed mid-flight (true offline, S3 hiccup, auth blip).
+      // Best-effort cache fallback before propagating the error.
+      const cached = await loadFromOfflineCache(userId, id);
+
+      if (cached) {
+        logger.warn(
+          "[offline] served editor doc from cache after fetch failure",
+          { id, err: err instanceof Error ? err.message : String(err) },
+        );
+
+        return cached;
+      }
+
+      throw err;
+    }
   })().finally(() => {
     inflight.delete(id);
   });
@@ -62,7 +145,7 @@ function loadDocument(id: string): Promise<LoadedDoc> {
  * Fetches the signed download URL, downloads the bytes, and seeds the store.
  */
 export function useEditorDocumentLoader() {
-  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const { isLoaded: authLoaded, isSignedIn, userId } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
@@ -122,7 +205,7 @@ export function useEditorDocumentLoader() {
 
     let cancelled = false;
 
-    loadDocument(id)
+    loadDocument(id, userId)
       .then((loaded) => {
         if (cancelled) return;
 
@@ -196,6 +279,7 @@ export function useEditorDocumentLoader() {
     setCurrentDocument,
     authLoaded,
     isSignedIn,
+    userId,
     router,
   ]);
 }

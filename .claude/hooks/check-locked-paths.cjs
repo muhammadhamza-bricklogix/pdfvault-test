@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable */
+ 
 // PreToolUse hook: blocks Edit / Write / MultiEdit / NotebookEdit on paths
 // listed in .claude/LOCKED_PATHS.
 //

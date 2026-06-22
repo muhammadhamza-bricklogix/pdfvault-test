@@ -277,10 +277,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       // allowing the user to drag the right-side handle to widen the
       // box; height auto-grows to fit wrapped lines.
       const pageW = fc.getWidth();
-      const widthBudget = Math.max(
-        80,
-        Math.min(240, pageW - pointer.x - 16),
-      );
+      const widthBudget = Math.max(80, Math.min(240, pageW - pointer.x - 16));
 
       const textObj = new FabricTextbox("", {
         fill: "#000000",
