@@ -90,6 +90,17 @@ For the full evidence trail (why each rule exists, what broke when we tried othe
 
 If a fix requires changing one of these, ask the user first.
 
+### Locking strategy (enforced)
+
+The off-limits list above is also enforced mechanically. `.claude/settings.json` registers a `PreToolUse` hook (`.claude/hooks/check-locked-paths.cjs`) that blocks `Edit`, `Write`, `MultiEdit`, and `NotebookEdit` against any path listed in `.claude/LOCKED_PATHS`.
+
+- **Add a lock:** append a path or glob (e.g. `lib/foo/bar.ts` or `lib/foo/**`) to `.claude/LOCKED_PATHS`. Use `!path` to carve out an allowlisted sub-path.
+- **Remove a lock:** delete the line and tell Claude what changed.
+- **One-off bypass:** `export CLAUDE_UNLOCK_PATHS=1` for the current shell, then re-launch Claude Code.
+- **Rollback target:** the tag `stable-2026-06-22` marks the last-known-good PDF editor state. To revert a regression: `git reset --hard stable-2026-06-22` (destructive — make a branch first). New stable checkpoints should be added as `stable-YYYY-MM-DD` tags after the mobile checklist passes.
+
+When Claude is blocked by this hook it must ask the user before bypassing — don't unlock unprompted.
+
 ## Mobile pre-push checklist (REQUIRED before any push or PR)
 
 Mobile (iOS Safari + Android Chrome) is the #1 regression surface in this app — the same code path can render fine on desktop and break completely on a real phone (the Fabric overlay, pdf.js fonts, touch-action, DPR, op-list shape, etc. all behave differently). Before claiming a change is ready to push, walk through this list. If you cannot run on a real mobile device, run in DevTools "Responsive" mode at iPhone 14 / Pixel 7 sizing AND say so explicitly in the summary — never claim mobile is verified when only desktop was tested.
