@@ -29,7 +29,7 @@ export const FOOTER_PRODUCT_SUBSECTIONS: FooterProductSubsection[] = [
     links: [
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Edit PDF" },
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Sign PDF" },
-      { href: ROUTES.TOOLS.PDF_EDITOR, label: "Split PDF" },
+      { href: ROUTES.TOOLS.SPLIT_PDF, label: "Split PDF" },
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Add image to PDF" },
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Delete pages" },
     ],

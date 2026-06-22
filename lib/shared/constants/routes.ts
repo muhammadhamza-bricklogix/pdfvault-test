@@ -31,6 +31,7 @@ export const ROUTES = {
     EXCEL_TO_PDF: "/tools/xlsx-to-pdf",
     DOC_TO_PDF: "/tools/docx-to-pdf",
     PDF_TO_DOC: "/tools/pdf-to-docx",
+    SPLIT_PDF: "/tools/split-pdf",
     BY_SLUG: (slug: string) => `/tools/${slug}` as const,
   },
 } as const;
