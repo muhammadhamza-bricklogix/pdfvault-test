@@ -81,6 +81,464 @@
   },
   "suites": [
     {
+      "title": "auth.setup.ts",
+      "file": "auth.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "authenticate",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Could not establish Clerk session — see warning above.",
+                  "location": {
+                    "file": "/Users/softaims/pdf-viewer-app/tests/auth.setup.ts",
+                    "line": 36,
+                    "column": 11
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 25249,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [
+                    {
+                      "text": "[auth.setup] Sign-in/up failed (\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ok\"\u001b[39m\nReceived: \u001b[31m\"http://localhost:3000/sign-in\"\u001b[39m\n\nCall Log:\n- Timeout 15000ms exceeded while waiting on the predicate). Auth-protected tests will be skipped on this run.\n"
+                    }
+                  ],
+                  "retry": 0,
+                  "startTime": "2026-06-22T14:01:56.072Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Could not establish Clerk session — see warning above.",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/auth.setup.ts",
+                        "line": 36,
+                        "column": 11
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-60f085b113a677673906",
+          "file": "auth.setup.ts",
+          "line": 25,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "conversion/tool-pages.spec.ts",
+      "file": "conversion/tool-pages.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Conversion tool pages — frontend fires POST /conversion",
+          "file": "conversion/tool-pages.spec.ts",
+          "line": 24,
+          "column": 6,
+          "specs": [
+            {
+              "title": "/tools/pdf-to-jpg → type=pdf_to_jpg",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 3,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.033Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                            "line": 16,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc18f0739ff7f753e83b-92f075b52c85bf5e13aa",
+              "file": "conversion/tool-pages.spec.ts",
+              "line": 26,
+              "column": 5
+            },
+            {
+              "title": "/tools/pdf-to-word → type=pdf_to_docx",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "skipped",
+                      "duration": 3,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.028Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                            "line": 16,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc18f0739ff7f753e83b-374c46ed5303fa7a9114",
+              "file": "conversion/tool-pages.spec.ts",
+              "line": 26,
+              "column": 5
+            },
+            {
+              "title": "/tools/pdf-to-excel → type=pdf_to_xlsx",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "skipped",
+                      "duration": 5,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.036Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                            "line": 16,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc18f0739ff7f753e83b-7f466b7b89f91b6a1906",
+              "file": "conversion/tool-pages.spec.ts",
+              "line": 26,
+              "column": 5
+            },
+            {
+              "title": "/tools/jpg-to-pdf → type=jpg_to_pdf",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.059Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                            "line": 16,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc18f0739ff7f753e83b-215aba9d35b40d9c8a38",
+              "file": "conversion/tool-pages.spec.ts",
+              "line": 26,
+              "column": 5
+            },
+            {
+              "title": "/tools/word-to-pdf → type=docx_to_pdf",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 1,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.068Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                            "line": 16,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc18f0739ff7f753e83b-bf86eca2dd6f8b2d5e9e",
+              "file": "conversion/tool-pages.spec.ts",
+              "line": 26,
+              "column": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "conversion/tools-modal.spec.ts",
+      "file": "conversion/tools-modal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Conversion — Tools modal in editor",
+          "file": "conversion/tools-modal.spec.ts",
+          "line": 10,
+          "column": 6,
+          "specs": [
+            {
+              "title": "opens from the editor top bar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 9207,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.089Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c85e3b0861f84ef22dd0-c20f1512af9f9e55e5d7",
+              "file": "conversion/tools-modal.spec.ts",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "clicking a tile navigates to a real /tools/<slug> page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "skipped",
+                      "duration": 8200,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:01:56.088Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
+                            "line": 16,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c85e3b0861f84ef22dd0-ffba6adbe60f9c411e16",
+              "file": "conversion/tools-modal.spec.ts",
+              "line": 22,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
       "title": "pdf-editor/controls.spec.ts",
       "file": "pdf-editor/controls.spec.ts",
       "column": 0,
@@ -106,15 +564,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 7931,
+                      "duration": 8470,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:01.121Z",
+                      "startTime": "2026-06-22T14:01:56.094Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -140,15 +598,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 9405,
+                      "duration": 6436,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:01.172Z",
+                      "startTime": "2026-06-22T14:02:06.032Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -174,15 +632,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 9276,
+                      "duration": 7610,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:01.128Z",
+                      "startTime": "2026-06-22T14:02:06.164Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -193,6 +651,295 @@
               "id": "e301254aa141050c1d86-858eb93df30a706b7d75",
               "file": "pdf-editor/controls.spec.ts",
               "line": 30,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor/edge-cases.spec.ts",
+      "file": "pdf-editor/edge-cases.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PDF editor — edge cases",
+          "file": "pdf-editor/edge-cases.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "?id= with empty value redirects out of the editor",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 7227,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:06.963Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-5cc518f33bb1c9ca52e2",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "?id= with a bogus value redirects to sign-in (signed-out)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 7225,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:12.519Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-1a70f52fc187bffa5d9c",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 25,
+              "column": 3
+            },
+            {
+              "title": "Local-mode editor opens without an id",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1917,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:13.854Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-56c719e37a91f3eeaaff",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "Keyboard: Escape and Delete don't crash on empty editor",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2398,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:14.209Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-8f2ef2caa4eab9667c34",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 45,
+              "column": 3
+            },
+            {
+              "title": "Cmd+Z / Cmd+Shift+Z don't crash on empty editor",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2933,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:15.792Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-800e432314e0f87ea0a7",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "Cmd+F opens Find & Replace once a PDF is loaded",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3165,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:16.619Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-fe61578060e9eab7c8bd",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 79,
+              "column": 3
+            },
+            {
+              "title": "Uploading non-PDF + non-supported file is rejected",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4465,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:18.741Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-9598e82ef59a99461f0b",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "Tool switch doesn't crash the editor",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 4889,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:19.767Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8731476c3ea032e8700b-a6385efb2612363bd38f",
+              "file": "pdf-editor/edge-cases.spec.ts",
+              "line": 120,
               "column": 3
             }
           ]
@@ -235,12 +982,12 @@
                           "workerIndex": 3,
                           "parallelIndex": 3,
                           "status": "passed",
-                          "duration": 10825,
+                          "duration": 6032,
                           "errors": [],
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-06-17T13:40:01.451Z",
+                          "startTime": "2026-06-22T14:02:19.929Z",
                           "annotations": [],
                           "attachments": []
                         }
@@ -266,15 +1013,15 @@
                       "projectName": "chromium",
                       "results": [
                         {
-                          "workerIndex": 0,
+                          "workerIndex": 4,
                           "parallelIndex": 0,
                           "status": "passed",
-                          "duration": 8986,
+                          "duration": 7054,
                           "errors": [],
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-06-17T13:40:11.758Z",
+                          "startTime": "2026-06-22T14:02:24.628Z",
                           "annotations": [],
                           "attachments": []
                         }
@@ -297,7 +1044,7 @@
               "specs": [
                 {
                   "title": "modified source text survives PDF export on rotated pages",
-                  "ok": true,
+                  "ok": false,
                   "tags": [],
                   "tests": [
                     {
@@ -310,18 +1057,58 @@
                         {
                           "workerIndex": 1,
                           "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 12898,
-                          "errors": [],
+                          "status": "failed",
+                          "duration": 6839,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m873\u001b[39m",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m873\u001b[39m\n    at /Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts:266:26",
+                            "location": {
+                              "file": "/Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts",
+                              "column": 26,
+                              "line": 266
+                            },
+                            "snippet": "  264 |       const stats = fs.statSync(downloadPath);\n  265 |\n> 266 |       expect(stats.size).toBeGreaterThan(1_000);\n      |                          ^\n  267 |\n  268 |       const { getDocument } = await import(\"pdfjs-dist/legacy/build/pdf.mjs\");\n  269 |       const data = new Uint8Array(fs.readFileSync(downloadPath));"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts",
+                                "column": 26,
+                                "line": 266
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m873\u001b[39m\n\n  264 |       const stats = fs.statSync(downloadPath);\n  265 |\n> 266 |       expect(stats.size).toBeGreaterThan(1_000);\n      |                          ^\n  267 |\n  268 |       const { getDocument } = await import(\"pdfjs-dist/legacy/build/pdf.mjs\");\n  269 |       const data = new Uint8Array(fs.readFileSync(downloadPath));\n    at /Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts:266:26"
+                            }
+                          ],
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-06-17T13:40:12.065Z",
+                          "startTime": "2026-06-22T14:02:23.409Z",
                           "annotations": [],
-                          "attachments": []
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/softaims/pdf-viewer-app/test-results/pdf-editor-edit-text-expor-8609f-PDF-export-on-rotated-pages-chromium/test-failed-1.png"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/softaims/pdf-viewer-app/test-results/pdf-editor-edit-text-expor-8609f-PDF-export-on-rotated-pages-chromium/error-context.md"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "/Users/softaims/pdf-viewer-app/test-results/pdf-editor-edit-text-expor-8609f-PDF-export-on-rotated-pages-chromium/trace.zip"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts",
+                            "column": 26,
+                            "line": 266
+                          }
                         }
                       ],
-                      "status": "expected"
+                      "status": "unexpected"
                     }
                   ],
                   "id": "67c70d19eda0fab21edd-a20ba7b9c3db5ab94741",
@@ -330,6 +1117,329 @@
                   "column": 5
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor/hamburger.spec.ts",
+      "file": "pdf-editor/hamburger.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PDF editor — hamburger menu",
+          "file": "pdf-editor/hamburger.spec.ts",
+          "line": 16,
+          "column": 6,
+          "specs": [
+            {
+              "title": "opens \"/^create new$/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 8823,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:24.689Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-c97fbadcfac5b4dea80d",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "opens \"/^compress pdf$/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 6106,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:26.006Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-039269505e308734cc7a",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "opens \"/^password protect$/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 7806,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:32.799Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-e2d3442d3345aa6efdda",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "opens \"/^find.*replace/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4355,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:32.131Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-781649b5be5c623ca814",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "opens \"/^add page numbers$/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5279,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:32.464Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-061a409cc91c37f64d53",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "opens \"/^split pdf$/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 7936,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:33.526Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-a9d32a0a5c5cc8043c83",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "opens \"/^annotations$/i\" without runtime errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 5396,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:36.506Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-054481918e0140faa4b8",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 49,
+              "column": 5
+            },
+            {
+              "title": "Flatten form fields fires a mutation (or fails open)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 14279,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:37.773Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-8b4165c15407f51e02b5",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 74,
+              "column": 3
+            },
+            {
+              "title": "My PDFs item is gated when signed out",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 10447,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:41.488Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-cfda254271f46212be4f",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 96,
+              "column": 3
             }
           ]
         }
@@ -361,15 +1471,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 8960,
+                      "duration": 9821,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:11.982Z",
+                      "startTime": "2026-06-22T14:02:41.538Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -380,6 +1490,193 @@
               "id": "384f5fa235f4e18ca19d-780a46b0970277e2bd31",
               "file": "pdf-editor/manage-pages.spec.ts",
               "line": 10,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor/offline.spec.ts",
+      "file": "pdf-editor/offline.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Offline — banner + IDB schema",
+          "file": "pdf-editor/offline.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "OfflineBanner is absent while online",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 11880,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:41.927Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "557d3e80894c4333d5c2-6c4af9b83d640873aae8",
+              "file": "pdf-editor/offline.spec.ts",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "OfflineBanner appears when the context goes offline",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 8699,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:51.395Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "557d3e80894c4333d5c2-cef074baf718e5933354",
+              "file": "pdf-editor/offline.spec.ts",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "Banner mounts on auth routes too (proves global mount)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 7997,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:51.984Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "557d3e80894c4333d5c2-91a084b5122ced21243d",
+              "file": "pdf-editor/offline.spec.ts",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "IDB schema works in this Chrome (open + put + get)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8231,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:52.126Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "557d3e80894c4333d5c2-e88e523ffd9b99eb701e",
+              "file": "pdf-editor/offline.spec.ts",
+              "line": 52,
+              "column": 3
+            },
+            {
+              "title": "Account-switch invalidation drops the prior user's DB",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 9359,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:02:53.835Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "557d3e80894c4333d5c2-b648fb14d3ba5426cff7",
+              "file": "pdf-editor/offline.spec.ts",
+              "line": 128,
               "column": 3
             }
           ]
@@ -412,15 +1709,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 12263,
+                      "duration": 9889,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:13.470Z",
+                      "startTime": "2026-06-22T14:03:00.048Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -446,15 +1743,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 6579,
+                      "duration": 9044,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:20.876Z",
+                      "startTime": "2026-06-22T14:03:00.126Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -465,6 +1762,371 @@
               "id": "63181d3227ec15740c58-c7b5c7c9f651420c1b07",
               "file": "pdf-editor/save-export.spec.ts",
               "line": 30,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor/split-pdf.spec.ts",
+      "file": "pdf-editor/split-pdf.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PDF editor — Split PDF (in-editor)",
+          "file": "pdf-editor/split-pdf.spec.ts",
+          "line": 17,
+          "column": 6,
+          "specs": [
+            {
+              "title": "opens with page count + filename header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10626,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:00.462Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-33feeeaf485531204e46",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "Custom ranges: valid input enables Split button + lists outputs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 12610,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:03.234Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-e95363af2e49f70c6a97",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "Custom ranges: out-of-bounds shows inline error + keeps button disabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 7944,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:09.237Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-f7f68ea3d28e1e8f1d8d",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 58,
+              "column": 3
+            },
+            {
+              "title": "Custom ranges: malformed token shows readable error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 6802,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:10.512Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-fefbc70bea3372d3105f",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "Custom ranges: reverse range (3-1) flagged",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6405,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:11.123Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-8d472aa8515fb3ad0308",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 89,
+              "column": 3
+            },
+            {
+              "title": "Every N pages: switching modes resets validation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 6322,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:15.871Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-10f7d810ac60af3d48fa",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "Every N pages: 0 is rejected",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 5292,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:17.209Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-62f705bfca0a2030bfde",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 121,
+              "column": 3
+            },
+            {
+              "title": "Cancel closes the modal without firing a download",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 5960,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:17.419Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-05653dba7c70ec84227d",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 131,
+              "column": 3
+            },
+            {
+              "title": "Split & download fires a download (single-range → PDF)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5811,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:17.548Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-ffb1150c7c81c0d64f3c",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 150,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Split PDF — standalone route (/tools/split-pdf)",
+          "file": "pdf-editor/split-pdf.spec.ts",
+          "line": 167,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Anonymous visit redirects to /sign-in with return path",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2295,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-22T14:03:22.217Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d8f7b19a89bf322eca69-22f48fa6cbe559724fef",
+              "file": "pdf-editor/split-pdf.spec.ts",
+              "line": 168,
               "column": 3
             }
           ]
@@ -497,15 +2159,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 6478,
+                      "duration": 6913,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:21.037Z",
+                      "startTime": "2026-06-22T14:03:22.550Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -531,15 +2193,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7748,
+                      "duration": 6867,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:25.146Z",
+                      "startTime": "2026-06-22T14:03:23.390Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -565,15 +2227,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 9789,
+                      "duration": 7042,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:25.839Z",
+                      "startTime": "2026-06-22T14:03:23.406Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -599,15 +2261,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 9731,
+                      "duration": 10615,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:27.517Z",
+                      "startTime": "2026-06-22T14:03:24.547Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -633,15 +2295,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 9584,
+                      "duration": 4910,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:27.569Z",
+                      "startTime": "2026-06-22T14:03:29.480Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -667,15 +2329,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8376,
+                      "duration": 5322,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:32.936Z",
+                      "startTime": "2026-06-22T14:03:30.267Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -701,15 +2363,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 5644,
+                      "duration": 5033,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:35.657Z",
+                      "startTime": "2026-06-22T14:03:30.460Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -735,15 +2397,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 7613,
+                      "duration": 4664,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:37.194Z",
+                      "startTime": "2026-06-22T14:03:34.423Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -769,15 +2431,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 7327,
+                      "duration": 3837,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:37.261Z",
+                      "startTime": "2026-06-22T14:03:35.181Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -803,15 +2465,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 6607,
+                      "duration": 7024,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:41.346Z",
+                      "startTime": "2026-06-22T14:03:35.507Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -837,15 +2499,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6624,
+                      "duration": 6804,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-17T13:40:41.347Z",
+                      "startTime": "2026-06-22T14:03:35.604Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -865,11 +2527,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-17T13:39:59.722Z",
-    "duration": 48991.014,
-    "expected": 20,
-    "skipped": 0,
-    "unexpected": 0,
+    "startTime": "2026-06-22T14:01:54.742Z",
+    "duration": 107970.23300000001,
+    "expected": 52,
+    "skipped": 7,
+    "unexpected": 1,
     "flaky": 0
   }
 }
