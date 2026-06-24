@@ -81,20 +81,21 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       .getState()
       .extractedPages.has(sourcePage);
 
-    // Trigger extraction in two cases:
-    //   1. User explicitly armed text editing via the "Edit Text" tool.
-    //   2. Default Select tool on a fresh load — so users can click any
-    //      run on the page and have it act as a Fabric object straight
-    //      away (no Edit Text → click → Select toggle dance).
-    // Already-extracted pages still flow through so the rotation-mismatch
-    // reset below can re-extract if Manage Pages rotated the page.
-    if (
-      !alreadyExtracted &&
-      activeTool !== "editText" &&
-      activeTool !== "select"
-    ) {
-      return;
-    }
+    // Only run when the user has explicitly armed text editing for this
+    // page (via the "Edit Text" toolbar tool), OR when we're returning
+    // to a page we've already extracted (so the rotation-mismatch reset
+    // below can re-extract if Manage Pages rotated the page).
+    //
+    // Reverted 2026-06-24: the 2026-06-22 auto-extract-on-Select branch
+    // caused every PDF load to drop white-on-coloured-background text
+    // to black (the page's mode color) because the color extractor's
+    // zip-by-index falls back to mode colour for graphics-state-driven
+    // coloured text (e.g. white title on a blue banner). Restoring the
+    // explicit Edit Text gate keeps the default load on pdf.js's native
+    // paint — colours correct, no mid-word wrap from the overlay
+    // Textbox. Users still get on-demand text editing via the toolbar
+    // button.
+    if (!alreadyExtracted && activeTool !== "editText") return;
 
     // If `getTextContent` previously threw on this page (older Safari
     // WebKit), don't retry — the user has already seen the toast and
@@ -311,19 +312,23 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           originY: "top",
           // Store original PDF text width for accurate export spacing.
           pdfTextWidth: block.width,
-          // Textbox uses `width` as the wrap point — fixed at the source
-          // run's advance width so typed text wraps inside the box
-          // instead of overflowing the original glyph bounds.
-          //
-          // `splitByGrapheme: true` (NOT false) — extracted runs are
-          // often short single words ("Hello", "Page", "Total"), so
-          // word-wrap has nothing to break on; appending characters then
-          // overflows the page horizontally because no whitespace gets
-          // introduced. Grapheme wrap guarantees containment regardless
-          // of the typed content's whitespace, and is also the correct
-          // wrap mode for CJK if/when extraction supports it. drawIText
-          // reads `_textLines` to round-trip wrapped lines through save.
-          splitByGrapheme: true,
+          // Reverted 2026-06-24 from `true` → `false`. Grapheme wrap
+          // caused the very first render of source-extracted text to
+          // truncate the last character: pdf.js's stored advance width
+          // (`block.width`) sits ~1–5% under the Fabric-rendered
+          // natural width because the embedded font's metrics differ
+          // from the canvas-rasterised fallback. With per-grapheme
+          // wrap, the overflow character (often a single letter at
+          // the end of a heading) hopped to a hidden line 2 — you saw
+          // "Architectur" instead of "Architecture" on the AWS-arch
+          // banner. Word-wrap (`false`) lets the natural width spill a
+          // pixel or two past the box rather than mangle the glyph
+          // sequence — far better fidelity to the source. The
+          // trade-off (typed single-word content can overflow the
+          // page) is rare in source-text editing; the text TOOL
+          // (PdfViewerCanvas) still uses `splitByGrapheme: true` for
+          // newly-created text boxes where typing is the primary use.
+          splitByGrapheme: false,
           top,
           width: Math.max(8, block.width),
         } as any) as Textbox;

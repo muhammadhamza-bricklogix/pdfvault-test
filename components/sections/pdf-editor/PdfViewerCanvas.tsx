@@ -78,19 +78,15 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     };
   }, [sourcePage, pdfDocument]);
 
-  // Fit-to-width on mobile when a new file is opened. PDF pages (e.g.
-  // 612pt-wide US Letter) overflow narrow viewports at zoom=1.0, leaving the
-  // user staring at white margins until they pinch-zoom out. Mobile Safari
-  // also misrenders the Fabric IText overlay at the very small zoom values
-  // that aggressive pinching produces, so the page appears blank. Picking a
-  // fit-width zoom on first load keeps the experience close to desktop.
+  // Fit-to-width on first open of every file (mobile + desktop). PDF
+  // pages (e.g. 612pt-wide US Letter) leave the user staring at white
+  // margins at zoom=1.0 on any viewport that isn't roughly page-sized.
+  // Auto-fitting on first load matches the experience users expect from
+  // mainstream PDF viewers and saves the manual pinch / + button hunt.
+  // Re-fit triggers only on file CHANGE (`fittedFileRef` guard) so the
+  // user's subsequent manual zoom adjustments are preserved across page
+  // navigation, tool switches, etc.
   useEffect(() => {
-    if (!isMobile) {
-      fittedFileRef.current = null;
-
-      return;
-    }
-
     if (!page || !file || !viewerScrollRef.current) return;
     if (fittedFileRef.current === file) return;
 
@@ -110,7 +106,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     usePdfEditorStore.getState().setZoom(clamped);
     fittedFileRef.current = file;
-  }, [isMobile, page, file]);
+  }, [page, file]);
 
   const bgShouldShow =
     backgroundImageConfig.enabled &&
