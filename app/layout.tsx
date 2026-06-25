@@ -4,6 +4,10 @@ import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Dancing_Script, Playfair_Display } from "next/font/google";
 
+import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
+
+import { Providers } from "./providers";
+
 const dancingScript = Dancing_Script({
   display: "swap",
   subsets: ["latin"],
@@ -17,8 +21,6 @@ const playfairDisplay = Playfair_Display({
   variable: "--font-legal-serif",
   weight: ["400", "600", "700"],
 });
-
-import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: {
@@ -52,6 +54,7 @@ export default function RootLayout({
       lang="en"
     >
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
+        <WeglotLoader />
         <ClerkProvider
           signInFallbackRedirectUrl="/dashboard"
           signInUrl="/sign-in"
