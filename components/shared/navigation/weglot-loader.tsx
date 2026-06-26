@@ -10,7 +10,7 @@ export function WeglotLoader() {
       src="https://cdn.weglot.com/weglot.min.js"
       strategy="afterInteractive"
       onLoad={() => {
-        window.Weglot.initialize({
+        window.Weglot?.initialize({
           api_key: WEGLOT_API_KEY,
           originalLanguage: "en",
           destinationLanguages: "es",

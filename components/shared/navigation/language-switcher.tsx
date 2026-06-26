@@ -15,11 +15,13 @@ export function LanguageSwitcher() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const onLangChange = (newLang: string) => {
+      setCurrentLang(newLang as LangCode);
+    };
+
     const init = () => {
-      setCurrentLang((window.Weglot.getCurrentLang() as LangCode) ?? "en");
-      window.Weglot.on("languageChanged", (newLang) => {
-        setCurrentLang(newLang as LangCode);
-      });
+      setCurrentLang((window.Weglot?.getCurrentLang() as LangCode) ?? "en");
+      window.Weglot?.on("languageChanged", onLangChange);
       setReady(true);
     };
 
@@ -31,6 +33,7 @@ export function LanguageSwitcher() {
 
     return () => {
       window.removeEventListener("weglot:initialized", init);
+      window.Weglot?.off("languageChanged", onLangChange);
     };
   }, []);
 
