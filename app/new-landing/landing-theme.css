@@ -1,0 +1,125 @@
+/**
+ * Scoped design tokens for the PDFVault landing-page reproduction.
+ * Values are taken directly from the official "PDF Vault Project Styleguide".
+ * Everything is namespaced under `.pdfvault-landing` so these values never
+ * leak into the rest of the app (which uses the PDFedits HeroUI theme).
+ */
+.pdfvault-landing {
+  /* Brand */
+  --pv-brand-200: #ff9c98; /* disabled */
+  --pv-brand-primary: #f12c23; /* default */
+  --pv-brand-700: #ba1109; /* hover */
+  --pv-brand-900: #530000; /* focused */
+
+  /* Grays */
+  --pv-gray-1: #f5f5f5;
+  --pv-gray-2: #f2f4f5;
+  --pv-gray-3: #e9ecef;
+  --pv-gray-4: #dee2e6;
+  --pv-gray-5: #ced4da;
+  --pv-gray-6: #acb5bd;
+  --pv-gray-7: #858e96;
+  --pv-gray-8: #494f56;
+  --pv-gray-9: #343a40;
+  --pv-gray-10: #212529;
+
+  /* State */
+  --pv-success: #38c977;
+  --pv-info: #35b0fc;
+  --pv-warning: #fac22b;
+  --pv-error: #ff3819;
+
+  /* Semantic aliases */
+  --pv-text-primary: var(--pv-gray-10);
+  --pv-text-secondary: var(--pv-gray-7);
+  --pv-text-tertiary: var(--pv-gray-6);
+  --pv-header-bg: var(--pv-gray-1);
+  --pv-section-gray: var(--pv-gray-1);
+  --pv-card-border: var(--pv-gray-3);
+  --pv-border-subtle: var(--pv-gray-4);
+  --pv-footer-bg: var(--pv-brand-900);
+
+  /* Layout */
+  --pv-content-max: 1248px;
+  --pv-gutter: 96px;
+  --pv-measure: 720px;
+
+  /* Radii */
+  --pv-radius-card: 16px;
+  --pv-radius-lg: 22px;
+
+  /* Typography — Geist scale (size / line-height / letter-spacing) */
+  --pv-font: var(--font-geist-sans), "Inter", Arial, sans-serif;
+
+  color: var(--pv-text-primary);
+  font-family: var(--pv-font);
+}
+
+/* Type scale helpers from the styleguide */
+.pdfvault-landing .pv-display {
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1;
+  letter-spacing: -2px;
+  font-weight: 700;
+}
+.pdfvault-landing .pv-h1 {
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.pdfvault-landing .pv-h2 {
+  font-size: clamp(26px, 3vw, 32px);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.pdfvault-landing .pv-h3 {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+/* Reusable centered content container */
+.pdfvault-landing .pv-container {
+  width: 100%;
+  max-width: var(--pv-content-max);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 6vw, var(--pv-gutter));
+}
+
+/* Buttons — styleguide states */
+.pdfvault-landing .pv-btn-primary {
+  background: var(--pv-brand-primary);
+  color: #fff;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+.pdfvault-landing .pv-btn-primary:hover {
+  background: var(--pv-brand-700);
+}
+.pdfvault-landing .pv-btn-primary:focus-visible {
+  background: var(--pv-brand-900);
+  outline: 2px solid var(--pv-brand-900);
+  outline-offset: 2px;
+}
+.pdfvault-landing .pv-btn-primary:disabled {
+  background: var(--pv-brand-200);
+  cursor: not-allowed;
+}
+
+.pdfvault-landing .pv-btn-secondary {
+  background: #fff;
+  color: var(--pv-text-primary);
+  border: 1px solid var(--pv-border-subtle);
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+.pdfvault-landing .pv-btn-secondary:hover {
+  background: var(--pv-gray-2);
+}
+.pdfvault-landing .pv-btn-secondary:focus-visible {
+  outline: 2px solid var(--pv-brand-900);
+  outline-offset: 2px;
+}
