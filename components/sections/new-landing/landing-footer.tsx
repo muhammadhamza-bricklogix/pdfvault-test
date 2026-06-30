@@ -97,10 +97,73 @@ function PhoneIcon() {
   );
 }
 
+/**
+ * Soft, low-contrast ribbon/chevron texture sampled from the reference footer.
+ * Thick round-capped chevron strokes plus a few rounded blobs in a slightly
+ * lighter maroon (white at ~3–4% over #400000) give the footer a layered,
+ * modern depth instead of a flat fill. It scales to cover via `slice`.
+ */
+function FooterPattern() {
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      preserveAspectRatio="xMidYMid slice"
+      viewBox="0 0 1300 547"
+    >
+      <g
+        fill="none"
+        stroke="#ffffff"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path
+          d="M-130 290 L650 470 L1430 250"
+          strokeOpacity="0.04"
+          strokeWidth="150"
+        />
+        <path
+          d="M-130 110 L650 300 L1430 80"
+          strokeOpacity="0.025"
+          strokeWidth="120"
+        />
+      </g>
+      <g fill="#ffffff">
+        <rect
+          fillOpacity="0.03"
+          height="210"
+          rx="90"
+          transform="rotate(-14 70 30)"
+          width="300"
+          x="-70"
+          y="-70"
+        />
+        <rect
+          fillOpacity="0.028"
+          height="200"
+          rx="90"
+          width="320"
+          x="70"
+          y="430"
+        />
+        <rect
+          fillOpacity="0.03"
+          height="300"
+          rx="120"
+          width="380"
+          x="1060"
+          y="150"
+        />
+      </g>
+    </svg>
+  );
+}
+
 export function LandingFooter() {
   return (
-    <footer className="bg-[var(--pv-footer-bg)] text-white">
-      <div className="pv-container py-16">
+    <footer className="relative overflow-hidden bg-[var(--pv-footer-bg)] text-white">
+      <FooterPattern />
+      <div className="pv-container relative z-10 py-16">
         <div className="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-4 md:grid-cols-[1.8fr_1fr_1fr_1fr_1fr] md:gap-x-10">
           {/* Brand block */}
           <div className="col-span-2 sm:col-span-4 md:col-span-1">

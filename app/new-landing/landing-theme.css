@@ -37,7 +37,9 @@
   --pv-section-gray: var(--pv-gray-1);
   --pv-card-border: var(--pv-gray-3);
   --pv-border-subtle: var(--pv-gray-4);
-  --pv-footer-bg: var(--pv-brand-900);
+  /* The footer in the design is a deeper oxblood than Brand-900 (#530000) —
+     sampled from the reference art at #400000. */
+  --pv-footer-bg: #400000;
 
   /* Layout */
   --pv-content-max: 1248px;
