@@ -98,18 +98,37 @@ function PhoneIcon() {
 }
 
 /**
- * Footer background motif, extracted directly from the reference art
- * (`/landing/footer-pattern.png`) — soft, rounded chevron bands in a slightly
- * lighter maroon. Baked as a faint white-alpha PNG so it composites over the
- * #400000 footer fill exactly as in the design.
+ * Footer background: a single large, faint circle in the centre (slightly
+ * right), as in the design — a soft darker orb with a thin lighter rim over
+ * the #400000 fill. Nothing else.
  */
 function FooterPattern() {
   return (
-    <div
+    <svg
       aria-hidden
-      className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/landing/footer-pattern.png')" }}
-    />
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      preserveAspectRatio="xMidYMid slice"
+      viewBox="0 0 1300 547"
+    >
+      <defs>
+        <radialGradient cx="50%" cy="50%" id="footer-orb" r="50%">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.22" />
+          <stop offset="60%" stopColor="#000000" stopOpacity="0.08" />
+          <stop offset="82%" stopColor="#ffffff" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="730" cy="274" fill="url(#footer-orb)" r="330" />
+      <circle
+        cx="730"
+        cy="274"
+        fill="none"
+        r="312"
+        stroke="#ffffff"
+        strokeOpacity="0.05"
+        strokeWidth="2"
+      />
+    </svg>
   );
 }
 
