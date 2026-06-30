@@ -27,6 +27,7 @@ const TRUST_ITEMS = [
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -44,7 +45,13 @@ function CheckCircleIcon() {
       viewBox="0 0 20 20"
       width="20"
     >
-      <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.4" />
+      <circle
+        cx="10"
+        cy="10"
+        r="8.25"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
       <path
         d="M6.5 10.2l2.3 2.3 4.7-4.9"
         stroke="currentColor"
@@ -97,6 +104,7 @@ function ProviderIcon({ id }: { id: CloudProvider["id"] }) {
       </svg>
     );
   }
+
   return (
     <svg aria-hidden height="16" viewBox="0 0 32 20" width="16">
       <path
@@ -120,11 +128,13 @@ export function UploadWorkspace() {
 
   const validateAndSet = (candidate: File) => {
     const ext = getExtension(candidate.name);
+
     if (!ACCEPTED_EXTENSIONS.includes(ext)) {
       setError(
         `"${candidate.name}" isn't a supported type. Use PDF, DOC, DOCX, JPG, or PNG.`,
       );
       setFile(null);
+
       return;
     }
     if (candidate.size > MAX_SIZE_BYTES) {
@@ -132,6 +142,7 @@ export function UploadWorkspace() {
         `"${candidate.name}" is too large. The maximum size is ${formatSize(MAX_SIZE_BYTES)}.`,
       );
       setFile(null);
+
       return;
     }
     setError(null);
@@ -140,6 +151,7 @@ export function UploadWorkspace() {
 
   const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0];
+
     if (selected) validateAndSet(selected);
   };
 
@@ -147,6 +159,7 @@ export function UploadWorkspace() {
     event.preventDefault();
     setDragActive(false);
     const dropped = event.dataTransfer.files?.[0];
+
     if (dropped) validateAndSet(dropped);
   };
 

@@ -11,10 +11,7 @@ export function LandingHero() {
       <HeroTileGrid />
 
       <div className="pv-container relative z-10 flex flex-col items-center pb-10 pt-24 text-center sm:pt-32">
-        <h1
-          className="pv-display max-w-[760px] text-balance"
-          id="hero-heading"
-        >
+        <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
           A smarter, more secure
           <br className="hidden sm:block" /> home for every PDF.
         </h1>

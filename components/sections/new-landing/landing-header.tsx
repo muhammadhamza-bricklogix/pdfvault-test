@@ -50,14 +50,14 @@ function ChevronDown({ className }: { className?: string }) {
 
 function GlobeIcon() {
   return (
-    <svg
-      aria-hidden
-      fill="none"
-      height="18"
-      viewBox="0 0 20 20"
-      width="18"
-    >
-      <circle cx="10" cy="10" r="7.25" stroke="currentColor" strokeWidth="1.5" />
+    <svg aria-hidden fill="none" height="18" viewBox="0 0 20 20" width="18">
+      <circle
+        cx="10"
+        cy="10"
+        r="7.25"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
       <path
         d="M2.75 10h14.5M10 2.75c2 2 2 12.5 0 14.5M10 2.75c-2 2-2 12.5 0 14.5"
         stroke="currentColor"

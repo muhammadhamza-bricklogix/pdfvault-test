@@ -49,7 +49,8 @@ const TOOLS: Tool[] = [
   {
     icon: "/landing/organize.svg",
     title: "Organize Pages",
-    description: "Reorder, insert, and rotate thumbnails until the flow is right.",
+    description:
+      "Reorder, insert, and rotate thumbnails until the flow is right.",
     href: ROUTES.TOOLS.BY_SLUG("organize"),
     tabs: ["edit", "others"],
   },
@@ -64,7 +65,8 @@ const TOOLS: Tool[] = [
   {
     icon: "/landing/password.svg",
     title: "Password Protect",
-    description: "Lock your PDF with a password so only intended readers get in.",
+    description:
+      "Lock your PDF with a password so only intended readers get in.",
     href: ROUTES.TOOLS.BY_SLUG("protect"),
     tabs: ["edit", "others"],
   },
@@ -78,14 +80,16 @@ const TOOLS: Tool[] = [
   {
     icon: "/landing/rotate.svg",
     title: "Rotate Pages",
-    description: "Fix upside-down scans or mixed-orientation bundles in seconds.",
+    description:
+      "Fix upside-down scans or mixed-orientation bundles in seconds.",
     href: ROUTES.TOOLS.BY_SLUG("rotate"),
     tabs: ["edit", "others"],
   },
   {
     icon: "/landing/delete.svg",
     title: "Delete Pages",
-    description: "Drop extras, blanks, or outdated sections without re-exporting.",
+    description:
+      "Drop extras, blanks, or outdated sections without re-exporting.",
     href: ROUTES.TOOLS.BY_SLUG("delete"),
     tabs: ["edit", "others"],
   },
@@ -93,13 +97,7 @@ const TOOLS: Tool[] = [
 
 function ArrowIcon() {
   return (
-    <svg
-      aria-hidden
-      fill="none"
-      height="18"
-      viewBox="0 0 20 20"
-      width="18"
-    >
+    <svg aria-hidden fill="none" height="18" viewBox="0 0 20 20" width="18">
       <path
         d="M4 10h12m0 0-4.5-4.5M16 10l-4.5 4.5"
         stroke="currentColor"
@@ -120,8 +118,10 @@ export function LandingTools() {
     const lastIndex = TABS.length - 1;
     let nextIndex: number | null = null;
 
-    if (event.key === "ArrowRight") nextIndex = index === lastIndex ? 0 : index + 1;
-    if (event.key === "ArrowLeft") nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === "ArrowRight")
+      nextIndex = index === lastIndex ? 0 : index + 1;
+    if (event.key === "ArrowLeft")
+      nextIndex = index === 0 ? lastIndex : index - 1;
     if (event.key === "Home") nextIndex = 0;
     if (event.key === "End") nextIndex = lastIndex;
 

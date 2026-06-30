@@ -123,7 +123,10 @@ function MarqueeRow({
 
 export function LandingTestimonials() {
   return (
-    <section aria-labelledby="testimonials-heading" className="bg-white py-20 sm:py-24">
+    <section
+      aria-labelledby="testimonials-heading"
+      className="bg-white py-20 sm:py-24"
+    >
       <div className="pv-container">
         <SectionHeading
           title={

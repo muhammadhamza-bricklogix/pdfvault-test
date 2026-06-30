@@ -35,7 +35,9 @@ export function LandingSteps() {
       <div className="pv-container">
         <SectionHeading
           description="From upload to a securely saved document, PDFVault makes it easy to handle every PDF in one place."
-          title={<span id="steps-heading">Get started in three simple steps</span>}
+          title={
+            <span id="steps-heading">Get started in three simple steps</span>
+          }
         />
 
         <ul className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">

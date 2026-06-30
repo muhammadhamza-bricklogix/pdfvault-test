@@ -74,13 +74,7 @@ const BANNER_TILES: BannerTile[] = [
 
 function ArrowIcon() {
   return (
-    <svg
-      aria-hidden
-      fill="none"
-      height="16"
-      viewBox="0 0 20 20"
-      width="16"
-    >
+    <svg aria-hidden fill="none" height="16" viewBox="0 0 20 20" width="16">
       <path
         d="M4 10h12m0 0-4.5-4.5M16 10l-4.5 4.5"
         stroke="currentColor"
@@ -121,7 +115,8 @@ export function LandingBanner() {
                   width: tile.w,
                   height: tile.h,
                   background: tile.tint ?? LIGHT,
-                  borderRadius: tile.shape === "circle" ? 999 : (tile.radius ?? 8),
+                  borderRadius:
+                    tile.shape === "circle" ? 999 : (tile.radius ?? 8),
                 }}
               />
             ))}
