@@ -1,14 +1,14 @@
-import { HeroTileGrid } from "./hero-tile-grid";
+import { HeroBackground } from "./hero-background";
 import { UploadWorkspace } from "./upload-workspace";
 
 export function LandingHero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="relative overflow-hidden bg-white"
+      className="relative isolate overflow-hidden bg-white"
     >
-      {/* Decorative, data-driven tile grid (see HeroTileGrid). */}
-      <HeroTileGrid />
+      {/* Designer geometric grid, inverted over white (see HeroBackground). */}
+      <HeroBackground />
 
       <div className="pv-container relative z-10 flex flex-col items-center pb-10 pt-24 text-center sm:pt-32">
         <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
