@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { LandingBanner } from "@/components/sections/new-landing/landing-banner";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
@@ -17,6 +18,7 @@ export default function NewLandingPage() {
         <LandingHero />
         <LandingSteps />
         <LandingTools />
+        <LandingBanner />
         {/* More sections are added layer by layer as the build progresses. */}
       </main>
     </div>
