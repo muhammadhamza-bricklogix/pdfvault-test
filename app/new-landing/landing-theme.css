@@ -123,3 +123,42 @@
   outline: 2px solid var(--pv-brand-900);
   outline-offset: 2px;
 }
+
+/* Testimonial marquee — two rows drifting in opposite directions.
+   Each track renders the cards twice, so translating by -50% loops
+   seamlessly (cards own their trailing gap via margin, not flex gap). */
+@keyframes pv-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes pv-marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.pdfvault-landing .pv-marquee {
+  display: flex;
+  width: max-content;
+}
+.pdfvault-landing .pv-marquee-left {
+  animation: pv-marquee-left 64s linear infinite;
+}
+.pdfvault-landing .pv-marquee-right {
+  animation: pv-marquee-right 64s linear infinite;
+}
+.pdfvault-landing .pv-marquee-row:hover .pv-marquee {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdfvault-landing .pv-marquee-left,
+  .pdfvault-landing .pv-marquee-right {
+    animation: none;
+  }
+}
