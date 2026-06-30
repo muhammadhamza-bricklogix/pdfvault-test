@@ -1,64 +1,75 @@
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 /**
- * Decorative "tech-grid" tiles layered over the red gradient. The pattern is
- * data-driven: each tile is positioned by percentage (so it scales with the
- * banner) with a pixel size and an optional tint / corner radius. Tiles are
- * deliberately concentrated on the darker left side, top and bottom edges, and
- * thin out toward the bright glow on the lower-right — mirroring the reference.
+ * Decorative "tech-grid" tiles layered over the red gradient, traced from the
+ * reference art. The layout is deliberate, not an even scatter:
+ *   - the LEFT side reads as a vertical column (stacked bars, a tall pill, and
+ *     two square-with-circle boxes);
+ *   - the TOP runs left→right with the big rounded rectangle, a round shape,
+ *     then bigger horizontal boxes;
+ *   - the RIGHT has only a small cluster top-right;
+ *   - the BOTTOM-RIGHT is intentionally empty so the gradient reads as light
+ *     emerging from that corner.
+ * It is data-driven: each tile is positioned by percentage (scales with the
+ * banner) with a pixel size, shape and optional tint / radius.
  */
 type BannerTile = {
   left: string;
   top: string;
   w: number;
   h: number;
+  shape?: "rect" | "circle";
   tint?: string;
   radius?: number;
 };
 
 const LIGHT = "rgba(255,158,128,0.13)";
-const FAINT = "rgba(255,255,255,0.06)";
-const DARK = "rgba(125,0,0,0.18)";
+const FAINT = "rgba(255,255,255,0.05)";
+const DARK = "rgba(125,0,0,0.16)";
+const RING = "rgba(255,210,190,0.17)";
 
 const BANNER_TILES: BannerTile[] = [
-  // Hero accents
-  { left: "13%", top: "8%", w: 232, h: 118, tint: LIGHT, radius: 26 },
-  { left: "41%", top: "9%", w: 62, h: 62, tint: FAINT, radius: 999 },
+  // ---- LEFT: vertical column ------------------------------------------------
+  { left: "0%", top: "9%", w: 14, h: 64, tint: FAINT },
+  { left: "0%", top: "27%", w: 14, h: 120, tint: LIGHT },
+  { left: "0%", top: "64%", w: 14, h: 70, tint: FAINT },
+  { left: "0.5%", top: "83%", w: 96, h: 20, tint: LIGHT },
+  // box-with-circle #1 (upper-left)
+  { left: "2%", top: "7%", w: 46, h: 46, tint: LIGHT, radius: 12 },
+  { left: "2.7%", top: "8.6%", w: 28, h: 28, shape: "circle", tint: RING },
+  // tall vertical pill
+  { left: "2%", top: "27%", w: 30, h: 150, tint: LIGHT, radius: 999 },
+  // box-with-circle #2 (mid-left)
+  { left: "2%", top: "66%", w: 46, h: 46, tint: LIGHT, radius: 12 },
+  { left: "2.7%", top: "67.6%", w: 28, h: 28, shape: "circle", tint: RING },
 
-  // Left-edge cluster
-  { left: "0%", top: "13%", w: 70, h: 70, tint: LIGHT },
-  { left: "0%", top: "24%", w: 92, h: 24, tint: FAINT },
-  { left: "3%", top: "31%", w: 42, h: 42, tint: DARK },
-  { left: "0%", top: "49%", w: 26, h: 72, tint: LIGHT },
-  { left: "2%", top: "60%", w: 66, h: 34, tint: FAINT },
-  { left: "7%", top: "62%", w: 36, h: 36, tint: LIGHT },
-  { left: "0%", top: "79%", w: 122, h: 26, tint: LIGHT },
-  { left: "4%", top: "83%", w: 60, h: 60, tint: DARK },
-  { left: "9%", top: "89%", w: 72, h: 26, tint: FAINT },
-  { left: "14%", top: "90%", w: 92, h: 40, tint: LIGHT },
-  { left: "21%", top: "84%", w: 40, h: 26, tint: FAINT },
-  { left: "25%", top: "92%", w: 60, h: 28, tint: LIGHT },
+  // ---- BOTTOM-LEFT cluster --------------------------------------------------
+  { left: "6%", top: "87%", w: 40, h: 30, tint: FAINT },
+  { left: "12%", top: "86%", w: 44, h: 44, tint: LIGHT, radius: 12 },
+  { left: "12.7%", top: "87.6%", w: 26, h: 26, shape: "circle", tint: RING },
+  { left: "18%", top: "87%", w: 46, h: 46, shape: "circle", tint: FAINT },
+  { left: "24%", top: "88%", w: 38, h: 38, tint: DARK },
+  { left: "1%", top: "96%", w: 120, h: 18, tint: LIGHT },
+  { left: "10%", top: "96%", w: 60, h: 16, tint: FAINT },
 
-  // Top edge
-  { left: "8%", top: "23%", w: 44, h: 20, tint: FAINT },
-  { left: "33%", top: "34%", w: 36, h: 36, tint: LIGHT },
+  // ---- TOP: left → right ----------------------------------------------------
+  { left: "13%", top: "8%", w: 150, h: 84, tint: LIGHT, radius: 20 },
+  { left: "8%", top: "24%", w: 30, h: 18, tint: FAINT },
+  { left: "30%", top: "5%", w: 26, h: 26, tint: FAINT },
+  { left: "33%", top: "34%", w: 34, h: 34, tint: DARK },
+  { left: "40%", top: "9%", w: 58, h: 58, shape: "circle", tint: RING },
+  { left: "49%", top: "18%", w: 54, h: 54, tint: FAINT },
   { left: "50%", top: "10%", w: 82, h: 22, tint: LIGHT },
-  { left: "57%", top: "13%", w: 72, h: 20, tint: FAINT },
+  { left: "57%", top: "13%", w: 70, h: 20, tint: FAINT },
   { left: "63%", top: "9%", w: 92, h: 24, tint: LIGHT },
-  { left: "49%", top: "18%", w: 56, h: 56, tint: FAINT },
-  { left: "61%", top: "25%", w: 40, h: 28, tint: DARK },
+  { left: "61%", top: "25%", w: 40, h: 26, tint: DARK },
 
-  // Right side
-  { left: "84%", top: "16%", w: 60, h: 60, tint: LIGHT },
-  { left: "91%", top: "23%", w: 48, h: 48, tint: FAINT },
-  { left: "96%", top: "8%", w: 36, h: 72, tint: LIGHT },
-  { left: "97%", top: "46%", w: 42, h: 42, tint: FAINT },
-  { left: "82%", top: "31%", w: 28, h: 28, tint: DARK },
-
-  // Lower band (sparser — washed out by the glow)
-  { left: "47%", top: "91%", w: 30, h: 24, tint: FAINT },
-  { left: "82%", top: "59%", w: 46, h: 30, tint: FAINT },
-  { left: "69%", top: "89%", w: 30, h: 18, tint: FAINT },
+  // ---- RIGHT: small top-right cluster only ----------------------------------
+  { left: "84%", top: "16%", w: 56, h: 56, tint: LIGHT },
+  { left: "90%", top: "22%", w: 44, h: 44, tint: FAINT },
+  { left: "96%", top: "8%", w: 34, h: 68, tint: LIGHT },
+  { left: "88%", top: "31%", w: 30, h: 22, tint: FAINT },
+  { left: "97%", top: "33%", w: 34, h: 30, tint: FAINT },
 ];
 
 function ArrowIcon() {
@@ -102,7 +113,7 @@ export function LandingBanner() {
           <div aria-hidden className="pointer-events-none absolute inset-0">
             {BANNER_TILES.map((tile) => (
               <span
-                key={`${tile.left}-${tile.top}-${tile.w}`}
+                key={`${tile.left}-${tile.top}-${tile.w}-${tile.h}`}
                 className="absolute"
                 style={{
                   left: tile.left,
@@ -110,7 +121,7 @@ export function LandingBanner() {
                   width: tile.w,
                   height: tile.h,
                   background: tile.tint ?? LIGHT,
-                  borderRadius: tile.radius ?? 8,
+                  borderRadius: tile.shape === "circle" ? 999 : (tile.radius ?? 8),
                 }}
               />
             ))}
