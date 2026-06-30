@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import { ROUTES } from "@/lib/shared/constants/routes";
+
 type NavLink = { label: string; href: string };
 
 const PRIMARY_LINKS: NavLink[] = [
@@ -184,13 +186,13 @@ export function LandingHeader() {
 
           <a
             className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-            href="#login"
+            href={ROUTES.AUTH.SIGN_IN}
           >
             Login
           </a>
           <a
             className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
-            href="#get-started"
+            href={ROUTES.AUTH.SIGN_UP}
           >
             Get started
           </a>
@@ -239,12 +241,20 @@ export function LandingHeader() {
               <GlobeIcon />
               EN
             </li>
-            <li className="px-2 pt-1">
+            <li className="flex flex-col gap-2 px-2 pt-1">
               <a
                 className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                href="#login"
+                href={ROUTES.AUTH.SIGN_IN}
+                onClick={() => setMobileOpen(false)}
               >
                 Login
+              </a>
+              <a
+                className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                href={ROUTES.AUTH.SIGN_UP}
+                onClick={() => setMobileOpen(false)}
+              >
+                Get started
               </a>
             </li>
           </ul>
