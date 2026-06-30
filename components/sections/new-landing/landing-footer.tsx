@@ -9,7 +9,9 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "TOOLS",
     links: [
-      { label: "Edit & Sign", href: ROUTES.TOOLS.PDF_EDITOR },
+      // Reference spelling is "Edit & SIgn" (designer typo) — kept per the
+      // pixel-accurate spec; flag to product if it should read "Edit & Sign".
+      { label: "Edit & SIgn", href: ROUTES.TOOLS.PDF_EDITOR },
       { label: "Compress", href: ROUTES.TOOLS.BY_SLUG("compress") },
       { label: "Convert", href: ROUTES.TOOLS.BY_SLUG("convert") },
     ],
@@ -42,34 +44,37 @@ const FOOTER_COLUMNS: FooterColumn[] = [
 
 const SOCIAL_LINKS: { label: string; href: string; icon: React.ReactNode }[] = [
   {
-    label: "LinkedIn",
+    label: "PDFVault on LinkedIn",
     href: "#linkedin",
     icon: (
       <path d="M4.98 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM3.4 9h3.2v10.5H3.4V9Zm5.3 0h3.07v1.43h.04c.43-.78 1.48-1.6 3.05-1.6 3.26 0 3.86 2.0 3.86 4.6v6.07h-3.2v-5.38c0-1.28-.02-2.93-1.8-2.93-1.8 0-2.07 1.39-2.07 2.83v5.48H8.7V9Z" />
     ),
   },
   {
-    label: "Facebook",
+    label: "PDFVault on Facebook",
     href: "#facebook",
     icon: (
       <path d="M13.5 21v-8h2.2l.4-2.7h-2.6V8.55c0-.78.23-1.31 1.37-1.31h1.32V4.84c-.64-.07-1.28-.1-1.92-.1-1.9 0-3.21 1.16-3.21 3.29V10.3H8.5V13h2.25v8h2.75Z" />
     ),
   },
   {
-    label: "X",
+    label: "PDFVault on X",
     href: "#x",
     icon: (
       <path d="M17.3 3.75h2.7l-5.9 6.74 6.94 9.17h-5.43l-4.25-5.56-4.87 5.56H3.78l6.31-7.21L3.43 3.75h5.57l3.84 5.08 4.46-5.08Zm-.95 14.27h1.5L7.7 5.27H6.1l10.25 12.75Z" />
     ),
   },
   {
-    label: "Instagram",
+    label: "PDFVault on Instagram",
     href: "#instagram",
     icon: (
       <path d="M12 4.8c2.34 0 2.62.01 3.54.05.85.04 1.32.18 1.63.3.41.16.7.35 1.01.66.31.31.5.6.66 1.01.12.31.26.78.3 1.63.04.92.05 1.2.05 3.54s-.01 2.62-.05 3.54c-.04.85-.18 1.32-.3 1.63-.16.41-.35.7-.66 1.01-.31.31-.6.5-1.01.66-.31.12-.78.26-1.63.3-.92.04-1.2.05-3.54.05s-2.62-.01-3.54-.05c-.85-.04-1.32-.18-1.63-.3a2.7 2.7 0 0 1-1.01-.66 2.7 2.7 0 0 1-.66-1.01c-.12-.31-.26-.78-.3-1.63C4.81 14.62 4.8 14.34 4.8 12s.01-2.62.05-3.54c.04-.85.18-1.32.3-1.63.16-.41.35-.7.66-1.01.31-.31.6-.5 1.01-.66.31-.12.78-.26 1.63-.3C9.38 4.81 9.66 4.8 12 4.8Zm0 3.7a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 5.77a2.27 2.27 0 1 1 0-4.54 2.27 2.27 0 0 1 0 4.54Zm4.46-5.91a.82.82 0 1 1-1.64 0 .82.82 0 0 1 1.64 0Z" />
     ),
   },
 ];
+
+const FOCUS_RING =
+  "focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/60";
 
 function SendIcon() {
   return (
@@ -98,49 +103,53 @@ function PhoneIcon() {
 }
 
 /**
- * Footer background motif, extracted directly from the reference art
- * (`/landing/footer-pattern.png`) — soft, rounded chevron bands in a slightly
- * lighter maroon. Baked as a faint white-alpha PNG so it composites over the
- * #400000 footer fill exactly as in the design.
+ * Footer background — the designer's dark-red vault artwork
+ * (`/landing/footer-bg.png`, native 4320×2472, base #400000 with faint baked-in
+ * chevron contours). Used directly per the pixel-accurate spec: `cover`,
+ * top-centred, and clipped to the footer's height by `overflow-hidden`. No
+ * inversion, tint, overlay, or extra gradient — the artwork is deliberately
+ * very low contrast.
  */
-function FooterPattern() {
+function FooterBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/landing/footer-pattern.png')" }}
+      className="pointer-events-none absolute inset-0 z-0 select-none bg-cover bg-top bg-no-repeat"
+      style={{ backgroundImage: "url('/landing/footer-bg.png')" }}
     />
   );
 }
 
 export function LandingFooter() {
   return (
-    <footer className="relative overflow-hidden bg-[var(--pv-footer-bg)] text-white">
-      <FooterPattern />
-      <div className="pv-container relative z-10 py-16">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-4 md:grid-cols-[1.8fr_1fr_1fr_1fr_1fr] md:gap-x-10">
-          {/* Brand block */}
+    <footer className="relative isolate overflow-hidden bg-[#400000] text-white">
+      <FooterBackground />
+
+      <div className="relative z-[1] mx-auto w-[min(1240px,calc(100%-48px))] md:min-h-[589px]">
+        {/* Top: brand + four link columns (measured desktop grid) */}
+        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[440px_132px_145px_152px_155px] md:gap-x-[54px] md:pt-[100px]">
+          {/* Brand + contact */}
           <div className="col-span-2 sm:col-span-4 md:col-span-1">
             <Image
               alt="PDFVault"
-              className="h-8 w-auto brightness-0 invert"
-              height={70}
+              className="brightness-0 invert"
+              height={32}
               src="/landing/logo-with-text.png"
-              width={202}
+              width={92}
             />
-            <p className="mt-5 max-w-[260px] text-[15px] leading-relaxed text-white/70">
+            <p className="mt-6 max-w-[250px] text-[16px] leading-6 text-white/70">
               A smarter, more secure place for your PDFs.
             </p>
-            <div className="mt-8 flex flex-col gap-4">
+            <div className="mt-8 flex flex-col gap-5">
               <a
-                className="flex items-center gap-3 text-[14px] text-white/80 transition-colors hover:text-white"
-                href="mailto:info@pdfvault.com"
+                className={`flex w-fit items-center gap-3 text-[14px] text-white/70 transition-colors hover:text-white ${FOCUS_RING}`}
+                href="mailto:Info@pdfvault.com"
               >
                 <SendIcon />
                 Info@pdfvault.com
               </a>
               <a
-                className="flex items-center gap-3 text-[14px] text-white/80 transition-colors hover:text-white"
+                className={`flex w-fit items-center gap-3 text-[14px] text-white/70 transition-colors hover:text-white ${FOCUS_RING}`}
                 href="tel:+88123456789"
               >
                 <PhoneIcon />
@@ -152,14 +161,14 @@ export function LandingFooter() {
           {/* Link columns */}
           {FOOTER_COLUMNS.map((column) => (
             <nav key={column.heading} aria-label={column.heading}>
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-white">
+              <h2 className="text-[14px] font-semibold uppercase tracking-[0.04em] text-white">
                 {column.heading}
               </h2>
-              <ul className="mt-5 flex flex-col gap-3.5">
+              <ul className="mt-6 flex flex-col gap-[18px]">
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <a
-                      className="text-[14px] text-white/65 transition-colors hover:text-white"
+                      className={`text-[14px] text-white/65 transition-colors hover:text-white ${FOCUS_RING}`}
                       href={link.href}
                     >
                       {link.label}
@@ -171,27 +180,27 @@ export function LandingFooter() {
           ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-14 flex flex-col gap-5 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[13px] text-white/60">
+        {/* Bottom: copyright (left) + socials (right), pinned ~438px down on desktop */}
+        <div className="mt-14 flex flex-col gap-6 pb-14 sm:flex-row sm:items-center sm:justify-between md:absolute md:inset-x-0 md:top-[438px] md:mt-0 md:pb-0">
+          <p className="text-[14px] text-white/60">
             © 2026,{" "}
             <span className="font-semibold text-white/85">Pdfvault</span> All
             rights reserved.
           </p>
-          <ul className="flex items-center gap-3">
+          <ul className="flex items-center">
             {SOCIAL_LINKS.map((social) => (
               <li key={social.label}>
                 <a
                   aria-label={social.label}
-                  className="flex size-9 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                  className={`flex size-11 items-center justify-center text-white/55 transition-colors hover:text-white ${FOCUS_RING}`}
                   href={social.href}
                 >
                   <svg
                     aria-hidden
                     fill="currentColor"
-                    height="20"
+                    height="18"
                     viewBox="0 0 24 24"
-                    width="20"
+                    width="18"
                   >
                     {social.icon}
                   </svg>
