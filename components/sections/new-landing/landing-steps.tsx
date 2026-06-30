@@ -30,7 +30,7 @@ export function LandingSteps() {
   return (
     <section
       aria-labelledby="steps-heading"
-      className="bg-[var(--pv-section-gray)] py-20 sm:py-24"
+      className="bg-[var(--pv-section-gray)] py-24 sm:py-28"
     >
       <div className="pv-container">
         <SectionHeading
@@ -38,11 +38,11 @@ export function LandingSteps() {
           title={<span id="steps-heading">Get started in three simple steps</span>}
         />
 
-        <ul className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <ul className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
           {STEPS.map((step) => (
             <li
               key={step.title}
-              className="flex flex-col rounded-[16px] bg-white p-8"
+              className="flex flex-col rounded-[16px] bg-white p-9"
             >
               <Image
                 alt=""

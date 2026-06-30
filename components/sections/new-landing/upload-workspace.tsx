@@ -163,14 +163,14 @@ export function UploadWorkspace() {
     <div className="mx-auto w-full max-w-[1200px]">
       {/* Outer pale-gray frame */}
       <div
-        className="rounded-[22px] bg-[var(--pv-gray-1)] p-3 sm:p-4"
+        className="rounded-[22px] bg-[var(--pv-gray-1)] p-4 sm:p-5"
         style={{ border: "1px solid var(--pv-gray-3)" }}
       >
         {/* White dashed drop zone */}
         <div
           aria-describedby={error ? errorId : undefined}
           aria-label="Upload a file. Drop a file here, or activate to browse."
-          className={`flex flex-col items-center rounded-[16px] bg-white px-6 py-12 text-center transition-colors sm:py-16 ${
+          className={`flex flex-col items-center rounded-[16px] bg-white px-6 py-16 text-center transition-colors sm:py-24 ${
             dragActive ? "bg-[var(--pv-gray-1)]" : ""
           }`}
           role="button"
@@ -197,14 +197,14 @@ export function UploadWorkspace() {
 
           <Image
             alt=""
-            className="h-auto w-[120px] object-contain"
-            height={120}
+            className="h-auto w-[132px] object-contain"
+            height={132}
             src="/landing/upload-image.png"
-            width={150}
+            width={165}
           />
 
           {file ? (
-            <div className="mt-6 flex flex-col items-center">
+            <div className="mt-8 flex flex-col items-center">
               <p className="text-[18px] font-semibold text-[var(--pv-text-primary)]">
                 {file.name}
               </p>
@@ -225,17 +225,17 @@ export function UploadWorkspace() {
             </div>
           ) : (
             <>
-              <h2 className="mt-6 text-[20px] font-semibold leading-snug text-[var(--pv-text-primary)] sm:text-[22px]">
+              <h2 className="mt-8 text-[20px] font-semibold leading-snug text-[var(--pv-text-primary)] sm:text-[22px]">
                 Ready to sign, edit or get creative?
                 <br />
                 Drop your file here to get started
               </h2>
-              <p className="mt-3 max-w-[420px] text-[14px] text-[var(--pv-text-secondary)]">
+              <p className="mt-4 max-w-[420px] text-[14px] text-[var(--pv-text-secondary)]">
                 Upload a PDF or import from your cloud storage. Supports PDF,
                 DOC, DOCX, JPG, PNG
               </p>
               <button
-                className="pv-btn-primary mt-6 px-7 py-2.5 text-[15px]"
+                className="pv-btn-primary mt-8 px-7 py-2.5 text-[15px]"
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -259,7 +259,7 @@ export function UploadWorkspace() {
         </div>
 
         {/* Cloud provider buttons */}
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {CLOUD_PROVIDERS.map((provider) => (
             <button
               key={provider.id}
@@ -276,7 +276,7 @@ export function UploadWorkspace() {
       </div>
 
       {/* Trust strip */}
-      <ul className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
+      <ul className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
         {TRUST_ITEMS.map((item) => (
           <li
             key={item}
