@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+import { LandingLanguageSwitcher } from "./landing-language-switcher";
+
 type NavLink = { label: string; href: string };
 
 const PRIMARY_LINKS: NavLink[] = [
@@ -22,11 +24,6 @@ const ALL_TOOLS_MENU: NavLink[] = [
   { label: "Password Protect", href: "#protect" },
 ];
 
-const LANGUAGES: NavLink[] = [
-  { label: "EN", href: "#en" },
-  { label: "ES", href: "#es" },
-];
-
 function ChevronDown({ className }: { className?: string }) {
   return (
     <svg
@@ -42,25 +39,6 @@ function ChevronDown({ className }: { className?: string }) {
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg aria-hidden fill="none" height="18" viewBox="0 0 20 20" width="18">
-      <circle
-        cx="10"
-        cy="10"
-        r="7.25"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M2.75 10h14.5M10 2.75c2 2 2 12.5 0 14.5M10 2.75c-2 2-2 12.5 0 14.5"
-        stroke="currentColor"
         strokeWidth="1.5"
       />
     </svg>
@@ -177,11 +155,8 @@ export function LandingHeader() {
 
         {/* Right: language + auth */}
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 lg:flex">
-            <GlobeIcon />
-            <DropdownShell items={LANGUAGES} label="Language menu">
-              EN
-            </DropdownShell>
+          <div className="hidden lg:block">
+            <LandingLanguageSwitcher />
           </div>
 
           <a
@@ -237,9 +212,8 @@ export function LandingHeader() {
                 </li>
               ),
             )}
-            <li className="mt-1 flex items-center gap-2 px-2 py-2 text-[14px] text-[var(--pv-text-secondary)]">
-              <GlobeIcon />
-              EN
+            <li className="mt-1 px-2 py-1">
+              <LandingLanguageSwitcher variant="mobile" />
             </li>
             <li className="flex flex-col gap-2 px-2 pt-1">
               <a
