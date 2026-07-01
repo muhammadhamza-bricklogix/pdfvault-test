@@ -10,7 +10,7 @@ export function LandingHero() {
       {/* Designer geometric grid, inverted over white (see HeroBackground). */}
       <HeroBackground />
 
-      <div className="pv-container relative z-10 flex flex-col items-center pb-10 pt-24 text-center sm:pt-32">
+      <div className="pv-container relative z-10 flex flex-col items-center pt-24 text-center sm:pt-32">
         <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
           A smarter, more secure
           <br className="hidden sm:block" /> home for every PDF.
@@ -19,10 +19,12 @@ export function LandingHero() {
           Sign, edit, protect and much more. Keep important documents in one
           secure workspace without losing track of files that matter.
         </p>
+      </div>
 
-        <div className="mt-16 w-full">
-          <UploadWorkspace />
-        </div>
+      {/* Upload workspace sits in a wider, viewport-centred container than the
+          text column so it hits the design's ~1223px / 2:1 proportion. */}
+      <div className="relative z-10 mx-auto w-full max-w-[1272px] px-6 pb-10 pt-16">
+        <UploadWorkspace />
       </div>
     </section>
   );
