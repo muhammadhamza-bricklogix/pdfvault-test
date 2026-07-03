@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+import { LanguageSwitcher } from "./language-switcher";
+
 const PDF_TOOL_LINKS = [
   { href: `${ROUTES.PUBLIC.HOME}#pdf-tools`, label: "All tools overview" },
   { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF editor" },
@@ -119,6 +121,7 @@ export function SiteNavbar() {
 
                   <div className="flex flex-col gap-3 px-3">
                     <ThemeToggle />
+                    <LanguageSwitcher />
 
                     {showSignedOut ? (
                       <>
@@ -207,6 +210,10 @@ export function SiteNavbar() {
 
           <div className="hidden lg:block">
             <ThemeToggle />
+          </div>
+
+          <div className="hidden lg:block">
+            <LanguageSwitcher />
           </div>
 
           {showSignedOut ? (
