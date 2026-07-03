@@ -6,15 +6,15 @@ import { Button, Card } from "@heroui/react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { useEntitlementQuery } from "@/lib/client/query/queries/billing.query";
+import {
+  useEntitlementQuery,
+  useInvoicesQuery,
+} from "@/lib/client/query/queries/billing.query";
+import { billingService } from "@/lib/shared/api/services/billing.service";
 import { BILLING_PLANS } from "@/lib/shared/constants/billing";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { isEntitlementActive } from "@/lib/shared/types/billing.types";
 import { toast } from "@/lib/shared/utils/toast";
-
-interface BillingSettingsProps {
-  initialEntitlement: Entitlement;
-}
 
 const STATUS_LABEL: Record<Entitlement["status"], string> = {
   none: "No active plan",
@@ -26,60 +26,77 @@ const STATUS_LABEL: Record<Entitlement["status"], string> = {
   expired: "Expired",
 };
 
-const formatDate = (unixMs: number | null): string => {
-  if (!unixMs) {
+const formatDate = (value: number | string | null | undefined): string => {
+  if (!value) {
     return "—";
   }
 
-  return new Date(unixMs).toLocaleDateString(undefined, {
+  const date = typeof value === "string" ? new Date(value) : new Date(value);
+
+  return date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 };
 
-export function BillingSettings({ initialEntitlement }: BillingSettingsProps) {
-  const { data } = useEntitlementQuery();
-  const entitlement = data ?? initialEntitlement;
+const formatMoney = (cents: number, currency: string): string => {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+    }).format(cents / 100);
+  } catch {
+    return `${(cents / 100).toFixed(2)} ${currency}`;
+  }
+};
+
+const errorCode = (error: unknown): string | undefined => {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+
+  const data = (error as { data?: { error?: string } }).data;
+
+  return typeof data?.error === "string" ? data.error : undefined;
+};
+
+export function BillingSettings() {
+  const { data: entitlement } = useEntitlementQuery();
+  const { data: invoices } = useInvoicesQuery({
+    enabled: Boolean(entitlement && entitlement.status !== "none"),
+  });
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
-  const plan = entitlement.planId ? BILLING_PLANS[entitlement.planId] : null;
+  const plan = entitlement?.planId ? BILLING_PLANS[entitlement.planId] : null;
   const active = isEntitlementActive(entitlement);
 
   const openPortal = async () => {
     setIsOpeningPortal(true);
 
     try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const body = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
+      const { url } = await billingService.openPortal();
 
-      if (res.ok && body.url) {
-        window.location.href = body.url;
-
-        return;
-      }
-
-      toast.info({
-        title: "Portal unavailable",
-        description:
-          body.error === "portal-not-implemented"
-            ? "Self-serve portal is coming online soon. Contact support in the meantime."
-            : (body.error ?? "Please try again shortly."),
-      });
+      window.location.href = url;
     } catch (error) {
-      toast.error({
-        title: "Couldn't open portal",
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
+      const code = errorCode(error);
+      const description =
+        code === "chargebee-not-implemented" ||
+        code === "billing-not-configured"
+          ? "Self-serve portal is coming online soon. Contact support in the meantime."
+          : code === "no-billing-customer"
+            ? "You don't have a billing account yet. Pick a plan to get started."
+            : error instanceof Error
+              ? error.message
+              : "Please try again shortly.";
+
+      toast.info({ title: "Portal unavailable", description });
     } finally {
       setIsOpeningPortal(false);
     }
   };
 
-  if (!active) {
+  if (!entitlement || !active) {
     return (
       <Card className="rounded-2xl border border-default-200 bg-content1 p-6 dark:border-default-700">
         <div className="flex flex-col gap-4">
@@ -88,7 +105,10 @@ export function BillingSettings({ initialEntitlement }: BillingSettingsProps) {
               You don&apos;t have an active plan
             </h3>
             <p className="mt-1 text-sm text-default-500">
-              Status: {STATUS_LABEL[entitlement.status]}
+              Status:{" "}
+              {entitlement
+                ? STATUS_LABEL[entitlement.status]
+                : STATUS_LABEL.none}
             </p>
           </div>
           <div>
@@ -121,11 +141,9 @@ export function BillingSettings({ initialEntitlement }: BillingSettingsProps) {
               </p>
             </div>
             {plan ? (
-              <div className="text-right">
-                <p className="text-xl font-bold text-[var(--color-foreground)]">
-                  {plan.priceLabel}
-                </p>
-              </div>
+              <p className="text-xl font-bold text-[var(--color-foreground)]">
+                {plan.priceLabel}
+              </p>
             ) : null}
           </div>
 
@@ -179,14 +197,49 @@ export function BillingSettings({ initialEntitlement }: BillingSettingsProps) {
         <h3 className="text-base font-semibold text-[var(--color-foreground)]">
           Invoices
         </h3>
-        <p className="mt-1 text-sm text-default-500">
-          Invoices appear here once billing is fully connected. In the meantime
-          you can request receipts via{" "}
-          <Link className="underline" href={ROUTES.LEGAL.CONTACT}>
-            support
-          </Link>
-          .
-        </p>
+        {invoices && invoices.length > 0 ? (
+          <ul className="mt-3 divide-y divide-default-200 text-sm dark:divide-default-700">
+            {invoices.map((invoice) => (
+              <li
+                key={invoice.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-3"
+              >
+                <div>
+                  <p className="font-medium text-[var(--color-foreground)]">
+                    {invoice.invoiceNumber ?? invoice.chargebeeInvoiceId}
+                  </p>
+                  <p className="text-xs text-default-500">
+                    {formatDate(invoice.issuedAt)} · {invoice.status}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-[var(--color-foreground)]">
+                    {formatMoney(invoice.amountCents, invoice.currency)}
+                  </span>
+                  {invoice.pdfUrl ? (
+                    <a
+                      className="text-xs text-[var(--color-accent)] underline"
+                      href={invoice.pdfUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      PDF
+                    </a>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-sm text-default-500">
+            Invoices appear here once billing is fully connected. In the
+            meantime you can request receipts via{" "}
+            <Link className="underline" href={ROUTES.LEGAL.CONTACT}>
+              support
+            </Link>
+            .
+          </p>
+        )}
       </Card>
     </div>
   );

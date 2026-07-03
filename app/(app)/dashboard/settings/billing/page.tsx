@@ -1,11 +1,10 @@
 import Link from "next/link";
 
 import { BillingSettings } from "@/components/sections/billing/billing-settings";
-import { getEntitlementForCurrentUser } from "@/lib/server/billing/entitlement";
 import { isBillingEnabled } from "@/lib/shared/constants/billing";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-export default async function BillingSettingsPage() {
+export default function BillingSettingsPage() {
   if (!isBillingEnabled()) {
     return (
       <div className="flex flex-col gap-6">
@@ -31,8 +30,6 @@ export default async function BillingSettingsPage() {
     );
   }
 
-  const { entitlement } = await getEntitlementForCurrentUser();
-
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -43,7 +40,7 @@ export default async function BillingSettingsPage() {
           Manage your subscription, view invoices, and cancel any time.
         </p>
       </header>
-      <BillingSettings initialEntitlement={entitlement} />
+      <BillingSettings />
     </div>
   );
 }

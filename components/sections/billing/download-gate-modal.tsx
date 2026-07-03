@@ -7,6 +7,7 @@ import { Modal } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { billingService } from "@/lib/shared/api/services/billing.service";
 import {
   BILLING_PLANS,
   DOWNLOAD_GATE_PLAN_IDS,
@@ -31,11 +32,22 @@ export const DOWNLOAD_GATE_OPEN_EVENT = "download-gate:open";
 const KNOWN_ERRORS: Record<string, string> = {
   "billing-disabled":
     "Checkout is temporarily disabled. Please try again shortly.",
+  "billing-not-configured":
+    "Checkout is coming online soon — our team is provisioning the billing provider.",
   "plan-not-provisioned":
     "This plan isn't wired up yet — our team is provisioning it.",
-  "checkout-not-implemented":
+  "chargebee-not-implemented":
     "Checkout is coming online soon. Thanks for your patience.",
-  "unknown-plan": "Plan not found. Please refresh and try again.",
+};
+
+const errorCode = (error: unknown): string | undefined => {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+
+  const data = (error as { data?: { error?: string } }).data;
+
+  return typeof data?.error === "string" ? data.error : undefined;
 };
 
 export function DownloadGateProvider() {
@@ -75,36 +87,22 @@ export function DownloadGateProvider() {
       setPendingPlanId(plan.id);
 
       try {
-        const res = await fetch("/api/billing/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planId: plan.id,
-            returnUrl: `${window.location.origin}${window.location.pathname}`,
-          }),
+        const { url } = await billingService.startCheckout({
+          planId: plan.id,
+          returnUrl: `${window.location.origin}${window.location.pathname}`,
         });
 
-        const data = (await res.json().catch(() => ({}))) as {
-          url?: string;
-          error?: string;
-        };
-
-        if (res.ok && data.url) {
-          window.location.href = data.url;
-
-          return;
-        }
-
-        const message = data.error
-          ? (KNOWN_ERRORS[data.error] ?? data.error)
-          : "Something went wrong starting checkout.";
+        window.location.href = url;
+      } catch (error) {
+        const code = errorCode(error);
+        const message =
+          code && KNOWN_ERRORS[code]
+            ? KNOWN_ERRORS[code]
+            : error instanceof Error
+              ? error.message
+              : "Something went wrong starting checkout.";
 
         toast.info({ title: "Checkout unavailable", description: message });
-      } catch (error) {
-        toast.error({
-          title: "Checkout failed",
-          description: error instanceof Error ? error.message : "Unknown error",
-        });
       } finally {
         setPendingPlanId(null);
       }

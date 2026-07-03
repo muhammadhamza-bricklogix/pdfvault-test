@@ -43,3 +43,14 @@ export const USERS = {
   /** Pino audit hook — call right before `useClerk().signOut()`. */
   SIGN_OUT: "/users/sign-out",
 } as const;
+
+export const BILLING = {
+  ENTITLEMENT: "/billing/entitlement",
+  INVOICES: "/billing/invoices",
+  CHECKOUT: "/billing/checkout",
+  PORTAL: "/billing/portal",
+  CANCEL: "/billing/cancel",
+  ADMIN_LOOKUP: "/billing/admin/lookup",
+  ADMIN_REFUND: "/billing/admin/refund",
+  ADMIN_CHARGEBACKS: "/billing/admin/chargebacks",
+} as const;
