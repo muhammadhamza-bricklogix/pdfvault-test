@@ -1,0 +1,44 @@
+name: Deploy frontend to ECS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: pdfvault-frontend
+  ECS_CLUSTER: pdfvault-cluster
+  ECS_SERVICE: pdfvault-frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::633321546885:role/github-actions-pdfvault
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.pdfvault.ai \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
+            -t $REGISTRY/$ECR_REPOSITORY:latest \
+            -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
+          docker push $REGISTRY/$ECR_REPOSITORY:latest
+          docker push $REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+
+      - name: Force new deployment
+        run: aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
