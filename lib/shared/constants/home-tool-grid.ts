@@ -168,7 +168,7 @@ const HOME_TOOL_GRID_PRIMARY_CARDS: HomeToolCard[] = [
   {
     description:
       "Pull out the pages you need or split a long file into lighter parts.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: ROUTES.TOOLS.SPLIT_PDF,
     icon: Scissor01Icon,
     title: "Split & Extract Pages",
   },

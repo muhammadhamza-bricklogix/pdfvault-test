@@ -1,0 +1,37 @@
+# Build outputs + caches
+.next
+out
+node_modules
+.turbo
+
+# Tests + reports we never want shipped in the image
+coverage
+playwright-report
+test-results
+tests/__screenshots__
+
+# VCS + IDE
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# Local env (NEVER ship secrets in the image — use task-definition env)
+.env
+.env.*
+!.env.example
+
+# Docs + planning files
+*.md
+docs
+.repocards
+.claude
+.agents
+
+# Misc dev artifacts
+*.log
+.eslintcache
+*.tsbuildinfo
+tmp

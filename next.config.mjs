@@ -6,6 +6,10 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Produces a self-contained `.next/standalone` server folder that copies in
+  // only the node_modules actually referenced at runtime — the image we ship
+  // to ECS Fargate is ~10x smaller than a full node_modules copy.
+  output: "standalone",
   // Parent dirs (e.g. /Users/softaims/package-lock.json) must not win lockfile discovery —
   // wrong root breaks output tracing and can break Turbopack HMR / stale UI in dev.
   outputFileTracingRoot: projectRoot,

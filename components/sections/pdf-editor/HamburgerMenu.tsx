@@ -12,6 +12,7 @@ import {
   LockedIcon,
   Menu01Icon,
   NoteIcon,
+  Scissor01Icon,
   Search01Icon,
   Share01Icon,
   Stamp01Icon,
@@ -37,6 +38,7 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { AnnotationsModal } from "./AnnotationsModal";
 import { ShareModal } from "./ShareModal";
+import { SplitPdfModal, type SplitPdfModalSource } from "./SplitPdfModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 
 export function HamburgerMenu() {
@@ -62,6 +64,10 @@ export function HamburgerMenu() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const [isAnnotationsOpen, setIsAnnotationsOpen] = useState(false);
+  const [isSplitOpen, setIsSplitOpen] = useState(false);
+  const [splitSource, setSplitSource] = useState<SplitPdfModalSource | null>(
+    null,
+  );
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -100,6 +106,43 @@ export function HamburgerMenu() {
     // user added through the editor's image tool wouldn't be in the bytes
     // we POST and the backend would return 400 / "no images found".
     window.dispatchEvent(new CustomEvent("editor:extract-images"));
+  };
+
+  const openSplitModal = async () => {
+    const target = requireFile("splitting");
+
+    if (!target) return;
+
+    // Read the source bytes + page count once on click so the modal can
+    // stay a pure controlled view (avoids the cascading-render lint rule
+    // and the in-render async work it would otherwise require). pdf-lib's
+    // `load` parses the cross-reference table only, so this is fast (~tens
+    // of ms for typical PDFs).
+    const loadingKey = toast.loading({
+      title: "Preparing split",
+      description: "Reading the PDF…",
+    });
+
+    try {
+      const buf = await target.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const { PDFDocument } = await import("pdf-lib");
+      const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+
+      setSplitSource({
+        filename: target.name,
+        bytes,
+        pageCount: doc.getPageCount(),
+      });
+      setIsSplitOpen(true);
+    } catch (err) {
+      toast.error({
+        title: "Couldn't read this PDF",
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      toast.close(loadingKey);
+    }
   };
 
   const requireSignIn = () => {
@@ -150,6 +193,9 @@ export function HamburgerMenu() {
       case "page-numbers":
         if (!requireFile("adding page numbers")) return;
         setIsPageNumbersModalOpen(true);
+        break;
+      case "split":
+        void openSplitModal();
         break;
       case "versions": {
         if (!requireFile("viewing version history")) return;
@@ -295,6 +341,10 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={TextNumberSignIcon} size={14} />
               <Label>Add page numbers</Label>
             </Dropdown.Item>
+            <Dropdown.Item id="split" textValue="Split PDF">
+              <HugeiconsIcon icon={Scissor01Icon} size={14} />
+              <Label>Split PDF</Label>
+            </Dropdown.Item>
             <Dropdown.Item id="annotations" textValue="Annotations">
               <HugeiconsIcon icon={Stamp01Icon} size={14} />
               <Label>Annotations</Label>
@@ -350,6 +400,16 @@ export function HamburgerMenu() {
       <AnnotationsModal
         isOpen={isAnnotationsOpen}
         onClose={() => setIsAnnotationsOpen(false)}
+      />
+      <SplitPdfModal
+        isOpen={isSplitOpen}
+        source={splitSource}
+        onClose={() => {
+          setIsSplitOpen(false);
+          // Hold the source one tick so closing animations don't see a
+          // sudden empty modal. Cleared on next open via re-read.
+          setTimeout(() => setSplitSource(null), 200);
+        }}
       />
     </>
   );
