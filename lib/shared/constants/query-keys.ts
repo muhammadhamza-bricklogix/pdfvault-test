@@ -20,6 +20,11 @@ export const toolKeys = {
   detail: (id: string) => [...toolKeys.all, "detail", id] as const,
 };
 
+export const billingKeys = {
+  all: ["billing"] as const,
+  entitlement: () => [...billingKeys.all, "entitlement"] as const,
+};
+
 export const auditKeys = {
   all: ["audit"] as const,
   user: (pageSize: number) => [...auditKeys.all, "user", { pageSize }] as const,

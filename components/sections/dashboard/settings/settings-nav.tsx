@@ -2,6 +2,7 @@
 
 import {
   AlertCircleIcon,
+  CreditCardIcon,
   Globe02Icon,
   Setting07Icon,
   UserCircleIcon,
@@ -34,6 +35,13 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     icon: UserCircleIcon,
     id: "account",
     label: "Account",
+  },
+  {
+    description: "Plan, invoices, cancel",
+    href: ROUTES.APP.SETTINGS_BILLING,
+    icon: CreditCardIcon,
+    id: "billing",
+    label: "Billing",
   },
   {
     description: "Language, timezone, formats",
