@@ -12,7 +12,7 @@ import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 export const metadata: Metadata = {
   title: "PDFVault — A smarter, more secure home for every PDF",
   // Landing-page browser/tab icon — the PDFVault mark (overrides the app-wide
-  // /logo.svg favicon set in the root layout, for this route only).
+  // PDFVault favicon set in the root layout, for this route only).
   icons: {
     apple: "/landing/icon-only.png",
     icon: "/landing/icon-only.png",

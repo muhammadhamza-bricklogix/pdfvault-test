@@ -77,10 +77,10 @@ function SidebarBody({
         >
           <Image
             priority
-            alt="PDFedits.io"
+            alt="PDFVault"
             className="size-7 object-contain"
             height={28}
-            src="/logo.svg"
+            src="/PDFVault_stacked_layers.png"
             width={28}
           />
         </Link>
@@ -244,15 +244,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
         >
           <Image
             priority
-            alt="PDFedits.io logo"
+            alt="PDFVault logo"
             className="size-6 object-contain"
             height={24}
-            src="/logo.svg"
+            src="/PDFVault_stacked_layers.png"
             width={24}
           />
           <span>
             <span className="text-[var(--color-accent)]">PDF</span>
-            <span className="text-[var(--color-foreground)]">edits</span>
+            <span className="text-[var(--color-foreground)]">Vault</span>
           </span>
         </Link>
       </div>

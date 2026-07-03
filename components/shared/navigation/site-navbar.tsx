@@ -86,16 +86,16 @@ export function SiteNavbar() {
                   <Drawer.Heading className="flex items-center gap-2">
                     <Image
                       priority
-                      alt="PDFedits.io logo"
+                      alt="PDFVault logo"
                       className="size-9 object-contain"
                       height={36}
-                      src="/logo.svg"
+                      src="/PDFVault_stacked_layers.png"
                       width={36}
                     />
                     <span className="text-lg font-bold">
                       <span className="text-[var(--color-accent)]">PDF</span>
                       <span className="text-[var(--color-foreground)]">
-                        edits
+                        Vault
                       </span>
                     </span>
                   </Drawer.Heading>
@@ -169,15 +169,15 @@ export function SiteNavbar() {
         >
           <Image
             priority
-            alt="PDFedits.io logo"
+            alt="PDFVault logo"
             className="size-9 object-contain sm:size-10"
             height={40}
-            src="/logo.svg"
+            src="/PDFVault_stacked_layers.png"
             width={40}
           />
           <span className="text-lg font-bold tracking-tight sm:text-xl">
             <span className="text-[var(--color-accent)]">PDF</span>
-            <span className="text-[var(--color-foreground)]">edits</span>
+            <span className="text-[var(--color-foreground)]">Vault</span>
           </span>
         </Link>
 
