@@ -1,0 +1,31 @@
+import { HeroBackground } from "./hero-background";
+import { UploadWorkspace } from "./upload-workspace";
+
+export function LandingHero() {
+  return (
+    <section
+      aria-labelledby="hero-heading"
+      className="relative isolate overflow-hidden bg-white"
+    >
+      {/* Designer geometric grid, inverted over white (see HeroBackground). */}
+      <HeroBackground />
+
+      <div className="pv-container relative z-10 flex flex-col items-center pt-24 text-center sm:pt-32">
+        <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
+          A smarter, more secure
+          <br className="hidden sm:block" /> home for every PDF.
+        </h1>
+        <p className="mt-6 max-w-[600px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
+          Sign, edit, protect and much more. Keep important documents in one
+          secure workspace without losing track of files that matter.
+        </p>
+      </div>
+
+      {/* Upload workspace sits in a wider, viewport-centred container than the
+          text column so it hits the design's ~1223px / 2:1 proportion. */}
+      <div className="relative z-10 mx-auto w-full max-w-[1272px] px-6 pb-10 pt-16">
+        <UploadWorkspace />
+      </div>
+    </section>
+  );
+}
