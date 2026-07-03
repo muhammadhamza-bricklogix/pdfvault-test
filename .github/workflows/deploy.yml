@@ -12,7 +12,7 @@ env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: pdfvault-frontend
   ECS_CLUSTER: pdfvault-cluster
-  ECS_SERVICE: pdfvault-frontend
+  ECS_SERVICE: pdfvault-frontend-service-arskp30n
 
 jobs:
   deploy:
