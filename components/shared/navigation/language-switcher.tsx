@@ -60,7 +60,7 @@ export function LanguageSwitcher() {
               key={lang.code}
               id={lang.code}
               textValue={lang.label}
-              onAction={() => window.Weglot.switchTo(lang.code)}
+              onAction={() => window.Weglot?.switchTo(lang.code)}
             >
               <Label>{lang.label}</Label>
             </Dropdown.Item>
