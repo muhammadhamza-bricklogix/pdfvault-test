@@ -35,6 +35,7 @@ jobs:
           docker build \
             --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.pdfvault.ai \
             --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
+            --build-arg NEXT_PUBLIC_WEGLOT_API_KEY=${{ secrets.NEXT_PUBLIC_WEGLOT_API_KEY }} \
             -t $REGISTRY/$ECR_REPOSITORY:latest \
             -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
           docker push $REGISTRY/$ECR_REPOSITORY:latest
