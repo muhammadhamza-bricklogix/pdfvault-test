@@ -167,10 +167,10 @@ export function LandingTools() {
                     tabRefs.current[index] = node;
                   }}
                   aria-selected={selected}
-                  className={`rounded-full px-5 py-2 text-[14px] font-medium transition-colors ${
+                  className={`rounded-full px-5 py-2 text-[14px] font-medium transition-all duration-300 ease-out ${
                     selected
-                      ? "bg-[var(--pv-brand-primary)] text-white"
-                      : "text-[var(--pv-text-primary)] hover:bg-[var(--pv-section-gray)]"
+                      ? "scale-[1.02] bg-[var(--pv-brand-primary)] text-white shadow-[0_6px_16px_-6px_rgba(241,44,35,0.55)]"
+                      : "text-[var(--pv-text-secondary)] hover:bg-[var(--pv-section-gray)] hover:text-[var(--pv-text-primary)]"
                   }`}
                   role="tab"
                   tabIndex={selected ? 0 : -1}
@@ -185,18 +185,30 @@ export function LandingTools() {
           </div>
         </div>
 
-        {/* Tool cards */}
-        <ul className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {visibleTools.map((tool) => (
-            <li key={tool.title}>
+        {/*
+          Tool cards. `key={activeTab}` re-mounts the whole list when the tab
+          changes, which retriggers the CSS enter animation. Each item's
+          `animationDelay` staggers the reveal so the grid cascades rather
+          than blinking in as a slab.
+        */}
+        <ul
+          key={activeTab}
+          className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {visibleTools.map((tool, index) => (
+            <li
+              key={tool.title}
+              className="pv-fade-up"
+              style={{ animationDelay: `${index * 55}ms` }}
+            >
               <a
-                className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-colors hover:border-[var(--pv-gray-5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
+                className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
                 href={tool.href}
               >
-                <span className="flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)]">
+                <span className="flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">
                   <Image
                     alt=""
-                    className="size-6 object-contain"
+                    className="size-6 object-contain transition-transform duration-300 group-hover:scale-110"
                     height={24}
                     src={tool.icon}
                     width={24}
@@ -208,7 +220,7 @@ export function LandingTools() {
                 <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]">
                   {tool.description}
                 </p>
-                <span className="mt-4 text-[var(--pv-text-primary)] transition-transform group-hover:translate-x-1">
+                <span className="mt-4 text-[var(--pv-text-primary)] transition-transform duration-300 group-hover:translate-x-1.5">
                   <ArrowIcon />
                 </span>
               </a>

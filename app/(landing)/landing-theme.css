@@ -1,3 +1,40 @@
+@keyframes pv-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pv-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pv-fade-up {
+  animation: pv-fade-up 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.pv-fade-in {
+  animation: pv-fade-in 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-fade-up,
+  .pv-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /**
  * Scoped design tokens for the PDFVault landing-page reproduction.
  * Values are taken directly from the official "PDF Vault Project Styleguide".

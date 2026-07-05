@@ -137,7 +137,7 @@ export function LandingFooter() {
               src="/landing/logo-with-text.png"
               width={92}
             />
-            <p className="mt-6 max-w-[250px] text-[16px] leading-6 text-white/70">
+            <p className="mt-6 max-w-[250px] text-[16px] leading-[1.55] text-white/80">
               A smarter, more secure place for your PDFs.
             </p>
             <div className="mt-8 flex flex-col gap-5">
@@ -168,7 +168,7 @@ export function LandingFooter() {
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <a
-                      className={`text-[14px] text-white/65 transition-colors hover:text-white ${FOCUS_RING}`}
+                      className={`inline-block text-[14px] text-white/75 transition-all duration-200 hover:translate-x-0.5 hover:text-white ${FOCUS_RING}`}
                       href={link.href}
                     >
                       {link.label}
@@ -180,34 +180,41 @@ export function LandingFooter() {
           ))}
         </div>
 
-        {/* Bottom: copyright (left) + socials (right), pinned ~438px down on desktop */}
-        <div className="mt-14 flex flex-col gap-6 pb-14 sm:flex-row sm:items-center sm:justify-between md:absolute md:inset-x-0 md:top-[438px] md:mt-0 md:pb-0">
-          <p className="text-[14px] text-white/60">
-            © 2026,{" "}
-            <span className="font-semibold text-white/85">Pdfvault</span> All
-            rights reserved.
-          </p>
-          <ul className="flex items-center">
-            {SOCIAL_LINKS.map((social) => (
-              <li key={social.label}>
-                <a
-                  aria-label={social.label}
-                  className={`flex size-11 items-center justify-center text-white/55 transition-colors hover:text-white ${FOCUS_RING}`}
-                  href={social.href}
-                >
-                  <svg
-                    aria-hidden
-                    fill="currentColor"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    width="18"
+        {/*
+          Bottom: copyright (left) + socials (right).
+          Divider sits above the row on every breakpoint to visually anchor it
+          against the tinted footer artwork.
+        */}
+        <div className="mt-14 border-t border-white/10 pb-14 pt-8 md:absolute md:inset-x-0 md:top-[438px] md:mt-0 md:pb-0 md:pt-6">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[14px] text-white/60">
+              © 2026,{" "}
+              <span className="font-semibold text-white/90">PDFVault</span>{" "}
+              All rights reserved.
+            </p>
+            <ul className="flex items-center gap-3">
+              {SOCIAL_LINKS.map((social) => (
+                <li key={social.label}>
+                  <a
+                    aria-label={social.label}
+                    className={`group flex size-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+                    href={social.href}
                   >
-                    {social.icon}
-                  </svg>
-                </a>
-              </li>
-            ))}
-          </ul>
+                    <svg
+                      aria-hidden
+                      className="transition-transform duration-300 group-hover:scale-110"
+                      fill="currentColor"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      width="16"
+                    >
+                      {social.icon}
+                    </svg>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </footer>

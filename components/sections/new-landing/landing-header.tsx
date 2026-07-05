@@ -117,10 +117,33 @@ function DropdownShell({
 
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Sticky-header state: after ~8px the header condenses (tighter height,
+  // white/blurred background, subtle shadow) so it visually detaches from
+  // the hero without ever leaving the viewport.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="w-full border-b border-[var(--pv-border-subtle)] bg-[var(--pv-header-bg)]">
-      <div className="pv-container flex h-[52px] items-center justify-between gap-4">
+    <header
+      className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+        scrolled
+          ? "border-[var(--pv-border-subtle)] bg-white/85 shadow-[0_4px_18px_-14px_rgba(0,0,0,0.25)]"
+          : "border-transparent bg-[var(--pv-header-bg)]"
+      }`}
+    >
+      <div
+        className={`pv-container flex items-center justify-between gap-4 transition-[height] duration-300 ${
+          scrolled ? "h-[48px]" : "h-[52px]"
+        }`}
+      >
         {/* Left: logo + primary nav */}
         <div className="flex items-center gap-7">
           <a className="flex shrink-0 items-center" href="#top">
