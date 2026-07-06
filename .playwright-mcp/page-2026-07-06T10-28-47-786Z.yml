@@ -1,0 +1,398 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e3]:
+    - banner [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - link "PDFVault" [ref=f7e7] [cursor=pointer]:
+          - /url: "#top"
+          - img "PDFVault" [ref=f7e8]
+        - generic [ref=f7e9]:
+          - link "Get started" [ref=f7e10] [cursor=pointer]:
+            - /url: /sign-up
+          - button "Toggle navigation menu" [ref=f7e11]:
+            - img [ref=f7e12]
+    - main [ref=f7e14]:
+      - generic [ref=f7e16]:
+        - heading "A smarter, more secure home for every PDF." [level=1] [ref=f7e17]
+        - paragraph [ref=f7e18]: Sign, edit, protect and much more. Keep important documents in one secure workspace without losing track of files that matter.
+      - region "Every PDFVault tool" [ref=f7e19]:
+        - generic [ref=f7e20]:
+          - heading "Every PDFVault tool" [level=1] [ref=f7e21]
+          - generic [ref=f7e22]:
+            - generic [ref=f7e23]:
+              - heading "EDIT & SIgn" [level=2] [ref=f7e24]
+              - list [ref=f7e25]:
+                - listitem [ref=f7e26]:
+                  - link "PDF Editor" [ref=f7e27] [cursor=pointer]:
+                    - /url: /pdf-editor
+                    - img [ref=f7e29]
+                    - generic [ref=f7e32]: PDF Editor
+                - listitem [ref=f7e33]:
+                  - link "Compress" [ref=f7e34] [cursor=pointer]:
+                    - /url: /tools/compress
+                    - img [ref=f7e36]
+                    - generic [ref=f7e38]: Compress
+                - listitem [ref=f7e39]:
+                  - link "Organize Pages" [ref=f7e40] [cursor=pointer]:
+                    - /url: /tools/organize
+                    - img [ref=f7e42]
+                    - generic [ref=f7e45]: Organize Pages
+                - listitem [ref=f7e46]:
+                  - link "Split & Extract Pages" [ref=f7e47] [cursor=pointer]:
+                    - /url: /tools/split-pdf
+                    - img [ref=f7e49]
+                    - generic [ref=f7e52]: Split & Extract Pages
+                - listitem [ref=f7e53]:
+                  - link "Password Protect" [ref=f7e54] [cursor=pointer]:
+                    - /url: /tools/protect
+                    - img [ref=f7e56]
+                    - generic [ref=f7e58]: Password Protect
+                - listitem [ref=f7e59]:
+                  - link "Unlock PDF" [ref=f7e60] [cursor=pointer]:
+                    - /url: /tools/unlock
+                    - img [ref=f7e62]
+                    - generic [ref=f7e65]: Unlock PDF
+                - listitem [ref=f7e66]:
+                  - link "Rotate Pages" [ref=f7e67] [cursor=pointer]:
+                    - /url: /tools/rotate
+                    - img [ref=f7e69]
+                    - generic [ref=f7e72]: Rotate Pages
+                - listitem [ref=f7e73]:
+                  - link "Delete Pages" [ref=f7e74] [cursor=pointer]:
+                    - /url: /tools/delete
+                    - img [ref=f7e76]
+                    - generic [ref=f7e79]: Delete Pages
+            - generic [ref=f7e80]:
+              - heading "CONVERT TO PDF" [level=2] [ref=f7e81]
+              - list [ref=f7e82]:
+                - listitem [ref=f7e83]:
+                  - link "Word to PDF" [ref=f7e84] [cursor=pointer]:
+                    - /url: /tools/docx-to-pdf
+                    - img [ref=f7e86]:
+                      - generic [ref=f7e90]: DOC
+                    - generic [ref=f7e91]: Word to PDF
+                - listitem [ref=f7e92]:
+                  - link "PNG to PDF" [ref=f7e93] [cursor=pointer]:
+                    - /url: /tools/png-to-pdf
+                    - img [ref=f7e95]:
+                      - generic [ref=f7e99]: PNG
+                    - generic [ref=f7e100]: PNG to PDF
+                - listitem [ref=f7e101]:
+                  - link "JPG to PDF" [ref=f7e102] [cursor=pointer]:
+                    - /url: /tools/jpg-to-pdf
+                    - img [ref=f7e104]:
+                      - generic [ref=f7e108]: JPG
+                    - generic [ref=f7e109]: JPG to PDF
+                - listitem [ref=f7e110]:
+                  - link "EXCEl to PDF" [ref=f7e111] [cursor=pointer]:
+                    - /url: /tools/xlsx-to-pdf
+                    - img [ref=f7e113]:
+                      - generic [ref=f7e117]: XLS
+                    - generic [ref=f7e118]: EXCEl to PDF
+                - listitem [ref=f7e119]:
+                  - link "POWERPOINT to PDF" [ref=f7e120] [cursor=pointer]:
+                    - /url: /tools/pptx-to-pdf
+                    - img [ref=f7e122]:
+                      - generic [ref=f7e126]: PPT
+                    - generic [ref=f7e127]: POWERPOINT to PDF
+                - listitem [ref=f7e128]:
+                  - link "TXT to PDF" [ref=f7e129] [cursor=pointer]:
+                    - /url: /tools/txt-to-pdf
+                    - img [ref=f7e131]:
+                      - generic [ref=f7e135]: TXT
+                    - generic [ref=f7e136]: TXT to PDF
+                - listitem [ref=f7e137]:
+                  - link "Any format to PDF" [ref=f7e138] [cursor=pointer]:
+                    - /url: /tools/convert
+                    - img [ref=f7e140]:
+                      - generic [ref=f7e144]: ANY
+                    - generic [ref=f7e145]: Any format to PDF
+            - generic [ref=f7e146]:
+              - heading "CONVERT FROM PDF" [level=2] [ref=f7e147]
+              - list [ref=f7e148]:
+                - listitem [ref=f7e149]:
+                  - link "PDF to WORD" [ref=f7e150] [cursor=pointer]:
+                    - /url: /tools/pdf-to-docx
+                    - img [ref=f7e152]:
+                      - generic [ref=f7e156]: PDF
+                    - generic [ref=f7e157]: PDF to WORD
+                - listitem [ref=f7e158]:
+                  - link "PDF to PNG" [ref=f7e159] [cursor=pointer]:
+                    - /url: /tools/pdf-to-png
+                    - img [ref=f7e161]:
+                      - generic [ref=f7e165]: PDF
+                    - generic [ref=f7e166]: PDF to PNG
+                - listitem [ref=f7e167]:
+                  - link "PDF to JPG" [ref=f7e168] [cursor=pointer]:
+                    - /url: /tools/pdf-to-jpg
+                    - img [ref=f7e170]:
+                      - generic [ref=f7e174]: PDF
+                    - generic [ref=f7e175]: PDF to JPG
+                - listitem [ref=f7e176]:
+                  - link "PDF to EXCEL" [ref=f7e177] [cursor=pointer]:
+                    - /url: /tools/pdf-to-xlsx
+                    - img [ref=f7e179]:
+                      - generic [ref=f7e183]: PDF
+                    - generic [ref=f7e184]: PDF to EXCEL
+                - listitem [ref=f7e185]:
+                  - link "PDF to POWERPOINT" [ref=f7e186] [cursor=pointer]:
+                    - /url: /tools/pdf-to-pptx
+                    - img [ref=f7e188]:
+                      - generic [ref=f7e192]: PDF
+                    - generic [ref=f7e193]: PDF to POWERPOINT
+                - listitem [ref=f7e194]:
+                  - link "PDF to Any format" [ref=f7e195] [cursor=pointer]:
+                    - /url: /tools/pdf-to-any
+                    - img [ref=f7e197]:
+                      - generic [ref=f7e201]: PDF
+                    - generic [ref=f7e202]: PDF to Any format
+            - generic [ref=f7e203]:
+              - heading "OTHERS" [level=2] [ref=f7e204]
+              - list [ref=f7e205]:
+                - listitem [ref=f7e206]:
+                  - link "Edit Metadata" [ref=f7e207] [cursor=pointer]:
+                    - /url: /tools/edit-metadata
+                    - img [ref=f7e209]
+                    - generic [ref=f7e211]: Edit Metadata
+                - listitem [ref=f7e212]:
+                  - link "Extract Images" [ref=f7e213] [cursor=pointer]:
+                    - /url: /tools/extract-images
+                    - img [ref=f7e215]
+                    - generic [ref=f7e219]: Extract Images
+                - listitem [ref=f7e220]:
+                  - link "Crop" [ref=f7e221] [cursor=pointer]:
+                    - /url: /tools/crop
+                    - img [ref=f7e223]
+                    - generic [ref=f7e226]: Crop
+                - listitem [ref=f7e227]:
+                  - link "OCR" [ref=f7e228] [cursor=pointer]:
+                    - /url: /tools/ocr
+                    - img [ref=f7e230]
+                    - generic [ref=f7e232]: OCR
+                - listitem [ref=f7e233]:
+                  - link "Remove Annotations" [ref=f7e234] [cursor=pointer]:
+                    - /url: /tools/remove-annotations
+                    - img [ref=f7e236]
+                    - generic [ref=f7e239]: Remove Annotations
+                - listitem [ref=f7e240]:
+                  - link "Repair PDF" [ref=f7e241] [cursor=pointer]:
+                    - /url: /tools/repair
+                    - img [ref=f7e243]
+                    - generic [ref=f7e245]: Repair PDF
+                - listitem [ref=f7e246]:
+                  - link "Create Bookmarks" [ref=f7e247] [cursor=pointer]:
+                    - /url: /tools/bookmarks
+                    - img [ref=f7e249]
+                    - generic [ref=f7e251]: Create Bookmarks
+                - listitem [ref=f7e252]:
+                  - link "Watermark" [ref=f7e253] [cursor=pointer]:
+                    - /url: /tools/watermark
+                    - img [ref=f7e255]
+                    - generic [ref=f7e259]: Watermark
+      - generic [ref=f7e263]:
+        - heading "Edit and manage PDF documents with ease" [level=2] [ref=f7e264]
+        - link "Create your free vault" [ref=f7e265] [cursor=pointer]:
+          - /url: /sign-up
+          - text: Create your free vault
+          - img [ref=f7e266]
+      - region "See what people are saying about pdfvault." [ref=f7e268]:
+        - heading "See what people are saying about pdfvault." [level=2] [ref=f7e271]
+        - generic [ref=f7e272]:
+          - generic [ref=f7e274]:
+            - article [ref=f7e275]:
+              - generic [ref=f7e276]:
+                - generic [ref=f7e277]: SC
+                - generic [ref=f7e278]:
+                  - paragraph [ref=f7e279]: Sarah Chen
+                  - paragraph [ref=f7e280]: "@sarahchen"
+              - paragraph [ref=f7e281]: Just integrated @Pdfvault into my workflow and it's a game changer for document management! 🚀
+            - article [ref=f7e282]:
+              - generic [ref=f7e283]:
+                - generic [ref=f7e284]: AR
+                - generic [ref=f7e285]:
+                  - paragraph [ref=f7e286]: Alex Reyes
+                  - paragraph [ref=f7e287]: "@alexreyes"
+              - paragraph [ref=f7e288]: Can't believe I was managing my PDFs without @Pdfvault before. It's a must-have tool! 📚
+            - article [ref=f7e289]:
+              - generic [ref=f7e290]:
+                - generic [ref=f7e291]: JP
+                - generic [ref=f7e292]:
+                  - paragraph [ref=f7e293]: Jasmine Patel
+                  - paragraph [ref=f7e294]: "@jasminepatel"
+              - paragraph [ref=f7e295]: Shoutout to @Pdfvault for making collaborative document editing a breeze. Highly recommend! 💻✨
+            - article [ref=f7e296]:
+              - generic [ref=f7e297]:
+                - generic [ref=f7e298]: EB
+                - generic [ref=f7e299]:
+                  - paragraph [ref=f7e300]: Ethan Brooks
+                  - paragraph [ref=f7e301]: "@ethanbrooks"
+              - paragraph [ref=f7e302]: Merging and signing contracts used to take ages. With @Pdfvault it's a couple of clicks. ✍️
+            - article [ref=f7e303]:
+              - generic [ref=f7e304]:
+                - generic [ref=f7e305]: SC
+                - generic [ref=f7e306]:
+                  - paragraph [ref=f7e307]: Sarah Chen
+                  - paragraph [ref=f7e308]: "@sarahchen"
+              - paragraph [ref=f7e309]: Just integrated @Pdfvault into my workflow and it's a game changer for document management! 🚀
+            - article [ref=f7e310]:
+              - generic [ref=f7e311]:
+                - generic [ref=f7e312]: AR
+                - generic [ref=f7e313]:
+                  - paragraph [ref=f7e314]: Alex Reyes
+                  - paragraph [ref=f7e315]: "@alexreyes"
+              - paragraph [ref=f7e316]: Can't believe I was managing my PDFs without @Pdfvault before. It's a must-have tool! 📚
+            - article [ref=f7e317]:
+              - generic [ref=f7e318]:
+                - generic [ref=f7e319]: JP
+                - generic [ref=f7e320]:
+                  - paragraph [ref=f7e321]: Jasmine Patel
+                  - paragraph [ref=f7e322]: "@jasminepatel"
+              - paragraph [ref=f7e323]: Shoutout to @Pdfvault for making collaborative document editing a breeze. Highly recommend! 💻✨
+            - article [ref=f7e324]:
+              - generic [ref=f7e325]:
+                - generic [ref=f7e326]: EB
+                - generic [ref=f7e327]:
+                  - paragraph [ref=f7e328]: Ethan Brooks
+                  - paragraph [ref=f7e329]: "@ethanbrooks"
+              - paragraph [ref=f7e330]: Merging and signing contracts used to take ages. With @Pdfvault it's a couple of clicks. ✍️
+          - generic [ref=f7e332]:
+            - article [ref=f7e333]:
+              - generic [ref=f7e334]:
+                - generic [ref=f7e335]: ML
+                - generic [ref=f7e336]:
+                  - paragraph [ref=f7e337]: Morgan Linton
+                  - paragraph [ref=f7e338]: "@morganlinton"
+              - paragraph [ref=f7e339]: If you're coding with AI, and haven't discovered @Pdfvault yet, prepare to have your mind blown 🤯
+            - article [ref=f7e340]:
+              - generic [ref=f7e341]:
+                - generic [ref=f7e342]: JT
+                - generic [ref=f7e343]:
+                  - paragraph [ref=f7e344]: Jessica Tran
+                  - paragraph [ref=f7e345]: "@jessicatran"
+              - paragraph [ref=f7e346]: Pdfvault has transformed my workflow. Editing PDFs has never been so seamless! 🚀
+            - article [ref=f7e347]:
+              - generic [ref=f7e348]:
+                - generic [ref=f7e349]: DK
+                - generic [ref=f7e350]:
+                  - paragraph [ref=f7e351]: David Kim
+                  - paragraph [ref=f7e352]: "@davidkim"
+              - paragraph [ref=f7e353]: The features are intuitive, and the interface is sleek. Pdfvault is a game changer! 💼
+            - article [ref=f7e354]:
+              - generic [ref=f7e355]:
+                - generic [ref=f7e356]: SL
+                - generic [ref=f7e357]:
+                  - paragraph [ref=f7e358]: Samantha Lee
+                  - paragraph [ref=f7e359]: "@samanthalee"
+              - paragraph [ref=f7e360]: I can't believe how easy it is to collaborate on documents with Pdfvault. It's a must-have tool! 🙌
+            - article [ref=f7e361]:
+              - generic [ref=f7e362]:
+                - generic [ref=f7e363]: ML
+                - generic [ref=f7e364]:
+                  - paragraph [ref=f7e365]: Morgan Linton
+                  - paragraph [ref=f7e366]: "@morganlinton"
+              - paragraph [ref=f7e367]: If you're coding with AI, and haven't discovered @Pdfvault yet, prepare to have your mind blown 🤯
+            - article [ref=f7e368]:
+              - generic [ref=f7e369]:
+                - generic [ref=f7e370]: JT
+                - generic [ref=f7e371]:
+                  - paragraph [ref=f7e372]: Jessica Tran
+                  - paragraph [ref=f7e373]: "@jessicatran"
+              - paragraph [ref=f7e374]: Pdfvault has transformed my workflow. Editing PDFs has never been so seamless! 🚀
+            - article [ref=f7e375]:
+              - generic [ref=f7e376]:
+                - generic [ref=f7e377]: DK
+                - generic [ref=f7e378]:
+                  - paragraph [ref=f7e379]: David Kim
+                  - paragraph [ref=f7e380]: "@davidkim"
+              - paragraph [ref=f7e381]: The features are intuitive, and the interface is sleek. Pdfvault is a game changer! 💼
+            - article [ref=f7e382]:
+              - generic [ref=f7e383]:
+                - generic [ref=f7e384]: SL
+                - generic [ref=f7e385]:
+                  - paragraph [ref=f7e386]: Samantha Lee
+                  - paragraph [ref=f7e387]: "@samanthalee"
+              - paragraph [ref=f7e388]: I can't believe how easy it is to collaborate on documents with Pdfvault. It's a must-have tool! 🙌
+    - contentinfo [ref=f7e389]:
+      - generic [ref=f7e390]:
+        - generic [ref=f7e391]:
+          - generic [ref=f7e392]:
+            - img "PDFVault" [ref=f7e393]
+            - paragraph [ref=f7e394]: A smarter, more secure place for your PDFs.
+            - generic [ref=f7e395]:
+              - link "Info@pdfvault.com" [ref=f7e396] [cursor=pointer]:
+                - /url: mailto:Info@pdfvault.com
+                - img [ref=f7e397]
+                - text: Info@pdfvault.com
+              - link "+88 123 456 789" [ref=f7e399] [cursor=pointer]:
+                - /url: tel:+88123456789
+                - img [ref=f7e400]
+                - text: +88 123 456 789
+          - navigation "TOOLS" [ref=f7e402]:
+            - heading "TOOLS" [level=2] [ref=f7e403]
+            - list [ref=f7e404]:
+              - listitem [ref=f7e405]:
+                - link "Edit & SIgn" [ref=f7e406] [cursor=pointer]:
+                  - /url: /pdf-editor
+              - listitem [ref=f7e407]:
+                - link "Compress" [ref=f7e408] [cursor=pointer]:
+                  - /url: /tools/compress
+              - listitem [ref=f7e409]:
+                - link "Convert" [ref=f7e410] [cursor=pointer]:
+                  - /url: /tools/convert
+          - navigation "COMPANY" [ref=f7e411]:
+            - heading "COMPANY" [level=2] [ref=f7e412]
+            - list [ref=f7e413]:
+              - listitem [ref=f7e414]:
+                - link "Pricing" [ref=f7e415] [cursor=pointer]:
+                  - /url: /pricing
+              - listitem [ref=f7e416]:
+                - link "Contact Us" [ref=f7e417] [cursor=pointer]:
+                  - /url: /contact
+              - listitem [ref=f7e418]:
+                - link "About Us" [ref=f7e419] [cursor=pointer]:
+                  - /url: "#about"
+          - navigation "HELP" [ref=f7e420]:
+            - heading "HELP" [level=2] [ref=f7e421]
+            - list [ref=f7e422]:
+              - listitem [ref=f7e423]:
+                - link "FAQ" [ref=f7e424] [cursor=pointer]:
+                  - /url: "#faq"
+              - listitem [ref=f7e425]:
+                - link "Privacy" [ref=f7e426] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f7e427]:
+                - link "Terms & Condition" [ref=f7e428] [cursor=pointer]:
+                  - /url: /terms
+          - navigation "ACCOUNT" [ref=f7e429]:
+            - heading "ACCOUNT" [level=2] [ref=f7e430]
+            - list [ref=f7e431]:
+              - listitem [ref=f7e432]:
+                - link "Log In" [ref=f7e433] [cursor=pointer]:
+                  - /url: /sign-in
+              - listitem [ref=f7e434]:
+                - link "Sign Up" [ref=f7e435] [cursor=pointer]:
+                  - /url: /sign-up
+              - listitem [ref=f7e436]:
+                - link "Changelog" [ref=f7e437] [cursor=pointer]:
+                  - /url: "#changelog"
+        - generic [ref=f7e439]:
+          - paragraph [ref=f7e440]: © 2026, PDFVault All rights reserved.
+          - list [ref=f7e441]:
+            - listitem [ref=f7e442]:
+              - link "PDFVault on LinkedIn" [ref=f7e443] [cursor=pointer]:
+                - /url: "#linkedin"
+                - img [ref=f7e444]
+            - listitem [ref=f7e446]:
+              - link "PDFVault on Facebook" [ref=f7e447] [cursor=pointer]:
+                - /url: "#facebook"
+                - img [ref=f7e448]
+            - listitem [ref=f7e450]:
+              - link "PDFVault on X" [ref=f7e451] [cursor=pointer]:
+                - /url: "#x"
+                - img [ref=f7e452]
+            - listitem [ref=f7e454]:
+              - link "PDFVault on Instagram" [ref=f7e455] [cursor=pointer]:
+                - /url: "#instagram"
+                - img [ref=f7e456]
+  - button "Open Next.js Dev Tools" [ref=f7e463] [cursor=pointer]:
+    - img [ref=f7e464]
+  - alert [ref=f7e467]

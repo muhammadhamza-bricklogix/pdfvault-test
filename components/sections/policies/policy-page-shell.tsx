@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { HeroBackground } from "@/components/sections/new-landing/hero-background";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
@@ -59,8 +60,9 @@ function PolicyHero({
   description?: string;
 }) {
   return (
-    <section className="bg-white pb-10 pt-16 sm:pb-14 sm:pt-20">
-      <div className="mx-auto flex w-full max-w-[820px] flex-col items-center px-5 text-center sm:px-6">
+    <section className="relative isolate overflow-hidden bg-white pb-10 pt-16 sm:pb-14 sm:pt-20">
+      <HeroBackground />
+      <div className="relative z-10 mx-auto flex w-full max-w-[820px] flex-col items-center px-5 text-center sm:px-6">
         <h1 className="pv-display text-[#121212]">{title}</h1>
         {description ? (
           <p className="mt-6 text-[17px] leading-relaxed max-w-[560px] text-[var(--pv-text-secondary)]">

@@ -1,0 +1,233 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "PDFVault" [ref=e7] [cursor=pointer]:
+            - /url: "#top"
+            - img "PDFVault" [ref=e8]
+          - navigation "Primary" [ref=e9]:
+            - link "All Tools" [ref=e10] [cursor=pointer]:
+              - /url: /all-tools
+            - link "Compress" [ref=e11] [cursor=pointer]:
+              - /url: "#compress"
+            - link "Edit" [ref=e12] [cursor=pointer]:
+              - /url: "#edit"
+            - link "Convert" [ref=e13] [cursor=pointer]:
+              - /url: "#convert"
+            - link "AI Summarizer" [ref=e14] [cursor=pointer]:
+              - /url: "#ai-summarizer"
+        - generic [ref=e15]:
+          - button "Select language" [disabled] [ref=e18]:
+            - img [ref=e19]
+            - text: EN
+            - img [ref=e22]
+          - link "Login" [ref=e24] [cursor=pointer]:
+            - /url: /sign-in
+          - link "Get started" [ref=e25] [cursor=pointer]:
+            - /url: /sign-up
+    - main [ref=e26]:
+      - generic [ref=e28]:
+        - heading "Privacy Policy" [level=1] [ref=e29]
+        - paragraph [ref=e30]: How we collect, use, and protect your personal information when you use pdfvault.ai.
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - heading "Introduction" [level=2] [ref=e35]
+          - paragraph [ref=e36]: Content Clicks LLC ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and protect your personal information when you use our Service at pdfedits.io.
+        - generic [ref=e37]:
+          - heading "Information We Collect" [level=2] [ref=e38]
+          - paragraph [ref=e39]: "Information you provide directly:"
+          - list [ref=e40]:
+            - listitem [ref=e41]: Account registration details (name, email address, password hash).
+            - listitem [ref=e42]: Payment information (processed and stored by our payment processor; we do not store full card details).
+            - listitem [ref=e43]: Communications you send us (support tickets, emails).
+          - paragraph [ref=e44]: "Information collected automatically:"
+          - list [ref=e45]:
+            - listitem [ref=e46]: "Log data: IP address, browser type, pages visited, timestamps, referring URLs."
+            - listitem [ref=e47]: "Device information: operating system, screen resolution, language settings."
+            - listitem [ref=e48]: "Usage data: features used, file types processed (not file contents), session duration."
+            - listitem [ref=e49]:
+              - text: Cookies and similar tracking technologies (see
+              - link "Cookie Policy" [ref=e50] [cursor=pointer]:
+                - /url: /cookies
+              - text: ).
+          - generic [ref=e52]:
+            - paragraph [ref=e53]: "What we do NOT collect:"
+            - paragraph [ref=e55]: The contents of your uploaded files. Files are processed in memory and not permanently stored beyond the session unless you explicitly save them to your account.
+        - generic [ref=e56]:
+          - heading "How We Use Your Information" [level=2] [ref=e57]
+          - paragraph [ref=e58]: "We use your information to:"
+          - list [ref=e59]:
+            - listitem [ref=e60]: Provide, maintain, and improve the Service.
+            - listitem [ref=e61]: Process payments and manage subscriptions.
+            - listitem [ref=e62]: Send transactional emails (receipts, renewal reminders, service updates).
+            - listitem [ref=e63]: Respond to support requests.
+            - listitem [ref=e64]: Analyze usage patterns to improve user experience (using anonymized/aggregated data).
+            - listitem [ref=e65]: Comply with legal obligations.
+            - listitem [ref=e66]: Detect and prevent fraud or abuse.
+        - generic [ref=e67]:
+          - heading "Legal Basis for Processing (GDPR)" [level=2] [ref=e68]
+          - paragraph [ref=e69]: "For users in the European Economic Area, our legal bases are:"
+          - list [ref=e70]:
+            - listitem [ref=e71]: "Performance of a contract: to provide you with the Service."
+            - listitem [ref=e72]: "Legitimate interests: for security, fraud prevention, and service improvement."
+            - listitem [ref=e73]: "Legal obligation: to comply with applicable laws."
+            - listitem [ref=e74]: "Consent: for marketing communications and non-essential cookies (which you may withdraw at any time)."
+        - generic [ref=e75]:
+          - heading "Data Sharing and Disclosure" [level=2] [ref=e76]
+          - paragraph [ref=e79]: We do not sell your personal data.
+          - paragraph [ref=e80]: "We may share data with:"
+          - list [ref=e81]:
+            - listitem [ref=e82]: Service providers (payment processors, email providers, hosting providers) who are contractually bound to protect your data.
+            - listitem [ref=e83]: Analytics providers (using anonymized data only).
+            - listitem [ref=e84]: Law enforcement or regulatory authorities when required by law.
+            - listitem [ref=e85]: Successors in the event of a merger, acquisition, or sale of assets (with advance notice to you).
+        - generic [ref=e86]:
+          - heading "Data Retention" [level=2] [ref=e87]
+          - list [ref=e88]:
+            - listitem [ref=e89]: Account data is retained for as long as your account is active.
+            - listitem [ref=e90]: Uploaded file data is not retained beyond the processing session (unless explicitly saved to your account).
+            - listitem [ref=e91]: Payment records are retained as required by financial and tax regulations.
+            - listitem [ref=e92]: Log data is retained for up to 90 days.
+          - paragraph [ref=e93]: You may request deletion of your account and associated data at any time (see Your Rights).
+        - generic [ref=e94]:
+          - heading "International Data Transfers" [level=2] [ref=e95]
+          - paragraph [ref=e96]:
+            - text: Your data may be processed in countries outside your own. Where we transfer data internationally, we ensure appropriate safeguards (e.g.,
+            - strong [ref=e97]: Standard Contractual Clauses
+            - text: for EEA transfers) are in place.
+        - generic [ref=e98]:
+          - heading "Your Rights" [level=2] [ref=e99]
+          - paragraph [ref=e100]: "Depending on your location, you may have the right to:"
+          - list [ref=e102]:
+            - listitem [ref=e103]:
+              - strong [ref=e104]: Access
+              - text: — Request a copy of the personal data we hold about you.
+            - listitem [ref=e105]:
+              - strong [ref=e106]: Rectification
+              - text: — Correct inaccurate or incomplete data.
+            - listitem [ref=e107]:
+              - strong [ref=e108]: Erasure
+              - text: — Request deletion of your personal data ("right to be forgotten").
+            - listitem [ref=e109]:
+              - strong [ref=e110]: Restriction
+              - text: — Request that we limit how we process your data.
+            - listitem [ref=e111]:
+              - strong [ref=e112]: Portability
+              - text: — Receive your data in a machine-readable format.
+            - listitem [ref=e113]:
+              - strong [ref=e114]: Object
+              - text: — Object to processing based on legitimate interests.
+            - listitem [ref=e115]:
+              - strong [ref=e116]: Withdraw consent
+              - text: — For processing based on consent, at any time.
+            - listitem [ref=e117]:
+              - strong [ref=e118]: Lodge a complaint
+              - text: — With your local data protection authority.
+          - paragraph [ref=e122]:
+            - text: To exercise any of these rights, contact us at
+            - link "support@pdfedits.io" [ref=e123] [cursor=pointer]:
+              - /url: mailto:support@pdfedits.io
+            - text: . We will respond within
+            - strong [ref=e124]: 30 days
+            - text: .
+        - generic [ref=e125]:
+          - heading "Children's Privacy" [level=2] [ref=e126]
+          - paragraph [ref=e127]:
+            - text: The Service is not directed to children under
+            - strong [ref=e128]: "16"
+            - text: . We do not knowingly collect personal information from children under 16. If you believe we have inadvertently collected such information, please contact us immediately at
+            - link "support@pdfedits.io" [ref=e129] [cursor=pointer]:
+              - /url: mailto:support@pdfedits.io
+            - text: .
+        - generic [ref=e130]:
+          - heading "Security" [level=2] [ref=e131]
+          - paragraph [ref=e132]: We implement industry-standard security measures including TLS encryption in transit, hashed passwords, access controls, and regular security audits. No system is completely secure; we cannot guarantee absolute security.
+        - paragraph [ref=e133]:
+          - text: See also our
+          - link "Cookie Policy" [ref=e134] [cursor=pointer]:
+            - /url: /cookies
+          - text: .
+    - contentinfo [ref=e135]:
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - img "PDFVault" [ref=e139]
+            - paragraph [ref=e140]: A smarter, more secure place for your PDFs.
+            - generic [ref=e141]:
+              - link "Info@pdfvault.com" [ref=e142] [cursor=pointer]:
+                - /url: mailto:Info@pdfvault.com
+                - img [ref=e143]
+                - text: Info@pdfvault.com
+              - link "+88 123 456 789" [ref=e145] [cursor=pointer]:
+                - /url: tel:+88123456789
+                - img [ref=e146]
+                - text: +88 123 456 789
+          - navigation "TOOLS" [ref=e148]:
+            - heading "TOOLS" [level=2] [ref=e149]
+            - list [ref=e150]:
+              - listitem [ref=e151]:
+                - link "Edit & SIgn" [ref=e152] [cursor=pointer]:
+                  - /url: /pdf-editor
+              - listitem [ref=e153]:
+                - link "Compress" [ref=e154] [cursor=pointer]:
+                  - /url: /tools/compress
+              - listitem [ref=e155]:
+                - link "Convert" [ref=e156] [cursor=pointer]:
+                  - /url: /tools/convert
+          - navigation "COMPANY" [ref=e157]:
+            - heading "COMPANY" [level=2] [ref=e158]
+            - list [ref=e159]:
+              - listitem [ref=e160]:
+                - link "Pricing" [ref=e161] [cursor=pointer]:
+                  - /url: /pricing
+              - listitem [ref=e162]:
+                - link "Contact Us" [ref=e163] [cursor=pointer]:
+                  - /url: /contact
+              - listitem [ref=e164]:
+                - link "About Us" [ref=e165] [cursor=pointer]:
+                  - /url: "#about"
+          - navigation "HELP" [ref=e166]:
+            - heading "HELP" [level=2] [ref=e167]
+            - list [ref=e168]:
+              - listitem [ref=e169]:
+                - link "FAQ" [ref=e170] [cursor=pointer]:
+                  - /url: "#faq"
+              - listitem [ref=e171]:
+                - link "Privacy" [ref=e172] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e173]:
+                - link "Terms & Condition" [ref=e174] [cursor=pointer]:
+                  - /url: /terms
+          - navigation "ACCOUNT" [ref=e175]:
+            - heading "ACCOUNT" [level=2] [ref=e176]
+            - list [ref=e177]:
+              - listitem [ref=e178]:
+                - link "Log In" [ref=e179] [cursor=pointer]:
+                  - /url: /sign-in
+              - listitem [ref=e180]:
+                - link "Sign Up" [ref=e181] [cursor=pointer]:
+                  - /url: /sign-up
+              - listitem [ref=e182]:
+                - link "Changelog" [ref=e183] [cursor=pointer]:
+                  - /url: "#changelog"
+        - generic [ref=e185]:
+          - paragraph [ref=e186]: © 2026, PDFVault All rights reserved.
+          - list [ref=e187]:
+            - listitem [ref=e188]:
+              - link "PDFVault on LinkedIn" [ref=e189] [cursor=pointer]:
+                - /url: "#linkedin"
+                - img [ref=e190]
+            - listitem [ref=e192]:
+              - link "PDFVault on Facebook" [ref=e193] [cursor=pointer]:
+                - /url: "#facebook"
+                - img [ref=e194]
+            - listitem [ref=e196]:
+              - link "PDFVault on X" [ref=e197] [cursor=pointer]:
+                - /url: "#x"
+                - img [ref=e198]
+            - listitem [ref=e200]:
+              - link "PDFVault on Instagram" [ref=e201] [cursor=pointer]:
+                - /url: "#instagram"
+                - img [ref=e202]
+  - alert [ref=e204]

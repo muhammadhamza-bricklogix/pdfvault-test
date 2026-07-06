@@ -9,9 +9,31 @@
   font-size: 16px;
   line-height: 1.65;
   letter-spacing: -0.01em;
+  /* Neutralize legacy legal-* accents inside policy prose so inline
+     `text-[var(--legal-burgundy)]` / callout backgrounds from the old
+     LegalSectionCard system render as plain near-black on the new UI. */
+  --legal-burgundy: #121212;
+  --legal-text-body: var(--pv-text-secondary);
+  --legal-text-muted: var(--pv-text-tertiary);
+  --legal-border-subtle: var(--pv-border-subtle);
+  --legal-pink-header: transparent;
+  --legal-pink-active: var(--pv-gray-2);
+  --legal-pink-callout: var(--pv-gray-1);
+  --legal-callout-green-bg: var(--pv-gray-1);
+  --legal-callout-green-border: var(--pv-border-subtle);
+  --legal-callout-green-text: var(--pv-text-secondary);
+}
+.pv-policy-prose section {
+  scroll-margin-top: 7rem;
+}
+.pv-policy-prose section + section {
+  margin-top: 40px;
 }
 .pv-policy-prose > * + * {
   margin-top: 20px;
+}
+.pv-policy-prose section > * + * {
+  margin-top: 16px;
 }
 .pv-policy-prose h2,
 .pv-policy-prose h3 {
@@ -154,10 +176,16 @@
 
 /* Type scale helpers from the styleguide */
 .pdfvault-landing .pv-display {
-  font-size: clamp(40px, 5vw, 64px);
-  line-height: 1;
-  letter-spacing: -2px;
+  font-size: clamp(32px, 6vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -1.5px;
   font-weight: 700;
+}
+@media (min-width: 640px) {
+  .pdfvault-landing .pv-display {
+    line-height: 1;
+    letter-spacing: -2px;
+  }
 }
 .pdfvault-landing .pv-h1 {
   font-size: clamp(34px, 4vw, 48px);

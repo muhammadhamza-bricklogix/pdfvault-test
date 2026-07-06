@@ -6,46 +6,17 @@ type LegalCalloutProps = {
   variant: "emphasis" | "success";
 };
 
-export function LegalCallout({ children, title, variant }: LegalCalloutProps) {
-  const isSuccess = variant === "success";
-
+/**
+ * Lightweight inline callout used inside policy sections. The new UI drops the
+ * pink/green boxed variants — the callout is now a subtle bordered inset that
+ * blends with the surrounding prose (matches Figma frames 2147239362/3).
+ * The `variant` prop is preserved for backwards compatibility.
+ */
+export function LegalCallout({ children, title }: LegalCalloutProps) {
   return (
-    <div
-      className={
-        isSuccess
-          ? "rounded-xl border-l-4 px-4 py-3"
-          : "rounded-xl border-l-4 px-4 py-3"
-      }
-      style={
-        isSuccess
-          ? {
-              backgroundColor: "var(--legal-callout-green-bg)",
-              borderColor: "var(--legal-callout-green-border)",
-              color: "var(--legal-callout-green-text)",
-            }
-          : {
-              backgroundColor: "var(--legal-pink-callout)",
-              borderColor: "var(--legal-burgundy)",
-              color: "var(--legal-text-body)",
-            }
-      }
-    >
-      {title ? (
-        <p
-          className={`font-semibold ${isSuccess ? "" : "text-[var(--legal-burgundy)]"}`}
-        >
-          {title}
-        </p>
-      ) : null}
-      <div
-        className={
-          title
-            ? "mt-1 space-y-2 text-sm leading-relaxed"
-            : "space-y-2 text-sm leading-relaxed"
-        }
-      >
-        {children}
-      </div>
+    <div className="rounded-md border-l-2 border-[var(--pv-border-subtle)] bg-[var(--pv-gray-1)] px-4 py-3">
+      {title ? <p className="font-semibold text-[#121212]">{title}</p> : null}
+      <div className={title ? "mt-1 space-y-2" : "space-y-2"}>{children}</div>
     </div>
   );
 }

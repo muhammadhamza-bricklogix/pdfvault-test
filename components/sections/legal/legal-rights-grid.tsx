@@ -35,20 +35,12 @@ const RIGHTS: { body: string; title: string }[] = [
 
 export function LegalRightsGrid() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <ul className="mt-2 space-y-2 pl-5" style={{ listStyle: "disc" }}>
       {RIGHTS.map((item) => (
-        <div
-          key={item.title}
-          className="rounded-xl border border-[var(--legal-border-subtle)] bg-[var(--legal-pink-header)] p-4 text-sm"
-        >
-          <p className="font-semibold text-[var(--legal-burgundy)]">
-            {item.title}
-          </p>
-          <p className="mt-2 leading-relaxed text-[var(--legal-text-body)]">
-            {item.body}
-          </p>
-        </div>
+        <li key={item.title}>
+          <strong>{item.title}</strong> — {item.body}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
