@@ -43,7 +43,7 @@ const TOOLS: Tool[] = [
     icon: "/landing/convert.svg",
     title: "Convert Document",
     description: "Turn PDFs into spreadsheets, Word docs, and more.",
-    href: ROUTES.TOOLS.BY_SLUG("convert"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "convert-to", "convert-from", "compress"],
   },
   {
@@ -51,7 +51,7 @@ const TOOLS: Tool[] = [
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: ROUTES.TOOLS.BY_SLUG("organize"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "others"],
   },
   {
@@ -59,7 +59,7 @@ const TOOLS: Tool[] = [
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: ROUTES.TOOLS.BY_SLUG("split"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "compress", "others"],
   },
   {
@@ -67,14 +67,14 @@ const TOOLS: Tool[] = [
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: ROUTES.TOOLS.BY_SLUG("protect"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "others"],
   },
   {
     icon: "/landing/unlock.svg",
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: ROUTES.TOOLS.BY_SLUG("unlock"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "others"],
   },
   {
@@ -82,7 +82,7 @@ const TOOLS: Tool[] = [
     title: "Rotate Pages",
     description:
       "Fix upside-down scans or mixed-orientation bundles in seconds.",
-    href: ROUTES.TOOLS.BY_SLUG("rotate"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "others"],
   },
   {
@@ -90,7 +90,7 @@ const TOOLS: Tool[] = [
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: ROUTES.TOOLS.BY_SLUG("delete"),
+    href: ROUTES.TOOLS.PDF_EDITOR,
     tabs: ["edit", "others"],
   },
 ];
