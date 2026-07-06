@@ -1,3 +1,61 @@
+/*
+ * Prose scope for policy pages. Section headings pick up Figma weight
+ * (semibold black), body text picks up the muted landing token, and lists
+ * inherit paragraph rhythm so any legacy `LegalSectionCard` / raw markup
+ * content component renders consistently without editing each one.
+ */
+.pv-policy-prose {
+  color: var(--pv-text-secondary);
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+}
+.pv-policy-prose > * + * {
+  margin-top: 20px;
+}
+.pv-policy-prose h2,
+.pv-policy-prose h3 {
+  color: #121212;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 40px;
+  margin-bottom: 12px;
+}
+.pv-policy-prose h2 {
+  font-size: 22px;
+  line-height: 1.35;
+}
+.pv-policy-prose h3 {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.pv-policy-prose p {
+  color: var(--pv-text-secondary);
+}
+.pv-policy-prose ul,
+.pv-policy-prose ol {
+  padding-left: 20px;
+}
+.pv-policy-prose ul {
+  list-style: disc;
+}
+.pv-policy-prose ol {
+  list-style: decimal;
+}
+.pv-policy-prose li {
+  margin-top: 8px;
+  color: var(--pv-text-secondary);
+}
+.pv-policy-prose a {
+  color: var(--pv-brand-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pv-policy-prose strong {
+  color: #121212;
+  font-weight: 600;
+}
+
 @keyframes pv-fade-up {
   from {
     opacity: 0;

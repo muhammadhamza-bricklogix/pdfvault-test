@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -15,105 +15,6 @@ const PRIMARY_LINKS: NavLink[] = [
   { label: "Convert", href: "#convert" },
   { label: "AI Summarizer", href: "#ai-summarizer" },
 ];
-
-const ALL_TOOLS_MENU: NavLink[] = [
-  { label: "PDF Editor", href: "#edit" },
-  { label: "Convert Document", href: "#convert" },
-  { label: "Compress PDF", href: "#compress" },
-  { label: "Organize Pages", href: "#organize" },
-  { label: "Password Protect", href: "#protect" },
-];
-
-function ChevronDown({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      className={className}
-      fill="none"
-      height="16"
-      viewBox="0 0 16 16"
-      width="16"
-    >
-      <path
-        d="M4 6l4 4 4-4"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
-
-/** Generic dropdown shell: opens on click, closes on outside-click and Escape. */
-function DropdownShell({
-  children,
-  items,
-  label,
-}: {
-  children: React.ReactNode;
-  items: NavLink[];
-  label: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className="flex items-center gap-1 text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-      >
-        {children}
-        <ChevronDown
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open ? (
-        <div
-          className="absolute left-0 top-[calc(100%+8px)] z-20 min-w-[200px] rounded-xl border border-[var(--pv-card-border)] bg-white p-1.5 shadow-lg"
-          role="menu"
-        >
-          {items.map((item) => (
-            <a
-              key={item.label}
-              className="block rounded-lg px-3 py-2 text-[14px] text-[var(--pv-text-primary)] transition-colors hover:bg-[var(--pv-section-gray)] focus-visible:bg-[var(--pv-section-gray)] focus-visible:outline-none"
-              href={item.href}
-              role="menuitem"
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
-      ) : null}
-      <span className="sr-only">{label}</span>
-    </div>
-  );
-}
 
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -161,9 +62,12 @@ export function LandingHeader() {
             aria-label="Primary"
             className="hidden items-center gap-6 lg:flex"
           >
-            <DropdownShell items={ALL_TOOLS_MENU} label="All tools menu">
+            <a
+              className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+              href={ROUTES.PUBLIC.ALL_TOOLS}
+            >
               All Tools
-            </DropdownShell>
+            </a>
             {PRIMARY_LINKS.map((link) => (
               <a
                 key={link.label}
@@ -222,19 +126,20 @@ export function LandingHeader() {
           className="border-t border-[var(--pv-border-subtle)] bg-[var(--pv-header-bg)] px-5 py-3 lg:hidden"
         >
           <ul className="flex flex-col gap-1">
-            {[{ label: "All Tools", href: "#tools" }, ...PRIMARY_LINKS].map(
-              (link) => (
-                <li key={link.label}>
-                  <a
-                    className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ),
-            )}
+            {[
+              { label: "All Tools", href: ROUTES.PUBLIC.ALL_TOOLS },
+              ...PRIMARY_LINKS,
+            ].map((link) => (
+              <li key={link.label}>
+                <a
+                  className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
             <li className="mt-1 px-2 py-1">
               <LandingLanguageSwitcher variant="mobile" />
             </li>

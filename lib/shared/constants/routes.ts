@@ -7,6 +7,7 @@ export const ROUTES = {
   PUBLIC: {
     HOME: "/",
     PRICING: "/pricing",
+    ALL_TOOLS: "/all-tools",
   },
   LEGAL: {
     CONTACT: "/contact",
