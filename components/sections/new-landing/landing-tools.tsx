@@ -7,6 +7,8 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { SectionHeading } from "./section-heading";
 
+const DASHBOARD = ROUTES.APP.DASHBOARD;
+
 type TabId = "edit" | "convert-to" | "compress" | "convert-from" | "others";
 
 type Tab = { id: TabId; label: string };
@@ -36,14 +38,14 @@ const TOOLS: Tool[] = [
     title: "PDF Editor",
     description:
       "Revise text and objects inline with our full in-browser PDF editor.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit"],
   },
   {
     icon: "/landing/convert.svg",
     title: "Convert Document",
     description: "Turn PDFs into spreadsheets, Word docs, and more.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "convert-to", "convert-from", "compress"],
   },
   {
@@ -51,7 +53,7 @@ const TOOLS: Tool[] = [
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "others"],
   },
   {
@@ -59,7 +61,7 @@ const TOOLS: Tool[] = [
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "compress", "others"],
   },
   {
@@ -67,14 +69,14 @@ const TOOLS: Tool[] = [
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "others"],
   },
   {
     icon: "/landing/unlock.svg",
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "others"],
   },
   {
@@ -82,7 +84,7 @@ const TOOLS: Tool[] = [
     title: "Rotate Pages",
     description:
       "Fix upside-down scans or mixed-orientation bundles in seconds.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "others"],
   },
   {
@@ -90,7 +92,7 @@ const TOOLS: Tool[] = [
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: DASHBOARD,
     tabs: ["edit", "others"],
   },
 ];

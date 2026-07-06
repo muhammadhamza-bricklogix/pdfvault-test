@@ -14,6 +14,7 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { DocumentsTable } from "./documents-table";
+import { PendingConversionBanner } from "./pending-conversion-banner";
 import { UploadCta } from "./upload-cta";
 
 /**
@@ -90,6 +91,7 @@ const TONE_STYLES: Record<(typeof TOOL_TILES)[number]["tone"], string> = {
 export function DashboardHome() {
   return (
     <div className="mx-auto flex w-[95%] max-w-none flex-col gap-6">
+      <PendingConversionBanner />
       {/* Top bar — title + upload CTA on the right, search row owned by the
           documents table below. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

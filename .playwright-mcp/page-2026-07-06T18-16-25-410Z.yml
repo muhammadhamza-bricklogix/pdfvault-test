@@ -1,0 +1,153 @@
+- generic [active] [ref=f13e1]:
+  - generic [ref=f13e3]:
+    - banner [ref=f13e4]:
+      - generic [ref=f13e5]:
+        - generic [ref=f13e6]:
+          - link "PDFVault" [ref=f13e7] [cursor=pointer]:
+            - /url: "#top"
+            - img "PDFVault" [ref=f13e8]
+          - navigation "Primary" [ref=f13e9]:
+            - link "All Tools" [ref=f13e10] [cursor=pointer]:
+              - /url: /all-tools
+            - link "Compress" [ref=f13e11] [cursor=pointer]:
+              - /url: "#compress"
+            - link "Edit" [ref=f13e12] [cursor=pointer]:
+              - /url: "#edit"
+            - link "Convert" [ref=f13e13] [cursor=pointer]:
+              - /url: "#convert"
+            - link "AI Summarizer" [ref=f13e14] [cursor=pointer]:
+              - /url: "#ai-summarizer"
+        - generic [ref=f13e15]:
+          - button "Select language" [disabled] [ref=f13e18]:
+            - img [ref=f13e19]
+            - text: EN
+            - img [ref=f13e22]
+          - link "Login" [ref=f13e24] [cursor=pointer]:
+            - /url: /sign-in
+          - link "Get started" [ref=f13e25] [cursor=pointer]:
+            - /url: /sign-up
+    - main [ref=f13e26]:
+      - generic [ref=f13e28]:
+        - heading "Convert Word to PDF" [level=1] [ref=f13e29]
+        - paragraph [ref=f13e30]: Upload a .doc or .docx and get a clean PDF ready to sign or share.
+      - generic [ref=f13e33]:
+        - generic [ref=f13e35]:
+          - button "Upload a file. Drop a file here, or activate to browse." [ref=f13e36]:
+            - img
+            - button "Choose File" [ref=f13e37]
+            - generic [ref=f13e38]:
+              - heading "Drop your file here to get started" [level=2] [ref=f13e39]
+              - paragraph [ref=f13e40]: Upload a PDF or import from your cloud storage.
+              - paragraph [ref=f13e41]: Supports PDF, DOC, DOCX, JPG, PNG
+              - button "Choose File" [ref=f13e42]
+            - paragraph [ref=f13e43]
+          - generic [ref=f13e44]:
+            - generic [ref=f13e45]:
+              - paragraph [ref=f13e46]: Upload a file to continue
+              - paragraph [ref=f13e47]: Drop or choose a file above, then hit Convert.
+            - button "Convert now" [disabled] [ref=f13e48]
+          - generic [ref=f13e49]:
+            - button "Upload from Google drive" [ref=f13e50]:
+              - text: Upload from Google drive
+              - img [ref=f13e51]
+            - button "Upload from Dropbox" [ref=f13e58]:
+              - text: Upload from Dropbox
+              - img [ref=f13e60]
+            - button "Upload from one drive" [ref=f13e62]:
+              - text: Upload from one drive
+              - img [ref=f13e63]
+        - list [ref=f13e66]:
+          - listitem [ref=f13e67]:
+            - img [ref=f13e68]
+            - text: Secure document storage
+          - listitem [ref=f13e71]:
+            - img [ref=f13e72]
+            - text: Edit in your browser
+          - listitem [ref=f13e75]:
+            - img [ref=f13e76]
+            - text: Personal file library
+    - contentinfo [ref=f13e79]:
+      - generic [ref=f13e80]:
+        - generic [ref=f13e81]:
+          - generic [ref=f13e82]:
+            - img "PDFVault" [ref=f13e83]
+            - paragraph [ref=f13e84]: A smarter, more secure place for your PDFs.
+            - generic [ref=f13e85]:
+              - link "Info@pdfvault.com" [ref=f13e86] [cursor=pointer]:
+                - /url: mailto:Info@pdfvault.com
+                - img [ref=f13e87]
+                - text: Info@pdfvault.com
+              - link "+88 123 456 789" [ref=f13e89] [cursor=pointer]:
+                - /url: tel:+88123456789
+                - img [ref=f13e90]
+                - text: +88 123 456 789
+          - navigation "TOOLS" [ref=f13e92]:
+            - heading "TOOLS" [level=2] [ref=f13e93]
+            - list [ref=f13e94]:
+              - listitem [ref=f13e95]:
+                - link "Edit & SIgn" [ref=f13e96] [cursor=pointer]:
+                  - /url: /pdf-editor
+              - listitem [ref=f13e97]:
+                - link "Compress" [ref=f13e98] [cursor=pointer]:
+                  - /url: /tools/compress
+              - listitem [ref=f13e99]:
+                - link "Convert" [ref=f13e100] [cursor=pointer]:
+                  - /url: /tools/convert
+          - navigation "COMPANY" [ref=f13e101]:
+            - heading "COMPANY" [level=2] [ref=f13e102]
+            - list [ref=f13e103]:
+              - listitem [ref=f13e104]:
+                - link "Pricing" [ref=f13e105] [cursor=pointer]:
+                  - /url: /pricing
+              - listitem [ref=f13e106]:
+                - link "Contact Us" [ref=f13e107] [cursor=pointer]:
+                  - /url: /contact
+              - listitem [ref=f13e108]:
+                - link "About Us" [ref=f13e109] [cursor=pointer]:
+                  - /url: "#about"
+          - navigation "HELP" [ref=f13e110]:
+            - heading "HELP" [level=2] [ref=f13e111]
+            - list [ref=f13e112]:
+              - listitem [ref=f13e113]:
+                - link "FAQ" [ref=f13e114] [cursor=pointer]:
+                  - /url: "#faq"
+              - listitem [ref=f13e115]:
+                - link "Privacy" [ref=f13e116] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f13e117]:
+                - link "Terms & Condition" [ref=f13e118] [cursor=pointer]:
+                  - /url: /terms
+          - navigation "ACCOUNT" [ref=f13e119]:
+            - heading "ACCOUNT" [level=2] [ref=f13e120]
+            - list [ref=f13e121]:
+              - listitem [ref=f13e122]:
+                - link "Log In" [ref=f13e123] [cursor=pointer]:
+                  - /url: /sign-in
+              - listitem [ref=f13e124]:
+                - link "Sign Up" [ref=f13e125] [cursor=pointer]:
+                  - /url: /sign-up
+              - listitem [ref=f13e126]:
+                - link "Changelog" [ref=f13e127] [cursor=pointer]:
+                  - /url: "#changelog"
+        - generic [ref=f13e129]:
+          - paragraph [ref=f13e130]: © 2026, PDFVault All rights reserved.
+          - list [ref=f13e131]:
+            - listitem [ref=f13e132]:
+              - link "PDFVault on LinkedIn" [ref=f13e133] [cursor=pointer]:
+                - /url: "#linkedin"
+                - img [ref=f13e134]
+            - listitem [ref=f13e136]:
+              - link "PDFVault on Facebook" [ref=f13e137] [cursor=pointer]:
+                - /url: "#facebook"
+                - img [ref=f13e138]
+            - listitem [ref=f13e140]:
+              - link "PDFVault on X" [ref=f13e141] [cursor=pointer]:
+                - /url: "#x"
+                - img [ref=f13e142]
+            - listitem [ref=f13e144]:
+              - link "PDFVault on Instagram" [ref=f13e145] [cursor=pointer]:
+                - /url: "#instagram"
+                - img [ref=f13e146]
+  - button "Open Next.js Dev Tools" [ref=f13e153] [cursor=pointer]:
+    - img [ref=f13e154]
+  - alert [ref=f13e157]

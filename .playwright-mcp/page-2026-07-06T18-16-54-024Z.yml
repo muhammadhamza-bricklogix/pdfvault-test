@@ -1,0 +1,175 @@
+- generic [active] [ref=f14e1]:
+  - generic [ref=f14e2]:
+    - banner [ref=f14e3]:
+      - generic [ref=f14e4]:
+        - link "PDFedits.io logo PDFedits" [ref=f14e5] [cursor=pointer]:
+          - /url: /
+          - img "PDFedits.io logo" [ref=f14e6]
+          - generic [ref=f14e7]: PDFedits
+        - generic [ref=f14e8]:
+          - button "All PDF tools" [ref=f14e10] [cursor=pointer]:
+            - text: All PDF tools
+            - img
+          - button "Switch to dark mode" [ref=f14e12] [cursor=pointer]:
+            - img
+          - generic [ref=f14e13]:
+            - button "🌐 EN" [disabled]
+    - main [ref=f14e14]:
+      - generic [ref=f14e16]:
+        - generic [ref=f14e17]:
+          - heading "Sign in to your PDFedits.io workspace" [level=1] [ref=f14e18]
+          - paragraph [ref=f14e19]: Use your email address and password to get into PDFedits.io. If Clerk asks for an extra check, we keep that verification inside this route.
+        - generic [ref=f14e20]:
+          - generic [ref=f14e21]:
+            - generic [ref=f14e22]: Welcome back
+            - button "Google Continue with Google" [ref=f14e23] [cursor=pointer]:
+              - img "Google" [ref=f14e24]
+              - text: Continue with Google
+            - generic [ref=f14e25]:
+              - separator [ref=f14e26]
+              - generic [ref=f14e27]: or
+              - separator [ref=f14e28]
+            - group [ref=f14e30]:
+              - generic [ref=f14e31]:
+                - generic [ref=f14e32]:
+                  - generic [ref=f14e33]: Email address
+                  - textbox "Email address" [ref=f14e35]:
+                    - /placeholder: you@example.com
+                - generic [ref=f14e36]:
+                  - generic [ref=f14e37]: Password
+                  - generic [ref=f14e38]:
+                    - textbox "Password" [ref=f14e39]:
+                      - /placeholder: Enter your password
+                    - button "Show password" [ref=f14e40]:
+                      - img [ref=f14e41]
+              - button "Sign in" [ref=f14e45] [cursor=pointer]
+          - paragraph [ref=f14e46]:
+            - text: Need an account?
+            - link "Create one" [ref=f14e47] [cursor=pointer]:
+              - /url: /sign-up
+    - contentinfo [ref=f14e48]:
+      - generic [ref=f14e49]:
+        - region "Product, Help, and Account" [ref=f14e50]:
+          - generic [ref=f14e51]:
+            - generic [ref=f14e52]:
+              - generic [ref=f14e53]:
+                - img [ref=f14e55]
+                - heading "Edit PDF" [level=4] [ref=f14e57]
+              - list [ref=f14e58]:
+                - listitem [ref=f14e59]:
+                  - link "Edit PDF" [ref=f14e60] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=f14e61]:
+                  - link "Sign PDF" [ref=f14e62] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=f14e63]:
+                  - link "Split PDF" [ref=f14e64] [cursor=pointer]:
+                    - /url: /tools/split-pdf
+                - listitem [ref=f14e65]:
+                  - link "Add image to PDF" [ref=f14e66] [cursor=pointer]:
+                    - /url: /pdf-editor
+                - listitem [ref=f14e67]:
+                  - link "Delete pages" [ref=f14e68] [cursor=pointer]:
+                    - /url: /pdf-editor
+            - generic [ref=f14e69]:
+              - generic [ref=f14e70]:
+                - img [ref=f14e72]
+                - heading "Convert from PDF" [level=4] [ref=f14e74]
+              - list [ref=f14e75]:
+                - listitem [ref=f14e76]:
+                  - link "PDF to Word" [ref=f14e77] [cursor=pointer]:
+                    - /url: /tools/pdf-to-docx
+                - listitem [ref=f14e78]:
+                  - link "PDF to PPTX" [ref=f14e79] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=f14e80]:
+                  - link "PDF to Excel" [ref=f14e81] [cursor=pointer]:
+                    - /url: /tools/pdf-to-xlsx
+                - listitem [ref=f14e82]:
+                  - link "PDF to JPG" [ref=f14e83] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=f14e84]:
+                  - link "PDF to PNG" [ref=f14e85] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=f14e86]:
+                  - link "View all" [ref=f14e87] [cursor=pointer]:
+                    - /url: /#pdf-tools
+            - generic [ref=f14e88]:
+              - generic [ref=f14e89]:
+                - img [ref=f14e91]
+                - heading "Convert to PDF" [level=4] [ref=f14e93]
+              - list [ref=f14e94]:
+                - listitem [ref=f14e95]:
+                  - link "Word to PDF" [ref=f14e96] [cursor=pointer]:
+                    - /url: /tools/docx-to-pdf
+                - listitem [ref=f14e97]:
+                  - link "PPTX to PDF" [ref=f14e98] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=f14e99]:
+                  - link "Excel to PDF" [ref=f14e100] [cursor=pointer]:
+                    - /url: /tools/xlsx-to-pdf
+                - listitem [ref=f14e101]:
+                  - link "JPG to PDF" [ref=f14e102] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=f14e103]:
+                  - link "PNG to PDF" [ref=f14e104] [cursor=pointer]:
+                    - /url: /#pdf-tools
+                - listitem [ref=f14e105]:
+                  - link "View all" [ref=f14e106] [cursor=pointer]:
+                    - /url: /#pdf-tools
+            - generic [ref=f14e107]:
+              - heading "Help" [level=3] [ref=f14e108]:
+                - img [ref=f14e110]
+                - generic [ref=f14e113]: Help
+              - list [ref=f14e114]:
+                - listitem [ref=f14e115]:
+                  - link "Contact us" [ref=f14e116] [cursor=pointer]:
+                    - /url: /contact
+                - listitem [ref=f14e117]:
+                  - link "FAQ" [ref=f14e118] [cursor=pointer]:
+                    - /url: /#faq
+                - listitem [ref=f14e119]:
+                  - link "Pricing" [ref=f14e120] [cursor=pointer]:
+                    - /url: /pricing
+            - generic [ref=f14e121]:
+              - heading "Account" [level=3] [ref=f14e122]:
+                - img [ref=f14e124]
+                - generic [ref=f14e127]: Account
+              - list [ref=f14e128]:
+                - listitem [ref=f14e129]:
+                  - link "Sign In" [ref=f14e130] [cursor=pointer]:
+                    - /url: /sign-in
+                - listitem [ref=f14e131]:
+                  - link "Register" [ref=f14e132] [cursor=pointer]:
+                    - /url: /sign-up
+                - listitem [ref=f14e133]:
+                  - link "Unsubscribe" [ref=f14e134] [cursor=pointer]:
+                    - /url: /contact
+        - generic [ref=f14e135]:
+          - paragraph [ref=f14e136]: © 2026. Content Clicks LLC. All rights reserved.
+          - navigation "Legal policies" [ref=f14e137]:
+            - link "Privacy Policy" [ref=f14e139] [cursor=pointer]:
+              - /url: /privacy
+            - generic [ref=f14e140]:
+              - generic [ref=f14e141]: ·
+              - link "Terms of Use" [ref=f14e142] [cursor=pointer]:
+                - /url: /terms
+            - generic [ref=f14e143]:
+              - generic [ref=f14e144]: ·
+              - link "Cookie Policy" [ref=f14e145] [cursor=pointer]:
+                - /url: /cookies
+            - generic [ref=f14e146]:
+              - generic [ref=f14e147]: ·
+              - link "Subscription Policy" [ref=f14e148] [cursor=pointer]:
+                - /url: /refund
+          - paragraph [ref=f14e150]:
+            - text: PDFedits.io is an independent service and is not affiliated with, endorsed by, or approved by any governmental authority, agency, or public institution of any kind, including but not limited to the Internal Revenue Service (IRS), the Social Security Administration (SSA), or U.S. Citizenship and Immigration Services (USCIS).
+            - text: PDFedits.io is also not associated with, connected to, or endorsed by any other editors or brands.
+        - group "Accepted payment methods" [ref=f14e151]:
+          - img [ref=f14e153]
+          - img [ref=f14e156]
+          - img [ref=f14e159]
+          - img [ref=f14e162]
+  - button "Open Next.js Dev Tools" [ref=f14e169] [cursor=pointer]:
+    - img [ref=f14e170]
+  - alert [ref=f14e173]

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 
 const ACCEPTED_EXTENSIONS = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
@@ -152,12 +153,55 @@ function ProviderBadge({ id }: { id: CloudProvider["id"] }) {
   );
 }
 
-export function UploadWorkspace() {
+/**
+ * Optional "next step" surfaced under the drop zone once a valid file exists.
+ * Convert routes use this to add a "Convert now" CTA that hands off to the
+ * auth-gated dashboard where the actual conversion runs. Home leaves it unset
+ * so the workspace stays open-ended.
+ */
+interface UploadAction {
+  label: string;
+  href: string;
+  contextKey?: string;
+}
+
+interface UploadWorkspaceProps {
+  action?: UploadAction;
+}
+
+export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const errorId = useId();
+  const router = useRouter();
+
+  const onSubmitAction = () => {
+    if (!action || !file) return;
+    setSubmitting(true);
+    // Stash the pending upload's identity so the destination screen can greet
+    // the user with "Continue converting X.pdf" instead of a cold start. The
+    // File blob itself doesn't cross route boundaries — the user re-picks it
+    // in the dashboard, which is fine because sign-in happens in between.
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem(
+          "pdfvault:pendingUpload",
+          JSON.stringify({
+            fileName: file.name,
+            fileSize: file.size,
+            context: action.contextKey ?? null,
+            ts: Date.now(),
+          }),
+        );
+      } catch {
+        // sessionStorage can throw in private mode — ignore, the flow still works.
+      }
+    }
+    router.push(action.href);
+  };
 
   const validateAndSet = (candidate: File) => {
     const ext = getExtension(candidate.name);
@@ -305,6 +349,33 @@ export function UploadWorkspace() {
               {error}
             </p>
           </div>
+
+          {/* Post-upload CTA — only rendered when the caller passes `action`
+              (currently the /convert/[slug] routes). Disabled until a valid
+              file is selected so the "next step" affordance stays honest. */}
+          {action ? (
+            <div className="mt-4 flex items-center justify-between gap-4 rounded-[12px] border border-[var(--pv-card-border)] bg-white px-4 py-3 sm:px-5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-medium text-[var(--pv-text-primary)]">
+                  {file ? file.name : "Upload a file to continue"}
+                </p>
+                <p className="text-[13px] text-[var(--pv-text-secondary)]">
+                  {file
+                    ? "Sign in to run the conversion — takes just a moment."
+                    : "Drop or choose a file above, then hit Convert."}
+                </p>
+              </div>
+              <button
+                aria-disabled={!file || submitting}
+                className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-primary)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-700)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!file || submitting}
+                type="button"
+                onClick={onSubmitAction}
+              >
+                {submitting ? "Opening…" : action.label}
+              </button>
+            </div>
+          ) : null}
 
           {/* Cloud provider capsules — three separate buttons with white gutters */}
           <div className="mt-[10px] grid grid-cols-1 gap-[10px] sm:grid-cols-3">

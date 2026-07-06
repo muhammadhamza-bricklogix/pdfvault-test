@@ -1,5 +1,8 @@
 import { ROUTES } from "./routes";
 
+const DASHBOARD = ROUTES.APP.DASHBOARD;
+const convert = (slug: string) => `/convert/${slug}` as const;
+
 /**
  * Master catalog of every tool surfaced on `/all-tools`, one row per Figma
  * frame. Kept in one file so ordering, spellings, and future URL wiring are
@@ -10,10 +13,14 @@ import { ROUTES } from "./routes";
  *   - `orange` : orange file badge with a format label (source → PDF)
  *   - `blue`   : blue PDF badge with a target format label (PDF → target)
  *
- * `label` is the visible name in the grid. `href` is where the row navigates;
- * tools that don't have a route yet stub to `#` so they render but no-op —
- * please replace with the real route as each tool ships instead of hiding
- * the row, so the catalog stays visually aligned with the Figma.
+ * `label` is the visible name in the grid. `href` is where the row navigates.
+ * Routing rules:
+ *   - EDIT & SIGN / OTHERS tools require an account → all point to the
+ *     dashboard; the Clerk middleware in `proxy.ts` bounces signed-out users
+ *     to `/sign-in?redirect_url=/dashboard` automatically.
+ *   - CONVERT TO PDF / CONVERT FROM PDF tools deep-link to `/convert/<slug>`
+ *     so the shared UploadWorkspace opens under the correct heading. Slugs
+ *     must exist in `CONVERT_ROUTES` (see `convert-routes.ts`).
  */
 
 export type LineIconId =
@@ -62,42 +69,42 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "PDF Editor",
         icon: { kind: "line", id: "editor" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Compress",
         icon: { kind: "line", id: "compress" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Organize Pages",
         icon: { kind: "line", id: "organize" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Split & Extract Pages",
         icon: { kind: "line", id: "split" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Password Protect",
         icon: { kind: "line", id: "password" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Unlock PDF",
         icon: { kind: "line", id: "unlock" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Rotate Pages",
         icon: { kind: "line", id: "rotate" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Delete Pages",
         icon: { kind: "line", id: "delete" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
     ],
   },
@@ -108,37 +115,37 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "Word to PDF",
         icon: { kind: "badge", variant: "orange", badge: "DOC" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("word-to-pdf"),
       },
       {
         label: "PNG to PDF",
         icon: { kind: "badge", variant: "orange", badge: "PNG" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("png-to-pdf"),
       },
       {
         label: "JPG to PDF",
         icon: { kind: "badge", variant: "orange", badge: "JPG" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("jpg-to-pdf"),
       },
       {
         label: "EXCEl to PDF",
         icon: { kind: "badge", variant: "orange", badge: "XLS" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("excel-to-pdf"),
       },
       {
         label: "POWERPOINT to PDF",
         icon: { kind: "badge", variant: "orange", badge: "PPT" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("powerpoint-to-pdf"),
       },
       {
         label: "TXT  to PDF",
         icon: { kind: "badge", variant: "orange", badge: "TXT" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("txt-to-pdf"),
       },
       {
         label: "Any format to PDF",
         icon: { kind: "badge", variant: "orange", badge: "ANY" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("any-to-pdf"),
       },
     ],
   },
@@ -149,32 +156,32 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "PDF to WORD",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("pdf-to-word"),
       },
       {
         label: "PDF to PNG",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("pdf-to-png"),
       },
       {
         label: "PDF to JPG",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("pdf-to-jpg"),
       },
       {
         label: "PDF to EXCEL",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("pdf-to-excel"),
       },
       {
         label: "PDF to POWERPOINT",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("pdf-to-powerpoint"),
       },
       {
         label: "PDF to  Any format",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: convert("pdf-to-any"),
       },
     ],
   },
@@ -185,42 +192,42 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "Edit Metadata",
         icon: { kind: "line", id: "hash" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Extract Images",
         icon: { kind: "line", id: "extract-images" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Crop",
         icon: { kind: "line", id: "crop" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "OCR",
         icon: { kind: "line", id: "ocr" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Remove Annotations",
         icon: { kind: "line", id: "remove-annotations" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Repair PDF",
         icon: { kind: "line", id: "repair" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Create Bookmarks",
         icon: { kind: "line", id: "bookmarks" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
       {
         label: "Watermark",
         icon: { kind: "line", id: "watermark" },
-        href: ROUTES.TOOLS.PDF_EDITOR,
+        href: DASHBOARD,
       },
     ],
   },
