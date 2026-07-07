@@ -24,21 +24,26 @@ const FILLED_TILES: { col: number; row: number }[] = [
 ];
 
 /**
- * Subtle full-viewport square grid with a few pale filled tiles. Pure CSS/DOM
- * (no raster asset exists for it) and decorative — hidden from assistive tech
- * and never intercepts pointer events. Sits behind the header and card.
+ * Subtle square grid with a few pale filled tiles. Pure CSS/DOM (no raster
+ * asset exists for it) and decorative — hidden from assistive tech and never
+ * intercepts pointer events. Per the reference, the pattern does NOT bleed
+ * into the header band: it starts below the menu bar (clean strip up top),
+ * so the layer is offset by the header height rather than inset-0. The -1px
+ * background offset keeps the first horizontal line from rendering as a
+ * border glued to the header's bottom edge.
  */
 function LoginBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      className="pointer-events-none absolute inset-x-0 bottom-0 top-[56px] z-0 overflow-hidden"
     >
       <div
         className="absolute inset-0"
         style={{
           backgroundImage:
             "linear-gradient(to right, rgba(232,232,232,0.34) 1px, transparent 1px), linear-gradient(to bottom, rgba(232,232,232,0.34) 1px, transparent 1px)",
+          backgroundPosition: "0 -1px",
           backgroundSize: `${CELL_PX}px ${CELL_PX}px`,
         }}
       />
