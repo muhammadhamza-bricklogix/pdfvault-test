@@ -335,7 +335,24 @@ export function useCloudUpload() {
       );
     }
 
-    const picked = await pickGoogleDrivePdfFiles(accessToken, apiKey);
+    // Required by drive.file — Picker uses this to grant the picked file
+    // to THIS Cloud project. Without it, the follow-up gadget/files.get
+    // returns 401 "Invalid Credentials" even with a valid OAuth token.
+    // Numeric project number = the digits before the first dash in the
+    // OAuth client ID.
+    const projectNumber = process.env.NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER;
+
+    if (!projectNumber) {
+      throw new Error(
+        "Missing NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER. Set it to your Google Cloud project number (the numeric prefix before the dash in NEXT_PUBLIC_GOOGLE_CLIENT_ID).",
+      );
+    }
+
+    const picked = await pickGoogleDrivePdfFiles(
+      accessToken,
+      apiKey,
+      projectNumber,
+    );
 
     return picked as CloudBrowserItem[];
   }, []);

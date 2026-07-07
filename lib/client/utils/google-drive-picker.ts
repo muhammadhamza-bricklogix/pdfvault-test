@@ -79,17 +79,28 @@ function ensureGooglePickerLoaded(): Promise<void> {
 
 /**
  * Opens the official Google Drive file picker (PDF files only).
- * Requires the Picker API enabled in Google Cloud and a browser API key
- * (`NEXT_PUBLIC_GOOGLE_API_KEY`).
+ * Requires the Picker API enabled in Google Cloud, a browser API key
+ * (`NEXT_PUBLIC_GOOGLE_API_KEY`), and the Cloud project number
+ * (`NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER`). The project number is required
+ * so per-file grants issued under `drive.file` are scoped to THIS app —
+ * without it Drive's gadget endpoint 401s on the picked file.
  */
 export async function pickGoogleDrivePdfFiles(
   accessToken: string,
   developerKey: string,
+  appId: string,
 ): Promise<PickedGoogleDrivePdf[]> {
   if (!developerKey || developerKey.length < 10) {
     throw new Error(
       "Google API Key is missing or looks invalid. " +
         "Ensure NEXT_PUBLIC_GOOGLE_API_KEY is set and the Picker API is enabled in Google Cloud Console.",
+    );
+  }
+
+  if (!appId || !/^\d+$/.test(appId)) {
+    throw new Error(
+      "Google Cloud project number is missing or invalid. " +
+        "Set NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER to the numeric project number (the prefix before the dash in your OAuth client ID).",
     );
   }
 
@@ -129,6 +140,7 @@ export async function pickGoogleDrivePdfFiles(
     addView: (v: unknown) => PickerBuilderInstance;
     setOAuthToken: (t: string) => PickerBuilderInstance;
     setDeveloperKey: (k: string) => PickerBuilderInstance;
+    setAppId: (id: string) => PickerBuilderInstance;
     setCallback: (
       cb: (data: Record<string, unknown>) => void,
     ) => PickerBuilderInstance;
@@ -163,6 +175,7 @@ export async function pickGoogleDrivePdfFiles(
         .addView(view)
         .setOAuthToken(accessToken)
         .setDeveloperKey(developerKey)
+        .setAppId(appId)
         .setCallback((data: Record<string, unknown>) => {
           const action = data.action as string | undefined;
 
