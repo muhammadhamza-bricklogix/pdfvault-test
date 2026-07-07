@@ -104,7 +104,7 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
       const cleanup = () => {
         window.removeEventListener("message", onMessage);
         window.removeEventListener("storage", onStorage);
-        window.clearInterval(closedPoll);
+        window.removeEventListener("focus", onWindowFocus);
         window.clearTimeout(timer);
         try {
           window.localStorage.removeItem(OAUTH_STORAGE_KEY);
@@ -241,51 +241,28 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
         }
       };
 
-      // Best-effort "user closed the popup" detector. Under strict COOP
-      // `popup.closed` reads throw a SecurityError DOMException — caught
-      // + silently dropped. Anything else (genuinely unexpected) gets
-      // logged once via a memo so the console doesn't drown in repeats.
-      let unexpectedCloseError = false;
-      const closedPoll = window.setInterval(() => {
-        try {
-          if (popup.closed) {
-            // If we already received the token but the popup hasn't been
-            // closed by cleanup() yet, don't treat this as an error.
-            if (hasReceived) {
-              return;
-            }
-            // Race: the popup wrote its token to localStorage right
-            // before closing, but the `storage` event hasn't reached us
-            // yet (or never will — Chrome occasionally drops `storage`
-            // events when the writing window unloads in the same task).
-            // Give the event loop a brief grace, then drain localStorage
-            // synchronously. If a payload is there, we settle via that;
-            // otherwise treat it as a genuine cancel.
-            window.clearInterval(closedPoll);
-            window.setTimeout(() => {
-              if (hasReceived) return;
-              if (drainStoredPayload()) return;
-              cleanup();
-              reject(new Error("Sign-in popup was closed."));
-            }, 300);
-          }
-        } catch (err) {
-          if (
-            err instanceof DOMException &&
-            /coop|cross-origin-opener|security/i.test(err.message)
-          ) {
-            return;
-          }
-          if (!unexpectedCloseError) {
-            unexpectedCloseError = true;
-            // eslint-disable-next-line no-console
-            console.warn(
-              "[runOAuthPopup] unexpected popup.closed read error:",
-              err,
-            );
-          }
-        }
-      }, 500);
+      // Popup-close detection is intentionally handled by the parent's
+      // `focus` listener below, NOT a `popup.closed` poll. Reading
+      // `popup.closed` on a cross-origin popup under COOP
+      // `same-origin-allow-popups` doesn't throw — Chrome silently drops
+      // the read AND logs a `"Cross-Origin-Opener-Policy policy would block
+      // the window.closed call"` warning per read. Polling at 500ms
+      // therefore spammed dozens of warnings per sign-in, which was the
+      // symptom QA reported (no functional bug — the postMessage path
+      // still resolved). Removed.
+      //
+      // Detection strategy that replaces it:
+      //   1. Popup succeeds → posts `pdfedits-oauth` message → resolved.
+      //   2. Popup fails to postMessage (Chrome dropped `storage` on close,
+      //      COOP blocked postMessage, etc.) → localStorage drain on focus.
+      //   3. User closes the popup without granting → parent regains focus,
+      //      drain finds nothing → we wait for `timer` to time out.
+      const onWindowFocus = () => {
+        if (hasReceived) return;
+        drainStoredPayload();
+      };
+
+      window.addEventListener("focus", onWindowFocus);
 
       const timer = window.setTimeout(() => {
         // Same recovery path as the popup-close branch: a slow OAuth
