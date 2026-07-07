@@ -2,7 +2,10 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
+
+import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
+import { toast } from "@/lib/shared/utils/toast";
 
 const ACCEPTED_EXTENSIONS = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
 const ACCEPT_ATTR = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
@@ -10,13 +13,15 @@ const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
 type CloudProvider = {
   label: string;
-  id: "google-drive" | "dropbox" | "onedrive";
+  id: "google-drive" | "dropbox" | "onedrive" | "device";
 };
 
 const CLOUD_PROVIDERS: CloudProvider[] = [
   { label: "Upload from Google drive", id: "google-drive" },
-  { label: "Upload from Dropbox", id: "dropbox" },
-  { label: "Upload from one drive", id: "onedrive" },
+  { label: "Upload from device", id: "device" },
+  // Hidden for now — Dropbox and OneDrive flows are not wired up.
+  // { label: "Upload from Dropbox", id: "dropbox" },
+  // { label: "Upload from one drive", id: "onedrive" },
 ];
 
 const TRUST_ITEMS = [
@@ -34,6 +39,24 @@ function formatSize(bytes: number): string {
 
 function getExtension(name: string): string {
   return name.split(".").pop()?.toLowerCase() ?? "";
+}
+
+/**
+ * Persist the picked cloud file's identity so the dashboard can pick up the
+ * flow after Clerk bounces a signed-out user through sign-in. Kept out of the
+ * component body so `react-hooks/purity` doesn't flag the sessionStorage
+ * write as an in-render side effect.
+ */
+function stashPendingCloudUpload(payload: object): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      "pdfvault:pendingUpload",
+      JSON.stringify(payload),
+    );
+  } catch {
+    // sessionStorage can throw in private mode — ignore.
+  }
 }
 
 function CheckCircleIcon() {
@@ -136,6 +159,25 @@ function ProviderBadge({ id }: { id: CloudProvider["id"] }) {
           />
         </svg>
       </span>
+    );
+  }
+  if (id === "device") {
+    return (
+      <svg
+        aria-hidden
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+        viewBox="0 0 24 24"
+        width="18"
+      >
+        <path d="M12 15V3" />
+        <path d="M7 8l5-5 5 5" />
+        <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+      </svg>
     );
   }
 
@@ -241,6 +283,58 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
   };
 
   const openPicker = () => inputRef.current?.click();
+
+  const cloudUpload = useCloudUpload();
+  const cloudUploadStart = cloudUpload.start;
+
+  // Kicks off the OAuth popup + Google Picker via `useCloudUpload`.
+  // On success the picker returns a `CloudBrowserItem` (fileId +
+  // accessToken); we stash it in sessionStorage under the same key the
+  // dashboard's `PendingConversionBanner` reads and push the user to
+  // /dashboard. Clerk middleware bounces signed-out users to sign-in
+  // first, then the dashboard picks up the marker post-signin and
+  // completes the actual upload against the backend.
+  const onCloudProviderClick = useCallback(
+    async (id: CloudProvider["id"]) => {
+      if (id === "device") {
+        openPicker();
+
+        return;
+      }
+
+      if (id !== "google-drive") return;
+
+      try {
+        const picked = await cloudUploadStart("gdrive");
+
+        if (picked.length === 0) return; // user cancelled the picker
+
+        const first = picked[0];
+
+        stashPendingCloudUpload({
+          fileName: first.name,
+          fileSize: first.size ?? 0,
+          context: "gdrive",
+          provider: "gdrive",
+          fileId: first.id,
+          mimeType: first.mimeType,
+          accessToken: first.accessToken,
+          ts: Date.now(),
+        });
+        toast.success({
+          title: `${first.name} selected`,
+          description: "Sign in to finish importing from Google Drive.",
+        });
+        router.push("/dashboard");
+      } catch (err) {
+        toast.error({
+          title: "Google Drive upload failed",
+          description: err instanceof Error ? err.message : undefined,
+        });
+      }
+    },
+    [cloudUploadStart, router],
+  );
 
   const onZoneKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -377,20 +471,32 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
             </div>
           ) : null}
 
-          {/* Cloud provider capsules — three separate buttons with white gutters */}
-          <div className="mt-[10px] grid grid-cols-1 gap-[10px] sm:grid-cols-3">
-            {CLOUD_PROVIDERS.map((provider) => (
-              <button
-                key={provider.id}
-                className="flex h-[45px] items-center justify-center gap-3 rounded-[12px] bg-[#f5f5f5] text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[#ececec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)]"
-                type="button"
-                // TODO: wire to cloud-import integrations when available.
-                onClick={() => undefined}
-              >
-                {provider.label}
-                <ProviderBadge id={provider.id} />
-              </button>
-            ))}
+          {/* Cloud provider capsules — layout adapts to the number of visible
+              options so the buttons split evenly. */}
+          <div
+            className={`mt-[10px] grid grid-cols-1 gap-[10px] ${
+              CLOUD_PROVIDERS.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
+            }`}
+          >
+            {CLOUD_PROVIDERS.map((provider) => {
+              const isBusy =
+                provider.id === "google-drive" &&
+                cloudUpload.isBusy &&
+                cloudUpload.activeProvider === "gdrive";
+
+              return (
+                <button
+                  key={provider.id}
+                  className="flex h-[45px] items-center justify-center gap-3 rounded-[12px] bg-[#f5f5f5] text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[#ececec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isBusy}
+                  type="button"
+                  onClick={() => void onCloudProviderClick(provider.id)}
+                >
+                  {isBusy ? "Opening…" : provider.label}
+                  <ProviderBadge id={provider.id} />
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
