@@ -307,6 +307,12 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
       try {
         const picked = await cloudUploadStart("gdrive");
 
+        // eslint-disable-next-line no-console
+        console.log("[gdrive] picker returned", {
+          count: picked.length,
+          firstName: picked[0]?.name,
+        });
+
         if (picked.length === 0) return; // user cancelled the picker
 
         const first = picked[0];
@@ -321,6 +327,8 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
           accessToken: first.accessToken,
           ts: Date.now(),
         });
+        // eslint-disable-next-line no-console
+        console.log("[gdrive] stashed → /dashboard");
         toast.success({
           title: `${first.name} selected`,
           description: "Sign in to finish importing from Google Drive.",

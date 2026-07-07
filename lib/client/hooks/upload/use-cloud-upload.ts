@@ -165,11 +165,16 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
       };
 
       const onMessage = (event: MessageEvent) => {
+        // Don't log `event.data` — it holds the OAuth access token when
+        // the callback page posts back. Origin + shape is enough to debug
+        // origin-mismatch drops without leaking the token to console.
         // eslint-disable-next-line no-console
         console.log(
           "[runOAuthPopup] raw message event:",
           event.origin,
-          event.data,
+          typeof event.data === "object" && event.data !== null
+            ? Object.keys(event.data as object)
+            : typeof event.data,
         );
         if (event.origin !== window.location.origin) {
           log("message origin mismatch, ignoring", event.origin);
@@ -192,11 +197,14 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
       // OTHER same-origin windows (i.e. this one), so the parent still
       // gets the payload.
       const onStorage = (event: StorageEvent) => {
+        // Log key + has-payload only. The payload contains the OAuth
+        // access token; slicing 30 chars off the front used to include the
+        // token prefix in browser console history / screen recordings.
         // eslint-disable-next-line no-console
         console.log(
           "[runOAuthPopup] raw storage event:",
           event.key,
-          event.newValue?.slice(0, 30),
+          event.newValue ? "(payload present)" : "(empty)",
         );
         if (event.key !== OAUTH_STORAGE_KEY || !event.newValue) return;
         try {
