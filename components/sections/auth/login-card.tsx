@@ -1,12 +1,25 @@
 "use client";
 
+import { useSignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useId, useMemo, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 
 // Reasonable email check — not an overly strict regex (per the design spec).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Same semantics as use-sign-in-flow's safeRedirectPath: only allow same-site
+// paths from ?redirect_url, otherwise fall back to the dashboard.
+function safeRedirectPath(raw: string | null, fallback: string): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+    return fallback;
+  }
+
+  return raw;
+}
 
 function AppleIcon() {
   return (
@@ -63,19 +76,49 @@ const OAUTH_BUTTON =
   "flex h-[46px] w-full items-center justify-center gap-3.5 rounded-[12px] border border-[#e1ebed] bg-white text-[16px] text-[#5f5f5f] shadow-[0_5px_12px_rgba(24,39,45,0.08)] transition-colors hover:bg-[#fafbfb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] disabled:opacity-60";
 
 export function LoginCard() {
+  const { signIn } = useSignIn();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const emailId = useId();
   const errorId = useId();
   const statusId = useId();
 
-  // TODO(auth): wire to Clerk OAuth (`authenticateWithRedirect`) once Apple /
-  // Google are enabled in the Clerk dashboard. Kept as a clearly-named boundary
-  // — it must NOT fake a successful sign-in.
-  const onProvider = (provider: "Apple" | "Google") => {
+  const afterSignInPath = useMemo(
+    () =>
+      safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
+    [searchParams],
+  );
+
+  // Same Clerk flow as the working /sign-in page (use-sign-in-flow.ts):
+  // signIn.sso redirects through /sso-callback, which handles the transfer
+  // cases and routes to the dashboard.
+  const onGoogle = async () => {
     setError(null);
-    setNotice(`${provider} sign-in isn’t connected yet.`);
+    setNotice(null);
+    setOauthLoading(true);
+
+    try {
+      await signIn.sso({
+        strategy: "oauth_google",
+        redirectCallbackUrl: afterSignInPath,
+        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
+      });
+    } catch (err) {
+      logger.error("Google sign-in failed", err);
+      setError("Something went wrong with Google sign-in.");
+      setOauthLoading(false);
+    }
+  };
+
+  // TODO(auth): wire Apple like onGoogle once the provider is enabled in the
+  // Clerk dashboard. Kept as a clearly-named boundary — it must NOT fake a
+  // successful sign-in.
+  const onApple = () => {
+    setError(null);
+    setNotice("Apple sign-in isn’t connected yet.");
   };
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -113,19 +156,21 @@ export function LoginCard() {
       <div className="mt-[30px] flex flex-col gap-3">
         <button
           className={OAUTH_BUTTON}
+          disabled={oauthLoading}
           type="button"
-          onClick={() => onProvider("Apple")}
+          onClick={onApple}
         >
           <AppleIcon />
           Login with Apple
         </button>
         <button
           className={OAUTH_BUTTON}
+          disabled={oauthLoading}
           type="button"
-          onClick={() => onProvider("Google")}
+          onClick={onGoogle}
         >
           <GoogleIcon />
-          Login with Google
+          {oauthLoading ? "Connecting to Google…" : "Login with Google"}
         </button>
       </div>
 
