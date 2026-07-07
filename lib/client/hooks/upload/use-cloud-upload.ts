@@ -28,7 +28,12 @@ type OAuthPopupOptions = {
   url: string;
 };
 
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+// Non-sensitive scope. Grants access ONLY to files the user picks through the
+// Google Picker (or that this app creates) — not the whole Drive. Requires the
+// PickerBuilder to call `.setOAuthToken(accessToken)` so each pick emits a
+// per-file grant against THIS OAuth client; without it, the backend
+// `files.get` would 403. Verified in `google-drive-picker.ts`.
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const MICROSOFT_SCOPE = "Files.Read User.Read";
 const POPUP_FEATURES =
   "width=520,height=700,menubar=no,toolbar=no,location=yes,resizable=yes,scrollbars=yes,status=no";
