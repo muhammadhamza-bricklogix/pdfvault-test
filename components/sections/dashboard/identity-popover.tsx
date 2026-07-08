@@ -20,11 +20,18 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 
 type IdentityPopoverProps = {
   collapsed: boolean;
+  /**
+   * Override the trigger content. When set, replaces the default avatar-only
+   * button — used by the expanded sidebar's profile row (avatar + name +
+   * verified badge + email + chevron all in one clickable target).
+   */
+  content?: React.ReactNode;
   onNavigate?: () => void;
 };
 
 export function IdentityPopover({
   collapsed,
+  content,
   onNavigate,
 }: IdentityPopoverProps) {
   const { user } = useUser();
@@ -82,12 +89,15 @@ export function IdentityPopover({
             ? // Sidebar variant — tight circular avatar button. `w-full` was
               // breaking layouts when rendered inside flex/grid containers.
               "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-            : "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-default-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            : "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[var(--pv-nav-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
         }
       >
-        {avatar}
+        {content ?? avatar}
       </Popover.Trigger>
-      <Popover.Content offset={8} placement="right bottom">
+      <Popover.Content
+        offset={8}
+        placement={collapsed ? "right bottom" : "top start"}
+      >
         <Popover.Dialog className="!min-w-[280px] !p-0">
           {/* Profile details header — name + email, set apart from the
               action list with bottom padding instead of a divider so the
@@ -145,7 +155,10 @@ export function IdentityPopover({
                   icon={HelpCircleIcon}
                 />
               </div>
-              <Label>Help</Label>
+              <div className="flex flex-col">
+                <Label>Help</Label>
+                <Description>Account, billing, access</Description>
+              </div>
             </ListBox.Item>
 
             <ListBox.Item id="terms" textValue="Terms and Conditions">
