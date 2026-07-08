@@ -42,19 +42,23 @@ export function LandingHeader() {
     >
       <div
         className={`pv-container flex items-center justify-between gap-4 transition-[height] duration-300 ${
-          scrolled ? "h-[48px]" : "h-[52px]"
+          scrolled ? "h-[62px]" : "h-[68px]"
         }`}
       >
         {/* Left: logo + primary nav */}
         <div className="flex items-center gap-7">
-          <a className="flex shrink-0 items-center" href="#top">
+          <a
+            aria-label="PDFVault home"
+            className="flex shrink-0 items-center"
+            href={ROUTES.PUBLIC.HOME}
+          >
             <Image
               priority
               alt="PDFVault"
-              className="h-[26px] w-auto object-contain"
-              height={26}
+              className="h-[38px] w-auto object-contain sm:h-[44px]"
+              height={44}
               src="/landing/logo-with-text.png"
-              width={104}
+              width={176}
             />
           </a>
 
