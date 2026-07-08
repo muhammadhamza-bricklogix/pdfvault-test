@@ -1,104 +1,162 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { UserCircleIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
+import { Mail01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useState } from "react";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
+import {
+  PvFormRow,
+  PvSectionHeading,
+} from "@/components/sections/dashboard/settings/pv-settings-primitives";
+import { PvPhotoUpload } from "@/components/sections/dashboard/settings/pv-photo-upload";
+import { PvTextField } from "@/components/sections/dashboard/settings/pv-text-field";
+import { toast } from "@/lib/shared/utils/toast";
 
+/**
+ * General tab — Personal info from Frame 2043684300. Rows are wired to
+ * Clerk so edits actually save:
+ *   - Photo   → `user.setProfileImage({ file })`
+ *   - Name    → `user.update({ firstName, lastName })` (Save button
+ *               appears once either field is dirty)
+ *   - Email   → read-only here per the design; edits belong under Account
+ *   - Member  → derived from `user.createdAt`, DD-MM-YYYY
+ */
 export default function GeneralSettingsPage() {
   const { user, isLoaded } = useUser();
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFirstName(user?.firstName ?? "");
+
+    setLastName(user?.lastName ?? "");
+  }, [user?.firstName, user?.lastName]);
+
   if (!isLoaded) {
-    return <p className="text-sm text-default-500">Loading…</p>;
+    return <p className="py-6 text-sm text-[var(--pv-text-muted)]">Loading…</p>;
   }
 
+  const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const created = user?.createdAt ? new Date(user.createdAt) : null;
+  const memberSince = created
+    ? `${String(created.getDate()).padStart(2, "0")}-${String(
+        created.getMonth() + 1,
+      ).padStart(2, "0")}-${created.getFullYear()}`
+    : "";
+
+  const nameDirty =
+    (user?.firstName ?? "") !== firstName ||
+    (user?.lastName ?? "") !== lastName;
+
+  const saveName = async () => {
+    if (!user || !nameDirty) return;
+    setSavingName(true);
+    try {
+      await user.update({ firstName, lastName });
+      toast.success({ title: "Name updated" });
+    } catch (err) {
+      toast.error({
+        title: "Couldn't update name",
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const savePhoto = async (file: File) => {
+    if (!user) return;
+    setSavingPhoto(true);
+    try {
+      await user.setProfileImage({ file });
+      toast.success({ title: "Profile photo updated" });
+    } catch (err) {
+      toast.error({
+        title: "Couldn't update photo",
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setSavingPhoto(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
-          General
-        </h2>
-        <p className="text-sm text-default-500">
-          A snapshot of your profile. Edit details under{" "}
-          <Link
-            className="underline underline-offset-2 hover:text-[var(--color-foreground)]"
-            href={ROUTES.APP.SETTINGS_ACCOUNT}
-          >
-            Account
-          </Link>
-          .
-        </p>
-      </header>
+    <section>
+      <PvSectionHeading
+        description="You can setup your account, password and billing"
+        title="Personal info"
+      />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-default-200 bg-[var(--color-background)] p-5">
-        <div className="flex items-center gap-4">
-          {user?.imageUrl ? (
-            <img
-              alt={user.fullName ?? "Avatar"}
-              className="size-16 rounded-full object-cover"
-              src={user.imageUrl}
-            />
-          ) : (
-            <HugeiconsIcon icon={UserCircleIcon} size={64} />
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-semibold text-[var(--color-foreground)]">
-              {user?.fullName ?? "User"}
-            </p>
-            <p className="truncate text-sm text-default-500">
-              {user?.primaryEmailAddress?.emailAddress ?? ""}
-            </p>
-          </div>
+      <PvFormRow
+        helpTip
+        required
+        description="This will be displayed on your profile."
+        label="Your photo"
+      >
+        <PvPhotoUpload
+          currentUrl={user?.imageUrl ?? null}
+          onFileSelected={savePhoto}
+        />
+        {savingPhoto ? (
+          <p className="mt-2 text-[12px] text-[var(--pv-text-muted)]">
+            Uploading…
+          </p>
+        ) : null}
+      </PvFormRow>
+
+      <PvFormRow
+        required
+        description="This is a hint text to help user."
+        label="Name"
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <PvTextField
+            placeholder="First name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+          />
+          <PvTextField
+            placeholder="Last name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
         </div>
-
-        <dl className="grid grid-cols-1 gap-4 border-t border-default-200 pt-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-default-500">
-              First name
-            </dt>
-            <dd className="mt-1 text-sm text-[var(--color-foreground)]">
-              {user?.firstName ?? "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-default-500">
-              Last name
-            </dt>
-            <dd className="mt-1 text-sm text-[var(--color-foreground)]">
-              {user?.lastName ?? "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-default-500">
-              Email
-            </dt>
-            <dd className="mt-1 truncate text-sm text-[var(--color-foreground)]">
-              {user?.primaryEmailAddress?.emailAddress ?? "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-default-500">
-              Member since
-            </dt>
-            <dd className="mt-1 text-sm text-[var(--color-foreground)]">
-              {created ? created.toLocaleDateString() : "—"}
-            </dd>
-          </div>
-        </dl>
-
-        <div className="flex justify-end border-t border-default-200 pt-4">
-          <Link
-            className="inline-flex items-center justify-center rounded-md border border-default-200 px-4 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100"
-            href={ROUTES.APP.SETTINGS_ACCOUNT}
+        {nameDirty ? (
+          <button
+            className="mt-3 inline-flex h-9 items-center rounded-full bg-[var(--pv-brand-red)] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-hover)] disabled:opacity-60"
+            disabled={savingName || firstName.trim().length === 0}
+            type="button"
+            onClick={() => void saveName()}
           >
-            Edit profile
-          </Link>
-        </div>
-      </div>
-    </div>
+            {savingName ? "Saving…" : "Save name"}
+          </button>
+        ) : null}
+      </PvFormRow>
+
+      <PvFormRow
+        required
+        description="Change your email under Account."
+        label="Email address"
+      >
+        <PvTextField
+          disabled
+          leadingIcon={Mail01Icon}
+          type="email"
+          value={email}
+        />
+      </PvFormRow>
+
+      <PvFormRow
+        last
+        description="This is a hint text to help user."
+        label="Member Since"
+      >
+        <PvTextField disabled value={memberSince} />
+      </PvFormRow>
+    </section>
   );
 }

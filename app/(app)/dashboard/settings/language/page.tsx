@@ -3,6 +3,10 @@
 import { useMemo, useSyncExternalStore } from "react";
 
 import {
+  PvFormRow,
+  PvSectionHeading,
+} from "@/components/sections/dashboard/settings/pv-settings-primitives";
+import {
   type DateFormat,
   type Language,
   usePreferencesStore,
@@ -47,9 +51,14 @@ const COMMON_TIMEZONES = [
   "Australia/Sydney",
 ];
 
-const fieldClass =
-  "w-full rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+const selectClass =
+  "h-11 w-full rounded-full border border-[var(--pv-hairline-strong)] bg-[var(--pv-surface)] px-4 text-[14px] text-[var(--pv-text-strong)] focus:border-[#7F56D9] focus:outline-none focus:ring-2 focus:ring-[#7F56D9]/20 disabled:opacity-60";
 
+/**
+ * Language & Region tab — same two-column PvFormRow rhythm as General /
+ * Account. Persistence stays in the local Zustand preferences store; the
+ * save is optimistic (no explicit Save button needed).
+ */
 export default function LanguageSettingsPage() {
   const language = usePreferencesStore((s) => s.language);
   const timezone = usePreferencesStore((s) => s.timezone);
@@ -58,7 +67,6 @@ export default function LanguageSettingsPage() {
   const setTimezone = usePreferencesStore((s) => s.setTimezone);
   const setDateFormat = usePreferencesStore((s) => s.setDateFormat);
 
-  // Avoid hydration mismatch from persisted localStorage values.
   const hydrated = useIsMounted();
 
   const timezoneOptions = useMemo(() => {
@@ -70,84 +78,66 @@ export default function LanguageSettingsPage() {
   }, [timezone]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
-          Language &amp; Region
-        </h2>
-        <p className="text-sm text-default-500">
-          Saved automatically. These preferences apply only to this device for
-          now.
-        </p>
-      </header>
+    <section>
+      <PvSectionHeading
+        description="Saved automatically. These preferences apply only to this device for now."
+        title="Language & Region"
+      />
 
-      <div className="flex flex-col gap-5 rounded-xl border border-default-200 bg-[var(--color-background)] p-5">
-        <div className="flex flex-col gap-2">
-          <label
-            className="text-sm font-medium text-[var(--color-foreground)]"
-            htmlFor="lang-select"
-          >
-            Language
-          </label>
-          <select
-            className={fieldClass}
-            disabled={!hydrated}
-            id="lang-select"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as Language)}
-          >
-            {LANGUAGES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <PvFormRow
+        description="This is a hint text to help user."
+        label="Language"
+      >
+        <select
+          className={selectClass}
+          disabled={!hydrated}
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as Language)}
+        >
+          {LANGUAGES.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </PvFormRow>
 
-        <div className="flex flex-col gap-2">
-          <label
-            className="text-sm font-medium text-[var(--color-foreground)]"
-            htmlFor="tz-select"
-          >
-            Timezone
-          </label>
-          <select
-            className={fieldClass}
-            disabled={!hydrated}
-            id="tz-select"
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value)}
-          >
-            {timezoneOptions.map((tz) => (
-              <option key={tz} value={tz}>
-                {tz}
-              </option>
-            ))}
-          </select>
-        </div>
+      <PvFormRow
+        description="This is a hint text to help user."
+        label="Timezone"
+      >
+        <select
+          className={selectClass}
+          disabled={!hydrated}
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+        >
+          {timezoneOptions.map((tz) => (
+            <option key={tz} value={tz}>
+              {tz}
+            </option>
+          ))}
+        </select>
+      </PvFormRow>
 
-        <div className="flex flex-col gap-2">
-          <label
-            className="text-sm font-medium text-[var(--color-foreground)]"
-            htmlFor="date-select"
-          >
-            Date format
-          </label>
-          <select
-            className={fieldClass}
-            disabled={!hydrated}
-            id="date-select"
-            value={dateFormat}
-            onChange={(e) => setDateFormat(e.target.value as DateFormat)}
-          >
-            {DATE_FORMATS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </div>
+      <PvFormRow
+        last
+        description="This is a hint text to help user."
+        label="Date format"
+      >
+        <select
+          className={selectClass}
+          disabled={!hydrated}
+          value={dateFormat}
+          onChange={(e) => setDateFormat(e.target.value as DateFormat)}
+        >
+          {DATE_FORMATS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </PvFormRow>
+    </section>
   );
 }
