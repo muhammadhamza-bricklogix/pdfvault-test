@@ -179,15 +179,22 @@ export async function pickGoogleDrivePdfFiles(
         .setCallback((data: Record<string, unknown>) => {
           const action = data.action as string | undefined;
 
-          // Picker UI finished mounting — fired BEFORE the user picks
-          // anything. Not an error, not a settle event. Log for dev
-          // visibility only.
-          if (action === Action.LOADED || action === "loaded") {
-            if (process.env.NODE_ENV !== "production") {
-              // eslint-disable-next-line no-console
-              console.info("[google-drive-picker] picker loaded");
-            }
+          // Always log the raw action — production too. Silent `cancel`
+          // fires that turn into `count: 0` are the main reason we can't
+          // tell whether the picker actually opened; this lets us diff
+          // "loaded then cancel" (user closed) vs "cancel with no loaded"
+          // (Google refused to mount, usually API-key/referrer misconfig).
+          // eslint-disable-next-line no-console
+          console.log("[google-drive-picker] callback", {
+            action,
+            dataKeys: Object.keys(data),
+            error: data.error,
+            docsLength: Array.isArray(data.docs)
+              ? (data.docs as unknown[]).length
+              : undefined,
+          });
 
+          if (action === Action.LOADED || action === "loaded") {
             return;
           }
 
@@ -272,6 +279,13 @@ export async function pickGoogleDrivePdfFiles(
         })
         .build()
         .setVisible(true);
+      // eslint-disable-next-line no-console
+      console.log("[google-drive-picker] setVisible(true) called", {
+        appIdLen: appId.length,
+        keyLen: developerKey.length,
+        tokenLen: accessToken.length,
+        origin: window.location.origin,
+      });
     } catch (err) {
       // Synchronous Picker construction error — origin / API key / SDK
       // load problems can throw here.
