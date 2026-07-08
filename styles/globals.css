@@ -26,6 +26,59 @@
   --legal-cta-deep: #7f1d1d;
   --legal-border-subtle: #e7e5e4;
 }
+
+/*
+ * PDFVault dashboard tokens — sampled from the Figma export at
+ * `public/Dashboard/dashboard.css` (Geist for headings, Inter for body).
+ * Scoped under `.pv-dashboard` so the values never leak into HeroUI theme
+ * usage elsewhere in the app.
+ */
+.pv-dashboard {
+  /* Brand + semantic file colors */
+  --pv-brand-red: #f12c23;
+  --pv-brand-red-logo: #eb231b;
+  --pv-brand-red-hover: #d8241c;
+  --pv-file-pdf: #fb3748;
+  --pv-file-doc: #335cff;
+  --pv-file-ppt: #fa7319;
+  --pv-file-xls: #1fc16b;
+  --pv-verified: #46bffb;
+  --pv-online: #1fc16b;
+
+  /* Neutrals */
+  --pv-canvas: #f8f8fa;
+  --pv-surface: #ffffff;
+  --pv-nav-active: #f3f3f5;
+  --pv-tile: #f7f7f7;
+  --pv-fill-subtle: #f7f7f9;
+  --pv-hairline: #ebebeb;
+  --pv-hairline-strong: #e1e4ea;
+  --pv-text-strong: #171717;
+  --pv-text-body: #5c5c5c;
+  --pv-text-muted: #a4a4a4;
+
+  /* Typography — Geist for display/headings, Inter for body/UI */
+  --pv-font-display: var(--font-geist-sans), "Geist", "Inter", system-ui,
+    sans-serif;
+  --pv-font-body: "Inter", var(--font-geist-sans), system-ui, sans-serif;
+
+  color: var(--pv-text-strong);
+  font-family: var(--pv-font-body);
+  background-color: var(--pv-canvas);
+}
+.pv-dashboard .pv-heading {
+  font-family: var(--pv-font-display);
+  letter-spacing: -0.01em;
+}
+.pv-dashboard .pv-kbd {
+  border: 1px solid var(--pv-hairline);
+  background: var(--pv-surface);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pv-text-body);
+}
 html,
 body {
   min-height: 100%;
