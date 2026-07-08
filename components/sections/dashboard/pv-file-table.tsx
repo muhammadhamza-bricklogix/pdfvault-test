@@ -16,6 +16,7 @@ import { useState } from "react";
 interface PvFileTableProps {
   rows: readonly PvFileRow[];
   isLoading?: boolean;
+  onOpen?: (row: PvFileRow) => void;
   onDownload?: (row: PvFileRow) => void;
   onRename?: (row: PvFileRow) => void;
   onHistory?: (row: PvFileRow) => void;
@@ -179,6 +180,7 @@ function RowActions({
 export function PvFileTable({
   rows,
   isLoading,
+  onOpen,
   onDownload,
   onRename,
   onHistory,
@@ -263,6 +265,24 @@ export function PvFileTable({
         <tbody>
           {sorted.map((row) => {
             const isChecked = selected.has(row.id);
+            const openable = Boolean(onOpen);
+            // `role="link"` + keyboard handlers on the cell make the whole
+            // row body (name + uploader + date + size) a valid open target
+            // without swallowing the checkbox or action-icon clicks.
+            const openTd = openable
+              ? {
+                  className: "px-3 py-3 align-middle cursor-pointer",
+                  onClick: () => onOpen?.(row),
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpen?.(row);
+                    }
+                  },
+                  role: "link",
+                  tabIndex: 0,
+                }
+              : { className: "px-3 py-3 align-middle" };
 
             return (
               <tr
@@ -280,7 +300,10 @@ export function PvFileTable({
                     onChange={() => toggleRow(row.id)}
                   />
                 </td>
-                <td className="px-3 py-3 align-middle">
+                <td
+                  {...openTd}
+                  aria-label={openable ? `Open ${row.name}` : undefined}
+                >
                   <div className="flex items-center gap-3">
                     <TypeBadge type={row.type} />
                     <div className="min-w-0">
@@ -293,7 +316,7 @@ export function PvFileTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3 align-middle">
+                <td {...openTd}>
                   <div className="flex items-center gap-3">
                     {row.uploadedByAvatar ? (
                       // Dynamic Clerk profile URL — <img> is intentional.
@@ -319,10 +342,16 @@ export function PvFileTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3 align-middle text-[13px] text-[var(--pv-text-body)]">
+                <td
+                  {...openTd}
+                  className={`${openTd.className} text-[13px] text-[var(--pv-text-body)]`}
+                >
                   {row.uploadDate}
                 </td>
-                <td className="px-3 py-3 align-middle text-[13px] text-[var(--pv-text-body)]">
+                <td
+                  {...openTd}
+                  className={`${openTd.className} text-[13px] text-[var(--pv-text-body)]`}
+                >
                   {row.fileSize}
                 </td>
                 <td className="px-4 py-3 align-middle">

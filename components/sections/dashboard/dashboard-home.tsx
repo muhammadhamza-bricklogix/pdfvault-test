@@ -5,12 +5,14 @@ import type { Document } from "@/lib/shared/types/documents.types";
 
 import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { DeleteDocumentModal } from "./delete-document-modal";
@@ -42,6 +44,7 @@ export function DashboardHome() {
   const query = useDocumentsQuery();
   const queryClient = useQueryClient();
   const { user } = useUser();
+  const router = useRouter();
 
   const items: readonly Document[] = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
@@ -102,6 +105,7 @@ export function DashboardHome() {
         onDelete={(row) => setDeleteTarget(row.doc)}
         onDownload={(row) => void handleDownload(row)}
         onHistory={(row) => setHistoryTarget(row.doc)}
+        onOpen={(row) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${row.id}`)}
         onRename={(row) => setRenameTarget(row.doc)}
       />
 
