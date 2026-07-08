@@ -77,7 +77,7 @@ export default function SSOCallbackPage() {
             "An account with this email already exists. Please sign in instead.",
           );
           await signUp?.reset();
-          router.replace(ROUTES.AUTH.LOGIN);
+          router.replace(ROUTES.AUTH.SIGN_IN);
 
           return;
         }
@@ -91,7 +91,7 @@ export default function SSOCallbackPage() {
 
         if (signInExtStatus === "transferable") {
           toast("No account found for this email — let's create one.");
-          router.replace(ROUTES.AUTH.SIGNUP);
+          router.replace(ROUTES.AUTH.SIGN_UP);
 
           return;
         }
@@ -99,7 +99,7 @@ export default function SSOCallbackPage() {
         if (cancelled) return;
         logger.error("OAuth callback failed", err);
         toast.danger("Sign-in didn't complete. Please try again.");
-        router.replace(ROUTES.AUTH.LOGIN);
+        router.replace(ROUTES.AUTH.SIGN_IN);
       }
     })();
 

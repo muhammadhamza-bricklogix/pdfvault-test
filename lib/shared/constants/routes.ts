@@ -1,9 +1,5 @@
 export const ROUTES = {
   AUTH: {
-    // New PDFVault-design auth screens
-    LOGIN: "/login",
-    SIGNUP: "/signup",
-    // Existing Clerk auth screens
     SIGN_IN: "/sign-in",
     SIGN_UP: "/sign-up",
     SSO_CALLBACK: "/sso-callback",

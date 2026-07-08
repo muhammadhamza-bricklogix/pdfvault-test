@@ -35,8 +35,8 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "ACCOUNT",
     links: [
-      { label: "Log In", href: ROUTES.AUTH.LOGIN },
-      { label: "Sign Up", href: ROUTES.AUTH.SIGNUP },
+      { label: "Log In", href: ROUTES.AUTH.SIGN_IN },
+      { label: "Sign Up", href: ROUTES.AUTH.SIGN_UP },
       { label: "Changelog", href: "#changelog" },
     ],
   },

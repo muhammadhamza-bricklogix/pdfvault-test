@@ -130,7 +130,7 @@ export function SiteNavbar() {
                           className="w-full"
                           variant="ghost"
                           onPress={() =>
-                            navigateAndCloseDrawer(ROUTES.AUTH.LOGIN)
+                            navigateAndCloseDrawer(ROUTES.AUTH.SIGN_IN)
                           }
                         >
                           Sign in
@@ -138,7 +138,7 @@ export function SiteNavbar() {
                         <Button
                           className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
                           onPress={() =>
-                            navigateAndCloseDrawer(ROUTES.AUTH.SIGNUP)
+                            navigateAndCloseDrawer(ROUTES.AUTH.SIGN_UP)
                           }
                         >
                           Sign up free
@@ -221,13 +221,13 @@ export function SiteNavbar() {
             <>
               <Link
                 className="hidden px-2 text-sm font-medium text-default-600 transition-colors hover:text-foreground sm:inline-flex dark:text-default-400"
-                href={ROUTES.AUTH.LOGIN}
+                href={ROUTES.AUTH.SIGN_IN}
               >
                 Sign in
               </Link>
               <Button
                 className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
-                onPress={() => router.push(ROUTES.AUTH.SIGNUP)}
+                onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
               >
                 Sign up free
               </Button>

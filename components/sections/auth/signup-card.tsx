@@ -2,7 +2,7 @@
 
 import { useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -10,11 +10,8 @@ import { logger } from "@/lib/shared/utils/logger";
 
 import { AppleIcon, GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
-// Reasonable email check — not an overly strict regex (per the design spec).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Same semantics as use-sign-in-flow's safeRedirectPath: only allow same-site
-// paths from ?redirect_url, otherwise fall back to the dashboard.
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
     return fallback;
@@ -23,10 +20,29 @@ function safeRedirectPath(raw: string | null, fallback: string): string {
   return raw;
 }
 
+/** Extracts the first useful Clerk error message. */
+function readClerkError(err: unknown, fallback: string): string {
+  const first = (
+    err as { errors?: { longMessage?: string; message?: string }[] }
+  )?.errors?.[0];
+
+  return first?.longMessage ?? first?.message ?? fallback;
+}
+
+function splitName(fullName: string): { firstName: string; lastName: string } {
+  const trimmed = fullName.trim();
+  const parts = trimmed.split(/\s+/);
+  const firstName = parts[0] ?? "";
+  const lastName = parts.slice(1).join(" ");
+
+  return { firstName, lastName };
+}
+
 type FieldErrors = {
   email?: string;
   fullName?: string;
   password?: string;
+  code?: string;
 };
 
 const INPUT_CLASS =
@@ -34,19 +50,28 @@ const INPUT_CLASS =
 
 const LABEL_CLASS = "block text-[14px] leading-[18px] text-[#6f6f6f]";
 
+type Step = "credentials" | "verify";
+
 export function SignupCard() {
   const { signUp } = useSignUp();
+  const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [step, setStep] = useState<Step>("credentials");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   const headingId = useId();
   const fullNameId = useId();
   const emailId = useId();
   const passwordId = useId();
+  const codeId = useId();
   const statusId = useId();
 
   const afterSignUpPath = useMemo(
@@ -55,10 +80,8 @@ export function SignupCard() {
     [searchParams],
   );
 
-  // Same Clerk flow as the working sign-up page (use-sign-up-flow.ts):
-  // signUp.sso redirects through /sso-callback, which handles the transfer
-  // cases (existing account → sign-in) and routes to the destination.
   const onGoogle = async () => {
+    if (!signUp) return;
     setErrors({});
     setNotice(null);
     setOauthLoading(true);
@@ -76,38 +99,184 @@ export function SignupCard() {
     }
   };
 
-  // TODO(auth): wire Apple like onGoogle once the provider is enabled in the
-  // Clerk dashboard. Kept as a clearly-named boundary — it must NOT fake a
-  // successful sign-up.
   const onApple = () => {
     setErrors({});
     setNotice("Apple sign-up isn’t connected yet.");
   };
 
-  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const onSubmitCredentials = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
+    if (!signUp) return;
+
     const nextErrors: FieldErrors = {};
+    const trimmedEmail = email.trim();
 
     if (!fullName.trim()) {
       nextErrors.fullName = "Please enter your full name.";
     }
-    if (!EMAIL_RE.test(email.trim())) {
+    if (!EMAIL_RE.test(trimmedEmail)) {
       nextErrors.email = "Please enter a valid email address.";
     }
-    if (!password) {
-      nextErrors.password = "Please enter a password.";
+    if (password.length < 8) {
+      nextErrors.password = "Password must be at least 8 characters.";
     }
 
     setNotice(null);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      const { firstName, lastName } = splitName(fullName);
+
+      // Future-API Clerk sign-up: create the attempt, attach the name
+      // (best-effort — some Clerk instances reject unknown fields, in which
+      // case we still ship the account and let the user set names later
+      // from Settings), then send the email verification code.
+      const { error: passwordError } = await signUp.password({
+        emailAddress: trimmedEmail,
+        password,
+      });
+
+      if (passwordError) {
+        setErrors({
+          password: readClerkError(
+            passwordError,
+            "Couldn't create your account.",
+          ),
+        });
+
+        return;
+      }
+
+      if (firstName || lastName) {
+        try {
+          await signUp.update({ firstName, lastName });
+        } catch (nameErr) {
+          logger.warn?.("Signup name update failed (non-fatal)", nameErr);
+        }
+      }
+
+      const sendCode = await signUp.verifications.sendEmailCode();
+
+      if (sendCode.error) {
+        setErrors({
+          password: readClerkError(
+            sendCode.error,
+            "Couldn't send the verification code.",
+          ),
+        });
+
+        return;
+      }
+
+      setStep("verify");
+      setCode("");
+    } catch (err) {
+      logger.error("Sign-up submission failed", err);
+      setErrors({
+        password: readClerkError(
+          err,
+          "Something went wrong while creating your account.",
+        ),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!signUp) return;
+    const trimmedCode = code.trim();
+
+    if (trimmedCode.length < 4) {
+      setErrors({ code: "Enter the code we emailed you." });
+
       return;
     }
-    // TODO(auth): hand the values to the existing Clerk email sign-up flow
-    // (signUp.password + the email-verification-code step, see
-    // use-sign-up-flow.ts) once that step has a designed screen. No fake
-    // success here.
-    setNotice(`Email sign-up isn’t connected yet (${email.trim()}).`);
+
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const { error: verifyError } = await signUp.verifications.verifyEmailCode(
+        {
+          code: trimmedCode,
+        },
+      );
+
+      if (verifyError) {
+        setErrors({
+          code: readClerkError(
+            verifyError,
+            "That code didn't work. Try again or resend a new one.",
+          ),
+        });
+
+        return;
+      }
+
+      if (signUp.status === "complete") {
+        const { error: finalizeError } = await signUp.finalize({
+          navigate: ({ decorateUrl }) => {
+            const url = decorateUrl(afterSignUpPath);
+
+            if (url.startsWith("http")) {
+              window.location.href = url;
+
+              return;
+            }
+            router.push(url);
+          },
+        });
+
+        if (finalizeError) {
+          setErrors({
+            code: readClerkError(
+              finalizeError,
+              "Couldn't finish creating your account.",
+            ),
+          });
+        }
+
+        return;
+      }
+
+      setNotice(
+        "One more step is needed to finish creating your account. Please check your email.",
+      );
+    } catch (err) {
+      logger.error("Verification failed", err);
+      setErrors({
+        code: readClerkError(
+          err,
+          "That code didn't work. Try again or resend a new one.",
+        ),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onResendCode = async () => {
+    if (!signUp) return;
+    setErrors({});
+    setNotice(null);
+    try {
+      const { error: resendError } = await signUp.verifications.sendEmailCode();
+
+      if (resendError) {
+        setNotice(readClerkError(resendError, "Couldn't resend the code."));
+
+        return;
+      }
+      setNotice("A fresh code is on the way.");
+    } catch (err) {
+      logger.error("Resend failed", err);
+      setNotice(readClerkError(err, "Couldn't resend the code."));
+    }
   };
 
   return (
@@ -119,154 +288,183 @@ export function SignupCard() {
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
         id={headingId}
       >
-        Create a Free Account
+        {step === "credentials" ? "Create a Free Account" : "Verify your email"}
       </h1>
       <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
-        Unlimited Downloads, Shares, And Printing.
+        {step === "credentials"
+          ? "Unlimited Downloads, Shares, And Printing."
+          : `We sent a code to ${email}.`}
       </p>
 
-      {/* OAuth providers */}
-      <div className="mt-[34px] flex flex-col gap-[13px]">
-        <button
-          className={OAUTH_BUTTON_CLASS}
-          disabled={oauthLoading}
-          type="button"
-          onClick={onApple}
-        >
-          <AppleIcon />
-          Continue with Apple
-        </button>
-        <button
-          className={OAUTH_BUTTON_CLASS}
-          disabled={oauthLoading}
-          type="button"
-          onClick={onGoogle}
-        >
-          <GoogleIcon />
-          {oauthLoading ? "Connecting to Google…" : "Continue with Google"}
-        </button>
-      </div>
+      {step === "credentials" ? (
+        <>
+          <div className="mt-[34px] flex flex-col gap-[13px]">
+            <button
+              className={OAUTH_BUTTON_CLASS}
+              disabled={oauthLoading}
+              type="button"
+              onClick={onApple}
+            >
+              <AppleIcon />
+              Continue with Apple
+            </button>
+            <button
+              className={OAUTH_BUTTON_CLASS}
+              disabled={oauthLoading}
+              type="button"
+              onClick={onGoogle}
+            >
+              <GoogleIcon />
+              {oauthLoading ? "Connecting to Google…" : "Continue with Google"}
+            </button>
+          </div>
 
-      {/* Divider — the signup reference uses the darker #9d9d9d lines */}
-      <div className="mx-[5px] mt-[30px] grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <span className="h-px bg-[#9d9d9d]" />
-        <span className="text-[16px] text-[#9d9d9d]">
-          Or sign in with email
-        </span>
-        <span className="h-px bg-[#9d9d9d]" />
-      </div>
+          <div className="mx-[5px] mt-[30px] grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+            <span className="h-px bg-[#9d9d9d]" />
+            <span className="text-[16px] text-[#9d9d9d]">
+              Or sign in with email
+            </span>
+            <span className="h-px bg-[#9d9d9d]" />
+          </div>
 
-      {/* Signup form */}
-      <form noValidate className="mt-[30px]" onSubmit={onSubmit}>
-        <div>
-          <label className={LABEL_CLASS} htmlFor={fullNameId}>
-            Your Fullname
+          <form noValidate className="mt-[30px]" onSubmit={onSubmitCredentials}>
+            <div>
+              <label className={LABEL_CLASS} htmlFor={fullNameId}>
+                Your Fullname
+                <span aria-hidden className="text-[#f12c23]">
+                  *
+                </span>
+              </label>
+              <input
+                required
+                aria-invalid={errors.fullName ? true : undefined}
+                autoComplete="name"
+                className={INPUT_CLASS}
+                id={fullNameId}
+                name="fullName"
+                placeholder="Ammy Oginni"
+                spellCheck={false}
+                type="text"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+              />
+              {errors.fullName ? (
+                <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
+                  {errors.fullName}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-[8px]">
+              <label className={LABEL_CLASS} htmlFor={emailId}>
+                Your Registered Email
+                <span aria-hidden className="text-[#f12c23]">
+                  *
+                </span>
+              </label>
+              <input
+                required
+                aria-invalid={errors.email ? true : undefined}
+                autoComplete="email"
+                className={INPUT_CLASS}
+                id={emailId}
+                inputMode="email"
+                name="email"
+                placeholder="ammy@theblanck.co"
+                spellCheck={false}
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              {errors.email ? (
+                <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
+                  {errors.email}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-[8px]">
+              <label className={LABEL_CLASS} htmlFor={passwordId}>
+                Your Password
+                <span aria-hidden className="text-[#f12c23]">
+                  *
+                </span>
+              </label>
+              <input
+                required
+                aria-invalid={errors.password ? true : undefined}
+                autoComplete="new-password"
+                className={INPUT_CLASS}
+                id={passwordId}
+                minLength={8}
+                name="password"
+                placeholder="********"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              {errors.password ? (
+                <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
+                  {errors.password}
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              className="mt-4 flex h-[56px] w-full items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              disabled={submitting}
+              type="submit"
+            >
+              {submitting ? "Creating account…" : "Create Account"}
+            </button>
+          </form>
+        </>
+      ) : (
+        <form noValidate className="mt-8" onSubmit={onSubmitCode}>
+          <label className={LABEL_CLASS} htmlFor={codeId}>
+            Verification code
             <span aria-hidden className="text-[#f12c23]">
               *
             </span>
           </label>
           <input
+            autoFocus
             required
-            aria-describedby={
-              errors.fullName ? `${fullNameId}-error` : undefined
-            }
-            aria-invalid={errors.fullName ? true : undefined}
-            autoComplete="name"
+            aria-invalid={errors.code ? true : undefined}
+            autoComplete="one-time-code"
             className={INPUT_CLASS}
-            id={fullNameId}
-            name="fullName"
-            placeholder="Ammy Oginni"
-            spellCheck={false}
+            id={codeId}
+            inputMode="numeric"
+            name="code"
+            placeholder="123456"
             type="text"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
           />
-          {errors.fullName ? (
-            <p
-              className="mt-2 text-[13px] text-[#f12c23]"
-              id={`${fullNameId}-error`}
-              role="alert"
-            >
-              {errors.fullName}
+          {errors.code ? (
+            <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
+              {errors.code}
             </p>
           ) : null}
-        </div>
 
-        <div className="mt-[8px]">
-          <label className={LABEL_CLASS} htmlFor={emailId}>
-            Your Registered Email
-            <span aria-hidden className="text-[#f12c23]">
-              *
-            </span>
-          </label>
-          <input
-            required
-            aria-describedby={errors.email ? `${emailId}-error` : undefined}
-            aria-invalid={errors.email ? true : undefined}
-            autoComplete="email"
-            className={INPUT_CLASS}
-            id={emailId}
-            inputMode="email"
-            name="email"
-            placeholder="ammy@theblanck.co"
-            spellCheck={false}
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          {errors.email ? (
-            <p
-              className="mt-2 text-[13px] text-[#f12c23]"
-              id={`${emailId}-error`}
-              role="alert"
-            >
-              {errors.email}
-            </p>
-          ) : null}
-        </div>
+          <button
+            className="mt-4 flex h-[56px] w-full items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+            disabled={submitting}
+            type="submit"
+          >
+            {submitting ? "Verifying…" : "Verify & Continue"}
+          </button>
 
-        <div className="mt-[8px]">
-          <label className={LABEL_CLASS} htmlFor={passwordId}>
-            Your Password
-            <span aria-hidden className="text-[#f12c23]">
-              *
-            </span>
-          </label>
-          <input
-            required
-            aria-describedby={
-              errors.password ? `${passwordId}-error` : undefined
-            }
-            aria-invalid={errors.password ? true : undefined}
-            autoComplete="new-password"
-            className={INPUT_CLASS}
-            id={passwordId}
-            name="password"
-            placeholder="********"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          {errors.password ? (
-            <p
-              className="mt-2 text-[13px] text-[#f12c23]"
-              id={`${passwordId}-error`}
-              role="alert"
-            >
-              {errors.password}
-            </p>
-          ) : null}
-        </div>
+          <button
+            className="mt-3 w-full text-center text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+            type="button"
+            onClick={() => void onResendCode()}
+          >
+            Resend code
+          </button>
+        </form>
+      )}
 
-        <button
-          className="mt-4 flex h-[56px] w-full items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-          type="submit"
-        >
-          Create Account
-        </button>
-      </form>
-
-      {/* Non-faking status region for the stubbed provider/email handlers */}
       <p aria-live="polite" className="sr-only" id={statusId}>
         {notice}
       </p>
@@ -274,13 +472,11 @@ export function SignupCard() {
         <p className="mt-3 text-center text-[13px] text-[#666666]">{notice}</p>
       ) : null}
 
-      {/* The reference copy really does say "Don’t have an account yet?" on
-          the signup screen — match it exactly per the spec. */}
       <p className="mt-[28px] text-center text-[16px] text-[#4c4c4c]">
         Don’t have an account yet?{" "}
         <Link
           className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={ROUTES.AUTH.LOGIN}
+          href={ROUTES.AUTH.SIGN_IN}
         >
           Sign In
         </Link>

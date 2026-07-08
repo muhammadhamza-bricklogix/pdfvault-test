@@ -128,7 +128,7 @@ export function LandingBanner() {
             </h2>
             <a
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[var(--pv-gray-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              href={ROUTES.AUTH.SIGNUP}
+              href={ROUTES.AUTH.SIGN_UP}
             >
               Create your free vault
               <ArrowIcon />

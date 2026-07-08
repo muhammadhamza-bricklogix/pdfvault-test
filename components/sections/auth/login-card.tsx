@@ -2,7 +2,7 @@
 
 import { useSignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -10,11 +10,8 @@ import { logger } from "@/lib/shared/utils/logger";
 
 import { AppleIcon, GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
-// Reasonable email check — not an overly strict regex (per the design spec).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Same semantics as use-sign-in-flow's safeRedirectPath: only allow same-site
-// paths from ?redirect_url, otherwise fall back to the dashboard.
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
     return fallback;
@@ -37,14 +34,49 @@ function ArrowIcon() {
   );
 }
 
+function BackChevron() {
+  return (
+    <svg aria-hidden fill="none" height="14" viewBox="0 0 14 14" width="14">
+      <path
+        d="M9 3 5 7l4 4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Extracts the first useful message from a Clerk error, falling back to a
+ * generic string. Clerk throws `{ errors: [{ longMessage, message, code }] }`.
+ */
+function readClerkError(err: unknown, fallback: string): string {
+  const first = (
+    err as { errors?: { longMessage?: string; message?: string }[] }
+  )?.errors?.[0];
+
+  return first?.longMessage ?? first?.message ?? fallback;
+}
+
+type Step = "email" | "password";
+
 export function LoginCard() {
   const { signIn } = useSignIn();
+  const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   const emailId = useId();
+  const passwordId = useId();
   const errorId = useId();
   const statusId = useId();
 
@@ -54,10 +86,8 @@ export function LoginCard() {
     [searchParams],
   );
 
-  // Same Clerk flow as the working /sign-in page (use-sign-in-flow.ts):
-  // signIn.sso redirects through /sso-callback, which handles the transfer
-  // cases and routes to the dashboard.
   const onGoogle = async () => {
+    if (!signIn) return;
     setError(null);
     setNotice(null);
     setOauthLoading(true);
@@ -75,15 +105,14 @@ export function LoginCard() {
     }
   };
 
-  // TODO(auth): wire Apple like onGoogle once the provider is enabled in the
-  // Clerk dashboard. Kept as a clearly-named boundary — it must NOT fake a
-  // successful sign-in.
+  // Apple isn't enabled in the Clerk dashboard yet — surface an honest
+  // notice instead of faking success.
   const onApple = () => {
     setError(null);
     setNotice("Apple sign-in isn’t connected yet.");
   };
 
-  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const onSubmitEmail = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const value = email.trim();
 
@@ -94,9 +123,80 @@ export function LoginCard() {
       return;
     }
     setError(null);
-    // TODO(auth): hand the normalized email to the existing Clerk email-first
-    // sign-in flow and navigate to the next step. No fake success here.
-    setNotice(`Email sign-in isn’t connected yet (${value}).`);
+    setEmail(value);
+    setStep("password");
+  };
+
+  const onSubmitPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!signIn) return;
+    if (password.length === 0) {
+      setError("Enter your password to continue.");
+
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setSubmitting(true);
+
+    try {
+      const { error: submitError } = await signIn.password({
+        emailAddress: email,
+        password,
+      });
+
+      if (submitError) {
+        setError(
+          readClerkError(
+            submitError,
+            "Couldn't sign you in. Please try again.",
+          ),
+        );
+        setSubmitting(false);
+
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        const { error: finalizeError } = await signIn.finalize({
+          navigate: ({ decorateUrl }) => {
+            const url = decorateUrl(afterSignInPath);
+
+            if (url.startsWith("http")) {
+              window.location.href = url;
+
+              return;
+            }
+            router.push(url);
+          },
+        });
+
+        if (finalizeError) {
+          setError(
+            readClerkError(finalizeError, "Couldn't finish signing you in."),
+          );
+          setSubmitting(false);
+        }
+
+        return;
+      }
+
+      // Second-factor / additional step needed — Clerk's sso-callback page
+      // knows how to complete either path.
+      router.push(ROUTES.AUTH.SSO_CALLBACK);
+    } catch (err) {
+      logger.error("Password sign-in failed", err);
+      setError(readClerkError(err, "Couldn't sign you in. Please try again."));
+      setSubmitting(false);
+    }
+  };
+
+  const goBackToEmail = () => {
+    setError(null);
+    setNotice(null);
+    setPassword("");
+    setStep("email");
   };
 
   return (
@@ -111,84 +211,144 @@ export function LoginCard() {
         Login to PDFVault
       </h1>
       <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
-        Please enter your details below to sign in
+        {step === "email"
+          ? "Please enter your details below to sign in"
+          : `Signing in as ${email}`}
       </p>
 
-      {/* OAuth providers */}
-      <div className="mt-[30px] flex flex-col gap-3">
-        <button
-          className={OAUTH_BUTTON_CLASS}
-          disabled={oauthLoading}
-          type="button"
-          onClick={onApple}
-        >
-          <AppleIcon />
-          Login with Apple
-        </button>
-        <button
-          className={OAUTH_BUTTON_CLASS}
-          disabled={oauthLoading}
-          type="button"
-          onClick={onGoogle}
-        >
-          <GoogleIcon />
-          {oauthLoading ? "Connecting to Google…" : "Login with Google"}
-        </button>
-      </div>
+      {/* OAuth providers — email step only */}
+      {step === "email" ? (
+        <>
+          <div className="mt-[30px] flex flex-col gap-3">
+            <button
+              className={OAUTH_BUTTON_CLASS}
+              disabled={oauthLoading}
+              type="button"
+              onClick={onApple}
+            >
+              <AppleIcon />
+              Login with Apple
+            </button>
+            <button
+              className={OAUTH_BUTTON_CLASS}
+              disabled={oauthLoading}
+              type="button"
+              onClick={onGoogle}
+            >
+              <GoogleIcon />
+              {oauthLoading ? "Connecting to Google…" : "Login with Google"}
+            </button>
+          </div>
 
-      {/* Divider */}
-      <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <span className="h-px bg-[#d9d9d9]" />
-        <span className="text-[16px] text-[#999999]">
-          Or sign in with email
-        </span>
-        <span className="h-px bg-[#d9d9d9]" />
-      </div>
+          <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+            <span className="h-px bg-[#d9d9d9]" />
+            <span className="text-[16px] text-[#999999]">
+              Or sign in with email
+            </span>
+            <span className="h-px bg-[#d9d9d9]" />
+          </div>
 
-      {/* Email form */}
-      <form noValidate className="mt-6" onSubmit={onSubmit}>
-        <label className="block text-[14px] text-[#5f5f5f]" htmlFor={emailId}>
-          Your Registered Email
-          <span aria-hidden className="text-[#f12c23]">
-            *
-          </span>
-        </label>
-        <input
-          required
-          aria-describedby={error ? errorId : undefined}
-          aria-invalid={error ? true : undefined}
-          autoComplete="email"
-          className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
-          id={emailId}
-          inputMode="email"
-          name="email"
-          placeholder="ammy@theblanck.co"
-          spellCheck={false}
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
+          <form noValidate className="mt-6" onSubmit={onSubmitEmail}>
+            <label
+              className="block text-[14px] text-[#5f5f5f]"
+              htmlFor={emailId}
+            >
+              Your Registered Email
+              <span aria-hidden className="text-[#f12c23]">
+                *
+              </span>
+            </label>
+            <input
+              required
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? true : undefined}
+              autoComplete="email"
+              className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
+              id={emailId}
+              inputMode="email"
+              name="email"
+              placeholder="ammy@theblanck.co"
+              spellCheck={false}
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
 
-        {error ? (
-          <p
-            className="mt-2 text-[13px] text-[#f12c23]"
-            id={errorId}
-            role="alert"
+            {error ? (
+              <p
+                className="mt-2 text-[13px] text-[#f12c23]"
+                id={errorId}
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
+
+            <button
+              className="mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              type="submit"
+            >
+              Continue
+              <ArrowIcon />
+            </button>
+          </form>
+        </>
+      ) : (
+        <form noValidate className="mt-8" onSubmit={onSubmitPassword}>
+          <button
+            className="mb-4 inline-flex items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
+            type="button"
+            onClick={goBackToEmail}
           >
-            {error}
-          </p>
-        ) : null}
+            <BackChevron />
+            Use a different email
+          </button>
 
-        <button
-          className="mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-          type="submit"
-        >
-          Continue
-          <ArrowIcon />
-        </button>
-      </form>
+          <label
+            className="block text-[14px] text-[#5f5f5f]"
+            htmlFor={passwordId}
+          >
+            Password
+            <span aria-hidden className="text-[#f12c23]">
+              *
+            </span>
+          </label>
+          <input
+            autoFocus
+            required
+            aria-describedby={error ? errorId : undefined}
+            aria-invalid={error ? true : undefined}
+            autoComplete="current-password"
+            className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
+            id={passwordId}
+            name="password"
+            placeholder="••••••••"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
 
-      {/* Non-faking status region for the stubbed provider/email handlers */}
+          {error ? (
+            <p
+              className="mt-2 text-[13px] text-[#f12c23]"
+              id={errorId}
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <button
+            className="mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+            disabled={submitting}
+            type="submit"
+          >
+            {submitting ? "Signing in…" : "Sign In"}
+            {submitting ? null : <ArrowIcon />}
+          </button>
+        </form>
+      )}
+
       <p aria-live="polite" className="sr-only" id={statusId}>
         {notice}
       </p>
@@ -200,7 +360,7 @@ export function LoginCard() {
         Don’t have an account yet?{" "}
         <Link
           className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={ROUTES.AUTH.SIGNUP}
+          href={ROUTES.AUTH.SIGN_UP}
         >
           Sign Up
         </Link>

@@ -88,13 +88,13 @@ export function LandingHeader() {
 
           <a
             className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-            href={ROUTES.AUTH.LOGIN}
+            href={ROUTES.AUTH.SIGN_IN}
           >
             Login
           </a>
           <a
             className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
-            href={ROUTES.AUTH.SIGNUP}
+            href={ROUTES.AUTH.SIGN_UP}
           >
             Get started
           </a>
@@ -146,14 +146,14 @@ export function LandingHeader() {
             <li className="flex flex-col gap-2 px-2 pt-1">
               <a
                 className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                href={ROUTES.AUTH.LOGIN}
+                href={ROUTES.AUTH.SIGN_IN}
                 onClick={() => setMobileOpen(false)}
               >
                 Login
               </a>
               <a
                 className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                href={ROUTES.AUTH.SIGNUP}
+                href={ROUTES.AUTH.SIGN_UP}
                 onClick={() => setMobileOpen(false)}
               >
                 Get started

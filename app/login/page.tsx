@@ -1,28 +1,22 @@
-import type { Metadata } from "next";
-
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 
-import { LoginScreen } from "@/components/sections/auth/login-screen";
-import { ROUTES } from "@/lib/shared/constants/routes";
+/**
+ * Legacy alias — auth lives at `/sign-in` (matches the platform config).
+ * Any bookmark that still hits `/login` gets forwarded, preserving the
+ * `?redirect_url=` param when present.
+ */
+export default async function LoginAliasPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const suffix = new URLSearchParams();
 
-export const metadata: Metadata = {
-  title: "Login to PDFVault",
-};
-
-export default async function LoginPage() {
-  const { userId } = await auth();
-
-  if (userId) {
-    redirect(ROUTES.APP.DASHBOARD);
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") suffix.set(key, value);
   }
+  const query = suffix.toString();
 
-  return (
-    // Suspense is required because LoginCard reads ?redirect_url via
-    // useSearchParams (same pattern as the existing /sign-in page).
-    <Suspense fallback={null}>
-      <LoginScreen />
-    </Suspense>
-  );
+  redirect(`/sign-in${query ? `?${query}` : ""}`);
 }
