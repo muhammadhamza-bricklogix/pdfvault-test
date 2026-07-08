@@ -40,7 +40,7 @@ export function PrivacyPolicyContent() {
           Content Clicks LLC (&quot;we,&quot; &quot;us,&quot; or
           &quot;our&quot;) is committed to protecting your privacy. This Privacy
           Policy explains how we collect, use, disclose, and protect your
-          personal information when you use our Service at pdfedits.io.
+          personal information when you use our Service at pdfvault.ai.
         </p>
       </LegalSectionCard>
 
@@ -207,7 +207,7 @@ export function PrivacyPolicyContent() {
           <LegalCallout variant="emphasis">
             <p>
               To exercise any of these rights, contact us at{" "}
-              <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>. We
+              <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>. We
               will respond within <strong>30 days</strong>.
             </p>
           </LegalCallout>
@@ -224,7 +224,7 @@ export function PrivacyPolicyContent() {
           do not knowingly collect personal information from children under 16.
           If you believe we have inadvertently collected such information,
           please contact us immediately at{" "}
-          <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>.
+          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
         </p>
       </LegalSectionCard>
 

@@ -132,24 +132,24 @@ export function LandingFooter() {
           <div className="col-span-2 sm:col-span-4 md:col-span-1">
             <Image
               alt="PDFVault"
-              className="brightness-0 invert"
-              height={32}
+              className="h-[40px] w-auto brightness-0 invert"
+              height={40}
               src="/landing/logo-with-text.png"
-              width={92}
+              width={116}
             />
             <p className="mt-6 max-w-[250px] text-[16px] leading-[1.55] text-white/80">
               A smarter, more secure place for your PDFs.
             </p>
             <div className="mt-8 flex flex-col gap-5">
               <a
-                className={`flex w-fit items-center gap-3 text-[14px] text-white/70 transition-colors hover:text-white ${FOCUS_RING}`}
+                className={`flex w-fit items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
                 href="mailto:Info@pdfvault.com"
               >
                 <SendIcon />
                 Info@pdfvault.com
               </a>
               <a
-                className={`flex w-fit items-center gap-3 text-[14px] text-white/70 transition-colors hover:text-white ${FOCUS_RING}`}
+                className={`flex w-fit items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
                 href="tel:+88123456789"
               >
                 <PhoneIcon />
@@ -168,7 +168,7 @@ export function LandingFooter() {
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <a
-                      className={`inline-block text-[14px] text-white/75 transition-all duration-200 hover:translate-x-0.5 hover:text-white ${FOCUS_RING}`}
+                      className={`inline-block text-[14px] text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING}`}
                       href={link.href}
                     >
                       {link.label}
@@ -186,8 +186,8 @@ export function LandingFooter() {
           against the tinted footer artwork.
         */}
         <div className="mt-14 border-t border-white/10 pb-14 pt-8 md:absolute md:inset-x-0 md:top-[438px] md:mt-0 md:pb-0 md:pt-6">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[14px] text-white/60">
+          <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+            <p className="text-[13px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
@@ -197,12 +197,11 @@ export function LandingFooter() {
                 <li key={social.label}>
                   <a
                     aria-label={social.label}
-                    className={`group flex size-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+                    className={`flex size-9 items-center justify-center rounded-full text-white/80 transition-opacity duration-200 hover:opacity-100 sm:size-10 ${FOCUS_RING}`}
                     href={social.href}
                   >
                     <svg
                       aria-hidden
-                      className="transition-transform duration-300 group-hover:scale-110"
                       fill="currentColor"
                       height="16"
                       viewBox="0 0 24 24"

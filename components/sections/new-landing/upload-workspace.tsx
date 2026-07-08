@@ -361,7 +361,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
           <div
             aria-describedby={error ? errorId : undefined}
             aria-label="Upload a file. Drop a file here, or activate to browse."
-            className="relative flex flex-1 flex-col items-center justify-center rounded-[13px] px-6 py-8 text-center outline-none"
+            className="relative flex flex-1 cursor-pointer flex-col items-center justify-center rounded-[13px] px-6 py-8 text-center outline-none"
             role="button"
             tabIndex={0}
             onClick={openPicker}
@@ -429,7 +429,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
                   Supports PDF, DOC, DOCX, JPG, PNG
                 </p>
                 <button
-                  className="mt-7 inline-flex h-11 w-[188px] items-center justify-center rounded-full bg-[#de472e] text-[16px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
+                  className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] text-[16px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -495,7 +495,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
               return (
                 <button
                   key={provider.id}
-                  className="flex h-[45px] items-center justify-center gap-3 rounded-[12px] bg-[#f5f5f5] text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[#ececec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex h-[45px] cursor-pointer items-center justify-center gap-3 rounded-[12px] bg-[#f5f5f5] text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[#ececec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={isBusy}
                   type="button"
                   onClick={() => void onCloudProviderClick(provider.id)}

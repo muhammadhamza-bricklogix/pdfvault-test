@@ -29,10 +29,14 @@ const TABS: Tab[] = [
   { id: "others", label: "Others" },
 ];
 
-// The reference design only specifies the "Edit & Sign" tab (the 8 cards
-// below). Each tool also declares the other tabs it belongs to, so switching
-// tabs filters the same catalog instead of duplicating markup.
+// Catalog of every landing-page tool. Each tool declares the tabs it belongs
+// to, so switching tabs filters the same list instead of duplicating markup.
+// The design shipped with only 8 Edit & Sign entries — the Convert / Compress
+// / Others tabs were near-empty. This expansion re-uses the existing eight
+// tool SVGs (grouped by shape) so no new assets are required, while keeping
+// each tab well-populated.
 const TOOLS: Tool[] = [
+  // ─── Edit & Sign ────────────────────────────────────────────────────────
   {
     icon: "/landing/editor.svg",
     title: "PDF Editor",
@@ -42,11 +46,11 @@ const TOOLS: Tool[] = [
     tabs: ["edit"],
   },
   {
-    icon: "/landing/convert.svg",
-    title: "Convert Document",
-    description: "Turn PDFs into spreadsheets, Word docs, and more.",
+    icon: "/landing/editor.svg",
+    title: "Sign & Watermark",
+    description: "Sign and watermark with vector strokes.",
     href: DASHBOARD,
-    tabs: ["edit", "convert-to", "convert-from", "compress"],
+    tabs: ["edit", "others"],
   },
   {
     icon: "/landing/organize.svg",
@@ -94,6 +98,168 @@ const TOOLS: Tool[] = [
       "Drop extras, blanks, or outdated sections without re-exporting.",
     href: DASHBOARD,
     tabs: ["edit", "others"],
+  },
+
+  // ─── Convert to PDF ─────────────────────────────────────────────────────
+  {
+    icon: "/landing/convert.svg",
+    title: "Word to PDF",
+    description: "Upload a .doc or .docx and get a clean PDF, ready to share.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "Excel to PDF",
+    description: "Turn .xls or .xlsx spreadsheets into print-ready PDFs.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PowerPoint to PDF",
+    description: "Convert .ppt or .pptx decks into shareable PDF slides.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "JPG to PDF",
+    description: "Turn JPG photos or scans into a single, tidy PDF.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PNG to PDF",
+    description: "Drop one or more PNGs and bundle them into one PDF.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "TXT to PDF",
+    description: "Wrap a plain-text file into a formatted, page-ready PDF.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "Any Format to PDF",
+    description: "Drop any supported document and we'll convert it to PDF.",
+    href: DASHBOARD,
+    tabs: ["convert-to"],
+  },
+
+  // ─── Compress PDF ───────────────────────────────────────────────────────
+  {
+    icon: "/landing/convert.svg",
+    title: "Compress PDF",
+    description: "Reduce file size with three compression levels.",
+    href: DASHBOARD,
+    tabs: ["compress"],
+  },
+  {
+    icon: "/landing/split.svg",
+    title: "Reduce Images",
+    description: "Downsample embedded images to shrink a bulky PDF.",
+    href: DASHBOARD,
+    tabs: ["compress"],
+  },
+  {
+    icon: "/landing/organize.svg",
+    title: "Merge & Compress",
+    description: "Combine multiple PDFs and squeeze them in a single pass.",
+    href: DASHBOARD,
+    tabs: ["compress"],
+  },
+
+  // ─── Convert from PDF ───────────────────────────────────────────────────
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to Word",
+    description: "Turn a PDF into an editable .docx you can keep working in.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to Excel",
+    description: "Pull tables out of a PDF and into a ready-to-edit Excel.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to PowerPoint",
+    description: "Turn a PDF into a .pptx deck, one slide per page.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to JPG",
+    description: "Export every page of a PDF as a JPG image.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to PNG",
+    description: "Export every page of a PDF as a high-quality PNG.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to Any Format",
+    description: "Pick your target format after upload — Word, Excel, images.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+
+  // ─── Others ─────────────────────────────────────────────────────────────
+  {
+    icon: "/landing/editor.svg",
+    title: "Edit Metadata",
+    description: "Rewrite the title, author, and other PDF metadata fields.",
+    href: DASHBOARD,
+    tabs: ["others"],
+  },
+  {
+    icon: "/landing/split.svg",
+    title: "Extract Images",
+    description: "Pull every embedded image out of a PDF in one click.",
+    href: DASHBOARD,
+    tabs: ["others"],
+  },
+  {
+    icon: "/landing/organize.svg",
+    title: "Crop PDF",
+    description: "Trim page margins and reframe content across the doc.",
+    href: DASHBOARD,
+    tabs: ["others"],
+  },
+  {
+    icon: "/landing/editor.svg",
+    title: "OCR PDF",
+    description: "Turn scanned pages into searchable, selectable text.",
+    href: DASHBOARD,
+    tabs: ["others"],
+  },
+  {
+    icon: "/landing/delete.svg",
+    title: "Remove Annotations",
+    description: "Strip notes, highlights, and comments in one pass.",
+    href: DASHBOARD,
+    tabs: ["others"],
+  },
+  {
+    icon: "/landing/rotate.svg",
+    title: "Repair PDF",
+    description: "Recover corrupt or partially damaged PDFs.",
+    href: DASHBOARD,
+    tabs: ["others"],
   },
 ];
 
@@ -169,7 +335,7 @@ export function LandingTools() {
                     tabRefs.current[index] = node;
                   }}
                   aria-selected={selected}
-                  className={`rounded-full px-5 py-2 text-[14px] font-medium transition-all duration-300 ease-out ${
+                  className={`cursor-pointer rounded-full px-5 py-2 text-[14px] font-medium transition-all duration-300 ease-out ${
                     selected
                       ? "scale-[1.02] bg-[var(--pv-brand-primary)] text-white shadow-[0_6px_16px_-6px_rgba(241,44,35,0.55)]"
                       : "text-[var(--pv-text-secondary)] hover:bg-[var(--pv-section-gray)] hover:text-[var(--pv-text-primary)]"

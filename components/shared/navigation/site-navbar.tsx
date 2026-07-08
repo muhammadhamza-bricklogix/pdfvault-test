@@ -26,6 +26,11 @@ const DRAWER_LINKS = [
   { href: ROUTES.PUBLIC.HOME, label: "Home" },
 ] as const;
 
+// Route prefixes that render their own bespoke chrome (logo + language) and
+// don't want the marketing SiteNavbar stacked on top. Keeping this local so
+// SiteFooter can mirror the same list without a shared import cycle.
+const HIDE_ON_PATHNAMES = ["/sign-in", "/sign-up"];
+
 export function SiteNavbar() {
   const router = useRouter();
   // `isLoaded` gates auth-conditional buttons so the server-rendered shell
@@ -66,6 +71,15 @@ export function SiteNavbar() {
     setIsDrawerOpen(false);
   }, [pathname]);
 
+  // Auth routes render their own logo + language menu — bail out here to
+  // avoid the double-header stack the user reported.
+  if (
+    pathname &&
+    HIDE_ON_PATHNAMES.some((prefix) => pathname.startsWith(prefix))
+  ) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-default-200/80 bg-[var(--color-background)]/90 backdrop-blur-md dark:border-default-800/80">
       <div className="mx-auto flex w-full max-w-[min(100%,104rem)] items-center gap-4 px-6 py-3.5 sm:px-8">
@@ -87,7 +101,7 @@ export function SiteNavbar() {
                   <Drawer.Heading className="flex items-center gap-2">
                     <Image
                       priority
-                      alt="PDFedits.io logo"
+                      alt="pdfvault.ai logo"
                       className="size-9 object-contain"
                       height={36}
                       src="/logo.svg"
@@ -170,7 +184,7 @@ export function SiteNavbar() {
         >
           <Image
             priority
-            alt="PDFedits.io logo"
+            alt="pdfvault.ai logo"
             className="size-9 object-contain sm:size-10"
             height={40}
             src="/logo.svg"

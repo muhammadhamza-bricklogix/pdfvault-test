@@ -51,7 +51,7 @@ export function DoNotSellContent() {
         title="Our Current Practices"
       >
         <p>
-          PDFedits.io does not sell your personal information to third parties
+          pdfvault.ai does not sell your personal information to third parties
           for monetary compensation.
         </p>
         <p className="mt-3">
@@ -100,8 +100,8 @@ export function DoNotSellContent() {
           </li>
           <li>
             Emailing us at{" "}
-            <a href="mailto:support@pdfedits.io?subject=CCPA%20Opt-Out%20Request">
-              support@pdfedits.io
+            <a href="mailto:support@pdfvault.ai?subject=CCPA%20Opt-Out%20Request">
+              support@pdfvault.ai
             </a>{" "}
             with subject line &quot;CCPA Opt-Out Request&quot; and your account
             email address.
@@ -161,7 +161,7 @@ export function DoNotSellContent() {
       <LegalSectionCard icon={Mail01Icon} id="d-6-8" title="Contact">
         <p>
           For privacy rights requests or questions:{" "}
-          <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>
+          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>
         </p>
       </LegalSectionCard>
 
@@ -175,7 +175,7 @@ export function DoNotSellContent() {
           Utah (UCPA), and other states with privacy laws have similar rights.
           We honor opt-out and deletion requests from users in all such
           jurisdictions. Contact us at{" "}
-          <a href="mailto:support@pdfedits.io">support@pdfedits.io</a> to
+          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a> to
           exercise your rights.
         </p>
       </LegalSectionCard>

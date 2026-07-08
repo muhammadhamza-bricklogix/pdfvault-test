@@ -24,11 +24,11 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   title: {
-    default: "PDFedits.io",
-    template: "%s | PDFedits.io",
+    default: "pdfvault.ai",
+    template: "%s | pdfvault.ai",
   },
   description:
-    "PDFedits.io is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
+    "pdfvault.ai is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
   icons: {
     apple: "/logo.svg",
     icon: "/logo.svg",

@@ -40,7 +40,7 @@ export function TermsAndConditionsContent() {
     <>
       <LegalSectionCard icon={File01Icon} id="t-2-1" title="Agreement">
         <p>
-          By accessing or using PDFedits.io (&quot;Service&quot;), you agree to
+          By accessing or using pdfvault.ai (&quot;Service&quot;), you agree to
           be bound by these Terms and Conditions. If you do not agree, do not
           use the Service.
         </p>
@@ -73,7 +73,7 @@ export function TermsAndConditionsContent() {
           </li>
           <li>
             You must notify us immediately of any unauthorized use at{" "}
-            <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>.
+            <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
           </li>
         </ul>
       </LegalSectionCard>
@@ -116,7 +116,7 @@ export function TermsAndConditionsContent() {
         <LegalCallout variant="emphasis">
           <p>
             The Service and its content (excluding your uploaded files) are
-            owned by PDFedits.io and protected by copyright, trademark, and
+            owned by pdfvault.ai and protected by copyright, trademark, and
             other laws. You retain full ownership of all files you upload. By
             uploading files, you grant us a temporary, limited license solely to
             process them and return results to you. We do not claim ownership of
@@ -151,7 +151,7 @@ export function TermsAndConditionsContent() {
       >
         <LegalCallout variant="emphasis">
           <p className="text-xs font-semibold uppercase leading-relaxed tracking-wide">
-            To the maximum extent permitted by law, PDFedits.io shall not be
+            To the maximum extent permitted by law, pdfvault.ai shall not be
             liable for any indirect, incidental, special, consequential, or
             punitive damages, including loss of data or profits, arising from
             your use of the Service. Our total liability shall not exceed the
@@ -166,7 +166,7 @@ export function TermsAndConditionsContent() {
         title="Indemnification"
       >
         <p>
-          You agree to indemnify and hold harmless PDFedits.io, its officers,
+          You agree to indemnify and hold harmless pdfvault.ai, its officers,
           directors, employees, and agents from any claims, damages, or expenses
           arising out of your use of the Service, your violation of these Terms,
           or your violation of any third-party rights.

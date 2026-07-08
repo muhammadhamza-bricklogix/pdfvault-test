@@ -28,7 +28,7 @@ export function RefundPolicyContent() {
     <>
       <LegalSectionCard icon={SparklesIcon} id="r-5-1" title="Our Commitment">
         <p>
-          We want you to be satisfied with PDFedits.io. Our refund policy is
+          We want you to be satisfied with pdfvault.ai. Our refund policy is
           designed to be <strong>fair and transparent</strong>.
         </p>
       </LegalSectionCard>
@@ -105,7 +105,7 @@ export function RefundPolicyContent() {
       >
         <LegalCallout variant="emphasis">
           <p>
-            Email <a href="mailto:support@pdfedits.io">support@pdfedits.io</a>{" "}
+            Email <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>{" "}
             with subject line &quot;Refund Request&quot;, your account email,
             the date and amount of the charge, and (optional) your reason.
           </p>

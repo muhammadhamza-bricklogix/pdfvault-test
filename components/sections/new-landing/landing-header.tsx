@@ -63,10 +63,25 @@ export function LandingHeader() {
             className="hidden items-center gap-6 lg:flex"
           >
             <a
-              className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+              className="pv-btn-secondary inline-flex items-center gap-1.5 px-4 py-1.5 text-[14px]"
               href={ROUTES.PUBLIC.ALL_TOOLS}
             >
               All Tools
+              <svg
+                aria-hidden
+                fill="none"
+                height="12"
+                viewBox="0 0 12 12"
+                width="12"
+              >
+                <path
+                  d="M3 4.5 6 7.5l3-3"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.6"
+                />
+              </svg>
             </a>
             {PRIMARY_LINKS.map((link) => (
               <a

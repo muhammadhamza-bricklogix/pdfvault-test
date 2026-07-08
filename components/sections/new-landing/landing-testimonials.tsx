@@ -4,6 +4,8 @@ type Testimonial = {
   name: string;
   handle: string;
   quote: string;
+  /** i.pravatar.cc image number (1–70). Gives each card a real photo. */
+  avatarSeed: number;
 };
 
 // Seven quotes are transcribed from the reference; the last entry is a
@@ -15,24 +17,28 @@ const ROW_ONE: Testimonial[] = [
     handle: "sarahchen",
     quote:
       "Just integrated @Pdfvault into my workflow and it's a game changer for document management! 🚀",
+    avatarSeed: 47,
   },
   {
     name: "Alex Reyes",
     handle: "alexreyes",
     quote:
       "Can't believe I was managing my PDFs without @Pdfvault before. It's a must-have tool! 📚",
+    avatarSeed: 12,
   },
   {
     name: "Jasmine Patel",
     handle: "jasminepatel",
     quote:
       "Shoutout to @Pdfvault for making collaborative document editing a breeze. Highly recommend! 💻✨",
+    avatarSeed: 25,
   },
   {
     name: "Ethan Brooks",
     handle: "ethanbrooks",
     quote:
       "Merging and signing contracts used to take ages. With @Pdfvault it's a couple of clicks. ✍️",
+    avatarSeed: 13,
   },
 ];
 
@@ -42,43 +48,43 @@ const ROW_TWO: Testimonial[] = [
     handle: "morganlinton",
     quote:
       "If you're coding with AI, and haven't discovered @Pdfvault yet, prepare to have your mind blown 🤯",
+    avatarSeed: 15,
   },
   {
     name: "Jessica Tran",
     handle: "jessicatran",
     quote:
       "Pdfvault has transformed my workflow. Editing PDFs has never been so seamless! 🚀",
+    avatarSeed: 32,
   },
   {
     name: "David Kim",
     handle: "davidkim",
     quote:
       "The features are intuitive, and the interface is sleek. Pdfvault is a game changer! 💼",
+    avatarSeed: 17,
   },
   {
     name: "Samantha Lee",
     handle: "samanthalee",
     quote:
       "I can't believe how easy it is to collaborate on documents with Pdfvault. It's a must-have tool! 🙌",
+    avatarSeed: 45,
   },
 ];
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 function TestimonialCard({ data }: { data: Testimonial }) {
   return (
     <article className="mr-5 flex w-[340px] shrink-0 flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6">
       <header className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--pv-gray-3)] text-[13px] font-semibold text-[var(--pv-gray-8)]">
-          {getInitials(data.name)}
-        </span>
+        {/* Photo avatar — pravatar serves stable portraits per seed. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          alt=""
+          className="size-10 shrink-0 rounded-full object-cover"
+          loading="lazy"
+          src={`https://i.pravatar.cc/80?img=${data.avatarSeed}`}
+        />
         <div className="leading-tight">
           <p className="text-[15px] font-semibold text-[var(--pv-text-primary)]">
             {data.name}

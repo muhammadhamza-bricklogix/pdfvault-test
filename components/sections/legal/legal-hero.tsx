@@ -17,7 +17,7 @@ export function LegalHero({
   description,
   eyebrow = "Support",
   lastUpdatedLabel,
-  siteDomain = "pdfedits.io",
+  siteDomain = "pdfvault.ai",
   title,
 }: LegalHeroProps) {
   return (

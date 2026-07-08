@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { FooterLinkColumns } from "@/components/shared/footer/footer-link-columns";
 import { FooterPaymentStrip } from "@/components/shared/footer/footer-payment-strip";
@@ -21,7 +22,20 @@ import {
   formatFooterCopyrightLine,
 } from "@/lib/shared/constants/footer";
 
+// Route prefixes whose screens ship their own footer (LandingFooter) — bail
+// out here so we don't stack two footers on the auth pages.
+const HIDE_ON_PATHNAMES = ["/sign-in", "/sign-up"];
+
 export function SiteFooter() {
+  const pathname = usePathname();
+
+  if (
+    pathname &&
+    HIDE_ON_PATHNAMES.some((prefix) => pathname.startsWith(prefix))
+  ) {
+    return null;
+  }
+
   const year = new Date().getFullYear();
 
   return (
