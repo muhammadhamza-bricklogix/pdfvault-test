@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { type NextRequest, NextResponse } from "next/server";
 
 const DASHBOARD_PATH = "/dashboard";
-const SIGN_IN_PATH = "/sign-in";
+const SIGN_IN_PATH = "/login";
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/tools/(.*)"]);
 

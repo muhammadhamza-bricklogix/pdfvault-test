@@ -57,9 +57,9 @@ export default function RootLayout({
         <WeglotLoader />
         <ClerkProvider
           signInFallbackRedirectUrl="/dashboard"
-          signInUrl="/sign-in"
+          signInUrl="/login"
           signUpFallbackRedirectUrl="/dashboard"
-          signUpUrl="/sign-up"
+          signUpUrl="/signup"
         >
           <Providers
             themeProps={{

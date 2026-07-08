@@ -48,7 +48,7 @@ export function HomeHero() {
       title: "Sign in required",
     });
     router.push(
-      `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(ROUTES.PUBLIC.HOME)}`,
+      `${ROUTES.AUTH.LOGIN}?redirect_url=${encodeURIComponent(ROUTES.PUBLIC.HOME)}`,
     );
   }, [router]);
 

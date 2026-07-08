@@ -35,8 +35,8 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "ACCOUNT",
     links: [
-      { label: "Log In", href: ROUTES.AUTH.SIGN_IN },
-      { label: "Sign Up", href: ROUTES.AUTH.SIGN_UP },
+      { label: "Log In", href: ROUTES.AUTH.LOGIN },
+      { label: "Sign Up", href: ROUTES.AUTH.SIGNUP },
       { label: "Changelog", href: "#changelog" },
     ],
   },
@@ -189,8 +189,8 @@ export function LandingFooter() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[14px] text-white/60">
               © 2026,{" "}
-              <span className="font-semibold text-white/90">PDFVault</span>{" "}
-              All rights reserved.
+              <span className="font-semibold text-white/90">PDFVault</span> All
+              rights reserved.
             </p>
             <ul className="flex items-center gap-3">
               {SOCIAL_LINKS.map((social) => (
