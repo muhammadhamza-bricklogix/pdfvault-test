@@ -155,16 +155,43 @@ export async function pickGoogleDrivePdfFiles(
     // from browser quirks). We only want the first conclusive event
     // (picked / cancel / error) to settle the promise.
     let settled = false;
+    // Tracks whether the picker UI actually rendered. A `cancel` that fires
+    // before `loaded` almost always means Google refused to mount the picker
+    // (API key not authorized for this origin, Picker API disabled, or wrong
+    // project number). Without this flag we silently return `count: 0` and
+    // callers treat it as a user-dismiss.
+    let hasLoaded = false;
     const settleResolve = (value: PickedGoogleDrivePdf[]) => {
       if (settled) return;
       settled = true;
+      clearTimeout(safetyTimer);
       resolve(value);
     };
     const settleReject = (err: Error) => {
       if (settled) return;
       settled = true;
+      clearTimeout(safetyTimer);
       reject(err);
     };
+
+    // Safety net: if the picker never fires a conclusive callback (loaded,
+    // picked, cancel, or error) the promise would hang forever. This timer
+    // rejects so the UI can recover and show a useful message.
+    const safetyTimer = window.setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[google-drive-picker] timed out waiting for a picker callback — " +
+          "the picker dialog likely failed to open.",
+        { hasLoaded, origin: window.location.origin, appId },
+      );
+      settleReject(
+        new Error(
+          `Google Drive picker did not respond. ` +
+            `Check that the Picker API is enabled and the API key is ` +
+            `authorized for "${window.location.origin}/*".`,
+        ),
+      );
+    }, 15000);
 
     const view = new DocsViewCtor()
       .setIncludeFolders(true)
@@ -195,10 +222,13 @@ export async function pickGoogleDrivePdfFiles(
           });
 
           if (action === Action.LOADED || action === "loaded") {
+            hasLoaded = true;
+
             return;
           }
 
           if (action === Action.PICKED || action === "picked") {
+            hasLoaded = true;
             const raw = (data.docs ?? []) as Array<{
               id?: string;
               mimeType?: string;
@@ -226,7 +256,29 @@ export async function pickGoogleDrivePdfFiles(
 
           // User-initiated dismiss — empty selection is the correct answer.
           if (action === Action.CANCEL || action === "cancel") {
-            settleResolve([]);
+            if (hasLoaded) {
+              settleResolve([]);
+
+              return;
+            }
+
+            // Cancel without the picker ever loading is not a user dismiss;
+            // it is Google refusing to mount the dialog. Surface a clear,
+            // actionable error instead of returning `count: 0`.
+            // eslint-disable-next-line no-console
+            console.error(
+              "[google-drive-picker] cancel fired before picker loaded — " +
+                "this usually means the API key is not authorized for this " +
+                "origin or the Picker API is disabled.",
+              { origin: window.location.origin, appId },
+            );
+            settleReject(
+              new Error(
+                `Google Drive picker could not open. ` +
+                  `Check that the Picker API is enabled in Google Cloud Console, ` +
+                  `and that the API key is authorized for "${window.location.origin}/*".`,
+              ),
+            );
 
             return;
           }

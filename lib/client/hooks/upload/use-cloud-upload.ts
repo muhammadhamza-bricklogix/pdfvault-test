@@ -59,6 +59,17 @@ function buildRedirectUri(): string {
 }
 
 /**
+ * Extract the Google Cloud project number from an OAuth client ID.
+ * Client IDs have the form `<project-number>-<random>.apps.googleusercontent.com`.
+ * The project number is also shown in Google Cloud Console → Project info.
+ */
+function deriveProjectNumber(clientId: string): string | null {
+  const match = /^(\d+)-[^.]+\.apps\.googleusercontent\.com$/.exec(clientId);
+
+  return match?.[1] ?? null;
+}
+
+/**
  * Drive the OAuth popup via `postMessage` instead of polling
  * `popup.location.href`.
  *
@@ -338,15 +349,24 @@ export function useCloudUpload() {
     // Required by drive.file — Picker uses this to grant the picked file
     // to THIS Cloud project. Without it, the follow-up gadget/files.get
     // returns 401 "Invalid Credentials" even with a valid OAuth token.
-    // Numeric project number = the digits before the first dash in the
-    // OAuth client ID.
-    const projectNumber = process.env.NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER;
+    // We prefer the explicit env var, but fall back to deriving it from the
+    // client ID so one less secret can be misconfigured.
+    const explicitProjectNumber = process.env.NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER;
+    const derivedProjectNumber = deriveProjectNumber(clientId);
+    const projectNumber = explicitProjectNumber ?? derivedProjectNumber;
 
     if (!projectNumber) {
       throw new Error(
-        "Missing NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER. Set it to your Google Cloud project number (the numeric prefix before the dash in NEXT_PUBLIC_GOOGLE_CLIENT_ID).",
+        "Missing NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER and could not derive it from NEXT_PUBLIC_GOOGLE_CLIENT_ID. Set NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER to your Google Cloud project number.",
       );
     }
+
+    // eslint-disable-next-line no-console
+    console.log(
+      "[beginGoogleFlow] projectNumber source =",
+      explicitProjectNumber ? "env" : "derived",
+      { length: projectNumber.length },
+    );
 
     const picked = await pickGoogleDrivePdfFiles(
       accessToken,
