@@ -16,6 +16,7 @@ import {
   HighlighterIcon,
   Image01Icon,
   Layers01Icon,
+  Layout03Icon,
   Link01Icon,
   LockedIcon,
   PaintBrush01Icon,
@@ -37,6 +38,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
@@ -95,6 +97,20 @@ const GROUP_C: ToolEntry[] = [
     icon: TextNumberSignIcon,
   },
   { kind: "action", id: "annotate", label: "Annotate", icon: Comment01Icon },
+];
+
+// Manage Pages — kept in its own pill group so the rotate/reorder/delete flow
+// reads as a distinct document-structure action, not another single-page tool.
+// Runs a saveBeforeAction guard locally (same guard the mobile BottomDock and
+// legacy EditorToolBar use) so in-progress edits are flushed before the modal
+// opens.
+const GROUP_MANAGE: ToolEntry[] = [
+  {
+    kind: "action",
+    id: "manage-pages",
+    label: "Manage Pages",
+    icon: Layout03Icon,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -230,16 +246,16 @@ function TopAppBar() {
         {fileName}
       </span>
 
-      <div className="flex shrink-0 items-center gap-1 rounded-full border border-default-200 bg-white px-1 py-0.5">
+      <div className="ml-3 flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
         <Tooltip delay={300}>
           <button
             aria-label="Undo"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!canUndo}
             type="button"
             onClick={() => fireEditorEvent("editor:undo")}
           >
-            <HugeiconsIcon icon={UndoIcon} size={16} />
+            <HugeiconsIcon icon={UndoIcon} size={18} />
           </button>
           <Tooltip.Content>
             <p>Undo</p>
@@ -249,12 +265,12 @@ function TopAppBar() {
         <Tooltip delay={300}>
           <button
             aria-label="Redo"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!canRedo}
             type="button"
             onClick={() => fireEditorEvent("editor:redo")}
           >
-            <HugeiconsIcon icon={RedoIcon} size={16} />
+            <HugeiconsIcon icon={RedoIcon} size={18} />
           </button>
           <Tooltip.Content>
             <p>Redo</p>
@@ -319,11 +335,35 @@ function ToolToolbar() {
   const setIsPageNumbersModalOpen = usePdfEditorStore(
     (s) => s.setIsPageNumbersModalOpen,
   );
+  const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const pageCount = usePdfEditorStore((s) => s.pageCount);
 
   const disabled = !file;
+  const canManagePages = !!pdfDocument && pageCount > 0;
+
+  const isActionDisabled = (id: string): boolean => {
+    if (id === "manage-pages") return !canManagePages;
+
+    return disabled;
+  };
 
   const handleAction = (id: string) => {
+    if (id === "manage-pages") {
+      // Same save-before-action guard as EditorToolBar / BottomDock so
+      // in-progress edits get flushed before the modal opens.
+      void (async () => {
+        const ok = await saveBeforeAction(
+          "Saving your edits before opening Manage Pages.",
+        );
+
+        if (ok) setIsManagePagesOpen(true);
+      })();
+
+      return;
+    }
+
     if (disabled) {
       toast.info({
         title: "Open a PDF first",
@@ -365,7 +405,7 @@ function ToolToolbar() {
     }
   };
 
-  const groups = useMemo(() => [GROUP_A, GROUP_B, GROUP_C], []);
+  const groups = useMemo(() => [GROUP_A, GROUP_B, GROUP_C, GROUP_MANAGE], []);
 
   return (
     <div className="flex shrink-0 items-center justify-center gap-3 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
@@ -390,7 +430,7 @@ function ToolToolbar() {
             return (
               <ToolButton
                 key={tool.id}
-                disabled={disabled}
+                disabled={isActionDisabled(tool.id)}
                 icon={tool.icon}
                 label={tool.label}
                 onClick={() => handleAction(tool.id)}
@@ -404,7 +444,7 @@ function ToolToolbar() {
 }
 
 // ---------------------------------------------------------------------------
-// Public: single chrome component.
+// Public: single chrome component (kept for mobile / consumers that want both).
 // ---------------------------------------------------------------------------
 
 export function PvEditorTopChrome() {
@@ -415,3 +455,5 @@ export function PvEditorTopChrome() {
     </>
   );
 }
+
+export { TopAppBar, ToolToolbar };

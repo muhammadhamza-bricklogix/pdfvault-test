@@ -3,6 +3,8 @@ import type { FontData } from "@/lib/client/pdf-editor/text-extraction";
 
 import { create } from "zustand";
 
+import { toast } from "@/lib/shared/utils/toast";
+
 const MAX_HISTORY = 50;
 
 export type ActiveTool =
@@ -151,6 +153,7 @@ type PdfEditorStore = {
   backgroundImageConfig: BackgroundImageConfig;
   zoom: number;
 
+  addBlankPage: () => Promise<void>;
   addFontData: (fonts: FontData[]) => void;
   clearFile: () => void;
   setCurrentDocument: (doc: { id: string; name: string } | null) => void;
@@ -262,6 +265,51 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
   backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
   zoom: 1.0,
+
+  addBlankPage: async () => {
+    const state = get();
+    const currentFile = state.file;
+
+    if (!currentFile) {
+      toast.info({
+        title: "No PDF open",
+        description: "Open or create a PDF before adding a page.",
+      });
+
+      return;
+    }
+
+    const { PDFDocument } = await import("pdf-lib");
+    const bytes = new Uint8Array(await currentFile.arrayBuffer());
+    const pdfDoc = await PDFDocument.load(bytes);
+
+    // Default to A4 if the document has no pages; otherwise copy the last
+    // page's dimensions so the new blank page matches the existing doc.
+    const existingCount = pdfDoc.getPageCount();
+    const dims =
+      existingCount > 0
+        ? pdfDoc.getPage(existingCount - 1).getSize()
+        : { width: 612, height: 792 };
+
+    pdfDoc.addPage([dims.width, dims.height]);
+
+    const newBytes = await pdfDoc.save();
+    const newFile = new File([newBytes], currentFile.name, {
+      type: "application/pdf",
+    });
+
+    const newPageCount = existingCount + 1;
+
+    set({
+      file: newFile,
+      pageCount: newPageCount,
+      pageOrder: Array.from({ length: newPageCount }, (_, i) => i + 1),
+      currentPage: newPageCount,
+      hasUnsavedChanges: true,
+      // The new page has no extracted text / overlays yet.
+      extractedPages: new Set(),
+    });
+  },
 
   addFontData: (fonts) =>
     set((state) => {

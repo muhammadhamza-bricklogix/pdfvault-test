@@ -13,9 +13,9 @@ import { LoginLanguageMenu } from "./login-language-menu";
 
 export function LoginScreen() {
   return (
-    <>
-      <header className="absolute inset-x-0 top-0 z-20">
-        <div className="mx-auto flex max-w-[1226px] items-center justify-between px-6 pt-4 sm:px-10">
+    <div className="flex min-h-[100dvh] flex-col">
+      <header className="z-20 shrink-0">
+        <div className="flex items-center justify-between px-6 pt-4 sm:px-10">
           <Link
             aria-label="PDFVault home"
             className="inline-flex"
@@ -34,13 +34,13 @@ export function LoginScreen() {
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-[100dvh] items-center justify-center px-4 py-24">
+      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
         <LoginCard />
       </main>
 
-      <div className="relative z-10">
+      <div className="relative z-10 shrink-0">
         <LandingFooter />
       </div>
-    </>
+    </div>
   );
 }

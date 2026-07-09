@@ -46,7 +46,7 @@ import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { PerformancePanel } from "./PerformancePanel";
-import { PvEditorTopChrome } from "./PvEditorTopChrome";
+import { PvEditorTopChrome, TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
 import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
@@ -330,10 +330,13 @@ function EditorLayout() {
 
   return (
     <>
-      <PvEditorTopChrome />
+      <TopAppBar />
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar onReorderPages={handleReorderPages} />
-        <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
+          <ToolToolbar />
+          <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+        </div>
         <RightSidebar fabricCanvas={fabricCanvas} />
 
         <div className="pointer-events-none absolute bottom-4 right-[17rem] z-10">

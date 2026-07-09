@@ -82,7 +82,7 @@ export function SiteNavbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-default-200/80 bg-[var(--color-background)]/90 backdrop-blur-md dark:border-default-800/80">
-      <div className="mx-auto flex w-full max-w-[min(100%,104rem)] items-center gap-4 px-6 py-3.5 sm:px-8">
+      <div className="flex w-full items-center gap-4 px-6 py-3.5 sm:px-8">
         <Drawer isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <Button
             isIconOnly

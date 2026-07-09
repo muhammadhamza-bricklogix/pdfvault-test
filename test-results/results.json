@@ -81,72 +81,6 @@
   },
   "suites": [
     {
-      "title": "auth.setup.ts",
-      "file": "auth.setup.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [
-        {
-          "title": "authenticate",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [
-                {
-                  "type": "skip",
-                  "description": "Could not establish Clerk session — see warning above.",
-                  "location": {
-                    "file": "/Users/softaims/pdf-viewer-app/tests/auth.setup.ts",
-                    "line": 36,
-                    "column": 11
-                  }
-                }
-              ],
-              "expectedStatus": "skipped",
-              "projectId": "setup",
-              "projectName": "setup",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "skipped",
-                  "duration": 25249,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [
-                    {
-                      "text": "[auth.setup] Sign-in/up failed (\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ok\"\u001b[39m\nReceived: \u001b[31m\"http://localhost:3000/sign-in\"\u001b[39m\n\nCall Log:\n- Timeout 15000ms exceeded while waiting on the predicate). Auth-protected tests will be skipped on this run.\n"
-                    }
-                  ],
-                  "retry": 0,
-                  "startTime": "2026-06-22T14:01:56.072Z",
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "description": "Could not establish Clerk session — see warning above.",
-                      "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/auth.setup.ts",
-                        "line": 36,
-                        "column": 11
-                      }
-                    }
-                  ],
-                  "attachments": []
-                }
-              ],
-              "status": "skipped"
-            }
-          ],
-          "id": "17e3fe6f4d9d8bd79c6b-60f085b113a677673906",
-          "file": "auth.setup.ts",
-          "line": 25,
-          "column": 1
-        }
-      ]
-    },
-    {
       "title": "conversion/tool-pages.spec.ts",
       "file": "conversion/tool-pages.spec.ts",
       "column": 0,
@@ -182,15 +116,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 3,
+                      "duration": 5,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.033Z",
+                      "startTime": "2026-07-09T18:09:20.826Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -236,15 +170,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 3,
+                      "duration": 6,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.028Z",
+                      "startTime": "2026-07-09T18:09:20.623Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -290,15 +224,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "skipped",
-                      "duration": 5,
+                      "duration": 8,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.036Z",
+                      "startTime": "2026-07-09T18:09:20.643Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -344,15 +278,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "skipped",
-                      "duration": 0,
+                      "duration": 9,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.059Z",
+                      "startTime": "2026-07-09T18:09:20.621Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -398,15 +332,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "skipped",
-                      "duration": 1,
+                      "duration": 5,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.068Z",
+                      "startTime": "2026-07-09T18:09:20.706Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -443,7 +377,7 @@
         {
           "title": "Conversion — Tools modal in editor",
           "file": "conversion/tools-modal.spec.ts",
-          "line": 10,
+          "line": 18,
           "column": 6,
           "specs": [
             {
@@ -459,15 +393,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 9207,
+                      "duration": 9792,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.089Z",
+                      "startTime": "2026-07-09T18:09:20.757Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -477,7 +411,7 @@
               ],
               "id": "c85e3b0861f84ef22dd0-c20f1512af9f9e55e5d7",
               "file": "conversion/tools-modal.spec.ts",
-              "line": 11,
+              "line": 19,
               "column": 3
             },
             {
@@ -503,15 +437,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "skipped",
-                      "duration": 8200,
+                      "duration": 21609,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.088Z",
+                      "startTime": "2026-07-09T18:09:20.770Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -531,7 +465,7 @@
               ],
               "id": "c85e3b0861f84ef22dd0-ffba6adbe60f9c411e16",
               "file": "conversion/tools-modal.spec.ts",
-              "line": 22,
+              "line": 30,
               "column": 3
             }
           ]
@@ -548,7 +482,7 @@
         {
           "title": "PDF editor — top-bar controls",
           "file": "pdf-editor/controls.spec.ts",
-          "line": 9,
+          "line": 10,
           "column": 6,
           "specs": [
             {
@@ -564,15 +498,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 8470,
+                      "duration": 9857,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:01:56.094Z",
+                      "startTime": "2026-07-09T18:09:20.779Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -582,11 +516,11 @@
               ],
               "id": "e301254aa141050c1d86-154d84f2672ae0e1d4ce",
               "file": "pdf-editor/controls.spec.ts",
-              "line": 10,
+              "line": 11,
               "column": 3
             },
             {
-              "title": "zoom-in changes the zoom percentage",
+              "title": "Undo/Redo state updates after a canvas edit",
               "ok": true,
               "tags": [],
               "tests": [
@@ -598,15 +532,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6436,
+                      "duration": 10697,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:06.032Z",
+                      "startTime": "2026-07-09T18:09:20.940Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -614,13 +548,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "e301254aa141050c1d86-54743e38494fe314d5c8",
+              "id": "e301254aa141050c1d86-449c020ca36ebbed4f0c",
               "file": "pdf-editor/controls.spec.ts",
-              "line": 18,
+              "line": 19,
               "column": 3
             },
             {
-              "title": "next-page button advances the page indicator",
+              "title": "Share via link is disabled when signed out",
               "ok": true,
               "tags": [],
               "tests": [
@@ -635,12 +569,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 7610,
+                      "duration": 11853,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:06.164Z",
+                      "startTime": "2026-07-09T18:09:31.983Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -648,9 +582,9 @@
                   "status": "expected"
                 }
               ],
-              "id": "e301254aa141050c1d86-858eb93df30a706b7d75",
+              "id": "e301254aa141050c1d86-e71008eef746ed843150",
               "file": "pdf-editor/controls.spec.ts",
-              "line": 30,
+              "line": 47,
               "column": 3
             }
           ]
@@ -683,15 +617,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 7227,
+                      "duration": 11378,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:06.963Z",
+                      "startTime": "2026-07-09T18:09:32.234Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -717,15 +651,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7225,
+                      "duration": 12855,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:12.519Z",
+                      "startTime": "2026-07-09T18:09:32.996Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -751,15 +685,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1917,
+                      "duration": 4426,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:13.854Z",
+                      "startTime": "2026-07-09T18:09:43.701Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -785,15 +719,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2398,
+                      "duration": 4995,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:14.209Z",
+                      "startTime": "2026-07-09T18:09:43.885Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -819,15 +753,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 2933,
+                      "duration": 4876,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:15.792Z",
+                      "startTime": "2026-07-09T18:09:43.906Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -853,15 +787,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3165,
+                      "duration": 8350,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:16.619Z",
+                      "startTime": "2026-07-09T18:09:45.868Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -887,15 +821,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 4465,
+                      "duration": 7008,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:18.741Z",
+                      "startTime": "2026-07-09T18:09:48.140Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -921,15 +855,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 4889,
+                      "duration": 10116,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:19.767Z",
+                      "startTime": "2026-07-09T18:09:48.803Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -979,15 +913,15 @@
                       "projectName": "chromium",
                       "results": [
                         {
-                          "workerIndex": 3,
-                          "parallelIndex": 3,
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
                           "status": "passed",
-                          "duration": 6032,
+                          "duration": 12720,
                           "errors": [],
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-06-22T14:02:19.929Z",
+                          "startTime": "2026-07-09T18:09:49.398Z",
                           "annotations": [],
                           "attachments": []
                         }
@@ -1013,15 +947,15 @@
                       "projectName": "chromium",
                       "results": [
                         {
-                          "workerIndex": 4,
+                          "workerIndex": 0,
                           "parallelIndex": 0,
                           "status": "passed",
-                          "duration": 7054,
+                          "duration": 10682,
                           "errors": [],
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-06-22T14:02:24.628Z",
+                          "startTime": "2026-07-09T18:09:54.330Z",
                           "annotations": [],
                           "attachments": []
                         }
@@ -1055,13 +989,13 @@
                       "projectName": "chromium",
                       "results": [
                         {
-                          "workerIndex": 1,
-                          "parallelIndex": 1,
+                          "workerIndex": 2,
+                          "parallelIndex": 2,
                           "status": "failed",
-                          "duration": 6839,
+                          "duration": 11514,
                           "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m873\u001b[39m",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m873\u001b[39m\n    at /Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts:266:26",
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m872\u001b[39m",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m872\u001b[39m\n    at /Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts:266:26",
                             "location": {
                               "file": "/Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts",
                               "column": 26,
@@ -1076,13 +1010,13 @@
                                 "column": 26,
                                 "line": 266
                               },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m873\u001b[39m\n\n  264 |       const stats = fs.statSync(downloadPath);\n  265 |\n> 266 |       expect(stats.size).toBeGreaterThan(1_000);\n      |                          ^\n  267 |\n  268 |       const { getDocument } = await import(\"pdfjs-dist/legacy/build/pdf.mjs\");\n  269 |       const data = new Uint8Array(fs.readFileSync(downloadPath));\n    at /Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts:266:26"
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1000\u001b[39m\nReceived:   \u001b[31m872\u001b[39m\n\n  264 |       const stats = fs.statSync(downloadPath);\n  265 |\n> 266 |       expect(stats.size).toBeGreaterThan(1_000);\n      |                          ^\n  267 |\n  268 |       const { getDocument } = await import(\"pdfjs-dist/legacy/build/pdf.mjs\");\n  269 |       const data = new Uint8Array(fs.readFileSync(downloadPath));\n    at /Users/softaims/pdf-viewer-app/tests/pdf-editor/edit-text-export.spec.ts:266:26"
                             }
                           ],
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-06-22T14:02:23.409Z",
+                          "startTime": "2026-07-09T18:09:55.549Z",
                           "annotations": [],
                           "attachments": [
                             {
@@ -1132,45 +1066,11 @@
         {
           "title": "PDF editor — hamburger menu",
           "file": "pdf-editor/hamburger.spec.ts",
-          "line": 16,
+          "line": 11,
           "column": 6,
           "specs": [
             {
-              "title": "opens \"/^create new$/i\" without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 8823,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-22T14:02:24.689Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2092523ad93a0cb9432d-c97fbadcfac5b4dea80d",
-              "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
-            },
-            {
-              "title": "opens \"/^compress pdf$/i\" without runtime errors",
+              "title": "lists all five menu items",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1185,12 +1085,12 @@
                       "workerIndex": 3,
                       "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 6106,
+                      "duration": 10937,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:26.006Z",
+                      "startTime": "2026-07-09T18:09:58.990Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1198,13 +1098,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "2092523ad93a0cb9432d-039269505e308734cc7a",
+              "id": "2092523ad93a0cb9432d-a417b42a6c59ef617523",
               "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
+              "line": 24,
+              "column": 3
             },
             {
-              "title": "opens \"/^password protect$/i\" without runtime errors",
+              "title": "Create New opens the create-PDF modal",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1216,15 +1116,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 7806,
+                      "duration": 8280,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:32.799Z",
+                      "startTime": "2026-07-09T18:10:02.212Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1232,13 +1132,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "2092523ad93a0cb9432d-e2d3442d3345aa6efdda",
+              "id": "2092523ad93a0cb9432d-492c2bc6a1594bc471cc",
               "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
+              "line": 44,
+              "column": 3
             },
             {
-              "title": "opens \"/^find.*replace/i\" without runtime errors",
+              "title": "Find and Replace opens the find/replace modal",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1250,49 +1150,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 4355,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-22T14:02:32.131Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2092523ad93a0cb9432d-781649b5be5c623ca814",
-              "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
-            },
-            {
-              "title": "opens \"/^add page numbers$/i\" without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 5279,
+                      "duration": 9895,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:32.464Z",
+                      "startTime": "2026-07-09T18:10:05.038Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1300,111 +1166,9 @@
                   "status": "expected"
                 }
               ],
-              "id": "2092523ad93a0cb9432d-061a409cc91c37f64d53",
+              "id": "2092523ad93a0cb9432d-a2c89394a0d85abd9580",
               "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
-            },
-            {
-              "title": "opens \"/^split pdf$/i\" without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 7936,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-22T14:02:33.526Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2092523ad93a0cb9432d-a9d32a0a5c5cc8043c83",
-              "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
-            },
-            {
-              "title": "opens \"/^annotations$/i\" without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 5396,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-22T14:02:36.506Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2092523ad93a0cb9432d-054481918e0140faa4b8",
-              "file": "pdf-editor/hamburger.spec.ts",
-              "line": 49,
-              "column": 5
-            },
-            {
-              "title": "Flatten form fields fires a mutation (or fails open)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 14279,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-22T14:02:37.773Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2092523ad93a0cb9432d-8b4165c15407f51e02b5",
-              "file": "pdf-editor/hamburger.spec.ts",
-              "line": 74,
+              "line": 63,
               "column": 3
             },
             {
@@ -1420,15 +1184,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 4,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 10447,
+                      "duration": 8908,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:41.488Z",
+                      "startTime": "2026-07-09T18:10:10.361Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1438,7 +1202,41 @@
               ],
               "id": "2092523ad93a0cb9432d-cfda254271f46212be4f",
               "file": "pdf-editor/hamburger.spec.ts",
-              "line": 96,
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "Version History is gated when signed out",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 11276,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:09.996Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2092523ad93a0cb9432d-f4403994136783964839",
+              "file": "pdf-editor/hamburger.spec.ts",
+              "line": 90,
               "column": 3
             }
           ]
@@ -1471,15 +1269,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 9821,
+                      "duration": 10078,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:41.538Z",
+                      "startTime": "2026-07-09T18:10:10.574Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1490,6 +1288,193 @@
               "id": "384f5fa235f4e18ca19d-780a46b0970277e2bd31",
               "file": "pdf-editor/manage-pages.spec.ts",
               "line": 10,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor/mobile-chrome.spec.ts",
+      "file": "pdf-editor/mobile-chrome.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PDF editor — mobile chrome",
+          "file": "pdf-editor/mobile-chrome.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "EditorInfoBar shows hamburger, filename, Save, page nav + zoom",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 14519,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:14.958Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "024487275eb8fa49067e-91fa4482fa8fc34942fc",
+              "file": "pdf-editor/mobile-chrome.spec.ts",
+              "line": 18,
+              "column": 3
+            },
+            {
+              "title": "BottomDock is visible with Undo, Redo, tool strip, Manage Pages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 13195,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:20.745Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "024487275eb8fa49067e-d53a3484863b478401d6",
+              "file": "pdf-editor/mobile-chrome.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "Watermark opens a mobile properties modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 13108,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:21.079Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "024487275eb8fa49067e-01cccf7d69e1db0760e6",
+              "file": "pdf-editor/mobile-chrome.spec.ts",
+              "line": 48,
+              "column": 3
+            },
+            {
+              "title": "Background opens a mobile properties modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 12863,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:21.313Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "024487275eb8fa49067e-7bede384392acb2c37ca",
+              "file": "pdf-editor/mobile-chrome.spec.ts",
+              "line": 60,
+              "column": 3
+            },
+            {
+              "title": "Save button is visible and disabled in local mode",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7572,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:29.496Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "024487275eb8fa49067e-fd3d2b610ff436321a68",
+              "file": "pdf-editor/mobile-chrome.spec.ts",
+              "line": 74,
               "column": 3
             }
           ]
@@ -1522,15 +1507,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 11880,
+                      "duration": 2975,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:41.927Z",
+                      "startTime": "2026-07-09T18:10:33.976Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1556,15 +1541,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 8699,
+                      "duration": 2722,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:51.395Z",
+                      "startTime": "2026-07-09T18:10:34.283Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1590,15 +1575,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 7997,
+                      "duration": 4052,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:51.984Z",
+                      "startTime": "2026-07-09T18:10:34.277Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1624,15 +1609,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 8231,
+                      "duration": 3023,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:52.126Z",
+                      "startTime": "2026-07-09T18:10:36.969Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1658,15 +1643,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 9359,
+                      "duration": 2967,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:02:53.835Z",
+                      "startTime": "2026-07-09T18:10:37.030Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1693,7 +1678,7 @@
         {
           "title": "PDF editor — Save dropdown",
           "file": "pdf-editor/save-export.spec.ts",
-          "line": 20,
+          "line": 27,
           "column": 6,
           "specs": [
             {
@@ -1709,15 +1694,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 9889,
+                      "duration": 3682,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:00.048Z",
+                      "startTime": "2026-07-09T18:10:37.119Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1727,7 +1712,7 @@
               ],
               "id": "63181d3227ec15740c58-a119e3aea50ced0625a8",
               "file": "pdf-editor/save-export.spec.ts",
-              "line": 21,
+              "line": 28,
               "column": 3
             },
             {
@@ -1743,15 +1728,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 9044,
+                      "duration": 9067,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:00.126Z",
+                      "startTime": "2026-07-09T18:10:38.359Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1761,7 +1746,7 @@
               ],
               "id": "63181d3227ec15740c58-c7b5c7c9f651420c1b07",
               "file": "pdf-editor/save-export.spec.ts",
-              "line": 30,
+              "line": 38,
               "column": 3
             }
           ]
@@ -1794,15 +1779,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 10626,
+                      "duration": 7476,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:00.462Z",
+                      "startTime": "2026-07-09T18:10:40.039Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1812,7 +1797,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-33feeeaf485531204e46",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 31,
+              "line": 30,
               "column": 3
             },
             {
@@ -1828,15 +1813,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 12610,
+                      "duration": 7633,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:03.234Z",
+                      "startTime": "2026-07-09T18:10:40.038Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1846,7 +1831,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-e95363af2e49f70c6a97",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 40,
+              "line": 39,
               "column": 3
             },
             {
@@ -1862,15 +1847,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7944,
+                      "duration": 7305,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:09.237Z",
+                      "startTime": "2026-07-09T18:10:40.832Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1880,7 +1865,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-f7f68ea3d28e1e8f1d8d",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 58,
+              "line": 57,
               "column": 3
             },
             {
@@ -1896,15 +1881,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 6802,
+                      "duration": 4684,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:10.512Z",
+                      "startTime": "2026-07-09T18:10:47.486Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1914,7 +1899,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-fefbc70bea3372d3105f",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 75,
+              "line": 74,
               "column": 3
             },
             {
@@ -1930,15 +1915,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 6405,
+                      "duration": 4426,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:11.123Z",
+                      "startTime": "2026-07-09T18:10:47.534Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1948,7 +1933,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-8d472aa8515fb3ad0308",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 89,
+              "line": 88,
               "column": 3
             },
             {
@@ -1964,15 +1949,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 6322,
+                      "duration": 4351,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:15.871Z",
+                      "startTime": "2026-07-09T18:10:47.690Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1982,7 +1967,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-10f7d810ac60af3d48fa",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 103,
+              "line": 102,
               "column": 3
             },
             {
@@ -1998,15 +1983,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 5292,
+                      "duration": 7091,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:17.209Z",
+                      "startTime": "2026-07-09T18:10:48.147Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2016,7 +2001,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-62f705bfca0a2030bfde",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 121,
+              "line": 120,
               "column": 3
             },
             {
@@ -2032,15 +2017,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 5960,
+                      "duration": 4083,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:17.419Z",
+                      "startTime": "2026-07-09T18:10:51.988Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2050,7 +2035,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-05653dba7c70ec84227d",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 131,
+              "line": 130,
               "column": 3
             },
             {
@@ -2067,14 +2052,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 5811,
+                      "duration": 3901,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:17.548Z",
+                      "startTime": "2026-07-09T18:10:52.066Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2084,7 +2069,7 @@
               ],
               "id": "d8f7b19a89bf322eca69-ffb1150c7c81c0d64f3c",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 150,
+              "line": 149,
               "column": 3
             }
           ]
@@ -2092,7 +2077,7 @@
         {
           "title": "Split PDF — standalone route (/tools/split-pdf)",
           "file": "pdf-editor/split-pdf.spec.ts",
-          "line": 167,
+          "line": 166,
           "column": 6,
           "specs": [
             {
@@ -2111,12 +2096,12 @@
                       "workerIndex": 3,
                       "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 2295,
+                      "duration": 4536,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:22.217Z",
+                      "startTime": "2026-07-09T18:10:52.193Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2126,7 +2111,58 @@
               ],
               "id": "d8f7b19a89bf322eca69-22f48fa6cbe559724fef",
               "file": "pdf-editor/split-pdf.spec.ts",
-              "line": 168,
+              "line": 167,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor/toolbar-overflow.spec.ts",
+      "file": "pdf-editor/toolbar-overflow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PDF editor — toolbar overflow at 1280x720",
+          "file": "pdf-editor/toolbar-overflow.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Select and Manage Pages buttons are clipped from viewport",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3708,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-09T18:10:55.300Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7cb0d98da374188c44ad-bbf5b74f0550294fa700",
+              "file": "pdf-editor/toolbar-overflow.spec.ts",
+              "line": 20,
               "column": 3
             }
           ]
@@ -2159,15 +2195,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 6913,
+                      "duration": 6528,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:22.550Z",
+                      "startTime": "2026-07-09T18:10:56.007Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2193,15 +2229,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 6867,
+                      "duration": 3521,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:23.390Z",
+                      "startTime": "2026-07-09T18:10:56.148Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2227,15 +2263,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 7042,
+                      "duration": 5631,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:23.406Z",
+                      "startTime": "2026-07-09T18:10:56.798Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2261,15 +2297,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 10615,
+                      "duration": 6896,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:24.547Z",
+                      "startTime": "2026-07-09T18:10:59.094Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2295,15 +2331,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 4910,
+                      "duration": 6284,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:29.480Z",
+                      "startTime": "2026-07-09T18:10:59.692Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2329,15 +2365,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 5322,
+                      "duration": 4969,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:30.267Z",
+                      "startTime": "2026-07-09T18:11:02.500Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2363,15 +2399,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 4,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 5033,
+                      "duration": 5322,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:30.460Z",
+                      "startTime": "2026-07-09T18:11:02.554Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2385,7 +2421,7 @@
               "column": 5
             },
             {
-              "title": "Signature tool activates without runtime errors",
+              "title": "Sign tool activates without runtime errors",
               "ok": true,
               "tags": [],
               "tests": [
@@ -2397,15 +2433,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 4664,
+                      "duration": 4122,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:34.423Z",
+                      "startTime": "2026-07-09T18:11:06.007Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2413,7 +2449,7 @@
                   "status": "expected"
                 }
               ],
-              "id": "6547b0f80d8d52cf780b-dd76a133bca237be5db3",
+              "id": "6547b0f80d8d52cf780b-a9f6e45eed6af3935b28",
               "file": "pdf-editor/tools.spec.ts",
               "line": 25,
               "column": 5
@@ -2431,15 +2467,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3837,
+                      "duration": 3951,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:35.181Z",
+                      "startTime": "2026-07-09T18:11:06.005Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2465,15 +2501,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 7024,
+                      "duration": 7533,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:35.507Z",
+                      "startTime": "2026-07-09T18:11:07.500Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2500,14 +2536,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 6804,
+                      "duration": 7371,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-22T14:03:35.604Z",
+                      "startTime": "2026-07-09T18:11:07.920Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2523,14 +2559,862 @@
           ]
         }
       ]
+    },
+    {
+      "title": "pdf-editor/ui-inventory.spec.ts",
+      "file": "pdf-editor/ui-inventory.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PDF editor — UI inventory",
+          "file": "pdf-editor/ui-inventory.spec.ts",
+          "line": 10,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Top App Bar",
+              "file": "pdf-editor/ui-inventory.spec.ts",
+              "line": 16,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "hamburger menu opens and lists expected items",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6216,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:10.028Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-99dcd374439f519344c4",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 17,
+                  "column": 5
+                },
+                {
+                  "title": "PDFVault logo links home",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 5785,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:10.190Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-643cc9f94e4b211d27fa",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 37,
+                  "column": 5
+                },
+                {
+                  "title": "filename is shown",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 3,
+                          "status": "passed",
+                          "duration": 5503,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:15.071Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-54e8a94663d618de6f19",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 44,
+                  "column": 5
+                },
+                {
+                  "title": "Undo/Redo pill is present",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 4928,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:15.547Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-01ec90c6aa746197d82b",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 52,
+                  "column": 5
+                },
+                {
+                  "title": "Share via link button is present (sign-in gated)",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 6060,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:15.998Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-329a4474ea7a3dcee902",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 57,
+                  "column": 5
+                },
+                {
+                  "title": "Download dropdown lists all 8 formats",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6161,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:16.258Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-0a972b3950de9d1e3575",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 67,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Left Sidebar",
+              "file": "pdf-editor/ui-inventory.spec.ts",
+              "line": 89,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "thumbnails are visible and clicking page 2 jumps current page",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 4118,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:20.553Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-36cda4d13dff28841db4",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 90,
+                  "column": 5
+                },
+                {
+                  "title": "drag handle exists and current page has active indicator",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 3,
+                          "status": "passed",
+                          "duration": 3800,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:20.590Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-24a0b728b26ffe6f14f9",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 107,
+                  "column": 5
+                },
+                {
+                  "title": "Add Page button appends a blank page",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 5466,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:22.091Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-6e851ebf917ea32c3edd",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 119,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Right Sidebar (desktop)",
+              "file": "pdf-editor/ui-inventory.spec.ts",
+              "line": 135,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Shapes tool shows shape properties",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4974,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:22.449Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-4f39e4e615927af39e01",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 136,
+                  "column": 5
+                },
+                {
+                  "title": "Highlight tool shows highlight color properties",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 3,
+                          "status": "passed",
+                          "duration": 8129,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:24.409Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-7cfd9517322ce2865add",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 147,
+                  "column": 5
+                },
+                {
+                  "title": "Watermark tool shows watermark config",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 8050,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:24.690Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-140bb39df41f4f337b3c",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 156,
+                  "column": 5
+                },
+                {
+                  "title": "Background tool shows background image config",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 5915,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:27.461Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-46c2650be7b2ed7394f0",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 169,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Modals reachable from hamburger/toolbar",
+              "file": "pdf-editor/ui-inventory.spec.ts",
+              "line": 184,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Create New opens CreatePdfModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 6799,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:27.588Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-9f0a107bc19d3b6236f4",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 207,
+                  "column": 5
+                },
+                {
+                  "title": "Find and Replace opens FindReplaceModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 3,
+                          "status": "passed",
+                          "duration": 5080,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:32.571Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-486efbd8a51c241ba412",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 214,
+                  "column": 5
+                },
+                {
+                  "title": "Compress toolbar button opens CompressModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 4578,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:32.811Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-6c0a01080127d417da35",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 221,
+                  "column": 5
+                },
+                {
+                  "title": "Secure toolbar button opens PasswordModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4504,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:33.393Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-1609cfd9678dde719bf5",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 227,
+                  "column": 5
+                },
+                {
+                  "title": "Page No toolbar button opens PageNumbersModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 5892,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:34.415Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-224d965bfe1efe161263",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 233,
+                  "column": 5
+                },
+                {
+                  "title": "Annotate toolbar button opens AnnotationsModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 3140,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:37.410Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-f19276e20c3ac5389b51",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 239,
+                  "column": 5
+                },
+                {
+                  "title": "Split toolbar button still opens SplitPdfModal",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 3,
+                          "status": "passed",
+                          "duration": 6828,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:37.700Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-d1bfc95070d4aa5befa4",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 245,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Keyboard shortcuts",
+              "file": "pdf-editor/ui-inventory.spec.ts",
+              "line": 252,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Cmd+F opens Find & Replace",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6265,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:37.919Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-2d612d69146776f2703c",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 253,
+                  "column": 5
+                },
+                {
+                  "title": "Cmd+Z / Cmd+Y don't crash",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 4940,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:40.329Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-ae2e158bb672a465c97e",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 263,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Save / persistence smoke",
+              "file": "pdf-editor/ui-inventory.spec.ts",
+              "line": 277,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "beforeunload prompt fires on unsaved changes",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 5395,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-09T18:11:40.559Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "7bd2a85044ea11022030-0e20eddd49ff6d77e522",
+                  "file": "pdf-editor/ui-inventory.spec.ts",
+                  "line": 278,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-22T14:01:54.742Z",
-    "duration": 107970.23300000001,
-    "expected": 52,
-    "skipped": 7,
+    "startTime": "2026-07-09T18:09:19.452Z",
+    "duration": 146701.911,
+    "expected": 77,
+    "skipped": 6,
     "unexpected": 1,
     "flaky": 0
   }

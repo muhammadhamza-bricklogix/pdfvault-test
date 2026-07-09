@@ -21,8 +21,7 @@ test.describe("PDF editor — Split PDF (in-editor)", () => {
   });
 
   async function openSplitModal(page: import("@playwright/test").Page) {
-    await page.getByRole("button", { name: "Editor menu" }).click();
-    await page.getByRole("menuitem", { name: /^split pdf$/i }).click();
+    await page.getByRole("button", { name: /^split$/i }).first().click();
     await expect(
       page.getByRole("heading", { name: /split pdf/i }),
     ).toBeVisible({ timeout: 8_000 });

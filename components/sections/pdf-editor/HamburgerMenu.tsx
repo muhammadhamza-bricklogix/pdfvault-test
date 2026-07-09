@@ -5,18 +5,10 @@ import type { Key } from "@heroui/react";
 import {
   Add01Icon,
   Clock01Icon,
-  FileExportIcon,
-  FileMinusIcon,
   FolderOpenIcon,
-  LayersIcon,
-  LockedIcon,
   Menu01Icon,
   NoteIcon,
-  Scissor01Icon,
   Search01Icon,
-  Share01Icon,
-  Stamp01Icon,
-  TextNumberSignIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -41,23 +33,25 @@ import { ShareModal } from "./ShareModal";
 import { SplitPdfModal, type SplitPdfModalSource } from "./SplitPdfModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 
+// Actions still triggered by PvEditorTopChrome that need modal state /
+// hidden-input machinery owned by this component. The top toolbar dispatches
+// these events; we handle them via the same switch a menu click would use so
+// there's one source of truth for the guards (sign-in, requireFile, etc.).
+const BRIDGE_EVENTS = {
+  "editor:open-split": "split",
+  "editor:open-share": "share",
+  "editor:open-annotations": "annotations",
+  "editor:open-flatten": "flatten",
+} as const;
+
 export function HamburgerMenu() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setFile = usePdfEditorStore((s) => s.setFile);
-  const setIsCompressModalOpen = usePdfEditorStore(
-    (s) => s.setIsCompressModalOpen,
-  );
-  const setIsPasswordModalOpen = usePdfEditorStore(
-    (s) => s.setIsPasswordModalOpen,
-  );
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
-  );
-  const setIsPageNumbersModalOpen = usePdfEditorStore(
-    (s) => s.setIsPageNumbersModalOpen,
   );
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,16 +90,6 @@ export function HamburgerMenu() {
     } catch {
       // toast already shown by the mutation
     }
-  };
-
-  const runExtractImages = () => {
-    if (!requireFile("extracting images")) return;
-    // Defer to the editor-shell-mounted hook (`useExtractImagesEditor`) so
-    // the request goes out against the user's CURRENT edited PDF (overlays
-    // baked) rather than the original upload. Without this any images the
-    // user added through the editor's image tool wouldn't be in the bytes
-    // we POST and the backend would return 400 / "no images found".
-    window.dispatchEvent(new CustomEvent("editor:extract-images"));
   };
 
   const openSplitModal = async () => {
@@ -172,27 +156,12 @@ export function HamburgerMenu() {
           }),
         );
         break;
-      case "compress":
-        if (!requireFile("compressing")) return;
-        setIsCompressModalOpen(true);
-        break;
-      case "password":
-        if (!requireFile("setting a password")) return;
-        setIsPasswordModalOpen(true);
-        break;
       case "flatten":
         void runFlatten();
-        break;
-      case "extract-images":
-        runExtractImages();
         break;
       case "find-replace":
         if (!requireFile("searching")) return;
         setIsFindReplaceOpen(true);
-        break;
-      case "page-numbers":
-        if (!requireFile("adding page numbers")) return;
-        setIsPageNumbersModalOpen(true);
         break;
       case "split":
         void openSplitModal();
@@ -244,30 +213,27 @@ export function HamburgerMenu() {
     }
   };
 
-  // Bridge for the new top-chrome toolbar: it dispatches these events instead
-  // of duplicating the split/share/annotations/flatten local state. Each
-  // listener runs the SAME code path a menu click would (permission checks,
-  // toasts, etc.), so the two entry points can't drift.
+  // Bridge for the top-chrome toolbar: it dispatches these events instead of
+  // duplicating file-input / modal-state / guard logic. Each listener runs
+  // the SAME switch a menu click would (permission checks, toasts, etc.), so
+  // the two entry points can't drift.
   useEffect(() => {
-    const openSplit = () => void handleAction("split");
-    const openShare = () => void handleAction("share");
-    const openAnnotations = () => void handleAction("annotations");
-    const openFlatten = () => void handleAction("flatten");
+    const handlers: Array<[string, () => void]> = Object.entries(
+      BRIDGE_EVENTS,
+    ).map(([event, action]) => [event, () => void handleAction(action)]);
 
-    window.addEventListener("editor:open-split", openSplit);
-    window.addEventListener("editor:open-share", openShare);
-    window.addEventListener("editor:open-annotations", openAnnotations);
-    window.addEventListener("editor:open-flatten", openFlatten);
+    for (const [event, handler] of handlers) {
+      window.addEventListener(event, handler);
+    }
 
     return () => {
-      window.removeEventListener("editor:open-split", openSplit);
-      window.removeEventListener("editor:open-share", openShare);
-      window.removeEventListener("editor:open-annotations", openAnnotations);
-      window.removeEventListener("editor:open-flatten", openFlatten);
+      for (const [event, handler] of handlers) {
+        window.removeEventListener(event, handler);
+      }
     };
     // handleAction is redefined per render — that's fine, the listeners are
-    // reattached in sync with the closure that owns the current file / signed-in
-    // state.
+    // reattached in sync with the closure that owns the current file /
+    // signed-in state.
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,45 +309,13 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={NoteIcon} size={14} />
               <Label>My PDFs</Label>
             </Dropdown.Item>
-            <Dropdown.Item id="compress" textValue="Compress PDF">
-              <HugeiconsIcon icon={FileMinusIcon} size={14} />
-              <Label>Compress PDF</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="password" textValue="Password protect">
-              <HugeiconsIcon icon={LockedIcon} size={14} />
-              <Label>Password protect</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="flatten" textValue="Flatten form fields">
-              <HugeiconsIcon icon={LayersIcon} size={14} />
-              <Label>Flatten form fields</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="extract-images" textValue="Extract images">
-              <HugeiconsIcon icon={FileExportIcon} size={14} />
-              <Label>Extract images (ZIP)</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="find-replace" textValue="Find and replace">
+            <Dropdown.Item id="find-replace" textValue="Find and Replace">
               <HugeiconsIcon icon={Search01Icon} size={14} />
-              <Label>Find &amp; Replace (⌘F)</Label>
+              <Label>Find and Replace</Label>
             </Dropdown.Item>
-            <Dropdown.Item id="page-numbers" textValue="Add page numbers">
-              <HugeiconsIcon icon={TextNumberSignIcon} size={14} />
-              <Label>Add page numbers</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="split" textValue="Split PDF">
-              <HugeiconsIcon icon={Scissor01Icon} size={14} />
-              <Label>Split PDF</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="annotations" textValue="Annotations">
-              <HugeiconsIcon icon={Stamp01Icon} size={14} />
-              <Label>Annotations</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="versions" textValue="Version history">
+            <Dropdown.Item id="versions" textValue="Version History">
               <HugeiconsIcon icon={Clock01Icon} size={14} />
-              <Label>Version history</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="share" textValue="Share via link">
-              <HugeiconsIcon icon={Share01Icon} size={14} />
-              <Label>Share via link</Label>
+              <Label>Version History</Label>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown.Popover>

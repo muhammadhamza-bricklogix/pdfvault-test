@@ -1,10 +1,18 @@
 import { test, expect } from "@playwright/test";
 
 import { skipIfUnauthenticated } from "../helpers/auth";
-import { openSamplePdfInEditor } from "../helpers/editor";
+import { openSamplePdfInEditor, waitForPdfReady } from "../helpers/editor";
+
+/**
+ * The "Browse all tools" trigger lives in the mobile EditorInfoBar. The
+ * desktop PvEditorTopChrome renders tools directly in the pill toolbar and
+ * does not surface this modal entry point.
+ */
+test.use({ viewport: { width: 390, height: 844 } });
 
 test.beforeEach(async ({ page }) => {
   await openSamplePdfInEditor(page);
+  await waitForPdfReady(page);
 });
 
 test.describe("Conversion — Tools modal in editor", () => {
