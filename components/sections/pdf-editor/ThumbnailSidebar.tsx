@@ -484,7 +484,6 @@ export function ThumbnailSidebar({ onReorderPages }: ThumbnailSidebarProps) {
           aria-label="Add page"
           className="justify-center gap-2 rounded-lg border border-default-200 bg-white px-4 py-2 text-sm font-medium text-[var(--color-foreground)] shadow-sm hover:bg-default-50 disabled:opacity-50"
           isDisabled={isLoading}
-          variant="flat"
           onPress={() => void addBlankPage()}
         >
           <HugeiconsIcon icon={AddCircleIcon} size={18} strokeWidth={1.5} />
