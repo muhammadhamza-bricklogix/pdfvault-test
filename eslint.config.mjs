@@ -22,6 +22,7 @@ export default defineConfig([
     "**/coverage",
     "**/.next",
     "**/build",
+    "**/playwright-report",
     "!**/.commitlintrc.cjs",
     "!**/.lintstagedrc.cjs",
     "!**/jest.config.js",

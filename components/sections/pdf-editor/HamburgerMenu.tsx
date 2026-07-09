@@ -21,7 +21,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   UPLOAD_ACCEPT_MIME,
@@ -243,6 +243,32 @@ export function HamburgerMenu() {
       }
     }
   };
+
+  // Bridge for the new top-chrome toolbar: it dispatches these events instead
+  // of duplicating the split/share/annotations/flatten local state. Each
+  // listener runs the SAME code path a menu click would (permission checks,
+  // toasts, etc.), so the two entry points can't drift.
+  useEffect(() => {
+    const openSplit = () => void handleAction("split");
+    const openShare = () => void handleAction("share");
+    const openAnnotations = () => void handleAction("annotations");
+    const openFlatten = () => void handleAction("flatten");
+
+    window.addEventListener("editor:open-split", openSplit);
+    window.addEventListener("editor:open-share", openShare);
+    window.addEventListener("editor:open-annotations", openAnnotations);
+    window.addEventListener("editor:open-flatten", openFlatten);
+
+    return () => {
+      window.removeEventListener("editor:open-split", openSplit);
+      window.removeEventListener("editor:open-share", openShare);
+      window.removeEventListener("editor:open-annotations", openAnnotations);
+      window.removeEventListener("editor:open-flatten", openFlatten);
+    };
+    // handleAction is redefined per render — that's fine, the listeners are
+    // reattached in sync with the closure that owns the current file / signed-in
+    // state.
+  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];

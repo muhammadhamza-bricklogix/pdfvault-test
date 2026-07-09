@@ -124,6 +124,10 @@ function ProfileRow({ onNavigate }: { onNavigate?: () => void }) {
           <>
             <span className="relative shrink-0">
               {user?.imageUrl ? (
+                // User avatar from Clerk is a dynamic external URL; next/image
+                // would require remotePatterns config and offers little benefit
+                // for a small avatar.
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   alt={fullName}
                   className="size-9 rounded-full object-cover"

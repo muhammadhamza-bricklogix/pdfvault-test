@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useRef, useState } from "react";
 
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 const ACCEPTED_EXTENSIONS = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
@@ -307,8 +308,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
       try {
         const picked = await cloudUploadStart("gdrive");
 
-        // eslint-disable-next-line no-console
-        console.log("[gdrive] picker returned", {
+        logger.debug("[gdrive] picker returned", {
           count: picked.length,
           firstName: picked[0]?.name,
         });
@@ -327,8 +327,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
           accessToken: first.accessToken,
           ts: Date.now(),
         });
-        // eslint-disable-next-line no-console
-        console.log("[gdrive] stashed → /dashboard");
+        logger.debug("[gdrive] stashed → /dashboard");
         toast.success({
           title: `${first.name} selected`,
           description: "Sign in to finish importing from Google Drive.",

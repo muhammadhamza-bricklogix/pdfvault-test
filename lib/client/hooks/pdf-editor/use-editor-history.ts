@@ -6,6 +6,7 @@ import type { RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 
 type UseEditorHistoryParams = {
   fabricCanvas: Canvas | null;
@@ -102,8 +103,7 @@ export function useEditorHistory({
 
       (target as { pristine?: boolean }).pristine = false;
 
-      /* eslint-disable-next-line no-console */
-      console.info("[PDFedits] pristine: editModeText → false", {
+      logger.debug("[PDFedits] pristine: editModeText → false", {
         page: currentPage,
         text: (target as { text?: string }).text?.slice(0, 30),
       });

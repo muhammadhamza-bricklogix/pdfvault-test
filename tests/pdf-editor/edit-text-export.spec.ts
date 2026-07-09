@@ -79,7 +79,7 @@ async function exportPdfDownload(
 
 test.describe("PDF editor — Edit Text", () => {
   // Export / mocked-save specs do not need a real Clerk session.
-  test.use({ storageState: {} });
+  test.use({ storageState: undefined });
 
   test.describe("Sample PDF (upright pages)", () => {
     test.beforeEach(async ({ page }) => {

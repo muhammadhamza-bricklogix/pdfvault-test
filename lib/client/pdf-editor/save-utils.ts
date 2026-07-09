@@ -1,6 +1,7 @@
 import type { Canvas as FabricCanvas } from "fabric";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 
 import {
   isIdentityOrder,
@@ -85,8 +86,7 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
     const eds = objs.filter((o) => o.editorType === "editModeText");
     const modifiedCount = eds.filter((o) => o.pristine !== true).length;
 
-    /* eslint-disable-next-line no-console */
-    console.info("[PDFedits] serialize: editModeText breakdown", {
+    logger.debug("[PDFedits] serialize: editModeText breakdown", {
       total: eds.length,
       modified: modifiedCount,
       pristine: eds.length - modifiedCount,
@@ -221,8 +221,7 @@ export function flushLiveFabricPage(
     pristine: (o as { pristine?: boolean }).pristine,
   }));
 
-  /* eslint-disable-next-line no-console */
-  console.info("[PDFedits] flush: live canvas →", {
+  logger.debug("[PDFedits] flush: live canvas →", {
     displayPage,
     objectCount: liveObjects.length,
     types: summary,

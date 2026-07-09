@@ -45,6 +45,7 @@ export function IdentityPopover({
   const avatarSize = collapsed ? "size-8" : "size-9";
   const avatarPx = collapsed ? 32 : 36;
   const avatar = user?.imageUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element -- User avatar from Clerk is a dynamic external URL; next/image would require remotePatterns config and offers little benefit for a small avatar.
     <img
       alt={fullName}
       className={`${avatarSize} shrink-0 rounded-full object-cover`}
