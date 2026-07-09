@@ -64,6 +64,12 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         channel: "chrome",
+        // The new editor toolbar renders 21 tool buttons across floating pill
+        // groups. At Playwright's default 1280x720 Desktop Chrome viewport the
+        // leftmost (Select, Edit) and rightmost (Manage Pages) pills are
+        // horizontally clipped and unreachable by click. 1920x1080 keeps the
+        // full toolbar in viewport so functional tests can reach every tool.
+        viewport: { width: 1920, height: 1080 },
         ...(hasStoredAuth ? { storageState: STORAGE_STATE } : {}),
       },
       // No dependency on setup — we want all unauthenticated tests to run

@@ -89,8 +89,8 @@ export function SignupCard() {
     try {
       await signUp.sso({
         strategy: "oauth_google",
-        redirectCallbackUrl: afterSignUpPath,
-        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectUrl: afterSignUpPath,
       });
     } catch (err) {
       logger.error("Google sign-up failed", err);

@@ -15,7 +15,7 @@
 Error: expect(received).toBeGreaterThan(expected)
 
 Expected: > 1000
-Received:   873
+Received:   872
 ```
 
 # Page snapshot
@@ -23,117 +23,124 @@ Received:   873
 ```yaml
 - generic:
   - generic [ref=e2]:
-    - generic [ref=e4]:
-      - generic [ref=e5]:
-        - button "Editor menu" [ref=e6] [cursor=pointer]:
-          - img
-        - separator [ref=e7]
-        - button "Browse all tools" [ref=e8] [cursor=pointer]:
-          - img
-          - generic [ref=e9]: Tools
-      - generic [ref=e10]:
-        - generic [ref=e11]: rotated-sample.pdf
-        - separator [ref=e12]
-        - generic [ref=e13]:
-          - button "Previous page" [disabled]: ‹
-          - generic [ref=e14]: Page 1 of 1
-          - button "Next page" [disabled]: ›
-      - generic [ref=e15]:
-        - generic [ref=e17]:
-          - button "Zoom out" [ref=e18] [cursor=pointer]: −
-          - generic [ref=e19]: 100%
-          - button "Zoom in" [ref=e20] [cursor=pointer]: +
-        - separator [ref=e21]
-        - group [ref=e22]:
-          - button "Save" [disabled]:
-            - img
-            - generic: Save
-          - button "Export options" [ref=e23] [cursor=pointer]:
-            - img
-        - separator [ref=e24]
-        - button "Switch to dark mode" [ref=e25] [cursor=pointer]:
-          - img
-    - generic [ref=e26]:
-      - toolbar "History actions" [ref=e27]:
-        - group [ref=e28]:
-          - button "Undo" [ref=e29] [cursor=pointer]:
-            - img
-            - generic [ref=e30]: Undo
-          - button "Redo" [disabled]:
-            - img
-            - generic: Redo
-      - separator [ref=e31]
-      - toolbar "Drawing tools" [ref=e32]:
-        - radiogroup [ref=e33]:
-          - radio "Select" [ref=e34] [cursor=pointer]:
-            - img
-            - generic [ref=e35]: Select
-          - radio "Edit Text" [checked] [active] [ref=e36] [cursor=pointer]:
-            - img
-            - generic [ref=e37]: Edit Text
-          - radio "Signature" [ref=e38] [cursor=pointer]:
-            - img
-            - generic [ref=e39]: Signature
-          - radio "Text" [ref=e40] [cursor=pointer]:
-            - img
-            - generic [ref=e41]: Text
-          - radio "Draw" [ref=e42] [cursor=pointer]:
-            - img
-            - generic [ref=e43]: Draw
-          - radio "Highlight" [ref=e44] [cursor=pointer]:
-            - img
-            - generic [ref=e45]: Highlight
-          - radio "Shapes" [ref=e46] [cursor=pointer]:
-            - img
-            - generic [ref=e47]: Shapes
-          - radio "Eraser" [ref=e48] [cursor=pointer]:
-            - img
-            - generic [ref=e49]: Eraser
-          - radio "Whiteout" [ref=e50] [cursor=pointer]:
-            - img
-            - generic [ref=e51]: Whiteout
-          - radio "Redact" [ref=e52] [cursor=pointer]:
-            - img
-            - generic [ref=e53]: Redact
-          - radio "Image" [ref=e54] [cursor=pointer]:
-            - img
-            - generic [ref=e55]: Image
-          - radio "Watermark" [ref=e56] [cursor=pointer]:
-            - img
-            - generic [ref=e57]: Watermark
-          - radio "Background" [ref=e58] [cursor=pointer]:
-            - img
-            - generic [ref=e59]: Background
-      - separator [ref=e60]
-      - button "Manage Pages" [ref=e61] [cursor=pointer]:
+    - generic [ref=e3]:
+      - button "Editor menu" [ref=e4] [cursor=pointer]:
         - img
-        - generic [ref=e62]: Manage Pages
-    - generic [ref=e63]:
-      - listbox "Page thumbnails" [ref=e64]:
-        - option "Page 1" [selected] [ref=e67] [cursor=pointer]:
-          - generic [ref=e70]: "1"
-      - generic [ref=e74]:
-        - img "PDF page 1 of 1" [ref=e75]
-        - application "PDF editing canvas, page 1 of 1" [ref=e77]
-      - button "Performance panel" [ref=e81] [cursor=pointer]:
-        - button "Performance panel" [ref=e82]:
+      - separator [ref=e5]
+      - link "Home" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "PDFVault" [ref=e7]
+      - generic "Document" [ref=e9]: rotated-sample.pdf
+      - generic [ref=e10]:
+        - button "Undo" [ref=e11] [cursor=pointer]:
+          - img [ref=e12]
+        - button "Redo" [disabled] [ref=e15]:
+          - img [ref=e16]
+      - button "Share via link" [disabled] [ref=e18]:
+        - img [ref=e19]
+        - text: Share via link
+      - button "Download" [ref=e22] [cursor=pointer]:
+        - text: Download
+        - img
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - button "Select" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+          - generic [ref=e28]: Select
+        - button "Edit" [active] [pressed] [ref=e29] [cursor=pointer]:
+          - img [ref=e30]
+          - generic [ref=e32]: Edit
+        - button "Sign" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+          - generic [ref=e36]: Sign
+        - button "Text" [ref=e37] [cursor=pointer]:
+          - img [ref=e38]
+          - generic [ref=e41]: Text
+        - button "Draw" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+          - generic [ref=e46]: Draw
+        - button "Highlight" [ref=e47] [cursor=pointer]:
+          - img [ref=e48]
+          - generic [ref=e50]: Highlight
+      - generic [ref=e51]:
+        - button "Shapes" [ref=e52] [cursor=pointer]:
+          - img [ref=e53]
+          - generic [ref=e55]: Shapes
+        - button "Eraser" [ref=e56] [cursor=pointer]:
+          - img [ref=e57]
+          - generic [ref=e60]: Eraser
+        - button "Whiteout" [ref=e61] [cursor=pointer]:
+          - img [ref=e62]
+          - generic [ref=e65]: Whiteout
+        - button "Redact" [ref=e66] [cursor=pointer]:
+          - img [ref=e67]
+          - generic [ref=e73]: Redact
+        - button "Image" [ref=e74] [cursor=pointer]:
+          - img [ref=e75]
+          - generic [ref=e79]: Image
+        - button "Watermark" [ref=e80] [cursor=pointer]:
+          - img [ref=e81]
+          - generic [ref=e84]: Watermark
+        - button "Background" [ref=e85] [cursor=pointer]:
+          - img [ref=e86]
+          - generic [ref=e93]: Background
+      - generic [ref=e94]:
+        - button "Compress" [ref=e95] [cursor=pointer]:
+          - img [ref=e96]
+          - generic [ref=e98]: Compress
+        - button "Secure" [ref=e99] [cursor=pointer]:
+          - img [ref=e100]
+          - generic [ref=e103]: Secure
+        - button "Merge" [ref=e104] [cursor=pointer]:
+          - img [ref=e105]
+          - generic [ref=e108]: Merge
+        - button "Split" [ref=e109] [cursor=pointer]:
+          - img [ref=e110]
+          - generic [ref=e113]: Split
+        - button "Flatten" [ref=e114] [cursor=pointer]:
+          - img [ref=e115]
+          - generic [ref=e119]: Flatten
+        - button "Extract" [ref=e120] [cursor=pointer]:
+          - img [ref=e121]
+          - generic [ref=e124]: Extract
+        - button "Page No" [ref=e125] [cursor=pointer]:
+          - img [ref=e126]
+          - generic [ref=e129]: Page No
+        - button "Annotate" [ref=e130] [cursor=pointer]:
+          - img [ref=e131]
+          - generic [ref=e134]: Annotate
+      - button "Manage Pages" [ref=e136] [cursor=pointer]:
+        - img [ref=e137]
+        - generic [ref=e139]: Manage Pages
+    - generic [ref=e140]:
+      - listbox "Page thumbnails" [ref=e141]:
+        - button "Add page" [ref=e142] [cursor=pointer]:
           - img
-  - button "Open Next.js Dev Tools" [ref=e88] [cursor=pointer]:
-    - generic [ref=e91]:
+          - text: Add Page
+        - option "Page 1" [selected] [ref=e145] [cursor=pointer]:
+          - generic [ref=e148]: "1"
+      - generic [ref=e152]:
+        - img "PDF page 1 of 1" [ref=e153]
+        - application "PDF editing canvas, page 1 of 1" [ref=e155]
+      - button "Performance panel" [ref=e158] [cursor=pointer]:
+        - button "Performance panel" [ref=e159]:
+          - img
+  - button "Open Next.js Dev Tools" [ref=e165] [cursor=pointer]:
+    - generic [ref=e168]:
       - text: Compiling
-      - generic [ref=e92]:
-        - generic [ref=e93]: .
-        - generic [ref=e94]: .
-        - generic [ref=e95]: .
-  - alert [ref=e96]
+      - generic [ref=e169]:
+        - generic [ref=e170]: .
+        - generic [ref=e171]: .
+        - generic [ref=e172]: .
+  - alert [ref=e173]
   - region "1 notification.":
     - list:
       - listitem:
-        - alertdialog "Exported" [ref=e97]:
-          - img [ref=e99]
-          - alert [ref=e101]:
-            - generic [ref=e102]: Exported
-            - generic [ref=e103]: Your edited PDF has been downloaded.
+        - alertdialog "Exported" [ref=e174]:
+          - img [ref=e176]
+          - alert [ref=e178]:
+            - generic [ref=e179]: Exported
+            - generic [ref=e180]: Your edited PDF has been downloaded.
           - button "Close":
             - img
 ```
@@ -232,7 +239,7 @@ Received:   873
   254 |       await page.locator('input[type="file"]').setInputFiles(rotatedFixture);
   255 |       await waitForPdfReady(page);
   256 | 
-  257 |       await page.getByRole("radio", { name: /Edit Text/i }).click();
+  257 |       await page.getByRole("button", { name: /^edit$/i }).first().click();
   258 |       await armEditTextAndWait(page);
   259 | 
   260 |       const editedText = `${EDITED_MARKER}ROT_${Date.now()}`;

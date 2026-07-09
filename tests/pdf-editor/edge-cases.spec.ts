@@ -135,12 +135,12 @@ test.describe("PDF editor — edge cases", () => {
     // in `use-fabric-canvas.ts` (touch-action trio + selection flag)
     // AND the cursor-map switch in `PdfViewerCanvas.tsx`.
     await page
-      .getByRole("radio", { name: /^draw$/i })
+      .getByRole("button", { name: /^draw$/i })
       .first()
       .click();
     await page.waitForTimeout(200);
     await page
-      .getByRole("radio", { name: /^select$/i })
+      .getByRole("button", { name: /^select$/i })
       .first()
       .click();
     await page.waitForTimeout(200);

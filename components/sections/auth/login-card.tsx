@@ -95,8 +95,8 @@ export function LoginCard() {
     try {
       await signIn.sso({
         strategy: "oauth_google",
-        redirectCallbackUrl: afterSignInPath,
-        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectUrl: afterSignInPath,
       });
     } catch (err) {
       logger.error("Google sign-in failed", err);

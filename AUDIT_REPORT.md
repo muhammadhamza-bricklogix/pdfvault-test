@@ -5,6 +5,42 @@
 
 ---
 
+## Frontend cleanup pass — 2026-07-08
+
+A focused, low-risk polish pass was run on the frontend only. Backend code was not available in this checkout.
+
+### What was fixed
+
+| Issue | File(s) | Fix |
+|---|---|---|
+| Pre-existing TypeScript error blocking `tsc` | `tests/pdf-editor/edit-text-export.spec.ts` | Changed `test.use({ storageState: {} })` to `test.use({ storageState: undefined })` to match Playwright's fixture type. |
+| Raw `<img>` tags for Clerk avatars | `components/sections/dashboard/dashboard-shell.tsx`, `components/sections/dashboard/identity-popover.tsx` | Added documented `eslint-disable-next-line @next/next/no-img-element` comments. Using `next/image` would require `remotePatterns` config for dynamic external avatar URLs and offers little benefit for small avatars. |
+| Unused `isMobile` hook | `components/sections/pdf-editor/PdfViewerCanvas.tsx` | Removed the unused variable and its import. |
+| Unused `PDF_TOOLS_HUB` constant | `lib/shared/constants/home-tool-grid.ts` | Removed the constant (only referenced in a commented-out block). |
+| Build artifacts being linted | `eslint.config.mjs` | Added `**/playwright-report` to `globalIgnores`. |
+| Debug `console.info` logs leaking to production | `lib/client/pdf-editor/vector-drawers.ts`, `lib/client/pdf-editor/merge-pdf.ts`, `lib/client/pdf-editor/save-utils.ts`, `lib/client/hooks/pdf-editor/use-editor-history.ts`, `components/sections/new-landing/upload-workspace.tsx` | Replaced with `logger.debug(...)` from `@/lib/shared/utils/logger`, which is suppressed in production. |
+
+### What was deliberately left untouched
+
+- **OAuth / Google Picker diagnostics** in `use-cloud-upload.ts`, `oauth-callback/page.tsx`, and `google-drive-picker.ts` were kept as `console.*` logs. These are intentional production troubleshooting aids and should remain visible in production until the Google Drive integration is proven stable.
+- **Large-file splits**, **error-screen additions**, and **server-side changes** were out of scope for this no-regression pass.
+- **Security audit** was skipped per request.
+
+### Verification results
+
+| Check | Command | Result |
+|---|---|---|
+| TypeScript | `npx tsc --noEmit` | ✅ Pass |
+| Lint | `npx eslint .` | ✅ Pass, 0 warnings |
+| Production build | `npx next build` | ✅ Pass |
+| Dev server smoke test | `npx next dev --turbopack` + `curl` on `/`, `/dashboard`, `/pdf-editor` | ✅ 200 / 307 / 200 |
+
+### Note on backend
+
+The existing report below references a backend codebase. That backend was **not present** in this working directory, so it was not audited or changed. Provide the backend repo path if you want a matching backend cleanup pass.
+
+---
+
 ## Overall verdict
 
 The codebase is in good shape. The team has built it carefully — the structure is clean, the database design is solid, and the day-to-day code follows consistent patterns. There are some cleanup items worth doing, but nothing alarming.

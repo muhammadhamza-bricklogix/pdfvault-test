@@ -3,6 +3,9 @@
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
+import { AddCircleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@heroui/react";
 import {
   DndContext,
   type DragEndEvent,
@@ -466,12 +469,29 @@ type ThumbnailSidebarProps = {
 };
 
 export function ThumbnailSidebar({ onReorderPages }: ThumbnailSidebarProps) {
+  const file = usePdfEditorStore((s) => s.file);
+  const addBlankPage = usePdfEditorStore((s) => s.addBlankPage);
+  const isLoading = !file;
+
   return (
     <aside
       aria-label="Page thumbnails"
-      className="flex w-44 shrink-0 flex-col border-r border-default-200 bg-default-100 p-2"
+      className="flex w-44 shrink-0 flex-col border-r border-default-200 bg-default-100 px-2 pb-2 pt-0"
       role="listbox"
     >
+      <div className="flex items-center justify-center px-0 py-3">
+        <Button
+          aria-label="Add page"
+          className="justify-center gap-2 rounded-lg border border-default-200 bg-white px-4 py-2 text-sm font-medium text-[var(--color-foreground)] shadow-sm hover:bg-default-50 disabled:opacity-50"
+          isDisabled={isLoading}
+          variant="flat"
+          onPress={() => void addBlankPage()}
+        >
+          <HugeiconsIcon icon={AddCircleIcon} size={18} strokeWidth={1.5} />
+          Add Page
+        </Button>
+      </div>
+
       <SortablePageList
         className="flex flex-col gap-1 overflow-y-auto"
         layout="vertical"

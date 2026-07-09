@@ -16,6 +16,8 @@ import {
   showText,
 } from "pdf-lib";
 
+import { logger } from "@/lib/shared/utils/logger";
+
 /**
  * pdf-lib's StandardFonts use WinAnsi encoding and throw an exception
  * the moment they encounter a character outside that range — e.g. `↔`
@@ -107,8 +109,7 @@ export async function drawIText(
   if (!rawText) return;
 
   if (editorTypeEarly === "editModeText") {
-    /* eslint-disable-next-line no-console */
-    console.info("[PDFedits] drawIText: editModeText drawing", {
+    logger.debug("[PDFedits] drawIText: editModeText drawing", {
       text: rawText.slice(0, 30),
       textLen: rawText.length,
       pristine: (obj as { pristine?: boolean }).pristine,

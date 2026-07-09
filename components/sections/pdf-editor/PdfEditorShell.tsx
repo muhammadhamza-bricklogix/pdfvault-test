@@ -42,10 +42,11 @@ import { FindReplaceModal } from "./FindReplaceModal";
 import { FormFieldsModal } from "./FormFieldsModal";
 import { PageNumbersModal } from "./PageNumbersModal";
 import { PasswordModal } from "./PasswordModal";
-import { EditorInfoBar, EditorToolBar } from "./EditorTopBar";
+import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { PerformancePanel } from "./PerformancePanel";
+import { PvEditorTopChrome, TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
 import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
@@ -329,12 +330,13 @@ function EditorLayout() {
 
   return (
     <>
-      <EditorInfoBar />
-      <EditorToolBar />
+      <TopAppBar />
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar onReorderPages={handleReorderPages} />
-        <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
-        <div aria-hidden className="w-44 shrink-0 bg-default-100" />
+        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
+          <ToolToolbar />
+          <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
+        </div>
         <RightSidebar fabricCanvas={fabricCanvas} />
 
         <div className="pointer-events-none absolute bottom-4 right-[17rem] z-10">

@@ -17,7 +17,6 @@ import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
 import { useTestHarness } from "@/lib/client/hooks/pdf-editor/use-test-harness";
 import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
-import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -54,7 +53,6 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerScrollRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
-  const isMobile = useIsMobile();
   const file = usePdfEditorStore((s) => s.file);
   const fittedFileRef = useRef<File | null>(null);
 

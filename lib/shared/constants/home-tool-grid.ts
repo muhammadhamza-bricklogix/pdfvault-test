@@ -36,8 +36,6 @@ export const HOME_TOOL_GRID_SUBTITLE =
 
 export const HOME_TOOL_GRID_BADGE_SUFFIX = "PDF Tools";
 
-const PDF_TOOLS_HUB = `${ROUTES.PUBLIC.HOME}#pdf-tools`;
-
 /** Icons allowed on home tool cards (pool for variety + typing). */
 const HOME_TOOL_ICON_POOL = [
   TextFontIcon,

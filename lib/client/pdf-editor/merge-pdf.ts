@@ -11,6 +11,8 @@ import type {
 
 import { rgb } from "pdf-lib";
 
+import { logger } from "@/lib/shared/utils/logger";
+
 import {
   createCoordinateContext,
   toPdfDim,
@@ -152,8 +154,7 @@ function logMergeEditModeTextSummary(
   if (!eds.length) return;
   const modified = eds.filter(isModifiedEditModeText);
 
-  /* eslint-disable-next-line no-console */
-  console.info("[PDFedits] merge: editModeText on page", {
+  logger.debug("[PDFedits] merge: editModeText on page", {
     page: pageNum,
     total: eds.length,
     modifiedDrawn: modified.length,
@@ -242,8 +243,7 @@ function whiteoutSourceText(
     opacity: 1,
   });
 
-  /* eslint-disable-next-line no-console */
-  console.info("[PDFedits] whiteout: drew rect over source word", {
+  logger.debug("[PDFedits] whiteout: drew rect over source word", {
     text:
       typeof (obj as { originalText?: string }).originalText === "string"
         ? (obj as { originalText?: string }).originalText!.slice(0, 24)

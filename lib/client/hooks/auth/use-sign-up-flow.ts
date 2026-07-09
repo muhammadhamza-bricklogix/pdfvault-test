@@ -99,8 +99,8 @@ export function useSignUpFlow() {
     try {
       await signUp.sso({
         strategy: "oauth_google",
-        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
-        redirectCallbackUrl: ROUTES.APP.DASHBOARD,
+        redirectCallbackUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectUrl: ROUTES.APP.DASHBOARD,
       });
     } catch (error) {
       logger.error("Google sign-up failed", error);

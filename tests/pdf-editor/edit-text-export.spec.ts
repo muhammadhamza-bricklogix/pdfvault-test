@@ -79,7 +79,7 @@ async function exportPdfDownload(
 
 test.describe("PDF editor — Edit Text", () => {
   // Export / mocked-save specs do not need a real Clerk session.
-  test.use({ storageState: {} });
+  test.use({ storageState: undefined });
 
   test.describe("Sample PDF (upright pages)", () => {
     test.beforeEach(async ({ page }) => {
@@ -88,7 +88,7 @@ test.describe("PDF editor — Edit Text", () => {
     });
 
     test("modified source text survives PDF export", async ({ page }) => {
-      await page.getByRole("radio", { name: /Edit Text/i }).click();
+      await page.getByRole("button", { name: /^edit$/i }).first().click();
       await armEditTextAndWait(page);
 
       const editedText = `${EDITED_MARKER}${Date.now()}`;
@@ -124,7 +124,7 @@ test.describe("PDF editor — Edit Text", () => {
         window.__PDF_EDITOR_TEST__!.getStore().setIsSignedIn(true);
       });
 
-      await page.getByRole("radio", { name: /Edit Text/i }).click();
+      await page.getByRole("button", { name: /^edit$/i }).first().click();
       await armEditTextAndWait(page);
 
       const editedText = `${EDITED_MARKER}SAVE_${Date.now()}`;
@@ -254,7 +254,7 @@ test.describe("PDF editor — Edit Text", () => {
       await page.locator('input[type="file"]').setInputFiles(rotatedFixture);
       await waitForPdfReady(page);
 
-      await page.getByRole("radio", { name: /Edit Text/i }).click();
+      await page.getByRole("button", { name: /^edit$/i }).first().click();
       await armEditTextAndWait(page);
 
       const editedText = `${EDITED_MARKER}ROT_${Date.now()}`;

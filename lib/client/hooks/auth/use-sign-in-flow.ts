@@ -137,8 +137,8 @@ export function useSignInFlow() {
     try {
       await signIn.sso({
         strategy: "oauth_google",
-        redirectCallbackUrl: afterSignInPath,
-        redirectUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectUrl: afterSignInPath,
       });
     } catch (error) {
       logger.error("Google sign-in failed", error);

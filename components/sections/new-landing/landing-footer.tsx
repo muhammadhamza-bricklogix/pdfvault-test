@@ -125,7 +125,7 @@ export function LandingFooter() {
     <footer className="relative isolate overflow-hidden bg-[#400000] text-white">
       <FooterBackground />
 
-      <div className="relative z-[1] mx-auto w-[min(1240px,calc(100%-48px))] md:min-h-[589px]">
+      <div className="relative z-[1] w-full px-6 sm:px-10 md:min-h-[589px]">
         {/* Top: brand + four link columns (measured desktop grid) */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[440px_132px_145px_152px_155px] md:gap-x-[54px] md:pt-[100px]">
           {/* Brand + contact */}
