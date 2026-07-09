@@ -294,7 +294,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     pdfDoc.addPage([dims.width, dims.height]);
 
     const newBytes = await pdfDoc.save();
-    const newFile = new File([newBytes], currentFile.name, {
+    const newFile = new File([newBytes as BlobPart], currentFile.name, {
       type: "application/pdf",
     });
 
