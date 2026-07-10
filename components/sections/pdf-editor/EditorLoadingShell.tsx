@@ -41,10 +41,7 @@ export function EditorLoadingShell() {
         <div className="flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
           <div className="flex shrink-0 items-center justify-center gap-3 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton
-                key={i}
-                className="h-11 w-[200px] rounded-[16px]"
-              />
+              <Skeleton key={i} className="h-11 w-[200px] rounded-[16px]" />
             ))}
           </div>
           <div className="flex flex-1 items-start justify-center overflow-hidden bg-default-100 p-6">

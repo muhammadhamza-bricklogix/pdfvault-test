@@ -140,7 +140,7 @@ export default function AccountSettingsPage() {
         />
         <div className="mt-4 flex justify-end">
           <button
-            className="inline-flex h-10 items-center rounded-full bg-[var(--pv-brand-red)] px-5 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 cursor-pointer items-center rounded-full bg-[var(--pv-brand-red)] px-5 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!canSubmit}
             type="button"
             onClick={() => void submit()}

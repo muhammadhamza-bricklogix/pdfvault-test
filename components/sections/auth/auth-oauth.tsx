@@ -2,7 +2,7 @@
 // cards (login/signup). Icons are decorative; labels live on the buttons.
 
 export const OAUTH_BUTTON_CLASS =
-  "flex h-[46px] w-full items-center justify-center gap-3.5 rounded-[12px] border border-[#e1ebed] bg-white text-[16px] text-[#5f5f5f] shadow-[0_5px_12px_rgba(24,39,45,0.08)] transition-colors hover:bg-[#fafbfb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] disabled:opacity-60";
+  "flex h-[46px] w-full cursor-pointer items-center justify-center gap-3.5 rounded-[12px] border border-[#e1ebed] bg-white text-[16px] text-[#5f5f5f] shadow-[0_5px_12px_rgba(24,39,45,0.08)] transition-colors hover:bg-[#fafbfb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] disabled:cursor-not-allowed disabled:opacity-60";
 
 export function AppleIcon() {
   return (

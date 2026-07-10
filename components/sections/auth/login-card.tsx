@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -70,6 +71,7 @@ export function LoginCard() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordRevealed, setPasswordRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -285,7 +287,7 @@ export function LoginCard() {
             ) : null}
 
             <button
-              className="mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
               type="submit"
             >
               Continue
@@ -296,7 +298,7 @@ export function LoginCard() {
       ) : (
         <form noValidate className="mt-8" onSubmit={onSubmitPassword}>
           <button
-            className="mb-4 inline-flex items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
+            className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
             type="button"
             onClick={goBackToEmail}
           >
@@ -313,20 +315,26 @@ export function LoginCard() {
               *
             </span>
           </label>
-          <input
-            autoFocus
-            required
-            aria-describedby={error ? errorId : undefined}
-            aria-invalid={error ? true : undefined}
-            autoComplete="current-password"
-            className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
-            id={passwordId}
-            name="password"
-            placeholder="••••••••"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <div className="relative mt-2">
+            <input
+              autoFocus
+              required
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? true : undefined}
+              autoComplete="current-password"
+              className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
+              id={passwordId}
+              name="password"
+              placeholder="••••••••"
+              type={passwordRevealed ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <PasswordRevealToggle
+              revealed={passwordRevealed}
+              onToggle={() => setPasswordRevealed((v) => !v)}
+            />
+          </div>
 
           {error ? (
             <p
@@ -339,7 +347,7 @@ export function LoginCard() {
           ) : null}
 
           <button
-            className="mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+            className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
             disabled={submitting}
             type="submit"
           >
