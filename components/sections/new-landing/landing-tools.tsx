@@ -212,8 +212,15 @@ const TOOLS: Tool[] = [
   },
   {
     icon: "/landing/convert.svg",
-    title: "PDF to Any Format",
-    description: "Pick your target format after upload — Word, Excel, images.",
+    title: "PDF to HTML",
+    description: "Turn a PDF into a lightweight HTML page you can embed.",
+    href: DASHBOARD,
+    tabs: ["convert-from"],
+  },
+  {
+    icon: "/landing/convert.svg",
+    title: "PDF to Plain Text",
+    description: "Extract the raw text from a PDF as a plain .txt file.",
     href: DASHBOARD,
     tabs: ["convert-from"],
   },

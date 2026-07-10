@@ -65,9 +65,14 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
     description:
       "Turn a PDF into an editable .pptx deck with each page as its own slide.",
   },
-  "pdf-to-any": {
-    title: "Convert PDF to any format",
+  "pdf-to-html": {
+    title: "Convert PDF to HTML",
     description:
-      "Pick your target format after uploading — Word, Excel, images, and more.",
+      "Turn a PDF into a lightweight HTML page you can embed or edit.",
+  },
+  "pdf-to-text": {
+    title: "Convert PDF to Plain Text",
+    description:
+      "Extract the raw text from a PDF as a plain .txt file, ready to reuse.",
   },
 };
