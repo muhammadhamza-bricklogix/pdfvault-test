@@ -45,25 +45,25 @@ const QUICK_TOOLS: readonly QuickTool[] = [
   {
     title: "Edit PDF",
     description: "Edit text, draw, highlight, and annotate.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Edit%20PDF.svg`,
   },
   {
     title: "Sign & Watermark",
     description: "Sign and watermark with vector strokes.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Sign%20%26%20Watermark.svg`,
   },
   {
     title: "Organize Pages",
     description: "Reorder, rotate, split, and merge pages.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Organize%20Pages.svg`,
   },
   {
     title: "Protect PDF",
     description: "Add or remove password protection.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Protect%20PDF.svg`,
   },
 ];

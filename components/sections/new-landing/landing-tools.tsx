@@ -39,9 +39,9 @@ const TOOLS: Tool[] = [
   // ─── Edit & Sign ────────────────────────────────────────────────────────
   {
     icon: "/landing/editor.svg",
-    title: "PDF Editor",
+    title: "PDF Composer",
     description:
-      "Revise text and objects inline with our full in-browser PDF editor.",
+      "Revise text and objects inline with our full in-browser PDF composer.",
     href: DASHBOARD,
     tabs: ["edit"],
   },

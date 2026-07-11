@@ -27,7 +27,7 @@ export const ROUTES = {
     SETTINGS_DANGER: "/dashboard/settings/danger",
   },
   TOOLS: {
-    PDF_EDITOR: "/pdf-editor",
+    PDF_EDITOR: "/pdf-composer",
     PDF_TO_EXCEL: "/tools/pdf-to-xlsx",
     EXCEL_TO_PDF: "/tools/xlsx-to-pdf",
     DOC_TO_PDF: "/tools/docx-to-pdf",

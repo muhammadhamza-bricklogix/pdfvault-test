@@ -67,7 +67,7 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
     heading: "EDIT & SIgn",
     tools: [
       {
-        label: "PDF Editor",
+        label: "PDF Composer",
         icon: { kind: "line", id: "editor" },
         href: DASHBOARD,
       },

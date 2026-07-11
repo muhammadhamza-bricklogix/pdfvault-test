@@ -16,7 +16,7 @@ import { LanguageSwitcher } from "./language-switcher";
 
 const PDF_TOOL_LINKS = [
   { href: `${ROUTES.PUBLIC.HOME}#pdf-tools`, label: "All tools overview" },
-  { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF editor" },
+  { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF Composer" },
   { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
 ] as const;
 

@@ -186,18 +186,18 @@ export function LandingFooter() {
           against the tinted footer artwork.
         */}
         <div className="mt-14 border-t border-white/10 pb-14 pt-8 md:absolute md:inset-x-0 md:top-[438px] md:mt-0 md:pb-0 md:pt-6">
-          <div className="flex flex-row flex-wrap items-center justify-between gap-4">
-            <p className="text-[13px] text-white/60 sm:text-[14px]">
+          <div className="flex flex-row flex-nowrap items-center justify-between gap-3 sm:gap-4">
+            <p className="min-w-0 flex-1 truncate text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
             </p>
-            <ul className="flex items-center gap-3">
+            <ul className="flex shrink-0 items-center gap-2 sm:gap-3">
               {SOCIAL_LINKS.map((social) => (
                 <li key={social.label}>
                   <a
                     aria-label={social.label}
-                    className={`flex size-9 items-center justify-center rounded-full text-white/80 transition-opacity duration-200 hover:opacity-100 sm:size-10 ${FOCUS_RING}`}
+                    className={`flex size-7 items-center justify-center rounded-full text-white/80 transition-opacity duration-200 hover:opacity-100 sm:size-10 ${FOCUS_RING}`}
                     href={social.href}
                   >
                     <svg

@@ -43,7 +43,7 @@ const ABOUT_FAQ: FaqEntry[] = [
   },
   {
     answer:
-      "When Word and other Office conversions are fully wired, you’ll upload from the home or tool flows and download a PDF. Today, the PDF editor accepts PDFs directly; check our conversion tools for formats we support today.",
+      "When Word and other Office conversions are fully wired, you’ll upload from the home or tool flows and download a PDF. Today, the PDF Composer accepts PDFs directly; check our conversion tools for formats we support today.",
     id: "about-5",
     question: "Can I convert a Word document into a PDF?",
   },
