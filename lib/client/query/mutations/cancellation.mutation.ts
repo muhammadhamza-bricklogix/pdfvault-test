@@ -17,26 +17,6 @@ export type ChurnReason =
 export interface CancellationFeedback {
   reason: ChurnReason;
   freeText?: string;
-  rejectedThroughTier?: number;
-}
-
-export function useRecordOfferShownMutation() {
-  return useMutation({
-    mutationFn: async (input: { tier: number }) => {
-      await apiClient.post("/billing/cancellation/offer-shown", input);
-    },
-  });
-}
-
-export function useAcceptDownsellMutation() {
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: { tier: 1 | 2 }) => {
-      await apiClient.post("/billing/cancellation/accept-downsell", input);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
-  });
 }
 
 export function useFinalizeCancellationMutation() {

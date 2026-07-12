@@ -5,11 +5,7 @@ import type { ChurnReason } from "@/lib/client/query/mutations/cancellation.muta
 import { Button, Modal } from "@heroui/react";
 import { useEffect, useState } from "react";
 
-import {
-  useAcceptDownsellMutation,
-  useFinalizeCancellationMutation,
-  useRecordOfferShownMutation,
-} from "@/lib/client/query/mutations/cancellation.mutation";
+import { useFinalizeCancellationMutation } from "@/lib/client/query/mutations/cancellation.mutation";
 import { toast } from "@/lib/shared/utils/toast";
 
 interface CancellationFlowProps {
@@ -18,27 +14,21 @@ interface CancellationFlowProps {
 }
 
 /**
- * Three-step cancellation modal.
+ * Two-step cancellation modal.
  *
  *   Step 1 — churn-reason capture (categorical + free-text)
- *   Step 2 — Tier-1 downsell ("1 year full access at ~90% off")
- *   Step 3 — Tier-2 downsell ("2 years at the same discounted rate")
- *   Step 4 — final confirmation → cancel-at-period-end
+ *   Step 2 — final confirmation → cancel-at-period-end
  *
- * Skipping to the next tier records the previous offer as "shown but
- * rejected" via `/billing/cancellation/offer-shown`. Accepting either
- * tier swaps the product and closes. Rejecting both fires the final
- * cancellation with the captured feedback → Solidgate cancel_code.
+ * The 1Y / 2Y downsell tiers were dropped from the product spec — user
+ * goes straight from feedback to finalisation. Feedback is still
+ * mapped to a Solidgate cancel_code on the backend so retention
+ * analytics stay unchanged.
  */
 export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
-  const [step, setStep] = useState<
-    "feedback" | "tier-1" | "tier-2" | "confirmed"
-  >("feedback");
+  const [step, setStep] = useState<"feedback" | "confirmed">("feedback");
   const [reason, setReason] = useState<ChurnReason>("unforeseen_circumstances");
   const [freeText, setFreeText] = useState("");
 
-  const recordShown = useRecordOfferShownMutation();
-  const acceptDownsell = useAcceptDownsellMutation();
   const finalize = useFinalizeCancellationMutation();
 
   useEffect(() => {
@@ -53,39 +43,9 @@ export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
     };
   }, [isOpen]);
 
-  const advanceFromFeedback = () => {
-    recordShown.mutate({ tier: 1 });
-    setStep("tier-1");
-  };
-
-  const advanceToTier2 = () => {
-    recordShown.mutate({ tier: 2 });
-    setStep("tier-2");
-  };
-
-  const handleAccept = (tier: 1 | 2) => {
-    acceptDownsell.mutate(
-      { tier },
-      {
-        onSuccess: () => {
-          toast.success({
-            title: "Discount applied",
-            description: "Your plan has been switched.",
-          });
-          setStep("confirmed");
-        },
-        onError: () =>
-          toast.error({
-            title: "Couldn't apply the discount",
-            description: "Please try again or contact support.",
-          }),
-      },
-    );
-  };
-
   const handleFinalize = () => {
     finalize.mutate(
-      { reason, freeText: freeText || undefined, rejectedThroughTier: 2 },
+      { reason, freeText: freeText || undefined },
       {
         onSuccess: () => setStep("confirmed"),
         onError: () =>
@@ -109,31 +69,12 @@ export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
           <Modal.CloseTrigger />
           {step === "feedback" && (
             <FeedbackStep
+              finalising={finalize.isPending}
               freeText={freeText}
               reason={reason}
+              onCancel={handleFinalize}
               onFreeTextChange={setFreeText}
-              onNext={advanceFromFeedback}
               onReasonChange={setReason}
-            />
-          )}
-          {step === "tier-1" && (
-            <TierStep
-              accepting={acceptDownsell.isPending}
-              rejectLabel="No thanks, continue cancelling"
-              tier={1}
-              onAccept={() => handleAccept(1)}
-              onReject={advanceToTier2}
-            />
-          )}
-          {step === "tier-2" && (
-            <TierStep
-              accepting={acceptDownsell.isPending}
-              rejectLabel={
-                finalize.isPending ? "Cancelling…" : "No thanks, cancel my plan"
-              }
-              tier={2}
-              onAccept={() => handleAccept(2)}
-              onReject={handleFinalize}
             />
           )}
           {step === "confirmed" && <ConfirmedStep onClose={onClose} />}
@@ -161,13 +102,15 @@ function FeedbackStep({
   onReasonChange,
   freeText,
   onFreeTextChange,
-  onNext,
+  onCancel,
+  finalising,
 }: {
   reason: ChurnReason;
   onReasonChange: (r: ChurnReason) => void;
   freeText: string;
   onFreeTextChange: (t: string) => void;
-  onNext: () => void;
+  onCancel: () => void;
+  finalising: boolean;
 }) {
   return (
     <>
@@ -208,50 +151,8 @@ function FeedbackStep({
         />
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="primary" onPress={onNext}>
-          Continue
-        </Button>
-      </Modal.Footer>
-    </>
-  );
-}
-
-function TierStep({
-  tier,
-  onAccept,
-  onReject,
-  accepting,
-  rejectLabel,
-}: {
-  tier: 1 | 2;
-  onAccept: () => void;
-  onReject: () => void;
-  accepting: boolean;
-  rejectLabel: string;
-}) {
-  const heading =
-    tier === 1
-      ? "Wait — take 90% off a full year"
-      : "Lock the same discount for 2 years";
-  const body =
-    tier === 1
-      ? "One payment. One-year access to every PDFVault feature at the deepest discount we offer."
-      : "Same discounted rate, twice the runway. Perfect if you know you'll come back to it.";
-
-  return (
-    <>
-      <Modal.Header>
-        <Modal.Heading>{heading}</Modal.Heading>
-      </Modal.Header>
-      <Modal.Body>
-        <p className="text-sm text-default-600">{body}</p>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button isDisabled={accepting} variant="secondary" onPress={onReject}>
-          {rejectLabel}
-        </Button>
-        <Button isDisabled={accepting} variant="primary" onPress={onAccept}>
-          {accepting ? "Applying…" : "Accept offer"}
+        <Button isDisabled={finalising} variant="primary" onPress={onCancel}>
+          {finalising ? "Cancelling…" : "Cancel my subscription"}
         </Button>
       </Modal.Footer>
     </>
@@ -266,8 +167,9 @@ function ConfirmedStep({ onClose }: { onClose: () => void }) {
       </Modal.Header>
       <Modal.Body>
         <p className="text-sm text-default-600">
-          The change will reflect in your billing dashboard within a minute. You
-          can always come back and change your plan later.
+          Your subscription has been cancelled. You&apos;ll continue to have
+          access until the end of your current billing period. You can renew
+          anytime from your billing settings.
         </p>
       </Modal.Body>
       <Modal.Footer>

@@ -12,7 +12,7 @@
 - **Paywall triggers at value moment** — the very first time the user asks the backend to convert, export a downloadable file, share publicly, or run a bulk PDF-tool operation, the paywall fires.
 - **7-day trial for $0.99** — one-time trial charge, then $25/month recurring. Full disclosure shown adjacent to the pay button.
 - **Solidgate iframe** — card data never touches PDFVault's servers. Apple Pay + Google Pay + card, all inside the Solidgate-hosted iframe.
-- **Cancel anytime** — dashboard button, three-step flow captures reason, offers a 90%-off 1-year downsell, then a 2-year downsell, then finalises.
+- **Cancel anytime** — dashboard button, two-step flow captures reason then finalises.
 - **Access continues until period end** — cancellation is not instant termination; the user still gets what they paid for.
 
 ---
@@ -253,7 +253,7 @@ The **email-to-cancel** line (`payments@pdfvault.ai`) is mandatory compliance co
 
 ---
 
-### 9. Cancellation flow — three-step retention
+### 9. Cancellation flow — two-step
 
 **Component:** [`components/sections/billing/CancellationFlow.tsx`](../components/sections/billing/CancellationFlow.tsx)
 
@@ -271,46 +271,21 @@ Triggered by the "Cancel subscription" button on the billing tab.
   7. Other
 - **Free text** (optional, up to 2000 chars): "What would make you use PDFVault regularly?"
 
-**Continue** → step 2.
+**Cancel my subscription** button → step 2.
 
 The categorical answer is translated by the backend into a Solidgate `cancel_code` string via a mapping table in `billing.controller.ts`. Also stored locally on `Subscription.cancelReasonCode` + `cancelReasonText` for retention analytics.
 
-#### Step 2 — Tier 1 downsell ("Wait — take 90% off a full year")
-
-Headline:
-> Wait — take 90% off a full year
-
-Body:
-> One payment. One-year access to every PDFVault feature at the deepest discount we offer.
-
-Buttons:
-- **Accept offer** → `POST /billing/cancellation/accept-downsell` with `tier: 1` → Solidgate `switchProduct` to `DOWNSELL_1Y` → toast "Discount applied. Your plan has been switched." → done.
-- **No thanks, continue cancelling** → analytics row recorded → step 3.
-
-#### Step 3 — Tier 2 downsell ("Lock the same discount for 2 years")
-
-Headline:
-> Lock the same discount for 2 years
-
-Body:
-> Same discounted rate, twice the runway. Perfect if you know you'll come back to it.
-
-Buttons:
-- **Accept offer** → `POST /billing/cancellation/accept-downsell` with `tier: 2` → Solidgate `switchProduct` to `DOWNSELL_2Y` → done.
-- **No thanks, cancel my plan** → step 4 (finalise).
-
-#### Step 4 — Finalise ("You're all set")
+#### Step 2 — Confirmation ("You're all set")
 
 - `POST /billing/subscription/cancel` with:
   - `reason` (the categorical answer from step 1)
   - `freeText` (optional)
-  - `rejectedThroughTier: 2`
 - Backend calls Solidgate `cancelSubscription` with `cancelAtPeriodEnd: true` + the mapped `cancel_code`.
 - Webhook: `subscription.cancelled` → local status flips to `CANCELLED`, `cancelledAt` populated, `currentPeriodEnd` stays in place.
-- Confirmation screen: "The change will reflect in your billing dashboard within a minute."
+- Confirmation screen: "Your subscription has been cancelled. You'll continue to have access until the end of your current billing period."
 - Cancellation confirmation email sent via SES.
 
-**Retention analytics:** every step records a `CancellationOffer` row (tier + accepted flag) so the dashboard can measure "of users who saw Tier 1, what % accepted vs advanced to Tier 2 vs closed the modal entirely."
+**Downsells (dropped):** an earlier version of the spec included a 1-year 90%-off downsell followed by a 2-year lock-in. Removed per product decision. The `CancellationOffer` model + `DOWNSELL_1Y` / `DOWNSELL_2Y` plan kinds remain in the schema so retention flows can be re-added later without a migration.
 
 ---
 
@@ -417,7 +392,6 @@ Never edit an old `DISCLAIMER_VERSION` value retroactively — you'd break the a
 - **Trial → paid conversion** = `count(subs that reached ACTIVE from TRIALING) / count(subs that started TRIALING)`
 - **Voluntary churn** = users who cancelled during a period
 - **Involuntary churn** = users where `PAST_DUE → CANCELLED` via terminal card failure
-- **Downsell acceptance** = `count(CancellationOffer where accepted=true group by tier) / count(offers shown)`
 - **MRR** = `sum(Subscription.plan.recurringAmountMinor / plan.intervalMonths) where status IN (ACTIVE, TRIALING)`
 
 **Alerts (Phase 8):**
