@@ -10,10 +10,21 @@
 
 - **Free by default** — editing a PDF (open, save to vault, annotate, edit text, sign, watermark) is free. Sign-in is not required to start.
 - **Paywall triggers at value moment** — the very first time the user asks the backend to convert, export a downloadable file, share publicly, or run a bulk PDF-tool operation, the paywall fires.
-- **7-day trial for $0.99** — one-time trial charge, then $25/month recurring. Full disclosure shown adjacent to the pay button.
+- **One SKU only** — 7-day trial at $0.99, then $25/month recurring. No standalone annual plan. No retention downsells. Full disclosure shown adjacent to the pay button.
 - **Solidgate iframe** — card data never touches PDFVault's servers. Apple Pay + Google Pay + card, all inside the Solidgate-hosted iframe.
 - **Cancel anytime** — dashboard button, two-step flow captures reason then finalises.
 - **Access continues until period end** — cancellation is not instant termination; the user still gets what they paid for.
+
+## Plan catalog
+
+| Plan kind | Trial | Recurring | Interval | Notes |
+|---|---|---|---|---|
+| `TRIAL_MONTHLY` | $0.99 for 7 days | $25.00 | Every 30 days | The only plan seeded and offered. Backed by one Solidgate `product_id` set via `SOLIDGATE_PRODUCT_TRIAL_MONTHLY`. |
+| ~~`ANNUAL`~~ | — | — | — | Enum value exists in schema, no plan seeded. Reserved for future. |
+| ~~`DOWNSELL_1Y`~~ | — | — | — | Enum value exists in schema, no plan seeded. Reserved for future retention flow. |
+| ~~`DOWNSELL_2Y`~~ | — | — | — | Enum value exists in schema, no plan seeded. Reserved for future retention flow. |
+
+Prices are stored in the `Plan` DB row and read at request time — the finance team can change them without a deploy.
 
 ---
 
@@ -285,7 +296,7 @@ The categorical answer is translated by the backend into a Solidgate `cancel_cod
 - Confirmation screen: "Your subscription has been cancelled. You'll continue to have access until the end of your current billing period."
 - Cancellation confirmation email sent via SES.
 
-**Downsells (dropped):** an earlier version of the spec included a 1-year 90%-off downsell followed by a 2-year lock-in. Removed per product decision. The `CancellationOffer` model + `DOWNSELL_1Y` / `DOWNSELL_2Y` plan kinds remain in the schema so retention flows can be re-added later without a migration.
+**Retention flows (not implemented):** the schema keeps `CancellationOffer` and `PlanKind.DOWNSELL_1Y` / `DOWNSELL_2Y` as dormant future-proofing, but nothing writes to them today. When retention lands, no migration required — just wire the modal steps and seed the discounted plans.
 
 ---
 
@@ -305,7 +316,7 @@ At `currentPeriodEnd`:
 
 ### 11. Invoices
 
-Each successful payment (trial charge, monthly renewal, downsell payment) produces:
+Each successful payment (trial charge, monthly renewal) produces:
 
 - A local `Payment` row with `invoiceNumber` + `invoiceUrl` populated from the Solidgate webhook payload.
 - A row in the invoices table on `/dashboard/settings/billing`:
@@ -405,7 +416,7 @@ Never edit an old `DISCLAIMER_VERSION` value retroactively — you'd break the a
 
 - Every webhook delivery: event key, event type, verification result, processing outcome.
 - Every checkout intent: user id, plan kind, disclaimer version — never the secret / signature.
-- Every downsell decision: tier + accepted / rejected + timestamp.
+- Every cancellation: reason code + free-text length + subscription id.
 
 Secrets (Solidgate secret key, webhook secret) are NEVER logged anywhere. A CI job at Phase 8 greps the `next build` output for known secret prefixes as a last-line defence.
 
@@ -434,7 +445,7 @@ Secrets (Solidgate secret key, webhook secret) are NEVER logged anywhere. A CI j
 - [`lib/shared/constants/billing.ts`](../lib/shared/constants/billing.ts) — disclaimer template + version
 
 **Backend** (in `pdf-viewer-backend` repo):
-- `src/billing/billing.controller.ts` — checkout intent, subscription, cancel, restore, downsell, invoices
+- `src/billing/billing.controller.ts` — checkout intent, subscription, cancel, restore, invoices
 - `src/billing/services/solidgate.service.ts` — SDK wrapper + webhook verify
 - `src/billing/services/webhook-processor.service.ts` — state machine
 - `src/billing/webhooks/solidgate-webhook.controller.ts` — raw-body receiver
