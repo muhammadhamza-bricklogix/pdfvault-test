@@ -28,6 +28,11 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     label: "Language & Region",
   },
   {
+    href: ROUTES.APP.SETTINGS_BILLING,
+    id: "billing",
+    label: "Billing",
+  },
+  {
     href: ROUTES.APP.SETTINGS_DANGER,
     id: "danger",
     label: "Danger Zone",

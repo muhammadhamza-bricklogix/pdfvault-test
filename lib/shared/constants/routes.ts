@@ -24,6 +24,7 @@ export const ROUTES = {
     SETTINGS_GENERAL: "/dashboard/settings/general",
     SETTINGS_ACCOUNT: "/dashboard/settings/account",
     SETTINGS_LANGUAGE: "/dashboard/settings/language",
+    SETTINGS_BILLING: "/dashboard/settings/billing",
     SETTINGS_DANGER: "/dashboard/settings/danger",
   },
   TOOLS: {
