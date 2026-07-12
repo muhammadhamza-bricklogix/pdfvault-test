@@ -51,3 +51,15 @@ export interface CheckoutIntent {
   renewalDate: string;
   currency: string;
 }
+
+export interface Invoice {
+  id: string;
+  amountMinor: number;
+  currency: string;
+  status: "APPROVED" | "DECLINED" | "REFUNDED" | "PENDING";
+  type: "TRIAL" | "RECURRING" | "DOWNSELL" | "REFUND" | "ONE_OFF";
+  invoiceNumber: string | null;
+  invoiceUrl: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}

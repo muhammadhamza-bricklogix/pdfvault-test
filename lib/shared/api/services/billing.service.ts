@@ -1,6 +1,7 @@
 import type {
   CheckoutIntent,
   CheckoutIntentRequest,
+  Invoice,
   Plan,
   SubscriptionSnapshot,
 } from "@/lib/shared/types/billing.types";
@@ -33,8 +34,15 @@ async function createCheckoutIntent(
   return data;
 }
 
+async function listInvoices(): Promise<Invoice[]> {
+  const { data } = await apiClient.get<Invoice[]>(BILLING.INVOICES);
+
+  return data;
+}
+
 export const billingService = {
   listPlans,
   getSubscription,
   createCheckoutIntent,
+  listInvoices,
 };

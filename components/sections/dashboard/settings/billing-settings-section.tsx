@@ -6,6 +6,7 @@ import { Button } from "@heroui/react";
 import { useState } from "react";
 
 import { CancellationFlow } from "@/components/sections/billing/CancellationFlow";
+import { InvoicesTable } from "@/components/sections/billing/InvoicesTable";
 import { useRestoreSubscriptionMutation } from "@/lib/client/query/mutations/cancel-subscription.mutation";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 
@@ -74,6 +75,14 @@ export function BillingSettingsSection() {
           </a>{" "}
           before your next renewal.
         </p>
+      </div>
+
+      <PvSectionHeading
+        description="Download receipts for all past charges."
+        title="Invoices"
+      />
+      <div className="mt-4">
+        <InvoicesTable />
       </div>
 
       <CancellationFlow

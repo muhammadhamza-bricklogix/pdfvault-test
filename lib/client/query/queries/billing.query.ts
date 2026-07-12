@@ -32,3 +32,14 @@ export function usePlansQuery() {
     staleTime: 5 * 60_000,
   });
 }
+
+/**
+ * Invoice history for the dashboard billing tab.
+ */
+export function useInvoicesQuery() {
+  return useQuery({
+    queryKey: billingKeys.invoices(),
+    queryFn: billingService.listInvoices,
+    staleTime: 60_000,
+  });
+}

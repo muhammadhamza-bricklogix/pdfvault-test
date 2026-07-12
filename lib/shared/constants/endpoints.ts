@@ -21,6 +21,7 @@ export const BILLING = {
   PLANS: "/billing/plans",
   SUBSCRIPTION: "/billing/subscription",
   CHECKOUT_INTENT: "/billing/checkout-intent",
+  INVOICES: "/billing/invoices",
 } as const;
 
 export const TOOLS = {
