@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import type { PaywallOutcome } from "./paywall-bus";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
+
+import { setPaywallHandler } from "./paywall-bus";
 
 /**
  * Central controller for the paywall modal. A caller (Download button,
@@ -20,6 +24,13 @@ export function usePaywall() {
   const { data: subscription, isLoading } = useSubscriptionQuery();
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
+    null,
+  );
+  // When a paywall opens because the API interceptor asked for it, the
+  // resolver settles the promise back in the axios pipeline so the
+  // failed request can be retried after payment. Ref so the current
+  // resolver survives re-renders between open and close.
+  const busResolverRef = useRef<((outcome: PaywallOutcome) => void) | null>(
     null,
   );
 
@@ -43,6 +54,13 @@ export function usePaywall() {
   const close = useCallback(() => {
     setIsOpen(false);
     setPending(null);
+    // Notify the bus-side promise that the user bailed so the axios
+    // interceptor can reject with PaywallCancelledError instead of
+    // hanging forever.
+    if (busResolverRef.current) {
+      busResolverRef.current("cancelled");
+      busResolverRef.current = null;
+    }
   }, []);
 
   const onPaymentSuccess = useCallback(async () => {
@@ -51,6 +69,10 @@ export function usePaywall() {
     // firing the queued action — otherwise a download or router-push
     // can race the modal teardown.
     await Promise.resolve();
+    if (busResolverRef.current) {
+      busResolverRef.current("success");
+      busResolverRef.current = null;
+    }
     if (pending) {
       try {
         await pending();
@@ -59,6 +81,27 @@ export function usePaywall() {
       }
     }
   }, [pending]);
+
+  // Wire this modal into the module-level paywall bus so non-React
+  // callers (axios interceptor, service helpers) can trigger it. The
+  // handler returns a promise that settles when the user pays or
+  // closes.
+  useEffect(() => {
+    setPaywallHandler(
+      () =>
+        new Promise<PaywallOutcome>((resolve) => {
+          if (entitled) {
+            resolve("success");
+
+            return;
+          }
+          busResolverRef.current = resolve;
+          setIsOpen(true);
+        }),
+    );
+
+    return () => setPaywallHandler(null);
+  }, [entitled]);
 
   return {
     isOpen,

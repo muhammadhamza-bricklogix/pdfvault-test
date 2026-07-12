@@ -1,7 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
+import { setEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 
@@ -14,11 +16,22 @@ import { billingKeys } from "@/lib/shared/constants/query-keys";
  * also invalidates this key on success.
  */
 export function useSubscriptionQuery() {
-  return useQuery({
+  const result = useQuery({
     queryKey: billingKeys.subscription(),
     queryFn: billingService.getSubscription,
     staleTime: 30_000,
   });
+
+  // Mirror the entitlement flag into the module-level snapshot the
+  // axios request interceptor reads. Cheap to run every render; only
+  // fires the effect when the boolean changes.
+  useEffect(() => {
+    if (result.data) {
+      setEntitledSnapshot(result.data.entitled);
+    }
+  }, [result.data]);
+
+  return result;
 }
 
 /**
