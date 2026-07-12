@@ -17,6 +17,12 @@ export const CONVERSION = {
   CONVERT: "/conversion",
 } as const;
 
+export const BILLING = {
+  PLANS: "/billing/plans",
+  SUBSCRIPTION: "/billing/subscription",
+  CHECKOUT_INTENT: "/billing/checkout-intent",
+} as const;
+
 export const TOOLS = {
   LIST: "/tools",
   SUGGESTED: "/tools/suggested",

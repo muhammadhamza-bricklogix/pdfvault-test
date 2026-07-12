@@ -5,6 +5,7 @@ import type { ThemeProviderProps } from "next-themes";
 import { Toast } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
+import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
@@ -22,13 +23,15 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
   return (
     <NextThemesProvider {...themeProps}>
       <QueryProvider>
-        <OfflineBanner />
-        {children}
-        <Toast.Provider placement="top end" />
-        <UploadToastProvider />
-        <MobileDebugBoot />
-        <UserSyncBoot />
-        <OfflineBoot />
+        <PaywallProvider>
+          <OfflineBanner />
+          {children}
+          <Toast.Provider placement="top end" />
+          <UploadToastProvider />
+          <MobileDebugBoot />
+          <UserSyncBoot />
+          <OfflineBoot />
+        </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>
   );
