@@ -19,9 +19,7 @@ export function InvoicesTable() {
   }
 
   if (!data || data.length === 0) {
-    return (
-      <p className="py-4 text-sm text-default-500">No invoices yet.</p>
-    );
+    return <p className="py-4 text-sm text-default-500">No invoices yet.</p>;
   }
 
   return (
