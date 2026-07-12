@@ -5,6 +5,7 @@ import type { SubscriptionSnapshot } from "@/lib/shared/types/billing.types";
 import { Button } from "@heroui/react";
 import { useState } from "react";
 
+import { CancellationFlow } from "@/components/sections/billing/CancellationFlow";
 import { useRestoreSubscriptionMutation } from "@/lib/client/query/mutations/cancel-subscription.mutation";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 
@@ -75,17 +76,10 @@ export function BillingSettingsSection() {
         </p>
       </div>
 
-      {cancelOpen ? (
-        <div className="mt-4 rounded-lg border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800">
-          Cancellation flow ships in Phase 5. This modal will host the feedback
-          form + Tier-1 / Tier-2 downsell offers.
-          <div className="mt-3 flex gap-2">
-            <Button variant="secondary" onPress={() => setCancelOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <CancellationFlow
+        isOpen={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+      />
     </section>
   );
 }
