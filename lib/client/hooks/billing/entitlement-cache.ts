@@ -5,13 +5,18 @@
  *
  * The snapshot is kept in sync by `useSubscriptionQuery` — every time
  * the query resolves, `setEntitledSnapshot` writes the new value here.
- * SSR + first-paint hit `getEntitledSnapshot()` before the query has
- * ever run, so the default is `true` (fail-open) to avoid a spurious
- * paywall on cold start; the response interceptor's 402/403 handler
- * still catches server-side rejections.
+ *
+ * **Fail-closed default.** Until the subscription query resolves the
+ * snapshot is `false`, so a signed-in user who clicks a gated action
+ * before the query lands still hits the paywall. The alternative
+ * (fail-open) let the paywall trip only when the network was already
+ * in a race — signed-in users would blow past the gate on first
+ * click. `PaywallProvider` mounts `useSubscriptionQuery` at the app
+ * root so the flip to `true` for entitled users happens within a
+ * round-trip of first paint.
  */
 
-let entitledSnapshot = true;
+let entitledSnapshot = false;
 let billingEnabledSnapshot = false;
 
 export function setEntitledSnapshot(value: boolean): void {

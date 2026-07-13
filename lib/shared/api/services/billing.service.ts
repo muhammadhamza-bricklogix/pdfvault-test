@@ -40,9 +40,21 @@ async function listInvoices(): Promise<Invoice[]> {
   return data;
 }
 
+async function syncSubscription(
+  input: { subscriptionId?: string } = {},
+): Promise<{ ok: true; synced: number }> {
+  const { data } = await apiClient.post<{ ok: true; synced: number }>(
+    "/billing/subscription/sync",
+    input,
+  );
+
+  return data;
+}
+
 export const billingService = {
   listPlans,
   getSubscription,
   createCheckoutIntent,
   listInvoices,
+  syncSubscription,
 };
