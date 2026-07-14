@@ -30,12 +30,31 @@ export function useCancelSubscriptionMutation() {
   });
 }
 
+/**
+ * Restores a cancelled-but-still-active subscription. The backend
+ * returns `{ ok: true, message?: string }`:
+ *   - `message` present → the local row was a phantom (Solidgate 404'd
+ *     during the restore call) and the backend cleaned it up. The
+ *     caller should show `message` to the user so they understand why
+ *     the state changed without a real "renew" happening.
+ *   - `message` absent → normal restore succeeded, subscription is
+ *     ACTIVE again on the next query tick.
+ */
+export interface RestoreResult {
+  ok: true;
+  message?: string;
+}
+
 export function useRestoreSubscriptionMutation() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      await apiClient.post("/billing/subscription/restore");
+    mutationFn: async (): Promise<RestoreResult> => {
+      const { data } = await apiClient.post<RestoreResult>(
+        "/billing/subscription/restore",
+      );
+
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
   });

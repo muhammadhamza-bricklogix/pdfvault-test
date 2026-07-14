@@ -35,6 +35,32 @@ export function BillingSettingsSection() {
   const sync = useSyncSubscriptionMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
 
+  const handleRestore = () => {
+    restore.mutate(undefined, {
+      onSuccess: (result) => {
+        if (result?.message) {
+          // Phantom-row cleanup path — backend deleted the local row
+          // because Solidgate didn't know about it. Toast the reason so
+          // the user isn't confused why the button just disappeared.
+          toast.info({
+            title: "Subscription cleaned up",
+            description: result.message,
+          });
+        } else {
+          toast.success({
+            title: "Subscription renewed",
+            description: "You're back on your plan.",
+          });
+        }
+      },
+      onError: () =>
+        toast.error({
+          title: "Couldn't renew",
+          description: "Please try again or contact support.",
+        }),
+    });
+  };
+
   const handleRefresh = async () => {
     try {
       const result = await sync.mutateAsync({});
@@ -82,7 +108,7 @@ export function BillingSettingsSection() {
           restoring={restore.isPending}
           sub={sub}
           onCancel={() => setCancelOpen(true)}
-          onRestore={() => restore.mutate()}
+          onRestore={handleRestore}
         />
       ) : (
         <NoSubscriptionCard />
@@ -164,6 +190,11 @@ function SubscriptionCard({
           >
             {restoring ? "Renewing…" : "Renew subscription"}
           </Button>
+        ) : sub.status === "CANCELLED" ? (
+          <p className="text-[13px] text-[var(--pv-text-muted)]">
+            This subscription is closed. Start a new one from any Convert /
+            Download action.
+          </p>
         ) : (
           <Button variant="secondary" onPress={onCancel}>
             Cancel subscription
