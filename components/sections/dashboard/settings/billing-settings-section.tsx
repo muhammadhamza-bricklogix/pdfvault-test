@@ -7,7 +7,10 @@ import { useState } from "react";
 
 import { CancellationFlow } from "@/components/sections/billing/CancellationFlow";
 import { InvoicesTable } from "@/components/sections/billing/InvoicesTable";
-import { useRestoreSubscriptionMutation } from "@/lib/client/query/mutations/cancel-subscription.mutation";
+import {
+  useHardCancelSubscriptionMutation,
+  useRestoreSubscriptionMutation,
+} from "@/lib/client/query/mutations/cancel-subscription.mutation";
 import { useSyncSubscriptionMutation } from "@/lib/client/query/mutations/billing.mutation";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { toast } from "@/lib/shared/utils/toast";
@@ -33,7 +36,39 @@ export function BillingSettingsSection() {
   const { data: sub, isLoading, refetch } = useSubscriptionQuery();
   const restore = useRestoreSubscriptionMutation();
   const sync = useSyncSubscriptionMutation();
+  const hardCancel = useHardCancelSubscriptionMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
+
+  const handleHardCancel = async () => {
+    if (
+      !confirm(
+        "This will force-cancel your subscription at Solidgate and remove it from your account. Continue?",
+      )
+    ) {
+      return;
+    }
+    try {
+      const result = await hardCancel.mutateAsync();
+
+      toast.success({
+        title:
+          result.solidgateStatus === "cancelled"
+            ? "Subscription cancelled"
+            : "Local subscription cleared",
+        description:
+          result.solidgateStatus === "cancelled"
+            ? "Your Solidgate subscription is cancelled and the local record is cleared."
+            : result.solidgateStatus === "not_found"
+              ? "There was no matching subscription at Solidgate. Local record cleared."
+              : "Couldn't reach Solidgate but the local record has been cleared.",
+      });
+    } catch {
+      toast.error({
+        title: "Couldn't reset subscription",
+        description: "Please try again or email payments@pdfvault.ai.",
+      });
+    }
+  };
 
   const handleRestore = () => {
     restore.mutate(undefined, {
@@ -121,6 +156,38 @@ export function BillingSettingsSection() {
       <div className="mt-4">
         <InvoicesTable />
       </div>
+
+      {hasSubscription ? (
+        <>
+          <PvSectionHeading
+            description="Escape hatch when the normal Cancel flow can't reach Solidgate."
+            title="Advanced"
+          />
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-danger-200 bg-danger-50/40 p-5">
+            <p className="text-[13px] font-semibold text-danger-700">
+              Reset subscription
+            </p>
+            <p className="text-[12px] leading-relaxed text-[var(--pv-text-muted)]">
+              Force-cancels your subscription at Solidgate immediately and
+              removes it from your account. Use this if Cancel isn&apos;t
+              working, if the subscription is stuck, or after a declined
+              trial. You&apos;ll be free to start a new subscription right
+              after.
+            </p>
+            <div>
+              <Button
+                isDisabled={hardCancel.isPending}
+                variant="danger"
+                onPress={() => void handleHardCancel()}
+              >
+                {hardCancel.isPending
+                  ? "Resetting…"
+                  : "Reset subscription"}
+              </Button>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       <CancellationFlow
         isOpen={cancelOpen}

@@ -59,3 +59,30 @@ export function useRestoreSubscriptionMutation() {
     onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
   });
 }
+
+export interface HardCancelResult {
+  ok: true;
+  solidgateStatus: "cancelled" | "not_found" | "error";
+}
+
+/**
+ * Force-cancel + wipe the local subscription row. Escape hatch for a
+ * stuck state (declined trial, phantom row, Solidgate mismatch).
+ * Attempts to cancel at Solidgate but always cleans up locally so the
+ * user can start fresh. `solidgateStatus` reports the outbound result
+ * so the caller can toast the truth.
+ */
+export function useHardCancelSubscriptionMutation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<HardCancelResult> => {
+      const { data } = await apiClient.post<HardCancelResult>(
+        "/billing/subscription/hard-cancel",
+      );
+
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
+  });
+}
