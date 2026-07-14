@@ -25,11 +25,13 @@ const FOOTER_COLUMNS: FooterColumn[] = [
     ],
   },
   {
-    heading: "HELP",
+    heading: "LEGAL",
     links: [
-      { label: "FAQ", href: "#faq" },
       { label: "Privacy", href: ROUTES.LEGAL.PRIVACY },
       { label: "Terms & Condition", href: ROUTES.LEGAL.TERMS },
+      { label: "Refund Policy", href: ROUTES.LEGAL.REFUND },
+      { label: "Cookies", href: ROUTES.LEGAL.COOKIES },
+      { label: "Do Not Sell", href: ROUTES.LEGAL.DO_NOT_SELL },
     ],
   },
   {

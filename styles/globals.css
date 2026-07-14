@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+/*
+ * Route Tailwind v4's `dark:*` variant to whatever `next-themes` sets on
+ * the <html> element. Our ThemeProvider is configured with
+ * `attribute: "data-theme"` so the html gets `data-theme="dark"` when
+ * dark mode is active. Without this custom-variant, `dark:` classes are
+ * dead — that's why the theme toggle previously only affected the
+ * settings pane (which had its own scoped styles) and nothing else.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   /* BRAND RED (#DF3A38) */
   --accent: oklch(62.3% 0.203 26.5);
