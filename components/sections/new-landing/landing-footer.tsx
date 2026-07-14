@@ -145,10 +145,10 @@ export function LandingFooter() {
             <div className="mt-8 flex flex-col gap-5">
               <a
                 className={`flex w-fit items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
-                href="mailto:Info@pdfvault.com"
+                href="mailto:support@pdfvault.ai"
               >
                 <SendIcon />
-                Info@pdfvault.com
+                support@pdfvault.ai
               </a>
               <a
                 className={`flex w-fit items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
