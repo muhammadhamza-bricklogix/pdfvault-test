@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
@@ -19,6 +20,11 @@ const PRIMARY_LINKS: NavLink[] = [
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { isLoaded, isSignedIn } = useAuth();
+  // Signed-in state resolved via Clerk. Until `isLoaded` we render
+  // nothing on the auth slot so the header doesn't flash Login → then
+  // → Dashboard on hydration.
+  const showAuthButtons = isLoaded;
 
   // Sticky-header state: after ~8px the header condenses (tighter height,
   // white/blurred background, subtle shadow) so it visually detaches from
@@ -105,18 +111,31 @@ export function LandingHeader() {
             <LandingLanguageSwitcher />
           </div>
 
-          <a
-            className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-            href={ROUTES.AUTH.SIGN_IN}
-          >
-            Login
-          </a>
-          <a
-            className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
-            href={ROUTES.AUTH.SIGN_UP}
-          >
-            Get started
-          </a>
+          {showAuthButtons ? (
+            isSignedIn ? (
+              <a
+                className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                href={ROUTES.APP.DASHBOARD}
+              >
+                Dashboard
+              </a>
+            ) : (
+              <>
+                <a
+                  className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                  href={ROUTES.AUTH.SIGN_IN}
+                >
+                  Login
+                </a>
+                <a
+                  className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                  href={ROUTES.AUTH.SIGN_UP}
+                >
+                  Get started
+                </a>
+              </>
+            )
+          ) : null}
 
           {/* Mobile menu toggle */}
           <button
@@ -163,20 +182,34 @@ export function LandingHeader() {
               <LandingLanguageSwitcher variant="mobile" />
             </li>
             <li className="flex flex-col gap-2 px-2 pt-1">
-              <a
-                className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                href={ROUTES.AUTH.SIGN_IN}
-                onClick={() => setMobileOpen(false)}
-              >
-                Login
-              </a>
-              <a
-                className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                href={ROUTES.AUTH.SIGN_UP}
-                onClick={() => setMobileOpen(false)}
-              >
-                Get started
-              </a>
+              {showAuthButtons ? (
+                isSignedIn ? (
+                  <a
+                    className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                    href={ROUTES.APP.DASHBOARD}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Dashboard
+                  </a>
+                ) : (
+                  <>
+                    <a
+                      className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                      href={ROUTES.AUTH.SIGN_IN}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Login
+                    </a>
+                    <a
+                      className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      href={ROUTES.AUTH.SIGN_UP}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Get started
+                    </a>
+                  </>
+                )
+              ) : null}
             </li>
           </ul>
         </nav>
