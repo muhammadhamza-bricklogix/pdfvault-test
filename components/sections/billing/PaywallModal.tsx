@@ -80,7 +80,6 @@ export function PaywallModal({
     };
     // Depending only on `isOpen`: a stable mutation identity change
     // would double-fire the intent request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const handleIframeSuccess = async (message?: {
@@ -180,8 +179,8 @@ function ValueColumn({ intent }: { intent: CheckoutIntent }) {
           </span>
         </div>
         <p className="mt-2 text-[13px] text-default-600">
-          7-day trial, then <span className="font-semibold">{renew}/month</span>.
-          Cancel anytime.
+          7-day trial, then <span className="font-semibold">{renew}/month</span>
+          . Cancel anytime.
         </p>
       </div>
 
@@ -200,8 +199,8 @@ function ValueColumn({ intent }: { intent: CheckoutIntent }) {
           <TrustBadge label="30-day support" />
         </div>
         <p>
-          Payments processed by Solidgate. Card details never touch our
-          servers.
+          Card details never touch our servers. All payments run through a
+          PCI-compliant partner.
         </p>
       </div>
     </div>

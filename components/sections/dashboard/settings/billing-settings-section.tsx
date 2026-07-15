@@ -2,7 +2,7 @@
 
 import type { SubscriptionSnapshot } from "@/lib/shared/types/billing.types";
 
-import { Button } from "@heroui/react";
+import { Button, Modal } from "@heroui/react";
 import { useState } from "react";
 
 import { CancellationFlow } from "@/components/sections/billing/CancellationFlow";
@@ -18,19 +18,14 @@ import { toast } from "@/lib/shared/utils/toast";
 import { PvSectionHeading } from "./pv-settings-primitives";
 
 /**
- * `/dashboard/settings/billing` — reads the live subscription snapshot
- * and renders one of five cards:
- *   - NONE            → paywall CTA + trust badges
- *   - TRIALING        → trial countdown + Cancel + auto-renews at date
- *   - ACTIVE          → next renewal date + Cancel
- *   - PAST_DUE        → update-card CTA + Cancel
- *   - CANCELLED (grace) → access-until + Renew
- *   - CANCELLED (terminal) → paywall CTA
+ * `/dashboard/settings/billing` — three stacked sections:
+ *   1. "Your subscription" — plan card + Cancel / Renew actions
+ *   2. "Billing history" — invoices table
+ *   3. "Advanced" — Close-subscription escape hatch, only when a
+ *      subscription row exists
  *
- * A manual "Refresh" button beside the plan header calls
- * `POST /billing/subscription/sync` — pulls latest state from Solidgate
- * REST + upserts locally. Useful when the webhook path isn't wired yet
- * (local dev, staging without a public tunnel).
+ * No third-party payment-processor names in user-visible copy — all
+ * "Solidgate" mentions live in code comments / API paths only.
  */
 export function BillingSettingsSection() {
   const { data: sub, isLoading, refetch } = useSubscriptionQuery();
@@ -38,45 +33,12 @@ export function BillingSettingsSection() {
   const sync = useSyncSubscriptionMutation();
   const hardCancel = useHardCancelSubscriptionMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
-
-  const handleHardCancel = async () => {
-    if (
-      !confirm(
-        "This will force-cancel your subscription at Solidgate and remove it from your account. Continue?",
-      )
-    ) {
-      return;
-    }
-    try {
-      const result = await hardCancel.mutateAsync();
-
-      toast.success({
-        title:
-          result.solidgateStatus === "cancelled"
-            ? "Subscription cancelled"
-            : "Local subscription cleared",
-        description:
-          result.solidgateStatus === "cancelled"
-            ? "Your Solidgate subscription is cancelled and the local record is cleared."
-            : result.solidgateStatus === "not_found"
-              ? "There was no matching subscription at Solidgate. Local record cleared."
-              : "Couldn't reach Solidgate but the local record has been cleared.",
-      });
-    } catch {
-      toast.error({
-        title: "Couldn't reset subscription",
-        description: "Please try again or email payments@pdfvault.ai.",
-      });
-    }
-  };
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   const handleRestore = () => {
     restore.mutate(undefined, {
       onSuccess: (result) => {
         if (result?.message) {
-          // Phantom-row cleanup path — backend deleted the local row
-          // because Solidgate didn't know about it. Toast the reason so
-          // the user isn't confused why the button just disappeared.
           toast.info({
             title: "Subscription cleaned up",
             description: result.message,
@@ -91,7 +53,8 @@ export function BillingSettingsSection() {
       onError: () =>
         toast.error({
           title: "Couldn't renew",
-          description: "Please try again or contact support.",
+          description:
+            "Something went wrong. Please try again or email payments@pdfvault.ai.",
         }),
     });
   };
@@ -102,28 +65,51 @@ export function BillingSettingsSection() {
 
       await refetch();
       toast.success({
-        title: "Subscription refreshed",
-        description: `${result.synced} subscription${result.synced === 1 ? "" : "s"} synced from Solidgate.`,
+        title: "Up to date",
+        description:
+          result.synced > 0
+            ? `Latest ${result.synced === 1 ? "subscription" : `${result.synced} subscriptions`} loaded.`
+            : "Your subscription is up to date.",
       });
     } catch {
       toast.error({
         title: "Couldn't refresh",
-        description: "Please try again or contact support.",
+        description: "Please try again in a moment.",
+      });
+    }
+  };
+
+  const handleCloseSubscription = async () => {
+    setCloseConfirmOpen(false);
+    try {
+      const result = await hardCancel.mutateAsync();
+
+      toast.success({
+        title: "Subscription closed",
+        description:
+          result.solidgateStatus === "cancelled"
+            ? "Your subscription has been closed and your account is ready for a fresh start."
+            : result.solidgateStatus === "not_found"
+              ? "No active subscription was found. Your account is ready for a fresh start."
+              : "The subscription record on your account has been cleared.",
+      });
+    } catch {
+      toast.error({
+        title: "Couldn't close subscription",
+        description: "Please try again or email payments@pdfvault.ai for help.",
       });
     }
   };
 
   if (isLoading || !sub) {
-    return (
-      <p className="py-6 text-sm text-[var(--pv-text-muted)]">Loading…</p>
-    );
+    return <p className="py-6 text-sm text-[var(--pv-text-muted)]">Loading…</p>;
   }
 
   const hasSubscription = sub.status !== "NONE";
 
   return (
     <section>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <PvSectionHeading
           description="Manage your PDFVault subscription and view upcoming charges."
           title="Your subscription"
@@ -150,48 +136,30 @@ export function BillingSettingsSection() {
       )}
 
       <PvSectionHeading
-        description="Download receipts for all past charges."
-        title="Invoices"
+        description="Every past charge with a downloadable receipt."
+        title="Billing history"
       />
       <div className="mt-4">
         <InvoicesTable />
       </div>
 
       {hasSubscription ? (
-        <>
-          <PvSectionHeading
-            description="Escape hatch when the normal Cancel flow can't reach Solidgate."
-            title="Advanced"
-          />
-          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-danger-200 bg-danger-50/40 p-5">
-            <p className="text-[13px] font-semibold text-danger-700">
-              Reset subscription
-            </p>
-            <p className="text-[12px] leading-relaxed text-[var(--pv-text-muted)]">
-              Force-cancels your subscription at Solidgate immediately and
-              removes it from your account. Use this if Cancel isn&apos;t
-              working, if the subscription is stuck, or after a declined
-              trial. You&apos;ll be free to start a new subscription right
-              after.
-            </p>
-            <div>
-              <Button
-                isDisabled={hardCancel.isPending}
-                variant="danger"
-                onPress={() => void handleHardCancel()}
-              >
-                {hardCancel.isPending
-                  ? "Resetting…"
-                  : "Reset subscription"}
-              </Button>
-            </div>
-          </div>
-        </>
+        <AdvancedSection
+          busy={hardCancel.isPending}
+          onOpenClose={() => setCloseConfirmOpen(true)}
+        />
       ) : null}
 
       <CancellationFlow
         isOpen={cancelOpen}
         onClose={() => setCancelOpen(false)}
+      />
+
+      <CloseSubscriptionModal
+        busy={hardCancel.isPending}
+        isOpen={closeConfirmOpen}
+        onClose={() => setCloseConfirmOpen(false)}
+        onConfirm={() => void handleCloseSubscription()}
       />
     </section>
   );
@@ -199,17 +167,16 @@ export function BillingSettingsSection() {
 
 function NoSubscriptionCard() {
   return (
-    <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-dashed border-[var(--pv-hairline-strong)] bg-[var(--pv-surface)] p-6 text-center">
-      <p className="text-[14px] font-semibold text-[var(--pv-text-strong)]">
+    <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[var(--pv-hairline-strong)] bg-[var(--pv-surface)] p-8 text-center">
+      <p className="text-[15px] font-semibold text-[var(--pv-text-strong)]">
         You&apos;re on the free plan
       </p>
-      <p className="text-[13px] text-[var(--pv-text-muted)]">
+      <p className="max-w-md text-[13px] text-[var(--pv-text-muted)]">
         Start a 7-day trial for $0.99 to unlock conversions, exports, and
         sharing. Cancel anytime.
       </p>
       <p className="text-[12px] text-[var(--pv-text-muted)]">
-        The paywall appears the next time you try to convert, share, or
-        export a file.
+        The paywall appears the next time you convert, share, or export a file.
       </p>
     </div>
   );
@@ -250,11 +217,7 @@ function SubscriptionCard({
 
       <div className="mt-2 flex flex-wrap gap-2">
         {sub.cancelledButActive ? (
-          <Button
-            isDisabled={restoring}
-            variant="primary"
-            onPress={onRestore}
-          >
+          <Button isDisabled={restoring} variant="primary" onPress={onRestore}>
             {restoring ? "Renewing…" : "Renew subscription"}
           </Button>
         ) : sub.status === "CANCELLED" ? (
@@ -277,6 +240,109 @@ function SubscriptionCard({
         before your next renewal.
       </p>
     </div>
+  );
+}
+
+function AdvancedSection({
+  busy,
+  onOpenClose,
+}: {
+  busy: boolean;
+  onOpenClose: () => void;
+}) {
+  return (
+    <>
+      <PvSectionHeading
+        description="Rarely needed. Use these only if the standard Cancel option isn't working."
+        title="Advanced"
+      />
+      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-danger-200 bg-danger-50/40 p-5">
+        <div>
+          <p className="text-[13px] font-semibold text-danger-700">
+            Close subscription immediately
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-muted)]">
+            Ends your subscription right away instead of at the end of the
+            billing period. Your account returns to the free plan. Use this when
+            the standard Cancel button isn&apos;t working, when a trial was
+            declined, or when you want a clean slate to restart.
+          </p>
+        </div>
+        <div>
+          <Button isDisabled={busy} variant="danger" onPress={onOpenClose}>
+            {busy ? "Closing…" : "Close subscription"}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CloseSubscriptionModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  busy,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  busy: boolean;
+}) {
+  return (
+    <Modal.Backdrop
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <Modal.Container>
+        <Modal.Dialog className="sm:max-w-[440px]">
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading>Close this subscription?</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="text-sm text-default-700">
+              Your subscription will end immediately and you&apos;ll return to
+              the free plan. This action can&apos;t be undone — you would need
+              to start a new subscription to regain paid access.
+            </p>
+            <ul className="mt-3 flex flex-col gap-1 text-[13px] text-default-600">
+              <li className="flex items-start gap-2">
+                <span
+                  aria-hidden
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-danger-400"
+                />
+                <span>All auto-renewals stop right now.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span
+                  aria-hidden
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-danger-400"
+                />
+                <span>You lose access to paid features immediately.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span
+                  aria-hidden
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-danger-400"
+                />
+                <span>Past invoices remain available on this page.</span>
+              </li>
+            </ul>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button isDisabled={busy} variant="secondary" onPress={onClose}>
+              Keep subscription
+            </Button>
+            <Button isDisabled={busy} variant="danger" onPress={onConfirm}>
+              {busy ? "Closing…" : "Yes, close it"}
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 
@@ -364,10 +430,6 @@ function formatDate(iso: string): string {
   });
 }
 
-/**
- * Human-friendly "in 5 days" / "today" / "yesterday" from an ISO date.
- * Reads nicer in a settings row than a bare date.
- */
 function daysUntil(iso: string): string {
   const now = Date.now();
   const target = new Date(iso).getTime();
