@@ -84,6 +84,13 @@ export function BillingSettingsSection() {
     try {
       const result = await hardCancel.mutateAsync();
 
+      // Force a synchronous refetch so the UI flips to
+      // NoSubscriptionCard immediately, before the toast fires. Without
+      // this, `invalidateQueries` in the mutation's onSuccess kicks the
+      // refetch async and users can see the "Renew" / "Close" buttons
+      // for a beat while the query rehydrates.
+      await refetch();
+
       toast.success({
         title: "Subscription closed",
         description:
