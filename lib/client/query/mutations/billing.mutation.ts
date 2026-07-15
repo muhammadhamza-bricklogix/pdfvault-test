@@ -27,6 +27,24 @@ export function useSyncSubscriptionMutation() {
 }
 
 /**
+ * Deep-sync the caller's full billing history from Solidgate. Walks
+ * every subscription tied to the customer, fetches its full state
+ * (invoices + orders), and upserts local Payment rows. Idempotent.
+ * Runs automatically on Billing page mount + on the "Sync history"
+ * button so the invoice table always reflects Solidgate truth even
+ * when webhook delivery was flaky.
+ */
+export function useSyncHistoryMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: billingService.syncHistory,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: billingKeys.all }),
+  });
+}
+
+/**
  * Builds the signed Solidgate merchant-data envelope for the iframe.
  * Consumed exclusively by `PaywallModal` — no other component should
  * call this directly.

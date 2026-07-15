@@ -51,10 +51,25 @@ async function syncSubscription(
   return data;
 }
 
+async function syncHistory(): Promise<{
+  ok: true;
+  subscriptions: number;
+  payments: number;
+}> {
+  const { data } = await apiClient.post<{
+    ok: true;
+    subscriptions: number;
+    payments: number;
+  }>("/billing/history/sync");
+
+  return data;
+}
+
 export const billingService = {
   listPlans,
   getSubscription,
   createCheckoutIntent,
   listInvoices,
   syncSubscription,
+  syncHistory,
 };

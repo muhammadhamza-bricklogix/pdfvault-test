@@ -3,7 +3,7 @@
 import type { SubscriptionSnapshot } from "@/lib/shared/types/billing.types";
 
 import { Button, Modal } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CancellationFlow } from "@/components/sections/billing/CancellationFlow";
 import { InvoicesTable } from "@/components/sections/billing/InvoicesTable";
@@ -11,7 +11,10 @@ import {
   useHardCancelSubscriptionMutation,
   useRestoreSubscriptionMutation,
 } from "@/lib/client/query/mutations/cancel-subscription.mutation";
-import { useSyncSubscriptionMutation } from "@/lib/client/query/mutations/billing.mutation";
+import {
+  useSyncHistoryMutation,
+  useSyncSubscriptionMutation,
+} from "@/lib/client/query/mutations/billing.mutation";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -31,9 +34,46 @@ export function BillingSettingsSection() {
   const { data: sub, isLoading, refetch } = useSubscriptionQuery();
   const restore = useRestoreSubscriptionMutation();
   const sync = useSyncSubscriptionMutation();
+  const syncHistory = useSyncHistoryMutation();
   const hardCancel = useHardCancelSubscriptionMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const autoSyncFiredRef = useRef(false);
+
+  // Auto-run the deep history sync once on mount so the invoices list
+  // reflects Solidgate truth even when webhook delivery was flaky.
+  // Ref-guarded so a React strict-mode double-mount doesn't fire it
+  // twice. Silent on failure — the manual "Sync history" button
+  // surfaces errors clearly if the user chooses to retry.
+  useEffect(() => {
+    if (autoSyncFiredRef.current) return;
+    autoSyncFiredRef.current = true;
+    syncHistory.mutate(undefined, {
+      onSettled: () => {
+        void refetch();
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSyncHistory = () => {
+    syncHistory.mutate(undefined, {
+      onSuccess: (result) => {
+        toast.success({
+          title: "Billing history synced",
+          description:
+            result.payments > 0
+              ? `${result.payments} new charge${result.payments === 1 ? "" : "s"} loaded from your payment history.`
+              : "Your billing history is already up to date.",
+        });
+      },
+      onError: () =>
+        toast.error({
+          title: "Couldn't sync history",
+          description: "Please try again in a moment.",
+        }),
+    });
+  };
 
   const handleRestore = () => {
     restore.mutate(undefined, {
@@ -142,10 +182,20 @@ export function BillingSettingsSection() {
         <NoSubscriptionCard />
       )}
 
-      <PvSectionHeading
-        description="Every past charge with a downloadable receipt."
-        title="Billing history"
-      />
+      <div className="flex items-center justify-between gap-4">
+        <PvSectionHeading
+          description="Every past charge with a downloadable receipt."
+          title="Billing history"
+        />
+        <Button
+          isDisabled={syncHistory.isPending}
+          size="sm"
+          variant="secondary"
+          onPress={handleSyncHistory}
+        >
+          {syncHistory.isPending ? "Syncing…" : "Sync history"}
+        </Button>
+      </div>
       <div className="mt-4">
         <InvoicesTable />
       </div>
