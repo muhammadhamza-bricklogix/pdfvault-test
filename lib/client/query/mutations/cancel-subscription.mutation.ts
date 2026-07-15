@@ -83,6 +83,16 @@ export function useHardCancelSubscriptionMutation() {
 
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
+    onSuccess: async () => {
+      // Nuke the cached data outright instead of just invalidating.
+      // Some subscribers (e.g. usePaywallGuard's snapshot mirror) read
+      // React Query cache directly and race the invalidate/refetch
+      // cycle, showing stale state for a beat after Close. Removing
+      // the cache entry forces every subscriber into a "loading"
+      // state → the very next network round-trip drives the true
+      // NONE-status render.
+      qc.removeQueries({ queryKey: billingKeys.all });
+      await qc.refetchQueries({ queryKey: billingKeys.subscription() });
+    },
   });
 }

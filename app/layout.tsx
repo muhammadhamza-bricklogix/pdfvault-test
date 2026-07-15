@@ -30,8 +30,9 @@ export const metadata: Metadata = {
   description:
     "pdfvault.ai is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
   icons: {
-    apple: "/landing/icon-only.png",
-    icon: "/landing/icon-only.png",
+    apple: "/PDFVault_stacked_layers.png",
+    icon: "/PDFVault_stacked_layers.png",
+    shortcut: "/PDFVault_stacked_layers.png",
   },
 };
 

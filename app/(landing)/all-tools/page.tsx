@@ -9,8 +9,9 @@ export const metadata: Metadata = {
   description:
     "Every PDFVault tool in one place — edit, convert, compress, and organise PDFs, all built for a fast, secure browser workflow.",
   icons: {
-    apple: "/landing/icon-only.png",
-    icon: "/landing/icon-only.png",
+    apple: "/PDFVault_stacked_layers.png",
+    icon: "/PDFVault_stacked_layers.png",
+    shortcut: "/PDFVault_stacked_layers.png",
   },
 };
 
