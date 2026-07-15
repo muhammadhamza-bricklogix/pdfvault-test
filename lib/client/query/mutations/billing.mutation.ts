@@ -21,7 +21,8 @@ export function useSyncSubscriptionMutation() {
   return useMutation({
     mutationFn: (input: { subscriptionId?: string } = {}) =>
       billingService.syncSubscription(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: billingKeys.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: billingKeys.all }),
   });
 }
 

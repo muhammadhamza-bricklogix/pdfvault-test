@@ -55,7 +55,9 @@ function BackChevron() {
  */
 function readClerkError(err: unknown, fallback: string): string {
   const first = (
-    err as { errors?: { longMessage?: string; message?: string; code?: string }[] }
+    err as {
+      errors?: { longMessage?: string; message?: string; code?: string }[];
+    }
   )?.errors?.[0];
   const raw = first?.longMessage ?? first?.message ?? "";
 
@@ -73,16 +75,25 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   if (code === "form_password_pwned" || /pwned/i.test(s)) {
     return "This password appeared in a public data breach. Choose a different one.";
   }
-  if (code === "form_password_not_strong_enough" || /not strong enough/i.test(s)) {
+  if (
+    code === "form_password_not_strong_enough" ||
+    /not strong enough/i.test(s)
+  ) {
     return "Password isn't strong enough. Use at least 8 characters with a mix of upper, lower, number, and symbol.";
   }
-  if (code === "form_identifier_exists" || /that email address is taken/i.test(s)) {
+  if (
+    code === "form_identifier_exists" ||
+    /that email address is taken/i.test(s)
+  ) {
     return "This email is already registered. Try signing in instead.";
   }
   if (code === "form_password_incorrect" || /password is incorrect/i.test(s)) {
     return "That password doesn't match. Please try again.";
   }
-  if (code === "form_identifier_not_found" || /couldn.?t find your account/i.test(s)) {
+  if (
+    code === "form_identifier_not_found" ||
+    /couldn.?t find your account/i.test(s)
+  ) {
     return "We couldn't find an account with that email. Create one to get started.";
   }
 
