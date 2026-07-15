@@ -26,7 +26,18 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
         <PaywallProvider>
           <OfflineBanner />
           {children}
-          <Toast.Provider placement="top end" />
+          {/*
+            `maxVisibleToasts` defaults to 3 with the extras collapsing
+            into a single pill — users complained they couldn't read
+            back-to-back messages. Bumping to 5 with a slightly larger
+            gap gives every toast its own row so a burst of
+            notifications is legible.
+          */}
+          <Toast.Provider
+            gap={12}
+            maxVisibleToasts={5}
+            placement="top end"
+          />
           <UploadToastProvider />
           <MobileDebugBoot />
           <UserSyncBoot />
