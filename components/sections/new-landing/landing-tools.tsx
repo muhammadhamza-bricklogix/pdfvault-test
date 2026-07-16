@@ -215,13 +215,7 @@ const TOOLS: Tool[] = [
   },
 
   // ─── Others ─────────────────────────────────────────────────────────────
-  {
-    icon: "/landing/editor.svg",
-    title: "Edit Metadata",
-    description: "Rewrite the title, author, and other PDF metadata fields.",
-    href: DASHBOARD,
-    tabs: ["others"],
-  },
+  // "Edit Metadata" removed — no metadata-editing UI in the editor.
   {
     icon: "/landing/split.svg",
     title: "Extract Images",
@@ -237,13 +231,7 @@ const TOOLS: Tool[] = [
     href: DASHBOARD,
     tabs: ["others"],
   },
-  {
-    icon: "/landing/rotate.svg",
-    title: "Repair PDF",
-    description: "Recover corrupt or partially damaged PDFs.",
-    href: DASHBOARD,
-    tabs: ["others"],
-  },
+  // "Repair PDF" tile removed — not offered.
 ];
 
 function ArrowIcon() {

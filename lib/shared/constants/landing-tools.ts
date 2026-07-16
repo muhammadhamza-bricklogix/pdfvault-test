@@ -142,11 +142,7 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "badge", variant: "orange", badge: "TXT" },
         href: convert("txt-to-pdf"),
       },
-      {
-        label: "Any format to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "ANY" },
-        href: convert("any-to-pdf"),
-      },
+      // "Any format to PDF" removed — no backend pipeline for arbitrary formats.
     ],
   },
   {
@@ -193,40 +189,18 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
   {
     id: "others",
     heading: "OTHERS",
+    // Edit Metadata / Crop / OCR / Repair PDF / Create Bookmarks removed —
+    // not offered yet. Only kept features with a live backend or editor
+    // implementation.
     tools: [
-      {
-        label: "Edit Metadata",
-        icon: { kind: "line", id: "hash" },
-        href: DASHBOARD,
-      },
       {
         label: "Extract Images",
         icon: { kind: "line", id: "extract-images" },
         href: DASHBOARD,
       },
       {
-        label: "Crop",
-        icon: { kind: "line", id: "crop" },
-        href: DASHBOARD,
-      },
-      {
-        label: "OCR",
-        icon: { kind: "line", id: "ocr" },
-        href: DASHBOARD,
-      },
-      {
         label: "Remove Annotations",
         icon: { kind: "line", id: "remove-annotations" },
-        href: DASHBOARD,
-      },
-      {
-        label: "Repair PDF",
-        icon: { kind: "line", id: "repair" },
-        href: DASHBOARD,
-      },
-      {
-        label: "Create Bookmarks",
-        icon: { kind: "line", id: "bookmarks" },
         href: DASHBOARD,
       },
       {
