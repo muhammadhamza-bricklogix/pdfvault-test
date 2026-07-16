@@ -62,6 +62,12 @@ function humaniseClerkMessage(raw: string, code?: string): string {
     return "That code doesn't match. Check your inbox or resend a new one.";
   }
   if (
+    code === "strategy_for_user_invalid" ||
+    /verification strategy is not valid/i.test(s)
+  ) {
+    return "Wrong password. Please enter your correct password.";
+  }
+  if (
     code === "form_identifier_not_found" ||
     /couldn.?t find your account/i.test(s)
   ) {
@@ -389,7 +395,7 @@ export function SignupCard() {
                 className={INPUT_CLASS}
                 id={fullNameId}
                 name="fullName"
-                placeholder="Ammy Oginni"
+                placeholder="John Doe"
                 spellCheck={false}
                 type="text"
                 value={fullName}
@@ -417,7 +423,7 @@ export function SignupCard() {
                 id={emailId}
                 inputMode="email"
                 name="email"
-                placeholder="ammy@theblanck.co"
+                placeholder="john.doe@gmail.com"
                 spellCheck={false}
                 type="email"
                 value={email}

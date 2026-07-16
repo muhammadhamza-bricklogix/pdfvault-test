@@ -143,13 +143,8 @@ const TOOLS: Tool[] = [
     href: DASHBOARD,
     tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "Any Format to PDF",
-    description: "Drop any supported document and we'll convert it to PDF.",
-    href: DASHBOARD,
-    tabs: ["convert-to"],
-  },
+  // "Any Format to PDF" tile hidden per PM review 2026-07 (no backend
+  // pipeline for arbitrary formats yet).
 
   // ─── Compress PDF ───────────────────────────────────────────────────────
   {
@@ -159,13 +154,7 @@ const TOOLS: Tool[] = [
     href: DASHBOARD,
     tabs: ["compress"],
   },
-  {
-    icon: "/landing/split.svg",
-    title: "Reduce Images",
-    description: "Downsample embedded images to shrink a bulky PDF.",
-    href: DASHBOARD,
-    tabs: ["compress"],
-  },
+  // "Reduce Images" tile hidden per PM review 2026-07 (not shipped).
   {
     icon: "/landing/organize.svg",
     title: "Merge & Compress",
@@ -240,20 +229,7 @@ const TOOLS: Tool[] = [
     href: DASHBOARD,
     tabs: ["others"],
   },
-  {
-    icon: "/landing/organize.svg",
-    title: "Crop PDF",
-    description: "Trim page margins and reframe content across the doc.",
-    href: DASHBOARD,
-    tabs: ["others"],
-  },
-  {
-    icon: "/landing/editor.svg",
-    title: "OCR PDF",
-    description: "Turn scanned pages into searchable, selectable text.",
-    href: DASHBOARD,
-    tabs: ["others"],
-  },
+  // "Crop PDF" + "OCR PDF" tiles hidden per PM review 2026-07 (not shipped).
   {
     icon: "/landing/delete.svg",
     title: "Remove Annotations",

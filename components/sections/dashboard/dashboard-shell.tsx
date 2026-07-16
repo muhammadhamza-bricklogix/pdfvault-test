@@ -61,9 +61,9 @@ function PdfVaultLogo() {
   return (
     <div className="flex items-center gap-2">
       <Image
+        aria-hidden
         priority
         alt=""
-        aria-hidden
         className="h-6 w-auto object-contain"
         height={24}
         src="/PDFVault_stacked_layers.png"

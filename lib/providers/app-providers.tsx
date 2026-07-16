@@ -33,11 +33,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
             gap gives every toast its own row so a burst of
             notifications is legible.
           */}
-          <Toast.Provider
-            gap={12}
-            maxVisibleToasts={5}
-            placement="top end"
-          />
+          <Toast.Provider gap={12} maxVisibleToasts={5} placement="top end" />
           <UploadToastProvider />
           <MobileDebugBoot />
           <UserSyncBoot />
