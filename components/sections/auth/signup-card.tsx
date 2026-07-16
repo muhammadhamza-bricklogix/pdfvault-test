@@ -5,8 +5,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
+import {
+  evaluatePassword,
+  PASSWORD_RULES,
+} from "@/lib/shared/utils/password-strength";
 
 import { AppleIcon, GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
@@ -20,13 +25,56 @@ function safeRedirectPath(raw: string | null, fallback: string): string {
   return raw;
 }
 
-/** Extracts the first useful Clerk error message. */
+/** Extracts the first useful Clerk error message + rewrites the awkward ones. */
 function readClerkError(err: unknown, fallback: string): string {
   const first = (
-    err as { errors?: { longMessage?: string; message?: string }[] }
+    err as {
+      errors?: { longMessage?: string; message?: string; code?: string }[];
+    }
   )?.errors?.[0];
+  const raw = first?.longMessage ?? first?.message ?? "";
 
-  return first?.longMessage ?? first?.message ?? fallback;
+  return humaniseClerkMessage(raw, first?.code) || fallback;
+}
+
+function humaniseClerkMessage(raw: string, code?: string): string {
+  const s = raw.toLowerCase();
+
+  if (code === "form_password_pwned" || /pwned/i.test(s)) {
+    return "This password appeared in a public data breach. Choose a different one.";
+  }
+  if (
+    code === "form_password_not_strong_enough" ||
+    /not strong enough/i.test(s)
+  ) {
+    return "Password isn't strong enough. Use at least 8 characters with a mix of upper, lower, number, and symbol.";
+  }
+  if (
+    code === "form_identifier_exists" ||
+    /that email address is taken/i.test(s)
+  ) {
+    return "This email is already registered. Try signing in instead.";
+  }
+  if (
+    code === "form_code_incorrect" ||
+    /code is incorrect|didn.?t work/i.test(s)
+  ) {
+    return "That code doesn't match. Check your inbox or resend a new one.";
+  }
+  if (
+    code === "strategy_for_user_invalid" ||
+    /verification strategy is not valid/i.test(s)
+  ) {
+    return "Wrong password. Please enter your correct password.";
+  }
+  if (
+    code === "form_identifier_not_found" ||
+    /couldn.?t find your account/i.test(s)
+  ) {
+    return "We couldn't find an account with that email. Create one to get started.";
+  }
+
+  return raw;
 }
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
@@ -61,6 +109,8 @@ export function SignupCard() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordRevealed, setPasswordRevealed] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -119,8 +169,11 @@ export function SignupCard() {
     if (!EMAIL_RE.test(trimmedEmail)) {
       nextErrors.email = "Please enter a valid email address.";
     }
-    if (password.length < 8) {
-      nextErrors.password = "Password must be at least 8 characters.";
+    const strength = evaluatePassword(password);
+
+    if (!strength.allPassed) {
+      nextErrors.password =
+        "Password must be at least 8 characters and include upper, lower, number, and a symbol.";
     }
 
     setNotice(null);
@@ -342,7 +395,7 @@ export function SignupCard() {
                 className={INPUT_CLASS}
                 id={fullNameId}
                 name="fullName"
-                placeholder="Ammy Oginni"
+                placeholder="John Doe"
                 spellCheck={false}
                 type="text"
                 value={fullName}
@@ -370,7 +423,7 @@ export function SignupCard() {
                 id={emailId}
                 inputMode="email"
                 name="email"
-                placeholder="ammy@theblanck.co"
+                placeholder="john.doe@gmail.com"
                 spellCheck={false}
                 type="email"
                 value={email}
@@ -390,28 +443,56 @@ export function SignupCard() {
                   *
                 </span>
               </label>
-              <input
-                required
-                aria-invalid={errors.password ? true : undefined}
-                autoComplete="new-password"
-                className={INPUT_CLASS}
-                id={passwordId}
-                minLength={8}
-                name="password"
-                placeholder="********"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
+              <div className="relative mt-2">
+                <input
+                  required
+                  aria-invalid={errors.password ? true : undefined}
+                  autoComplete="new-password"
+                  className={`${INPUT_CLASS} mt-0 pr-11`}
+                  id={passwordId}
+                  minLength={8}
+                  name="password"
+                  placeholder="********"
+                  type={passwordRevealed ? "text" : "password"}
+                  value={password}
+                  onBlur={() => setPasswordFocused(false)}
+                  onChange={(event) => setPassword(event.target.value)}
+                  onFocus={() => setPasswordFocused(true)}
+                />
+                <PasswordRevealToggle
+                  revealed={passwordRevealed}
+                  onToggle={() => setPasswordRevealed((v) => !v)}
+                />
+              </div>
               {errors.password ? (
                 <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
                   {errors.password}
                 </p>
               ) : null}
+              {(passwordFocused || password.length > 0) && !errors.password ? (
+                <ul
+                  aria-label="Password requirements"
+                  className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2"
+                >
+                  {PASSWORD_RULES.map((rule) => {
+                    const passed = rule.test(password);
+
+                    return (
+                      <li
+                        key={rule.key}
+                        className={`flex items-center gap-1.5 text-[12px] ${passed ? "text-[#0a9e5a]" : "text-[#8a8a8a]"}`}
+                      >
+                        <span aria-hidden>{passed ? "✓" : "○"}</span>
+                        <span>{rule.label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
             </div>
 
             <button
-              className="mt-4 flex h-[56px] w-full items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              className="mt-4 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
               disabled={submitting}
               type="submit"
             >
@@ -448,7 +529,7 @@ export function SignupCard() {
           ) : null}
 
           <button
-            className="mt-4 flex h-[56px] w-full items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+            className="mt-4 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
             disabled={submitting}
             type="submit"
           >
@@ -456,7 +537,7 @@ export function SignupCard() {
           </button>
 
           <button
-            className="mt-3 w-full text-center text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+            className="mt-3 w-full cursor-pointer text-center text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
             type="button"
             onClick={() => void onResendCode()}
           >
@@ -473,7 +554,7 @@ export function SignupCard() {
       ) : null}
 
       <p className="mt-[28px] text-center text-[16px] text-[#4c4c4c]">
-        Don’t have an account yet?{" "}
+        Already have an account?{" "}
         <Link
           className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
           href={ROUTES.AUTH.SIGN_IN}

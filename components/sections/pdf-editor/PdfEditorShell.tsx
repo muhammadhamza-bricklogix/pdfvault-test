@@ -46,7 +46,7 @@ import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { PerformancePanel } from "./PerformancePanel";
-import { PvEditorTopChrome, TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
+import { TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
 import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";

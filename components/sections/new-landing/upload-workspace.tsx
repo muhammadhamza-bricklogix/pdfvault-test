@@ -1,10 +1,15 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useRef, useState } from "react";
 
+import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
+import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -218,8 +223,66 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [opening, setOpening] = useState(false);
   const errorId = useId();
   const router = useRouter();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const setEditorFile = usePdfEditorStore((s) => s.setFile);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+
+  const openFileInEditor = useCallback(
+    async (picked: File) => {
+      setOpening(true);
+      const loadingKey =
+        picked.type === "application/pdf"
+          ? null
+          : toast.loading({
+              description: `Preparing ${picked.name} for the editor.`,
+              title: "Converting to PDF",
+            });
+
+      try {
+        const pdfFile = await uploadAsPdf(picked);
+
+        setCurrentDocument(null);
+        setEditorFile(pdfFile);
+
+        if (authLoaded && !isSignedIn) {
+          const redirect = encodeURIComponent(ROUTES.TOOLS.PDF_EDITOR);
+
+          // Zustand doesn't survive Clerk's full-page redirect to
+          // `/sign-in` — mirror the File to IDB so the editor can
+          // rehydrate it on mount. Awaited so the write lands before
+          // the navigation.
+          try {
+            await savePendingEditorFile(pdfFile);
+          } catch (err) {
+            logger.warn("pending editor file save failed", err);
+          }
+
+          toast.info({
+            title: "Sign in to open your file",
+            description: "We'll take you straight to the editor after login.",
+          });
+          router.push(`${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`);
+
+          return;
+        }
+
+        router.push(ROUTES.TOOLS.PDF_EDITOR);
+      } catch (err) {
+        logger.error("Landing upload → open failed", err);
+        toast.error({
+          title: "Couldn't open file",
+          description: err instanceof Error ? err.message : undefined,
+        });
+        setOpening(false);
+      } finally {
+        if (loadingKey) toast.close(loadingKey);
+      }
+    },
+    [authLoaded, isSignedIn, router, setCurrentDocument, setEditorFile],
+  );
 
   const onSubmitAction = () => {
     if (!action || !file) return;
@@ -267,6 +330,13 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
     }
     setError(null);
     setFile(candidate);
+
+    // When no downstream `action` is provided (landing home path), take the
+    // user straight into the editor. If a caller passes `action` (convert
+    // routes), keep the two-step flow so its "Convert now" CTA can fire.
+    if (!action) {
+      void openFileInEditor(candidate);
+    }
   };
 
   const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -396,17 +466,23 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
                 <p className="mt-1 text-[14px] text-[var(--pv-text-secondary)]">
                   {formatSize(file.size)}
                 </p>
-                <button
-                  className="pv-btn-secondary mt-4 px-4 py-1.5 text-[14px]"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setFile(null);
-                    if (inputRef.current) inputRef.current.value = "";
-                  }}
-                >
-                  Remove file
-                </button>
+                {opening ? (
+                  <p className="mt-4 text-[14px] font-medium text-[var(--pv-brand-primary)]">
+                    Opening editor…
+                  </p>
+                ) : (
+                  <button
+                    className="pv-btn-secondary mt-4 cursor-pointer px-4 py-1.5 text-[14px]"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setFile(null);
+                      if (inputRef.current) inputRef.current.value = "";
+                    }}
+                  >
+                    Remove file
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center">
@@ -468,7 +544,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
               </div>
               <button
                 aria-disabled={!file || submitting}
-                className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-primary)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-700)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--pv-brand-primary)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-700)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!file || submitting}
                 type="button"
                 onClick={onSubmitAction}

@@ -5,17 +5,21 @@ import { LandingFooter } from "@/components/sections/new-landing/landing-footer"
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
-import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
+// Testimonials hidden per PM review 2026-07 (copy pending).
+// import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 import { LandingTools } from "@/components/sections/new-landing/landing-tools";
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
 export const metadata: Metadata = {
   title: "PDFVault — A smarter, more secure home for every PDF",
-  // Landing-page browser/tab icon — the PDFVault mark (overrides the app-wide
-  // /logo.svg favicon set in the root layout, for this route only).
+  // Root layout already sets the PDFVault stacked-layers favicon
+  // globally, but Next.js metadata resolution merges per-route
+  // overrides — restating it here makes the landing tab keep the
+  // brand icon even if the root layout is ever restructured.
   icons: {
-    apple: "/landing/icon-only.png",
-    icon: "/landing/icon-only.png",
+    apple: "/PDFVault_stacked_layers.png",
+    icon: "/PDFVault_stacked_layers.png",
+    shortcut: "/PDFVault_stacked_layers.png",
   },
 };
 
@@ -29,7 +33,7 @@ export default function NewLandingPage() {
         <LandingSteps />
         <LandingTools />
         <LandingBanner />
-        <LandingTestimonials />
+        {/* <LandingTestimonials /> */}
       </main>
       <LandingFooter />
     </div>

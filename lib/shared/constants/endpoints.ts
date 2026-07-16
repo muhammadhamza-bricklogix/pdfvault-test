@@ -17,6 +17,13 @@ export const CONVERSION = {
   CONVERT: "/conversion",
 } as const;
 
+export const BILLING = {
+  PLANS: "/billing/plans",
+  SUBSCRIPTION: "/billing/subscription",
+  CHECKOUT_INTENT: "/billing/checkout-intent",
+  INVOICES: "/billing/invoices",
+} as const;
+
 export const TOOLS = {
   LIST: "/tools",
   SUGGESTED: "/tools/suggested",
@@ -42,4 +49,8 @@ export const USERS = {
   ME: "/users/me",
   /** Pino audit hook — call right before `useClerk().signOut()`. */
   SIGN_OUT: "/users/sign-out",
+} as const;
+
+export const CONTACT = {
+  SUBMIT: "/contact",
 } as const;

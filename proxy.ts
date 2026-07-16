@@ -7,20 +7,20 @@ const SIGN_IN_PATH = "/sign-in";
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/tools/(.*)"]);
 
 /**
- * Classifies the `?id=` parameter on the `/pdf-editor` route:
- *   - "absent"  → bare `/pdf-editor` (no `id` param at all). Intentionally
+ * Classifies the `?id=` parameter on the `/pdf-composer` route:
+ *   - "absent"  → bare `/pdf-composer` (no `id` param at all). Intentionally
  *     PUBLIC — the editor runs in local upload-and-edit mode without an
  *     account, and the marketing site / navbar / footer link here.
- *   - "empty"   → `/pdf-editor?id=` (param present but blank / whitespace).
+ *   - "empty"   → `/pdf-composer?id=` (param present but blank / whitespace).
  *     Never a valid editor URL (a broken or half-built link) — we bounce the
  *     user out instead of showing a blank editor.
- *   - "present" → `/pdf-editor?id=<docId>`. Needs a signed-in user because
+ *   - "present" → `/pdf-composer?id=<docId>`. Needs a signed-in user because
  *     the document fetch is auth-gated. Without this gate, signed-out
  *     visitors hitting an editor URL with an id saw a blank editor + a
  *     "Couldn't open document" toast — QA-reported 2026-06-16.
  */
 function editorDocIdState(req: NextRequest): "absent" | "empty" | "present" {
-  if (req.nextUrl.pathname !== "/pdf-editor") return "absent";
+  if (req.nextUrl.pathname !== "/pdf-composer") return "absent";
   if (!req.nextUrl.searchParams.has("id")) return "absent";
 
   return (req.nextUrl.searchParams.get("id") ?? "").trim() === ""
@@ -39,7 +39,7 @@ function redirectToSignIn(req: NextRequest, returnTo: string): NextResponse {
 export default clerkMiddleware(async (auth, req) => {
   const idState = editorDocIdState(req);
 
-  // `/pdf-editor?id=` with an empty id is never a valid editor URL. Send the
+  // `/pdf-composer?id=` with an empty id is never a valid editor URL. Send the
   // user somewhere useful instead of a blank editor: signed-in → dashboard,
   // signed-out → sign-in. Runs server-side, so it behaves identically on web
   // and mobile with no editor flash.
@@ -53,7 +53,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
   }
 
-  // Auth-gate the protected app routes + `/pdf-editor?id=<docId>`. Signed-out
+  // Auth-gate the protected app routes + `/pdf-composer?id=<docId>`. Signed-out
   // users are bounced to sign-in with a return path so they land back on the
   // same URL after authenticating.
   if (isProtectedRoute(req) || idState === "present") {

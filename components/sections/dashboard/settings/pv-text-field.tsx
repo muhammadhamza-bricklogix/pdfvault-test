@@ -3,7 +3,9 @@
 import type { ComponentProps } from "react";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
+
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 
 type IconGlyph = ComponentProps<typeof HugeiconsIcon>["icon"];
 
@@ -14,16 +16,15 @@ interface PvTextFieldProps
   invalid?: boolean;
 }
 
-/**
- * Rounded pill input matching the settings frames. Optional leading icon on
- * the left, optional hint under the field. Reads styling from the
- * `.pv-dashboard` token scope so hover/focus stay on-brand.
- */
 export const PvTextField = forwardRef<HTMLInputElement, PvTextFieldProps>(
   function PvTextField(
-    { leadingIcon, hint, invalid, className, disabled, ...rest },
+    { leadingIcon, hint, invalid, className, disabled, type, ...rest },
     ref,
   ) {
+    const isPassword = type === "password";
+    const [revealed, setRevealed] = useState(false);
+    const effectiveType = isPassword && revealed ? "text" : type;
+
     return (
       <div className="min-w-0">
         <div
@@ -40,10 +41,17 @@ export const PvTextField = forwardRef<HTMLInputElement, PvTextFieldProps>(
             ref={ref}
             className={`h-full flex-1 bg-transparent px-4 text-[14px] text-[var(--pv-text-strong)] outline-none placeholder:text-[var(--pv-text-muted)] ${
               leadingIcon ? "pl-2" : ""
-            } ${className ?? ""}`}
+            } ${isPassword ? "pr-10" : ""} ${className ?? ""}`}
             disabled={disabled}
+            type={effectiveType}
             {...rest}
           />
+          {isPassword ? (
+            <PasswordRevealToggle
+              revealed={revealed}
+              onToggle={() => setRevealed((v) => !v)}
+            />
+          ) : null}
         </div>
         {hint ? (
           <p className="mt-2 text-[12px] text-[var(--pv-text-muted)]">{hint}</p>

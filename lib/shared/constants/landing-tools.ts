@@ -67,7 +67,7 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
     heading: "EDIT & SIgn",
     tools: [
       {
-        label: "PDF Editor",
+        label: "PDF Composer",
         icon: { kind: "line", id: "editor" },
         href: DASHBOARD,
       },
@@ -179,9 +179,14 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         href: convert("pdf-to-powerpoint"),
       },
       {
-        label: "PDF to  Any format",
+        label: "PDF to HTML",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-any"),
+        href: convert("pdf-to-html"),
+      },
+      {
+        label: "PDF to Plain Text",
+        icon: { kind: "badge", variant: "blue", badge: "PDF" },
+        href: convert("pdf-to-text"),
       },
     ],
   },

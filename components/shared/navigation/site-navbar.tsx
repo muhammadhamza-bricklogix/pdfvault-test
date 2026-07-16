@@ -16,7 +16,7 @@ import { LanguageSwitcher } from "./language-switcher";
 
 const PDF_TOOL_LINKS = [
   { href: `${ROUTES.PUBLIC.HOME}#pdf-tools`, label: "All tools overview" },
-  { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF editor" },
+  { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF Composer" },
   { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
 ] as const;
 
@@ -101,18 +101,12 @@ export function SiteNavbar() {
                   <Drawer.Heading className="flex items-center gap-2">
                     <Image
                       priority
-                      alt="pdfvault.ai logo"
-                      className="size-9 object-contain"
+                      alt="PDFVault"
+                      className="h-9 w-auto object-contain"
                       height={36}
-                      src="/logo.svg"
-                      width={36}
+                      src="/landing/logo-with-text.png"
+                      width={144}
                     />
-                    <span className="text-lg font-bold">
-                      <span className="text-[var(--color-accent)]">PDF</span>
-                      <span className="text-[var(--color-foreground)]">
-                        edits
-                      </span>
-                    </span>
                   </Drawer.Heading>
                 </Drawer.Header>
                 <Drawer.Body>
@@ -184,16 +178,12 @@ export function SiteNavbar() {
         >
           <Image
             priority
-            alt="pdfvault.ai logo"
-            className="size-9 object-contain sm:size-10"
+            alt="PDFVault"
+            className="h-9 w-auto object-contain sm:h-10"
             height={40}
-            src="/logo.svg"
-            width={40}
+            src="/landing/logo-with-text.png"
+            width={160}
           />
-          <span className="text-lg font-bold tracking-tight sm:text-xl">
-            <span className="text-[var(--color-accent)]">PDF</span>
-            <span className="text-[var(--color-foreground)]">edits</span>
-          </span>
         </Link>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-3">

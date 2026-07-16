@@ -23,56 +23,56 @@ interface ToolCardEntry {
 
 const TOOL_CARDS: readonly ToolCardEntry[] = [
   {
-    title: "PDF Editor",
+    title: "PDF Composer",
     description:
-      "Revise text and objects inline with our full in-browser PDF editor.",
-    href: "/pdf-editor",
+      "Revise text and objects inline with our full in-browser PDF composer.",
+    href: "/pdf-composer",
     icon: Edit02Icon,
   },
   {
     title: "Compress Document",
     description: "Reduce PDF file size with upto 3 compression levels.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: LayerAddIcon,
   },
   {
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: LayoutGridIcon,
   },
   {
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: Scissor01Icon,
   },
   {
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: SquareLock02Icon,
   },
   {
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: SquareUnlock01Icon,
   },
   {
     title: "Rotate Pages",
     description: "Fix upside-down scans or mixed-orientation bundles.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: RefreshIcon,
   },
   {
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: "/pdf-editor",
+    href: "/pdf-composer",
     icon: Delete02Icon,
   },
 ];

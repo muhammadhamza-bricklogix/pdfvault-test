@@ -24,10 +24,11 @@ export const ROUTES = {
     SETTINGS_GENERAL: "/dashboard/settings/general",
     SETTINGS_ACCOUNT: "/dashboard/settings/account",
     SETTINGS_LANGUAGE: "/dashboard/settings/language",
+    SETTINGS_BILLING: "/dashboard/settings/billing",
     SETTINGS_DANGER: "/dashboard/settings/danger",
   },
   TOOLS: {
-    PDF_EDITOR: "/pdf-editor",
+    PDF_EDITOR: "/pdf-composer",
     PDF_TO_EXCEL: "/tools/pdf-to-xlsx",
     EXCEL_TO_PDF: "/tools/xlsx-to-pdf",
     DOC_TO_PDF: "/tools/docx-to-pdf",

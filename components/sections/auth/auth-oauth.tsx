@@ -2,7 +2,7 @@
 // cards (login/signup). Icons are decorative; labels live on the buttons.
 
 export const OAUTH_BUTTON_CLASS =
-  "flex h-[46px] w-full items-center justify-center gap-3.5 rounded-[12px] border border-[#e1ebed] bg-white text-[16px] text-[#5f5f5f] shadow-[0_5px_12px_rgba(24,39,45,0.08)] transition-colors hover:bg-[#fafbfb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] disabled:opacity-60";
+  "flex h-[46px] w-full cursor-pointer items-center justify-center gap-3.5 rounded-[12px] border border-[#e1ebed] bg-white text-[16px] text-[#5f5f5f] shadow-[0_5px_12px_rgba(24,39,45,0.08)] transition-colors hover:bg-[#fafbfb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] disabled:cursor-not-allowed disabled:opacity-60";
 
 export function AppleIcon() {
   return (
@@ -19,23 +19,28 @@ export function AppleIcon() {
 }
 
 export function GoogleIcon() {
+  // Official Google "G" logo (2015+ brand mark), sourced from Google's
+  // developer sign-in-button guidelines. Do not restyle — the four
+  // colour segments MUST render in the exact order + hex Google
+  // publishes, or we're out of compliance with their brand identity
+  // policy for third-party sign-in.
   return (
-    <svg aria-hidden height="20" viewBox="0 0 24 24" width="20">
+    <svg aria-hidden height="20" viewBox="0 0 48 48" width="20">
       <path
-        d="M23.06 12.25c0-.86-.07-1.5-.22-2.16H12.24v3.92h6.19c-.12 1-.8 2.5-2.3 3.51l-.02.14 3.34 2.59.23.02c2.12-1.96 3.34-4.85 3.34-8.02Z"
-        fill="#4285F4"
+        d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
+        fill="#FFC107"
       />
       <path
-        d="M12.24 24c3.03 0 5.57-1 7.43-2.72l-3.54-2.75c-.95.66-2.22 1.12-3.89 1.12-2.97 0-5.49-1.96-6.39-4.67l-.13.01-3.47 2.69-.05.13C4.58 21.3 8.13 24 12.24 24Z"
-        fill="#34A853"
+        d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
+        fill="#FF3D00"
       />
       <path
-        d="M5.85 14.98c-.24-.7-.37-1.45-.37-2.23s.13-1.53.36-2.23l-.01-.15-3.51-2.73-.11.05A11.99 11.99 0 0 0 0 12.75c0 1.94.46 3.77 1.29 5.4l4.56-3.17Z"
-        fill="#FBBC05"
+        d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
+        fill="#4CAF50"
       />
       <path
-        d="M12.24 4.75c2.11 0 3.53.91 4.34 1.67l3.17-3.09C17.8 1.44 15.27 0 12.24 0 8.13 0 4.58 2.7 1.29 6.35l4.55 3.4c.91-2.71 3.43-5 6.4-5Z"
-        fill="#EA4335"
+        d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
+        fill="#1976D2"
       />
     </svg>
   );

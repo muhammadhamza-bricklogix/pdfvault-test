@@ -7,12 +7,12 @@ import {
   BankIcon,
   Cancel01Icon,
   CheckmarkBadge01Icon,
-  LayersLogoIcon,
   Menu01Icon,
   MenuSquareIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -53,16 +53,21 @@ const NAV_ITEMS: readonly NavItem[] = [
 ];
 
 /**
- * Red stacked-layers mark + "PDFVault" wordmark (PDF strong, Vault muted).
- * Matches Figma frames — see `public/Dashboard/Dashboard home.png`.
+ * Brand PNG stacked-layers mark + "PDFVault" wordmark. Uses the same
+ * public asset the browser favicon points at so the tab icon + sidebar
+ * always match.
  */
 function PdfVaultLogo() {
   return (
     <div className="flex items-center gap-2">
-      <HugeiconsIcon
-        className="text-[var(--pv-brand-red-logo)]"
-        icon={LayersLogoIcon}
-        size={22}
+      <Image
+        aria-hidden
+        priority
+        alt=""
+        className="h-6 w-auto object-contain"
+        height={24}
+        src="/PDFVault_stacked_layers.png"
+        width={24}
       />
       <span className="pv-heading text-[17px] font-semibold leading-none">
         <span className="text-[var(--pv-brand-red-logo)]">PDF</span>
