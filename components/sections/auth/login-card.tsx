@@ -207,14 +207,13 @@ export function LoginCard() {
       if (signIn.status === "complete") {
         const { error: finalizeError } = await signIn.finalize({
           navigate: ({ decorateUrl }) => {
-            const url = decorateUrl(afterSignInPath);
-
-            if (url.startsWith("http")) {
-              window.location.href = url;
-
-              return;
-            }
-            router.push(url);
+            // Full-page navigation (not `router.push`). Clerk sets the
+            // session cookie during finalize; on mobile Safari the SPA
+            // transition can outrun the cookie commit, so the middleware
+            // sees the user as signed-out and bounces them to /sign-up.
+            // `window.location.assign` forces a fresh document request
+            // that always includes the freshly-set cookie.
+            window.location.assign(decorateUrl(afterSignInPath));
           },
         });
 

@@ -2,7 +2,7 @@
 
 import { useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
@@ -102,7 +102,6 @@ type Step = "credentials" | "verify";
 
 export function SignupCard() {
   const { signUp } = useSignUp();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>("credentials");
@@ -274,14 +273,11 @@ export function SignupCard() {
       if (signUp.status === "complete") {
         const { error: finalizeError } = await signUp.finalize({
           navigate: ({ decorateUrl }) => {
-            const url = decorateUrl(afterSignUpPath);
-
-            if (url.startsWith("http")) {
-              window.location.href = url;
-
-              return;
-            }
-            router.push(url);
+            // Full-page navigation so the freshly-set Clerk session cookie
+            // is on the next request. `router.push` runs in-tab before
+            // mobile Safari commits the cookie, which makes the middleware
+            // treat the user as signed-out and bounce them to /sign-up.
+            window.location.assign(decorateUrl(afterSignUpPath));
           },
         });
 
