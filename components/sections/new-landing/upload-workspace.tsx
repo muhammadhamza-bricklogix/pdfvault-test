@@ -8,6 +8,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -248,6 +249,16 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
 
         if (authLoaded && !isSignedIn) {
           const redirect = encodeURIComponent(ROUTES.TOOLS.PDF_EDITOR);
+
+          // Zustand doesn't survive Clerk's full-page redirect to
+          // `/sign-in` — mirror the File to IDB so the editor can
+          // rehydrate it on mount. Awaited so the write lands before
+          // the navigation.
+          try {
+            await savePendingEditorFile(pdfFile);
+          } catch (err) {
+            logger.warn("pending editor file save failed", err);
+          }
 
           toast.info({
             title: "Sign in to open your file",

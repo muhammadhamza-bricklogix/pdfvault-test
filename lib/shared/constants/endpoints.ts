@@ -50,3 +50,7 @@ export const USERS = {
   /** Pino audit hook — call right before `useClerk().signOut()`. */
   SIGN_OUT: "/users/sign-out",
 } as const;
+
+export const CONTACT = {
+  SUBMIT: "/contact",
+} as const;

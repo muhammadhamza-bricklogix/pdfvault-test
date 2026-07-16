@@ -8,6 +8,8 @@ import { useForm } from "react-hook-form";
 
 import { ControlledInputField } from "@/components/ui/form/controlled-input-field";
 import { ControlledTextareaField } from "@/components/ui/form/controlled-textarea-field";
+import { apiClient } from "@/lib/config/api-client";
+import { CONTACT } from "@/lib/shared/constants/endpoints";
 import { contactFormSchema } from "@/lib/shared/schemas/contact.schema";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -24,21 +26,25 @@ export function ContactFormSection() {
     resolver: zodResolver(contactFormSchema),
   });
 
-  const onSubmit = (values: ContactFormValues) => {
-    const subject = encodeURIComponent(
-      `Contact — ${values.firstName} ${values.lastName}`,
-    );
-    const body = encodeURIComponent(
-      `From: ${values.firstName} ${values.lastName}\nEmail: ${values.email}\n\n${values.message}`,
-    );
+  const {
+    formState: { isSubmitting },
+    reset,
+  } = form;
 
-    toast.success({
-      description: `If nothing opens, reach us directly at ${SUPPORT_EMAIL}.`,
-      title: "Opening your email app…",
-    });
-    window.location.assign(
-      `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`,
-    );
+  const onSubmit = async (values: ContactFormValues) => {
+    try {
+      await apiClient.post(CONTACT.SUBMIT, values);
+      toast.success({
+        description: "Thanks — we'll reply within 24 hours.",
+        title: "Message sent",
+      });
+      reset();
+    } catch {
+      toast.error({
+        description: `Please try again or email us directly at ${SUPPORT_EMAIL}.`,
+        title: "Couldn't send message",
+      });
+    }
   };
 
   return (
@@ -75,8 +81,8 @@ export function ContactFormSection() {
           placeholder="How can we help?"
           rows={6}
         />
-        <Button type="submit" variant="primary">
-          Send message
+        <Button isDisabled={isSubmitting} type="submit" variant="primary">
+          {isSubmitting ? "Sending…" : "Send message"}
         </Button>
       </Fieldset>
     </Form>

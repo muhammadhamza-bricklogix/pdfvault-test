@@ -87,8 +87,13 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   ) {
     return "This email is already registered. Try signing in instead.";
   }
-  if (code === "form_password_incorrect" || /password is incorrect/i.test(s)) {
-    return "That password doesn't match. Please try again.";
+  if (
+    code === "form_password_incorrect" ||
+    code === "strategy_for_user_invalid" ||
+    /password is incorrect/i.test(s) ||
+    /verification strategy is not valid/i.test(s)
+  ) {
+    return "Wrong password. Please enter your correct password.";
   }
   if (
     code === "form_identifier_not_found" ||
@@ -308,7 +313,7 @@ export function LoginCard() {
               id={emailId}
               inputMode="email"
               name="email"
-              placeholder="ammy@theblanck.co"
+              placeholder="john.doe@gmail.com"
               spellCheck={false}
               type="email"
               value={email}

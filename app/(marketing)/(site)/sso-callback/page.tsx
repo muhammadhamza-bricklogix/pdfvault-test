@@ -109,8 +109,20 @@ export default function SSOCallbackPage() {
   }, [handleRedirectCallback, router, signIn, signUp]);
 
   return (
-    <div className="flex min-h-[40vh] items-center justify-center text-sm text-default-500">
-      Completing sign-in…
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4">
+      <div
+        aria-label="Signing you in"
+        className="h-12 w-12 animate-spin rounded-full border-[3px] border-default-200 border-t-[var(--pv-brand-red,#de472e)]"
+        role="status"
+      />
+      <div className="text-center">
+        <p className="text-[16px] font-semibold text-[var(--pv-text-strong,#1a1c21)]">
+          Signing you in…
+        </p>
+        <p className="mt-1 text-[13px] text-[var(--pv-text-muted,#666666)]">
+          One moment while we securely finish your login.
+        </p>
+      </div>
     </div>
   );
 }

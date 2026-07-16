@@ -9,19 +9,20 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "TOOLS",
     links: [
-      // Reference spelling is "Edit & SIgn" (designer typo) — kept per the
-      // pixel-accurate spec; flag to product if it should read "Edit & Sign".
+      // Edit → PDF Composer (editor). Compress + Convert → upload flow
+      // (dashboard) per PM review 2026-07.
       { label: "Edit & SIgn", href: ROUTES.TOOLS.PDF_EDITOR },
-      { label: "Compress", href: ROUTES.TOOLS.BY_SLUG("compress") },
-      { label: "Convert", href: ROUTES.TOOLS.BY_SLUG("convert") },
+      { label: "Compress", href: ROUTES.APP.DASHBOARD },
+      { label: "Convert", href: "/convert/pdf-to-word" },
     ],
   },
   {
     heading: "COMPANY",
     links: [
-      { label: "Pricing", href: ROUTES.PUBLIC.PRICING },
-      { label: "Contact Us", href: ROUTES.LEGAL.CONTACT },
+      // About Us first, Pricing hidden until public pricing page ships.
       { label: "About Us", href: "#about" },
+      // { label: "Pricing", href: ROUTES.PUBLIC.PRICING },
+      { label: "Contact Us", href: ROUTES.LEGAL.CONTACT },
     ],
   },
   {
@@ -37,9 +38,9 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "ACCOUNT",
     links: [
-      { label: "Log In", href: ROUTES.AUTH.SIGN_IN },
-      { label: "Sign Up", href: ROUTES.AUTH.SIGN_UP },
-      { label: "Changelog", href: "#changelog" },
+      // Changelog removed; replaced with the auth pair per PM review.
+      { label: "Login", href: ROUTES.AUTH.SIGN_IN },
+      { label: "Register", href: ROUTES.AUTH.SIGN_UP },
     ],
   },
 ];
@@ -83,19 +84,6 @@ function SendIcon() {
     <svg aria-hidden fill="none" height="18" viewBox="0 0 20 20" width="18">
       <path
         d="M17.5 2.5 9 11M17.5 2.5l-5.4 15-3.1-6.5L2.5 7.9l15-5.4Z"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg aria-hidden fill="none" height="18" viewBox="0 0 20 20" width="18">
-      <path
-        d="M6.5 3.5c.4 0 .76.24.9.62l.96 2.4a1 1 0 0 1-.24 1.07l-1.1 1.1a11 11 0 0 0 4.3 4.3l1.1-1.1a1 1 0 0 1 1.06-.24l2.4.96c.38.15.62.5.62.9V16a1.5 1.5 0 0 1-1.6 1.5C8.6 17.1 2.9 11.4 2.5 4.6A1.5 1.5 0 0 1 4 3h2.5Z"
         stroke="currentColor"
         strokeLinejoin="round"
         strokeWidth="1.4"
@@ -150,13 +138,6 @@ export function LandingFooter() {
                 <SendIcon />
                 support@pdfvault.ai
               </a>
-              <a
-                className={`flex w-fit items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
-                href="tel:+88123456789"
-              >
-                <PhoneIcon />
-                +88 123 456 789
-              </a>
             </div>
           </div>
 
@@ -187,7 +168,7 @@ export function LandingFooter() {
           Divider sits above the row on every breakpoint to visually anchor it
           against the tinted footer artwork.
         */}
-        <div className="mt-14 border-t border-white/10 pb-14 pt-8 md:absolute md:inset-x-0 md:top-[438px] md:mt-0 md:pb-0 md:pt-6">
+        <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
           <div className="flex flex-row flex-nowrap items-center justify-between gap-3 sm:gap-4">
             <p className="min-w-0 flex-1 truncate text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}

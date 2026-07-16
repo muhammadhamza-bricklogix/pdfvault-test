@@ -5,7 +5,8 @@ import { LandingFooter } from "@/components/sections/new-landing/landing-footer"
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
-import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
+// Testimonials hidden per PM review 2026-07 (copy pending).
+// import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 import { LandingTools } from "@/components/sections/new-landing/landing-tools";
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
@@ -32,7 +33,7 @@ export default function NewLandingPage() {
         <LandingSteps />
         <LandingTools />
         <LandingBanner />
-        <LandingTestimonials />
+        {/* <LandingTestimonials /> */}
       </main>
       <LandingFooter />
     </div>
