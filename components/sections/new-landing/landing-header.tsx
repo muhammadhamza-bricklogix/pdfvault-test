@@ -1,11 +1,13 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import { Modal } from "@heroui/react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+import { AllToolsCatalog } from "./all-tools-catalog";
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
 
 type NavLink = { label: string; href: string };
@@ -20,19 +22,10 @@ const PRIMARY_LINKS: NavLink[] = [
   // { label: "AI Summarizer", href: "/ai-summarizer" },
 ];
 
-// PDF Vault dropdown items — click-toggle menu surfaced next to the logo.
-const PDFVAULT_MENU: NavLink[] = [
-  { label: "Edit PDF", href: ROUTES.TOOLS.PDF_EDITOR },
-  { label: "Convert PDF", href: "/convert/pdf-to-word" },
-  { label: "Compress PDF", href: ROUTES.APP.DASHBOARD },
-  { label: "All tools", href: ROUTES.PUBLIC.ALL_TOOLS },
-];
-
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const { isLoaded, isSignedIn } = useAuth();
   // Signed-in state resolved via Clerk. Until `isLoaded` we render
   // nothing on the auth slot so the header doesn't flash Login → then
@@ -51,73 +44,57 @@ export function LandingHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close the PDF Vault dropdown on outside click or Escape.
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const onClick = (event: MouseEvent) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(event.target as Node)) setMenuOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
-    };
-
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
+  const openToolsModal = () => {
+    setToolsModalOpen(true);
+    setMobileOpen(false);
+  };
 
   return (
-    <header
-      className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
-        scrolled
-          ? "border-[var(--pv-border-subtle)] bg-white/85 shadow-[0_4px_18px_-14px_rgba(0,0,0,0.25)]"
-          : "border-transparent bg-[var(--pv-header-bg)]"
-      }`}
-    >
-      <div
-        className={`pv-container flex items-center justify-between gap-4 transition-[height] duration-300 ${
-          scrolled ? "h-[62px]" : "h-[68px]"
+    <>
+      <header
+        className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+          scrolled
+            ? "border-[var(--pv-border-subtle)] bg-white/85 shadow-[0_4px_18px_-14px_rgba(0,0,0,0.25)]"
+            : "border-transparent bg-[var(--pv-header-bg)]"
         }`}
       >
-        {/* Left: logo + primary nav */}
-        <div className="flex items-center gap-7">
-          <a
-            aria-label="PDFVault home"
-            className="flex shrink-0 items-center"
-            href={ROUTES.PUBLIC.HOME}
-          >
-            <Image
-              priority
-              alt="PDFVault"
-              className="h-[38px] w-auto object-contain sm:h-[44px]"
-              height={44}
-              src="/landing/logo-with-text.png"
-              width={176}
-            />
-          </a>
+        <div
+          className={`pv-container flex items-center justify-between gap-4 transition-[height] duration-300 ${
+            scrolled ? "h-[62px]" : "h-[68px]"
+          }`}
+        >
+          {/* Left: logo + primary nav */}
+          <div className="flex items-center gap-7">
+            <a
+              aria-label="PDFVault home"
+              className="flex shrink-0 items-center"
+              href={ROUTES.PUBLIC.HOME}
+            >
+              <Image
+                priority
+                alt="PDFVault"
+                className="h-[38px] w-auto object-contain sm:h-[44px]"
+                height={44}
+                src="/landing/logo-with-text.png"
+                width={176}
+              />
+            </a>
 
-          <nav
-            aria-label="Primary"
-            className="hidden items-center gap-6 lg:flex"
-          >
-            <div ref={menuRef} className="relative">
+            <nav
+              aria-label="Primary"
+              className="hidden items-center gap-6 lg:flex"
+            >
               <button
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
+                aria-expanded={toolsModalOpen}
+                aria-haspopup="dialog"
                 className="pv-btn-secondary inline-flex items-center gap-1.5 px-4 py-1.5 text-[14px]"
                 type="button"
-                onClick={() => setMenuOpen((value) => !value)}
+                onClick={openToolsModal}
               >
-                PDF Vault
+                All Tools
                 <svg
                   aria-hidden
-                  className={`transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
+                  className={`transition-transform duration-200 ${toolsModalOpen ? "rotate-180" : ""}`}
                   fill="none"
                   height="12"
                   viewBox="0 0 12 12"
@@ -132,150 +109,152 @@ export function LandingHeader() {
                   />
                 </svg>
               </button>
-
-              {menuOpen ? (
-                <div
-                  className="absolute left-0 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-xl border border-[var(--pv-border-subtle)] bg-white shadow-[0_10px_30px_-10px_rgba(0,0,0,0.2)]"
-                  role="menu"
-                >
-                  <ul className="py-1">
-                    {PDFVAULT_MENU.map((item) => (
-                      <li key={item.label}>
-                        <a
-                          className="block px-4 py-2.5 text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-default-100"
-                          href={item.href}
-                          role="menuitem"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          {item.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-            {PRIMARY_LINKS.map((link) => (
-              <a
-                key={link.label}
-                className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
-                href={link.href}
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-
-        {/* Right: language + auth */}
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:block">
-            <LandingLanguageSwitcher />
-          </div>
-
-          {showAuthButtons ? (
-            isSignedIn ? (
-              <a
-                className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
-                href={ROUTES.APP.DASHBOARD}
-              >
-                Dashboard
-              </a>
-            ) : (
-              <>
+              {PRIMARY_LINKS.map((link) => (
                 <a
-                  className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-                  href={ROUTES.AUTH.SIGN_IN}
-                >
-                  Login
-                </a>
-                <a
-                  className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
-                  href={ROUTES.AUTH.SIGN_UP}
-                >
-                  Get started
-                </a>
-              </>
-            )
-          ) : null}
-
-          {/* Mobile menu toggle */}
-          <button
-            aria-expanded={mobileOpen}
-            aria-label="Toggle navigation menu"
-            className="inline-flex size-9 items-center justify-center rounded-lg text-[var(--pv-text-primary)] lg:hidden"
-            type="button"
-            onClick={() => setMobileOpen((value) => !value)}
-          >
-            <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
-              <path
-                d="M4 7h16M4 12h16M4 17h16"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="1.75"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile drawer */}
-      {mobileOpen ? (
-        <nav
-          aria-label="Mobile"
-          className="border-t border-[var(--pv-border-subtle)] bg-[var(--pv-header-bg)] px-5 py-3 lg:hidden"
-        >
-          <ul className="flex flex-col gap-1">
-            {[
-              { label: "All Tools", href: ROUTES.PUBLIC.ALL_TOOLS },
-              ...PRIMARY_LINKS,
-            ].map((link) => (
-              <li key={link.label}>
-                <a
-                  className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  key={link.label}
+                  className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
                   href={link.href}
-                  onClick={() => setMobileOpen(false)}
                 >
                   {link.label}
                 </a>
-              </li>
-            ))}
-            <li className="mt-1 px-2 py-1">
-              <LandingLanguageSwitcher variant="mobile" />
-            </li>
-            <li className="flex flex-col gap-2 px-2 pt-1">
-              {showAuthButtons ? (
-                isSignedIn ? (
+              ))}
+            </nav>
+          </div>
+
+          {/* Right: language + auth */}
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:block">
+              <LandingLanguageSwitcher />
+            </div>
+
+            {showAuthButtons ? (
+              isSignedIn ? (
+                <a
+                  className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                  href={ROUTES.APP.DASHBOARD}
+                >
+                  Dashboard
+                </a>
+              ) : (
+                <>
                   <a
-                    className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                    href={ROUTES.APP.DASHBOARD}
+                    className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                    href={ROUTES.AUTH.SIGN_IN}
+                  >
+                    Login
+                  </a>
+                  <a
+                    className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                    href={ROUTES.AUTH.SIGN_UP}
+                  >
+                    Get started
+                  </a>
+                </>
+              )
+            ) : null}
+
+            {/* Mobile menu toggle */}
+            <button
+              aria-expanded={mobileOpen}
+              aria-label="Toggle navigation menu"
+              className="inline-flex size-9 items-center justify-center rounded-lg text-[var(--pv-text-primary)] lg:hidden"
+              type="button"
+              onClick={() => setMobileOpen((value) => !value)}
+            >
+              <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.75"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile drawer */}
+        {mobileOpen ? (
+          <nav
+            aria-label="Mobile"
+            className="border-t border-[var(--pv-border-subtle)] bg-[var(--pv-header-bg)] px-5 py-3 lg:hidden"
+          >
+            <ul className="flex flex-col gap-1">
+              <li>
+                <button
+                  className="block w-full rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  type="button"
+                  onClick={openToolsModal}
+                >
+                  All Tools
+                </button>
+              </li>
+              {PRIMARY_LINKS.map((link) => (
+                <li key={link.label}>
+                  <a
+                    className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                    href={link.href}
                     onClick={() => setMobileOpen(false)}
                   >
-                    Dashboard
+                    {link.label}
                   </a>
-                ) : (
-                  <>
-                    <a
-                      className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                      href={ROUTES.AUTH.SIGN_IN}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      Login
-                    </a>
+                </li>
+              ))}
+              <li className="mt-1 px-2 py-1">
+                <LandingLanguageSwitcher variant="mobile" />
+              </li>
+              <li className="flex flex-col gap-2 px-2 pt-1">
+                {showAuthButtons ? (
+                  isSignedIn ? (
                     <a
                       className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                      href={ROUTES.AUTH.SIGN_UP}
+                      href={ROUTES.APP.DASHBOARD}
                       onClick={() => setMobileOpen(false)}
                     >
-                      Get started
+                      Dashboard
                     </a>
-                  </>
-                )
-              ) : null}
-            </li>
-          </ul>
-        </nav>
-      ) : null}
-    </header>
+                  ) : (
+                    <>
+                      <a
+                        className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                        href={ROUTES.AUTH.SIGN_IN}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        Login
+                      </a>
+                      <a
+                        className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                        href={ROUTES.AUTH.SIGN_UP}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        Get started
+                      </a>
+                    </>
+                  )
+                ) : null}
+              </li>
+            </ul>
+          </nav>
+        ) : null}
+      </header>
+
+      {/* All Tools modal — full-catalog view without leaving the current page. */}
+      <Modal.Backdrop
+        isOpen={toolsModalOpen}
+        onOpenChange={(o) => setToolsModalOpen(o)}
+      >
+        <Modal.Container className="items-start pt-6">
+          <Modal.Dialog className="w-full max-w-[1180px] rounded-2xl">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>All Tools</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="max-h-[80vh] overflow-y-auto p-0">
+              <AllToolsCatalog />
+            </Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </>
   );
 }
