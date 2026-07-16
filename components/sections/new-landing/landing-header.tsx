@@ -243,7 +243,7 @@ export function LandingHeader() {
         isOpen={toolsModalOpen}
         onOpenChange={(o) => setToolsModalOpen(o)}
       >
-        <Modal.Container className="items-start pt-6">
+        <Modal.Container className="items-center justify-center p-4">
           <Modal.Dialog className="w-full max-w-[1180px] rounded-2xl">
             <Modal.CloseTrigger />
             <Modal.Header>
