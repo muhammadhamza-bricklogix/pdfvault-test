@@ -60,11 +60,8 @@ export default async function ConvertPage({
         <section className="pb-20">
           <div className="mx-auto w-full max-w-[1272px] px-6">
             <UploadWorkspace
-              action={{
-                label: "Convert now",
-                href: "/dashboard",
-                contextKey: `convert:${slug}`,
-              }}
+              acceptExtensions={route.accept}
+              exportFormat={route.exportFormat}
             />
           </div>
         </section>

@@ -3,11 +3,11 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { SectionHeading } from "./section-heading";
 
-const DASHBOARD = ROUTES.APP.DASHBOARD;
+const convert = (slug: string) => `/convert/${slug}` as const;
 
 type TabId = "edit" | "convert-to" | "compress" | "convert-from" | "others";
 
@@ -42,14 +42,14 @@ const TOOLS: Tool[] = [
     title: "PDF Composer",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.editor,
     tabs: ["edit"],
   },
   {
     icon: "/landing/editor.svg",
     title: "Sign & Watermark",
     description: "Sign and watermark with vector strokes.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.watermark,
     tabs: ["edit", "others"],
   },
   {
@@ -57,7 +57,7 @@ const TOOLS: Tool[] = [
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.managePages,
     tabs: ["edit", "others"],
   },
   {
@@ -65,7 +65,7 @@ const TOOLS: Tool[] = [
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.split,
     tabs: ["edit", "compress", "others"],
   },
   {
@@ -73,14 +73,14 @@ const TOOLS: Tool[] = [
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.password,
     tabs: ["edit", "others"],
   },
   {
     icon: "/landing/unlock.svg",
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.unlock,
     tabs: ["edit", "others"],
   },
   {
@@ -88,7 +88,7 @@ const TOOLS: Tool[] = [
     title: "Rotate Pages",
     description:
       "Fix upside-down scans or mixed-orientation bundles in seconds.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.managePages,
     tabs: ["edit", "others"],
   },
   {
@@ -96,7 +96,7 @@ const TOOLS: Tool[] = [
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.managePages,
     tabs: ["edit", "others"],
   },
 
@@ -105,61 +105,58 @@ const TOOLS: Tool[] = [
     icon: "/landing/convert.svg",
     title: "Word to PDF",
     description: "Upload a .doc or .docx and get a clean PDF, ready to share.",
-    href: DASHBOARD,
+    href: convert("word-to-pdf"),
     tabs: ["convert-to"],
   },
   {
     icon: "/landing/convert.svg",
     title: "Excel to PDF",
     description: "Turn .xls or .xlsx spreadsheets into print-ready PDFs.",
-    href: DASHBOARD,
+    href: convert("excel-to-pdf"),
     tabs: ["convert-to"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PowerPoint to PDF",
     description: "Convert .ppt or .pptx decks into shareable PDF slides.",
-    href: DASHBOARD,
+    href: convert("powerpoint-to-pdf"),
     tabs: ["convert-to"],
   },
   {
     icon: "/landing/convert.svg",
     title: "JPG to PDF",
     description: "Turn JPG photos or scans into a single, tidy PDF.",
-    href: DASHBOARD,
+    href: convert("jpg-to-pdf"),
     tabs: ["convert-to"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PNG to PDF",
     description: "Drop one or more PNGs and bundle them into one PDF.",
-    href: DASHBOARD,
+    href: convert("png-to-pdf"),
     tabs: ["convert-to"],
   },
   {
     icon: "/landing/convert.svg",
     title: "TXT to PDF",
     description: "Wrap a plain-text file into a formatted, page-ready PDF.",
-    href: DASHBOARD,
+    href: convert("txt-to-pdf"),
     tabs: ["convert-to"],
   },
-  // "Any Format to PDF" tile hidden per PM review 2026-07 (no backend
-  // pipeline for arbitrary formats yet).
 
   // ─── Compress PDF ───────────────────────────────────────────────────────
   {
     icon: "/landing/convert.svg",
     title: "Compress PDF",
     description: "Reduce file size with three compression levels.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.compress,
     tabs: ["compress"],
   },
-  // "Reduce Images" tile hidden per PM review 2026-07 (not shipped).
   {
     icon: "/landing/organize.svg",
     title: "Merge & Compress",
     description: "Combine multiple PDFs and squeeze them in a single pass.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.managePages,
     tabs: ["compress"],
   },
 
@@ -168,70 +165,67 @@ const TOOLS: Tool[] = [
     icon: "/landing/convert.svg",
     title: "PDF to Word",
     description: "Turn a PDF into an editable .docx you can keep working in.",
-    href: DASHBOARD,
+    href: convert("pdf-to-word"),
     tabs: ["convert-from"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PDF to Excel",
     description: "Pull tables out of a PDF and into a ready-to-edit Excel.",
-    href: DASHBOARD,
+    href: convert("pdf-to-excel"),
     tabs: ["convert-from"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PDF to PowerPoint",
     description: "Turn a PDF into a .pptx deck, one slide per page.",
-    href: DASHBOARD,
+    href: convert("pdf-to-powerpoint"),
     tabs: ["convert-from"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PDF to JPG",
     description: "Export every page of a PDF as a JPG image.",
-    href: DASHBOARD,
+    href: convert("pdf-to-jpg"),
     tabs: ["convert-from"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PDF to PNG",
     description: "Export every page of a PDF as a high-quality PNG.",
-    href: DASHBOARD,
+    href: convert("pdf-to-png"),
     tabs: ["convert-from"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PDF to HTML",
     description: "Turn a PDF into a lightweight HTML page you can embed.",
-    href: DASHBOARD,
+    href: convert("pdf-to-html"),
     tabs: ["convert-from"],
   },
   {
     icon: "/landing/convert.svg",
     title: "PDF to Plain Text",
     description: "Extract the raw text from a PDF as a plain .txt file.",
-    href: DASHBOARD,
+    href: convert("pdf-to-text"),
     tabs: ["convert-from"],
   },
 
   // ─── Others ─────────────────────────────────────────────────────────────
-  // "Edit Metadata" removed — no metadata-editing UI in the editor.
   {
     icon: "/landing/split.svg",
     title: "Extract Images",
     description: "Pull every embedded image out of a PDF in one click.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.extractImages,
     tabs: ["others"],
   },
-  // "Crop PDF" + "OCR PDF" tiles hidden per PM review 2026-07 (not shipped).
   {
     icon: "/landing/delete.svg",
     title: "Remove Annotations",
     description: "Strip notes, highlights, and comments in one pass.",
-    href: DASHBOARD,
+    href: TOOL_ROUTE.flatten,
     tabs: ["others"],
   },
-  // "Repair PDF" tile removed — not offered.
 ];
 
 function ArrowIcon() {

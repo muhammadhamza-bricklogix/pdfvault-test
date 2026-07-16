@@ -1,20 +1,24 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
-const ACCEPTED_EXTENSIONS = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
-const ACCEPT_ATTR = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
+const DEFAULT_ACCEPTED_EXTENSIONS = [
+  "pdf",
+  "doc",
+  "docx",
+  "jpg",
+  "jpeg",
+  "png",
+];
 const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
 type CloudProvider = {
@@ -207,28 +211,52 @@ function ProviderBadge({ id }: { id: CloudProvider["id"] }) {
  * auth-gated dashboard where the actual conversion runs. Home leaves it unset
  * so the workspace stays open-ended.
  */
-interface UploadAction {
-  label: string;
-  href: string;
-  contextKey?: string;
-}
-
 interface UploadWorkspaceProps {
-  action?: UploadAction;
+  /** Extensions the picker accepts (without leading dot). Defaults to
+   *  pdf/doc/docx/jpg/jpeg/png. Per-tool convert routes pass a narrower
+   *  set (e.g. `["doc","docx"]` for Word → PDF). */
+  acceptExtensions?: string[];
+  /** Editor tool slug to auto-launch after the file loads
+   *  (e.g. `"password"`, `"compress"`, `"manage"`). */
+  tool?: string;
+  /** Export format to auto-fire once the file loads in the editor
+   *  (e.g. `"docx"` for /convert/pdf-to-word). */
+  exportFormat?: string;
 }
 
-export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
+export function UploadWorkspace({
+  acceptExtensions,
+  exportFormat,
+  tool,
+}: UploadWorkspaceProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [opening, setOpening] = useState(false);
   const errorId = useId();
   const router = useRouter();
-  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+
+  const acceptedExtensions = useMemo(
+    () => acceptExtensions ?? DEFAULT_ACCEPTED_EXTENSIONS,
+    [acceptExtensions],
+  );
+  const acceptAttr = useMemo(
+    () => acceptedExtensions.map((ext) => `.${ext}`).join(","),
+    [acceptedExtensions],
+  );
+
+  const composerHref = useMemo(() => {
+    const query = new URLSearchParams();
+
+    if (tool) query.set("tool", tool);
+    if (exportFormat) query.set("export", exportFormat);
+    const q = query.toString();
+
+    return q ? `${ROUTES.TOOLS.PDF_EDITOR}?${q}` : ROUTES.TOOLS.PDF_EDITOR;
+  }, [tool, exportFormat]);
 
   const openFileInEditor = useCallback(
     async (picked: File) => {
@@ -247,29 +275,11 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
         setCurrentDocument(null);
         setEditorFile(pdfFile);
 
-        if (authLoaded && !isSignedIn) {
-          const redirect = encodeURIComponent(ROUTES.TOOLS.PDF_EDITOR);
-
-          // Zustand doesn't survive Clerk's full-page redirect to
-          // `/sign-in` — mirror the File to IDB so the editor can
-          // rehydrate it on mount. Awaited so the write lands before
-          // the navigation.
-          try {
-            await savePendingEditorFile(pdfFile);
-          } catch (err) {
-            logger.warn("pending editor file save failed", err);
-          }
-
-          toast.info({
-            title: "Sign in to open your file",
-            description: "We'll take you straight to the editor after login.",
-          });
-          router.push(`${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`);
-
-          return;
-        }
-
-        router.push(ROUTES.TOOLS.PDF_EDITOR);
+        // /pdf-composer is a public route — signed-out users get the same
+        // in-browser editor experience with the file held in-memory. No
+        // sign-in bounce. If they want to save to their library, the Save
+        // button will prompt sign-in at that point.
+        router.push(composerHref);
       } catch (err) {
         logger.error("Landing upload → open failed", err);
         toast.error({
@@ -281,40 +291,17 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
         if (loadingKey) toast.close(loadingKey);
       }
     },
-    [authLoaded, isSignedIn, router, setCurrentDocument, setEditorFile],
+    [composerHref, router, setCurrentDocument, setEditorFile],
   );
-
-  const onSubmitAction = () => {
-    if (!action || !file) return;
-    setSubmitting(true);
-    // Stash the pending upload's identity so the destination screen can greet
-    // the user with "Continue converting X.pdf" instead of a cold start. The
-    // File blob itself doesn't cross route boundaries — the user re-picks it
-    // in the dashboard, which is fine because sign-in happens in between.
-    if (typeof window !== "undefined") {
-      try {
-        window.sessionStorage.setItem(
-          "pdfvault:pendingUpload",
-          JSON.stringify({
-            fileName: file.name,
-            fileSize: file.size,
-            context: action.contextKey ?? null,
-            ts: Date.now(),
-          }),
-        );
-      } catch {
-        // sessionStorage can throw in private mode — ignore, the flow still works.
-      }
-    }
-    router.push(action.href);
-  };
 
   const validateAndSet = (candidate: File) => {
     const ext = getExtension(candidate.name);
 
-    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+    if (!acceptedExtensions.includes(ext)) {
+      const label = acceptedExtensions.map((e) => e.toUpperCase()).join(", ");
+
       setError(
-        `"${candidate.name}" isn't a supported type. Use PDF, DOC, DOCX, JPG, or PNG.`,
+        `"${candidate.name}" isn't a supported type here. Use ${label}.`,
       );
       setFile(null);
 
@@ -330,13 +317,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
     }
     setError(null);
     setFile(candidate);
-
-    // When no downstream `action` is provided (landing home path), take the
-    // user straight into the editor. If a caller passes `action` (convert
-    // routes), keep the two-step flow so its "Convert now" CTA can fire.
-    if (!action) {
-      void openFileInEditor(candidate);
-    }
+    void openFileInEditor(candidate);
   };
 
   const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -445,7 +426,7 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
             <DashedBorder active={dragActive} />
             <input
               ref={inputRef}
-              accept={ACCEPT_ATTR}
+              accept={acceptAttr}
               className="sr-only"
               type="file"
               onChange={onInputChange}
@@ -501,7 +482,8 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
                   Upload a PDF or import from your cloud storage.
                 </p>
                 <p className="mt-3 text-[15px] font-medium leading-5 text-[#818285]">
-                  Supports PDF, DOC, DOCX, JPG, PNG
+                  Supports{" "}
+                  {acceptedExtensions.map((e) => e.toUpperCase()).join(", ")}
                 </p>
                 <button
                   className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] text-[16px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
@@ -526,33 +508,6 @@ export function UploadWorkspace({ action }: UploadWorkspaceProps = {}) {
               {error}
             </p>
           </div>
-
-          {/* Post-upload CTA — only rendered when the caller passes `action`
-              (currently the /convert/[slug] routes). Disabled until a valid
-              file is selected so the "next step" affordance stays honest. */}
-          {action ? (
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-[12px] border border-[var(--pv-card-border)] bg-white px-4 py-3 sm:px-5">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-medium text-[var(--pv-text-primary)]">
-                  {file ? file.name : "Upload a file to continue"}
-                </p>
-                <p className="text-[13px] text-[var(--pv-text-secondary)]">
-                  {file
-                    ? "Sign in to run the conversion — takes just a moment."
-                    : "Drop or choose a file above, then hit Convert."}
-                </p>
-              </div>
-              <button
-                aria-disabled={!file || submitting}
-                className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--pv-brand-primary)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-700)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!file || submitting}
-                type="button"
-                onClick={onSubmitAction}
-              >
-                {submitting ? "Opening…" : action.label}
-              </button>
-            </div>
-          ) : null}
 
           {/* Cloud provider capsules — layout adapts to the number of visible
               options so the buttons split evenly. */}

@@ -1,6 +1,5 @@
-import { ROUTES } from "./routes";
+import { TOOL_ROUTE } from "./tool-routes";
 
-const DASHBOARD = ROUTES.APP.DASHBOARD;
 const convert = (slug: string) => `/convert/${slug}` as const;
 
 /**
@@ -69,42 +68,42 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "PDF Composer",
         icon: { kind: "line", id: "editor" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.editor,
       },
       {
         label: "Compress",
         icon: { kind: "line", id: "compress" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.compress,
       },
       {
         label: "Organize Pages",
         icon: { kind: "line", id: "organize" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.managePages,
       },
       {
         label: "Split & Extract Pages",
         icon: { kind: "line", id: "split" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.split,
       },
       {
         label: "Password Protect",
         icon: { kind: "line", id: "password" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.password,
       },
       {
         label: "Unlock PDF",
         icon: { kind: "line", id: "unlock" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.unlock,
       },
       {
         label: "Rotate Pages",
         icon: { kind: "line", id: "rotate" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.managePages,
       },
       {
         label: "Delete Pages",
         icon: { kind: "line", id: "delete" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.managePages,
       },
     ],
   },
@@ -196,17 +195,17 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "Extract Images",
         icon: { kind: "line", id: "extract-images" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.extractImages,
       },
       {
         label: "Remove Annotations",
         icon: { kind: "line", id: "remove-annotations" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.flatten,
       },
       {
         label: "Watermark",
         icon: { kind: "line", id: "watermark" },
-        href: DASHBOARD,
+        href: TOOL_ROUTE.watermark,
       },
     ],
   },

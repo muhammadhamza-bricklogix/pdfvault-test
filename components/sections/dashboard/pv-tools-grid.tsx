@@ -12,6 +12,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
+
 type IconGlyph = typeof Edit02Icon;
 
 interface ToolCardEntry {
@@ -26,53 +28,53 @@ const TOOL_CARDS: readonly ToolCardEntry[] = [
     title: "PDF Composer",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.editor,
     icon: Edit02Icon,
   },
   {
     title: "Compress Document",
     description: "Reduce PDF file size with upto 3 compression levels.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.compress,
     icon: LayerAddIcon,
   },
   {
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.managePages,
     icon: LayoutGridIcon,
   },
   {
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.split,
     icon: Scissor01Icon,
   },
   {
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.password,
     icon: SquareLock02Icon,
   },
   {
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.unlock,
     icon: SquareUnlock01Icon,
   },
   {
     title: "Rotate Pages",
     description: "Fix upside-down scans or mixed-orientation bundles.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.managePages,
     icon: RefreshIcon,
   },
   {
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.managePages,
     icon: Delete02Icon,
   },
 ];

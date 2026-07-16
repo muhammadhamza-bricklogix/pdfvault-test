@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
+
 interface QuickTool {
   title: string;
   description: string;
@@ -33,37 +35,37 @@ const QUICK_TOOLS: readonly QuickTool[] = [
   {
     title: "Convert PDF",
     description: "PDF → Word, Excel, image, and more.",
-    href: "/dashboard/tools",
+    href: "/convert/pdf-to-word",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Convert%20PDF.svg`,
   },
   {
     title: "Word to PDF",
     description: "Word, Excel, PPT, and images to PDF.",
-    href: "/dashboard/tools",
+    href: "/convert/word-to-pdf",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Word%20to%20PDF.svg`,
   },
   {
     title: "Edit PDF",
     description: "Edit text, draw, highlight, and annotate.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.editor,
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Edit%20PDF.svg`,
   },
   {
     title: "Sign & Watermark",
     description: "Sign and watermark with vector strokes.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.watermark,
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Sign%20%26%20Watermark.svg`,
   },
   {
     title: "Organize Pages",
     description: "Reorder, rotate, split, and merge pages.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.managePages,
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Organize%20Pages.svg`,
   },
   {
     title: "Protect PDF",
     description: "Add or remove password protection.",
-    href: "/pdf-composer",
+    href: TOOL_ROUTE.password,
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Protect%20PDF.svg`,
   },
 ];

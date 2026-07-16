@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -14,36 +15,56 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * Rehydrates a File the landing UploadWorkspace stashed in IndexedDB
- * just before Clerk bounced a signed-out visitor through sign-in. Runs
- * once on `/pdf-composer` mount.
+ * Bootstraps the editor on `/pdf-composer` mount:
  *
- * Flow (post-signin):
- *   1. Read the pending File from IDB.
- *   2. Upload it to the user's library via /documents/upload so it
- *      persists (Dashboard → My PDFs shows it) even if they leave the
- *      editor and come back. Subsequent editor saves overwrite this
- *      same document rather than creating a duplicate.
- *   3. Push the returned Document + local File blob into the editor
- *      store so the editor can render immediately without waiting for
- *      the round-trip through the server.
- *   4. Clear the IDB marker + invalidate the docs list query so the
- *      Dashboard reflects the new row on next visit.
+ * 1. **Rehydrate** — if IndexedDB has a File left over from an old flow
+ *    (belt-and-braces; the new `UploadWorkspace` no longer writes to IDB),
+ *    load it into the store.
+ * 2. **Auto-save to library (signed-in only)** — the first time a File is
+ *    seen in the store without a matching Document ID, POST it to
+ *    `/documents/upload` so it appears in Dashboard → My PDFs and future
+ *    Save actions overwrite the same row.
+ * 3. **Auto-launch tool** — if the URL carries `?tool=<slug>` and/or
+ *    `?export=<format>`, fire the matching editor action once the store
+ *    has a File. The mapping mirrors the toolbar / HamburgerMenu event
+ *    bus so we don't duplicate the modal-open logic.
  *
- * If the store already holds a fresh in-tab file (user opened another
- * PDF while this was still queued), the IDB record is dropped as stale
- * and no upload happens.
+ * Slugs:
+ *   compress          → CompressModal
+ *   password / unlock → PasswordModal (mode inferred by the modal)
+ *   manage            → ManagePagesModal
+ *   split             → dispatch `editor:open-split` (HamburgerMenu bridge)
+ *   watermark         → setActiveTool("watermark")
+ *   extract-images    → dispatch `editor:extract-images`
+ *   flatten           → dispatch `editor:open-flatten` (HamburgerMenu bridge)
  *
- * Lives outside `components/sections/pdf-editor/**` so the rehydrate
- * seam doesn't touch the locked editor internals.
+ * Export formats: docx / xlsx / pptx / jpg / png / html / txt — fired via
+ * `editor:export` with the matching `ExportFormat` detail.
  */
 export function PendingEditorFileHydrator() {
   const ranRef = useRef(false);
+  const launchedRef = useRef(false);
+  const autoSavedRef = useRef(false);
+
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
+  const setIsCompressModalOpen = usePdfEditorStore(
+    (s) => s.setIsCompressModalOpen,
+  );
+  const setIsPasswordModalOpen = usePdfEditorStore(
+    (s) => s.setIsPasswordModalOpen,
+  );
+  const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const currentFile = usePdfEditorStore((s) => s.file);
+  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const queryClient = useQueryClient();
 
+  const searchParams = useSearchParams();
+  const tool = searchParams.get("tool");
+  const exportFormat = searchParams.get("export");
+
+  // Step 1 — one-shot IDB rehydrate.
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
@@ -60,41 +81,9 @@ export function PendingEditorFileHydrator() {
 
           return;
         }
-
-        // Save first (persist to the user's library), then open. Uses a
-        // dismissable loading toast so the user knows something is
-        // happening on slow uploads.
-        const loadingKey = toast.loading({
-          title: "Saving your PDF…",
-          description: file.name,
-        });
-
-        try {
-          const document = await documentsService.uploadDocument({ file });
-
-          if (cancelled) return;
-          setCurrentDocument({ id: document.id, name: document.filename });
-          setFile(file);
-          queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
-          toast.success({
-            title: "Saved to My PDFs",
-            description: document.filename,
-          });
-        } catch (err) {
-          logger.warn("pending editor file save failed", err);
-          if (cancelled) return;
-          // Fall back to open-only so the user isn't stranded — they can
-          // still edit and Save from the editor to persist manually.
-          setCurrentDocument(null);
-          setFile(file);
-          toast.error({
-            title: "Couldn't save automatically",
-            description: "Your file opened locally. Use Save to store it.",
-          });
-        } finally {
-          toast.close(loadingKey);
-          await clearPendingEditorFile();
-        }
+        setCurrentDocument(null);
+        setFile(file);
+        await clearPendingEditorFile();
       } catch (err) {
         logger.warn("pending editor file hydrate failed", err);
       }
@@ -103,7 +92,103 @@ export function PendingEditorFileHydrator() {
     return () => {
       cancelled = true;
     };
-  }, [currentFile, queryClient, setCurrentDocument, setFile]);
+  }, [currentFile, setCurrentDocument, setFile]);
+
+  // Step 2 — background auto-save for signed-in users. Fires once per
+  // file-without-doc-id combo. Failure is non-blocking; the editor still
+  // opens and the user can hit Save manually.
+  useEffect(() => {
+    if (autoSavedRef.current) return;
+    if (!currentFile) return;
+    if (currentDocumentId) return; // already tied to a document row
+
+    autoSavedRef.current = true;
+
+    void (async () => {
+      try {
+        const document = await documentsService.uploadDocument({
+          file: currentFile,
+        });
+
+        setCurrentDocument({ id: document.id, name: document.filename });
+        queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+        toast.success({
+          title: "Saved to My PDFs",
+          description: document.filename,
+        });
+      } catch (err) {
+        // Expected for signed-out visitors (401). Silent for that case,
+        // logged for anything else.
+        const status = (err as { response?: { status?: number } })?.response
+          ?.status;
+
+        if (status !== 401) logger.warn("editor auto-save failed", err);
+        autoSavedRef.current = false; // allow retry on next file load
+      }
+    })();
+  }, [currentDocumentId, currentFile, queryClient, setCurrentDocument]);
+
+  // Step 3 — tool / export auto-launch, one-shot per URL. Waits for the
+  // file to be non-null so the modals don't open on an empty editor.
+  useEffect(() => {
+    if (launchedRef.current) return;
+    if (!currentFile) return;
+    if (!tool && !exportFormat) return;
+
+    launchedRef.current = true;
+
+    // Small delay so the editor's own file-load pipeline (Fabric mount +
+    // pdf.js hydrate) settles before we open a modal on top of it. The
+    // modals are cheap; the risk is that a modal opens over a still-blank
+    // canvas and looks jarring.
+    const timeoutId = window.setTimeout(() => {
+      if (tool) {
+        switch (tool) {
+          case "compress":
+            setIsCompressModalOpen(true);
+            break;
+          case "password":
+          case "unlock":
+            setIsPasswordModalOpen(true);
+            break;
+          case "manage":
+            setIsManagePagesOpen(true);
+            break;
+          case "split":
+            window.dispatchEvent(new CustomEvent("editor:open-split"));
+            break;
+          case "watermark":
+            setActiveTool("watermark");
+            break;
+          case "extract-images":
+            window.dispatchEvent(new CustomEvent("editor:extract-images"));
+            break;
+          case "flatten":
+            window.dispatchEvent(new CustomEvent("editor:open-flatten"));
+            break;
+          default:
+            logger.warn(`unknown auto-launch tool: ${tool}`);
+        }
+      }
+      if (exportFormat) {
+        window.dispatchEvent(
+          new CustomEvent("editor:export", {
+            detail: { format: exportFormat },
+          }),
+        );
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    currentFile,
+    exportFormat,
+    setActiveTool,
+    setIsCompressModalOpen,
+    setIsManagePagesOpen,
+    setIsPasswordModalOpen,
+    tool,
+  ]);
 
   return null;
 }
