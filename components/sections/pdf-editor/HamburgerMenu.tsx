@@ -146,7 +146,16 @@ export function HamburgerMenu() {
         break;
       case "my-pdfs":
         if (!isSignedIn) {
-          requireSignIn();
+          // Full-page redirect to sign-in with a return path back to the
+          // editor. Matches the Save button behaviour (see EditorTopBar) —
+          // signed-out users get a clear next step instead of a toast.
+          if (typeof window !== "undefined") {
+            const redirect = encodeURIComponent(ROUTES.APP.DASHBOARD);
+
+            window.location.assign(
+              `${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`,
+            );
+          }
 
           return;
         }
@@ -301,11 +310,7 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={FolderOpenIcon} size={14} />
               <Label>Open File</Label>
             </Dropdown.Item>
-            <Dropdown.Item
-              className={isSignedIn ? "" : "text-default-400 opacity-60"}
-              id="my-pdfs"
-              textValue="My PDFs"
-            >
+            <Dropdown.Item id="my-pdfs" textValue="My PDFs">
               <HugeiconsIcon icon={NoteIcon} size={14} />
               <Label>My PDFs</Label>
             </Dropdown.Item>

@@ -85,12 +85,14 @@ export default function LanguageSettingsPage() {
       />
 
       <PvFormRow
-        description="This is a hint text to help user."
+        description="The language used for the PDFVault interface on this device."
+        htmlFor="settings-language"
         label="Language"
       >
         <select
           className={selectClass}
           disabled={!hydrated}
+          id="settings-language"
           value={language}
           onChange={(e) => setLanguage(e.target.value as Language)}
         >
@@ -103,12 +105,14 @@ export default function LanguageSettingsPage() {
       </PvFormRow>
 
       <PvFormRow
-        description="This is a hint text to help user."
+        description="Used for timestamps on saved documents and activity."
+        htmlFor="settings-timezone"
         label="Timezone"
       >
         <select
           className={selectClass}
           disabled={!hydrated}
+          id="settings-timezone"
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
         >
@@ -122,12 +126,14 @@ export default function LanguageSettingsPage() {
 
       <PvFormRow
         last
-        description="This is a hint text to help user."
+        description="How dates appear across the app — pick the layout you prefer."
+        htmlFor="settings-date-format"
         label="Date format"
       >
         <select
           className={selectClass}
           disabled={!hydrated}
+          id="settings-date-format"
           value={dateFormat}
           onChange={(e) => setDateFormat(e.target.value as DateFormat)}
         >

@@ -35,10 +35,8 @@ const log = (...args: unknown[]) => {
 
 export default function OAuthCallbackPage() {
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log("[oauth-callback] page mounted, hash:", window.location.hash);
-    // eslint-disable-next-line no-console
-    console.log("[oauth-callback] window.opener:", !!window.opener);
+    log("mounted, hash =", window.location.hash);
+    log("window.opener present =", !!window.opener);
     log("mounted, location =", window.location.href);
 
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -68,8 +66,7 @@ export default function OAuthCallbackPage() {
     //      opener window even when COOP severed the opener pointer (which
     //      is the default `same-origin` behaviour and what most hosts
     //      ship). Either channel resolves the parent's promise.
-    // eslint-disable-next-line no-console
-    console.log("[oauth-callback] writing to localStorage");
+    log("writing to localStorage");
     try {
       window.localStorage.setItem(
         "pdfedits:oauth-result",
@@ -82,8 +79,7 @@ export default function OAuthCallbackPage() {
 
     log("window.opener =", Boolean(window.opener));
 
-    // eslint-disable-next-line no-console
-    console.log("[oauth-callback] posting message to opener");
+    log("posting message to opener");
     if (window.opener) {
       try {
         window.opener.postMessage(payload, window.location.origin);
@@ -120,8 +116,7 @@ export default function OAuthCallbackPage() {
     // COOP severs opener) we still close after this timeout so the user
     // isn't left with a dangling blank window.
     const timer = window.setTimeout(() => {
-      // eslint-disable-next-line no-console
-      console.log("[oauth-callback] auto-closing window");
+      log("auto-closing window");
       try {
         window.close();
       } catch {

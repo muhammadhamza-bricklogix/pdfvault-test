@@ -110,7 +110,7 @@ export default function GeneralSettingsPage() {
 
       <PvFormRow
         required
-        description="This is a hint text to help user."
+        description="The name shown across PDFVault and in the header of your saved PDFs."
         label="Name"
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -152,7 +152,7 @@ export default function GeneralSettingsPage() {
 
       <PvFormRow
         last
-        description="This is a hint text to help user."
+        description="When you created your PDFVault account."
         label="Member Since"
       >
         <PvTextField disabled value={memberSince} />
