@@ -105,7 +105,15 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   return raw;
 }
 
-type Step = "email" | "password";
+type Step = "email" | "password" | "twoFactor";
+
+// Second-factor strategies we can prompt for. Matches the shape Clerk
+// returns in `signIn.supportedSecondFactors[].strategy`.
+type SecondFactorStrategy =
+  | "email_code"
+  | "phone_code"
+  | "totp"
+  | "backup_code";
 
 export function LoginCard() {
   const { signIn } = useSignIn();
@@ -120,9 +128,17 @@ export function LoginCard() {
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Second-factor state. `strategy` is picked once we detect
+  // `needs_second_factor` on the sign-in attempt; `code` holds what the
+  // user types in the 6-digit input.
+  const [secondFactorStrategy, setSecondFactorStrategy] =
+    useState<SecondFactorStrategy | null>(null);
+  const [code, setCode] = useState("");
+  const [resending, setResending] = useState(false);
 
   const emailId = useId();
   const passwordId = useId();
+  const codeId = useId();
   const errorId = useId();
   const statusId = useId();
 
@@ -227,14 +243,194 @@ export function LoginCard() {
         return;
       }
 
-      // Second-factor / additional step needed — Clerk's sso-callback page
-      // knows how to complete either path.
+      // Account has 2FA enabled → password verified, now prompt for the
+      // second-factor code. We prefer email_code because that's what our
+      // Clerk instance defaults to, but fall back to whatever the account
+      // supports.
+      if (signIn.status === "needs_second_factor") {
+        const supported =
+          (signIn.supportedSecondFactors as
+            | { strategy: SecondFactorStrategy; emailAddressId?: string }[]
+            | undefined) ?? [];
+        const preferred =
+          supported.find((f) => f.strategy === "email_code") ??
+          supported.find((f) => f.strategy === "totp") ??
+          supported.find((f) => f.strategy === "phone_code") ??
+          supported[0];
+
+        if (!preferred) {
+          setError(
+            "Two-factor authentication is required but no method is available. Contact support.",
+          );
+          setSubmitting(false);
+
+          return;
+        }
+
+        setSecondFactorStrategy(preferred.strategy);
+
+        // TOTP + backup codes are user-typed — no prep call needed. For
+        // email_code / phone_code we ask Clerk to send the code now via
+        // the `mfa` namespace of the Future-API sign-in resource.
+        if (preferred.strategy === "email_code") {
+          const { error: sendErr } = await signIn.mfa.sendEmailCode();
+
+          if (sendErr) {
+            setError(
+              readClerkError(
+                sendErr,
+                "Couldn't send your verification code. Try again.",
+              ),
+            );
+            setSubmitting(false);
+
+            return;
+          }
+          setNotice("We sent a 6-digit code to your email.");
+        } else if (preferred.strategy === "phone_code") {
+          const { error: sendErr } = await signIn.mfa.sendPhoneCode();
+
+          if (sendErr) {
+            setError(
+              readClerkError(
+                sendErr,
+                "Couldn't send your verification code. Try again.",
+              ),
+            );
+            setSubmitting(false);
+
+            return;
+          }
+          setNotice("We sent a 6-digit code to your phone.");
+        }
+
+        setStep("twoFactor");
+        setSubmitting(false);
+
+        return;
+      }
+
+      // Some other unexpected status — fall through to SSO callback so
+      // Clerk's own recovery UI can pick up the pieces.
       router.push(ROUTES.AUTH.SSO_CALLBACK);
     } catch (err) {
       logger.error("Password sign-in failed", err);
       setError(readClerkError(err, "Couldn't sign you in. Please try again."));
       setSubmitting(false);
     }
+  };
+
+  const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!signIn) return;
+    if (!secondFactorStrategy) return;
+
+    const trimmedCode = code.trim();
+
+    if (trimmedCode.length === 0) {
+      setError("Enter the code we sent you.");
+
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setSubmitting(true);
+
+    try {
+      const verify = async () => {
+        switch (secondFactorStrategy) {
+          case "email_code":
+            return signIn.mfa.verifyEmailCode({ code: trimmedCode });
+          case "phone_code":
+            return signIn.mfa.verifyPhoneCode({ code: trimmedCode });
+          case "totp":
+            return signIn.mfa.verifyTOTP({ code: trimmedCode });
+          case "backup_code":
+            return signIn.mfa.verifyBackupCode({ code: trimmedCode });
+        }
+      };
+      const { error: attemptError } = (await verify()) ?? {};
+
+      if (attemptError) {
+        setError(
+          readClerkError(attemptError, "That code didn't work. Try again."),
+        );
+        setSubmitting(false);
+
+        return;
+      }
+
+      if (signIn.status !== "complete") {
+        setError("Verification didn't finish. Try again.");
+        setSubmitting(false);
+
+        return;
+      }
+
+      const { error: finalizeError } = await signIn.finalize({
+        navigate: ({ decorateUrl }) => {
+          window.location.assign(decorateUrl(afterSignInPath));
+        },
+      });
+
+      if (finalizeError) {
+        setError(
+          readClerkError(finalizeError, "Couldn't finish signing you in."),
+        );
+        setSubmitting(false);
+      }
+    } catch (err) {
+      logger.error("2FA verification failed", err);
+      setError(readClerkError(err, "That code didn't work. Try again."));
+      setSubmitting(false);
+    }
+  };
+
+  const onResendCode = async () => {
+    if (!signIn || !secondFactorStrategy) return;
+    if (
+      secondFactorStrategy !== "email_code" &&
+      secondFactorStrategy !== "phone_code"
+    ) {
+      return;
+    }
+
+    setError(null);
+    setResending(true);
+
+    try {
+      const { error: sendErr } =
+        secondFactorStrategy === "email_code"
+          ? await signIn.mfa.sendEmailCode()
+          : await signIn.mfa.sendPhoneCode();
+
+      if (sendErr) {
+        setError(
+          readClerkError(sendErr, "Couldn't resend the code. Try again."),
+        );
+
+        return;
+      }
+
+      setNotice(
+        secondFactorStrategy === "email_code"
+          ? "A new code was sent to your email."
+          : "A new code was sent to your phone.",
+      );
+    } catch (err) {
+      setError(readClerkError(err, "Couldn't resend the code. Try again."));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const goBackToPassword = () => {
+    setError(null);
+    setNotice(null);
+    setCode("");
+    setSecondFactorStrategy(null);
+    setStep("password");
   };
 
   const goBackToEmail = () => {
@@ -258,7 +454,9 @@ export function LoginCard() {
       <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
         {step === "email"
           ? "Please enter your details below to sign in"
-          : `Signing in as ${email}`}
+          : step === "password"
+            ? `Signing in as ${email}`
+            : "Enter the verification code we sent you"}
       </p>
 
       {/* OAuth providers — email step only */}
@@ -338,7 +536,7 @@ export function LoginCard() {
             </button>
           </form>
         </>
-      ) : (
+      ) : step === "password" ? (
         <form noValidate className="mt-8" onSubmit={onSubmitPassword}>
           <button
             className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
@@ -397,6 +595,73 @@ export function LoginCard() {
             {submitting ? "Signing in…" : "Sign In"}
             {submitting ? null : <ArrowIcon />}
           </button>
+        </form>
+      ) : (
+        <form noValidate className="mt-8" onSubmit={onSubmitCode}>
+          <button
+            className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
+            type="button"
+            onClick={goBackToPassword}
+          >
+            <BackChevron />
+            Back to password
+          </button>
+
+          <label className="block text-[14px] text-[#5f5f5f]" htmlFor={codeId}>
+            Verification code
+            <span aria-hidden className="text-[#f12c23]">
+              *
+            </span>
+          </label>
+          <input
+            autoFocus
+            required
+            aria-describedby={error ? errorId : undefined}
+            aria-invalid={error ? true : undefined}
+            autoComplete="one-time-code"
+            className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-center text-[20px] font-semibold tracking-[0.4em] text-[#1a1c21] outline-none placeholder:text-[#c4c4c4] placeholder:tracking-normal placeholder:font-normal placeholder:text-[16px] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
+            id={codeId}
+            inputMode="numeric"
+            maxLength={8}
+            name="code"
+            pattern="[0-9]*"
+            placeholder="123456"
+            value={code}
+            onChange={(event) =>
+              setCode(event.target.value.replace(/[^0-9]/g, ""))
+            }
+          />
+
+          {error ? (
+            <p
+              className="mt-2 text-[13px] text-[#f12c23]"
+              id={errorId}
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <button
+            className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+            disabled={submitting || code.length === 0}
+            type="submit"
+          >
+            {submitting ? "Verifying…" : "Verify"}
+            {submitting ? null : <ArrowIcon />}
+          </button>
+
+          {secondFactorStrategy === "email_code" ||
+          secondFactorStrategy === "phone_code" ? (
+            <button
+              className="mt-3 block w-full text-center text-[13px] text-[#666666] hover:text-[#1a1c21] disabled:opacity-60"
+              disabled={resending}
+              type="button"
+              onClick={() => void onResendCode()}
+            >
+              {resending ? "Sending…" : "Didn't get it? Resend code"}
+            </button>
+          ) : null}
         </form>
       )}
 
