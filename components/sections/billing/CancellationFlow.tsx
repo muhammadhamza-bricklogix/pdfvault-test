@@ -8,20 +8,25 @@ import { useEffect, useState } from "react";
 import { useFinalizeCancellationMutation } from "@/lib/client/query/mutations/cancellation.mutation";
 import { toast } from "@/lib/shared/utils/toast";
 
+const RETENTION_DAYS = 30;
+
 interface CancellationFlowProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 /**
- * Two-step cancellation modal.
+ * Two-step cancellation modal, restyled to match the app's --pv-* tokens
+ * so it sits naturally alongside the settings / billing surfaces.
  *
  *   Step 1 — churn-reason capture (categorical + free-text)
- *   Step 2 — final confirmation → cancel-at-period-end
+ *   Step 2 — final confirmation → cancel-at-period-end, with the
+ *            retention message ("your files stay for {RETENTION_DAYS}
+ *            days") that mirrors the PaywallModal's trust block.
  *
  * The 1Y / 2Y downsell tiers were dropped from the product spec — user
  * goes straight from feedback to finalisation. Feedback is still
- * mapped to a Solidgate cancel_code on the backend so retention
+ * mapped to a processor cancel_code on the backend so retention
  * analytics stay unchanged.
  */
 export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
@@ -51,7 +56,7 @@ export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
         onError: () =>
           toast.error({
             title: "Couldn't cancel your subscription",
-            description: "Please try again or email payments@pdfvault.ai.",
+            description: "Please try again or email support@pdfvault.ai.",
           }),
       },
     );
@@ -64,8 +69,8 @@ export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
         if (!open) onClose();
       }}
     >
-      <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[540px]">
+      <Modal.Container className="items-center justify-center p-4">
+        <Modal.Dialog className="w-full overflow-hidden rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:max-w-[540px]">
           <Modal.CloseTrigger />
           {step === "feedback" && (
             <FeedbackStep
@@ -115,20 +120,35 @@ function FeedbackStep({
   return (
     <>
       <Modal.Header>
-        <Modal.Heading>Before you go</Modal.Heading>
-        <p className="mt-1 text-xs text-default-500">
+        <Modal.Heading className="pv-heading text-[var(--pv-text-strong)]">
+          Before you go
+        </Modal.Heading>
+        <p className="mt-1 text-[13px] text-[var(--pv-text-muted)]">
           Tell us what didn&apos;t work. It only takes a moment.
         </p>
       </Modal.Header>
       <Modal.Body>
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-medium">
+        <div className="mb-4 rounded-xl border border-[var(--pv-hairline)] bg-[var(--pv-tile)] p-3.5">
+          <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
+            Your files stay safe
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-body)]">
+            After cancellation your PDFs stay in your account for{" "}
+            <span className="font-semibold text-[var(--pv-text-strong)]">
+              {RETENTION_DAYS} days
+            </span>{" "}
+            so you can download them or resubscribe without losing work.
+          </p>
+        </div>
+
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="mb-2 text-[13px] font-medium text-[var(--pv-text-strong)]">
             What&apos;s the main reason?
           </legend>
           {REASON_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className="flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-default-50"
+              className="flex cursor-pointer items-center gap-2 rounded-md p-2 text-[13px] text-[var(--pv-text-body)] hover:bg-[var(--pv-tile)]"
             >
               <input
                 checked={reason === opt.value}
@@ -143,7 +163,7 @@ function FeedbackStep({
           ))}
         </fieldset>
         <textarea
-          className="mt-3 min-h-[80px] w-full rounded-lg border border-default-200 bg-default-50 p-2 text-sm outline-none focus:border-default-400"
+          className="mt-3 min-h-[80px] w-full rounded-lg border border-[var(--pv-hairline)] bg-[var(--pv-tile)] p-3 text-[13px] text-[var(--pv-text-body)] outline-none placeholder:text-[var(--pv-text-muted)] focus:border-[var(--pv-hairline-strong)]"
           maxLength={2000}
           placeholder="What would make you use PDFVault regularly? (optional)"
           value={freeText}
@@ -163,14 +183,24 @@ function ConfirmedStep({ onClose }: { onClose: () => void }) {
   return (
     <>
       <Modal.Header>
-        <Modal.Heading>You&apos;re all set</Modal.Heading>
+        <Modal.Heading className="pv-heading text-[var(--pv-text-strong)]">
+          You&apos;re all set
+        </Modal.Heading>
       </Modal.Header>
       <Modal.Body>
-        <p className="text-sm text-default-600">
+        <p className="text-[13px] leading-relaxed text-[var(--pv-text-body)]">
           Your subscription has been cancelled. You&apos;ll continue to have
-          access until the end of your current billing period. You can renew
-          anytime from your billing settings.
+          full access until the end of your current billing period.
         </p>
+        <div className="mt-3 rounded-xl border border-[var(--pv-hairline)] bg-[var(--pv-tile)] p-3.5">
+          <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
+            Your files stay for {RETENTION_DAYS} more days
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-body)]">
+            After that we clear them from our servers. Renew anytime from
+            Settings → Billing to keep everything.
+          </p>
+        </div>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="primary" onPress={onClose}>
