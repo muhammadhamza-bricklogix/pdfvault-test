@@ -8,6 +8,7 @@ import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -303,7 +304,43 @@ export function UploadWorkspace({
       try {
         const pdfFile = await uploadAsPdf(picked);
 
-        setCurrentDocument(null);
+        // Save-first-then-open (signed-in users only). The QA-expected
+        // flow: file lands in `/documents/upload` BEFORE the editor
+        // opens so the document row exists in "My PDFs" from the moment
+        // the user starts editing. Signed-out users skip this step —
+        // /pdf-composer runs entirely in-memory for anon visitors.
+        let savedDoc: { id: string; name: string } | null = null;
+
+        if (authLoaded && isSignedIn) {
+          if (loadingKey) toast.close(loadingKey);
+          const savingKey = toast.loading({
+            title: "Saving to My PDFs",
+            description: pdfFile.name,
+          });
+
+          try {
+            const document = await documentsService.uploadDocument({
+              file: pdfFile,
+            });
+
+            savedDoc = { id: document.id, name: document.filename };
+            toast.success({
+              title: "Saved to My PDFs",
+              description: document.filename,
+            });
+          } catch (saveErr) {
+            logger.warn("save-before-open failed", saveErr);
+            toast.error({
+              title: "Couldn't save to My PDFs",
+              description:
+                "Your file will open locally — use Save from the editor to persist.",
+            });
+          } finally {
+            toast.close(savingKey);
+          }
+        }
+
+        setCurrentDocument(savedDoc);
         setEditorFile(pdfFile);
 
         // /pdf-composer is a public route — signed-out users get the same
