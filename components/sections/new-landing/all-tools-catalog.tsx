@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { LANDING_TOOL_CATEGORIES } from "@/lib/shared/constants/landing-tools";
@@ -49,7 +51,7 @@ export function AllToolsCatalog({ onNavigate }: AllToolsCatalogProps = {}) {
                     <Link
                       className="group flex items-center gap-[10px] text-[16px] leading-[21px] tracking-[-0.03em] text-[#121212] transition-colors duration-200 hover:text-[var(--pv-brand-primary)]"
                       href={tool.href}
-                      onClick={() => onNavigate?.()}
+                      onClick={onNavigate}
                     >
                       <span className="inline-flex size-[18px] shrink-0 items-center justify-center text-[#121212] transition-colors duration-200 group-hover:text-[var(--pv-brand-primary)]">
                         <AllToolsIcon icon={tool.icon} />
