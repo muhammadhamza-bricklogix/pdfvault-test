@@ -138,7 +138,7 @@ export function PaywallModal({
       }}
     >
       <Modal.Container className="items-center justify-center p-4">
-        <Modal.Dialog className="w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px]">
+        <Modal.Dialog className="w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1">
           <Modal.CloseTrigger />
           {error ? (
             <ErrorState error={error} />
@@ -165,9 +165,9 @@ function ValueColumn({ intent }: { intent: CheckoutIntent }) {
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
 
   return (
-    <div className="flex flex-col gap-6 bg-[var(--pv-tile)] p-6 md:p-8">
+    <div className="flex flex-col gap-6 bg-[#f7f7f7] p-6 md:p-8 dark:bg-content2">
       <div>
-        <span className="inline-flex h-6 items-center rounded-full bg-[var(--pv-surface)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red)]">
+        <span className="inline-flex h-6 items-center rounded-full bg-white dark:bg-content1 px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red)]">
           Limited-time offer
         </span>
         <h2 className="pv-heading mt-3 text-[22px] font-semibold leading-tight text-[var(--pv-text-strong)] sm:text-[24px]">
@@ -179,7 +179,7 @@ function ValueColumn({ intent }: { intent: CheckoutIntent }) {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 shadow-sm">
+      <div className="rounded-2xl border border-[var(--pv-hairline)] bg-white dark:bg-content1 p-5 shadow-sm">
         <div className="flex items-baseline gap-2">
           <span className="pv-heading text-[36px] font-semibold leading-none text-[var(--pv-text-strong)]">
             {today}
@@ -232,7 +232,7 @@ function PaymentColumn({
   onFail: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 bg-[var(--pv-surface)] p-6 md:p-8">
+    <div className="flex flex-col gap-4 bg-white dark:bg-content1 p-6 md:p-8">
       <div>
         <h3 className="pv-heading text-[16px] font-semibold text-[var(--pv-text-strong)]">
           Pay securely
@@ -294,7 +294,7 @@ function Feature({ children }: { children: React.ReactNode }) {
  */
 function RetentionNotice({ days }: { days: number }) {
   return (
-    <div className="rounded-xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-3.5">
+    <div className="rounded-xl border border-[var(--pv-hairline)] bg-white dark:bg-content1 p-3.5">
       <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
         Your files stay safe
       </p>
@@ -311,7 +311,7 @@ function RetentionNotice({ days }: { days: number }) {
 
 function TrustBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--pv-surface)] px-2 py-1 font-medium text-[var(--pv-text-body)]">
+    <span className="inline-flex items-center gap-1 rounded-full bg-white dark:bg-content1 px-2 py-1 font-medium text-[var(--pv-text-body)]">
       <span aria-hidden className="text-emerald-600">
         🔒
       </span>
@@ -328,7 +328,7 @@ function PaymentMethodBadges() {
       {methods.map((m) => (
         <span
           key={m}
-          className="inline-flex h-6 items-center rounded border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-2 text-[10px] font-semibold text-[var(--pv-text-body)]"
+          className="inline-flex h-6 items-center rounded border border-[var(--pv-hairline)] bg-white dark:bg-content1 px-2 text-[10px] font-semibold text-[var(--pv-text-body)]"
         >
           {m}
         </span>
@@ -339,7 +339,7 @@ function PaymentMethodBadges() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 bg-[var(--pv-surface)] p-10">
+    <div className="flex flex-col items-center justify-center gap-3 bg-white dark:bg-content1 p-10">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--pv-hairline)] border-t-[var(--pv-brand-red)]" />
       <p className="pv-heading text-sm text-[var(--pv-text-body)]">
         Preparing secure checkout…
@@ -350,7 +350,7 @@ function LoadingState() {
 
 function ErrorState({ error }: { error: string }) {
   return (
-    <div className="flex flex-col gap-3 bg-[var(--pv-surface)] p-8">
+    <div className="flex flex-col gap-3 bg-white dark:bg-content1 p-8">
       <h3 className="pv-heading text-[16px] font-semibold text-danger">
         Couldn&apos;t start checkout
       </h3>

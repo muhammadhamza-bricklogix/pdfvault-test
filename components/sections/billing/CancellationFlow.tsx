@@ -70,7 +70,7 @@ export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
       }}
     >
       <Modal.Container className="items-center justify-center p-4">
-        <Modal.Dialog className="w-full overflow-hidden rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:max-w-[540px]">
+        <Modal.Dialog className="w-full overflow-hidden rounded-2xl border border-[var(--pv-hairline)] bg-white dark:bg-content1 shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:max-w-[540px]">
           <Modal.CloseTrigger />
           {step === "feedback" && (
             <FeedbackStep
@@ -128,7 +128,7 @@ function FeedbackStep({
         </p>
       </Modal.Header>
       <Modal.Body>
-        <div className="mb-4 rounded-xl border border-[var(--pv-hairline)] bg-[var(--pv-tile)] p-3.5">
+        <div className="mb-4 rounded-xl border border-[var(--pv-hairline)] bg-[#f7f7f7] dark:bg-content2 p-3.5">
           <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
             Your files stay safe
           </p>
@@ -148,7 +148,7 @@ function FeedbackStep({
           {REASON_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className="flex cursor-pointer items-center gap-2 rounded-md p-2 text-[13px] text-[var(--pv-text-body)] hover:bg-[var(--pv-tile)]"
+              className="flex cursor-pointer items-center gap-2 rounded-md p-2 text-[13px] text-[var(--pv-text-body)] hover:bg-[#f7f7f7] dark:bg-content2"
             >
               <input
                 checked={reason === opt.value}
@@ -163,7 +163,7 @@ function FeedbackStep({
           ))}
         </fieldset>
         <textarea
-          className="mt-3 min-h-[80px] w-full rounded-lg border border-[var(--pv-hairline)] bg-[var(--pv-tile)] p-3 text-[13px] text-[var(--pv-text-body)] outline-none placeholder:text-[var(--pv-text-muted)] focus:border-[var(--pv-hairline-strong)]"
+          className="mt-3 min-h-[80px] w-full rounded-lg border border-[var(--pv-hairline)] bg-[#f7f7f7] dark:bg-content2 p-3 text-[13px] text-[var(--pv-text-body)] outline-none placeholder:text-[var(--pv-text-muted)] focus:border-[var(--pv-hairline-strong)]"
           maxLength={2000}
           placeholder="What would make you use PDFVault regularly? (optional)"
           value={freeText}
@@ -192,7 +192,7 @@ function ConfirmedStep({ onClose }: { onClose: () => void }) {
           Your subscription has been cancelled. You&apos;ll continue to have
           full access until the end of your current billing period.
         </p>
-        <div className="mt-3 rounded-xl border border-[var(--pv-hairline)] bg-[var(--pv-tile)] p-3.5">
+        <div className="mt-3 rounded-xl border border-[var(--pv-hairline)] bg-[#f7f7f7] dark:bg-content2 p-3.5">
           <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
             Your files stay for {RETENTION_DAYS} more days
           </p>
