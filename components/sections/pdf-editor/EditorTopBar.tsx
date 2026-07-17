@@ -41,6 +41,7 @@ import { useState } from "react";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { HamburgerMenu } from "./HamburgerMenu";
 import { ToolsModal } from "./ToolsModal";
@@ -90,12 +91,34 @@ export function EditorInfoBar() {
 
   const fileName = file?.name ?? "PDF Editor";
 
-  const canSave = !!file && isSignedIn;
+  // Enable Save whenever a file is open. Signed-out users get bounced into
+  // the sign-in flow (with a redirect back to `/pdf-composer`) instead of
+  // hitting a silently-disabled button — that was confusing users into
+  // thinking Save was broken.
+  const canSave = !!file;
   const saveTooltip = !file
     ? "Open a PDF to save"
     : !isSignedIn
       ? "Sign in to save to your library"
       : "Save";
+  const onSaveClick = () => {
+    if (!isSignedIn) {
+      const redirect = encodeURIComponent(
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.search}`
+          : ROUTES.TOOLS.PDF_EDITOR,
+      );
+
+      if (typeof window !== "undefined") {
+        window.location.assign(
+          `${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`,
+        );
+      }
+
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("editor:save"));
+  };
 
   const handleExportAction = (key: Key) => {
     window.dispatchEvent(
@@ -238,12 +261,7 @@ export function EditorInfoBar() {
             />
             <ButtonGroup isDisabled={!file} size="sm" variant="primary">
               <Tooltip delay={300}>
-                <Button
-                  isDisabled={!canSave}
-                  onPress={() =>
-                    window.dispatchEvent(new CustomEvent("editor:save"))
-                  }
-                >
+                <Button isDisabled={!canSave} onPress={onSaveClick}>
                   <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
                   <span className="hidden sm:inline">Save</span>
                 </Button>

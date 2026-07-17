@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 type FooterLink = { label: string; href: string };
 type FooterColumn = { heading: string; links: FooterLink[] };
@@ -9,19 +10,18 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "TOOLS",
     links: [
-      // Edit → PDF Composer (editor). Compress + Convert → upload flow
-      // (dashboard) per PM review 2026-07.
+      // Edit → PDF Composer. Compress → editor with compress dialog auto-open.
+      // Convert → the Word-to-PDF landing (most-used input format).
       { label: "Edit & SIgn", href: ROUTES.TOOLS.PDF_EDITOR },
-      { label: "Compress", href: ROUTES.APP.DASHBOARD },
+      { label: "Compress", href: TOOL_ROUTE.compress },
       { label: "Convert", href: "/convert/pdf-to-word" },
     ],
   },
   {
     heading: "COMPANY",
     links: [
-      // About Us first, Pricing hidden until public pricing page ships.
-      { label: "About Us", href: "#about" },
-      // { label: "Pricing", href: ROUTES.PUBLIC.PRICING },
+      // "About Us" hidden until the /about page ships (was a dead #hash link).
+      // "Pricing" hidden until the public pricing page ships.
       { label: "Contact Us", href: ROUTES.LEGAL.CONTACT },
     ],
   },
@@ -45,6 +45,10 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   },
 ];
 
+// Kept for the future — re-render the icon row in the copyright bar once
+// real social profile URLs land. Currently unused because dead #hash links
+// shipped as anchors were flagged in the production audit.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SOCIAL_LINKS: { label: string; href: string; icon: React.ReactNode }[] = [
   {
     label: "PDFVault on LinkedIn",
@@ -164,9 +168,9 @@ export function LandingFooter() {
         </div>
 
         {/*
-          Bottom: copyright (left) + socials (right).
-          Divider sits above the row on every breakpoint to visually anchor it
-          against the tinted footer artwork.
+          Bottom: copyright. Social icons were dead #hash links so they're
+          hidden until real account URLs exist — re-enable by mapping over
+          SOCIAL_LINKS again once the hrefs are set.
         */}
         <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
           <div className="flex flex-row flex-nowrap items-center justify-between gap-3 sm:gap-4">
@@ -175,27 +179,6 @@ export function LandingFooter() {
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
             </p>
-            <ul className="flex shrink-0 items-center gap-2 sm:gap-3">
-              {SOCIAL_LINKS.map((social) => (
-                <li key={social.label}>
-                  <a
-                    aria-label={social.label}
-                    className={`flex size-7 items-center justify-center rounded-full text-white/80 transition-opacity duration-200 hover:opacity-100 sm:size-10 ${FOCUS_RING}`}
-                    href={social.href}
-                  >
-                    <svg
-                      aria-hidden
-                      fill="currentColor"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      width="16"
-                    >
-                      {social.icon}
-                    </svg>
-                  </a>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </div>

@@ -40,6 +40,7 @@ export function PvFormRow({
   description,
   required,
   helpTip,
+  htmlFor,
   children,
   last,
 }: {
@@ -47,6 +48,11 @@ export function PvFormRow({
   description?: string;
   required?: boolean;
   helpTip?: boolean;
+  /** id of the control this row labels — required for a11y when the control
+   *  is a `<select>` or non-labelled `<input>`. When absent the label is
+   *  presentational only (matches the current text-field usage where the
+   *  child already renders its own visible label wiring). */
+  htmlFor?: string;
   children: ReactNode;
   last?: boolean;
 }) {
@@ -58,7 +64,10 @@ export function PvFormRow({
     >
       <div className="min-w-0">
         <div className="flex items-center gap-1">
-          <label className="text-[13px] font-medium text-[var(--pv-text-strong)]">
+          <label
+            className="text-[13px] font-medium text-[var(--pv-text-strong)]"
+            htmlFor={htmlFor}
+          >
             {label}
             {required ? <span className="ml-0.5 text-[#7F56D9]">*</span> : null}
           </label>

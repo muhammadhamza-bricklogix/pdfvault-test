@@ -96,7 +96,7 @@ export default function AccountSettingsPage() {
 
       <PvFormRow
         required
-        description="This is a hint text to help user."
+        description="Enter the password you sign in with today."
         label="Current password"
       >
         <PvTextField
@@ -110,7 +110,7 @@ export default function AccountSettingsPage() {
 
       <PvFormRow
         required
-        description="This is a hint text to help user."
+        description="At least 8 characters with a mix of letters, numbers, and symbols."
         label="New password"
       >
         <PvTextField
@@ -126,7 +126,7 @@ export default function AccountSettingsPage() {
       <PvFormRow
         last
         required
-        description="This is a hint text to help user."
+        description="Re-enter the new password so we can catch typos."
         label="Confirm new password"
       >
         <PvTextField

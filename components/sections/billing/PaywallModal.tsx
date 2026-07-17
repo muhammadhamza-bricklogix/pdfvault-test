@@ -18,9 +18,9 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { DisclaimerBlock } from "./DisclaimerBlock";
 
-// Solidgate's iframe loader touches `window` at import time — dynamic
-// import with `ssr: false` keeps the Next.js server bundle clean and
-// avoids a 500 on the first request.
+// The payment SDK's iframe loader touches `window` at import time —
+// dynamic import with `ssr: false` keeps the Next.js server bundle clean
+// and avoids a 500 on the first request.
 const PaymentForm = dynamic(
   () => import("@solidgate/react-sdk").then((m) => m.default),
   { ssr: false },
@@ -33,9 +33,9 @@ interface PaywallModalProps {
 }
 
 /**
- * Two-column paywall modal — value proposition on the left, Solidgate
- * iframe on the right. Collapses to a single column on mobile so the
- * iframe stays legible on narrow viewports.
+ * Two-column paywall modal — value proposition on the left, payment
+ * processor iframe on the right. Collapses to a single column on mobile
+ * so the iframe stays legible on narrow viewports.
  *
  * Flow:
  *   1. On open, POST /billing/checkout-intent to get merchant data.
@@ -95,8 +95,8 @@ export function PaywallModal({
 
     // Belt-and-suspenders sync: the webhook is the source of truth in
     // production, but during local dev + demos it may not be routable.
-    // Sync pulls the latest state straight from Solidgate REST and
-    // upserts locally so the dashboard reflects reality immediately.
+    // Sync pulls the latest state straight from the processor's REST API
+    // and upserts locally so the dashboard reflects reality immediately.
     // Passing the subscription_id from the iframe success event skips
     // the customer-scoped list lookup — much more reliable.
     try {

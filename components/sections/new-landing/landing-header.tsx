@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { AllToolsCatalog } from "./all-tools-catalog";
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -18,7 +19,7 @@ type NavLink = { label: string; href: string };
 const PRIMARY_LINKS: NavLink[] = [
   { label: "Edit", href: ROUTES.TOOLS.PDF_EDITOR },
   { label: "Convert", href: "/convert/pdf-to-word" },
-  { label: "Compress", href: ROUTES.APP.DASHBOARD },
+  { label: "Compress", href: TOOL_ROUTE.compress },
   // { label: "AI Summarizer", href: "/ai-summarizer" },
 ];
 

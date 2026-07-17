@@ -372,7 +372,15 @@ export function PvFileTable({
                 className="px-4 py-10 text-center text-[13px] text-[var(--pv-text-muted)]"
                 colSpan={6}
               >
-                No files match your search.
+                <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
+                  <p>No files match your search.</p>
+                  <a
+                    className="pv-btn-primary inline-flex px-5 py-1.5 text-[13px]"
+                    href="/pdf-composer"
+                  >
+                    Upload a PDF
+                  </a>
+                </div>
               </td>
             </tr>
           ) : null}
