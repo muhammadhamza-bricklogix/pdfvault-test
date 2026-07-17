@@ -18,13 +18,15 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { DisclaimerBlock } from "./DisclaimerBlock";
 
-// Solidgate's iframe loader touches `window` at import time — dynamic
-// import with `ssr: false` keeps the Next.js server bundle clean and
-// avoids a 500 on the first request.
+// The payment SDK's iframe loader touches `window` at import time —
+// dynamic import with `ssr: false` keeps the Next.js server bundle clean
+// and avoids a 500 on the first request.
 const PaymentForm = dynamic(
   () => import("@solidgate/react-sdk").then((m) => m.default),
   { ssr: false },
 );
+
+const RETENTION_DAYS = 30;
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -33,13 +35,20 @@ interface PaywallModalProps {
 }
 
 /**
- * Two-column paywall modal — value proposition on the left, Solidgate
- * iframe on the right. Collapses to a single column on mobile so the
- * iframe stays legible on narrow viewports.
+ * Two-column payment modal — value proposition on the left, payment
+ * processor iframe on the right. Collapses to a single column on mobile
+ * so the iframe stays legible on narrow viewports.
+ *
+ * Styling comes from the app's --pv-* tokens (see globals.css) so the
+ * shell feels native next to the dashboard and settings surfaces. The
+ * checkout wiring (`useCreateCheckoutIntentMutation` +
+ * `handleIframeSuccess`) is unchanged from the previous version — this
+ * pass is a visual refresh + a data-retention notice, not a flow change.
  *
  * Flow:
  *   1. On open, POST /billing/checkout-intent to get merchant data.
- *   2. Left column renders the price card + feature list + trust row.
+ *   2. Left column renders the price card + feature list + retention +
+ *      trust row.
  *   3. Right column boots `<PaymentForm merchantData={...} />` inside
  *      an iframe. Card data never touches our JS bundle.
  *   4. On `success` iframe event: invalidate the subscription cache and
@@ -95,8 +104,8 @@ export function PaywallModal({
 
     // Belt-and-suspenders sync: the webhook is the source of truth in
     // production, but during local dev + demos it may not be routable.
-    // Sync pulls the latest state straight from Solidgate REST and
-    // upserts locally so the dashboard reflects reality immediately.
+    // Sync pulls the latest state straight from the processor's REST API
+    // and upserts locally so the dashboard reflects reality immediately.
     // Passing the subscription_id from the iframe success event skips
     // the customer-scoped list lookup — much more reliable.
     try {
@@ -128,8 +137,8 @@ export function PaywallModal({
         if (!open) onClose();
       }}
     >
-      <Modal.Container>
-        <Modal.Dialog className="w-[min(880px,calc(100vw-32px))] sm:!max-w-[880px]">
+      <Modal.Container className="items-center justify-center p-4">
+        <Modal.Dialog className="w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px]">
           <Modal.CloseTrigger />
           {error ? (
             <ErrorState error={error} />
@@ -156,47 +165,53 @@ function ValueColumn({ intent }: { intent: CheckoutIntent }) {
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
 
   return (
-    <div className="flex flex-col gap-5 rounded-t-[inherit] bg-gradient-to-br from-[#fff5f4] to-[#ffeceb] p-6 md:rounded-l-[inherit] md:rounded-tr-none md:p-7 dark:from-[#2a1613] dark:to-[#331915]">
+    <div className="flex flex-col gap-6 bg-[var(--pv-tile)] p-6 md:p-8">
       <div>
-        <span className="inline-flex h-6 items-center rounded-full bg-white/70 px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red,#de472e)] dark:bg-black/40">
+        <span className="inline-flex h-6 items-center rounded-full bg-[var(--pv-surface)] px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red)]">
           Limited-time offer
         </span>
-        <h2 className="mt-3 text-[22px] font-bold leading-tight text-default-900 sm:text-[24px]">
+        <h2 className="pv-heading mt-3 text-[22px] font-semibold leading-tight text-[var(--pv-text-strong)] sm:text-[24px]">
           Unlock the full PDFVault toolkit
         </h2>
-        <p className="mt-1 text-[13px] text-default-600">
-          Everything you need to convert, share, and edit — in one place.
+        <p className="mt-1.5 text-[13px] leading-snug text-[var(--pv-text-body)]">
+          Everything you need to convert, share, edit, and organize — in one
+          workspace.
         </p>
       </div>
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 dark:bg-black/30 dark:ring-white/5">
+      <div className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 shadow-sm">
         <div className="flex items-baseline gap-2">
-          <span className="text-[36px] font-bold leading-none text-default-900">
+          <span className="pv-heading text-[36px] font-semibold leading-none text-[var(--pv-text-strong)]">
             {today}
           </span>
-          <span className="text-[13px] font-medium text-default-500">
+          <span className="text-[13px] font-medium text-[var(--pv-text-muted)]">
             today
           </span>
         </div>
-        <p className="mt-2 text-[13px] text-default-600">
-          7-day trial, then <span className="font-semibold">{renew}/month</span>
-          . Cancel anytime.
+        <p className="mt-2 text-[13px] leading-snug text-[var(--pv-text-body)]">
+          7-day trial, then{" "}
+          <span className="font-semibold text-[var(--pv-text-strong)]">
+            {renew}/month
+          </span>
+          . Cancel anytime from Settings.
         </p>
       </div>
 
-      <ul className="flex flex-col gap-2.5 text-[13px] text-default-700">
+      <ul className="flex flex-col gap-2.5 text-[13px] text-[var(--pv-text-body)]">
         <Feature>Convert PDF to Word, Excel, PowerPoint, JPG, PNG</Feature>
-        <Feature>Merge, split, compress and organize pages</Feature>
+        <Feature>Merge, split, compress, and organize pages</Feature>
         <Feature>Password-protect and share via secure links</Feature>
         <Feature>Extract images and edit text inline</Feature>
         <Feature>Unlimited edits + priority processing</Feature>
       </ul>
 
-      <div className="mt-auto flex flex-col gap-2 text-[11px] text-default-500">
-        <div className="flex flex-wrap items-center gap-3">
-          <TrustBadge label="SSL secure checkout" />
+      <RetentionNotice days={RETENTION_DAYS} />
+
+      <div className="mt-auto flex flex-col gap-2 text-[11px] text-[var(--pv-text-muted)]">
+        <div className="flex flex-wrap items-center gap-2">
+          <TrustBadge label="SSL checkout" />
           <TrustBadge label="Cancel anytime" />
-          <TrustBadge label="30-day support" />
+          <TrustBadge label={`${RETENTION_DAYS}-day retention`} />
         </div>
         <p>
           Card details never touch our servers. All payments run through a
@@ -213,16 +228,16 @@ function PaymentColumn({
   onFail,
 }: {
   intent: CheckoutIntent;
-  onSuccess: () => void;
+  onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
   onFail: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 p-6 md:p-7">
+    <div className="flex flex-col gap-4 bg-[var(--pv-surface)] p-6 md:p-8">
       <div>
-        <h3 className="text-[16px] font-semibold text-default-900">
+        <h3 className="pv-heading text-[16px] font-semibold text-[var(--pv-text-strong)]">
           Pay securely
         </h3>
-        <p className="mt-0.5 text-[12px] text-default-500">
+        <p className="mt-0.5 text-[12px] text-[var(--pv-text-muted)]">
           Apple Pay, Google Pay, or card
         </p>
       </div>
@@ -259,10 +274,10 @@ function PaymentColumn({
 
 function Feature({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-2">
+    <li className="flex items-start gap-2.5">
       <span
         aria-hidden
-        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red,#de472e)] text-[10px] font-bold text-white"
+        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[10px] font-bold text-white"
       >
         ✓
       </span>
@@ -271,9 +286,32 @@ function Feature({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Data retention block — surfaces the fact that we hold on to a user's
+ * files for a while after any cancellation so nothing is lost. This copy
+ * pairs with the matching retention badge below and appears in the
+ * settings > billing cancel flow, so wording stays consistent.
+ */
+function RetentionNotice({ days }: { days: number }) {
+  return (
+    <div className="rounded-xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-3.5">
+      <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
+        Your files stay safe
+      </p>
+      <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-body)]">
+        If you cancel, we keep your PDFs in your account for{" "}
+        <span className="font-semibold text-[var(--pv-text-strong)]">
+          {days} days
+        </span>{" "}
+        so you can resubscribe or download without losing work.
+      </p>
+    </div>
+  );
+}
+
 function TrustBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-1 font-medium text-default-700 dark:bg-black/30 dark:text-default-300">
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--pv-surface)] px-2 py-1 font-medium text-[var(--pv-text-body)]">
       <span aria-hidden className="text-emerald-600">
         🔒
       </span>
@@ -290,7 +328,7 @@ function PaymentMethodBadges() {
       {methods.map((m) => (
         <span
           key={m}
-          className="inline-flex h-6 items-center rounded border border-default-200 bg-white px-2 text-[10px] font-semibold text-default-700 dark:border-default-700 dark:bg-black/40 dark:text-default-300"
+          className="inline-flex h-6 items-center rounded border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-2 text-[10px] font-semibold text-[var(--pv-text-body)]"
         >
           {m}
         </span>
@@ -301,17 +339,19 @@ function PaymentMethodBadges() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 p-10">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-default-200 border-t-[var(--pv-brand-red,#de472e)]" />
-      <p className="text-sm text-default-600">Preparing secure checkout…</p>
+    <div className="flex flex-col items-center justify-center gap-3 bg-[var(--pv-surface)] p-10">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--pv-hairline)] border-t-[var(--pv-brand-red)]" />
+      <p className="pv-heading text-sm text-[var(--pv-text-body)]">
+        Preparing secure checkout…
+      </p>
     </div>
   );
 }
 
 function ErrorState({ error }: { error: string }) {
   return (
-    <div className="flex flex-col gap-3 p-8">
-      <h3 className="text-[16px] font-semibold text-danger">
+    <div className="flex flex-col gap-3 bg-[var(--pv-surface)] p-8">
+      <h3 className="pv-heading text-[16px] font-semibold text-danger">
         Couldn&apos;t start checkout
       </h3>
       <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger">
