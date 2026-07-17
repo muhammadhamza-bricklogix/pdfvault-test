@@ -445,7 +445,7 @@ export function ManagePagesModal({
           <Modal.Dialog className="flex !h-full !max-h-full !w-full !max-w-none flex-col overflow-hidden p-0 sm:!max-w-none">
             <Modal.CloseTrigger />
 
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default-200 bg-[var(--color-background)] px-3 py-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default-200 bg-[var(--color-background)] px-3 py-2 pr-12">
               <div className="flex flex-wrap items-center gap-0.5">
                 {LEFT_TOOLS.map((tool) => {
                   const disabled = isToolDisabled(tool.id);

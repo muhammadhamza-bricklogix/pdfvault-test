@@ -4,9 +4,12 @@ import type { Canvas } from "fabric";
 import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
+import NextImage from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { ROUTES } from "@/lib/shared/constants/routes";
 import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
@@ -51,6 +54,26 @@ import { RightSidebar } from "./RightSidebar";
 import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
 
+function UploadScreenHeader() {
+  return (
+    <header className="flex h-14 shrink-0 items-center border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
+      <Link
+        aria-label="PDFVault home"
+        className="flex shrink-0 items-center"
+        href={ROUTES.PUBLIC.HOME}
+      >
+        <NextImage
+          alt="PDFVault"
+          className="h-[26px] w-auto object-contain"
+          height={26}
+          src="/landing/logo-with-text.png"
+          width={104}
+        />
+      </Link>
+    </header>
+  );
+}
+
 function UploadScreen() {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
@@ -81,25 +104,28 @@ function UploadScreen() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center p-8">
-      <div className="w-full max-w-2xl space-y-4">
-        <FileUpload
-          accept={UPLOAD_ACCEPT_MIME}
-          acceptLabel="PDF, Word, Excel, PowerPoint, Image"
-          description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
-          heading="Drop your file here"
-          onFileSelect={handleSelect}
-        />
-        <p className="text-center text-sm text-default-400">
-          or{" "}
-          <button
-            className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
-            type="button"
-            onClick={() => setIsCreatePdfModalOpen(true)}
-          >
-            create a blank PDF
-          </button>
-        </p>
+    <div className="flex flex-1 flex-col">
+      <UploadScreenHeader />
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="w-full max-w-2xl space-y-4">
+          <FileUpload
+            accept={UPLOAD_ACCEPT_MIME}
+            acceptLabel="PDF, Word, Excel, PowerPoint, Image"
+            description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
+            heading="Drop your file here"
+            onFileSelect={handleSelect}
+          />
+          <p className="text-center text-sm text-default-400">
+            or{" "}
+            <button
+              className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
+              type="button"
+              onClick={() => setIsCreatePdfModalOpen(true)}
+            >
+              create a blank PDF
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

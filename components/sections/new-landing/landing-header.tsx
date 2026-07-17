@@ -251,7 +251,7 @@ export function LandingHeader() {
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="max-h-[80vh] overflow-y-auto p-0">
-              <AllToolsCatalog />
+              <AllToolsCatalog onNavigate={() => setToolsModalOpen(false)} />
             </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>

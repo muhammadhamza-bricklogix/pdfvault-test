@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -11,22 +12,43 @@ import {
 } from "@/lib/client/upload/pending-editor-file";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
+ * Tools whose action lives on the backend (auth-gated / paywalled). Landing
+ * these signed-out kicks the user into the "Couldn't start checkout"
+ * dead-end — we redirect to sign-in first instead.
+ */
+const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set([
+  "compress",
+  "password",
+  "unlock",
+  "flatten",
+  "extract-images",
+]);
+
+/**
  * Bootstraps the editor on `/pdf-composer` mount:
  *
- * 1. **Rehydrate** — if IndexedDB has a File left over from an old flow
+ * 1. **Tool-tile reset** — if the URL carries `?tool=<slug>` and no `?id=`,
+ *    the user came from a landing / dashboard tool tile. Clear the store's
+ *    lingering file so the drop-zone shows instead of the previous PDF,
+ *    matching QA's expected "Drop your file here" screen.
+ * 2. **Auth gate for backend tools** — some tools (compress, password,
+ *    unlock, flatten, extract-images) hit auth-gated backend endpoints.
+ *    If a signed-out user lands with one of those slugs, bounce to
+ *    /sign-in with a return URL so they don't hit the paywall dead-end.
+ * 3. **Rehydrate** — if IndexedDB has a File left over from an old flow
  *    (belt-and-braces; the new `UploadWorkspace` no longer writes to IDB),
  *    load it into the store.
- * 2. **Auto-save to library (signed-in only)** — the first time a File is
+ * 4. **Auto-save to library (signed-in only)** — the first time a File is
  *    seen in the store without a matching Document ID, POST it to
  *    `/documents/upload` so it appears in Dashboard → My PDFs and future
  *    Save actions overwrite the same row.
- * 3. **Auto-launch tool** — if the URL carries `?tool=<slug>` and/or
- *    `?export=<format>`, fire the matching editor action once the store
- *    has a File. The mapping mirrors the toolbar / HamburgerMenu event
+ * 5. **Auto-launch tool** — once the store has a File, fire the matching
+ *    editor action. The mapping mirrors the toolbar / HamburgerMenu event
  *    bus so we don't duplicate the modal-open logic.
  *
  * Slugs:
@@ -43,9 +65,11 @@ import { toast } from "@/lib/shared/utils/toast";
  */
 export function PendingEditorFileHydrator() {
   const ranRef = useRef(false);
+  const resetRef = useRef(false);
   const launchedRef = useRef(false);
   const autoSavedRef = useRef(false);
 
+  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
@@ -59,12 +83,46 @@ export function PendingEditorFileHydrator() {
   const currentFile = usePdfEditorStore((s) => s.file);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const queryClient = useQueryClient();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
 
   const searchParams = useSearchParams();
   const tool = searchParams.get("tool");
   const exportFormat = searchParams.get("export");
+  const docId = searchParams.get("id");
 
-  // Step 1 — one-shot IDB rehydrate.
+  // Step 1 — auth gate + tool-tile reset. Runs once per mount before
+  // anything else touches the store.
+  useEffect(() => {
+    if (resetRef.current) return;
+    if (!authLoaded) return; // wait for auth so the gate doesn't misfire
+
+    resetRef.current = true;
+
+    // Landing / dashboard tool tiles route to `/pdf-composer?tool=<slug>`
+    // (no id). If the store has a stale file from a previous session in
+    // this tab, drop it so the user gets the "Drop your file here" screen
+    // they'd get from a first-visit — matches QA expectation.
+    if ((tool || exportFormat) && !docId) {
+      clearFile();
+    }
+
+    if (tool && AUTH_GATED_TOOLS.has(tool) && !isSignedIn) {
+      // Preserve the tool slug in the return URL so we land back in the
+      // same launch flow after sign-in.
+      const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
+
+      toast.info({
+        title: "Sign in to use this tool",
+        description:
+          "Sign in and you'll come right back to finish where you left off.",
+      });
+      window.location.assign(
+        `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
+      );
+    }
+  }, [authLoaded, clearFile, docId, exportFormat, isSignedIn, tool]);
+
+  // Step 2 — one-shot IDB rehydrate.
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
@@ -94,7 +152,7 @@ export function PendingEditorFileHydrator() {
     };
   }, [currentFile, setCurrentDocument, setFile]);
 
-  // Step 2 — background auto-save for signed-in users. Fires once per
+  // Step 3 — background auto-save for signed-in users. Fires once per
   // file-without-doc-id combo. Failure is non-blocking; the editor still
   // opens and the user can hit Save manually.
   useEffect(() => {
@@ -128,7 +186,7 @@ export function PendingEditorFileHydrator() {
     })();
   }, [currentDocumentId, currentFile, queryClient, setCurrentDocument]);
 
-  // Step 3 — tool / export auto-launch, one-shot per URL. Waits for the
+  // Step 4 — tool / export auto-launch, one-shot per URL. Waits for the
   // file to be non-null so the modals don't open on an empty editor.
   useEffect(() => {
     if (launchedRef.current) return;
