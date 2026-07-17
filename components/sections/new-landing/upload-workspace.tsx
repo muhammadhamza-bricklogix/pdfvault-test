@@ -1,7 +1,8 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
@@ -236,8 +237,22 @@ export function UploadWorkspace({
   const [opening, setOpening] = useState(false);
   const errorId = useId();
   const router = useRouter();
+  const pathname = usePathname();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  // Conversion (both PDF-to-X and X-to-PDF) hits the backend /conversion
+  // endpoint which is auth-gated. The signals:
+  //   - `exportFormat` present → PDF-to-X route (upload PDF, auto-export)
+  //   - `/convert/*` pathname → any conversion page (upload non-PDF, get PDF)
+  // Either way the flow needs the user signed in before we start burning
+  // client CPU on a client-side rasterise. Gate the entry: bounce to
+  // sign-in with a return URL back to this same convert page, then the
+  // user re-uploads once signed in.
+  const requiresAuth = useMemo(
+    () => Boolean(exportFormat) || Boolean(pathname?.startsWith("/convert/")),
+    [exportFormat, pathname],
+  );
 
   const acceptedExtensions = useMemo(
     () => acceptExtensions ?? DEFAULT_ACCEPTED_EXTENSIONS,
@@ -260,6 +275,22 @@ export function UploadWorkspace({
 
   const openFileInEditor = useCallback(
     async (picked: File) => {
+      // Convert routes require sign-in for the backend conversion call.
+      // Redirect BEFORE we spend time on the client-side PDF conversion.
+      if (requiresAuth && authLoaded && !isSignedIn) {
+        const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
+        const redirect = encodeURIComponent(returnPath);
+
+        toast.info({
+          title: "Sign in to convert",
+          description:
+            "Sign in and you'll come right back to this page to finish.",
+        });
+        router.push(`${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`);
+
+        return;
+      }
+
       setOpening(true);
       const loadingKey =
         picked.type === "application/pdf"
@@ -291,7 +322,16 @@ export function UploadWorkspace({
         if (loadingKey) toast.close(loadingKey);
       }
     },
-    [composerHref, router, setCurrentDocument, setEditorFile],
+    [
+      authLoaded,
+      composerHref,
+      isSignedIn,
+      pathname,
+      requiresAuth,
+      router,
+      setCurrentDocument,
+      setEditorFile,
+    ],
   );
 
   const validateAndSet = (candidate: File) => {
