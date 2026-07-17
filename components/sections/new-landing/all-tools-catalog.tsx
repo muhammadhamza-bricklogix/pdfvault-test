@@ -1,17 +1,8 @@
-"use client";
-
 import Link from "next/link";
 
 import { LANDING_TOOL_CATEGORIES } from "@/lib/shared/constants/landing-tools";
 
 import { AllToolsIcon } from "./all-tools-icon";
-
-interface AllToolsCatalogProps {
-  /** Optional callback fired when a tile is clicked. Used by the header
-   *  "All Tools" modal to close itself so the destination page isn't
-   *  hidden behind the still-open modal (QA-reported "nothing happens"). */
-  onNavigate?: () => void;
-}
 
 /**
  * The 4-column tool catalog from `Frame 2147239344.png`. Column widths and
@@ -22,8 +13,12 @@ interface AllToolsCatalogProps {
  * Rows are `<Link>`s so the whole 21px band is clickable, and the label
  * gets a subtle red hue + 2px x-shift on hover. Icons use `currentColor`
  * so they follow the same tone.
+ *
+ * Server-safe (no interactivity). When embedded inside the header's
+ * "All Tools" modal, the parent watches the pathname to auto-close on
+ * navigation — see `landing-header.tsx`.
  */
-export function AllToolsCatalog({ onNavigate }: AllToolsCatalogProps = {}) {
+export function AllToolsCatalog() {
   return (
     <section
       aria-labelledby="all-tools-heading"
@@ -51,7 +46,6 @@ export function AllToolsCatalog({ onNavigate }: AllToolsCatalogProps = {}) {
                     <Link
                       className="group flex items-center gap-[10px] text-[16px] leading-[21px] tracking-[-0.03em] text-[#121212] transition-colors duration-200 hover:text-[var(--pv-brand-primary)]"
                       href={tool.href}
-                      onClick={onNavigate}
                     >
                       <span className="inline-flex size-[18px] shrink-0 items-center justify-center text-[#121212] transition-colors duration-200 group-hover:text-[var(--pv-brand-primary)]">
                         <AllToolsIcon icon={tool.icon} />

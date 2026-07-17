@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { Modal } from "@heroui/react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -28,6 +29,19 @@ export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const { isLoaded, isSignedIn } = useAuth();
+  const pathname = usePathname();
+
+  // Auto-dismiss the All Tools + mobile drawer whenever the route
+  // changes. Tiles inside the modal used to leave the modal open behind
+  // the destination page ("nothing happened" QA report); syncing to
+  // pathname avoids the need to thread a callback through the
+  // server-safe AllToolsCatalog.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToolsModalOpen(false);
+
+    setMobileOpen(false);
+  }, [pathname]);
   // Signed-in state resolved via Clerk. Until `isLoaded` we render
   // nothing on the auth slot so the header doesn't flash Login → then
   // → Dashboard on hydration.
@@ -251,7 +265,7 @@ export function LandingHeader() {
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="max-h-[80vh] overflow-y-auto p-0">
-              <AllToolsCatalog onNavigate={() => setToolsModalOpen(false)} />
+              <AllToolsCatalog />
             </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>
