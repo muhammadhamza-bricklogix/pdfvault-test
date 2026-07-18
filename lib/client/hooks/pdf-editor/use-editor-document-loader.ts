@@ -253,13 +253,31 @@ export function useEditorDocumentLoader() {
         }
 
         // Document doesn't exist / forbidden / any non-auth error → toast
-        // then bounce to Dashboard so the user isn't stranded on a blank
-        // editor. Reported 2026-06-18: pasting an invalid `?id=` URL
-        // left a permanently blank page in both web and mobile views.
-        // 404 / 403 / network errors all funnel here; the toast carries
-        // the specific reason while the redirect ensures the user has a
-        // place to go next.
+        // and — only when there's truly nothing to show — bounce to
+        // Dashboard so the user isn't stranded on a blank editor
+        // (reported 2026-06-18: pasting an invalid `?id=` URL left a
+        // permanently blank page).
+        //
+        // BUT if the editor already has a file loaded (typical when
+        // `?id=` was written by the hydrator's auto-save right after
+        // the user's own upload — race between store update, URL
+        // replace, and this loader fetch), do NOT redirect. The user
+        // has a working local session; bouncing to Dashboard mid-flow
+        // dumps them out of the editor after sign-in for no reason
+        // (reported 2026-07-18 on the export-after-sign-in flow).
         logger.error("Failed to load document for editor", err);
+        const stateNow = usePdfEditorStore.getState();
+
+        if (stateNow.file) {
+          toast.error({
+            title: "Couldn't open saved document",
+            description:
+              "Continuing with your local copy — Save to persist edits.",
+          });
+
+          return;
+        }
+
         toast.error({
           title: "Couldn't open document",
           description: message,
