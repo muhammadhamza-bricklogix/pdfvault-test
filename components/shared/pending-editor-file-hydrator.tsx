@@ -177,12 +177,29 @@ export function PendingEditorFileHydrator() {
           description: document.filename,
         });
 
-        // Reflect the saved doc in the URL — the editor's document
-        // loader keys off `?id=<docId>` for cloud-persisted docs, and
-        // future Save actions overwrite the same row instead of
-        // creating a duplicate. Uses router.replace so the user's back
-        // button doesn't stack an intermediate URL.
-        if (pathname === ROUTES.TOOLS.PDF_EDITOR && !searchParams.get("id")) {
+        // Reflect the saved doc in the URL so future Save actions
+        // overwrite the same row and a bookmarked link reopens it —
+        // BUT only when we aren't mid-flight on an auto-launch flow
+        // (`?tool=` or `?export=`). Adding `?id=<newId>` under those
+        // params races the document-loader effect: it may fire against
+        // the freshly-added id before the store selector observes the
+        // matching `currentDocumentId`, briefly failing the
+        // "already hydrated" short-circuit and firing a GET
+        // /documents/<id> that can 404 during the backend-indexing
+        // window. The user then sees the file for a moment before the
+        // loader's error branch bounces them out. Skipping the URL
+        // update here keeps the store the source of truth for the
+        // in-flight session; the user's next explicit Save writes the
+        // id into the URL cleanly.
+        const hasAutoLaunch =
+          searchParams.get("tool") !== null ||
+          searchParams.get("export") !== null;
+
+        if (
+          pathname === ROUTES.TOOLS.PDF_EDITOR &&
+          !searchParams.get("id") &&
+          !hasAutoLaunch
+        ) {
           const next = new URLSearchParams(searchParams.toString());
 
           next.set("id", document.id);
