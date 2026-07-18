@@ -30,7 +30,9 @@ export function WeglotLoader() {
         window.Weglot?.initialize({
           api_key: WEGLOT_API_KEY,
           originalLanguage: "en",
-          destinationLanguages: "es",
+          // Match the hreflang subdomains declared in app/layout.tsx —
+          // ar, fr, de, pt, es on <lang>.pdfvault.ai.
+          destinationLanguages: "ar,fr,de,pt,es",
         });
         window.dispatchEvent(new CustomEvent("weglot:initialized"));
       }}

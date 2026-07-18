@@ -34,6 +34,22 @@ export const metadata: Metadata = {
     icon: "/PDFVault_stacked_layers.png",
     shortcut: "/PDFVault_stacked_layers.png",
   },
+  // Weglot serves translated versions at `<lang>.pdfvault.ai` subdomains.
+  // The alternates block emits the `<link rel="alternate" hreflang="...">`
+  // tags Google needs to index each language variant. `x-default` points
+  // at the canonical English origin.
+  alternates: {
+    canonical: "https://pdfvault.ai",
+    languages: {
+      "x-default": "https://pdfvault.ai",
+      en: "https://pdfvault.ai",
+      ar: "https://ar.pdfvault.ai",
+      fr: "https://fr.pdfvault.ai",
+      de: "https://de.pdfvault.ai",
+      pt: "https://pt.pdfvault.ai",
+      es: "https://es.pdfvault.ai",
+    },
+  },
 };
 
 export const viewport: Viewport = {
