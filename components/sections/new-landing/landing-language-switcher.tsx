@@ -2,11 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type LangCode = "en" | "es";
+type LangCode = "en" | "es" | "ar" | "fr" | "de" | "pt";
 
+// Must match the `destinationLanguages` list in `weglot-loader.tsx` and
+// the hreflang alternates in `app/layout.tsx`. Order shown here is the
+// order the dropdown renders.
 const LANGUAGES: { code: LangCode; label: string; short: string }[] = [
   { code: "en", label: "English", short: "EN" },
   { code: "es", label: "Español", short: "ES" },
+  { code: "fr", label: "Français", short: "FR" },
+  { code: "de", label: "Deutsch", short: "DE" },
+  { code: "pt", label: "Português", short: "PT" },
+  { code: "ar", label: "العربية", short: "AR" },
 ];
 
 function GlobeIcon() {

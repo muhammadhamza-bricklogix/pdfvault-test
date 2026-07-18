@@ -3,11 +3,17 @@
 import { Button, Dropdown, Label } from "@heroui/react";
 import { useEffect, useState } from "react";
 
-type LangCode = "en" | "es";
+type LangCode = "en" | "es" | "ar" | "fr" | "de" | "pt";
 
+// Must match `destinationLanguages` in weglot-loader.tsx + hreflang
+// alternates in app/layout.tsx.
 const LANGUAGES = [
   { code: "en" as LangCode, label: "English", short: "EN" },
   { code: "es" as LangCode, label: "Español", short: "ES" },
+  { code: "fr" as LangCode, label: "Français", short: "FR" },
+  { code: "de" as LangCode, label: "Deutsch", short: "DE" },
+  { code: "pt" as LangCode, label: "Português", short: "PT" },
+  { code: "ar" as LangCode, label: "العربية", short: "AR" },
 ] as const;
 
 export function LanguageSwitcher() {
