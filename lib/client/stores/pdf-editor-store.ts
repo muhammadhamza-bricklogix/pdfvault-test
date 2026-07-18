@@ -129,6 +129,14 @@ type PdfEditorStore = {
   isManagePagesOpen: boolean;
   isPageNumbersModalOpen: boolean;
   isRestoringHistory: boolean;
+  /**
+   * True while the post-sign-in hydrator is uploading a restored file
+   * to /documents/upload and waiting for the fresh document id. Used
+   * by PdfEditorShell to render the loading skeleton (not the empty
+   * drop-zone) during the save. Cleared once the id is in hand and
+   * the URL has been updated.
+   */
+  isRestoringSession: boolean;
   isSignatureModalOpen: boolean;
   isSignedIn: boolean;
   /**
@@ -213,6 +221,7 @@ type PdfEditorStore = {
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
   setIsRestoringHistory: (value: boolean) => void;
+  setIsRestoringSession: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   markPageExtracted: (sourcePage: number) => void;
@@ -253,6 +262,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isCreatingShape: false,
   isManagePagesOpen: false,
   isRestoringHistory: false,
+  isRestoringSession: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
   extractedPages: new Set(),
@@ -351,6 +361,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isCreatingShape: false,
       isManagePagesOpen: false,
       isRestoringHistory: false,
+      isRestoringSession: false,
       isSignatureModalOpen: false,
       extractedPages: new Set(),
       pageCount: 0,
@@ -593,6 +604,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsCreatingShape: (value) => set({ isCreatingShape: value }),
   setIsManagePagesOpen: (value) => set({ isManagePagesOpen: value }),
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
+  setIsRestoringSession: (value) => set({ isRestoringSession: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
   markPageExtracted: (sourcePage) =>

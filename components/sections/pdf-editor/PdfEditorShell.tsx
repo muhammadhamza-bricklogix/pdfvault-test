@@ -399,13 +399,17 @@ export function PdfEditorShell() {
     setIsSignedIn(isSignedIn ?? false);
   }, [isSignedIn, setIsSignedIn]);
 
+  const isRestoringSession = usePdfEditorStore((s) => s.isRestoringSession);
+
   let content: React.ReactNode;
 
   if (file) {
     content = <EditorLayout />;
-  } else if (pendingDocumentId) {
-    // Doc referenced by URL but not yet hydrated — show editor chrome with
-    // skeletons rather than the empty upload screen.
+  } else if (pendingDocumentId || isRestoringSession) {
+    // Doc referenced by URL but not yet hydrated, OR we're actively
+    // uploading the restored file to /documents/upload after a
+    // post-sign-in return. Either way show the skeleton so the user
+    // isn't dropped onto the "Drop your file here" screen mid-flow.
     content = <EditorLoadingShell />;
   } else {
     content = <UploadScreen />;

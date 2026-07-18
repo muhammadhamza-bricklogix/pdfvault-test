@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { uploadToasts } from "@/lib/client/upload-toasts/controller";
 import {
   clearPendingEditorFile,
   loadPendingEditorFile,
@@ -72,6 +73,9 @@ export function PendingEditorFileHydrator() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  const setIsRestoringSession = usePdfEditorStore(
+    (s) => s.setIsRestoringSession,
+  );
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCompressModalOpen = usePdfEditorStore(
     (s) => s.setIsCompressModalOpen,
@@ -168,33 +172,56 @@ export function PendingEditorFileHydrator() {
 
         if (isSignedIn && hasAutoLaunch && !docId) {
           // Post-sign-in restore path — save-first-then-navigate.
-          const savingKey = toast.loading({
-            title: "Saving your file to My PDFs…",
-            description: file.name,
+          // Flip isRestoringSession so PdfEditorShell renders the
+          // <EditorLoadingShell /> skeleton (not the empty drop-zone)
+          // during the save. Also open a bottom-anchored upload-progress
+          // toast that mirrors the real upload % (much less jarring
+          // than a top-right spinner for a multi-second network op).
+          setIsRestoringSession(true);
+          const trackingId = `restore-${Date.now()}`;
+
+          uploadToasts.start({
+            trackingId,
+            filename: file.name,
           });
 
           try {
-            const document = await documentsService.uploadDocument({ file });
+            const document = await documentsService.uploadDocument(
+              { file },
+              {
+                onUploadProgress: (event) => {
+                  if (!event.total) return;
+                  const pct = Math.round((event.loaded / event.total) * 100);
+
+                  uploadToasts.setProgress(
+                    trackingId,
+                    pct,
+                    "uploading_s3",
+                    pct < 100 ? "Uploading to cloud…" : "Finishing up…",
+                  );
+                },
+              },
+            );
 
             if (cancelled) return;
+            if (!document.id) {
+              throw new Error("Server returned document without an id");
+            }
             queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
             await clearPendingEditorFile();
             autoSavedRef.current = true; // Step 3 already covered
-            toast.success({
-              title: "Saved to My PDFs",
-              description: document.filename,
-            });
+            uploadToasts.succeed(trackingId, document);
 
             // Add the fresh id to the URL. The document loader takes
-            // over from here — it will GET /documents/<id>, hydrate
-            // the store, and the auto-launch effect will fire once
-            // the file lands.
+            // over from here — GET /documents/<id> hydrates the store
+            // and the auto-launch effect fires once the file lands.
             const next = new URLSearchParams(searchParams.toString());
 
             next.set("id", document.id);
             router.replace(`${pathname}?${next.toString()}`);
           } catch (saveErr) {
             logger.warn("post-signin save-first failed", saveErr);
+            uploadToasts.fail(trackingId, saveErr);
             toast.error({
               title: "Couldn't save automatically",
               description:
@@ -205,7 +232,7 @@ export function PendingEditorFileHydrator() {
             setFile(file);
             await clearPendingEditorFile();
           } finally {
-            toast.close(savingKey);
+            setIsRestoringSession(false);
           }
 
           return;
@@ -235,6 +262,7 @@ export function PendingEditorFileHydrator() {
     searchParams,
     setCurrentDocument,
     setFile,
+    setIsRestoringSession,
     tool,
   ]);
 

@@ -85,7 +85,7 @@ export function UploadToastProvider() {
   }, []);
 
   return (
-    <Toast.Provider placement="bottom end" queue={uploadToastQueue}>
+    <Toast.Provider placement="bottom start" queue={uploadToastQueue}>
       {({ toast }) => <UploadToastRenderer toast={toast} />}
     </Toast.Provider>
   );
