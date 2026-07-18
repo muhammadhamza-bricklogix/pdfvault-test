@@ -226,11 +226,19 @@ export function PendingEditorFileHydrator() {
   ]);
 
   // Step 4 — tool / export auto-launch, one-shot per URL. Waits for the
-  // file to be non-null so the modals don't open on an empty editor.
+  // file to be non-null so the modals don't open on an empty editor,
+  // and — crucially — waits for `authLoaded` before firing. If we
+  // dispatch `editor:export` before Clerk has finished hydrating,
+  // `useExportEditor` reads `store.isSignedIn` at its default (`false`)
+  // and re-triggers the sign-in redirect the user just came from →
+  // infinite bounce. Waiting for `authLoaded` guarantees the store's
+  // `isSignedIn` (synced from Clerk in PdfEditorShell) reflects reality
+  // by the time the event fires.
   useEffect(() => {
     if (launchedRef.current) return;
     if (!currentFile) return;
     if (!tool && !exportFormat) return;
+    if (!authLoaded) return;
 
     launchedRef.current = true;
 

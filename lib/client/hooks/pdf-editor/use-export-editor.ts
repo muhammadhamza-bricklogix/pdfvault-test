@@ -2,6 +2,7 @@
 
 import type { Canvas as FabricCanvas } from "fabric";
 
+import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef } from "react";
 
 import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
@@ -82,15 +83,33 @@ function downloadBytes(bytes: Uint8Array, filename: string) {
 export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
-  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
+  // Read auth from Clerk directly rather than from the store's cached
+  // `isSignedIn` — the store copy is updated in a separate useEffect
+  // downstream (PdfEditorShell → setIsSignedIn), and there is a window
+  // during the auth-return flow where that sync hasn't run yet. Reading
+  // Clerk's hook keeps the export gate honest at the exact moment the
+  // event fires.
+  const { isLoaded: authLoaded, isSignedIn: clerkIsSignedIn } = useAuth();
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
-  const stateRef = useRef({ currentPage, fabricCanvas, file, isSignedIn });
+  const stateRef = useRef({
+    currentPage,
+    fabricCanvas,
+    file,
+    authLoaded,
+    clerkIsSignedIn,
+  });
 
   useEffect(() => {
-    stateRef.current = { currentPage, fabricCanvas, file, isSignedIn };
-  }, [currentPage, fabricCanvas, file, isSignedIn]);
+    stateRef.current = {
+      currentPage,
+      fabricCanvas,
+      file,
+      authLoaded,
+      clerkIsSignedIn,
+    };
+  }, [currentPage, fabricCanvas, file, authLoaded, clerkIsSignedIn]);
 
   const convertRef = useRef(convert);
 
@@ -105,7 +124,8 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       currentPage: page,
       fabricCanvas: liveCanvas,
       file: sourceFile,
-      isSignedIn: signedIn,
+      authLoaded: authReady,
+      clerkIsSignedIn: signedIn,
     } = stateRef.current;
 
     if (!sourceFile) {
@@ -113,6 +133,24 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         title: "Nothing to export",
         description: "Open a PDF before exporting.",
       });
+
+      return;
+    }
+
+    // If Clerk hasn't finished hydrating yet, defer for a short beat and
+    // re-dispatch the export event. Otherwise a fresh-return-from-sign-in
+    // load can fire editor:export before authLoaded flips to true — we'd
+    // read isSignedIn=false and pointlessly redirect the user back into
+    // the sign-in flow they just completed. Re-dispatching (rather than
+    // recursing into handleExport) keeps the closure lint rule happy and
+    // still routes through the listener once auth is ready.
+    if (!authReady) {
+      isExportingRef.current = false;
+      window.setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("editor:export", { detail: { format } }),
+        );
+      }, 250);
 
       return;
     }
