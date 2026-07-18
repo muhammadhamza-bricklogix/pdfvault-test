@@ -264,15 +264,25 @@ export function UploadWorkspace({
     [acceptedExtensions],
   );
 
-  const composerHref = useMemo(() => {
-    const query = new URLSearchParams();
+  // Build the /pdf-composer URL for a given saved-document id. When we
+  // have an id, the editor loads the persisted bytes from the backend
+  // via `?id=<docId>`, and future Save actions overwrite that same row
+  // instead of creating a duplicate. When we don't (signed-out anon
+  // flow), the editor falls back to the in-memory file set on the
+  // Zustand store.
+  const buildComposerHref = useCallback(
+    (documentId: string | null) => {
+      const query = new URLSearchParams();
 
-    if (tool) query.set("tool", tool);
-    if (exportFormat) query.set("export", exportFormat);
-    const q = query.toString();
+      if (documentId) query.set("id", documentId);
+      if (tool) query.set("tool", tool);
+      if (exportFormat) query.set("export", exportFormat);
+      const q = query.toString();
 
-    return q ? `${ROUTES.TOOLS.PDF_EDITOR}?${q}` : ROUTES.TOOLS.PDF_EDITOR;
-  }, [tool, exportFormat]);
+      return q ? `${ROUTES.TOOLS.PDF_EDITOR}?${q}` : ROUTES.TOOLS.PDF_EDITOR;
+    },
+    [tool, exportFormat],
+  );
 
   const openFileInEditor = useCallback(
     async (picked: File) => {
@@ -343,11 +353,11 @@ export function UploadWorkspace({
         setCurrentDocument(savedDoc);
         setEditorFile(pdfFile);
 
-        // /pdf-composer is a public route — signed-out users get the same
-        // in-browser editor experience with the file held in-memory. No
-        // sign-in bounce. If they want to save to their library, the Save
-        // button will prompt sign-in at that point.
-        router.push(composerHref);
+        // Signed-in flow: navigate with `?id=<docId>` so the editor
+        // hydrates from the persisted document row (see proxy.ts —
+        // `?id=` also requires auth). Signed-out flow: no id, the
+        // editor renders the in-memory file from the store.
+        router.push(buildComposerHref(savedDoc?.id ?? null));
       } catch (err) {
         logger.error("Landing upload → open failed", err);
         toast.error({
@@ -361,7 +371,7 @@ export function UploadWorkspace({
     },
     [
       authLoaded,
-      composerHref,
+      buildComposerHref,
       isSignedIn,
       pathname,
       requiresAuth,

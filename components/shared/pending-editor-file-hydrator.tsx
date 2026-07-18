@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -85,6 +85,8 @@ export function PendingEditorFileHydrator() {
   const queryClient = useQueryClient();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
 
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const tool = searchParams.get("tool");
   const exportFormat = searchParams.get("export");
@@ -174,6 +176,18 @@ export function PendingEditorFileHydrator() {
           title: "Saved to My PDFs",
           description: document.filename,
         });
+
+        // Reflect the saved doc in the URL — the editor's document
+        // loader keys off `?id=<docId>` for cloud-persisted docs, and
+        // future Save actions overwrite the same row instead of
+        // creating a duplicate. Uses router.replace so the user's back
+        // button doesn't stack an intermediate URL.
+        if (pathname === ROUTES.TOOLS.PDF_EDITOR && !searchParams.get("id")) {
+          const next = new URLSearchParams(searchParams.toString());
+
+          next.set("id", document.id);
+          router.replace(`${pathname}?${next.toString()}`);
+        }
       } catch (err) {
         // Expected for signed-out visitors (401). Silent for that case,
         // logged for anything else.
@@ -184,7 +198,15 @@ export function PendingEditorFileHydrator() {
         autoSavedRef.current = false; // allow retry on next file load
       }
     })();
-  }, [currentDocumentId, currentFile, queryClient, setCurrentDocument]);
+  }, [
+    currentDocumentId,
+    currentFile,
+    pathname,
+    queryClient,
+    router,
+    searchParams,
+    setCurrentDocument,
+  ]);
 
   // Step 4 — tool / export auto-launch, one-shot per URL. Waits for the
   // file to be non-null so the modals don't open on an empty editor.
