@@ -126,9 +126,14 @@ export function PaywallModal({
     });
   };
 
+  // Fire only `onPaymentSuccess` here — usePaywall's own handler already
+  // calls setIsOpen(false) + resolves the axios interceptor's promise
+  // with "success" + runs the queued action. Calling `onClose()`
+  // afterward races the "cancelled" resolver against the "success"
+  // one and can bounce the caller's request with
+  // PaywallCancelledError even though the payment went through.
   const finish = () => {
     onPaymentSuccess();
-    onClose();
   };
 
   return (
