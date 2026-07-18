@@ -100,3 +100,16 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
+/* Weglot's SDK sometimes injects a floating language-switcher widget in
+ * the bottom-right corner regardless of the `switchers: []` init option.
+ * We render our own switcher in the header / navbar, so hide every
+ * variant of the built-in one. Kept broad on purpose — Weglot has
+ * shipped a handful of different class names over the years. */
+.country-selector,
+.wg-drop,
+.weglot-container,
+#weglot-listbox,
+[class*="weglot-inline"],
+[class*="wg-flags"] {
+  display: none !important;
+}
