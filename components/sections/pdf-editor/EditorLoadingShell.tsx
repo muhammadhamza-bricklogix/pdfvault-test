@@ -1,12 +1,31 @@
 "use client";
 
 import { Skeleton } from "@heroui/react";
+import { useEffect, useState } from "react";
 
 /**
- * Editor placeholder shown while a document referenced by `?id=` is loading.
- * Mirrors the chrome layout so heights/positions don't shift on hydration.
+ * Editor placeholder shown while a document referenced by `?id=` (or a
+ * post-signin save-first flow) is loading. Mirrors the chrome layout so
+ * heights/positions don't shift on hydration, and centers a spinner +
+ * status text on top so the user never wonders whether the app is
+ * frozen. An apologetic second line fades in after `LONG_LOAD_DELAY_MS`
+ * for large files — sets the expectation without hiding the underlying
+ * skeleton structure.
  */
+const LONG_LOAD_DELAY_MS = 3000;
+
 export function EditorLoadingShell() {
+  const [showApology, setShowApology] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setShowApology(true),
+      LONG_LOAD_DELAY_MS,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <>
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
@@ -54,7 +73,56 @@ export function EditorLoadingShell() {
           <Skeleton className="h-20 w-full rounded-md" />
           <Skeleton className="h-20 w-full rounded-md" />
         </div>
+
+        {/* Centered loading overlay. Non-blocking (pointer-events-none)
+            so the skeletons behind stay accessible; the visible signal
+            is what matters to the user. */}
+        <div
+          aria-live="polite"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          role="status"
+        >
+          <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/95 px-8 py-6 shadow-[0_20px_50px_-20px_rgba(23,23,23,0.35)] backdrop-blur">
+            <PdfLoadingSpinner />
+            <div className="text-center">
+              <p className="pv-heading text-[15px] font-semibold text-[var(--pv-text-strong,#1a1c21)]">
+                Loading your PDF…
+              </p>
+              <p
+                className={`mt-1.5 text-[12px] leading-relaxed text-[var(--pv-text-body,#5c5c5c)] transition-opacity duration-500 ${
+                  showApology ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                Your PDF is a little larger — hang tight, we&apos;re almost
+                there. Apologies for the wait.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Two-ring rotating spinner. Outer ring rotates clockwise, inner arc
+ * counter-clockwise for a subtle "PDF being processed" vibe. Colour
+ * uses the brand red so it visually anchors to the site palette.
+ */
+function PdfLoadingSpinner() {
+  return (
+    <div aria-hidden className="relative h-12 w-12">
+      <span
+        className="absolute inset-0 animate-spin rounded-full border-[3px] border-[var(--pv-hairline,rgb(235,235,235))] border-t-[var(--pv-brand-red,#f12c23)]"
+        style={{ animationDuration: "0.9s" }}
+      />
+      <span
+        className="absolute inset-1.5 animate-spin rounded-full border-2 border-transparent border-b-[var(--pv-brand-red,#f12c23)]"
+        style={{
+          animationDirection: "reverse",
+          animationDuration: "1.4s",
+        }}
+      />
+    </div>
   );
 }
