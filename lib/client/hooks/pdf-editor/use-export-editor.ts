@@ -12,6 +12,8 @@ import {
 import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -80,14 +82,15 @@ function downloadBytes(bytes: Uint8Array, filename: string) {
 export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
-  const stateRef = useRef({ currentPage, fabricCanvas, file });
+  const stateRef = useRef({ currentPage, fabricCanvas, file, isSignedIn });
 
   useEffect(() => {
-    stateRef.current = { currentPage, fabricCanvas, file };
-  }, [currentPage, fabricCanvas, file]);
+    stateRef.current = { currentPage, fabricCanvas, file, isSignedIn };
+  }, [currentPage, fabricCanvas, file, isSignedIn]);
 
   const convertRef = useRef(convert);
 
@@ -102,6 +105,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       currentPage: page,
       fabricCanvas: liveCanvas,
       file: sourceFile,
+      isSignedIn: signedIn,
     } = stateRef.current;
 
     if (!sourceFile) {
@@ -116,6 +120,39 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     isExportingRef.current = true;
 
     try {
+      // For non-PDF exports the backend /conversion endpoint (auth +
+      // paywall gated) has to run. Gate the auth check FIRST so a
+      // signed-out user is routed through sign-in before we even
+      // open the paywall — otherwise the paywall opens on an anon
+      // client and hits "Couldn't start checkout". After sign-in the
+      // user returns to the same editor with `?export=<fmt>` set, so
+      // the export re-fires automatically.
+      if (format !== "pdf" && !signedIn) {
+        try {
+          // Persist the file across the full-page sign-in redirect so
+          // the editor can rehydrate it on return.
+          await savePendingEditorFile(sourceFile);
+        } catch (err) {
+          logger.warn("pending editor file save failed", err);
+        }
+
+        const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
+
+        toast.info({
+          title: "Sign in to download",
+          description:
+            "Sign in and we'll take you back here to finish the conversion.",
+        });
+        if (typeof window !== "undefined") {
+          window.location.assign(
+            `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
+          );
+        }
+        isExportingRef.current = false;
+
+        return;
+      }
+
       // Non-PDF export routes through the paywalled /conversion endpoint.
       // Gate the paywall BEFORE the CPU-heavy bake so the modal doesn't
       // pop while the export busy-spinner is grinding — and so cancelling
