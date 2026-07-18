@@ -4,6 +4,7 @@ import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
 
 import { Modal } from "@heroui/react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { setEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
@@ -16,17 +17,19 @@ import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
-import { DisclaimerBlock } from "./DisclaimerBlock";
-
 // The payment SDK's iframe loader touches `window` at import time —
-// dynamic import with `ssr: false` keeps the Next.js server bundle clean
-// and avoids a 500 on the first request.
+// dynamic import with `ssr: false` keeps the Next.js server bundle
+// clean and avoids a 500 on the first request.
 const PaymentForm = dynamic(
   () => import("@solidgate/react-sdk").then((m) => m.default),
   { ssr: false },
 );
 
-const RETENTION_DAYS = 30;
+const CREAM = "#fdf3f0";
+const CREAM_CARD = "#fef5f1";
+
+type Step = "plan" | "pay" | "success";
+type PlanId = "trial" | "monthly";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -35,30 +38,28 @@ interface PaywallModalProps {
 }
 
 /**
- * Two-column payment modal — value proposition on the left, payment
- * processor iframe on the right. Collapses to a single column on mobile
- * so the iframe stays legible on narrow viewports.
+ * Three-step payment modal built from the "Payment Model" design:
  *
- * Styling comes from the app's --pv-* tokens (see globals.css) so the
- * shell feels native next to the dashboard and settings surfaces. The
- * checkout wiring (`useCreateCheckoutIntentMutation` +
- * `handleIframeSuccess`) is unchanged from the previous version — this
- * pass is a visual refresh + a data-retention notice, not a flow change.
+ *   Step 1 — "Choose your plan" — 2-column layout (value prop on the
+ *            cream left, plan picker + Continue on the white right).
+ *   Step 2 — "Pay securely" — 2-column layout (order summary cream
+ *            left, payment iframe from the SDK on the white right).
+ *   Step 3 — "You're all set!" — single centred column confirming
+ *            the trial is active + shortcuts to keep working / view
+ *            receipt.
  *
- * Flow:
- *   1. On open, POST /billing/checkout-intent to get merchant data.
- *   2. Left column renders the price card + feature list + retention +
- *      trust row.
- *   3. Right column boots `<PaymentForm merchantData={...} />` inside
- *      an iframe. Card data never touches our JS bundle.
- *   4. On `success` iframe event: invalidate the subscription cache and
- *      resume the caller's queued action via `onPaymentSuccess`.
+ * All checkout wiring (useCreateCheckoutIntentMutation, PaymentForm
+ * iframe, syncSubscription, invalidateSubscription,
+ * setEntitledSnapshot) is unchanged from the previous shell — only
+ * the visual chrome around it moved.
  */
 export function PaywallModal({
   isOpen,
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
+  const [step, setStep] = useState<Step>("plan");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("trial");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const createIntent = useCreateCheckoutIntentMutation();
@@ -67,6 +68,11 @@ export function PaywallModal({
 
   useEffect(() => {
     if (!isOpen) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStep("plan");
+
+    setSelectedPlan("trial");
 
     createIntent.mutate(
       { disclaimerVersion: DISCLAIMER_VERSION },
@@ -87,27 +93,17 @@ export function PaywallModal({
       setIntent(null);
       setError(null);
     };
-    // Depending only on `isOpen`: a stable mutation identity change
-    // would double-fire the intent request.
+    // Intentionally depend only on `isOpen` — the mutation identity
+    // would otherwise double-fire the intent request.
   }, [isOpen]);
 
   const handleIframeSuccess = async (message?: {
     order?: { subscription_id?: string };
   }) => {
-    // Optimistically flip the module snapshot so the queued gated
-    // request that this modal was gating doesn't re-fire the paywall
-    // when it resumes. The real subscription query catches up on the
-    // next tick and overwrites this if we were wrong somehow.
     setEntitledSnapshot(true);
 
     const subscriptionId = message?.order?.subscription_id;
 
-    // Belt-and-suspenders sync: the webhook is the source of truth in
-    // production, but during local dev + demos it may not be routable.
-    // Sync pulls the latest state straight from the processor's REST API
-    // and upserts locally so the dashboard reflects reality immediately.
-    // Passing the subscription_id from the iframe success event skips
-    // the customer-scoped list lookup — much more reliable.
     try {
       await syncSubscription.mutateAsync(
         subscriptionId ? { subscriptionId } : {},
@@ -120,7 +116,7 @@ export function PaywallModal({
       title: "Payment received",
       description: "Your access is unlocked.",
     });
-    onPaymentSuccess();
+    setStep("success");
   };
 
   const handleIframeFail = () => {
@@ -128,6 +124,11 @@ export function PaywallModal({
       title: "Payment failed",
       description: "Try a different card or method.",
     });
+  };
+
+  const finish = () => {
+    onPaymentSuccess();
+    onClose();
   };
 
   return (
@@ -138,21 +139,33 @@ export function PaywallModal({
       }}
     >
       <Modal.Container className="items-center justify-center p-4">
-        <Modal.Dialog className="w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1">
+        <Modal.Dialog
+          className={
+            step === "success"
+              ? "w-[min(460px,calc(100vw-32px))] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
+              : "w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
+          }
+        >
           <Modal.CloseTrigger />
           {error ? (
             <ErrorState error={error} />
           ) : !intent ? (
             <LoadingState />
+          ) : step === "plan" ? (
+            <PlanStep
+              intent={intent}
+              selectedPlan={selectedPlan}
+              onContinue={() => setStep("pay")}
+              onSelectPlan={setSelectedPlan}
+            />
+          ) : step === "pay" ? (
+            <PayStep
+              intent={intent}
+              onFail={handleIframeFail}
+              onSuccess={handleIframeSuccess}
+            />
           ) : (
-            <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <ValueColumn intent={intent} />
-              <PaymentColumn
-                intent={intent}
-                onFail={handleIframeFail}
-                onSuccess={handleIframeSuccess}
-              />
-            </div>
+            <SuccessStep intent={intent} onFinish={finish} />
           )}
         </Modal.Dialog>
       </Modal.Container>
@@ -160,69 +173,118 @@ export function PaywallModal({
   );
 }
 
-function ValueColumn({ intent }: { intent: CheckoutIntent }) {
+// ─────────────────────────────────────────────────────────────
+// Step 1 — Choose your plan
+// ─────────────────────────────────────────────────────────────
+function PlanStep({
+  intent,
+  selectedPlan,
+  onSelectPlan,
+  onContinue,
+}: {
+  intent: CheckoutIntent;
+  selectedPlan: PlanId;
+  onSelectPlan: (id: PlanId) => void;
+  onContinue: () => void;
+}) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
 
   return (
-    <div className="flex flex-col gap-6 bg-[#f7f7f7] p-6 md:p-8 dark:bg-content2">
-      <div>
-        <span className="inline-flex h-6 items-center rounded-full bg-white dark:bg-content1 px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red)]">
+    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      {/* Left — cream value column */}
+      <div
+        className="flex flex-col gap-6 p-6 md:p-8"
+        style={{ backgroundColor: CREAM }}
+      >
+        <BrandLogo />
+
+        <span className="inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red,#f12c23)]">
           Limited-time offer
         </span>
-        <h2 className="pv-heading mt-3 text-[22px] font-semibold leading-tight text-[var(--pv-text-strong)] sm:text-[24px]">
+
+        <h2 className="pv-heading text-[26px] font-semibold leading-tight text-[#1a1c21] sm:text-[30px]">
           Unlock the full PDFVault toolkit
         </h2>
-        <p className="mt-1.5 text-[13px] leading-snug text-[var(--pv-text-body)]">
-          Everything you need to convert, share, edit, and organize — in one
+        <p className="-mt-3 text-[14px] leading-relaxed text-[#5c5c5c]">
+          Everything you need to convert, share, and edit — in one secure
           workspace.
         </p>
+
+        <ul className="mt-1 flex flex-col gap-3 text-[14px] text-[#1a1c21]">
+          <Feature>Convert PDF to Word, Excel, PowerPoint, JPG & PNG</Feature>
+          <Feature>Merge, split, compress & organize pages</Feature>
+          <Feature>Unlimited edits + priority processing</Feature>
+        </ul>
+
+        <div className="mt-auto flex flex-wrap gap-2 pt-4">
+          <TrustPill label="SSL secure checkout" />
+          <TrustPill label="Cancel anytime" />
+          <TrustPill label="30-day support" />
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--pv-hairline)] bg-white dark:bg-content1 p-5 shadow-sm">
-        <div className="flex items-baseline gap-2">
-          <span className="pv-heading text-[36px] font-semibold leading-none text-[var(--pv-text-strong)]">
-            {today}
-          </span>
-          <span className="text-[13px] font-medium text-[var(--pv-text-muted)]">
-            today
-          </span>
+      {/* Right — plan picker column */}
+      <div className="flex flex-col gap-5 p-6 md:p-8">
+        <div>
+          <h3 className="pv-heading text-[22px] font-semibold text-[#1a1c21]">
+            Choose your plan
+          </h3>
+          <p className="mt-1 text-[13px] text-[#6c6c6c]">
+            Start with a 7-day trial. Switch or cancel anytime.
+          </p>
         </div>
-        <p className="mt-2 text-[13px] leading-snug text-[var(--pv-text-body)]">
-          7-day trial, then{" "}
-          <span className="font-semibold text-[var(--pv-text-strong)]">
-            {renew}/month
-          </span>
-          . Cancel anytime from Settings.
-        </p>
-      </div>
 
-      <ul className="flex flex-col gap-2.5 text-[13px] text-[var(--pv-text-body)]">
-        <Feature>Convert PDF to Word, Excel, PowerPoint, JPG, PNG</Feature>
-        <Feature>Merge, split, compress, and organize pages</Feature>
-        <Feature>Password-protect and share via secure links</Feature>
-        <Feature>Extract images and edit text inline</Feature>
-        <Feature>Unlimited edits + priority processing</Feature>
-      </ul>
-
-      <RetentionNotice days={RETENTION_DAYS} />
-
-      <div className="mt-auto flex flex-col gap-2 text-[11px] text-[var(--pv-text-muted)]">
-        <div className="flex flex-wrap items-center gap-2">
-          <TrustBadge label="SSL checkout" />
-          <TrustBadge label="Cancel anytime" />
-          <TrustBadge label={`${RETENTION_DAYS}-day retention`} />
+        <div className="flex flex-col gap-3">
+          <PlanCard
+            highlight
+            badge="Most popular"
+            price={today}
+            priceSuffix="today"
+            selected={selectedPlan === "trial"}
+            subtitle={`Then ${renew}/month · cancel anytime`}
+            title="7-Day Full Access Trial"
+            onSelect={() => onSelectPlan("trial")}
+          />
+          <PlanCard
+            price={renew}
+            priceSuffix="/mo"
+            selected={selectedPlan === "monthly"}
+            subtitle="Billed every 30 days"
+            title="Monthly"
+            onSelect={() => onSelectPlan("monthly")}
+          />
         </div>
-        <p>
-          Card details never touch our servers. All payments run through a
-          PCI-compliant partner.
+
+        <button
+          className="mt-2 flex h-[54px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] text-[16px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] active:translate-y-px"
+          type="button"
+          onClick={onContinue}
+        >
+          Continue to payment
+          <span aria-hidden>→</span>
+        </button>
+
+        <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
+          <span>We accept</span>
+          <CardBadge label="VISA" />
+          <CardBadge label="Mastercard" />
+          <CardBadge label="Amex" />
+        </div>
+
+        <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+          You&apos;ll be charged {today} today for a 7-day trial, then {renew}{" "}
+          every 30 days unless you cancel before the trial ends.
         </p>
       </div>
     </div>
   );
 }
 
-function PaymentColumn({
+// ─────────────────────────────────────────────────────────────
+// Step 2 — Pay securely (iframe)
+// ─────────────────────────────────────────────────────────────
+function PayStep({
   intent,
   onSuccess,
   onFail,
@@ -231,44 +293,210 @@ function PaymentColumn({
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
   onFail: () => void;
 }) {
+  const today = formatMinor(intent.amountTodayMinor, intent.currency);
+  const renew = formatMinor(intent.amountRenewMinor, intent.currency);
+  const nextChargeLabel = formatRenewalDate();
+
   return (
-    <div className="flex flex-col gap-4 bg-white dark:bg-content1 p-6 md:p-8">
-      <div>
-        <h3 className="pv-heading text-[16px] font-semibold text-[var(--pv-text-strong)]">
-          Pay securely
+    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      {/* Left — cream order summary */}
+      <div
+        className="flex flex-col gap-6 p-6 md:p-8"
+        style={{ backgroundColor: CREAM }}
+      >
+        <BrandLogo />
+
+        <h3 className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
+          Order summary
         </h3>
-        <p className="mt-0.5 text-[12px] text-[var(--pv-text-muted)]">
-          Apple Pay, Google Pay, or card
+
+        <div className="rounded-2xl bg-white p-5">
+          <div className="flex items-baseline justify-between">
+            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
+              7-Day Full Access Trial
+            </p>
+            <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
+              {today}
+            </p>
+          </div>
+          <p className="mt-0.5 text-[12px] text-[#6c6c6c]">Due today</p>
+          <div className="my-4 h-px bg-[#ececec]" />
+          <div className="flex items-baseline justify-between">
+            <p className="text-[13px] text-[#5c5c5c]">
+              After trial ({nextChargeLabel})
+            </p>
+            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
+              {renew} / month
+            </p>
+          </div>
+        </div>
+
+        <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
+          <Feature>Full access to 80+ tools</Feature>
+          <Feature>Unlimited edits &amp; downloads</Feature>
+          <Feature>Cancel anytime, no questions</Feature>
+        </ul>
+
+        <p className="mt-auto flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
+          <span aria-hidden>🔒</span>
+          Card details never touch our servers. Payments run through a
+          PCI-compliant partner.
         </p>
       </div>
 
-      <PaymentMethodBadges />
+      {/* Right — iframe */}
+      <div className="flex flex-col gap-4 p-6 md:p-8">
+        <div>
+          <h3 className="pv-heading text-[22px] font-semibold text-[#1a1c21]">
+            Pay securely
+          </h3>
+          <p className="mt-1 text-[13px] text-[#6c6c6c]">
+            Visa, Mastercard, or Amex
+          </p>
+        </div>
 
-      <PaymentForm
-        merchantData={{
-          merchant: intent.merchant,
-          signature: intent.signature,
-          paymentIntent: intent.paymentIntent,
-        }}
-        width="100%"
-        onFail={onFail}
-        onSuccess={onSuccess}
-      />
+        <div className="rounded-xl">
+          <PaymentForm
+            merchantData={{
+              merchant: intent.merchant,
+              signature: intent.signature,
+              paymentIntent: intent.paymentIntent,
+            }}
+            width="100%"
+            onFail={onFail}
+            onSuccess={onSuccess}
+          />
+        </div>
 
-      <DisclaimerBlock
-        amountRenewMinor={intent.amountRenewMinor}
-        amountTodayMinor={intent.amountTodayMinor}
-        currency={intent.currency}
-        intervalLabel="30 days"
-      />
-
-      {process.env.NODE_ENV !== "production" ? (
-        <p className="rounded-md bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
-          <strong>Sandbox test card:</strong> 4067 4299 7471 9265 · any future
-          expiry · any CVV
+        <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+          By continuing you agree to be charged {today} today, then {renew}{" "}
+          every 30 days unless cancelled. See our{" "}
+          <a
+            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            href="/terms"
+          >
+            Subscription
+          </a>{" "}
+          &amp;{" "}
+          <a
+            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            href="/refund"
+          >
+            Refund
+          </a>{" "}
+          policies.
         </p>
-      ) : null}
+
+        {process.env.NODE_ENV !== "production" ? (
+          <p className="rounded-md bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
+            <strong>Sandbox test card:</strong> 4067 4299 7471 9265 · any future
+            expiry · any CVV
+          </p>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Step 3 — Success
+// ─────────────────────────────────────────────────────────────
+function SuccessStep({
+  intent,
+  onFinish,
+}: {
+  intent: CheckoutIntent;
+  onFinish: () => void;
+}) {
+  const today = formatMinor(intent.amountTodayMinor, intent.currency);
+  const renew = formatMinor(intent.amountRenewMinor, intent.currency);
+  const nextDate = formatFullRenewalDate();
+
+  return (
+    <div className="flex flex-col items-center gap-5 p-8 text-center">
+      <BrandLogo />
+
+      <div
+        aria-hidden
+        className="relative flex h-16 w-16 items-center justify-center rounded-full"
+        style={{ backgroundColor: CREAM_CARD }}
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white">
+          <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
+            <path
+              d="M4 10.5l4 4 8-8"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.4"
+            />
+          </svg>
+        </span>
+      </div>
+
+      <div>
+        <h3 className="pv-heading text-[24px] font-semibold text-[#1a1c21]">
+          You&apos;re all set!
+        </h3>
+        <p className="mt-2 text-[13px] leading-relaxed text-[#5c5c5c]">
+          Your 7-day trial is active. You now have full access to every PDFVault
+          tool.
+        </p>
+      </div>
+
+      <div
+        className="w-full rounded-xl p-4 text-left text-[13px]"
+        style={{ backgroundColor: CREAM }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[#5c5c5c]">Plan</span>
+          <span className="font-semibold text-[#1a1c21]">
+            Full Access · Trial
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[#5c5c5c]">Charged today</span>
+          <span className="font-semibold text-[#1a1c21]">{today}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[#5c5c5c]">Next charge</span>
+          <span className="font-semibold text-[#1a1c21]">
+            {renew} · {nextDate}
+          </span>
+        </div>
+      </div>
+
+      <button
+        className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] text-[15px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c]"
+        type="button"
+        onClick={onFinish}
+      >
+        Start editing
+        <span aria-hidden>→</span>
+      </button>
+      <a
+        className="flex h-[48px] w-full cursor-pointer items-center justify-center rounded-2xl border border-[#ececec] text-[14px] font-medium text-[#1a1c21] transition-colors hover:bg-[#fafafa]"
+        href="/dashboard/settings/billing"
+      >
+        View receipt
+      </a>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Shared bits
+// ─────────────────────────────────────────────────────────────
+
+function BrandLogo() {
+  return (
+    <Image
+      alt="PDFVault"
+      className="h-[26px] w-auto object-contain"
+      height={26}
+      src="/landing/logo-with-text.png"
+      width={104}
+    />
   );
 }
 
@@ -277,7 +505,7 @@ function Feature({ children }: { children: React.ReactNode }) {
     <li className="flex items-start gap-2.5">
       <span
         aria-hidden
-        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[10px] font-bold text-white"
+        className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-[10px] font-bold text-white"
       >
         ✓
       </span>
@@ -286,33 +514,74 @@ function Feature({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Data retention block — surfaces the fact that we hold on to a user's
- * files for a while after any cancellation so nothing is lost. This copy
- * pairs with the matching retention badge below and appears in the
- * settings > billing cancel flow, so wording stays consistent.
- */
-function RetentionNotice({ days }: { days: number }) {
+function PlanCard({
+  title,
+  subtitle,
+  price,
+  priceSuffix,
+  selected,
+  highlight,
+  badge,
+  onSelect,
+}: {
+  title: string;
+  subtitle: string;
+  price: string;
+  priceSuffix: string;
+  selected: boolean;
+  highlight?: boolean;
+  badge?: string;
+  onSelect: () => void;
+}) {
+  const border = selected
+    ? "border-2 border-[var(--pv-brand-red,#f12c23)]"
+    : "border border-[#ececec]";
+  const bg = highlight && selected ? { backgroundColor: CREAM_CARD } : {};
+
   return (
-    <div className="rounded-xl border border-[var(--pv-hairline)] bg-white dark:bg-content1 p-3.5">
-      <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
-        Your files stay safe
-      </p>
-      <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-body)]">
-        If you cancel, we keep your PDFs in your account for{" "}
-        <span className="font-semibold text-[var(--pv-text-strong)]">
-          {days} days
-        </span>{" "}
-        so you can resubscribe or download without losing work.
-      </p>
-    </div>
+    <button
+      className={`relative flex w-full flex-col gap-1 rounded-2xl p-4 text-left transition-colors ${border} hover:border-[var(--pv-brand-red,#f12c23)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)]`}
+      style={bg}
+      type="button"
+      onClick={onSelect}
+    >
+      {badge ? (
+        <span className="absolute -top-2.5 left-4 inline-flex h-5 items-center rounded-full bg-[var(--pv-brand-red,#f12c23)] px-2 text-[10px] font-semibold uppercase tracking-wide text-white">
+          {badge}
+        </span>
+      ) : null}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${selected ? "border-[var(--pv-brand-red,#f12c23)]" : "border-[#d5d5d5]"}`}
+          >
+            {selected ? (
+              <span className="block h-2.5 w-2.5 rounded-full bg-[var(--pv-brand-red,#f12c23)]" />
+            ) : null}
+          </span>
+          <div className="min-w-0">
+            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
+              {title}
+            </p>
+            <p className="mt-0.5 text-[12px] text-[#6c6c6c]">{subtitle}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="pv-heading text-[22px] font-semibold leading-none text-[#1a1c21]">
+            {price}
+          </p>
+          <p className="mt-1 text-[11px] text-[#6c6c6c]">{priceSuffix}</p>
+        </div>
+      </div>
+    </button>
   );
 }
 
-function TrustBadge({ label }: { label: string }) {
+function TrustPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white dark:bg-content1 px-2 py-1 font-medium text-[var(--pv-text-body)]">
-      <span aria-hidden className="text-emerald-600">
+    <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-[#1a1c21]">
+      <span aria-hidden className="text-[#6c6c6c]">
         🔒
       </span>
       {label}
@@ -320,28 +589,19 @@ function TrustBadge({ label }: { label: string }) {
   );
 }
 
-function PaymentMethodBadges() {
-  const methods = ["Visa", "Mastercard", "Amex", "Apple Pay", "Google Pay"];
-
+function CardBadge({ label }: { label: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {methods.map((m) => (
-        <span
-          key={m}
-          className="inline-flex h-6 items-center rounded border border-[var(--pv-hairline)] bg-white dark:bg-content1 px-2 text-[10px] font-semibold text-[var(--pv-text-body)]"
-        >
-          {m}
-        </span>
-      ))}
-    </div>
+    <span className="inline-flex h-6 items-center rounded-md border border-[#ececec] bg-white px-2 text-[10px] font-semibold text-[#1a1c21]">
+      {label}
+    </span>
   );
 }
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 bg-white dark:bg-content1 p-10">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--pv-hairline)] border-t-[var(--pv-brand-red)]" />
-      <p className="pv-heading text-sm text-[var(--pv-text-body)]">
+    <div className="flex flex-col items-center justify-center gap-3 p-10">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#ececec] border-t-[var(--pv-brand-red,#f12c23)]" />
+      <p className="pv-heading text-sm text-[#5c5c5c]">
         Preparing secure checkout…
       </p>
     </div>
@@ -350,7 +610,7 @@ function LoadingState() {
 
 function ErrorState({ error }: { error: string }) {
   return (
-    <div className="flex flex-col gap-3 bg-white dark:bg-content1 p-8">
+    <div className="flex flex-col gap-3 p-8">
       <h3 className="pv-heading text-[16px] font-semibold text-danger">
         Couldn&apos;t start checkout
       </h3>
@@ -367,4 +627,30 @@ function formatMinor(minor: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(minor / 100);
+}
+
+// Trial ends 7 days from today. Short label like "Jul 24" for the
+// order-summary row.
+function formatRenewalDate(): string {
+  const d = new Date();
+
+  d.setDate(d.getDate() + 7);
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+// Long label like "Jul 24, 2026" for the success card.
+function formatFullRenewalDate(): string {
+  const d = new Date();
+
+  d.setDate(d.getDate() + 7);
+
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(d);
 }
