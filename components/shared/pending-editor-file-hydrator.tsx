@@ -125,8 +125,30 @@ export function PendingEditorFileHydrator() {
   }, [authLoaded, clearFile, docId, exportFormat, isSignedIn, tool]);
 
   // Step 2 — one-shot IDB rehydrate.
+  //
+  // Two distinct paths:
+  //
+  //   POST-SIGN-IN RESTORE (signed-in + IDB file + `?tool=` or
+  //   `?export=` but no `?id=`):
+  //     The user was signed-out, dropped a file, tried a paid action,
+  //     signed in, and came back. We save-first-then-navigate: upload
+  //     the IDB file to /documents/upload, clear IDB, then
+  //     router.replace to add `?id=<newDocId>` to the URL. The
+  //     document loader picks up the new id and hydrates the editor
+  //     the same way any deep-link load would — no race between the
+  //     hydrator, the loader, and the auto-launch effect. While the
+  //     upload + loader fetch are in flight, the editor shell shows
+  //     `<EditorLoadingShell />` (because `?id=` is present but no
+  //     file is loaded yet) so the user sees a proper spinner instead
+  //     of a bare "Drop your file here" screen or a flash of untitled
+  //     editor chrome.
+  //
+  //   NORMAL REHYDRATE (any other case):
+  //     Just hydrate the store from IDB. Step 3 handles the async
+  //     auto-save in the background.
   useEffect(() => {
     if (ranRef.current) return;
+    if (!authLoaded) return; // wait so we can pick the right branch
     ranRef.current = true;
 
     let cancelled = false;
@@ -141,6 +163,55 @@ export function PendingEditorFileHydrator() {
 
           return;
         }
+
+        const hasAutoLaunch = Boolean(tool || exportFormat);
+
+        if (isSignedIn && hasAutoLaunch && !docId) {
+          // Post-sign-in restore path — save-first-then-navigate.
+          const savingKey = toast.loading({
+            title: "Saving your file to My PDFs…",
+            description: file.name,
+          });
+
+          try {
+            const document = await documentsService.uploadDocument({ file });
+
+            if (cancelled) return;
+            queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+            await clearPendingEditorFile();
+            autoSavedRef.current = true; // Step 3 already covered
+            toast.success({
+              title: "Saved to My PDFs",
+              description: document.filename,
+            });
+
+            // Add the fresh id to the URL. The document loader takes
+            // over from here — it will GET /documents/<id>, hydrate
+            // the store, and the auto-launch effect will fire once
+            // the file lands.
+            const next = new URLSearchParams(searchParams.toString());
+
+            next.set("id", document.id);
+            router.replace(`${pathname}?${next.toString()}`);
+          } catch (saveErr) {
+            logger.warn("post-signin save-first failed", saveErr);
+            toast.error({
+              title: "Couldn't save automatically",
+              description:
+                "Continuing with your local copy — use Save from the editor.",
+            });
+            // Fall back to plain rehydrate so the user isn't stranded.
+            setCurrentDocument(null);
+            setFile(file);
+            await clearPendingEditorFile();
+          } finally {
+            toast.close(savingKey);
+          }
+
+          return;
+        }
+
+        // Normal rehydrate path.
         setCurrentDocument(null);
         setFile(file);
         await clearPendingEditorFile();
@@ -152,7 +223,20 @@ export function PendingEditorFileHydrator() {
     return () => {
       cancelled = true;
     };
-  }, [currentFile, setCurrentDocument, setFile]);
+  }, [
+    authLoaded,
+    currentFile,
+    docId,
+    exportFormat,
+    isSignedIn,
+    pathname,
+    queryClient,
+    router,
+    searchParams,
+    setCurrentDocument,
+    setFile,
+    tool,
+  ]);
 
   // Step 3 — background auto-save for signed-in users. Fires once per
   // file-without-doc-id combo. Failure is non-blocking; the editor still
