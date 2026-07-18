@@ -33,6 +33,12 @@ export function WeglotLoader() {
           // Match the hreflang subdomains declared in app/layout.tsx —
           // ar, fr, de, pt, es on <lang>.pdfvault.ai.
           destinationLanguages: "ar,fr,de,pt,es",
+          // Disable Weglot's own floating switcher — we render our own
+          // in the landing header / site navbar (see LanguageSwitcher +
+          // LandingLanguageSwitcher). Without this Weglot injects an
+          // extra fixed-position widget in the bottom-right corner that
+          // overlaps our custom UI.
+          switchers: [],
         });
         window.dispatchEvent(new CustomEvent("weglot:initialized"));
       }}

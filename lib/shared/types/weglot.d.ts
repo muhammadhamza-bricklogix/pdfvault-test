@@ -3,6 +3,11 @@ interface WeglotInstance {
     api_key: string;
     originalLanguage?: string;
     destinationLanguages?: string;
+    /** Empty array disables Weglot's built-in floating switcher — we
+     *  render our own in the header / navbar. */
+    switchers?: unknown[];
+    /** Legacy option name for the same behavior on older builds. */
+    hide_switcher?: boolean;
   }) => void;
   switchTo: (lang: string) => void;
   getCurrentLang: () => string;
