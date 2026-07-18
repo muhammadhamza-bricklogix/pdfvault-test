@@ -4,6 +4,11 @@ import type { Canvas as FabricCanvas } from "fabric";
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -111,6 +116,21 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     isExportingRef.current = true;
 
     try {
+      // Non-PDF export routes through the paywalled /conversion endpoint.
+      // Gate the paywall BEFORE the CPU-heavy bake so the modal doesn't
+      // pop while the export busy-spinner is grinding — and so cancelling
+      // the paywall doesn't leave a "failed" toast on a build that never
+      // needed to run. PDF export is free; skip the gate for it.
+      if (format !== "pdf" && !getEntitledSnapshot()) {
+        const outcome = await requestPaywall();
+
+        if (outcome !== "success") {
+          // User dismissed the paywall — silent bail-out. Not an error;
+          // the user simply chose not to buy.
+          return;
+        }
+      }
+
       // Export bakes the watermark + bg image into the downloaded copy. The
       // cloud-saved PDF intentionally does NOT have them baked (that's why
       // Save passes `bakeOverlays: false` / default) — keeping the source
@@ -157,6 +177,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
       triggerBlobDownload(result.blob, result.fileName);
     } catch (err) {
+      // The axios interceptor throws a well-known PaywallCancelledError
+      // when the user dismisses the payment modal on a 402/403 retry.
+      // Treat that as a normal user action — no error toast.
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       logger.error("Failed to export PDF", err);
       toast.error({
         title: "Export failed",
