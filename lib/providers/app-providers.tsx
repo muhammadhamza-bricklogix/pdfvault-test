@@ -9,6 +9,7 @@ import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
+import { SignInPromptModal } from "@/components/shared/sign-in-prompt-modal";
 import { UserSyncBoot } from "@/components/shared/user-sync-boot";
 import { UploadToastProvider } from "@/components/ui/upload-toast";
 
@@ -35,6 +36,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           */}
           <Toast.Provider gap={12} maxVisibleToasts={5} placement="top end" />
           <UploadToastProvider />
+          <SignInPromptModal />
           <MobileDebugBoot />
           <UserSyncBoot />
           <OfflineBoot />

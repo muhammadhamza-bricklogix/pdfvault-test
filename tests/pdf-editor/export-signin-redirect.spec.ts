@@ -37,25 +37,20 @@ test.describe("Editor export — signed-out flow", () => {
     expect(page.url()).toContain("/pdf-composer");
   });
 
-  test("non-PDF export as signed-out redirects to sign-in with the export in the return URL", async ({
+  test("non-PDF export as signed-out opens the Sign-In confirm modal, and confirming redirects to /sign-in with the export in the return URL", async ({
     page,
   }) => {
     await page.goto("/pdf-composer");
 
-    // Drop the sample PDF into the empty-state file picker.
     await page
       .locator('input[type="file"]')
       .first()
       .setInputFiles(SAMPLE_PDF);
 
-    // Wait for the PDF to render.
     await expect(
       page.getByRole("img", { name: /PDF page/i }).first(),
     ).toBeVisible({ timeout: 20_000 });
 
-    // Open the Download / Export dropdown and pick a non-PDF format so the
-    // export path hits the auth gate. Desktop chrome uses the "Download"
-    // button label; mobile info bar uses "Export options".
     const downloadTrigger = page
       .getByRole("button", { name: /^(download|export options)$/i })
       .first();
@@ -66,8 +61,22 @@ test.describe("Editor export — signed-out flow", () => {
       .first()
       .click();
 
-    // Should redirect to sign-in with the export format preserved in
-    // redirect_url so we can auto-fire the export on return.
+    // Sign-in prompt modal should appear (not an immediate redirect).
+    const promptHeading = page.getByRole("heading", {
+      name: /Sign in to download/i,
+    });
+
+    await expect(promptHeading).toBeVisible({ timeout: 5_000 });
+
+    // URL still on /pdf-composer — no redirect until user confirms.
+    expect(page.url()).toContain("/pdf-composer");
+    expect(page.url()).not.toContain("/sign-in");
+
+    // Confirm → redirect to /sign-in with correct redirect_url.
+    await page
+      .getByRole("button", { name: /Sign in & continue/i })
+      .click();
+
     await expect(page).toHaveURL(/\/sign-in\?redirect_url=/, {
       timeout: 10_000,
     });
@@ -79,5 +88,43 @@ test.describe("Editor export — signed-out flow", () => {
 
     expect(returnTo).toContain("/pdf-composer");
     expect(returnTo).toContain("export=docx");
+  });
+
+  test("non-PDF export as signed-out can be cancelled from the modal — user stays on the editor", async ({
+    page,
+  }) => {
+    await page.goto("/pdf-composer");
+
+    await page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles(SAMPLE_PDF);
+
+    await expect(
+      page.getByRole("img", { name: /PDF page/i }).first(),
+    ).toBeVisible({ timeout: 20_000 });
+
+    await page
+      .getByRole("button", { name: /^(download|export options)$/i })
+      .first()
+      .click();
+    await page
+      .locator('[role="menuitem"][data-key="docx"]')
+      .first()
+      .click();
+
+    await expect(
+      page.getByRole("heading", { name: /Sign in to download/i }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    await page.getByRole("button", { name: /^Cancel$/i }).click();
+
+    // Modal dismisses, user is still on /pdf-composer with the file
+    // loaded — no redirect happened.
+    await expect(
+      page.getByRole("heading", { name: /Sign in to download/i }),
+    ).not.toBeVisible({ timeout: 3_000 });
+    expect(page.url()).toContain("/pdf-composer");
+    expect(page.url()).not.toContain("/sign-in");
   });
 });

@@ -14,6 +14,7 @@ import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -176,16 +177,17 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
         const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
 
-        toast.info({
+        // Prompt with a real confirm modal (not a fire-and-forget
+        // toast + redirect). The user always knows what's about to
+        // happen and can cancel to keep editing locally.
+        dispatchSignInPrompt({
           title: "Sign in to download",
           description:
-            "Sign in and we'll take you back here to finish the conversion.",
+            "Downloading as a non-PDF format is a paid feature. Sign in and we'll bring you back to finish the conversion right where you left off.",
+          confirmLabel: "Sign in & continue",
+          redirectUrl: returnTo,
         });
-        if (typeof window !== "undefined") {
-          window.location.assign(
-            `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
-          );
-        }
+
         isExportingRef.current = false;
 
         return;

@@ -382,7 +382,7 @@ function EditorLayout() {
 }
 
 export function PdfEditorShell() {
-  const { isSignedIn } = useAuth();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const file = usePdfEditorStore((s) => s.file);
   const createPdfModalKey = usePdfEditorStore((s) => s.createPdfModalKey);
   const isCreatePdfModalOpen = usePdfEditorStore((s) => s.isCreatePdfModalOpen);
@@ -392,6 +392,8 @@ export function PdfEditorShell() {
   const setIsSignedIn = usePdfEditorStore((s) => s.setIsSignedIn);
   const searchParams = useSearchParams();
   const pendingDocumentId = searchParams.get("id");
+  const pendingExport = searchParams.get("export");
+  const pendingTool = searchParams.get("tool");
 
   useEditorDocumentLoader();
 
@@ -401,15 +403,40 @@ export function PdfEditorShell() {
 
   const isRestoringSession = usePdfEditorStore((s) => s.isRestoringSession);
 
+  // Suppress the "Drop your file here" flash when the URL suggests we
+  // might be resuming an auto-launch flow (post-sign-in return with
+  // `?export=` or `?tool=` and no `?id=`). The hydrator hasn't run its
+  // async IDB check yet on first paint, so without this guard the
+  // shell renders <UploadScreen /> for one frame before flipping to
+  // the loading skeleton. We keep the skeleton until either:
+  //  (a) Clerk hasn't loaded yet — auth undetermined, safer to show loader
+  //  (b) A signed-in user has ?export/tool= and no id — the hydrator is
+  //      about to check IDB and (if a file exists) start the save-first
+  //      flow. Signed-out users on the same URL don't need the loader
+  //      because they'll be redirected to /sign-in by the hydrator's
+  //      auth gate for the AUTH_GATED_TOOLS list, or dumped to the
+  //      drop-zone for public tools.
+  const isPendingAutoLaunch = Boolean(
+    (pendingExport || pendingTool) && !pendingDocumentId,
+  );
+  const showLoaderForPostSignInReturn =
+    isPendingAutoLaunch && (!authLoaded || isSignedIn === true);
+
   let content: React.ReactNode;
 
   if (file) {
     content = <EditorLayout />;
-  } else if (pendingDocumentId || isRestoringSession) {
+  } else if (
+    pendingDocumentId ||
+    isRestoringSession ||
+    showLoaderForPostSignInReturn
+  ) {
     // Doc referenced by URL but not yet hydrated, OR we're actively
     // uploading the restored file to /documents/upload after a
-    // post-sign-in return. Either way show the skeleton so the user
-    // isn't dropped onto the "Drop your file here" screen mid-flow.
+    // post-sign-in return, OR the URL is a fresh auto-launch and we're
+    // waiting for the hydrator to decide what to do. Either way show
+    // the skeleton so the user isn't dropped onto the drop-zone
+    // mid-flow.
     content = <EditorLoadingShell />;
   } else {
     content = <UploadScreen />;
