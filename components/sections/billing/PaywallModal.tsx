@@ -614,6 +614,20 @@ function LoadingState() {
 }
 
 function ErrorState({ error }: { error: string }) {
+  // A "sign in" error means the checkout intent request came back with
+  // 401 — i.e. the user isn't signed in and the paywall can't work for
+  // them. Surface a Sign In button so they aren't stuck.
+  const needsSignIn = /sign in|not authori[sz]ed|401/i.test(error);
+
+  const goToSignIn = () => {
+    if (typeof window === "undefined") return;
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+
+    window.location.assign(
+      `/sign-in?redirect_url=${encodeURIComponent(returnTo)}`,
+    );
+  };
+
   return (
     <div className="flex flex-col gap-3 p-8">
       <h3 className="pv-heading text-[16px] font-semibold text-danger">
@@ -622,6 +636,15 @@ function ErrorState({ error }: { error: string }) {
       <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger">
         {error}
       </p>
+      {needsSignIn ? (
+        <button
+          className="mt-1 inline-flex h-11 cursor-pointer items-center justify-center rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#d8241c]"
+          type="button"
+          onClick={goToSignIn}
+        >
+          Sign in & continue
+        </button>
+      ) : null}
     </div>
   );
 }

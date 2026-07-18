@@ -2,8 +2,10 @@
 
 import type { PaywallOutcome } from "./paywall-bus";
 
+import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 
 import { setPaywallHandler } from "./paywall-bus";
@@ -22,6 +24,7 @@ import { setPaywallHandler } from "./paywall-bus";
  */
 export function usePaywall() {
   const { data: subscription, isLoading } = useSubscriptionQuery();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
     null,
@@ -86,6 +89,11 @@ export function usePaywall() {
   // callers (axios interceptor, service helpers) can trigger it. The
   // handler returns a promise that settles when the user pays or
   // closes.
+  //
+  // Signed-out callers get the sign-in prompt modal instead — the
+  // paywall itself can't work for anon users (POST /billing/checkout-intent
+  // requires an authenticated user) and would just render the
+  // "You need to sign in to continue" error state with no way out.
   useEffect(() => {
     setPaywallHandler(
       () =>
@@ -95,13 +103,30 @@ export function usePaywall() {
 
             return;
           }
+          if (authLoaded && !isSignedIn) {
+            const returnTo =
+              typeof window === "undefined"
+                ? "/"
+                : `${window.location.pathname}${window.location.search}`;
+
+            dispatchSignInPrompt({
+              title: "Sign in to continue",
+              description:
+                "This action requires an account. Sign in and we'll bring you back to finish where you left off.",
+              confirmLabel: "Sign in & continue",
+              redirectUrl: returnTo,
+            });
+            resolve("cancelled");
+
+            return;
+          }
           busResolverRef.current = resolve;
           setIsOpen(true);
         }),
     );
 
     return () => setPaywallHandler(null);
-  }, [entitled]);
+  }, [authLoaded, entitled, isSignedIn]);
 
   return {
     isOpen,
