@@ -15,6 +15,7 @@ import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
+import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
 import { DeleteDocumentModal } from "./delete-document-modal";
 import { PendingConversionBanner } from "./pending-conversion-banner";
 import { PvFileTable } from "./pv-file-table";
@@ -39,6 +40,9 @@ export function DashboardHome() {
   const [search, setSearch] = useState("");
   const [renameTarget, setRenameTarget] = useState<Document | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
+  const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Document[] | null>(
+    null,
+  );
   const [historyTarget, setHistoryTarget] = useState<Document | null>(null);
 
   const query = useDocumentsQuery();
@@ -102,6 +106,7 @@ export function DashboardHome() {
       <PvFileTable
         isLoading={query.isLoading}
         rows={filteredRows}
+        onBulkDelete={(bulk) => setBulkDeleteTargets(bulk.map((r) => r.doc))}
         onDelete={(row) => setDeleteTarget(row.doc)}
         onDownload={(row) => void handleDownload(row)}
         onHistory={(row) => setHistoryTarget(row.doc)}
@@ -116,6 +121,10 @@ export function DashboardHome() {
       <DeleteDocumentModal
         document={deleteTarget}
         onClose={() => setDeleteTarget(null)}
+      />
+      <BulkDeleteDocumentsModal
+        documents={bulkDeleteTargets}
+        onClose={() => setBulkDeleteTargets(null)}
       />
       <VersionHistoryModal
         documentId={historyTarget?.id ?? null}

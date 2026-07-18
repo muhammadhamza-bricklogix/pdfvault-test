@@ -90,6 +90,36 @@ For the full evidence trail (why each rule exists, what broke when we tried othe
 
 If a fix requires changing one of these, ask the user first.
 
+## Auth + paywall + export flow (do NOT unravel)
+
+Ten commits between 2026-07-18 and 2026-07-19 wired a fragile chain that finally works end-to-end for the "signed-out user drops a PDF, clicks Download → DOCX, signs in, gets paywall or download" journey. Every piece exists for a specific bug the user reported and re-fixed multiple times. If you touch one of these components, understand what breaks:
+
+1. **`useExportEditor` reads `useAuth()` directly, not `store.isSignedIn`.** The store copy is synced by a downstream `useEffect` in `PdfEditorShell` and lags one tick during post-signin returns. Reading Clerk directly avoids the sign-in redirect loop.
+2. **`useExportEditor` re-dispatches `editor:export` after 250ms if Clerk hasn't hydrated.** The auto-launch event can fire faster than `authLoaded`. Recursion would trip the react-hooks/immutability lint rule — dispatch a fresh event instead.
+3. **`useExportEditor` gates non-PDF exports on `!signedIn` FIRST, before `requestPaywall`.** Paywall's `POST /billing/checkout-intent` needs auth. Signed-out user in paywall = "Couldn't start checkout" dead-end.
+4. **`useExportEditor` triggers `dispatchSignInPrompt`, not a raw redirect.** `SignInPromptModal` (mounted in `AppProviders`) is a confirm dialog with Cancel + "Sign in & continue" — user always has a way out.
+5. **`usePaywall` handler dispatches `SignInPromptModal` for signed-out callers.** Any code path that opens the paywall (axios interceptor, service helpers) now routes signed-out users through the sign-in modal instead of the paywall's error state. Reading `useAuth()` in `usePaywall` is required — the effect deps must include `authLoaded, entitled, isSignedIn`.
+6. **`PaywallModal.ErrorState` renders "Sign in & continue" when the error message matches `/sign in|401|not authori[sz]ed/i`.** Belt-and-braces for mid-session token expiry.
+7. **`PaywallModal.finish` calls ONLY `onPaymentSuccess`, not `onClose`.** `usePaywall.onPaymentSuccess` is async — calling `onClose` alongside races the "cancelled" resolver against "success" and cancels the queued action.
+8. **`PendingEditorFileHydrator` Step 1 waits for `authLoaded` before AUTH_GATED_TOOLS redirect.** Fires before Clerk = misfires.
+9. **`PendingEditorFileHydrator` Step 2 has TWO paths: post-signin restore vs normal rehydrate.** Post-signin restore is `authLoaded && isSignedIn && (tool || exportFormat) && !docId && IDB has file`. It uploads first, gets the id, then `router.replace(?id=<newId>&...)`. Deterministic — the document loader takes over from the new URL. Skipping this path (going back to normal rehydrate + async auto-save) reintroduces the race that dashboard-bounced users mid-flow.
+10. **`PendingEditorFileHydrator` Step 3 (background auto-save) DOES NOT update the URL if `?tool` or `?export` is present.** Race between `setCurrentDocument` and `router.replace` triggers the loader against a doc that hasn't propagated → 404 → dashboard bounce.
+11. **`PendingEditorFileHydrator` Step 4 (auto-launch) waits for `authLoaded`.** Same reason as Step 1.
+12. **`PendingEditorFileHydrator` sets `isRestoringSession=true` before the post-signin save + toggles it off in finally.** `PdfEditorShell` renders `<EditorLoadingShell />` while this flag is true (in addition to `pendingDocumentId`) — kills the drop-zone flash.
+13. **`PdfEditorShell` synchronously shows `<EditorLoadingShell />` if URL has `?export` or `?tool` without `?id`, AND Clerk is either still loading OR resolved to signed-in.** Prevents the drop-zone flash on the FIRST render before the hydrator's effect kicks in.
+14. **`useEditorDocumentLoader` non-401 error branch checks `store.file` before redirecting to `/dashboard`.** If a file is loaded (from IDB, hydrator, or user upload), stays put with a friendly toast. The dashboard bounce is destructive mid-flow — only fire it when there's truly nothing else to show.
+15. **Login card + Signup card use `window.location.assign` for finalize navigation, not `router.push`.** iOS Safari commits the Clerk session cookie during the full-page navigation; `router.push` outraces the cookie commit and the middleware treats the user as signed-out → bounce to sign-up.
+16. **Login card handles `signIn.status === "needs_second_factor"` via `signIn.mfa.sendEmailCode()` / `verifyEmailCode()` etc.** Skipping this branch means 2FA-enabled accounts silently loop back to sign-up.
+17. **`UploadWorkspace` (landing + convert routes) is auth-gated on convert routes (`pathname.startsWith("/convert/")`).** Signed-out users are redirected via `SignInPromptModal` before `uploadAsPdf` fires so the wasted client CPU is avoided and the paywall dead-end never happens.
+18. **`UploadWorkspace` runs `findDuplicateByFilename` before `documentsService.uploadDocument`.** If a matching doc exists in the user's library, we skip re-upload and navigate to the existing doc's id. Prevents the "user can create infinite duplicates" bug.
+19. **Post-signin save-first flow pipes `onUploadProgress` into `uploadToasts.setProgress`.** The bottom-left `<UploadToastProvider placement="bottom start" />` shows filename + live % during the multi-second upload. Do NOT switch back to `toast.loading` — that shows top-right, not bottom-left, and has no progress bar.
+20. **`AllToolsCatalog` stays server-safe (no props).** Landing header watches `usePathname()` and closes the modal on route change. Adding a callback prop back re-tripped Next 16's RSC serialization during `/all-tools` prerender.
+21. **`WeglotLoader` passes `switchers: []` AND CSS in `globals.css` hides `.country-selector, .wg-drop, .weglot-container, #weglot-listbox, [class*="weglot-inline"], [class*="wg-flags"]`.** Weglot's SDK sometimes injects a floating switcher regardless of the init flag. Both fences must stay — our custom `LanguageSwitcher` in the site navbar + dashboard sidebar + editor top chrome is the only one users should see.
+
+Full commit trail: `git log --oneline main -- lib/client/hooks/pdf-editor/use-export-editor.ts lib/client/hooks/billing/use-paywall.ts components/shared/pending-editor-file-hydrator.tsx components/shared/sign-in-prompt-modal.tsx components/sections/pdf-editor/PdfEditorShell.tsx`.
+
+Playwright coverage: `tests/pdf-editor/export-signin-redirect.spec.ts` guards items 1–4 and 8 above.
+
 ### Locking strategy (enforced)
 
 The off-limits list above is also enforced mechanically. `.claude/settings.json` registers a `PreToolUse` hook (`.claude/hooks/check-locked-paths.cjs`) that blocks `Edit`, `Write`, `MultiEdit`, and `NotebookEdit` against any path listed in `.claude/LOCKED_PATHS`.

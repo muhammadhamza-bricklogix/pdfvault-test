@@ -38,6 +38,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -277,6 +278,8 @@ function TopAppBar() {
           </Tooltip.Content>
         </Tooltip>
       </div>
+
+      <LanguageSwitcher />
 
       <button
         aria-label="Share via link"

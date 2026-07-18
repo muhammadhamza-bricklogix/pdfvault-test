@@ -21,6 +21,10 @@ interface PvFileTableProps {
   onRename?: (row: PvFileRow) => void;
   onHistory?: (row: PvFileRow) => void;
   onDelete?: (row: PvFileRow) => void;
+  /** Called when the user hits "Delete selected" in the bulk-action bar.
+   *  Receives the ids of every selected row. Parent owns the confirm
+   *  modal + mutation call so the table stays presentational. */
+  onBulkDelete?: (rows: readonly PvFileRow[]) => void;
 }
 
 type SortKey = "name" | "uploadedBy" | "date" | "size";
@@ -185,11 +189,17 @@ export function PvFileTable({
   onRename,
   onHistory,
   onDelete,
+  onBulkDelete,
 }: PvFileTableProps) {
   const { sorted, key, dir, cycle } = useSortedRows(rows);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
   const allSelected = sorted.length > 0 && selected.size === sorted.length;
+  const selectedRows = sorted.filter((r) => selected.has(r.id));
+  const handleBulkDelete = () => {
+    if (!onBulkDelete || selectedRows.length === 0) return;
+    onBulkDelete(selectedRows);
+  };
   const toggleAll = () => {
     setSelected(allSelected ? new Set() : new Set(sorted.map((r) => r.id)));
   };
@@ -205,197 +215,225 @@ export function PvFileTable({
   };
 
   return (
-    <div className="overflow-x-auto rounded-[16px] border border-[var(--pv-hairline)]">
-      <table className="w-full min-w-[720px] border-collapse text-left">
-        <thead>
-          <tr className="border-b border-[var(--pv-hairline)] bg-[var(--pv-fill-subtle)]">
-            <th className="w-10 px-4 py-3" scope="col">
-              <input
-                aria-label="Select all files"
-                checked={allSelected}
-                className="size-4 accent-[var(--pv-brand-red)]"
-                type="checkbox"
-                onChange={toggleAll}
-              />
-            </th>
-            <th className="px-3 py-3" scope="col">
-              <SortHeader
-                active={key === "name"}
-                dir={dir}
-                label="File Name"
-                sortKey="name"
-                onCycle={cycle}
-              />
-            </th>
-            <th className="px-3 py-3" scope="col">
-              <SortHeader
-                active={key === "uploadedBy"}
-                dir={dir}
-                label="Uploaded By"
-                sortKey="uploadedBy"
-                onCycle={cycle}
-              />
-            </th>
-            <th className="px-3 py-3" scope="col">
-              <SortHeader
-                active={key === "date"}
-                dir={dir}
-                label="Upload Date"
-                sortKey="date"
-                onCycle={cycle}
-              />
-            </th>
-            <th className="px-3 py-3" scope="col">
-              <SortHeader
-                active={key === "size"}
-                dir={dir}
-                label="File Size"
-                sortKey="size"
-                onCycle={cycle}
-              />
-            </th>
-            <th
-              className="px-4 py-3 text-right text-[13px] font-medium text-[var(--pv-text-body)]"
-              scope="col"
+    <div className="flex flex-col gap-2">
+      {selectedRows.length > 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--pv-hairline)] bg-[var(--pv-fill-subtle)] px-4 py-2">
+          <span className="text-[13px] font-medium text-[var(--pv-text-strong)]">
+            {selectedRows.length} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              className="rounded-full px-3 py-1 text-[13px] font-medium text-[var(--pv-text-body)] transition-colors hover:bg-white"
+              type="button"
+              onClick={() => setSelected(new Set())}
             >
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row) => {
-            const isChecked = selected.has(row.id);
-            const openable = Boolean(onOpen);
-            // `role="link"` + keyboard handlers on the cell make the whole
-            // row body (name + uploader + date + size) a valid open target
-            // without swallowing the checkbox or action-icon clicks.
-            const openTd = openable
-              ? {
-                  className: "px-3 py-3 align-middle cursor-pointer",
-                  onClick: () => onOpen?.(row),
-                  onKeyDown: (e: React.KeyboardEvent) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onOpen?.(row);
-                    }
-                  },
-                  role: "link",
-                  tabIndex: 0,
-                }
-              : { className: "px-3 py-3 align-middle" };
-
-            return (
-              <tr
-                key={row.id}
-                className={`border-b border-[var(--pv-hairline)] transition-colors last:border-b-0 hover:bg-[var(--pv-fill-subtle)] ${
-                  isChecked ? "bg-[var(--pv-nav-active)]/60" : ""
-                }`}
+              Clear
+            </button>
+            {onBulkDelete ? (
+              <button
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--pv-file-pdf)] px-3 py-1 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                type="button"
+                onClick={handleBulkDelete}
               >
-                <td className="px-4 py-3 align-middle">
-                  <input
-                    aria-label={`Select ${row.name}`}
-                    checked={isChecked}
-                    className="size-4 accent-[var(--pv-brand-red)]"
-                    type="checkbox"
-                    onChange={() => toggleRow(row.id)}
-                  />
-                </td>
-                <td
-                  {...openTd}
-                  aria-label={openable ? `Open ${row.name}` : undefined}
+                <HugeiconsIcon icon={Delete02Icon} size={14} />
+                Delete selected
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      <div className="overflow-x-auto rounded-[16px] border border-[var(--pv-hairline)]">
+        <table className="w-full min-w-[720px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-[var(--pv-hairline)] bg-[var(--pv-fill-subtle)]">
+              <th className="w-10 px-4 py-3" scope="col">
+                <input
+                  aria-label="Select all files"
+                  checked={allSelected}
+                  className="size-4 accent-[var(--pv-brand-red)]"
+                  type="checkbox"
+                  onChange={toggleAll}
+                />
+              </th>
+              <th className="px-3 py-3" scope="col">
+                <SortHeader
+                  active={key === "name"}
+                  dir={dir}
+                  label="File Name"
+                  sortKey="name"
+                  onCycle={cycle}
+                />
+              </th>
+              <th className="px-3 py-3" scope="col">
+                <SortHeader
+                  active={key === "uploadedBy"}
+                  dir={dir}
+                  label="Uploaded By"
+                  sortKey="uploadedBy"
+                  onCycle={cycle}
+                />
+              </th>
+              <th className="px-3 py-3" scope="col">
+                <SortHeader
+                  active={key === "date"}
+                  dir={dir}
+                  label="Upload Date"
+                  sortKey="date"
+                  onCycle={cycle}
+                />
+              </th>
+              <th className="px-3 py-3" scope="col">
+                <SortHeader
+                  active={key === "size"}
+                  dir={dir}
+                  label="File Size"
+                  sortKey="size"
+                  onCycle={cycle}
+                />
+              </th>
+              <th
+                className="px-4 py-3 text-right text-[13px] font-medium text-[var(--pv-text-body)]"
+                scope="col"
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((row) => {
+              const isChecked = selected.has(row.id);
+              const openable = Boolean(onOpen);
+              // `role="link"` + keyboard handlers on the cell make the whole
+              // row body (name + uploader + date + size) a valid open target
+              // without swallowing the checkbox or action-icon clicks.
+              const openTd = openable
+                ? {
+                    className: "px-3 py-3 align-middle cursor-pointer",
+                    onClick: () => onOpen?.(row),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onOpen?.(row);
+                      }
+                    },
+                    role: "link",
+                    tabIndex: 0,
+                  }
+                : { className: "px-3 py-3 align-middle" };
+
+              return (
+                <tr
+                  key={row.id}
+                  className={`border-b border-[var(--pv-hairline)] transition-colors last:border-b-0 hover:bg-[var(--pv-fill-subtle)] ${
+                    isChecked ? "bg-[var(--pv-nav-active)]/60" : ""
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <TypeBadge type={row.type} />
-                    <div className="min-w-0">
-                      <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
-                        {row.name}
-                      </p>
-                      <p className="text-[12px] text-[var(--pv-text-muted)]">
-                        {row.displaySize}
-                      </p>
+                  <td className="px-4 py-3 align-middle">
+                    <input
+                      aria-label={`Select ${row.name}`}
+                      checked={isChecked}
+                      className="size-4 accent-[var(--pv-brand-red)]"
+                      type="checkbox"
+                      onChange={() => toggleRow(row.id)}
+                    />
+                  </td>
+                  <td
+                    {...openTd}
+                    aria-label={openable ? `Open ${row.name}` : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <TypeBadge type={row.type} />
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
+                          {row.name}
+                        </p>
+                        <p className="text-[12px] text-[var(--pv-text-muted)]">
+                          {row.displaySize}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td {...openTd}>
-                  <div className="flex items-center gap-3">
-                    {row.uploadedByAvatar ? (
-                      // Dynamic Clerk profile URL — <img> is intentional.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt=""
-                        className="size-8 shrink-0 rounded-full object-cover"
-                        loading="lazy"
-                        src={row.uploadedByAvatar}
-                      />
-                    ) : (
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--pv-tile)] text-[var(--pv-text-body)]">
-                        <HugeiconsIcon icon={UserCircleIcon} size={20} />
-                      </span>
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
-                        {row.uploadedByName}
-                      </p>
-                      <p className="truncate text-[12px] text-[var(--pv-text-muted)]">
-                        {row.uploadedByEmail}
-                      </p>
+                  </td>
+                  <td {...openTd}>
+                    <div className="flex items-center gap-3">
+                      {row.uploadedByAvatar ? (
+                        // Dynamic Clerk profile URL — <img> is intentional.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          alt=""
+                          className="size-8 shrink-0 rounded-full object-cover"
+                          loading="lazy"
+                          src={row.uploadedByAvatar}
+                        />
+                      ) : (
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--pv-tile)] text-[var(--pv-text-body)]">
+                          <HugeiconsIcon icon={UserCircleIcon} size={20} />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
+                          {row.uploadedByName}
+                        </p>
+                        <p className="truncate text-[12px] text-[var(--pv-text-muted)]">
+                          {row.uploadedByEmail}
+                        </p>
+                      </div>
                     </div>
+                  </td>
+                  <td
+                    {...openTd}
+                    className={`${openTd.className} text-[13px] text-[var(--pv-text-body)]`}
+                  >
+                    {row.uploadDate}
+                  </td>
+                  <td
+                    {...openTd}
+                    className={`${openTd.className} text-[13px] text-[var(--pv-text-body)]`}
+                  >
+                    {row.fileSize}
+                  </td>
+                  <td className="px-4 py-3 align-middle">
+                    <RowActions
+                      row={row}
+                      onDelete={onDelete}
+                      onDownload={onDownload}
+                      onHistory={onHistory}
+                      onRename={onRename}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+            {sorted.length === 0 && !isLoading ? (
+              <tr>
+                <td
+                  className="px-4 py-10 text-center text-[13px] text-[var(--pv-text-muted)]"
+                  colSpan={6}
+                >
+                  <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
+                    <p>No files match your search.</p>
+                    <a
+                      className="pv-btn-primary inline-flex px-5 py-1.5 text-[13px]"
+                      href="/pdf-composer"
+                    >
+                      Upload a PDF
+                    </a>
                   </div>
-                </td>
-                <td
-                  {...openTd}
-                  className={`${openTd.className} text-[13px] text-[var(--pv-text-body)]`}
-                >
-                  {row.uploadDate}
-                </td>
-                <td
-                  {...openTd}
-                  className={`${openTd.className} text-[13px] text-[var(--pv-text-body)]`}
-                >
-                  {row.fileSize}
-                </td>
-                <td className="px-4 py-3 align-middle">
-                  <RowActions
-                    row={row}
-                    onDelete={onDelete}
-                    onDownload={onDownload}
-                    onHistory={onHistory}
-                    onRename={onRename}
-                  />
                 </td>
               </tr>
-            );
-          })}
-          {sorted.length === 0 && !isLoading ? (
-            <tr>
-              <td
-                className="px-4 py-10 text-center text-[13px] text-[var(--pv-text-muted)]"
-                colSpan={6}
-              >
-                <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
-                  <p>No files match your search.</p>
-                  <a
-                    className="pv-btn-primary inline-flex px-5 py-1.5 text-[13px]"
-                    href="/pdf-composer"
-                  >
-                    Upload a PDF
-                  </a>
-                </div>
-              </td>
-            </tr>
-          ) : null}
-          {isLoading && sorted.length === 0 ? (
-            <tr>
-              <td
-                className="px-4 py-10 text-center text-[13px] text-[var(--pv-text-muted)]"
-                colSpan={6}
-              >
-                Loading your files…
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
+            ) : null}
+            {isLoading && sorted.length === 0 ? (
+              <tr>
+                <td
+                  className="px-4 py-10 text-center text-[13px] text-[var(--pv-text-muted)]"
+                  colSpan={6}
+                >
+                  Loading your files…
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

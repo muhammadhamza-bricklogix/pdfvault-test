@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 
 import { IdentityPopover } from "./identity-popover";
 
@@ -210,6 +211,9 @@ function SidebarBody({
         ))}
       </nav>
       <div className="mt-auto">
+        <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
+          <LanguageSwitcher />
+        </div>
         <ProfileRow onNavigate={onNavigate} />
       </div>
     </div>

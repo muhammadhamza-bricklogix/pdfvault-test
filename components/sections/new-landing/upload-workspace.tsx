@@ -7,6 +7,7 @@ import { useCallback, useId, useMemo, useRef, useState } from "react";
 
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -322,31 +323,54 @@ export function UploadWorkspace({
         let savedDoc: { id: string; name: string } | null = null;
 
         if (authLoaded && isSignedIn) {
-          if (loadingKey) toast.close(loadingKey);
-          const savingKey = toast.loading({
-            title: "Saving to My PDFs",
-            description: pdfFile.name,
-          });
+          // Duplicate-name check: refuse to create a second document row
+          // with the same filename. Opens the file for local editing so
+          // the user isn't blocked; the visible toast tells them why we
+          // didn't save.
+          let existingDocId: string | null = null;
 
           try {
-            const document = await documentsService.uploadDocument({
-              file: pdfFile,
+            const existing = await findDuplicateByFilename(pdfFile.name);
+
+            if (existing) existingDocId = existing.id;
+          } catch (dupErr) {
+            logger.warn("duplicate-name check failed", dupErr);
+          }
+
+          if (existingDocId) {
+            toast.info({
+              title: "File already in My PDFs",
+              description: `Opening the existing copy of "${pdfFile.name}".`,
+            });
+            // Skip re-upload; navigate straight to the existing doc.
+            savedDoc = { id: existingDocId, name: pdfFile.name };
+          } else {
+            if (loadingKey) toast.close(loadingKey);
+            const savingKey = toast.loading({
+              title: "Saving to My PDFs",
+              description: pdfFile.name,
             });
 
-            savedDoc = { id: document.id, name: document.filename };
-            toast.success({
-              title: "Saved to My PDFs",
-              description: document.filename,
-            });
-          } catch (saveErr) {
-            logger.warn("save-before-open failed", saveErr);
-            toast.error({
-              title: "Couldn't save to My PDFs",
-              description:
-                "Your file will open locally — use Save from the editor to persist.",
-            });
-          } finally {
-            toast.close(savingKey);
+            try {
+              const document = await documentsService.uploadDocument({
+                file: pdfFile,
+              });
+
+              savedDoc = { id: document.id, name: document.filename };
+              toast.success({
+                title: "Saved to My PDFs",
+                description: document.filename,
+              });
+            } catch (saveErr) {
+              logger.warn("save-before-open failed", saveErr);
+              toast.error({
+                title: "Couldn't save to My PDFs",
+                description:
+                  "Your file will open locally — use Save from the editor to persist.",
+              });
+            } finally {
+              toast.close(savingKey);
+            }
           }
         }
 
