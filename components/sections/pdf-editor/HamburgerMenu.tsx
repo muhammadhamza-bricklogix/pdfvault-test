@@ -20,6 +20,7 @@ import {
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
@@ -129,10 +130,15 @@ export function HamburgerMenu() {
     }
   };
 
-  const requireSignIn = () => {
-    toast.info({
+  const requireSignIn = (
+    description = "Sign in to access this feature. We'll bring you back to the editor.",
+    redirectUrl?: string,
+  ) => {
+    dispatchSignInPrompt({
       title: "Sign in required",
-      description: "Sign in to access your saved PDFs.",
+      description,
+      confirmLabel: "Sign in & continue",
+      redirectUrl,
     });
   };
 
@@ -146,16 +152,10 @@ export function HamburgerMenu() {
         break;
       case "my-pdfs":
         if (!isSignedIn) {
-          // Full-page redirect to sign-in with a return path back to the
-          // editor. Matches the Save button behaviour (see EditorTopBar) —
-          // signed-out users get a clear next step instead of a toast.
-          if (typeof window !== "undefined") {
-            const redirect = encodeURIComponent(ROUTES.APP.DASHBOARD);
-
-            window.location.assign(
-              `${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`,
-            );
-          }
+          requireSignIn(
+            "Sign in to open your saved PDFs. You can cancel to keep editing here.",
+            ROUTES.APP.DASHBOARD,
+          );
 
           return;
         }
@@ -178,7 +178,9 @@ export function HamburgerMenu() {
       case "versions": {
         if (!requireFile("viewing version history")) return;
         if (!isSignedIn) {
-          requireSignIn();
+          requireSignIn(
+            "Sign in to view version history for this PDF. Cancel to stay on the editor.",
+          );
 
           return;
         }
@@ -201,7 +203,9 @@ export function HamburgerMenu() {
       case "share": {
         if (!requireFile("sharing")) return;
         if (!isSignedIn) {
-          requireSignIn();
+          requireSignIn(
+            "Sign in to share this PDF with a public link. Cancel to keep editing.",
+          );
 
           return;
         }

@@ -71,7 +71,7 @@ test.describe("PDF editor — mobile chrome", () => {
     ).toBeVisible();
   });
 
-  test("Save button is visible and disabled in local mode", async ({
+  test("Save button is visible and prompts sign-in in local mode", async ({
     page,
   }) => {
     const errors: string[] = [];
@@ -83,10 +83,17 @@ test.describe("PDF editor — mobile chrome", () => {
 
     const saveButton = page.locator('button.button--primary', { hasText: /save/i }).first();
 
+    // Save stays enabled for signed-out users on purpose — a silently
+    // disabled button used to make people think Save was broken.
+    // Instead, clicking fires the sign-in confirm modal (invariant #4 in
+    // CLAUDE.md).
     await expect(saveButton).toBeVisible();
-    // In local mode the button is disabled because the user isn't signed in;
-    // we still assert it can be located and the editor stays stable.
-    await expect(saveButton).toBeDisabled();
+    await expect(saveButton).toBeEnabled();
+
+    await saveButton.click();
+    await expect(
+      page.getByRole("heading", { name: /sign in/i }).first(),
+    ).toBeVisible({ timeout: 4_000 });
 
     expect(errors).toEqual([]);
   });

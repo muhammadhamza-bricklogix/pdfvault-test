@@ -79,19 +79,34 @@ test.describe("PDF editor — hamburger menu", () => {
     expect(errors).toEqual([]);
   });
 
-  test("My PDFs item is gated when signed out", async ({ page }) => {
+  test("My PDFs item is gated when signed out — opens the sign-in confirm modal", async ({
+    page,
+  }) => {
     await openMenu(page);
     await page.getByRole("menuitem", { name: /^my pdfs$/i }).click();
 
-    await page.waitForTimeout(500);
-    expect(page.url()).toMatch(/\/pdf-editor/);
+    await expect(
+      page.getByRole("heading", { name: /sign in required/i }).first(),
+    ).toBeVisible({ timeout: 4_000 });
+    await expect(
+      page.getByRole("button", { name: /sign in.*continue/i }).first(),
+    ).toBeVisible();
+
+    // Cancel keeps the user on the editor.
+    await page.getByRole("button", { name: /cancel/i }).first().click();
+    expect(page.url()).toMatch(/\/(pdf-editor|pdf-composer)/);
   });
 
-  test("Version History is gated when signed out", async ({ page }) => {
+  test("Version History is gated when signed out — opens the sign-in confirm modal", async ({
+    page,
+  }) => {
     await openMenu(page);
     await page.getByRole("menuitem", { name: /version history/i }).click();
 
-    await page.waitForTimeout(500);
-    expect(page.url()).toMatch(/\/pdf-editor/);
+    await expect(
+      page.getByRole("heading", { name: /sign in required/i }).first(),
+    ).toBeVisible({ timeout: 4_000 });
+    await page.getByRole("button", { name: /cancel/i }).first().click();
+    expect(page.url()).toMatch(/\/(pdf-editor|pdf-composer)/);
   });
 });
