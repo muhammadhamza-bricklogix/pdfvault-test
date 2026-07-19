@@ -30,16 +30,20 @@ test.describe("PDF editor — edge cases", () => {
     await expect
       .poll(() => page.url(), { timeout: 6_000 })
       .toMatch(/\/sign-in/);
-    expect(decodeURIComponent(page.url())).toContain(
-      "redirect_url=/pdf-editor",
+    // `/pdf-editor` is a redirect alias for the canonical `/pdf-composer`
+    // route (see app/(tools)/pdf-editor/page.tsx). Middleware sees the
+    // rewritten URL and preserves it in `redirect_url`.
+    expect(decodeURIComponent(page.url())).toMatch(
+      /redirect_url=\/(pdf-editor|pdf-composer)/,
     );
   });
 
   test("Local-mode editor opens without an id", async ({ page }) => {
     await page.goto("/pdf-editor");
 
-    // No redirect — bare /pdf-editor is intentionally public.
-    await expect(page).toHaveURL(/\/pdf-editor/);
+    // No sign-in redirect — bare editor URL is intentionally public.
+    // `/pdf-editor` server-redirects to the canonical `/pdf-composer`.
+    await expect(page).toHaveURL(/\/(pdf-editor|pdf-composer)/);
   });
 
   test("Keyboard: Escape and Delete don't crash on empty editor", async ({

@@ -39,9 +39,9 @@ import {
 import { useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { HamburgerMenu } from "./HamburgerMenu";
 import { ToolsModal } from "./ToolsModal";
@@ -103,17 +103,12 @@ export function EditorInfoBar() {
       : "Save";
   const onSaveClick = () => {
     if (!isSignedIn) {
-      const redirect = encodeURIComponent(
-        typeof window !== "undefined"
-          ? `${window.location.pathname}${window.location.search}`
-          : ROUTES.TOOLS.PDF_EDITOR,
-      );
-
-      if (typeof window !== "undefined") {
-        window.location.assign(
-          `${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`,
-        );
-      }
+      dispatchSignInPrompt({
+        title: "Sign in to save",
+        description:
+          "Saving stores this PDF in your library so you can come back to it. Cancel to keep editing here without an account.",
+        confirmLabel: "Sign in & continue",
+      });
 
       return;
     }
