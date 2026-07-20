@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { WEGLOT_LANG_STORAGE_KEY } from "@/components/shared/navigation/weglot-loader";
+
 type LangCode = "en" | "es" | "ar" | "fr" | "de" | "pt";
 
 // Must match the `destinationLanguages` list in `weglot-loader.tsx` and
@@ -139,7 +141,20 @@ export function LandingLanguageSwitcher({
   const current = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0];
 
   const select = (code: LangCode) => {
+    // Belt-and-braces: persist to localStorage synchronously here in
+    // addition to the `languageChanged` listener in WeglotLoader. Some
+    // Weglot builds don't fire `languageChanged` when the target
+    // matches the current cookie, so relying on that alone can leave
+    // localStorage stale between page reloads.
+    try {
+      window.localStorage.setItem(WEGLOT_LANG_STORAGE_KEY, code);
+    } catch {
+      // ignore private-mode / storage-disabled
+    }
     window.Weglot?.switchTo(code);
+    // Reflect the picked code immediately in local state so the
+    // dropdown label updates even if Weglot's own event is delayed.
+    setCurrentLang(code);
     setOpen(false);
   };
 

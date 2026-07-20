@@ -3,6 +3,8 @@
 import { Button, Dropdown, Label } from "@heroui/react";
 import { useEffect, useState } from "react";
 
+import { WEGLOT_LANG_STORAGE_KEY } from "./weglot-loader";
+
 type LangCode = "en" | "es" | "ar" | "fr" | "de" | "pt";
 
 // Must match `destinationLanguages` in weglot-loader.tsx + hreflang
@@ -66,7 +68,21 @@ export function LanguageSwitcher() {
               key={lang.code}
               id={lang.code}
               textValue={lang.label}
-              onAction={() => window.Weglot?.switchTo(lang.code)}
+              onAction={() => {
+                // Persist synchronously so localStorage stays fresh
+                // even if Weglot's `languageChanged` event is delayed
+                // or skipped on same-language switches.
+                try {
+                  window.localStorage.setItem(
+                    WEGLOT_LANG_STORAGE_KEY,
+                    lang.code,
+                  );
+                } catch {
+                  // ignore
+                }
+                window.Weglot?.switchTo(lang.code);
+                setCurrentLang(lang.code);
+              }}
             >
               <Label>{lang.label}</Label>
             </Dropdown.Item>
