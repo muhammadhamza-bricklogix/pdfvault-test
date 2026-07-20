@@ -162,7 +162,7 @@ function ToolButton({
         aria-pressed={active}
         className={`group flex h-auto min-w-[56px] cursor-pointer flex-col items-center gap-0.5 rounded-[10px] px-2 py-1.5 text-[10px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50 ${
           active
-            ? "bg-default-200 text-[var(--color-foreground)]"
+            ? "bg-[var(--color-accent)]/12 text-[var(--color-accent)] ring-1 ring-inset ring-[var(--color-accent)]/40"
             : "text-default-600 hover:bg-default-100"
         }`}
         disabled={disabled}
@@ -170,7 +170,11 @@ function ToolButton({
         onClick={onClick}
       >
         <HugeiconsIcon
-          className="text-[var(--color-foreground)]"
+          className={
+            active
+              ? "text-[var(--color-accent)]"
+              : "text-[var(--color-foreground)]"
+          }
           icon={icon}
           size={20}
           strokeWidth={1.6}

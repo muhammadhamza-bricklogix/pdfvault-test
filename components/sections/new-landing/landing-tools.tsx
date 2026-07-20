@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
@@ -266,6 +266,25 @@ export function LandingTools() {
   };
 
   const visibleTools = TOOLS.filter((tool) => tool.tabs.includes(activeTab));
+
+  // The tab list is re-mounted (`key={activeTab}` on the cards below), so
+  // Weglot needs to walk the fresh DOM to translate the newly-rendered
+  // tool cards. Its own MutationObserver misses the swap when it happens
+  // fast — re-invoke `switchTo(currentLang)` to force a rescan. Also
+  // guard against Weglot not being loaded / no cookie set yet, so this
+  // is a no-op in dev without WEGLOT_API_KEY.
+  useEffect(() => {
+    const current = window.Weglot?.getCurrentLang();
+
+    if (!current || current === "en") return;
+    // Defer to next frame so React commits the new tab DOM first,
+    // otherwise Weglot walks the pre-swap subtree.
+    const raf = window.requestAnimationFrame(() => {
+      window.Weglot?.switchTo(current);
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, [activeTab]);
 
   return (
     <section

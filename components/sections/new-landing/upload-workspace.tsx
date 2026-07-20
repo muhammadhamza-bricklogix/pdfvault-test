@@ -151,45 +151,19 @@ function DashedBorder({ active }: { active: boolean }) {
 
 /**
  * Orange folder-with-upload-arrow illustration for the landing hero
- * variant. Matches `public/landing/Background+Border.png`.
+ * variant. Sourced from `public/landing/Group.png` (matches the
+ * `Background+Border.png` reference used to spec the hero).
  */
 function HeroFolderIcon() {
   return (
-    <svg
-      aria-hidden
-      fill="none"
-      height="72"
-      viewBox="0 0 84 72"
-      width="84"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M4 12a4 4 0 0 1 4-4h20l6 8h42a4 4 0 0 1 4 4v6H4V12Z"
-        fill="#DE472E"
-      />
-      <rect
-        fill="#FFF3EE"
-        height="18"
-        rx="2"
-        stroke="#DE472E"
-        strokeWidth="2"
-        width="32"
-        x="26"
-        y="4"
-      />
-      <path d="M26 4h32v4H26z" fill="#DE472E" />
-      <path
-        d="M2 24a4 4 0 0 1 4-4h72a4 4 0 0 1 4 4v40a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V24Z"
-        fill="#DE472E"
-      />
-      <path
-        d="M42 34v22m0-22-8 8m8-8 8 8"
-        stroke="#111315"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="3"
-      />
-    </svg>
+    <Image
+      priority
+      alt=""
+      className="h-auto w-[84px] object-contain"
+      height={72}
+      src="/landing/Group.png"
+      width={84}
+    />
   );
 }
 
