@@ -23,14 +23,14 @@ import { toast } from "@/lib/shared/utils/toast";
  * signed-out kicks the user into the "Couldn't start checkout" dead-end —
  * we redirect to sign-in first instead.
  *
- * `extract-images` is intentionally omitted: `useExtractImagesEditor`
- * mirrors the `useExportEditor` pattern — it lets a signed-out visitor
- * open the editor, then trips the sign-in modal at Extract-time and the
- * paywall on the mutation itself. Same flow the user asked for on
+ * `extract-images` and `compress` are intentionally omitted:
+ * `useExtractImagesEditor` and `CompressModal.handleCompress` both mirror
+ * the `useExportEditor` pattern — a signed-out visitor can open the
+ * editor + drop a PDF, then hits the sign-in modal at action time and
+ * the paywall on the mutation. Matches the flow used on
  * `/convert/pdf-to-*` (Download → sign-in → paywall).
  */
 const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set([
-  "compress",
   "password",
   "unlock",
   "flatten",

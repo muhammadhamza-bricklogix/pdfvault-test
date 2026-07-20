@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { LandingLanguageSwitcher } from "@/components/sections/new-landing/landing-language-switcher";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-import { LoginLanguageMenu } from "./login-language-menu";
 import { SignupCard } from "./signup-card";
 
 // Background pattern removed per user request — screen renders on plain
@@ -30,7 +30,7 @@ export function SignupScreen() {
               width={184}
             />
           </Link>
-          <LoginLanguageMenu />
+          <LandingLanguageSwitcher />
         </div>
       </header>
 

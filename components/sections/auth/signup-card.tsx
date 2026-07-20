@@ -13,7 +13,7 @@ import {
   PASSWORD_RULES,
 } from "@/lib/shared/utils/password-strength";
 
-import { AppleIcon, GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
+import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -146,11 +146,6 @@ export function SignupCard() {
       setNotice("Something went wrong with Google sign-up.");
       setOauthLoading(false);
     }
-  };
-
-  const onApple = () => {
-    setErrors({});
-    setNotice("Apple sign-up isn’t connected yet.");
   };
 
   const onSubmitCredentials = async (
@@ -341,22 +336,13 @@ export function SignupCard() {
       </h1>
       <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
         {step === "credentials"
-          ? "Unlimited Downloads, Shares, And Printing."
+          ? "Please enter your details below to create your account"
           : `We sent a code to ${email}.`}
       </p>
 
       {step === "credentials" ? (
         <>
           <div className="mt-[34px] flex flex-col gap-[13px]">
-            <button
-              className={OAUTH_BUTTON_CLASS}
-              disabled={oauthLoading}
-              type="button"
-              onClick={onApple}
-            >
-              <AppleIcon />
-              Continue with Apple
-            </button>
             <button
               className={OAUTH_BUTTON_CLASS}
               disabled={oauthLoading}

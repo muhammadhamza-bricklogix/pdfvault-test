@@ -9,7 +9,7 @@ import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggl
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 
-import { AppleIcon, GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
+import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -165,13 +165,6 @@ export function LoginCard() {
       setError("Something went wrong with Google sign-in.");
       setOauthLoading(false);
     }
-  };
-
-  // Apple isn't enabled in the Clerk dashboard yet — surface an honest
-  // notice instead of faking success.
-  const onApple = () => {
-    setError(null);
-    setNotice("Apple sign-in isn’t connected yet.");
   };
 
   const onSubmitEmail = (event: React.FormEvent<HTMLFormElement>) => {
@@ -463,15 +456,6 @@ export function LoginCard() {
       {step === "email" ? (
         <>
           <div className="mt-[30px] flex flex-col gap-3">
-            <button
-              className={OAUTH_BUTTON_CLASS}
-              disabled={oauthLoading}
-              type="button"
-              onClick={onApple}
-            >
-              <AppleIcon />
-              Login with Apple
-            </button>
             <button
               className={OAUTH_BUTTON_CLASS}
               disabled={oauthLoading}

@@ -1,11 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { LandingLanguageSwitcher } from "@/components/sections/new-landing/landing-language-switcher";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LoginCard } from "./login-card";
-import { LoginLanguageMenu } from "./login-language-menu";
 
 // Background pattern removed per user request — screen renders on plain
 // #fdfdfd. If you ever want the grid + tiles back, restore the imports
@@ -30,7 +30,7 @@ export function LoginScreen() {
               width={184}
             />
           </Link>
-          <LoginLanguageMenu />
+          <LandingLanguageSwitcher />
         </div>
       </header>
 

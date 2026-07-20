@@ -2,6 +2,7 @@
 
 import type { CompressPreset } from "@/lib/shared/types/pdf-tools.types";
 
+import { useAuth } from "@clerk/nextjs";
 import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -14,9 +15,18 @@ import {
 } from "@heroui/react";
 import { useState } from "react";
 
+import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import { useCompressFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
+import { logger } from "@/lib/shared/utils/logger";
 
 type PresetOption = {
   description: string;
@@ -54,6 +64,7 @@ export function CompressModal() {
   const isOpen = usePdfEditorStore((s) => s.isCompressModalOpen);
   const setIsOpen = usePdfEditorStore((s) => s.setIsCompressModalOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const { isSignedIn } = useAuth();
 
   const [preset, setPreset] = useState<CompressPreset>("balanced");
   const [quality, setQuality] = useState(75);
@@ -70,6 +81,46 @@ export function CompressModal() {
   const handleCompress = async () => {
     if (!file) return;
 
+    // Sign-in gate — mirror the export flow. Guests can open + edit
+    // the PDF, but the compress endpoint is auth+paywall gated on the
+    // backend, so route them through the sign-in confirm modal first
+    // (the paywall's checkout intent needs auth). After sign-in the
+    // user returns to the same editor with `?tool=compress` set, so
+    // the compress modal re-opens automatically via the hydrator.
+    if (!isSignedIn) {
+      try {
+        await savePendingEditorFile(file);
+      } catch (err) {
+        logger.warn("pending editor file save failed", err);
+      }
+
+      const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=compress`;
+
+      dispatchSignInPrompt({
+        title: "Sign in to compress",
+        description:
+          "Compressing is a paid feature. Sign in and we'll bring you back here to finish.",
+        confirmLabel: "Sign in & continue",
+        redirectUrl: returnTo,
+      });
+
+      setIsOpen(false);
+
+      return;
+    }
+
+    // Paywall gate — fires BEFORE the CPU-heavy mutation so the modal
+    // doesn't stack on the compress busy-state. Axios interceptor is
+    // the safety net for stale entitlement snapshots.
+    if (!getEntitledSnapshot()) {
+      const outcome = await requestPaywall();
+
+      if (outcome !== "success") {
+        // User dismissed the paywall — silent bail-out.
+        return;
+      }
+    }
+
     try {
       const result = await compress.mutateAsync({
         file,
@@ -79,8 +130,14 @@ export function CompressModal() {
 
       triggerBlobDownload(result.blob, result.fileName);
       setIsOpen(false);
-    } catch {
-      // The mutation already toasts the error — nothing else to do here.
+    } catch (err) {
+      // Axios interceptor throws PaywallCancelledError when the user
+      // dismisses the payment modal on a 402/403 retry — that's a user
+      // choice, not an error worth toasting. The mutation's own
+      // onError still surfaces the toast for other HTTP failures.
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
     }
   };
 
