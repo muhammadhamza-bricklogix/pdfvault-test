@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
@@ -136,8 +137,11 @@ export function LandingHeader() {
             </nav>
           </div>
 
-          {/* Right: language + auth */}
+          {/* Right: theme + language + auth */}
           <div className="flex items-center gap-3">
+            <div className="hidden lg:block">
+              <ThemeToggle size="sm" variant="ghost" />
+            </div>
             <div className="hidden lg:block">
               <LandingLanguageSwitcher />
             </div>
@@ -215,8 +219,9 @@ export function LandingHeader() {
                   </a>
                 </li>
               ))}
-              <li className="mt-1 px-2 py-1">
+              <li className="mt-1 flex items-center gap-3 px-2 py-1">
                 <LandingLanguageSwitcher variant="mobile" />
+                <ThemeToggle size="sm" variant="ghost" />
               </li>
               <li className="flex flex-col gap-2 px-2 pt-1">
                 {showAuthButtons ? (

@@ -81,8 +81,8 @@ export default function RootLayout({
           <Providers
             themeProps={{
               attribute: "data-theme",
-              defaultTheme: "system",
-              enableSystem: true,
+              defaultTheme: "light",
+              enableSystem: false,
             }}
           >
             {children}
