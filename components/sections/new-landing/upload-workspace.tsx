@@ -9,6 +9,7 @@ import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
@@ -22,7 +23,7 @@ const DEFAULT_ACCEPTED_EXTENSIONS = [
   "jpeg",
   "png",
 ];
-const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB (matches landing hero caption)
 
 type CloudProvider = {
   label: string;
@@ -30,9 +31,9 @@ type CloudProvider = {
 };
 
 const CLOUD_PROVIDERS: CloudProvider[] = [
-  { label: "Upload from Google drive", id: "google-drive" },
   { label: "Upload from device", id: "device" },
-  // Hidden for now — Dropbox and OneDrive flows are not wired up.
+  // Hidden — Google Drive / Dropbox / OneDrive flows removed per PM (2026-07).
+  // { label: "Upload from Google drive", id: "google-drive" },
   // { label: "Upload from Dropbox", id: "dropbox" },
   // { label: "Upload from one drive", id: "onedrive" },
 ];
@@ -126,6 +127,50 @@ function DashedBorder({ active }: { active: boolean }) {
         width="99"
         x="0.5"
         y="0.5"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Orange folder-with-upload-arrow illustration for the landing hero
+ * variant. Matches `public/landing/Background+Border.png`.
+ */
+function HeroFolderIcon() {
+  return (
+    <svg
+      aria-hidden
+      fill="none"
+      height="72"
+      viewBox="0 0 84 72"
+      width="84"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 12a4 4 0 0 1 4-4h20l6 8h42a4 4 0 0 1 4 4v6H4V12Z"
+        fill="#DE472E"
+      />
+      <rect
+        fill="#FFF3EE"
+        height="18"
+        rx="2"
+        stroke="#DE472E"
+        strokeWidth="2"
+        width="32"
+        x="26"
+        y="4"
+      />
+      <path d="M26 4h32v4H26z" fill="#DE472E" />
+      <path
+        d="M2 24a4 4 0 0 1 4-4h72a4 4 0 0 1 4 4v40a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V24Z"
+        fill="#DE472E"
+      />
+      <path
+        d="M42 34v22m0-22-8 8m8-8 8 8"
+        stroke="#111315"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="3"
       />
     </svg>
   );
@@ -225,12 +270,24 @@ interface UploadWorkspaceProps {
   /** Export format to auto-fire once the file loads in the editor
    *  (e.g. `"docx"` for /convert/pdf-to-word). */
   exportFormat?: string;
+  /**
+   * Visual layout:
+   *  - `"full"` (default): the wide two-tier card with the gray outer
+   *    frame, cloud-provider chips, and trust strip. Used on
+   *    `/convert/[slug]`.
+   *  - `"hero"`: the compact single-card design shown in
+   *    `public/landing/Background+Border.png` — dashed border, orange
+   *    folder icon, OR divider, red pill button, "Size upto 100 MB"
+   *    caption. No cloud chips, no trust strip. Used on `/`.
+   */
+  variant?: "full" | "hero";
 }
 
 export function UploadWorkspace({
   acceptExtensions,
   exportFormat,
   tool,
+  variant = "full",
 }: UploadWorkspaceProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -243,16 +300,17 @@ export function UploadWorkspace({
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
-  // Conversion (both PDF-to-X and X-to-PDF) hits the backend /conversion
-  // endpoint which is auth-gated. The signals:
-  //   - `exportFormat` present → PDF-to-X route (upload PDF, auto-export)
-  //   - `/convert/*` pathname → any conversion page (upload non-PDF, get PDF)
-  // Either way the flow needs the user signed in before we start burning
-  // client CPU on a client-side rasterise. Gate the entry: bounce to
-  // sign-in with a return URL back to this same convert page, then the
-  // user re-uploads once signed in.
+  // Only convert-TO-pdf routes (Word/PNG/JPG/Excel/PowerPoint/TXT → PDF)
+  // require sign-in at upload time — those upload a non-PDF and expect a
+  // PDF back from the backend conversion pipeline, which needs auth.
+  //
+  // Convert-FROM-pdf routes (PDF → DOCX/XLSX/PPTX/JPG/PNG/HTML/TXT) use
+  // the same signed-out flow as `/pdf-composer`: the visitor drops a PDF,
+  // the editor opens, and the sign-in prompt + paywall trip at Download
+  // time via `useExportEditor`. The signal for that family is the
+  // presence of `exportFormat` on the route props.
   const requiresAuth = useMemo(
-    () => Boolean(exportFormat) || Boolean(pathname?.startsWith("/convert/")),
+    () => Boolean(pathname?.startsWith("/convert/")) && !exportFormat,
     [exportFormat, pathname],
   );
 
@@ -377,10 +435,24 @@ export function UploadWorkspace({
         setCurrentDocument(savedDoc);
         setEditorFile(pdfFile);
 
+        // Signed-out convert-FROM-pdf flow (e.g. /convert/pdf-to-word):
+        // the router.push carries `?export=<fmt>` which triggers the
+        // hydrator's Step 1 `clearFile()` on the next mount. Mirror the
+        // file into IDB first so the hydrator's Step 2 can rehydrate it
+        // for the auto-export → sign-in-modal → paywall chain.
+        if (exportFormat && authLoaded && !isSignedIn) {
+          try {
+            await savePendingEditorFile(pdfFile);
+          } catch (idbErr) {
+            logger.warn("pending editor file save failed", idbErr);
+          }
+        }
+
         // Signed-in flow: navigate with `?id=<docId>` so the editor
         // hydrates from the persisted document row (see proxy.ts —
         // `?id=` also requires auth). Signed-out flow: no id, the
-        // editor renders the in-memory file from the store.
+        // editor renders the in-memory file from the store (plus the
+        // IDB mirror above for convert-FROM-pdf routes).
         router.push(buildComposerHref(savedDoc?.id ?? null));
       } catch (err) {
         logger.error("Landing upload → open failed", err);
@@ -396,6 +468,7 @@ export function UploadWorkspace({
     [
       authLoaded,
       buildComposerHref,
+      exportFormat,
       isSignedIn,
       pathname,
       requiresAuth,
@@ -512,6 +585,105 @@ export function UploadWorkspace({
     }
   };
 
+  if (variant === "hero") {
+    return (
+      <div className="mx-auto w-full max-w-[820px]">
+        <div className="rounded-[24px] border border-black/5 bg-white p-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <div
+            aria-describedby={error ? errorId : undefined}
+            aria-label="Upload a file. Drop a file here, or activate to browse."
+            className="relative flex cursor-pointer flex-col items-center justify-center rounded-[16px] px-6 py-14 text-center outline-none sm:py-16"
+            role="button"
+            tabIndex={0}
+            onClick={openPicker}
+            onDragLeave={() => setDragActive(false)}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDrop={onDrop}
+            onKeyDown={onZoneKeyDown}
+          >
+            <DashedBorder active={dragActive} />
+            <input
+              ref={inputRef}
+              accept={acceptAttr}
+              className="sr-only"
+              type="file"
+              onChange={onInputChange}
+            />
+
+            {file ? (
+              <div className="flex flex-col items-center">
+                <HeroFolderIcon />
+                <p className="mt-6 text-[18px] font-semibold text-[#121212]">
+                  {file.name}
+                </p>
+                <p className="mt-1 text-[14px] text-[#818285]">
+                  {formatSize(file.size)}
+                </p>
+                {opening ? (
+                  <p className="mt-4 text-[14px] font-medium text-[var(--pv-brand-primary)]">
+                    Opening editor…
+                  </p>
+                ) : (
+                  <button
+                    className="pv-btn-secondary mt-4 cursor-pointer px-4 py-1.5 text-[14px]"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setFile(null);
+                      if (inputRef.current) inputRef.current.value = "";
+                    }}
+                  >
+                    Remove file
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <HeroFolderIcon />
+                <h2 className="mt-6 text-[22px] font-semibold leading-[28px] text-[#121212] sm:text-[24px] sm:leading-[30px]">
+                  Drag &amp; drop file to edit
+                </h2>
+
+                <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[#B4B4B4]">
+                  <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                  <span>OR</span>
+                  <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                </div>
+
+                <button
+                  className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openPicker();
+                  }}
+                >
+                  Upload to Edit
+                </button>
+
+                <p className="mt-5 text-[14px] text-[#8A8A8A]">
+                  Size upto 100 MB
+                </p>
+              </div>
+            )}
+
+            <p
+              aria-live="polite"
+              className={`mt-4 text-[14px] ${error ? "text-[var(--pv-error)]" : "sr-only"}`}
+              id={errorId}
+              role={error ? "alert" : undefined}
+            >
+              {error}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1223px]">
       {/* Soft-gray outer frame */}
@@ -624,7 +796,11 @@ export function UploadWorkspace({
               options so the buttons split evenly. */}
           <div
             className={`mt-[10px] grid grid-cols-1 gap-[10px] ${
-              CLOUD_PROVIDERS.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
+              CLOUD_PROVIDERS.length === 1
+                ? "sm:grid-cols-1"
+                : CLOUD_PROVIDERS.length === 2
+                  ? "sm:grid-cols-2"
+                  : "sm:grid-cols-3"
             }`}
           >
             {CLOUD_PROVIDERS.map((provider) => {

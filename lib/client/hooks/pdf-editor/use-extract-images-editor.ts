@@ -2,10 +2,19 @@
 
 import type { Canvas as FabricCanvas } from "fabric";
 
+import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef } from "react";
 
+import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import { useExtractImagesMutation } from "@/lib/client/query/mutations/pdf-tools.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -52,13 +61,24 @@ export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
   // fabricCanvas isn't read directly — the live canvas isn't touched.
   // Argument retained for call-site signature stability.
   const extractImages = useExtractImagesMutation();
+  // Read auth from Clerk directly rather than the store's cached
+  // `isSignedIn` copy — same reasoning as `useExportEditor`: the store
+  // is synced by a downstream `useEffect` in `PdfEditorShell` and lags
+  // one tick during post-signin returns, so reading Clerk keeps the
+  // gate honest at the exact moment the event fires.
+  const { isLoaded: authLoaded, isSignedIn: clerkIsSignedIn } = useAuth();
 
   const isRunningRef = useRef(false);
   const extractRef = useRef(extractImages);
+  const authRef = useRef({ authLoaded, clerkIsSignedIn });
 
   useEffect(() => {
     extractRef.current = extractImages;
   }, [extractImages]);
+
+  useEffect(() => {
+    authRef.current = { authLoaded, clerkIsSignedIn };
+  }, [authLoaded, clerkIsSignedIn]);
 
   const handleExtract = useCallback(async () => {
     if (isRunningRef.current) return;
@@ -74,15 +94,74 @@ export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
       return;
     }
 
+    const { authLoaded: authReady, clerkIsSignedIn: signedIn } =
+      authRef.current;
+
+    // Clerk still hydrating — defer + re-dispatch (same trick as
+    // `useExportEditor`), otherwise a fresh-return-from-sign-in fires
+    // this event before `isSignedIn` flips true and we'd pointlessly
+    // route the user back through sign-in.
+    if (!authReady) {
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("editor:extract-images"));
+      }, 250);
+
+      return;
+    }
+
     isRunningRef.current = true;
 
     try {
+      // Sign-in gate — mirror the export flow. Guests can open + edit
+      // the PDF, but extract-images hits the paywalled backend, so
+      // route them through the sign-in confirm modal first (the
+      // paywall's checkout intent needs auth).
+      if (!signedIn) {
+        try {
+          await savePendingEditorFile(sourceFile);
+        } catch (err) {
+          logger.warn("pending editor file save failed", err);
+        }
+
+        const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=extract-images`;
+
+        dispatchSignInPrompt({
+          title: "Sign in to extract images",
+          description:
+            "Extracting images is a paid feature. Sign in and we'll bring you back here to finish.",
+          confirmLabel: "Sign in & continue",
+          redirectUrl: returnTo,
+        });
+
+        isRunningRef.current = false;
+
+        return;
+      }
+
+      // Paywall gate — fires BEFORE the network call so the modal
+      // doesn't stack on the mutation's own loading toast. Axios
+      // interceptor is the safety net for stale entitlement snapshots.
+      if (!getEntitledSnapshot()) {
+        const outcome = await requestPaywall();
+
+        if (outcome !== "success") {
+          // User dismissed the paywall — silent bail-out.
+          return;
+        }
+      }
+
       const result = await extractRef.current.mutateAsync({
         file: sourceFile,
       });
 
       triggerBlobDownload(result.blob, result.fileName);
     } catch (err) {
+      // Axios interceptor throws PaywallCancelledError when the user
+      // dismisses the payment modal on a 402/403 retry — that's a user
+      // choice, not an error worth toasting.
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       logger.error("Failed to extract images", err);
       // Mutation's onError already surfaces a toast for HTTP failures.
     } finally {

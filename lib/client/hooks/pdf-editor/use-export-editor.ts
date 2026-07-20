@@ -159,14 +159,15 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     isExportingRef.current = true;
 
     try {
-      // For non-PDF exports the backend /conversion endpoint (auth +
-      // paywall gated) has to run. Gate the auth check FIRST so a
-      // signed-out user is routed through sign-in before we even
-      // open the paywall — otherwise the paywall opens on an anon
-      // client and hits "Couldn't start checkout". After sign-in the
-      // user returns to the same editor with `?export=<fmt>` set, so
-      // the export re-fires automatically.
-      if (format !== "pdf" && !signedIn) {
+      // ALL downloads (including plain PDF) require sign-in + subscription.
+      // Guests can open a PDF and edit it locally, but downloading —
+      // in any format — is a paid feature. Gate the auth check FIRST so
+      // a signed-out user is routed through sign-in before we even open
+      // the paywall — otherwise the paywall opens on an anon client and
+      // hits "Couldn't start checkout". After sign-in the user returns
+      // to the same editor with `?export=<fmt>` set, so the export
+      // re-fires automatically.
+      if (!signedIn) {
         try {
           // Persist the file across the full-page sign-in redirect so
           // the editor can rehydrate it on return.
@@ -183,7 +184,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         dispatchSignInPrompt({
           title: "Sign in to download",
           description:
-            "Downloading as a non-PDF format is a paid feature. Sign in and we'll bring you back to finish the conversion right where you left off.",
+            "Downloading is a paid feature. Sign in and we'll bring you back to finish the download right where you left off.",
           confirmLabel: "Sign in & continue",
           redirectUrl: returnTo,
         });
@@ -193,12 +194,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
-      // Non-PDF export routes through the paywalled /conversion endpoint.
-      // Gate the paywall BEFORE the CPU-heavy bake so the modal doesn't
-      // pop while the export busy-spinner is grinding — and so cancelling
-      // the paywall doesn't leave a "failed" toast on a build that never
-      // needed to run. PDF export is free; skip the gate for it.
-      if (format !== "pdf" && !getEntitledSnapshot()) {
+      // Paywall gate for signed-in but unentitled users. Runs BEFORE the
+      // CPU-heavy bake so the modal doesn't pop while the export
+      // busy-spinner is grinding — and so cancelling the paywall doesn't
+      // leave a "failed" toast on a build that never needed to run.
+      if (!getEntitledSnapshot()) {
         const outcome = await requestPaywall();
 
         if (outcome !== "success") {

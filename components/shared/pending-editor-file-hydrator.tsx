@@ -18,16 +18,22 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * Tools whose action lives on the backend (auth-gated / paywalled). Landing
- * these signed-out kicks the user into the "Couldn't start checkout"
- * dead-end — we redirect to sign-in first instead.
+ * Tools whose action lives on the backend (auth-gated / paywalled) AND whose
+ * per-tool hooks don't have their own signed-out flow. Landing these
+ * signed-out kicks the user into the "Couldn't start checkout" dead-end —
+ * we redirect to sign-in first instead.
+ *
+ * `extract-images` is intentionally omitted: `useExtractImagesEditor`
+ * mirrors the `useExportEditor` pattern — it lets a signed-out visitor
+ * open the editor, then trips the sign-in modal at Extract-time and the
+ * paywall on the mutation itself. Same flow the user asked for on
+ * `/convert/pdf-to-*` (Download → sign-in → paywall).
  */
 const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set([
   "compress",
   "password",
   "unlock",
   "flatten",
-  "extract-images",
 ]);
 
 /**

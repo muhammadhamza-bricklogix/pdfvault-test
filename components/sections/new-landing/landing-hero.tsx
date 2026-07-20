@@ -21,10 +21,10 @@ export function LandingHero() {
         </p>
       </div>
 
-      {/* Upload workspace sits in a wider, viewport-centred container than the
-          text column so it hits the design's ~1223px / 2:1 proportion. */}
-      <div className="relative z-10 mx-auto w-full max-w-[1272px] px-6 pb-10 pt-16">
-        <UploadWorkspace />
+      {/* Compact hero drop-zone (see public/landing/Background+Border.png).
+          Wider full-frame variant with cloud chips lives on `/convert/*`. */}
+      <div className="relative z-10 mx-auto w-full max-w-[880px] px-6 pb-10 pt-12">
+        <UploadWorkspace variant="hero" />
       </div>
     </section>
   );
