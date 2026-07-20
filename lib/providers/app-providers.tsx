@@ -4,9 +4,11 @@ import type { ThemeProviderProps } from "next-themes";
 
 import { Toast } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { Suspense } from "react";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
+import { WeglotRouteSync } from "@/components/shared/navigation/weglot-route-sync";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
 import { SignInPromptModal } from "@/components/shared/sign-in-prompt-modal";
@@ -40,6 +42,13 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <MobileDebugBoot />
           <UserSyncBoot />
           <OfflineBoot />
+          {/* Re-runs Weglot on every client-side route change so the
+              translation applied on `/` carries over when the user
+              navigates into `/convert/*`, `/pdf-composer`, etc. Wrapped
+              in Suspense because `useSearchParams` needs it during SSR. */}
+          <Suspense fallback={null}>
+            <WeglotRouteSync />
+          </Suspense>
         </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>
