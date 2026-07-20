@@ -168,6 +168,19 @@ export function PendingEditorFileHydrator() {
         const file = await loadPendingEditorFile();
 
         if (cancelled || !file) return;
+
+        // Guard: /pdf-composer is PDF-only. If a non-PDF is sitting in
+        // IDB (e.g. a .docx dropped by the signed-out user on
+        // /convert/word-to-pdf that hasn't been converted yet), leave
+        // it there — the convert page's own auto-resume effect will
+        // pick it up on return. Trying to hand a .docx to pdf.js just
+        // errors out and clears state the convert flow still needs.
+        const isPdf =
+          file.type === "application/pdf" ||
+          file.name.toLowerCase().endsWith(".pdf");
+
+        if (!isPdf) return;
+
         if (currentFile) {
           await clearPendingEditorFile();
 

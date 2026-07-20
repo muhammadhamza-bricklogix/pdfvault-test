@@ -297,47 +297,62 @@
 }
 
 /* Hardcoded near-black text → white. Also fixes SVG icons that use
-   `currentColor` for stroke/fill and pick up the parent text color. */
-[data-theme="dark"] .pdfvault-landing .text-black,
-[data-theme="dark"] .pdfvault-landing [class*="text-[#121212]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#111315]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#1a1c21]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#111"],
-[data-theme="dark"] .pdfvault-landing [class*="text-black/"] {
-  color: var(--pv-text-primary);
+   `currentColor` for stroke/fill and pick up the parent text color.
+   Note: NOT scoped under `.pdfvault-landing` because HeroUI Modal
+   renders its content via a Portal attached to <body>, outside the
+   landing wrapper. Keeping it global-under-dark catches those cases
+   too. Dashboard uses its own `--pv-text-*` tokens (not raw hex
+   literals) so this rule doesn't collide there. */
+[data-theme="dark"] .text-black,
+[data-theme="dark"] [class*="text-[#121212]"],
+[data-theme="dark"] [class*="text-[#111315]"],
+[data-theme="dark"] [class*="text-[#1a1c21]"],
+[data-theme="dark"] [class*="text-[#111"],
+[data-theme="dark"] [class*="text-[#000"],
+[data-theme="dark"] [class*="text-black/"] {
+  color: #f5f5f5;
 }
 
-/* Hardcoded muted grays → soft light gray. */
-[data-theme="dark"] .pdfvault-landing [class*="text-[#818285]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#8A8A8A]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#8a8a8a]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#666"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#5f5f5f]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#4c4c4c]"],
-[data-theme="dark"] .pdfvault-landing [class*="text-[#B4B4B4]"] {
-  color: var(--pv-text-secondary);
+/* Hardcoded muted grays → soft light gray. Global-under-dark for the
+   same portaled-modal reason as above. */
+[data-theme="dark"] [class*="text-[#818285]"],
+[data-theme="dark"] [class*="text-[#8A8A8A]"],
+[data-theme="dark"] [class*="text-[#8a8a8a]"],
+[data-theme="dark"] [class*="text-[#666"],
+[data-theme="dark"] [class*="text-[#6f6f6f]"],
+[data-theme="dark"] [class*="text-[#5f5f5f]"],
+[data-theme="dark"] [class*="text-[#4c4c4c]"],
+[data-theme="dark"] [class*="text-[#B4B4B4]"],
+[data-theme="dark"] [class*="text-[#999999]"],
+[data-theme="dark"] [class*="text-[#9a9a9a]"],
+[data-theme="dark"] [class*="text-[#9d9d9d]"],
+[data-theme="dark"] [class*="text-[#c4c4c4]"] {
+  color: #b7bcc4;
 }
 
 /* White surfaces (drop-zone card, modal panels, header when scrolled)
-   → dark surface. Keeps text-on-surface contrast without redesigning. */
+   → dark surface. Global-under-dark so portaled Modal.Dialog content
+   flips too (same reason as the text overrides above). */
 [data-theme="dark"] .pdfvault-landing [class*="bg-white"],
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#fff"] {
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#fff"],
+[data-theme="dark"] [role="dialog"][class*="bg-white"],
+[data-theme="dark"] [role="dialog"] [class*="bg-white"] {
   background-color: #16181c;
 }
 
 /* Soft-gray fills used for chips / uploads / tool tiles → slightly darker
    than the surface so the layered UI still reads on dark. */
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#f5f5f5]"],
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#F5F5F5]"],
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#ececec]"],
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#e5e5e5]"] {
+[data-theme="dark"] [class*="bg-[#f5f5f5]"],
+[data-theme="dark"] [class*="bg-[#F5F5F5]"],
+[data-theme="dark"] [class*="bg-[#ececec]"],
+[data-theme="dark"] [class*="bg-[#e5e5e5]"] {
   background-color: #1c1f24;
 }
 
 /* Divider lines that were near-white → dark border color. */
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#E5E5E5]"],
-[data-theme="dark"] .pdfvault-landing [class*="bg-[#e1ebed]"] {
-  background-color: var(--pv-border-subtle);
+[data-theme="dark"] [class*="bg-[#E5E5E5]"],
+[data-theme="dark"] [class*="bg-[#e1ebed]"] {
+  background-color: #2a2d31;
 }
 
 /* Dashed drop-zone border stroke is drawn as an inline SVG rect with a

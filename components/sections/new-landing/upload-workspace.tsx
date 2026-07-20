@@ -3,13 +3,24 @@
 import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import {
+  clearPendingEditorFile,
+  loadPendingEditorFile,
+  savePendingEditorFile,
+} from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -347,16 +358,23 @@ export function UploadWorkspace({
   const openFileInEditor = useCallback(
     async (picked: File) => {
       // Convert-TO-PDF routes require sign-in for the backend conversion
-      // call. Show the same confirm modal we use everywhere else (editor
-      // export, extract-images, compress) so the user gets a Cancel/Continue
-      // choice instead of a fire-and-forget toast + redirect.
+      // call. Save the original file to IDB so we can pick it up
+      // automatically after sign-in — the user shouldn't have to drop
+      // the same file twice for a better UX. The auto-resume effect
+      // below reads IDB when the user returns signed-in.
       if (requiresAuth && authLoaded && !isSignedIn) {
+        try {
+          await savePendingEditorFile(picked);
+        } catch (idbErr) {
+          logger.warn("pending editor file save failed", idbErr);
+        }
+
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
         dispatchSignInPrompt({
           title: "Sign in to convert",
           description:
-            "Converting is a paid feature. Sign in and we'll bring you back here to finish.",
+            "Converting is a paid feature. Sign in and we'll bring you back here to finish — you won't have to re-upload.",
           confirmLabel: "Sign in & continue",
           redirectUrl: returnPath,
         });
@@ -480,6 +498,52 @@ export function UploadWorkspace({
       setEditorFile,
     ],
   );
+
+  // Auto-resume the convert flow after sign-in. If the user dropped a
+  // file while signed-out, we stashed it in IDB and sent them through
+  // the sign-in modal. On return (signed-in, back on the same convert
+  // route), pick up the file automatically and continue the upload —
+  // no need for them to re-drop. Cleared from IDB on success so the
+  // next visit starts fresh. Also gated on `requiresAuth` so a random
+  // IDB file from a different flow doesn't misfire here.
+  const resumeRef = useRef(false);
+
+  useEffect(() => {
+    if (resumeRef.current) return;
+    if (!authLoaded || !isSignedIn) return;
+    if (!requiresAuth) return;
+
+    resumeRef.current = true;
+
+    void (async () => {
+      try {
+        const pending = await loadPendingEditorFile();
+
+        if (!pending) return;
+
+        const ext = pending.name.split(".").pop()?.toLowerCase() ?? "";
+
+        // Only auto-resume files that match this route's accept list.
+        // Prevents a leftover PDF-to-word source picking up on a
+        // Word-to-PDF page (or vice-versa).
+        if (!acceptedExtensions.includes(ext)) return;
+        if (pending.size > MAX_SIZE_BYTES) return;
+
+        await clearPendingEditorFile();
+        setError(null);
+        setFile(pending);
+        void openFileInEditor(pending);
+      } catch (err) {
+        logger.warn("convert-page auto-resume failed", err);
+      }
+    })();
+  }, [
+    acceptedExtensions,
+    authLoaded,
+    isSignedIn,
+    openFileInEditor,
+    requiresAuth,
+  ]);
 
   const validateAndSet = (candidate: File) => {
     const ext = getExtension(candidate.name);
