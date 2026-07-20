@@ -249,6 +249,127 @@
   outline-offset: 2px;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Dark mode — flip semantic tokens + override the many hardcoded near-black
+ * text colors that ship across landing components. `next-themes` sets
+ * `data-theme="dark"` on <html> (see globals.css `@custom-variant dark`), so
+ * this selector matches every landing page when the toggle is on.
+ *
+ * Why the attribute-substring rules: a swathe of components hardcode
+ * `text-[#121212]` / `text-[#111315]` / `text-[#1a1c21]` / `text-black`
+ * instead of consuming `--pv-text-primary`. Rewriting each component was
+ * too large a diff; catching them via `[class*="text-[#…]"]` lifts every
+ * black label to white without touching JSX. Same idea for the muted
+ * grays and background whites used on drop-zone cards / modals.
+ * ────────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] .pdfvault-landing {
+  --pv-brand-primary: #ff5c52;
+  --pv-brand-700: #ff4238;
+  --pv-brand-900: #ff8079;
+
+  --pv-gray-1: #16181c;
+  --pv-gray-2: #1c1f24;
+  --pv-gray-3: #262a30;
+  --pv-gray-4: #2f3339;
+  --pv-gray-5: #4a4f56;
+  --pv-gray-6: #7c848e;
+  --pv-gray-7: #b7bcc4;
+  --pv-gray-8: #d4d8dd;
+  --pv-gray-9: #e9ecef;
+  --pv-gray-10: #f5f5f5;
+
+  --pv-text-primary: #f5f5f5;
+  --pv-text-secondary: #b7bcc4;
+  --pv-text-tertiary: #7c848e;
+  --pv-header-bg: #0f1113;
+  --pv-section-gray: #16181c;
+  --pv-card-border: #2a2d31;
+  --pv-border-subtle: #2a2d31;
+
+  background: #0b0c0e;
+  color: var(--pv-text-primary);
+}
+
+/* The landing group layout applies `bg-white` as a Tailwind utility on
+   `.pdfvault-landing`. Override that in dark mode. */
+[data-theme="dark"] .pdfvault-landing.bg-white {
+  background-color: #0b0c0e;
+}
+
+/* Hardcoded near-black text → white. Also fixes SVG icons that use
+   `currentColor` for stroke/fill and pick up the parent text color. */
+[data-theme="dark"] .pdfvault-landing .text-black,
+[data-theme="dark"] .pdfvault-landing [class*="text-[#121212]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#111315]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#1a1c21]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#111"],
+[data-theme="dark"] .pdfvault-landing [class*="text-black/"] {
+  color: var(--pv-text-primary);
+}
+
+/* Hardcoded muted grays → soft light gray. */
+[data-theme="dark"] .pdfvault-landing [class*="text-[#818285]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#8A8A8A]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#8a8a8a]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#666"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#5f5f5f]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#4c4c4c]"],
+[data-theme="dark"] .pdfvault-landing [class*="text-[#B4B4B4]"] {
+  color: var(--pv-text-secondary);
+}
+
+/* White surfaces (drop-zone card, modal panels, header when scrolled)
+   → dark surface. Keeps text-on-surface contrast without redesigning. */
+[data-theme="dark"] .pdfvault-landing [class*="bg-white"],
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#fff"] {
+  background-color: #16181c;
+}
+
+/* Soft-gray fills used for chips / uploads / tool tiles → slightly darker
+   than the surface so the layered UI still reads on dark. */
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#f5f5f5]"],
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#F5F5F5]"],
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#ececec]"],
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#e5e5e5]"] {
+  background-color: #1c1f24;
+}
+
+/* Divider lines that were near-white → dark border color. */
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#E5E5E5]"],
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#e1ebed]"] {
+  background-color: var(--pv-border-subtle);
+}
+
+/* Dashed drop-zone border stroke is drawn as an inline SVG rect with a
+   `stroke` attribute set to `#CCCCCC` when idle. Force a lighter tone
+   in dark mode via a broad attribute selector on the SVG rect. */
+[data-theme="dark"] .pdfvault-landing rect[stroke="#CCCCCC"] {
+  stroke: #3a3e45;
+}
+
+/* Theme-toggle chip — the HeroUI ghost button was invisible in dark mode
+   because it inherits the header's transparent-ish bg and the icon color
+   only pops on hover. Wrap it in a rounded chip that gives the button a
+   dark surface + light icon regardless of what the navbar bg resolves
+   to, so it stays visible on both scrolled (white/85) and unscrolled
+   (--pv-header-bg) header states. */
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip {
+  border-radius: 9999px;
+  background: #1f2229;
+  padding: 2px;
+  box-shadow: 0 0 0 1px #2f3339;
+}
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip button {
+  background: transparent !important;
+  color: #f5f5f5 !important;
+}
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip button:hover {
+  background: #2a2d34 !important;
+}
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip svg {
+  color: #f5f5f5;
+}
+
 /* Testimonial marquee — two rows drifting in opposite directions.
    Each track renders the cards twice, so translating by -50% loops
    seamlessly (cards own their trailing gap via margin, not flex gap). */

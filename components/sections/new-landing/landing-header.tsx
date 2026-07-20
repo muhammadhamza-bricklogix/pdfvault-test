@@ -139,7 +139,7 @@ export function LandingHeader() {
 
           {/* Right: theme + language + auth */}
           <div className="flex items-center gap-3">
-            <div className="hidden lg:block">
+            <div className="pv-theme-chip hidden lg:block">
               <ThemeToggle size="sm" variant="ghost" />
             </div>
             <div className="hidden lg:block">
@@ -221,7 +221,9 @@ export function LandingHeader() {
               ))}
               <li className="mt-1 flex items-center gap-3 px-2 py-1">
                 <LandingLanguageSwitcher variant="mobile" />
-                <ThemeToggle size="sm" variant="ghost" />
+                <div className="pv-theme-chip">
+                  <ThemeToggle size="sm" variant="ghost" />
+                </div>
               </li>
               <li className="flex flex-col gap-2 px-2 pt-1">
                 {showAuthButtons ? (

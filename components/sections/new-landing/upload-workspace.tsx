@@ -10,6 +10,7 @@ import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
@@ -345,18 +346,20 @@ export function UploadWorkspace({
 
   const openFileInEditor = useCallback(
     async (picked: File) => {
-      // Convert routes require sign-in for the backend conversion call.
-      // Redirect BEFORE we spend time on the client-side PDF conversion.
+      // Convert-TO-PDF routes require sign-in for the backend conversion
+      // call. Show the same confirm modal we use everywhere else (editor
+      // export, extract-images, compress) so the user gets a Cancel/Continue
+      // choice instead of a fire-and-forget toast + redirect.
       if (requiresAuth && authLoaded && !isSignedIn) {
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
-        const redirect = encodeURIComponent(returnPath);
 
-        toast.info({
+        dispatchSignInPrompt({
           title: "Sign in to convert",
           description:
-            "Sign in and you'll come right back to this page to finish.",
+            "Converting is a paid feature. Sign in and we'll bring you back here to finish.",
+          confirmLabel: "Sign in & continue",
+          redirectUrl: returnPath,
         });
-        router.push(`${ROUTES.AUTH.SIGN_IN}?redirect_url=${redirect}`);
 
         return;
       }
