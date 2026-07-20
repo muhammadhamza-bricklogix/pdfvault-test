@@ -1,6 +1,7 @@
 "use client";
 
 import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
+import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
 import { Modal } from "@heroui/react";
 import dynamic from "next/dynamic";
@@ -33,6 +34,14 @@ type PlanId = "trial" | "monthly";
 
 interface PaywallModalProps {
   isOpen: boolean;
+  /**
+   * Optional preview of the file the user is trying to unlock — e.g.
+   * the source Word doc on `/convert/word-to-pdf`. Rendered above the
+   * plan picker as a blurred file card so the user sees "here is your
+   * converted file" before paying. Falls back to the plain plan-picker
+   * layout when undefined (axios interceptor path, generic downloads).
+   */
+  preview: PaywallPreview | null;
   onClose: () => void;
   onPaymentSuccess: () => void;
 }
@@ -55,6 +64,7 @@ interface PaywallModalProps {
  */
 export function PaywallModal({
   isOpen,
+  preview,
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
@@ -159,6 +169,7 @@ export function PaywallModal({
           ) : step === "plan" ? (
             <PlanStep
               intent={intent}
+              preview={preview}
               selectedPlan={selectedPlan}
               onContinue={() => setStep("pay")}
               onSelectPlan={setSelectedPlan}
@@ -183,11 +194,13 @@ export function PaywallModal({
 // ─────────────────────────────────────────────────────────────
 function PlanStep({
   intent,
+  preview,
   selectedPlan,
   onSelectPlan,
   onContinue,
 }: {
   intent: CheckoutIntent;
+  preview: PaywallPreview | null;
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
   onContinue: () => void;
@@ -204,22 +217,31 @@ function PlanStep({
       >
         <BrandLogo />
 
+        {preview ? <PreviewFileCard preview={preview} /> : null}
+
         <span className="inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red,#f12c23)]">
-          Limited-time offer
+          {preview ? "Ready to download" : "Limited-time offer"}
         </span>
 
         <h2 className="pv-heading text-[26px] font-semibold leading-tight text-[#1a1c21] sm:text-[30px]">
-          Unlock the full PDFVault toolkit
+          {preview
+            ? "Your converted file is ready"
+            : "Unlock the full PDFVault toolkit"}
         </h2>
         <p className="-mt-3 text-[14px] leading-relaxed text-[#5c5c5c]">
-          Everything you need to convert, share, and edit — in one secure
-          workspace.
+          {preview
+            ? "Subscribe to download the converted file instantly and unlock every professional tool in PDFVault."
+            : "Everything you need to convert, share, and edit — in one secure workspace."}
         </p>
 
         <ul className="mt-1 flex flex-col gap-3 text-[14px] text-[#1a1c21]">
-          <Feature>Convert PDF to Word, Excel, PowerPoint, JPG & PNG</Feature>
-          <Feature>Merge, split, compress & organize pages</Feature>
-          <Feature>Unlimited edits + priority processing</Feature>
+          <Feature>
+            Convert to and from Word, Excel, PowerPoint, JPG &amp; PNG
+          </Feature>
+          <Feature>Merge, split, compress &amp; organize pages</Feature>
+          <Feature>
+            Unlimited edits, priority processing &amp; cloud sync
+          </Feature>
         </ul>
 
         <div className="mt-auto flex flex-wrap gap-2 pt-4">
@@ -502,6 +524,98 @@ function BrandLogo() {
       src="/landing/logo-with-text.png"
       width={104}
     />
+  );
+}
+
+/**
+ * Preview panel shown at the top of the plan step when the caller
+ * passed a `PaywallPreview`. Renders a blurred, mock document card
+ * (we don't actually convert the file until payment succeeds — this
+ * is a visual promise, not the real output) with a lock overlay and
+ * the source → target format transition. Gives the user a concrete
+ * "here is your converted file" moment before they see the price.
+ */
+function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
+  const { filename, sourceExt, targetExt } = preview;
+  const badgeColor = (ext: string): string => {
+    const normalized = ext.toLowerCase();
+
+    if (normalized === "pdf") return "#e11d48"; // red
+    if (["doc", "docx"].includes(normalized)) return "#2563eb"; // blue
+    if (["xls", "xlsx"].includes(normalized)) return "#059669"; // green
+    if (["ppt", "pptx"].includes(normalized)) return "#ea580c"; // orange
+    if (["jpg", "jpeg", "png", "gif"].includes(normalized)) return "#7c3aed"; // purple
+    if (["html", "htm"].includes(normalized)) return "#0891b2"; // cyan
+    if (normalized === "txt") return "#525252"; // gray
+
+    return "#525252";
+  };
+
+  const sourceBadge = badgeColor(sourceExt);
+  const targetBadge = badgeColor(targetExt);
+  const shortName =
+    filename.length > 32 ? `${filename.slice(0, 29)}…` : filename;
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-black/5 bg-white p-4 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
+      {/* Blurred mock document preview */}
+      <div
+        aria-hidden
+        className="pointer-events-none flex select-none flex-col gap-1.5"
+        style={{ filter: "blur(3px)" }}
+      >
+        <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
+        <div className="h-2 w-full rounded bg-[#eaeaea]" />
+        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
+        <div className="h-2 w-full rounded bg-[#eaeaea]" />
+        <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
+        <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+      </div>
+
+      {/* Lock overlay */}
+      <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-lg">
+          <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+            <path
+              d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+            />
+          </svg>
+        </div>
+      </div>
+
+      {/* File-name + format transition */}
+      <div className="mt-3 flex items-center gap-2 border-t border-[#ececec] pt-3">
+        <span
+          aria-hidden
+          className="inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[10px] font-bold text-white"
+          style={{ backgroundColor: sourceBadge }}
+        >
+          {sourceExt.toUpperCase()}
+        </span>
+        <p
+          className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#1a1c21]"
+          title={filename}
+        >
+          {shortName}
+        </p>
+        <span aria-hidden className="text-[#9a9a9a]">
+          →
+        </span>
+        <span
+          aria-hidden
+          className="inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[10px] font-bold text-white"
+          style={{ backgroundColor: targetBadge }}
+        >
+          {targetExt.toUpperCase()}
+        </span>
+      </div>
+    </div>
   );
 }
 

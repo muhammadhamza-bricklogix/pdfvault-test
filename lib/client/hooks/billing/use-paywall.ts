@@ -1,6 +1,6 @@
 "use client";
 
-import type { PaywallOutcome } from "./paywall-bus";
+import type { PaywallOutcome, PaywallPreview } from "./paywall-bus";
 
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,6 +26,7 @@ export function usePaywall() {
   const { data: subscription, isLoading } = useSubscriptionQuery();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [preview, setPreview] = useState<PaywallPreview | null>(null);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
     null,
   );
@@ -57,6 +58,7 @@ export function usePaywall() {
   const close = useCallback(() => {
     setIsOpen(false);
     setPending(null);
+    setPreview(null);
     // Notify the bus-side promise that the user bailed so the axios
     // interceptor can reject with PaywallCancelledError instead of
     // hanging forever.
@@ -68,6 +70,7 @@ export function usePaywall() {
 
   const onPaymentSuccess = useCallback(async () => {
     setIsOpen(false);
+    setPreview(null);
     // Give React one microtask to unmount the modal cleanly before
     // firing the queued action — otherwise a download or router-push
     // can race the modal teardown.
@@ -96,7 +99,7 @@ export function usePaywall() {
   // "You need to sign in to continue" error state with no way out.
   useEffect(() => {
     setPaywallHandler(
-      () =>
+      (incomingPreview?: PaywallPreview) =>
         new Promise<PaywallOutcome>((resolve) => {
           if (entitled) {
             resolve("success");
@@ -121,6 +124,7 @@ export function usePaywall() {
             return;
           }
           busResolverRef.current = resolve;
+          setPreview(incomingPreview ?? null);
           setIsOpen(true);
         }),
     );
@@ -133,6 +137,7 @@ export function usePaywall() {
     entitled,
     isLoading,
     guard,
+    preview,
     close,
     onPaymentSuccess,
   };

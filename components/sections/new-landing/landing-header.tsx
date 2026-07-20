@@ -163,7 +163,12 @@ export function LandingHeader() {
                     Login
                   </a>
                   <a
-                    className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                    // Hide the top-bar CTA while the mobile drawer is open —
+                    // the drawer renders its own "Get started" and the pair
+                    // felt duplicated. Desktop (lg+) always shows it.
+                    className={`pv-btn-primary inline-flex px-5 py-1.5 text-[14px] ${
+                      mobileOpen ? "hidden lg:inline-flex" : ""
+                    }`}
                     href={ROUTES.AUTH.SIGN_UP}
                   >
                     Get started

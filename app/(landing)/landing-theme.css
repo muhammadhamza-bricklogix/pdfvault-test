@@ -362,6 +362,32 @@
   stroke: #3a3e45;
 }
 
+/* `pv-btn-secondary` hardcodes `background: #fff` in its own class rule,
+   which the attribute-substring `bg-white` override can't touch. In dark
+   mode that leaves white text on a white pill — invisible until the
+   hover state reveals the darker fill. Explicit override here flips the
+   button's own background + hover state to dark surfaces. Applies to
+   "Login" and "All Tools" in the header, "Remove file" in the drop
+   zone, and any other pv-btn-secondary consumer. */
+[data-theme="dark"] .pdfvault-landing .pv-btn-secondary {
+  background: #1c1f24;
+  color: var(--pv-text-primary);
+  border-color: var(--pv-border-subtle);
+}
+[data-theme="dark"] .pdfvault-landing .pv-btn-secondary:hover {
+  background: #262a30;
+}
+
+/* OAuth pill (Google button on /sign-in and /sign-up) hardcodes
+   `hover:bg-[#fafbfb]` which the substring rule below catches, but the
+   base bg-white and the near-black text also need mapping. Handled by
+   the earlier text/bg overrides; this rule pins the hover fill so it
+   doesn't flash near-white on pointer-in. */
+[data-theme="dark"] [class*="bg-[#fafbfb]"],
+[data-theme="dark"] [class*="hover:bg-[#fafbfb]"]:hover {
+  background-color: #262a30 !important;
+}
+
 /* Theme-toggle chip — the HeroUI ghost button was invisible in dark mode
    because it inherits the header's transparent-ish bg and the icon color
    only pops on hover. Wrap it in a rounded chip that gives the button a

@@ -30,14 +30,22 @@ const PaywallContext = createContext<PaywallContextValue | null>(null);
  * scrollable pane" quirk on iOS Safari.
  */
 export function PaywallProvider({ children }: { children: ReactNode }) {
-  const { isOpen, entitled, isLoading, guard, close, onPaymentSuccess } =
-    usePaywall();
+  const {
+    isOpen,
+    entitled,
+    isLoading,
+    guard,
+    preview,
+    close,
+    onPaymentSuccess,
+  } = usePaywall();
 
   return (
     <PaywallContext.Provider value={{ entitled, isLoading, guard }}>
       {children}
       <PaywallModal
         isOpen={isOpen}
+        preview={preview}
         onClose={close}
         onPaymentSuccess={onPaymentSuccess}
       />

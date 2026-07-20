@@ -13,6 +13,11 @@ import {
 } from "react";
 
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
+import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -380,6 +385,34 @@ export function UploadWorkspace({
         });
 
         return;
+      }
+
+      // Convert-TO-PDF entitlement gate (signed-in unentitled). Fire the
+      // paywall BEFORE `uploadAsPdf` so we don't burn a backend
+      // conversion call for a user who can't download the result, and
+      // don't flash a misleading "Converting to PDF" toast on a request
+      // that's about to hit the paywall. The paywall renders a blurred
+      // preview of the file the user just picked ("here is your
+      // converted file — subscribe to download"). On payment success we
+      // fall through and run the real conversion.
+      if (requiresAuth && authLoaded && isSignedIn && !getEntitledSnapshot()) {
+        try {
+          const outcome = await requestPaywall({
+            filename: picked.name,
+            sourceExt: getExtension(picked.name),
+            targetExt: "pdf",
+          });
+
+          if (outcome !== "success") {
+            // User dismissed the paywall — silent bail-out.
+            return;
+          }
+        } catch (err) {
+          if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+            return;
+          }
+          throw err;
+        }
       }
 
       setOpening(true);
