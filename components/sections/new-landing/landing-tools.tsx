@@ -267,21 +267,34 @@ export function LandingTools() {
 
   const visibleTools = TOOLS.filter((tool) => tool.tabs.includes(activeTab));
 
-  // The tab list is re-mounted (`key={activeTab}` on the cards below), so
-  // Weglot needs to walk the fresh DOM to translate the newly-rendered
-  // tool cards. Its own MutationObserver misses the swap when it happens
-  // fast — re-invoke `switchTo(currentLang)` to force a rescan. Also
-  // guard against Weglot not being loaded / no cookie set yet, so this
-  // is a no-op in dev without WEGLOT_API_KEY.
+  // The tab list is re-mounted (`key={activeTab}` on the cards below),
+  // so Weglot needs to walk the fresh DOM to translate the newly-rendered
+  // tool cards. Its own MutationObserver misses the swap because React
+  // commits the whole subtree in one frame and Weglot short-circuits
+  // `switchTo(currentLang)` when target == current (no work to do).
+  //
+  // Trick: call `Weglot.search()` when available (modern builds); it
+  // walks the DOM for untranslated nodes. On older bundles fall back to
+  // a two-step `switchTo("en") → switchTo(current)` which forces a full
+  // re-translation cycle. The two-step causes a brief English flash so
+  // the `search()` path is preferred.
   useEffect(() => {
-    const current = window.Weglot?.getCurrentLang();
+    const w = window.Weglot;
+    const current = w?.getCurrentLang();
 
-    if (!current || current === "en") return;
+    if (!w || !current || current === "en") return;
+
+    const rescan = () => {
+      if (typeof w.search === "function") {
+        w.search();
+      } else {
+        w.switchTo("en");
+        w.switchTo(current);
+      }
+    };
     // Defer to next frame so React commits the new tab DOM first,
     // otherwise Weglot walks the pre-swap subtree.
-    const raf = window.requestAnimationFrame(() => {
-      window.Weglot?.switchTo(current);
-    });
+    const raf = window.requestAnimationFrame(rescan);
 
     return () => window.cancelAnimationFrame(raf);
   }, [activeTab]);

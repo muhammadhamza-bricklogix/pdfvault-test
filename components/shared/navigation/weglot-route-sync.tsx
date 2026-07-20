@@ -28,10 +28,22 @@ export function WeglotRouteSync() {
 
   useEffect(() => {
     const run = () => {
-      const current = window.Weglot?.getCurrentLang();
+      const w = window.Weglot;
+      const current = w?.getCurrentLang();
 
-      if (!current) return;
-      window.Weglot?.switchTo(current);
+      if (!w || !current || current === "en") return;
+
+      // Prefer `search()` when the CDN bundle exposes it — walks the
+      // DOM for untranslated nodes without a visible flash.
+      // `switchTo(current)` short-circuits when target == current, so
+      // it can't be used to force a re-scan. Fallback: switch to
+      // English and back to force a full re-translation cycle.
+      if (typeof w.search === "function") {
+        w.search();
+      } else {
+        w.switchTo("en");
+        w.switchTo(current);
+      }
     };
 
     if (window.Weglot) {
