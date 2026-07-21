@@ -39,6 +39,41 @@ export function BillingSettingsSection() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const autoSyncFiredRef = useRef(false);
+  // Timestamp of the last successful local cancellation. If the user
+  // clicks Refresh within a short window, we skip the Solidgate sync —
+  // Solidgate replication can take up to a minute or two, and pulling
+  // fresh state during that window resurrects the just-cancelled
+  // subscription in the UI. Persisted to sessionStorage so a reload
+  // doesn't drop the guard.
+  const CANCEL_COOLDOWN_MS = 120_000;
+  const [justCancelledAt, setJustCancelledAt] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = window.sessionStorage.getItem("pdfvault:justCancelledAt");
+    const parsed = raw ? Number(raw) : NaN;
+
+    return Number.isFinite(parsed) ? parsed : null;
+  });
+
+  const markJustCancelled = () => {
+    const now = Date.now();
+
+    setJustCancelledAt(now);
+    try {
+      window.sessionStorage.setItem("pdfvault:justCancelledAt", String(now));
+    } catch {
+      // sessionStorage disabled in private mode — the in-memory
+      // state still guards the current session.
+    }
+  };
+
+  const clearJustCancelled = () => {
+    setJustCancelledAt(null);
+    try {
+      window.sessionStorage.removeItem("pdfvault:justCancelledAt");
+    } catch {
+      // ignore
+    }
+  };
 
   // Auto-run the deep history sync once on mount so the invoices list
   // reflects Solidgate truth even when webhook delivery was flaky.
@@ -99,6 +134,25 @@ export function BillingSettingsSection() {
   };
 
   const handleRefresh = async () => {
+    // If the user just cancelled locally, skip the Solidgate sync —
+    // that endpoint pulls live Solidgate state and will happily rewrite
+    // the local row back to ACTIVE if replication hasn't caught up
+    // (usually a minute or two). Show a friendly holding message
+    // instead. After the cooldown window elapses the button behaves
+    // normally again.
+    if (
+      justCancelledAt !== null &&
+      Date.now() - justCancelledAt < CANCEL_COOLDOWN_MS
+    ) {
+      toast.info({
+        title: "Cancellation still processing",
+        description:
+          "It can take a couple of minutes for the payment processor to confirm your cancellation. Please check back shortly.",
+      });
+
+      return;
+    }
+
     try {
       const result = await sync.mutateAsync({});
 
@@ -110,6 +164,10 @@ export function BillingSettingsSection() {
             ? `Latest ${result.synced === 1 ? "subscription" : `${result.synced} subscriptions`} loaded.`
             : "Your subscription is up to date.",
       });
+      // Refresh past the cooldown window with the backend reporting a
+      // stable state — clear the guard so future refreshes hit sync
+      // normally.
+      clearJustCancelled();
     } catch {
       toast.error({
         title: "Couldn't refresh",
@@ -129,6 +187,12 @@ export function BillingSettingsSection() {
       // refetch async and users can see the "Renew" / "Close" buttons
       // for a beat while the query rehydrates.
       await refetch();
+
+      // Guard: block the Refresh button's Solidgate sync for the next
+      // couple of minutes. Without this, Refresh would happily pull
+      // the still-active subscription back from Solidgate before their
+      // side has processed the cancel, resurrecting the row visually.
+      markJustCancelled();
 
       toast.success({
         title: "Subscription closed",
@@ -208,6 +272,7 @@ export function BillingSettingsSection() {
 
       <CancellationFlow
         isOpen={cancelOpen}
+        onCancelled={markJustCancelled}
         onClose={() => setCancelOpen(false)}
       />
 

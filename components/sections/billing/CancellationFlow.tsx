@@ -13,6 +13,14 @@ const RETENTION_DAYS = 30;
 interface CancellationFlowProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Fired once the local cancellation call succeeds. Callers can use
+   * this to flip a UI-side "just cancelled" flag so the Refresh button
+   * in the billing settings doesn't immediately re-sync against
+   * Solidgate and resurrect the row while replication is still in
+   * flight.
+   */
+  onCancelled?: () => void;
 }
 
 /**
@@ -29,7 +37,11 @@ interface CancellationFlowProps {
  * mapped to a processor cancel_code on the backend so retention
  * analytics stay unchanged.
  */
-export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
+export function CancellationFlow({
+  isOpen,
+  onClose,
+  onCancelled,
+}: CancellationFlowProps) {
   const [step, setStep] = useState<"feedback" | "confirmed">("feedback");
   const [reason, setReason] = useState<ChurnReason>("unforeseen_circumstances");
   const [freeText, setFreeText] = useState("");
@@ -52,7 +64,10 @@ export function CancellationFlow({ isOpen, onClose }: CancellationFlowProps) {
     finalize.mutate(
       { reason, freeText: freeText || undefined },
       {
-        onSuccess: () => setStep("confirmed"),
+        onSuccess: () => {
+          setStep("confirmed");
+          onCancelled?.();
+        },
         onError: () =>
           toast.error({
             title: "Couldn't cancel your subscription",

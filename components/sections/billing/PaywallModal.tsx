@@ -4,17 +4,18 @@ import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
 import { Modal } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import { setEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
 import {
   useCreateCheckoutIntentMutation,
-  useInvalidateSubscription,
   useSyncSubscriptionMutation,
 } from "@/lib/client/query/mutations/billing.mutation";
+import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
+import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -73,8 +74,8 @@ export function PaywallModal({
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const createIntent = useCreateCheckoutIntentMutation();
-  const invalidateSubscription = useInvalidateSubscription();
   const syncSubscription = useSyncSubscriptionMutation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -110,23 +111,67 @@ export function PaywallModal({
   const handleIframeSuccess = async (message?: {
     order?: { subscription_id?: string };
   }) => {
-    setEntitledSnapshot(true);
-
+    // Do NOT flip the entitlement snapshot optimistically on the iframe
+    // callback. Solidgate's `onSuccess` can fire client-side before the
+    // charge is confirmed server-side (declined-after-approval race,
+    // 3DS re-auth failures, etc.), so we'd previously flash "Payment
+    // received" and unlock premium tools for users whose card was never
+    // debited. Instead: sync with the backend, force a fresh
+    // subscription fetch, and only advance to the success step when the
+    // backend confirms `entitled === true`.
     const subscriptionId = message?.order?.subscription_id;
 
     try {
       await syncSubscription.mutateAsync(
         subscriptionId ? { subscriptionId } : {},
       );
+
+      // Force a fresh network fetch — `invalidateQueries` alone can
+      // race the modal close and let the snapshot stay at its last
+      // known value. `fetchQuery` guarantees we see the post-charge
+      // entitlement before we decide which step to render.
+      queryClient.removeQueries({ queryKey: billingKeys.subscription() });
+      const fresh = await queryClient.fetchQuery({
+        queryKey: billingKeys.subscription(),
+        queryFn: billingService.getSubscription,
+      });
+
+      if (!fresh?.entitled) {
+        logger.warn?.(
+          "Solidgate onSuccess fired but backend still reports entitled=false",
+          fresh,
+        );
+        setError(
+          "Payment couldn't be confirmed. If your card was charged, please refresh in a minute or email payments@pdfvault.ai.",
+        );
+
+        return;
+      }
+
+      // useSubscriptionQuery's mirror effect will flip the snapshot on
+      // the next tick — but the queued paywall action (onPaymentSuccess)
+      // runs immediately after this returns, so pre-set the snapshot
+      // here to avoid a one-tick lag where the retry still sees the
+      // old value. `setEntitledSnapshot` is imported lazily to keep
+      // the paths symmetrical — snapshot only ever flips true when the
+      // backend has confirmed entitlement.
+      const { setEntitledSnapshot } = await import(
+        "@/lib/client/hooks/billing/entitlement-cache"
+      );
+
+      setEntitledSnapshot(true);
+
+      toast.success({
+        title: "Payment received",
+        description: "Your access is unlocked.",
+      });
+      setStep("success");
     } catch (err) {
-      logger.warn?.("subscription sync after payment failed", err);
+      logger.error("subscription sync after payment failed", err);
+      setError(
+        "We received your payment attempt but couldn't verify it. Please refresh in a minute or email payments@pdfvault.ai.",
+      );
     }
-    void invalidateSubscription();
-    toast.success({
-      title: "Payment received",
-      description: "Your access is unlocked.",
-    });
-    setStep("success");
   };
 
   const handleIframeFail = () => {
