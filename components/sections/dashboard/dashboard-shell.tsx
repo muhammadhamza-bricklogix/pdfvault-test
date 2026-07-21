@@ -8,6 +8,7 @@ import {
   BankIcon,
   Cancel01Icon,
   CheckmarkBadge01Icon,
+  Home01Icon,
   Menu01Icon,
   MenuSquareIcon,
 } from "@hugeicons/core-free-icons";
@@ -40,6 +41,15 @@ type NavItem = {
 const DASHBOARD_TOOLS_PATH = "/dashboard/tools";
 
 const NAV_ITEMS: readonly NavItem[] = [
+  {
+    // Route back to the marketing / landing site. Users kept getting
+    // stuck inside the dashboard with no visible way back to the
+    // public home — the brand logo above only navigates in-app.
+    href: ROUTES.PUBLIC.HOME,
+    icon: Home01Icon,
+    isActive: () => false,
+    label: "Home",
+  },
   {
     href: ROUTES.APP.DASHBOARD,
     icon: BankIcon,
