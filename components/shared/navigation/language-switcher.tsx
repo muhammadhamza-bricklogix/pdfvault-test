@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 "use client";
 
 import { Button, Dropdown, Label } from "@heroui/react";
@@ -23,12 +24,18 @@ export function LanguageSwitcher() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    console.log("[LanguageSwitcher] mounting");
+
     const onLangChange = (newLang: string) => {
+      console.log("[LanguageSwitcher] languageChanged event:", newLang);
       setCurrentLang(newLang as LangCode);
     };
 
     const init = () => {
-      setCurrentLang((window.Weglot?.getCurrentLang() as LangCode) ?? "en");
+      const wgCurrent = window.Weglot?.getCurrentLang();
+
+      console.log("[LanguageSwitcher] init — Weglot currentLang:", wgCurrent);
+      setCurrentLang((wgCurrent as LangCode) ?? "en");
       window.Weglot?.on("languageChanged", onLangChange);
       setReady(true);
     };
@@ -36,6 +43,9 @@ export function LanguageSwitcher() {
     if (window.Weglot) {
       init();
     } else {
+      console.log(
+        "[LanguageSwitcher] Weglot not ready — waiting for weglot:initialized",
+      );
       window.addEventListener("weglot:initialized", init, { once: true });
     }
 
@@ -69,6 +79,10 @@ export function LanguageSwitcher() {
               id={lang.code}
               textValue={lang.label}
               onAction={() => {
+                console.log(
+                  "[LanguageSwitcher] user selected language:",
+                  lang.code,
+                );
                 // Persist synchronously so localStorage stays fresh
                 // even if Weglot's `languageChanged` event is delayed
                 // or skipped on same-language switches.
@@ -77,9 +91,20 @@ export function LanguageSwitcher() {
                     WEGLOT_LANG_STORAGE_KEY,
                     lang.code,
                   );
-                } catch {
-                  // ignore
+                  console.log(
+                    "[LanguageSwitcher] wrote to localStorage:",
+                    lang.code,
+                  );
+                } catch (err) {
+                  console.error(
+                    "[LanguageSwitcher] localStorage write failed:",
+                    err,
+                  );
                 }
+                console.log(
+                  "[LanguageSwitcher] calling Weglot.switchTo:",
+                  lang.code,
+                );
                 window.Weglot?.switchTo(lang.code);
                 setCurrentLang(lang.code);
               }}

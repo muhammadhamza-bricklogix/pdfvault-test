@@ -1,8 +1,11 @@
+/* eslint-disable no-console */
 "use client";
 
 import Script from "next/script";
 
 const WEGLOT_API_KEY = process.env.NEXT_PUBLIC_WEGLOT_API_KEY ?? "";
+
+const LOG_PREFIX = "[WeglotLoader]";
 
 /**
  * localStorage key mirroring the user's active Weglot language.
@@ -50,6 +53,10 @@ declare global {
  */
 export function WeglotLoader() {
   if (!WEGLOT_API_KEY) {
+    console.warn(
+      `${LOG_PREFIX} NEXT_PUBLIC_WEGLOT_API_KEY is missing — loader disabled`,
+    );
+
     return null;
   }
 
@@ -58,9 +65,18 @@ export function WeglotLoader() {
       src="https://cdn.weglot.com/weglot.min.js"
       strategy="afterInteractive"
       onLoad={() => {
+        console.log(
+          `${LOG_PREFIX} CDN script loaded. window.Weglot present?`,
+          !!window.Weglot,
+        );
+
         if (window.__WEGLOT_INITIALIZED__) {
           // Already initialized by another mount; do not re-attach listeners
           // or re-dispatch the event. The single dispatch below is enough.
+          console.log(
+            `${LOG_PREFIX} Already initialized — skipping repeat init`,
+          );
+
           return;
         }
 
@@ -79,6 +95,10 @@ export function WeglotLoader() {
         });
 
         window.__WEGLOT_INITIALIZED__ = true;
+        console.log(
+          `${LOG_PREFIX} Weglot.initialize() called. currentLang after init:`,
+          window.Weglot?.getCurrentLang(),
+        );
 
         // Restore the user's language from localStorage. Weglot's own
         // cookie sometimes gets dropped across route groups (auth uses
@@ -91,25 +111,43 @@ export function WeglotLoader() {
             window.localStorage.getItem(WEGLOT_LANG_STORAGE_KEY);
           const current = window.Weglot?.getCurrentLang();
 
+          console.log(
+            `${LOG_PREFIX} Restore check — stored:`,
+            stored,
+            "current:",
+            current,
+            "preferred key present?",
+            !!window[WEGLOT_PREFERRED_LANG_KEY],
+          );
+
           if (stored && stored !== current) {
+            console.log(`${LOG_PREFIX} Switching to stored language:`, stored);
             window.Weglot?.switchTo(stored);
+          } else {
+            console.log(`${LOG_PREFIX} No switch needed`);
           }
-        } catch {
-          // localStorage disabled / private mode — ignore.
+        } catch (err) {
+          console.error(`${LOG_PREFIX} Error restoring language:`, err);
         }
 
         // Any subsequent language change (from our switcher or via any
         // future integration) writes the new value back to localStorage
         // so the next page load picks it up.
         window.Weglot?.on("languageChanged", (lang: string) => {
+          console.log(`${LOG_PREFIX} Weglot languageChanged event:`, lang);
           try {
             window.localStorage.setItem(WEGLOT_LANG_STORAGE_KEY, lang);
             window[WEGLOT_PREFERRED_LANG_KEY] = lang;
-          } catch {
-            // ignore
+            console.log(
+              `${LOG_PREFIX} Persisted language to localStorage:`,
+              lang,
+            );
+          } catch (err) {
+            console.error(`${LOG_PREFIX} Error persisting language:`, err);
           }
         });
 
+        console.log(`${LOG_PREFIX} Dispatching weglot:initialized`);
         window.dispatchEvent(new CustomEvent("weglot:initialized"));
       }}
     />
