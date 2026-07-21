@@ -200,13 +200,6 @@ export function CookiePolicyContent() {
               expiry: "2 years",
             },
             {
-              name: "_ga_[container-id]",
-              provider: "Google Analytics (GA4)",
-              purpose:
-                "Persists session state for Google Analytics 4 properties.",
-              expiry: "2 years",
-            },
-            {
               name: "_gid",
               provider: "Google Analytics",
               purpose: "Distinguishes visitors for short-term usage analysis.",
