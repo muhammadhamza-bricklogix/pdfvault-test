@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { UploadWorkspace } from "@/components/sections/new-landing/upload-workspace";
-import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 import { CONVERT_ROUTES } from "@/lib/shared/constants/convert-routes";
 
 interface Params {
@@ -44,7 +43,6 @@ export default async function ConvertPage({
 
   return (
     <div id="top">
-      <WeglotLoader />
       <LandingHeader />
       <main>
         <section className="bg-white pb-8 pt-14 sm:pb-10 sm:pt-20">

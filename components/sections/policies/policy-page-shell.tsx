@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { HeroBackground } from "@/components/sections/new-landing/hero-background";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
-import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
 interface PolicyPageShellProps {
   title: string;
@@ -37,7 +36,6 @@ export function PolicyPageShell({
 }: PolicyPageShellProps) {
   return (
     <div id="top">
-      <WeglotLoader />
       <LandingHeader />
       <main>
         <PolicyHero description={description} title={title} />

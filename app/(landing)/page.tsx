@@ -8,7 +8,6 @@ import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
 // Testimonials hidden per PM review 2026-07 (copy pending).
 // import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 import { LandingTools } from "@/components/sections/new-landing/landing-tools";
-import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
 export const metadata: Metadata = {
   title: "PDFVault — A smarter, more secure home for every PDF",
@@ -26,7 +25,6 @@ export const metadata: Metadata = {
 export default function NewLandingPage() {
   return (
     <div id="top">
-      <WeglotLoader />
       <LandingHeader />
       <main>
         <LandingHero />

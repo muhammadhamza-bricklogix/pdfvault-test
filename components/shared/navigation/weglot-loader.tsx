@@ -16,6 +16,21 @@ const WEGLOT_API_KEY = process.env.NEXT_PUBLIC_WEGLOT_API_KEY ?? "";
 export const WEGLOT_LANG_STORAGE_KEY = "pdfvault:weglot-lang";
 
 /**
+ * Window key used by the inline preload script in app/layout.tsx to
+ * communicate the persisted language to Weglot before the CDN bundle
+ * finishes loading. This lets us restore the user's choice as early as
+ * possible and reduces the English flash on first load.
+ */
+const WEGLOT_PREFERRED_LANG_KEY = "__WEGLOT_PREFERRED_LANG__";
+
+declare global {
+  interface Window {
+    [WEGLOT_PREFERRED_LANG_KEY]?: string;
+    __WEGLOT_INITIALIZED__?: boolean;
+  }
+}
+
+/**
  * Loads Weglot's CDN script and initializes it on window. Both
  * LanguageSwitcher variants listen for the `weglot:initialized` event
  * we dispatch here — until it fires, their buttons stay disabled, which
@@ -27,6 +42,11 @@ export const WEGLOT_LANG_STORAGE_KEY = "pdfvault:weglot-lang";
  * pre-init disabled state and avoids Weglot's own "must be initialized"
  * / "isn't a language you have added" errors that would otherwise fire
  * on the first click.
+ *
+ * Initialization is guarded by `window.__WEGLOT_INITIALIZED__` so the
+ * component stays safe even if it is rendered more than once (the single
+ * instance in app/layout.tsx is the canonical one; child pages used to
+ * duplicate it and that caused race conditions).
  */
 export function WeglotLoader() {
   if (!WEGLOT_API_KEY) {
@@ -38,6 +58,12 @@ export function WeglotLoader() {
       src="https://cdn.weglot.com/weglot.min.js"
       strategy="afterInteractive"
       onLoad={() => {
+        if (window.__WEGLOT_INITIALIZED__) {
+          // Already initialized by another mount; do not re-attach listeners
+          // or re-dispatch the event. The single dispatch below is enough.
+          return;
+        }
+
         window.Weglot?.initialize({
           api_key: WEGLOT_API_KEY,
           originalLanguage: "en",
@@ -52,13 +78,17 @@ export function WeglotLoader() {
           switchers: [],
         });
 
+        window.__WEGLOT_INITIALIZED__ = true;
+
         // Restore the user's language from localStorage. Weglot's own
         // cookie sometimes gets dropped across route groups (auth uses
         // a different (marketing) segment) — mirroring to localStorage
         // makes the choice survive every navigation. Fires AFTER
         // initialize so Weglot is ready to accept switchTo.
         try {
-          const stored = window.localStorage.getItem(WEGLOT_LANG_STORAGE_KEY);
+          const stored =
+            window[WEGLOT_PREFERRED_LANG_KEY] ??
+            window.localStorage.getItem(WEGLOT_LANG_STORAGE_KEY);
           const current = window.Weglot?.getCurrentLang();
 
           if (stored && stored !== current) {
@@ -74,6 +104,7 @@ export function WeglotLoader() {
         window.Weglot?.on("languageChanged", (lang: string) => {
           try {
             window.localStorage.setItem(WEGLOT_LANG_STORAGE_KEY, lang);
+            window[WEGLOT_PREFERRED_LANG_KEY] = lang;
           } catch {
             // ignore
           }

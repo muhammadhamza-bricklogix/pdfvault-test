@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import { AllToolsCatalog } from "@/components/sections/new-landing/all-tools-catalog";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
-import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
 export const metadata: Metadata = {
   title: "All tools — PDFVault",
@@ -23,7 +22,6 @@ export const metadata: Metadata = {
 export default function AllToolsPage() {
   return (
     <div id="top">
-      <WeglotLoader />
       <LandingHeader />
       <main>
         <AllToolsCatalog />

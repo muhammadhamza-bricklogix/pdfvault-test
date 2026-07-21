@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { Dancing_Script, Playfair_Display } from "next/font/google";
+import Script from "next/script";
 
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
@@ -70,6 +71,23 @@ export default function RootLayout({
       className={`${dancingScript.variable} ${playfairDisplay.variable}`}
       lang="en"
     >
+      {/*
+        Read the persisted Weglot language as early as possible (before the
+        page becomes interactive) so WeglotLoader can switch to it
+        immediately after initialization. This minimizes the English flash
+        on first load and keeps the chosen language when the browser drops
+        Weglot's own cookie across route groups.
+      */}
+      <Script id="weglot-lang-pref" strategy="beforeInteractive">
+        {`
+          try {
+            const lang = window.localStorage.getItem("pdfvault:weglot-lang");
+            if (lang) window.__WEGLOT_PREFERRED_LANG__ = lang;
+          } catch (e) {
+            // ignore private-mode / storage-disabled
+          }
+        `}
+      </Script>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <WeglotLoader />
         <ClerkProvider

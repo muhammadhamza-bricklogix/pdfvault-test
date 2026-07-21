@@ -279,24 +279,49 @@ export function LandingTools() {
   // re-translation cycle. The two-step causes a brief English flash so
   // the `search()` path is preferred.
   useEffect(() => {
-    const w = window.Weglot;
-    const current = w?.getCurrentLang();
+    const translateVisibleTab = () => {
+      const w = window.Weglot;
+      const current = w?.getCurrentLang();
 
-    if (!w || !current || current === "en") return;
+      if (!w || !current || current === "en") return;
 
-    const rescan = () => {
-      if (typeof w.search === "function") {
-        w.search();
-      } else {
-        w.switchTo("en");
-        w.switchTo(current);
-      }
+      const rescan = () => {
+        if (typeof w.search === "function") {
+          w.search();
+        } else {
+          w.switchTo("en");
+          w.switchTo(current);
+        }
+      };
+
+      // Defer to the next frame (and a tiny bit longer) so React commits
+      // and paints the new tab DOM before Weglot walks it.
+      let timeoutId: number | undefined;
+      const raf = window.requestAnimationFrame(() => {
+        rescan();
+        timeoutId = window.setTimeout(rescan, 60);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(raf);
+        if (timeoutId !== undefined) {
+          window.clearTimeout(timeoutId);
+        }
+      };
     };
-    // Defer to next frame so React commits the new tab DOM first,
-    // otherwise Weglot walks the pre-swap subtree.
-    const raf = window.requestAnimationFrame(rescan);
 
-    return () => window.cancelAnimationFrame(raf);
+    if (window.Weglot) {
+      return translateVisibleTab();
+    }
+
+    // Weglot may still be loading when the component mounts or when a tab
+    // is clicked. Wait for initialization, then translate the currently
+    // visible panel.
+    const onInit = () => translateVisibleTab();
+
+    window.addEventListener("weglot:initialized", onInit, { once: true });
+
+    return () => window.removeEventListener("weglot:initialized", onInit);
   }, [activeTab]);
 
   return (
