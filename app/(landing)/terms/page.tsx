@@ -1,21 +1,10 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { PolicyPageShell } from "@/components/sections/policies/policy-page-shell";
-import { TermsAndConditionsContent } from "@/components/sections/legal/terms-and-conditions-content";
-
-export const metadata: Metadata = {
-  title: "Terms & Conditions — PDFVault",
-  description:
-    "The rules and guidelines that govern your use of PDFVault. Please read carefully before using the service.",
-};
-
-export default function TermsPage() {
-  return (
-    <PolicyPageShell
-      description="The rules and guidelines that govern your use of PDFVault. Please read carefully before using the service."
-      title="Terms & Conditions"
-    >
-      <TermsAndConditionsContent />
-    </PolicyPageShell>
-  );
+/**
+ * Legacy alias — the Terms & Conditions page lives at
+ * `/terms-and-conditions`. Any bookmark or external link that still
+ * points at `/terms` is forwarded permanently so nothing 404s.
+ */
+export default function TermsRedirectPage() {
+  redirect("/terms-and-conditions");
 }

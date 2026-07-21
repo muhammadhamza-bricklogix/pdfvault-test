@@ -14,7 +14,6 @@ import {
   SecurityCheckIcon,
   SecurityPasswordIcon,
   Shield01Icon,
-  SparklesIcon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 
@@ -28,7 +27,6 @@ export const termsTocEntries: LegalTocEntry[] = [
   { id: "t-2-4", label: "Subscriptions, Fees, and Payment" },
   { id: "t-2-5", label: "Acceptable Use" },
   { id: "t-2-6", label: "Your Content and License to Us" },
-  { id: "t-2-7", label: "AI Features" },
   { id: "t-2-8", label: "Intellectual Property of the Company" },
   { id: "t-2-9", label: "Copyright Complaints" },
   { id: "t-2-10", label: "Third-Party Services and Links" },
@@ -184,18 +182,6 @@ export function TermsAndConditionsContent() {
           and transform it as necessary to provide the Service and return
           results to you. We do not claim ownership of your content and do not
           use your files to train artificial intelligence models.
-        </p>
-      </LegalSectionCard>
-
-      <LegalSectionCard icon={SparklesIcon} id="t-2-7" title="AI Features">
-        <p>
-          The Service includes AI-powered features (such as the AI Summarizer).
-          Where AI features are used, your document content may be processed by
-          third-party AI service providers under contractual confidentiality
-          obligations. AI-generated output may contain errors or omissions and
-          is provided for convenience only; you are responsible for reviewing
-          output before relying on it. AI output is not professional, legal, or
-          financial advice.
         </p>
       </LegalSectionCard>
 

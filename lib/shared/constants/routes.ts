@@ -15,7 +15,7 @@ export const ROUTES = {
     DO_NOT_SELL: "/do-not-sell",
     PRIVACY: "/privacy",
     REFUND: "/refund",
-    TERMS: "/terms",
+    TERMS: "/terms-and-conditions",
   },
   APP: {
     DASHBOARD: "/dashboard",

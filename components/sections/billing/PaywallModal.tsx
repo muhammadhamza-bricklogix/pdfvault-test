@@ -400,7 +400,7 @@ function PayStep({
           every 30 days unless cancelled. See our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-            href="/terms"
+            href="/terms-and-conditions"
           >
             Subscription
           </a>{" "}
