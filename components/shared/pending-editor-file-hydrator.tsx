@@ -101,6 +101,7 @@ export function PendingEditorFileHydrator() {
   const tool = searchParams.get("tool");
   const exportFormat = searchParams.get("export");
   const docId = searchParams.get("id");
+  const isFreshEntry = searchParams.get("fresh") === "1";
 
   // Step 1 — auth gate + tool-tile reset. Runs once per mount before
   // anything else touches the store.
@@ -111,10 +112,12 @@ export function PendingEditorFileHydrator() {
     resetRef.current = true;
 
     // Landing / dashboard tool tiles route to `/pdf-composer?tool=<slug>`
-    // (no id). If the store has a stale file from a previous session in
-    // this tab, drop it so the user gets the "Drop your file here" screen
-    // they'd get from a first-visit — matches QA expectation.
-    if ((tool || exportFormat) && !docId) {
+    // or bare `/pdf-composer?fresh=1`. Either signal means the user
+    // came from a fresh tool selection and expects an empty
+    // drop-zone — dump any stale file from a prior session so a user
+    // who just converted Word→PDF doesn't see that converted file
+    // waiting for them when they click "PDF Composer".
+    if ((tool || exportFormat || isFreshEntry) && !docId) {
       clearFile();
     }
 
@@ -132,7 +135,15 @@ export function PendingEditorFileHydrator() {
         `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
       );
     }
-  }, [authLoaded, clearFile, docId, exportFormat, isSignedIn, tool]);
+  }, [
+    authLoaded,
+    clearFile,
+    docId,
+    exportFormat,
+    isFreshEntry,
+    isSignedIn,
+    tool,
+  ]);
 
   // Step 2 — one-shot IDB rehydrate.
   //
@@ -165,6 +176,17 @@ export function PendingEditorFileHydrator() {
 
     void (async () => {
       try {
+        // `?fresh=1` (added by TOOL_ROUTE tiles) means the user just
+        // clicked a tool tile and expects a clean drop-zone. Wipe any
+        // leftover IDB file too — otherwise Step 1's `clearFile()`
+        // would be immediately undone by this rehydrate. The IDB entry
+        // gets cleared so subsequent auto-launch flows start fresh.
+        if (isFreshEntry && !docId) {
+          await clearPendingEditorFile();
+
+          return;
+        }
+
         const file = await loadPendingEditorFile();
 
         if (cancelled || !file) return;
@@ -274,6 +296,7 @@ export function PendingEditorFileHydrator() {
     currentFile,
     docId,
     exportFormat,
+    isFreshEntry,
     isSignedIn,
     pathname,
     queryClient,

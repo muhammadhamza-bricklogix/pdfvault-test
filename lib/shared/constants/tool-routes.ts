@@ -21,16 +21,25 @@ export type EditorToolSlug =
   | "extract-images"
   | "flatten"; // remove annotations
 
+/**
+ * All composer tool routes carry `?fresh=1` so the hydrator wipes the
+ * previous session's file on landing — a user who converts a Word doc,
+ * then clicks "PDF Composer" from the navbar, expects the empty
+ * drop-zone, not the freshly-converted PDF they just downloaded.
+ * `?tool=<slug>` links already had the equivalent "clear on entry"
+ * behavior via the hydrator's tool-tile reset; adding `fresh=1`
+ * extends the same discipline to the bare `/pdf-composer` entry.
+ */
 const composer = (tool?: EditorToolSlug, extra?: Record<string, string>) => {
   const query = new URLSearchParams();
 
+  query.set("fresh", "1");
   if (tool) query.set("tool", tool);
   if (extra) {
     for (const [key, value] of Object.entries(extra)) query.set(key, value);
   }
-  const q = query.toString();
 
-  return q ? `${ROUTES.TOOLS.PDF_EDITOR}?${q}` : ROUTES.TOOLS.PDF_EDITOR;
+  return `${ROUTES.TOOLS.PDF_EDITOR}?${query.toString()}`;
 };
 
 export const TOOL_ROUTE = {
