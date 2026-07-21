@@ -127,7 +127,7 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         href: convert("jpg-to-pdf"),
       },
       {
-        label: "EXCEl to PDF",
+        label: "EXCEL to PDF",
         icon: { kind: "badge", variant: "orange", badge: "XLS" },
         href: convert("excel-to-pdf"),
       },
