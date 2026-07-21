@@ -5,7 +5,6 @@ import {
   Alert01Icon,
   ArrowReloadHorizontalIcon,
   BalanceScaleIcon,
-  Building03Icon,
   CancelCircleIcon,
   CopyrightIcon,
   Delete02Icon,
@@ -23,7 +22,6 @@ import { LegalSectionCard } from "@/components/sections/legal/legal-section-card
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const termsTocEntries: LegalTocEntry[] = [
-  { id: "t-meta", label: "Updated date & address" },
   { id: "t-2-1", label: "Acceptance of These Terms" },
   { id: "t-2-2", label: "Eligibility" },
   { id: "t-2-3", label: "Account Registration" },
@@ -49,11 +47,7 @@ export const termsTocEntries: LegalTocEntry[] = [
 export function TermsAndConditionsContent() {
   return (
     <>
-      <LegalSectionCard
-        icon={Building03Icon}
-        id="t-meta"
-        title="Updated date & address"
-      >
+      <div className="mb-6" id="t-meta">
         <p>
           <strong>Updated date:</strong> 22 July 2026.
         </p>
@@ -61,7 +55,7 @@ export function TermsAndConditionsContent() {
           <strong>Address:</strong> Shams Business Center, Sharjah Media City
           Free Zone, Al Messaned, Sharjah, UAE.
         </p>
-      </LegalSectionCard>
+      </div>
 
       <LegalSectionCard
         icon={File01Icon}

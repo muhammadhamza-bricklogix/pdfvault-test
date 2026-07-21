@@ -2,7 +2,6 @@ import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
 import Link from "next/link";
 import {
-  Building03Icon,
   Clock01Icon,
   Database01Icon,
   Globe02Icon,
@@ -20,7 +19,6 @@ import { LegalSectionCard } from "@/components/sections/legal/legal-section-card
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const privacyTocEntries: LegalTocEntry[] = [
-  { id: "p-meta", label: "Updated date & address" },
   { id: "p-3-1", label: "Introduction" },
   { id: "p-3-2", label: "Information We Collect" },
   { id: "p-3-3", label: "How We Use Your Information" },
@@ -39,11 +37,7 @@ export const privacyTocEntries: LegalTocEntry[] = [
 export function PrivacyPolicyContent() {
   return (
     <>
-      <LegalSectionCard
-        icon={Building03Icon}
-        id="p-meta"
-        title="Updated date & address"
-      >
+      <div className="mb-6" id="p-meta">
         <p>PDFVault (www.pdfvault.ai) Operated by Content Clicks LLC.</p>
         <p className="mt-2">
           <strong>Updated date:</strong> 22 July 2026.
@@ -52,7 +46,7 @@ export function PrivacyPolicyContent() {
           <strong>Address:</strong> Shams Business Center, Sharjah Media City
           Free Zone, Al Messaned, Sharjah, UAE.
         </p>
-      </LegalSectionCard>
+      </div>
 
       <LegalSectionCard icon={SparklesIcon} id="p-3-1" title="Introduction">
         <p>

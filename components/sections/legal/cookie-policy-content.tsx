@@ -2,7 +2,6 @@ import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
 import {
   ArrowReloadHorizontalIcon,
-  Building03Icon,
   CookieIcon,
   FingerPrintCheckIcon,
   Globe02Icon,
@@ -14,7 +13,6 @@ import {
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 
 export const cookieTocEntries: LegalTocEntry[] = [
-  { id: "c-meta", label: "Updated date & address" },
   { id: "c-4-1", label: "What Are Cookies" },
   { id: "c-4-2", label: "Who Sets Cookies on This Site" },
   { id: "c-4-3", label: "Categories of Cookies We Use" },
@@ -67,11 +65,7 @@ function CookieTable({
 export function CookiePolicyContent() {
   return (
     <>
-      <LegalSectionCard
-        icon={Building03Icon}
-        id="c-meta"
-        title="Updated date & address"
-      >
+      <div className="mb-6" id="c-meta">
         <p>
           <strong>Updated date:</strong> 22 July 2026.
         </p>
@@ -79,7 +73,7 @@ export function CookiePolicyContent() {
           <strong>Address:</strong> Shams Business Center, Sharjah Media City
           Free Zone, Al Messaned, Sharjah, UAE.
         </p>
-      </LegalSectionCard>
+      </div>
 
       <LegalSectionCard icon={CookieIcon} id="c-4-1" title="What Are Cookies">
         <p>

@@ -2,7 +2,6 @@ import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
 import Link from "next/link";
 import {
-  Building03Icon,
   Clock01Icon,
   Globe02Icon,
   JudgeIcon,
@@ -19,7 +18,6 @@ import { LegalSectionCard } from "@/components/sections/legal/legal-section-card
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const doNotSellTocEntries: LegalTocEntry[] = [
-  { id: "d-meta", label: "Updated date & address" },
   { id: "d-6-0", label: "Overview" },
   { id: "d-6-1", label: "Your Rights Under CCPA/CPRA" },
   { id: "d-6-2", label: "Our Current Practices" },
@@ -37,11 +35,7 @@ export const doNotSellTocEntries: LegalTocEntry[] = [
 export function DoNotSellContent() {
   return (
     <>
-      <LegalSectionCard
-        icon={Building03Icon}
-        id="d-meta"
-        title="Updated date & address"
-      >
+      <div className="mb-6" id="d-meta">
         <p>
           <strong>Updated date:</strong> 22 July 2026.
         </p>
@@ -49,7 +43,7 @@ export function DoNotSellContent() {
           <strong>Address:</strong> Shams Business Center, Sharjah Media City
           Free Zone, Al Messaned, Sharjah, UAE.
         </p>
-      </LegalSectionCard>
+      </div>
 
       <LegalSectionCard icon={SparklesIcon} id="d-6-0" title="Overview">
         <p>
