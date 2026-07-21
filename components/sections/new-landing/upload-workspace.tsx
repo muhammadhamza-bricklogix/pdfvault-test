@@ -281,6 +281,13 @@ export function UploadWorkspace({
   variant = "full",
 }: UploadWorkspaceProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // Holds a File dropped before Clerk hydrated. `openFileInEditor`
+  // stashes here + returns early when `authLoaded === false` on a
+  // convert route, and the effect below re-fires the drop once Clerk
+  // finishes loading. Without this, a fast drop on a slow network
+  // slips past both the sign-in and paywall gates and quietly kicks
+  // off a backend conversion for a signed-out visitor.
+  const pendingDropRef = useRef<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -292,17 +299,15 @@ export function UploadWorkspace({
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   // Only convert-TO-pdf routes (Word/PNG/JPG/Excel/PowerPoint/TXT → PDF)
-  // require sign-in at upload time — those upload a non-PDF and expect a
-  // PDF back from the backend conversion pipeline, which needs auth.
-  //
-  // Convert-FROM-pdf routes (PDF → DOCX/XLSX/PPTX/JPG/PNG/HTML/TXT) use
-  // the same signed-out flow as `/pdf-composer`: the visitor drops a PDF,
-  // the editor opens, and the sign-in prompt + paywall trip at Download
-  // time via `useExportEditor`. The signal for that family is the
-  // presence of `exportFormat` on the route props.
+  // Per the 2026-07-20 flow spec, every `/convert/*` route (both X→PDF
+  // and PDF→X) sits under "Flow 1 — Convert file": Land → Sign-in →
+  // Conversion → Payment → Download. So the sign-in gate fires at
+  // upload time regardless of direction; guests never see the composer
+  // preview for convert routes. The composer preview flow (Flow 2) is
+  // reserved for `/pdf-composer` uploads.
   const requiresAuth = useMemo(
-    () => Boolean(pathname?.startsWith("/convert/")) && !exportFormat,
-    [exportFormat, pathname],
+    () => Boolean(pathname?.startsWith("/convert/")),
+    [pathname],
   );
 
   const acceptedExtensions = useMemo(
@@ -336,11 +341,21 @@ export function UploadWorkspace({
 
   const openFileInEditor = useCallback(
     async (picked: File) => {
-      // Convert-TO-PDF routes require sign-in for the backend conversion
-      // call. Save the original file to IDB so we can pick it up
-      // automatically after sign-in — the user shouldn't have to drop
-      // the same file twice for a better UX. The auto-resume effect
-      // below reads IDB when the user returns signed-in.
+      // Auth still hydrating — defer. The effect below re-fires with
+      // the pending file once `authLoaded` flips true. Without this,
+      // a fast drop on a slow network slips past both gates and
+      // silently starts a backend conversion for a signed-out visitor.
+      if (requiresAuth && !authLoaded) {
+        pendingDropRef.current = picked;
+
+        return;
+      }
+      // Convert routes require sign-in for the backend conversion call
+      // (Flow 1 per the client-signed spec). Save the original file to
+      // IDB so we can pick it up automatically after sign-in — the
+      // user shouldn't have to drop the same file twice. The
+      // auto-resume effect below reads IDB when the user returns
+      // signed-in.
       if (requiresAuth && authLoaded && !isSignedIn) {
         try {
           await savePendingEditorFile(picked);
@@ -463,24 +478,12 @@ export function UploadWorkspace({
         setCurrentDocument(savedDoc);
         setEditorFile(pdfFile);
 
-        // Signed-out convert-FROM-pdf flow (e.g. /convert/pdf-to-word):
-        // the router.push carries `?export=<fmt>` which triggers the
-        // hydrator's Step 1 `clearFile()` on the next mount. Mirror the
-        // file into IDB first so the hydrator's Step 2 can rehydrate it
-        // for the auto-export → sign-in-modal → paywall chain.
-        if (exportFormat && authLoaded && !isSignedIn) {
-          try {
-            await savePendingEditorFile(pdfFile);
-          } catch (idbErr) {
-            logger.warn("pending editor file save failed", idbErr);
-          }
-        }
-
         // Signed-in flow: navigate with `?id=<docId>` so the editor
         // hydrates from the persisted document row (see proxy.ts —
-        // `?id=` also requires auth). Signed-out flow: no id, the
-        // editor renders the in-memory file from the store (plus the
-        // IDB mirror above for convert-FROM-pdf routes).
+        // `?id=` also requires auth). Signed-out visitors never reach
+        // this point on `/convert/*` routes now (the sign-in gate at
+        // the top of the function short-circuits both directions); on
+        // `/` they hit the editor with the in-memory file.
         router.push(buildComposerHref(savedDoc?.id ?? null));
       } catch (err) {
         logger.error("Landing upload → open failed", err);
@@ -496,7 +499,6 @@ export function UploadWorkspace({
     [
       authLoaded,
       buildComposerHref,
-      exportFormat,
       isSignedIn,
       pathname,
       requiresAuth,
@@ -505,6 +507,19 @@ export function UploadWorkspace({
       setEditorFile,
     ],
   );
+
+  // Re-fire a drop that arrived before Clerk hydrated. Paired with the
+  // `pendingDropRef` guard at the top of `openFileInEditor` — together
+  // they close the race where a fast drop on a slow network skipped
+  // both the sign-in and paywall gates.
+  useEffect(() => {
+    if (!authLoaded) return;
+    if (!pendingDropRef.current) return;
+    const file = pendingDropRef.current;
+
+    pendingDropRef.current = null;
+    void openFileInEditor(file);
+  }, [authLoaded, openFileInEditor]);
 
   // Auto-resume the convert flow after sign-in. If the user dropped a
   // file while signed-out, we stashed it in IDB and sent them through
