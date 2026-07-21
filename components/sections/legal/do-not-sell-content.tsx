@@ -2,7 +2,9 @@ import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
 import Link from "next/link";
 import {
+  Building03Icon,
   Clock01Icon,
+  Globe02Icon,
   JudgeIcon,
   Mail01Icon,
   SecurityCheckIcon,
@@ -17,30 +19,62 @@ import { LegalSectionCard } from "@/components/sections/legal/legal-section-card
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const doNotSellTocEntries: LegalTocEntry[] = [
+  { id: "d-meta", label: "Updated date & address" },
+  { id: "d-6-0", label: "Overview" },
   { id: "d-6-1", label: "Your Rights Under CCPA/CPRA" },
   { id: "d-6-2", label: "Our Current Practices" },
   { id: "d-6-3", label: "Categories of Information That May Be Shared" },
   { id: "d-6-4", label: "How to Opt Out" },
   { id: "d-6-5", label: "Other California Privacy Rights" },
-  { id: "d-6-6", label: "Authorized Agents" },
-  { id: "d-6-7", label: "Response Time" },
-  { id: "d-6-8", label: "Contact" },
+  { id: "d-6-6", label: "Sensitive Personal Information" },
+  { id: "d-6-7", label: "Authorized Agents" },
+  { id: "d-6-8", label: "Response Time" },
   { id: "d-6-9", label: "Rights for Residents of Other States" },
+  { id: "d-6-10", label: "Changes to This Policy" },
+  { id: "d-6-11", label: "Contact" },
 ];
 
 export function DoNotSellContent() {
   return (
     <>
       <LegalSectionCard
+        icon={Building03Icon}
+        id="d-meta"
+        title="Updated date & address"
+      >
+        <p>
+          <strong>Updated date:</strong> 22 July 2026.
+        </p>
+        <p className="mt-2">
+          <strong>Address:</strong> Shams Business Center, Sharjah Media City
+          Free Zone, Al Messaned, Sharjah, UAE.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={SparklesIcon} id="d-6-0" title="Overview">
+        <p>
+          This page explains your right to opt out of the &ldquo;sale&rdquo; or
+          &ldquo;sharing&rdquo; of your personal information under the
+          California Consumer Privacy Act, as amended by the California Privacy
+          Rights Act (CCPA / CPRA), and under similar laws in other US states.
+          It is issued by Content Clicks LLC (&ldquo;Company,&rdquo;
+          &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), the
+          operator of pdfvault.ai (the &ldquo;Service&rdquo;), and should be
+          read together with our{" "}
+          <Link href={ROUTES.LEGAL.PRIVACY}>Privacy Policy</Link> and{" "}
+          <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard
         icon={JudgeIcon}
         id="d-6-1"
         title="Your Rights Under CCPA/CPRA"
       >
         <p>
-          If you are a California resident, the California Consumer Privacy Act
-          (CCPA), as amended by the California Privacy Rights Act (CPRA), gives
-          you the right to opt out of the &quot;sale&quot; or
-          &quot;sharing&quot; of your personal information as those terms are
+          If you are a California resident, the CCPA, as amended by the CPRA,
+          gives you the right to opt out of the &ldquo;sale&rdquo; or
+          &ldquo;sharing&rdquo; of your personal information, as those terms are
           defined under California law.
         </p>
       </LegalSectionCard>
@@ -51,15 +85,12 @@ export function DoNotSellContent() {
         title="Our Current Practices"
       >
         <p>
-          pdfvault.ai does not sell your personal information to third parties
-          for monetary compensation.
-        </p>
-        <p className="mt-3">
-          However, under the broad definitions of the CCPA/CPRA, certain data
-          practices — such as sharing information with analytics providers or
-          advertising networks — may be considered &quot;sharing&quot; personal
-          information for cross-context behavioral advertising purposes. We want
-          to be transparent about this.
+          We do not sell your personal information to third parties in exchange
+          for money. However, under the broad definitions used by the CCPA /
+          CPRA, certain data practices; such as sharing information with
+          analytics providers or advertising networks; may be considered
+          &ldquo;sharing&rdquo; of personal information for cross-context
+          behavioral advertising purposes. We want to be transparent about this.
         </p>
       </LegalSectionCard>
 
@@ -68,15 +99,11 @@ export function DoNotSellContent() {
         id="d-6-3"
         title="Categories of Information That May Be Shared"
       >
-        <p>
-          The following categories of personal information may be shared for
-          analytics or service improvement purposes:
-        </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>Identifiers (IP address, cookie identifiers).</li>
+          <li>Identifiers (for example, IP address and cookie identifiers).</li>
           <li>
-            Internet or network activity (pages visited, features used, session
-            data).
+            Internet or network activity (for example, pages visited, features
+            used, and session data).
           </li>
           <li>
             Geolocation data (country-level only, derived from IP address).
@@ -89,43 +116,34 @@ export function DoNotSellContent() {
         id="d-6-4"
         title="How to Opt Out"
       >
-        <p>You may exercise this right by:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
-            Using the &quot;Cookie Settings&quot; link in the footer (
-            <Link href={`${ROUTES.LEGAL.COOKIES}#managing-cookies`}>
-              manage cookies
-            </Link>
-            ) to disable analytics and advertising cookies.
+            <strong>Cookie Settings:</strong> use the &ldquo;Cookie
+            Settings&rdquo; link in the footer, or visit our{" "}
+            <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>, to disable
+            analytics and advertising cookies.
           </li>
           <li>
-            Emailing us at{" "}
-            <a href="mailto:support@pdfvault.ai?subject=CCPA%20Opt-Out%20Request">
-              support@pdfvault.ai
-            </a>{" "}
-            with subject line &quot;CCPA Opt-Out Request&quot; and your account
-            email address.
-          </li>
-          <li>
-            Using a Global Privacy Control (GPC) signal in your browser — we
-            honor GPC signals automatically.
+            <strong>Email:</strong> write to{" "}
+            <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a> with the
+            subject line &ldquo;CCPA Opt-Out Request&rdquo; and the email
+            address associated with your account.
           </li>
         </ul>
       </LegalSectionCard>
 
       <LegalSectionCard
-        icon={SparklesIcon}
+        icon={UserCircleIcon}
         id="d-6-5"
         title="Other California Privacy Rights"
       >
-        <p>As a California resident, you also have the right to:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
             Know what personal information we collect, use, share, or sell.
           </li>
           <li>
-            Delete personal information we have collected about you (subject to
-            certain exceptions).
+            Delete personal information we have collected about you, subject to
+            certain exceptions.
           </li>
           <li>Correct inaccurate personal information.</li>
           <li>
@@ -139,44 +157,95 @@ export function DoNotSellContent() {
       </LegalSectionCard>
 
       <LegalSectionCard
-        icon={UserMultiple02Icon}
+        icon={Shield01Icon}
         id="d-6-6"
-        title="Authorized Agents"
+        title="Sensitive Personal Information"
       >
         <p>
-          You may designate an authorized agent to submit a request on your
-          behalf. We may require written proof of authorization and may verify
-          the identity of the requestor.
+          California law defines &ldquo;sensitive personal information&rdquo; to
+          include government identification numbers (such as Social Security,
+          driver&rsquo;s license, and passport numbers), precise geolocation,
+          and other protected categories. The Service allows users to upload
+          files that may incidentally contain sensitive personal information of
+          this kind; for example, a scanned ID or a document referencing a
+          Social Security number.
         </p>
-      </LegalSectionCard>
-
-      <LegalSectionCard icon={Clock01Icon} id="d-6-7" title="Response Time">
-        <p>
-          We will acknowledge your opt-out request within 10 business days and
-          fulfill it within 15 business days. We will confirm once the opt-out
-          is effective.
-        </p>
-      </LegalSectionCard>
-
-      <LegalSectionCard icon={Mail01Icon} id="d-6-8" title="Contact">
-        <p>
-          For privacy rights requests or questions:{" "}
-          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>
+        <p className="mt-3">
+          Under California regulations (11 CCR § 7027(m)), a business is not
+          required to offer a separate &ldquo;Limit the Use of My Sensitive
+          Personal Information&rdquo; mechanism if it uses and discloses
+          sensitive personal information only as reasonably necessary and
+          proportionate to perform the service the consumer requested. Because
+          we process uploaded file content solely to deliver the specific tool a
+          user invokes (for example, converting, compressing, editing, or
+          summarizing that file), and do not use file content to train AI
+          models, infer characteristics about users, or share it for
+          advertising, this exception applies and a separate limitation
+          mechanism is not currently required.
         </p>
       </LegalSectionCard>
 
       <LegalSectionCard
-        icon={UserCircleIcon}
+        icon={UserMultiple02Icon}
+        id="d-6-7"
+        title="Authorized Agents"
+      >
+        <p>
+          You may designate an authorized agent to submit a request on your
+          behalf. We may require written proof of the agent&rsquo;s
+          authorization and may independently verify your identity before
+          processing the request.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={Clock01Icon} id="d-6-8" title="Response Time">
+        <p>
+          We will acknowledge your opt-out request within 10 business days and
+          will process it as soon as feasible, but no later than 15 business
+          days from the date we receive it, in accordance with California
+          regulations (11 CCR § 7026(f)). We will confirm with you once the
+          opt-out is effective.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard
+        icon={JudgeIcon}
         id="d-6-9"
         title="Rights for Residents of Other States"
       >
         <p>
           Residents of Virginia (VCDPA), Colorado (CPA), Connecticut (CTDPA),
-          Utah (UCPA), and other states with privacy laws have similar rights.
-          We honor opt-out and deletion requests from users in all such
-          jurisdictions. Contact us at{" "}
-          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a> to
-          exercise your rights.
+          Utah (UCPA), and other US states with comparable privacy laws have
+          similar rights to opt out of the sale or sharing of personal
+          information, and to know, delete, and correct their personal
+          information. We honor opt-out, deletion, and correction requests from
+          users in all such jurisdictions. Contact us at{" "}
+          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a> to exercise these
+          rights.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard
+        icon={Globe02Icon}
+        id="d-6-10"
+        title="Changes to This Policy"
+      >
+        <p>
+          We may update this page periodically. Material changes will be
+          announced via a notice on the Service, and the &ldquo;Effective
+          date&rdquo; above will be updated.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={Mail01Icon} id="d-6-11" title="Contact">
+        <p>
+          Content Clicks LLC
+          <br />
+          Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
+          Sharjah, UAE.
+          <br />
+          For privacy rights requests or questions:{" "}
+          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>.
         </p>
       </LegalSectionCard>
     </>
