@@ -169,11 +169,10 @@ export function PrivacyPolicyContent() {
         </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
-            Service providers: payment processors, hosting providers, email
-            providers, and customer support tools, contractually bound to
-            protect your data.
+            Service providers: payment processors [Adyen], hosting and email
+            providers [GoDaddy], and customer support tools [Zendesk],
+            contractually bound to protect your data.
           </li>
-          <li>AI service providers, where you use AI features.</li>
           <li>
             Analytics providers (e.g., Google Analytics), using pseudonymized
             data.
