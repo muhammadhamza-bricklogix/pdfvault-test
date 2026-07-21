@@ -10,10 +10,7 @@ export const metadata: Metadata = {
 
 export default function CookiesPage() {
   return (
-    <PolicyPageShell
-      description="How we use cookies, local storage, and your choices on pdfvault.ai."
-      title="Cookie Policy"
-    >
+    <PolicyPageShell title="Cookie Policy">
       <CookiePolicyContent />
     </PolicyPageShell>
   );

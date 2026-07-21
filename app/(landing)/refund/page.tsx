@@ -11,10 +11,7 @@ export const metadata: Metadata = {
 
 export default function RefundPage() {
   return (
-    <PolicyPageShell
-      description="Our commitment to fair and transparent refunds for PDFVault subscriptions."
-      title="Refund Policy"
-    >
+    <PolicyPageShell title="Refund Policy">
       <RefundPolicyContent />
     </PolicyPageShell>
   );

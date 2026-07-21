@@ -14,10 +14,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <PolicyPageShell
-      description="How we collect, use, and protect your personal information when you use pdfvault.ai."
-      title="Privacy Policy"
-    >
+    <PolicyPageShell title="Privacy Policy">
       <PrivacyPolicyContent />
       <p>
         See also our <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>.

@@ -11,10 +11,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <PolicyPageShell
-      description="The rules and guidelines that govern your use of PDFVault. Please read carefully before using the service."
-      title="Terms & Conditions"
-    >
+    <PolicyPageShell title="Terms & Conditions">
       <TermsAndConditionsContent />
     </PolicyPageShell>
   );

@@ -38,8 +38,7 @@ export function PrivacyPolicyContent() {
   return (
     <>
       <div className="mb-6" id="p-meta">
-        <p>PDFVault (www.pdfvault.ai) Operated by Content Clicks LLC.</p>
-        <p className="mt-2">
+        <p>
           <strong>Updated date:</strong> 22 July 2026.
         </p>
         <p className="mt-2">
