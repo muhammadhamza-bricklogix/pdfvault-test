@@ -119,7 +119,7 @@ export function DoNotSellContent() {
           </li>
           <li>
             <strong>Email:</strong> write to{" "}
-            <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a> with the
+            <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> with the
             subject line &ldquo;CCPA Opt-Out Request&rdquo; and the email
             address associated with your account.
           </li>
@@ -213,8 +213,8 @@ export function DoNotSellContent() {
           information, and to know, delete, and correct their personal
           information. We honor opt-out, deletion, and correction requests from
           users in all such jurisdictions. Contact us at{" "}
-          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a> to exercise these
-          rights.
+          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> to exercise
+          these rights.
         </p>
       </LegalSectionCard>
 

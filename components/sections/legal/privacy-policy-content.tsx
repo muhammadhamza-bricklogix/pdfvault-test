@@ -252,8 +252,9 @@ export function PrivacyPolicyContent() {
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>). We do
           not knowingly collect personal information from anyone under 18. If
           you believe we have inadvertently collected such information, contact
-          us immediately at <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>{" "}
-          and we will delete it.
+          us immediately at{" "}
+          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> and we will
+          delete it.
         </p>
       </LegalSectionCard>
 
@@ -319,7 +320,7 @@ export function PrivacyPolicyContent() {
           Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
           Sharjah, UAE.
           <br />
-          Privacy contact: <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>
+          Privacy contact: <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a>
         </p>
       </LegalSectionCard>
     </>

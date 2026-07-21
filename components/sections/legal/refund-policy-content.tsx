@@ -1,8 +1,11 @@
 import type { LegalTocEntry } from "@/components/sections/legal/legal-toc";
 
+import Link from "next/link";
 import {
   Alert01Icon,
+  CancelCircleIcon,
   CreditCardIcon,
+  Globe02Icon,
   Mail01Icon,
   MoneyReceive02Icon,
   RefreshIcon,
@@ -10,26 +13,42 @@ import {
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 
-import { LegalCallout } from "@/components/sections/legal/legal-callout";
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const refundTocEntries: LegalTocEntry[] = [
-  { id: "r-5-1", label: "Our Commitment" },
+  { id: "r-5-1", label: "Overview" },
   { id: "r-5-2", label: "14-Day Money-Back Guarantee" },
-  { id: "r-5-3", label: "Renewal Payments" },
-  { id: "r-5-4", label: "Exceptional Circumstances" },
-  { id: "r-5-5", label: "How to Request a Refund" },
-  { id: "r-5-6", label: "Chargebacks" },
-  { id: "r-5-7", label: "Lifetime Plan" },
+  { id: "r-5-3", label: "Lifetime Plan" },
+  { id: "r-5-4", label: "Renewals" },
+  { id: "r-5-5", label: "Exceptional Circumstances" },
+  { id: "r-5-6", label: "EU and UK Consumers; Right of Withdrawal" },
+  { id: "r-5-7", label: "How to Request a Refund" },
+  { id: "r-5-8", label: "Exclusions" },
+  { id: "r-5-9", label: "Chargebacks" },
+  { id: "r-5-10", label: "Contact" },
 ];
 
 export function RefundPolicyContent() {
   return (
     <>
-      <LegalSectionCard icon={SparklesIcon} id="r-5-1" title="Our Commitment">
+      <div className="mb-6" id="r-meta">
         <p>
-          We want you to be satisfied with pdfvault.ai. Our refund policy is
-          designed to be <strong>fair and transparent</strong>.
+          <strong>Updated date:</strong> 22 July 2026.
+        </p>
+        <p className="mt-2">
+          <strong>Address:</strong> Shams Business Center, Sharjah Media City
+          Free Zone, Al Messaned, Sharjah, UAE.
+        </p>
+      </div>
+
+      <LegalSectionCard icon={SparklesIcon} id="r-5-1" title="Overview">
+        <p>
+          This Refund Policy applies to purchases of PDFVault subscriptions and
+          paid features made on pdfvault.ai and forms part of our{" "}
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. Nothing
+          in this Policy limits any non-waivable statutory rights you have in
+          your country of residence.
         </p>
       </LegalSectionCard>
 
@@ -38,102 +57,132 @@ export function RefundPolicyContent() {
         id="r-5-2"
         title="14-Day Money-Back Guarantee"
       >
-        <LegalCallout variant="success">
-          <p className="font-semibold">
-            Full refund, no questions asked — within 14 days of your first
-            subscription payment.
-          </p>
-        </LegalCallout>
-        <p className="mt-4">
-          We offer a 14-day money-back guarantee on all first-time subscriptions
-          (Monthly and Annual plans). If you are not satisfied within 14 days of
-          your initial subscription payment, contact us for a full refund — no
-          questions asked.
-        </p>
-        <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          This guarantee applies to:
-        </p>
-        <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>Your first Monthly plan payment.</li>
-          <li>Your first Annual plan payment.</li>
-        </ul>
-        <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          This guarantee does not apply to:
-        </p>
-        <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>Subscription renewals (i.e., your second payment onwards).</li>
-          <li>Lifetime plan purchases after 14 days.</li>
-          <li>
-            Cases where the account has been suspended for Terms of Service
-            violations.
-          </li>
-        </ul>
-      </LegalSectionCard>
-
-      <LegalSectionCard icon={RefreshIcon} id="r-5-3" title="Renewal Payments">
         <p>
-          For monthly and annual renewal payments, we do not offer automatic
-          refunds. However, if a renewal charge occurs and you cancel within{" "}
-          <strong>48 hours</strong>, contact us and we will consider a refund on
-          a case-by-case basis.
-        </p>
-      </LegalSectionCard>
-
-      <LegalSectionCard
-        icon={Alert01Icon}
-        id="r-5-4"
-        title="Exceptional Circumstances"
-      >
-        <p>
-          We will issue refunds outside the standard policy at our discretion in
-          cases such as:
-        </p>
-        <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>
-            A technical fault on our end that prevented you from using a paid
-            feature for more than <strong>72 hours</strong>.
-          </li>
-          <li>Duplicate charges due to a billing error.</li>
-          <li>Documented fraudulent charges.</li>
-        </ul>
-      </LegalSectionCard>
-
-      <LegalSectionCard
-        icon={Mail01Icon}
-        id="r-5-5"
-        title="How to Request a Refund"
-      >
-        <LegalCallout variant="emphasis">
-          <p>
-            Email <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>{" "}
-            with subject line &quot;Refund Request&quot;, your account email,
-            the date and amount of the charge, and (optional) your reason.
-          </p>
-        </LegalCallout>
-        <p className="mt-4">
-          We will process approved refunds within{" "}
-          <strong>5–10 business days</strong>. Refunds are returned to the
-          original payment method.
-        </p>
-      </LegalSectionCard>
-
-      <LegalSectionCard icon={CreditCardIcon} id="r-5-6" title="Chargebacks">
-        <p>
-          We strongly encourage you to contact us before initiating a chargeback
-          with your bank or card provider. Chargebacks result in significant
-          fees and administrative burden. If a chargeback is filed against a
-          valid charge, your account may be suspended pending resolution.
+          We offer a full refund, no questions asked, within 14 days of your
+          first subscription payment. This guarantee applies to your first
+          Monthly plan payment and your first Annual plan payment. It does not
+          apply to subscription renewals (your second payment onward), which are
+          addressed in Section 4, or to Lifetime plan purchases, which are
+          addressed in Section 3. The guarantee applies once per customer and
+          does not apply where an account has been suspended for violation of
+          the Terms and Conditions.
         </p>
       </LegalSectionCard>
 
       <LegalSectionCard
         icon={MoneyReceive02Icon}
-        id="r-5-7"
+        id="r-5-3"
         title="Lifetime Plan"
       >
         <p>
           The Lifetime plan is refundable within 14 days of purchase. After 14
           days, all Lifetime plan purchases are final.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={RefreshIcon} id="r-5-4" title="Renewals">
+        <p>
+          Subscriptions renew automatically (see{" "}
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>). We do
+          not offer automatic refunds for monthly or annual renewal payments.
+          However, if a renewal charge occurs and you cancel within 48 hours of
+          that charge, contact us and we will consider a refund on a
+          case-by-case basis. To avoid a renewal charge altogether, cancel
+          before the renewal date.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard
+        icon={Alert01Icon}
+        id="r-5-5"
+        title="Exceptional Circumstances"
+      >
+        <p>
+          We may issue refunds outside this Policy at our discretion in
+          circumstances such as:
+        </p>
+        <ul className="mt-2 list-disc space-y-2 pl-5">
+          <li>
+            A technical fault on our end that prevented you from using a paid
+            feature for more than 72 hours.
+          </li>
+          <li>Duplicate charges caused by a billing error.</li>
+          <li>Documented fraudulent charges.</li>
+        </ul>
+      </LegalSectionCard>
+
+      <LegalSectionCard
+        icon={Globe02Icon}
+        id="r-5-6"
+        title="EU and UK Consumers; Right of Withdrawal"
+      >
+        <p>
+          If you are a consumer in the EU or UK, you have a statutory 14-day
+          right to withdraw from a contract for digital services. By starting to
+          use the paid Service immediately, you request immediate performance
+          and acknowledge that, once the service has been fully performed, you
+          lose the right of withdrawal; where you withdraw during the 14-day
+          period after use has begun, we may deduct a proportionate amount for
+          the service already provided.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard
+        icon={Mail01Icon}
+        id="r-5-7"
+        title="How to Request a Refund"
+      >
+        <p>
+          Email <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>{" "}
+          with the subject line &ldquo;Refund Request,&rdquo; your account email
+          address, the date and amount of the charge, and optionally, your
+          reason for the request. We process approved refunds within 5&ndash;10
+          business days to the original payment method via our payment processor
+          [Adyen]; your bank or card issuer may take additional time to post the
+          credit.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={CancelCircleIcon} id="r-5-8" title="Exclusions">
+        <ul className="mt-2 list-disc space-y-2 pl-5">
+          <li>
+            Charges older than the applicable refund window, except where
+            required by law.
+          </li>
+          <li>
+            Subscription renewal payments outside the 48-hour window in Section
+            4.
+          </li>
+          <li>Lifetime plan purchases more than 14 days after purchase.</li>
+          <li>
+            Accounts suspended or terminated for violation of the Terms and
+            Conditions.
+          </li>
+          <li>
+            Purchases made through third-party platforms or resellers; request
+            refunds via the platform of purchase.
+          </li>
+        </ul>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={CreditCardIcon} id="r-5-9" title="Chargebacks">
+        <p>
+          Please contact us before initiating a chargeback with your bank or
+          card provider; chargebacks carry significant fees and administrative
+          burden and are usually slower to resolve than contacting us directly.
+          If a chargeback is filed against a valid charge, we may suspend your
+          account pending resolution.
+        </p>
+      </LegalSectionCard>
+
+      <LegalSectionCard icon={Mail01Icon} id="r-5-10" title="Contact">
+        <p>
+          Content Clicks LLC
+          <br />
+          Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
+          Sharjah, UAE.
+          <br />
+          Email: <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
         </p>
       </LegalSectionCard>
     </>
