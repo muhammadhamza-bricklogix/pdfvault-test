@@ -13,7 +13,7 @@ import {
 } from "react";
 
 import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
-import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
   requestPaywall,
@@ -380,27 +380,37 @@ export function UploadWorkspace({
       // paywall BEFORE `uploadAsPdf` so we don't burn a backend
       // conversion call for a user who can't download the result, and
       // don't flash a misleading "Converting to PDF" toast on a request
-      // that's about to hit the paywall. The paywall renders a blurred
-      // preview of the file the user just picked ("here is your
-      // converted file — subscribe to download"). On payment success we
-      // fall through and run the real conversion.
-      if (requiresAuth && authLoaded && isSignedIn && !getEntitledSnapshot()) {
-        try {
-          const outcome = await requestPaywall({
-            filename: picked.name,
-            sourceExt: getExtension(picked.name),
-            targetExt: "pdf",
-          });
+      // that's about to hit the paywall.
+      //
+      // Use `ensureFreshEntitlement()` (not the raw snapshot) — the
+      // snapshot fails closed while `useSubscriptionQuery` hasn't
+      // resolved yet, and this call-site runs on the very first render
+      // after a post-signin auto-resume, well before the query lands.
+      // Trusting the snapshot here would open the paywall for an
+      // already-subscribed user until they navigate away and back.
+      if (requiresAuth && authLoaded && isSignedIn) {
+        const entitled = await ensureFreshEntitlement();
 
-          if (outcome !== "success") {
-            // User dismissed the paywall — silent bail-out.
-            return;
+        if (!entitled) {
+          try {
+            const outcome = await requestPaywall({
+              filename: picked.name,
+              sourceExt: getExtension(picked.name),
+              targetExt: "pdf",
+            });
+
+            if (outcome !== "success") {
+              // User dismissed the paywall — silent bail-out.
+              return;
+            }
+          } catch (err) {
+            if (
+              (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
+            ) {
+              return;
+            }
+            throw err;
           }
-        } catch (err) {
-          if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
-            return;
-          }
-          throw err;
         }
       }
 

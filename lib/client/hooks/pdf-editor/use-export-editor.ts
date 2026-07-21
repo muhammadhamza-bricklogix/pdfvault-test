@@ -5,7 +5,7 @@ import type { Canvas as FabricCanvas } from "fabric";
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef } from "react";
 
-import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
   requestPaywall,
@@ -198,7 +198,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       // CPU-heavy bake so the modal doesn't pop while the export
       // busy-spinner is grinding — and so cancelling the paywall doesn't
       // leave a "failed" toast on a build that never needed to run.
-      if (!getEntitledSnapshot()) {
+      // `ensureFreshEntitlement()` forces a network read when the
+      // snapshot is `false` (may be stale immediately post-signin
+      // before `useSubscriptionQuery` resolves) so we don't fire the
+      // paywall for an already-subscribed user.
+      const entitled = await ensureFreshEntitlement();
+
+      if (!entitled) {
         const outcome = await requestPaywall();
 
         if (outcome !== "success") {

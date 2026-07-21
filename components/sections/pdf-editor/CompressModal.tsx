@@ -15,7 +15,7 @@ import {
 } from "@heroui/react";
 import { useState } from "react";
 
-import { getEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
   requestPaywall,
@@ -110,9 +110,14 @@ export function CompressModal() {
     }
 
     // Paywall gate — fires BEFORE the CPU-heavy mutation so the modal
-    // doesn't stack on the compress busy-state. Axios interceptor is
-    // the safety net for stale entitlement snapshots.
-    if (!getEntitledSnapshot()) {
+    // doesn't stack on the compress busy-state. `ensureFreshEntitlement`
+    // forces a network read when the snapshot is `false` — otherwise a
+    // freshly-signed-in user whose subscription query hasn't landed
+    // yet would hit the paywall despite being subscribed. Axios
+    // interceptor stays as the safety net for stale snapshots later.
+    const entitled = await ensureFreshEntitlement();
+
+    if (!entitled) {
       const outcome = await requestPaywall();
 
       if (outcome !== "success") {
