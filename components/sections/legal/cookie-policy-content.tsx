@@ -110,7 +110,7 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Essential for the Service to function; they cannot be disabled. They
-          include authentication, security, and bot-protection cookies.
+          include authentication and security cookies.
         </p>
         <CookieTable
           rows={[
@@ -126,20 +126,6 @@ export function CookiePolicyContent() {
               provider: "Clerk (authentication)",
               purpose:
                 "Authentication / session token used to keep you signed in.",
-              expiry: "Session",
-            },
-            {
-              name: "__cf_bm",
-              provider: "Cloudflare",
-              purpose:
-                "Bot-management cookie used to distinguish legitimate visitors from automated traffic.",
-              expiry: "30 minutes",
-            },
-            {
-              name: "_cfuvid",
-              provider: "Cloudflare",
-              purpose:
-                "Supports rate-limiting and abuse prevention alongside __cf_bm.",
               expiry: "Session",
             },
           ]}
@@ -303,10 +289,10 @@ export function CookiePolicyContent() {
       >
         <p>
           Some third-party services we use may set their own cookies, including
-          Clerk (authentication), Cloudflare (security and bot protection),
-          payment processors (fraud prevention during checkout), and Google LLC.
-          These providers&rsquo; own privacy and cookie policies apply to their
-          processing.
+          Clerk (authentication), Adyen (fraud prevention during checkout),
+          GoDaddy (hosting and email), Zendesk (customer support), CloudConvert
+          (file conversion), and Google LLC (analytics). These providers&rsquo;
+          own privacy and cookie policies apply to their processing.
         </p>
       </LegalSectionCard>
 

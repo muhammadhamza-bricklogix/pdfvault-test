@@ -11,10 +11,7 @@ export const metadata: Metadata = {
 
 export default function DoNotSellPage() {
   return (
-    <PolicyPageShell
-      description="Your rights under CCPA/CPRA and similar state laws — opt out of sale or sharing."
-      title="Do Not Sell or Share My Personal Information"
-    >
+    <PolicyPageShell title="Do Not Sell or Share My Personal Information">
       <DoNotSellContent />
     </PolicyPageShell>
   );

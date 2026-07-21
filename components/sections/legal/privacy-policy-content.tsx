@@ -107,11 +107,7 @@ export function PrivacyPolicyContent() {
           Files you upload are processed to deliver the feature you request and
           are not retained beyond the processing session unless you explicitly
           save them to your account. If you save files to your account, we store
-          them until you delete them or close your account. If you use AI
-          features (such as the AI Summarizer), the content of the relevant file
-          is processed; including, where applicable, by third-party AI providers
-          under contractual confidentiality obligations; solely to generate the
-          output you request. We do not use your files to train AI models.
+          them until you delete them or close your account.
         </p>
       </LegalSectionCard>
 
@@ -170,8 +166,9 @@ export function PrivacyPolicyContent() {
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
             Service providers: payment processors [Adyen], hosting and email
-            providers [GoDaddy], and customer support tools [Zendesk],
-            contractually bound to protect your data.
+            providers [GoDaddy], customer support tools [Zendesk], and file
+            conversion providers [CloudConvert], contractually bound to protect
+            your data.
           </li>
           <li>
             Analytics providers (e.g., Google Analytics), using pseudonymized
@@ -186,7 +183,7 @@ export function PrivacyPolicyContent() {
           </li>
         </ul>
         <p className="mt-3">
-          <strong>Note:</strong> some sharing via cookies for analytics or
+          <strong>Note: </strong> some sharing via cookies for analytics or
           advertising may qualify as a &ldquo;sale&rdquo; or
           &ldquo;sharing&rdquo; under certain US state laws even without
           payment; see Section 10.

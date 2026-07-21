@@ -171,9 +171,8 @@ export function DoNotSellContent() {
           sensitive personal information only as reasonably necessary and
           proportionate to perform the service the consumer requested. Because
           we process uploaded file content solely to deliver the specific tool a
-          user invokes (for example, converting, compressing, editing, or
-          summarizing that file), and do not use file content to train AI
-          models, infer characteristics about users, or share it for
+          user invokes (for example, converting, compressing, or editing that
+          file), and do not infer characteristics about users or share it for
           advertising, this exception applies and a separate limitation
           mechanism is not currently required.
         </p>

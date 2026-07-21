@@ -133,7 +133,8 @@ export function TermsAndConditionsContent() {
         <p className="mt-3">
           Unless stated otherwise, fees are exclusive of applicable taxes, which
           will be added where required by law. We do not store full payment card
-          details; payments are processed by third-party payment processors.
+          details; payments are processed by our third-party payment processor
+          [Adyen].
         </p>
       </LegalSectionCard>
 
@@ -225,7 +226,9 @@ export function TermsAndConditionsContent() {
       >
         <p>
           The Service may contain links to, or integrate with, third-party
-          websites and services (including payment processors and AI providers).
+          websites and services (including payment processors [Adyen], hosting
+          and email providers [GoDaddy], customer support tools [Zendesk],
+          authentication [Clerk], and file conversion providers [CloudConvert]).
           We are not responsible for third-party services, and your use of them
           is governed by their own terms and privacy policies.
         </p>
