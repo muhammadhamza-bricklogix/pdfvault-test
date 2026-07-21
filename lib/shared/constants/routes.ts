@@ -3,6 +3,7 @@ export const ROUTES = {
     SIGN_IN: "/sign-in",
     SIGN_UP: "/sign-up",
     SSO_CALLBACK: "/sso-callback",
+    FORGOT_PASSWORD: "/forgot-password",
   },
   PUBLIC: {
     HOME: "/",

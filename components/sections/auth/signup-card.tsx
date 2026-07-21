@@ -356,16 +356,14 @@ export function SignupCard() {
 
           <div className="mx-[5px] mt-[30px] grid grid-cols-[1fr_auto_1fr] items-center gap-4">
             <span className="h-px bg-[#9d9d9d]" />
-            <span className="text-[16px] text-[#9d9d9d]">
-              Or sign in with email
-            </span>
+            <span className="text-[16px] text-[#9d9d9d]">OR</span>
             <span className="h-px bg-[#9d9d9d]" />
           </div>
 
           <form noValidate className="mt-[30px]" onSubmit={onSubmitCredentials}>
             <div>
               <label className={LABEL_CLASS} htmlFor={fullNameId}>
-                Your Fullname
+                Fullname
                 <span aria-hidden className="text-[#f12c23]">
                   *
                 </span>
@@ -392,7 +390,7 @@ export function SignupCard() {
 
             <div className="mt-[8px]">
               <label className={LABEL_CLASS} htmlFor={emailId}>
-                Your Registered Email
+                Email
                 <span aria-hidden className="text-[#f12c23]">
                   *
                 </span>

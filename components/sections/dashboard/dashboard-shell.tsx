@@ -201,9 +201,9 @@ function SidebarBody({
     <div className="flex h-full flex-col">
       <div className="px-5 pb-6 pt-6">
         <Link
-          aria-label="PDFVault dashboard"
+          aria-label="PDFVault home"
           className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2"
-          href={ROUTES.APP.DASHBOARD}
+          href={ROUTES.PUBLIC.HOME}
           onClick={onNavigate}
         >
           <PdfVaultLogo />
@@ -236,7 +236,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const isMobile = useIsMobile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  console.log("[DashboardShell] render — pathname:", pathname, "isMobile:", isMobile);
+  console.log(
+    "[DashboardShell] render — pathname:",
+    pathname,
+    "isMobile:",
+    isMobile,
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -319,9 +324,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
           />
         </button>
         <Link
-          aria-label="PDFVault dashboard"
+          aria-label="PDFVault home"
           className="flex items-center"
-          href={ROUTES.APP.DASHBOARD}
+          href={ROUTES.PUBLIC.HOME}
         >
           <PdfVaultLogo />
         </Link>

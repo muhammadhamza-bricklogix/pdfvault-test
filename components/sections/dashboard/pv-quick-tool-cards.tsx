@@ -55,7 +55,7 @@ const ILLUSTRATION_HEIGHT = 84;
 
 const QUICK_TOOLS: readonly QuickTool[] = [
   {
-    title: "Convert PDF",
+    title: "PDF to Word",
     description: "PDF → Word, Excel, image, and more.",
     href: "/convert/pdf-to-word",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Convert%20PDF.svg`,
