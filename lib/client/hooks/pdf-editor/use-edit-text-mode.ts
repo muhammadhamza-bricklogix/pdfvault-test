@@ -333,6 +333,37 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           width: Math.max(8, block.width),
         } as any) as Textbox;
 
+        // Fabric Textbox wraps whenever its natural rendered width
+        // exceeds `width`. `block.width` is pdf.js's advance width; the
+        // browser canvas measures the freshly-loaded embedded font
+        // ~1–5% wider than the advance, so headings and single-token
+        // runs silently wrap onto a hidden second line INSIDE the box.
+        // Because every overlay sits at its source coordinates, that
+        // hidden line paints over the next run below → the "text
+        // squeezed / stacked when Edit activates" user report
+        // (2026-07-22). Bump `width` past the natural rendered width so
+        // the string always fits on a single visual line. Whiteout
+        // + export spacing keep using the pdf.js advance via
+        // `originalWidth` / `pdfTextWidth`, so the merge pipeline is
+        // untouched. Try/catch so a Fabric API mismatch on any single
+        // block falls back to today's behaviour instead of throwing.
+        try {
+          const natural =
+            typeof (textObj as any).calcTextWidth === "function"
+              ? ((textObj as any).calcTextWidth() as number)
+              : 0;
+
+          if (Number.isFinite(natural) && natural > block.width) {
+            textObj.set(
+              "width",
+              Math.max(textObj.width ?? 0, Math.ceil(natural) + 2),
+            );
+            (textObj as any).initDimensions?.();
+          }
+        } catch {
+          // fall through — no worse than the pre-fix behaviour
+        }
+
         fabricCanvas.add(textObj);
       }
 
