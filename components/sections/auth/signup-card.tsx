@@ -363,7 +363,7 @@ export function SignupCard() {
           <form noValidate className="mt-[30px]" onSubmit={onSubmitCredentials}>
             <div>
               <label className={LABEL_CLASS} htmlFor={fullNameId}>
-                Fullname
+                Name
                 <span aria-hidden className="text-[#f12c23]">
                   *
                 </span>
@@ -375,7 +375,7 @@ export function SignupCard() {
                 className={INPUT_CLASS}
                 id={fullNameId}
                 name="fullName"
-                placeholder="John Doe"
+                placeholder="Enter Your Name"
                 spellCheck={false}
                 type="text"
                 value={fullName}
@@ -403,7 +403,7 @@ export function SignupCard() {
                 id={emailId}
                 inputMode="email"
                 name="email"
-                placeholder="john.doe@gmail.com"
+                placeholder="Enter Your Email"
                 spellCheck={false}
                 type="email"
                 value={email}
@@ -418,7 +418,7 @@ export function SignupCard() {
 
             <div className="mt-[8px]">
               <label className={LABEL_CLASS} htmlFor={passwordId}>
-                Your Password
+                Password
                 <span aria-hidden className="text-[#f12c23]">
                   *
                 </span>
@@ -432,7 +432,7 @@ export function SignupCard() {
                   id={passwordId}
                   minLength={8}
                   name="password"
-                  placeholder="********"
+                  placeholder="Enter Your Password"
                   type={passwordRevealed ? "text" : "password"}
                   value={password}
                   onBlur={() => setPasswordFocused(false)}
