@@ -91,6 +91,7 @@ type FieldErrors = {
   fullName?: string;
   password?: string;
   code?: string;
+  terms?: string;
 };
 
 const INPUT_CLASS =
@@ -111,6 +112,7 @@ export function SignupCard() {
   const [passwordRevealed, setPasswordRevealed] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [code, setCode] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -121,6 +123,7 @@ export function SignupCard() {
   const emailId = useId();
   const passwordId = useId();
   const codeId = useId();
+  const termsId = useId();
   const statusId = useId();
 
   const afterSignUpPath = useMemo(
@@ -168,6 +171,10 @@ export function SignupCard() {
     if (!strength.allPassed) {
       nextErrors.password =
         "Password must be at least 8 characters and include upper, lower, number, and a symbol.";
+    }
+    if (!agreedToTerms) {
+      nextErrors.terms =
+        "You must agree to the Terms & Conditions to create an account.";
     }
 
     setNotice(null);
@@ -468,6 +475,51 @@ export function SignupCard() {
                     );
                   })}
                 </ul>
+              ) : null}
+            </div>
+
+            <div className="mt-4">
+              <label
+                className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-5 text-[#5f5f5f]"
+                htmlFor={termsId}
+              >
+                <input
+                  aria-describedby={
+                    errors.terms ? `${termsId}-error` : undefined
+                  }
+                  aria-invalid={errors.terms ? true : undefined}
+                  checked={agreedToTerms}
+                  className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[#f12c23]"
+                  id={termsId}
+                  name="agreedToTerms"
+                  type="checkbox"
+                  onChange={(event) => {
+                    setAgreedToTerms(event.target.checked);
+                    if (event.target.checked && errors.terms) {
+                      setErrors((prev) => ({ ...prev, terms: undefined }));
+                    }
+                  }}
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link
+                    className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+                    href={ROUTES.LEGAL.TERMS}
+                    target="_blank"
+                  >
+                    Terms &amp; Conditions
+                  </Link>
+                  .
+                </span>
+              </label>
+              {errors.terms ? (
+                <p
+                  className="mt-1.5 text-[13px] text-[#f12c23]"
+                  id={`${termsId}-error`}
+                  role="alert"
+                >
+                  {errors.terms}
+                </p>
               ) : null}
             </div>
 
