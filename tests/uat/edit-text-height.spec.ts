@@ -82,7 +82,7 @@ test("Edit-Text overlays match source paint (no size growth, no wrap)", async ({
       .getObjects()
       .filter((o) => (o as any).editorType === "editModeText")
       .map((o) => {
-        const any = o as {
+        const any = o as unknown as {
           text: string;
           fontSize: number;
           height: number;
@@ -137,11 +137,16 @@ test("Edit-Text overlays match source paint (no size growth, no wrap)", async ({
     "no extracted overlay should render on more than one line",
   ).toBe(0);
 
-  // No visible size growth — the 2026-07-23 lineHeight bug. The Fabric
-  // rendered height should sit within 4 % of the source cap-height for
-  // upright text. Allow a small slack for antialias rounding.
+  // Bounding-box vs. drawn-glyph height. Fabric reports
+  // `object.height = fontSize × _fontSizeMult × lineHeight`; the
+  // hardcoded `_fontSizeMult = 1.13` accounts for descender + top
+  // inset. The DRAWN glyphs are still painted at `fontSize`, so pdf.js
+  // and Fabric render the same visual size once `lineHeight: 1` is
+  // set. Guard: rendered height must not exceed `fontSize × 1.15`
+  // (13% Fabric ceiling + 2% antialias slack). Anything above that
+  // means someone reintroduced a non-1 lineHeight (2026-07-23 fix).
   const grew = overlays.filter(
-    (o) => o.renderedHeight > o.sourceHeight * 1.04,
+    (o) => o.renderedHeight > o.fontSize * 1.15,
   );
 
   if (grew.length > 0) {

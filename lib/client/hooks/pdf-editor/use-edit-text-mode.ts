@@ -352,24 +352,62 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         // Because every overlay sits at its source coordinates, that
         // hidden line paints over the next run below → the "text
         // squeezed / stacked when Edit activates" user report
-        // (2026-07-22). Bump `width` past the natural rendered width so
-        // the string always fits on a single visual line. Whiteout
-        // + export spacing keep using the pdf.js advance via
+        // (2026-07-22).
+        //
+        // 2026-07-23: the original fix here called `textObj.calcTextWidth()`
+        // to derive `natural`, but Fabric implements that method as
+        // `max(getLineWidth(i))` over the ALREADY-WRAPPED lines. When
+        // the string had already wrapped at `block.width`, the return
+        // value was ≤ block.width and the bump never fired. The
+        // Playwright probe `tests/uat/edit-text-height.spec.ts`
+        // reproduced this on `back-end-infrastructure.pdf`: 36 / 61
+        // overlays still wrapped despite the bump code being present.
+        //
+        // Fix: measure the raw un-wrapped string via a fresh
+        // `HTMLCanvasElement.getContext("2d").measureText()` using the
+        // same font stack we're about to render. That's independent of
+        // Fabric's wrap state and gives the true glyph-run width. We
+        // then bump `width` past that so the string fits on a single
+        // visual line.
+        //
+        // Whiteout + export spacing keep using the pdf.js advance via
         // `originalWidth` / `pdfTextWidth`, so the merge pipeline is
-        // untouched. Try/catch so a Fabric API mismatch on any single
+        // untouched. Try/catch so a canvas API mismatch on any single
         // block falls back to today's behaviour instead of throwing.
         try {
-          const natural =
-            typeof (textObj as any).calcTextWidth === "function"
-              ? ((textObj as any).calcTextWidth() as number)
-              : 0;
+          const measureCanvas = document.createElement("canvas");
+          const ctx = measureCanvas.getContext("2d");
 
-          if (Number.isFinite(natural) && natural > block.width) {
-            textObj.set(
-              "width",
-              Math.max(textObj.width ?? 0, Math.ceil(natural) + 2),
-            );
-            (textObj as any).initDimensions?.();
+          if (ctx) {
+            // Build a font shorthand identical to what Fabric will
+            // paint with. Order: style, weight, size (px), family.
+            const styleTok =
+              block.fontStyle && block.fontStyle !== "normal"
+                ? block.fontStyle
+                : "";
+            const weightTok =
+              block.fontWeight && block.fontWeight !== "normal"
+                ? String(block.fontWeight)
+                : "";
+
+            ctx.font = [
+              styleTok,
+              weightTok,
+              `${block.fontSize}px`,
+              block.fontFamily,
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            const natural = ctx.measureText(block.text).width;
+
+            if (Number.isFinite(natural) && natural > block.width) {
+              textObj.set(
+                "width",
+                Math.max(textObj.width ?? 0, Math.ceil(natural) + 2),
+              );
+              (textObj as any).initDimensions?.();
+            }
           }
         } catch {
           // fall through — no worse than the pre-fix behaviour
