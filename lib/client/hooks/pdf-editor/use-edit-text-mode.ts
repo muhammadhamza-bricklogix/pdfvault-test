@@ -305,6 +305,17 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           fontSize: block.fontSize,
           fontStyle: block.fontStyle,
           fontWeight: block.fontWeight,
+          // Match pdf.js's cap-height paint. Fabric Textbox defaults
+          // `lineHeight` to 1.16, so every extracted run visibly grew
+          // ~16% the moment Edit-Text activated — combined with the
+          // 2026-07-22 width bump, headings could still wrap to a
+          // second line because the taller-than-source glyphs pushed
+          // the last character over the box edge, and the user
+          // perceived it as "size changed on click." `lineHeight: 1`
+          // aligns the overlay's rendered baseline metrics with
+          // pdf.js's native paint. Merge pipeline unaffected — pdf-lib
+          // uses `fontSize` directly at export, never `lineHeight`.
+          lineHeight: 1,
           left,
           // Off-limits per CLAUDE.md — keep caching off.
           objectCaching: false,

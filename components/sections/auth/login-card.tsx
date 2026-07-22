@@ -479,7 +479,7 @@ export function LoginCard() {
               id={emailId}
               inputMode="email"
               name="email"
-              placeholder="john.doe@gmail.com"
+              placeholder="Enter Your Email"
               spellCheck={false}
               type="email"
               value={email}
@@ -512,7 +512,7 @@ export function LoginCard() {
                 className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
                 id={passwordId}
                 name="password"
-                placeholder="••••••••"
+                placeholder="Enter Your Password"
                 type={passwordRevealed ? "text" : "password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}

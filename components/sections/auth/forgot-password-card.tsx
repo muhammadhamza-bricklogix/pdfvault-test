@@ -363,7 +363,7 @@ export function ForgotPasswordCard() {
             id={emailId}
             inputMode="email"
             name="email"
-            placeholder="john.doe@gmail.com"
+            placeholder="Enter Your Email"
             spellCheck={false}
             type="email"
             value={email}
@@ -444,7 +444,7 @@ export function ForgotPasswordCard() {
               id={passwordId}
               minLength={8}
               name="password"
-              placeholder="********"
+              placeholder="Enter Your New Password"
               type={passwordRevealed ? "text" : "password"}
               value={password}
               onBlur={() => setPasswordFocused(false)}
