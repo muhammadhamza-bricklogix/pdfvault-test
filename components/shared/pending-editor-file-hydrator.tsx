@@ -121,6 +121,22 @@ export function PendingEditorFileHydrator() {
       clearFile();
     }
 
+    // Signed-in redirect (product decision 2026-07-23): when a signed-in
+    // user lands on the composer with a specific tool but no doc id,
+    // send them to the dashboard's document picker so they can pick
+    // from their library instead of re-uploading. Signed-out users
+    // keep the composer drop-zone since they have no library to pick
+    // from. Only fires for tools (not bare `?fresh=1` or `?export=`
+    // returns) so users who click "PDF Composer" itself still land on
+    // the editor.
+    if (tool && !docId && isSignedIn) {
+      const returnTo = `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
+
+      window.location.assign(returnTo);
+
+      return;
+    }
+
     if (tool && AUTH_GATED_TOOLS.has(tool) && !isSignedIn) {
       // Preserve the tool slug in the return URL so we land back in the
       // same launch flow after sign-in.
@@ -173,6 +189,16 @@ export function PendingEditorFileHydrator() {
     ranRef.current = true;
 
     let cancelled = false;
+
+    // Flag the shell into loading state for the duration of the IDB
+    // probe + any save-first upload it triggers. Without this, a URL
+    // like `/pdf-composer?fresh=1&tool=X` with an empty IDB would
+    // strand the user on <EditorLoadingShell /> forever (PdfEditorShell
+    // used to gate the loader on the URL alone). Bounding the loader
+    // to this effect means the moment we know there's nothing to
+    // restore we drop to the drop-zone. Every code path below MUST
+    // flip this back to false — the outer try/finally guarantees that.
+    setIsRestoringSession(true);
 
     void (async () => {
       try {
@@ -285,6 +311,14 @@ export function PendingEditorFileHydrator() {
         await clearPendingEditorFile();
       } catch (err) {
         logger.warn("pending editor file hydrate failed", err);
+      } finally {
+        // Clear the restoring flag no matter which path we took
+        // (fresh-entry cleanup, empty-IDB, non-PDF skip, currentFile
+        // present, save-first success/failure, or normal rehydrate).
+        // Without this the shell sits on <EditorLoadingShell /> even
+        // though the hydrator has nothing left to do — the exact
+        // "stuck loading on /pdf-composer?fresh=1&tool=X" report.
+        if (!cancelled) setIsRestoringSession(false);
       }
     })();
 

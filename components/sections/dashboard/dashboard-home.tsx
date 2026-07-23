@@ -5,8 +5,8 @@ import type { Document } from "@/lib/shared/types/documents.types";
 
 import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
@@ -17,6 +17,7 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
 import { DeleteDocumentModal } from "./delete-document-modal";
+import { DocPickerModal } from "./doc-picker-modal";
 import { PendingConversionBanner } from "./pending-conversion-banner";
 import { PvFileTable } from "./pv-file-table";
 import { documentToFileRow } from "./pv-mock-my-pdfs";
@@ -24,6 +25,20 @@ import { PvPageHeader, UploadPdfButton } from "./pv-page-header";
 import { PvQuickToolCards } from "./pv-quick-tool-cards";
 import { PvSearchToolbar } from "./pv-search-toolbar";
 import { RenameDocumentModal } from "./rename-document-modal";
+
+// Human-readable labels for the composer tool slugs that can arrive via
+// `?openPicker=<slug>` on the dashboard URL. Used only for the picker
+// modal's heading — the slug itself is the source of truth downstream.
+const TOOL_LABELS: Record<string, string> = {
+  compress: "Compress PDF",
+  password: "Password Protect",
+  unlock: "Unlock PDF",
+  manage: "Organize Pages",
+  split: "Split & Extract Pages",
+  watermark: "Sign & Watermark",
+  "extract-images": "Extract Images",
+  flatten: "Remove Annotations",
+};
 
 /**
  * My PDFs — the page inside the AppShell's white card. Composes the header,
@@ -49,6 +64,35 @@ export function DashboardHome() {
   const queryClient = useQueryClient();
   const { user } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // `?openPicker=<slug>` arrives from the composer's signed-in redirect
+  // (see PendingEditorFileHydrator Step 1). Open the DocPickerModal for
+  // that tool once, then strip the param from the URL so a refresh
+  // doesn't re-open it. React's "adjust state during render" pattern
+  // (see rename-document-modal.tsx) avoids the set-state-in-effect
+  // lint + the flash a mount-effect would cause.
+  const openPickerParam = searchParams.get("openPicker");
+  const [pickerTool, setPickerTool] = useState<string | null>(openPickerParam);
+  const [consumedPickerParam, setConsumedPickerParam] = useState<string | null>(
+    openPickerParam,
+  );
+
+  if (openPickerParam !== consumedPickerParam) {
+    setConsumedPickerParam(openPickerParam);
+    if (openPickerParam) setPickerTool(openPickerParam);
+  }
+
+  useEffect(() => {
+    if (!openPickerParam) return;
+    const next = new URLSearchParams(searchParams.toString());
+
+    next.delete("openPicker");
+    const suffix = next.toString();
+
+    router.replace(suffix ? `${pathname}?${suffix}` : pathname);
+  }, [openPickerParam, pathname, router, searchParams]);
 
   const items: readonly Document[] = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
@@ -125,6 +169,12 @@ export function DashboardHome() {
       <BulkDeleteDocumentsModal
         documents={bulkDeleteTargets}
         onClose={() => setBulkDeleteTargets(null)}
+      />
+      <DocPickerModal
+        isOpen={pickerTool !== null}
+        toolLabel={pickerTool ? (TOOL_LABELS[pickerTool] ?? "Tool") : null}
+        toolSlug={pickerTool}
+        onClose={() => setPickerTool(null)}
       />
       <VersionHistoryModal
         documentId={historyTarget?.id ?? null}
