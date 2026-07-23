@@ -17,8 +17,9 @@ import { toast } from "@/lib/shared/utils/toast";
  */
 export async function saveBeforeAction(
   description = "Saving your edits…",
+  force = false,
 ): Promise<boolean> {
-  if (!usePdfEditorStore.getState().hasUnsavedChanges) return true;
+  if (!force && !usePdfEditorStore.getState().hasUnsavedChanges) return true;
 
   const loadingKey = toast.loading({
     title: "Saving…",
@@ -29,7 +30,7 @@ export async function saveBeforeAction(
     const { ok } = await new Promise<{ ok: boolean }>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { onComplete: resolve },
+          detail: { force, onComplete: resolve },
         }),
       );
     });

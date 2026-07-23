@@ -5,6 +5,7 @@ import type { Canvas } from "fabric";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Modal, Tabs } from "@heroui/react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { FileUpload } from "@/components/ui/file-upload/file-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -213,7 +214,9 @@ function SignatureModalContent({
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
 
   const handleTabChange = useCallback((key: React.Key) => {
     setActiveTab(String(key));
@@ -254,8 +257,21 @@ function SignatureModalContent({
     fabricCanvas.renderAll();
 
     pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+    // Persist the signature into the page map immediately so the next save
+    // (including the auto-save before Version History) cannot miss it if the
+    // generic dirty-flag listener fails to fire (reported 2026-07-23).
+    saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+    markDocumentDirty();
     onClose();
-  }, [signatureDataUrl, fabricCanvas, currentPage, pushHistory, onClose]);
+  }, [
+    signatureDataUrl,
+    fabricCanvas,
+    currentPage,
+    pushHistory,
+    saveFabricJson,
+    markDocumentDirty,
+    onClose,
+  ]);
 
   return (
     <>

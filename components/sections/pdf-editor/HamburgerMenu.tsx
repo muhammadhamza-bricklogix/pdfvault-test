@@ -196,11 +196,14 @@ export function HamburgerMenu() {
 
           return;
         }
-        // Persist any unsaved draw/signature edits before opening history so
-        // the latest snapshot and the "Current" preview include them.
+        // Persist the current canvas state before opening history so the
+        // latest snapshot and the "Current" preview include recent draw /
+        // signature edits. We force the save even when the dirty flag is
+        // not set, because some tool paths don't reliably flip it.
         void (async () => {
           const ok = await saveBeforeAction(
             "Saving your edits before opening version history.",
+            true,
           );
 
           if (ok) setIsVersionsOpen(true);

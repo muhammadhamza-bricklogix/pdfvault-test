@@ -11,6 +11,7 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionDetail = {
+  force?: boolean;
   onComplete: (result: { ok: boolean }) => void;
 };
 
@@ -149,6 +150,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
 
       const result = await persistEditorDocument({
         fabricCanvas: fabricRef.current,
+        force: detail?.force,
       });
 
       if (result.ok) {

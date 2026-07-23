@@ -4,6 +4,7 @@ import type { Canvas } from "fabric";
 
 import { useEffect } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 type UseDrawToolParams = {
@@ -12,6 +13,9 @@ type UseDrawToolParams = {
 
 export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
+  const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
 
   useEffect(() => {
@@ -41,6 +45,13 @@ export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
     };
 
     const onPathCreated = () => {
+      // Persist the new path into the store immediately so the save pipeline
+      // always sees it, even if the dirty-flag listener is skipped for any
+      // reason (reported 2026-07-23: draw strokes missing from saved versions).
+      if (fabricCanvas) {
+        saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+        markDocumentDirty();
+      }
       setActiveTool("select");
     };
 
