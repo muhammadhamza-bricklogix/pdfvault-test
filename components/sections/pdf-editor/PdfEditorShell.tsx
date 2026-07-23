@@ -64,10 +64,10 @@ function UploadScreenHeader() {
       >
         <NextImage
           alt="PDFVault"
-          className="h-[26px] w-auto object-contain"
-          height={26}
+          className="h-[32px] w-auto object-contain"
+          height={32}
           src="/landing/logo-with-text.png"
-          width={104}
+          width={128}
         />
       </Link>
     </header>
