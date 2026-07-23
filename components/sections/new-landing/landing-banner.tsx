@@ -1,3 +1,5 @@
+import { Show } from "@clerk/nextjs";
+
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 /**
@@ -126,13 +128,24 @@ export function LandingBanner() {
             <h2 className="max-w-[560px] text-[clamp(30px,4vw,48px)] font-bold leading-[1.08] tracking-[-0.02em] text-white">
               Edit and manage PDF documents with ease
             </h2>
-            <a
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[var(--pv-gray-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              href={ROUTES.AUTH.SIGN_UP}
-            >
-              Create your free vault
-              <ArrowIcon />
-            </a>
+            <Show when="signed-out">
+              <a
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[var(--pv-gray-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                href={ROUTES.AUTH.SIGN_UP}
+              >
+                Create your free vault
+                <ArrowIcon />
+              </a>
+            </Show>
+            <Show when="signed-in">
+              <a
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[var(--pv-gray-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                href={ROUTES.APP.DASHBOARD}
+              >
+                Manage your PDFs
+                <ArrowIcon />
+              </a>
+            </Show>
           </div>
         </div>
       </div>
