@@ -12,6 +12,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -47,6 +48,7 @@ const BRIDGE_EVENTS = {
 } as const;
 
 export function HamburgerMenu() {
+  const { userId } = useAuth();
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -357,7 +359,7 @@ export function HamburgerMenu() {
           // store. Relying on `clearFile()` to bounce the loader effect
           // wasn't firing deterministically for every user (QA report
           // 2026-07-23: "restore succeeds but I have to refresh").
-          void reloadEditorFromDocument(restored).catch((err) => {
+          void reloadEditorFromDocument(restored, userId).catch((err) => {
             toast.error({
               title: "Couldn't reload restored version",
               description:

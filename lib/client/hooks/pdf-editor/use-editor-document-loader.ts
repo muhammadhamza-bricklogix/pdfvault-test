@@ -388,12 +388,36 @@ function rehydrateEditorState(editorState: string | null) {
  * refire deterministically after `clearFile()` on the same `?id=`
  * (reported 2026-07-23: "restore succeeds but I have to refresh").
  */
-export async function reloadEditorFromDocument(doc: Document): Promise<void> {
+export async function reloadEditorFromDocument(
+  doc: Document,
+  userId?: string | null,
+): Promise<void> {
   const res = await fetch(doc.url);
 
   if (!res.ok) throw new Error(`Failed to fetch restored PDF (${res.status})`);
   const blob = await res.blob();
   const nextFile = new File([blob], doc.filename, { type: doc.contentType });
+
+  // Write-through to IDB with the restored bytes + metadata. Without this,
+  // a subsequent open of the same doc could serve the PRE-restore blob
+  // from the offline cache (reported 2026-07-23: "reopen after restore
+  // shows the old edited version until I refresh"). Best-effort — a
+  // failure here shouldn't block the in-session swap that follows.
+  if (userId) {
+    try {
+      await Promise.all([
+        putPdfBytes(userId, {
+          id: doc.id,
+          blob,
+          filename: doc.filename,
+          contentType: doc.contentType,
+        }),
+        upsertCachedDocument(userId, doc),
+      ]);
+    } catch (err) {
+      logger.warn?.("[reloadEditorFromDocument] IDB write-through failed", err);
+    }
+  }
 
   // Wipe overlay/history state first so stale edits don't paint on top of
   // the restored bytes. `clearFile` also resets `file` to null; that null
