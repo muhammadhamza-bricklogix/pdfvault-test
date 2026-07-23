@@ -75,12 +75,16 @@ const VECTOR_TYPES = new Set([
   "i-text",
   "itext",
   "line",
+  "path",
   "rect",
   "text",
   "textbox",
   "triangle",
 ]);
-// "path" and "image" go through raster (PNG at multiplier:3)
+// "image" (signature stamps, uploaded PNGs) still goes through raster
+// (PNG at multiplier:3) — pdf-lib can't stroke raw image data as vectors.
+// "path" is vectorizable via drawPath → drawSvgPath (2026-07-23 fix). The
+// raster fallback exists for anything drawVectorObject returns false on.
 
 function isVectorizable(obj: FabricObj): boolean {
   // Annotation glyphs contain arbitrary Unicode. pdf-lib's `drawText` uses
