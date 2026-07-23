@@ -9,6 +9,7 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   ArrowUp01Icon,
+  Cancel01Icon,
   CircleIcon,
   LayerBringForwardIcon,
   LayerBringToFrontIcon,
@@ -805,9 +806,14 @@ export function ShapePropertiesContent({
       <>
         <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
           <Surface
-            className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+            className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
             variant="default"
           >
+            <FloatingPanelCloseButton
+              onPress={() =>
+                usePdfEditorStore.getState().setActiveTool("select")
+              }
+            />
             {body}
           </Surface>
         </aside>
@@ -835,16 +841,34 @@ export function ShapePropertiesContent({
   );
 }
 
+function FloatingPanelCloseButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Button
+      isIconOnly
+      aria-label="Close panel"
+      className="!absolute !right-2 !top-2 !size-7 !min-w-0 !rounded-full !p-0 text-default-500 hover:!bg-default-100 hover:!text-default-800"
+      variant="tertiary"
+      onPress={onPress}
+    >
+      <HugeiconsIcon icon={Cancel01Icon} size={14} />
+    </Button>
+  );
+}
+
 export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
+  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
+
+  const closePanel = () => setActiveTool("select");
 
   if (activeTool === "watermark") {
     return (
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+          className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
+          <FloatingPanelCloseButton onPress={closePanel} />
           <WatermarkPropertiesContent />
         </Surface>
       </aside>
@@ -855,9 +879,10 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     return (
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+          className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
+          <FloatingPanelCloseButton onPress={closePanel} />
           <BackgroundImagePropertiesContent />
         </Surface>
       </aside>
@@ -868,9 +893,10 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     return (
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="w-fit max-w-full rounded-xl p-4 shadow-xl ring-1 ring-default-200/70"
+          className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
+          <FloatingPanelCloseButton onPress={closePanel} />
           <HighlightPropertiesContent />
         </Surface>
       </aside>
