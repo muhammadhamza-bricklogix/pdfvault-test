@@ -8,6 +8,7 @@ import {
   BankIcon,
   Cancel01Icon,
   CheckmarkBadge01Icon,
+  Home01Icon,
   Menu01Icon,
   MenuSquareIcon,
 } from "@hugeicons/core-free-icons";
@@ -40,6 +41,15 @@ type NavItem = {
 const DASHBOARD_TOOLS_PATH = "/dashboard/tools";
 
 const NAV_ITEMS: readonly NavItem[] = [
+  {
+    // Route back to the marketing / landing site. Users kept getting
+    // stuck inside the dashboard with no visible way back to the
+    // public home — the brand logo above only navigates in-app.
+    href: ROUTES.PUBLIC.HOME,
+    icon: Home01Icon,
+    isActive: () => false,
+    label: "Home",
+  },
   {
     href: ROUTES.APP.DASHBOARD,
     icon: BankIcon,
@@ -191,9 +201,9 @@ function SidebarBody({
     <div className="flex h-full flex-col">
       <div className="px-5 pb-6 pt-6">
         <Link
-          aria-label="PDFVault dashboard"
+          aria-label="PDFVault home"
           className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2"
-          href={ROUTES.APP.DASHBOARD}
+          href={ROUTES.PUBLIC.HOME}
           onClick={onNavigate}
         >
           <PdfVaultLogo />
@@ -226,7 +236,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const isMobile = useIsMobile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  console.log("[DashboardShell] render — pathname:", pathname, "isMobile:", isMobile);
+  console.log(
+    "[DashboardShell] render — pathname:",
+    pathname,
+    "isMobile:",
+    isMobile,
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -309,9 +324,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
           />
         </button>
         <Link
-          aria-label="PDFVault dashboard"
+          aria-label="PDFVault home"
           className="flex items-center"
-          href={ROUTES.APP.DASHBOARD}
+          href={ROUTES.PUBLIC.HOME}
         >
           <PdfVaultLogo />
         </Link>

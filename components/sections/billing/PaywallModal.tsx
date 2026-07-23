@@ -4,17 +4,18 @@ import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
 import { Modal } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import { setEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
 import {
   useCreateCheckoutIntentMutation,
-  useInvalidateSubscription,
   useSyncSubscriptionMutation,
 } from "@/lib/client/query/mutations/billing.mutation";
+import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
+import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -72,9 +73,18 @@ export function PaywallModal({
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("trial");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // When Solidgate reports a decline, we surface a "Try another card"
+  // affordance instead of leaving the user staring at the read-only
+  // "Payment declined" iframe. Bumping `retryKey` remounts the payment
+  // iframe; fetching a fresh CheckoutIntent gives Solidgate a new
+  // paymentIntent to attach the retry to (declined intents can be
+  // marked terminal on their side and won't accept a second attempt).
+  const [payFailed, setPayFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const [retryLoading, setRetryLoading] = useState(false);
   const createIntent = useCreateCheckoutIntentMutation();
-  const invalidateSubscription = useInvalidateSubscription();
   const syncSubscription = useSyncSubscriptionMutation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -102,6 +112,8 @@ export function PaywallModal({
     return () => {
       setIntent(null);
       setError(null);
+      setPayFailed(false);
+      setRetryKey(0);
     };
     // Intentionally depend only on `isOpen` — the mutation identity
     // would otherwise double-fire the intent request.
@@ -110,30 +122,107 @@ export function PaywallModal({
   const handleIframeSuccess = async (message?: {
     order?: { subscription_id?: string };
   }) => {
-    setEntitledSnapshot(true);
-
+    // Do NOT flip the entitlement snapshot optimistically on the iframe
+    // callback. Solidgate's `onSuccess` can fire client-side before the
+    // charge is confirmed server-side (declined-after-approval race,
+    // 3DS re-auth failures, etc.), so we'd previously flash "Payment
+    // received" and unlock premium tools for users whose card was never
+    // debited. Instead: sync with the backend, force a fresh
+    // subscription fetch, and only advance to the success step when the
+    // backend confirms `entitled === true`.
     const subscriptionId = message?.order?.subscription_id;
 
     try {
       await syncSubscription.mutateAsync(
         subscriptionId ? { subscriptionId } : {},
       );
+
+      // Force a fresh network fetch — `invalidateQueries` alone can
+      // race the modal close and let the snapshot stay at its last
+      // known value. `fetchQuery` guarantees we see the post-charge
+      // entitlement before we decide which step to render.
+      queryClient.removeQueries({ queryKey: billingKeys.subscription() });
+      const fresh = await queryClient.fetchQuery({
+        queryKey: billingKeys.subscription(),
+        queryFn: billingService.getSubscription,
+      });
+
+      if (!fresh?.entitled) {
+        logger.warn?.(
+          "Solidgate onSuccess fired but backend still reports entitled=false",
+          fresh,
+        );
+        setError(
+          "Payment couldn't be confirmed. If your card was charged, please refresh in a minute or email payments@pdfvault.ai.",
+        );
+
+        return;
+      }
+
+      // useSubscriptionQuery's mirror effect will flip the snapshot on
+      // the next tick — but the queued paywall action (onPaymentSuccess)
+      // runs immediately after this returns, so pre-set the snapshot
+      // here to avoid a one-tick lag where the retry still sees the
+      // old value. `setEntitledSnapshot` is imported lazily to keep
+      // the paths symmetrical — snapshot only ever flips true when the
+      // backend has confirmed entitlement.
+      const { setEntitledSnapshot } = await import(
+        "@/lib/client/hooks/billing/entitlement-cache"
+      );
+
+      setEntitledSnapshot(true);
+
+      toast.success({
+        title: "Payment received",
+        description: "Your access is unlocked.",
+      });
+      setStep("success");
     } catch (err) {
-      logger.warn?.("subscription sync after payment failed", err);
+      logger.error("subscription sync after payment failed", err);
+      setError(
+        "We received your payment attempt but couldn't verify it. Please refresh in a minute or email payments@pdfvault.ai.",
+      );
     }
-    void invalidateSubscription();
-    toast.success({
-      title: "Payment received",
-      description: "Your access is unlocked.",
-    });
-    setStep("success");
   };
 
   const handleIframeFail = () => {
+    setPayFailed(true);
     toast.error({
-      title: "Payment failed",
-      description: "Try a different card or method.",
+      title: "Payment declined",
+      description: "Your card wasn't charged. Try another card to retry.",
     });
+  };
+
+  const handleRetry = () => {
+    // Fresh CheckoutIntent for the retry — Solidgate marks the previous
+    // paymentIntent terminal after a decline, so re-mounting the iframe
+    // against the same intent just re-renders the "Payment declined"
+    // state. Bump retryKey to force a full PaymentForm remount, then
+    // load a new intent and drop the failed flag once it lands.
+    setRetryLoading(true);
+    setPayFailed(false);
+    createIntent.mutate(
+      { disclaimerVersion: DISCLAIMER_VERSION },
+      {
+        onSuccess: (fresh) => {
+          setIntent(fresh);
+          setRetryKey((k) => k + 1);
+          setRetryLoading(false);
+        },
+        onError: (err) => {
+          logger.error("checkout intent retry failed", err);
+          setRetryLoading(false);
+          setPayFailed(true);
+          toast.error({
+            title: "Couldn't start a new attempt",
+            description:
+              err instanceof Error
+                ? err.message
+                : "Please close this dialog and try again.",
+          });
+        },
+      },
+    );
   };
 
   // Fire only `onPaymentSuccess` here — usePaywall's own handler already
@@ -177,7 +266,11 @@ export function PaywallModal({
           ) : step === "pay" ? (
             <PayStep
               intent={intent}
+              payFailed={payFailed}
+              retryKey={retryKey}
+              retryLoading={retryLoading}
               onFail={handleIframeFail}
+              onRetry={handleRetry}
               onSuccess={handleIframeSuccess}
             />
           ) : (
@@ -315,10 +408,18 @@ function PayStep({
   intent,
   onSuccess,
   onFail,
+  payFailed,
+  retryKey,
+  retryLoading,
+  onRetry,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
   onFail: () => void;
+  payFailed: boolean;
+  retryKey: number;
+  retryLoading: boolean;
+  onRetry: () => void;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
@@ -383,7 +484,11 @@ function PayStep({
         </div>
 
         <div className="rounded-xl">
+          {/* `key` bumps on retry so the Solidgate iframe fully remounts
+              — otherwise the SDK holds onto its "Payment declined"
+              state internally and a second submit is a no-op. */}
           <PaymentForm
+            key={retryKey}
             merchantData={{
               merchant: intent.merchant,
               signature: intent.signature,
@@ -394,6 +499,29 @@ function PayStep({
             onSuccess={onSuccess}
           />
         </div>
+
+        {payFailed ? (
+          <div
+            aria-live="polite"
+            className="flex flex-col gap-2 rounded-xl border border-danger-200 bg-danger-50 p-4 text-[13px] text-danger-800 dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
+          >
+            <p className="font-semibold">
+              Your card was declined and hasn&apos;t been charged.
+            </p>
+            <p>
+              Try another card or contact your bank. You can re-enter details
+              below.
+            </p>
+            <button
+              className="mt-1 inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={retryLoading}
+              type="button"
+              onClick={onRetry}
+            >
+              {retryLoading ? "Preparing…" : "Try another card"}
+            </button>
+          </div>
+        ) : null}
 
         <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
           By continuing you agree to be charged {today} today, then {renew}{" "}

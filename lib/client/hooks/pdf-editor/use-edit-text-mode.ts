@@ -305,6 +305,17 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           fontSize: block.fontSize,
           fontStyle: block.fontStyle,
           fontWeight: block.fontWeight,
+          // Match pdf.js's cap-height paint. Fabric Textbox defaults
+          // `lineHeight` to 1.16, so every extracted run visibly grew
+          // ~16% the moment Edit-Text activated — combined with the
+          // 2026-07-22 width bump, headings could still wrap to a
+          // second line because the taller-than-source glyphs pushed
+          // the last character over the box edge, and the user
+          // perceived it as "size changed on click." `lineHeight: 1`
+          // aligns the overlay's rendered baseline metrics with
+          // pdf.js's native paint. Merge pipeline unaffected — pdf-lib
+          // uses `fontSize` directly at export, never `lineHeight`.
+          lineHeight: 1,
           left,
           // Off-limits per CLAUDE.md — keep caching off.
           objectCaching: false,
@@ -332,6 +343,75 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           top,
           width: Math.max(8, block.width),
         } as any) as Textbox;
+
+        // Fabric Textbox wraps whenever its natural rendered width
+        // exceeds `width`. `block.width` is pdf.js's advance width; the
+        // browser canvas measures the freshly-loaded embedded font
+        // ~1–5% wider than the advance, so headings and single-token
+        // runs silently wrap onto a hidden second line INSIDE the box.
+        // Because every overlay sits at its source coordinates, that
+        // hidden line paints over the next run below → the "text
+        // squeezed / stacked when Edit activates" user report
+        // (2026-07-22).
+        //
+        // 2026-07-23: the original fix here called `textObj.calcTextWidth()`
+        // to derive `natural`, but Fabric implements that method as
+        // `max(getLineWidth(i))` over the ALREADY-WRAPPED lines. When
+        // the string had already wrapped at `block.width`, the return
+        // value was ≤ block.width and the bump never fired. The
+        // Playwright probe `tests/uat/edit-text-height.spec.ts`
+        // reproduced this on `back-end-infrastructure.pdf`: 36 / 61
+        // overlays still wrapped despite the bump code being present.
+        //
+        // Fix: measure the raw un-wrapped string via a fresh
+        // `HTMLCanvasElement.getContext("2d").measureText()` using the
+        // same font stack we're about to render. That's independent of
+        // Fabric's wrap state and gives the true glyph-run width. We
+        // then bump `width` past that so the string fits on a single
+        // visual line.
+        //
+        // Whiteout + export spacing keep using the pdf.js advance via
+        // `originalWidth` / `pdfTextWidth`, so the merge pipeline is
+        // untouched. Try/catch so a canvas API mismatch on any single
+        // block falls back to today's behaviour instead of throwing.
+        try {
+          const measureCanvas = document.createElement("canvas");
+          const ctx = measureCanvas.getContext("2d");
+
+          if (ctx) {
+            // Build a font shorthand identical to what Fabric will
+            // paint with. Order: style, weight, size (px), family.
+            const styleTok =
+              block.fontStyle && block.fontStyle !== "normal"
+                ? block.fontStyle
+                : "";
+            const weightTok =
+              block.fontWeight && block.fontWeight !== "normal"
+                ? String(block.fontWeight)
+                : "";
+
+            ctx.font = [
+              styleTok,
+              weightTok,
+              `${block.fontSize}px`,
+              block.fontFamily,
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            const natural = ctx.measureText(block.text).width;
+
+            if (Number.isFinite(natural) && natural > block.width) {
+              textObj.set(
+                "width",
+                Math.max(textObj.width ?? 0, Math.ceil(natural) + 2),
+              );
+              (textObj as any).initDimensions?.();
+            }
+          }
+        } catch {
+          // fall through — no worse than the pre-fix behaviour
+        }
 
         fabricCanvas.add(textObj);
       }

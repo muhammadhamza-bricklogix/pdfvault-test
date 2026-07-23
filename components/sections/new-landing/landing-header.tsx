@@ -89,10 +89,10 @@ export function LandingHeader() {
               <Image
                 priority
                 alt="PDFVault"
-                className="h-[38px] w-auto object-contain sm:h-[44px]"
-                height={44}
+                className="h-[40px] w-auto object-contain sm:h-[46px]"
+                height={46}
                 src="/landing/logo-with-text.png"
-                width={176}
+                width={184}
               />
             </a>
 

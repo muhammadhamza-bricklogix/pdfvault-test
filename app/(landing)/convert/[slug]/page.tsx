@@ -56,10 +56,11 @@ export default async function ConvertPage({
           </div>
         </section>
         <section className="pb-20">
-          <div className="mx-auto w-full max-w-[1272px] px-6">
+          <div className="mx-auto w-full max-w-[880px] px-6">
             <UploadWorkspace
               acceptExtensions={route.accept}
               exportFormat={route.exportFormat}
+              variant="hero"
             />
           </div>
         </section>

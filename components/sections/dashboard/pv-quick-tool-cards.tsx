@@ -1,7 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
+
+import { DocPickerModal } from "./doc-picker-modal";
 
 interface QuickTool {
   title: string;
@@ -9,6 +14,23 @@ interface QuickTool {
   href: string;
   /** Public path to the illustration SVG. */
   illustrationSrc: string;
+}
+
+/**
+ * If the tile's href is `/pdf-composer?tool=<slug>`, return the slug
+ * so we can open the doc-picker modal instead of navigating to an
+ * empty composer. Composer entry (`?tool=` absent) and convert routes
+ * stay as plain Links.
+ */
+function extractComposerToolSlug(href: string): string | null {
+  if (!href.startsWith("/pdf-composer")) return null;
+  const qIdx = href.indexOf("?");
+
+  if (qIdx < 0) return null;
+  const params = new URLSearchParams(href.slice(qIdx + 1));
+  const tool = params.get("tool");
+
+  return tool && tool !== "editor" ? tool : null;
 }
 
 /**
@@ -33,7 +55,7 @@ const ILLUSTRATION_HEIGHT = 84;
 
 const QUICK_TOOLS: readonly QuickTool[] = [
   {
-    title: "Convert PDF",
+    title: "PDF to Word",
     description: "PDF → Word, Excel, image, and more.",
     href: "/convert/pdf-to-word",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Convert%20PDF.svg`,
@@ -70,12 +92,12 @@ const QUICK_TOOLS: readonly QuickTool[] = [
   },
 ];
 
-function QuickToolCard({ tool }: { tool: QuickTool }) {
+const CARD_CLASSNAME =
+  "group flex w-full items-center justify-between gap-4 overflow-hidden rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-5 py-4 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2";
+
+function CardContent({ tool }: { tool: QuickTool }) {
   return (
-    <Link
-      className="group flex items-center justify-between gap-4 overflow-hidden rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-5 py-4 transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2"
-      href={tool.href}
-    >
+    <>
       <div className="min-w-0">
         <p className="pv-heading text-[16px] font-semibold leading-snug text-[var(--pv-text-strong)]">
           {tool.title}
@@ -93,20 +115,64 @@ function QuickToolCard({ tool }: { tool: QuickTool }) {
           width={ILLUSTRATION_WIDTH}
         />
       </span>
+    </>
+  );
+}
+
+function QuickToolCard({
+  tool,
+  onOpenPicker,
+}: {
+  tool: QuickTool;
+  onOpenPicker: (slug: string, label: string) => void;
+}) {
+  const pickerSlug = extractComposerToolSlug(tool.href);
+
+  if (pickerSlug) {
+    return (
+      <button
+        className={CARD_CLASSNAME}
+        type="button"
+        onClick={() => onOpenPicker(pickerSlug, tool.title)}
+      >
+        <CardContent tool={tool} />
+      </button>
+    );
+  }
+
+  return (
+    <Link className={CARD_CLASSNAME} href={tool.href}>
+      <CardContent tool={tool} />
     </Link>
   );
 }
 
 export function PvQuickToolCards() {
+  const [picker, setPicker] = useState<{
+    slug: string;
+    label: string;
+  } | null>(null);
+
   return (
-    <section aria-label="Quick tools">
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {QUICK_TOOLS.map((tool) => (
-          <li key={tool.title}>
-            <QuickToolCard tool={tool} />
-          </li>
-        ))}
-      </ul>
-    </section>
+    <>
+      <section aria-label="Quick tools">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {QUICK_TOOLS.map((tool) => (
+            <li key={tool.title}>
+              <QuickToolCard
+                tool={tool}
+                onOpenPicker={(slug, label) => setPicker({ slug, label })}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
+      <DocPickerModal
+        isOpen={picker !== null}
+        toolLabel={picker?.label ?? null}
+        toolSlug={picker?.slug ?? null}
+        onClose={() => setPicker(null)}
+      />
+    </>
   );
 }

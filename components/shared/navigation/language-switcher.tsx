@@ -67,7 +67,10 @@ export function LanguageSwitcher() {
       >
         🌐 {current.short}
       </Button>
-      <Dropdown.Popover className="min-w-[140px]">
+      {/* Mounted at the bottom of the dashboard sidebar — force the
+          popover to open upward so the menu isn't clipped by the
+          viewport edge. */}
+      <Dropdown.Popover className="min-w-[140px]" placement="top">
         <Dropdown.Menu
           aria-label="Select language"
           selectedKeys={new Set([currentLang])}

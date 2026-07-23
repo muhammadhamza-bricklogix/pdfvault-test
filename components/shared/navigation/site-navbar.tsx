@@ -179,10 +179,10 @@ export function SiteNavbar() {
           <Image
             priority
             alt="PDFVault"
-            className="h-9 w-auto object-contain sm:h-10"
-            height={40}
+            className="h-[40px] w-auto object-contain sm:h-[46px]"
+            height={46}
             src="/landing/logo-with-text.png"
-            width={160}
+            width={184}
           />
         </Link>
 

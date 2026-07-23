@@ -105,7 +105,7 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   return raw;
 }
 
-type Step = "email" | "password" | "twoFactor";
+type Step = "credentials" | "twoFactor";
 
 // Second-factor strategies we can prompt for. Matches the shape Clerk
 // returns in `signIn.supportedSecondFactors[].strategy`.
@@ -120,7 +120,7 @@ export function LoginCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [step, setStep] = useState<Step>("email");
+  const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
@@ -167,8 +167,12 @@ export function LoginCard() {
     }
   };
 
-  const onSubmitEmail = (event: React.FormEvent<HTMLFormElement>) => {
+  const onSubmitCredentials = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
+    if (!signIn) return;
+
     const value = email.trim();
 
     setNotice(null);
@@ -177,27 +181,19 @@ export function LoginCard() {
 
       return;
     }
-    setError(null);
-    setEmail(value);
-    setStep("password");
-  };
-
-  const onSubmitPassword = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!signIn) return;
     if (password.length === 0) {
       setError("Enter your password to continue.");
 
       return;
     }
 
+    setEmail(value);
     setError(null);
-    setNotice(null);
     setSubmitting(true);
 
     try {
       const { error: submitError } = await signIn.password({
-        emailAddress: email,
+        emailAddress: value,
         password,
       });
 
@@ -418,19 +414,13 @@ export function LoginCard() {
     }
   };
 
-  const goBackToPassword = () => {
+  const goBackToCredentials = () => {
     setError(null);
     setNotice(null);
     setCode("");
-    setSecondFactorStrategy(null);
-    setStep("password");
-  };
-
-  const goBackToEmail = () => {
-    setError(null);
-    setNotice(null);
     setPassword("");
-    setStep("email");
+    setSecondFactorStrategy(null);
+    setStep("credentials");
   };
 
   return (
@@ -445,15 +435,12 @@ export function LoginCard() {
         Login to PDFVault
       </h1>
       <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
-        {step === "email"
+        {step === "credentials"
           ? "Please enter your details below to sign in"
-          : step === "password"
-            ? `Signing in as ${email}`
-            : "Enter the verification code we sent you"}
+          : "Enter the verification code we sent you"}
       </p>
 
-      {/* OAuth providers — email step only */}
-      {step === "email" ? (
+      {step === "credentials" ? (
         <>
           <div className="mt-[30px] flex flex-col gap-3">
             <button
@@ -469,18 +456,16 @@ export function LoginCard() {
 
           <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
             <span className="h-px bg-[#d9d9d9]" />
-            <span className="text-[16px] text-[#999999]">
-              Or sign in with email
-            </span>
+            <span className="text-[16px] text-[#999999]">OR</span>
             <span className="h-px bg-[#d9d9d9]" />
           </div>
 
-          <form noValidate className="mt-6" onSubmit={onSubmitEmail}>
+          <form noValidate className="mt-6" onSubmit={onSubmitCredentials}>
             <label
               className="block text-[14px] text-[#5f5f5f]"
               htmlFor={emailId}
             >
-              Your Registered Email
+              Email
               <span aria-hidden className="text-[#f12c23]">
                 *
               </span>
@@ -494,12 +479,49 @@ export function LoginCard() {
               id={emailId}
               inputMode="email"
               name="email"
-              placeholder="john.doe@gmail.com"
+              placeholder="Enter Your Email"
               spellCheck={false}
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
+
+            <div className="mt-4 flex items-center justify-between">
+              <label
+                className="text-[14px] text-[#5f5f5f]"
+                htmlFor={passwordId}
+              >
+                Password
+                <span aria-hidden className="text-[#f12c23]">
+                  *
+                </span>
+              </label>
+              <Link
+                className="text-[13px] font-medium text-[#f12c23] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+                href={ROUTES.AUTH.FORGOT_PASSWORD}
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <div className="relative mt-2">
+              <input
+                required
+                aria-describedby={error ? errorId : undefined}
+                aria-invalid={error ? true : undefined}
+                autoComplete="current-password"
+                className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
+                id={passwordId}
+                name="password"
+                placeholder="Enter Your Password"
+                type={passwordRevealed ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <PasswordRevealToggle
+                revealed={passwordRevealed}
+                onToggle={() => setPasswordRevealed((v) => !v)}
+              />
+            </div>
 
             {error ? (
               <p
@@ -512,83 +534,24 @@ export function LoginCard() {
             ) : null}
 
             <button
-              className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              disabled={submitting}
               type="submit"
             >
-              Continue
-              <ArrowIcon />
+              {submitting ? "Signing in…" : "Sign In"}
+              {submitting ? null : <ArrowIcon />}
             </button>
           </form>
         </>
-      ) : step === "password" ? (
-        <form noValidate className="mt-8" onSubmit={onSubmitPassword}>
-          <button
-            className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
-            type="button"
-            onClick={goBackToEmail}
-          >
-            <BackChevron />
-            Use a different email
-          </button>
-
-          <label
-            className="block text-[14px] text-[#5f5f5f]"
-            htmlFor={passwordId}
-          >
-            Password
-            <span aria-hidden className="text-[#f12c23]">
-              *
-            </span>
-          </label>
-          <div className="relative mt-2">
-            <input
-              autoFocus
-              required
-              aria-describedby={error ? errorId : undefined}
-              aria-invalid={error ? true : undefined}
-              autoComplete="current-password"
-              className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
-              id={passwordId}
-              name="password"
-              placeholder="••••••••"
-              type={passwordRevealed ? "text" : "password"}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            <PasswordRevealToggle
-              revealed={passwordRevealed}
-              onToggle={() => setPasswordRevealed((v) => !v)}
-            />
-          </div>
-
-          {error ? (
-            <p
-              className="mt-2 text-[13px] text-[#f12c23]"
-              id={errorId}
-              role="alert"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          <button
-            className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-            disabled={submitting}
-            type="submit"
-          >
-            {submitting ? "Signing in…" : "Sign In"}
-            {submitting ? null : <ArrowIcon />}
-          </button>
-        </form>
       ) : (
         <form noValidate className="mt-8" onSubmit={onSubmitCode}>
           <button
             className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
             type="button"
-            onClick={goBackToPassword}
+            onClick={goBackToCredentials}
           >
             <BackChevron />
-            Back to password
+            Back to sign in
           </button>
 
           <label className="block text-[14px] text-[#5f5f5f]" htmlFor={codeId}>

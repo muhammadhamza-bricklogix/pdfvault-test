@@ -229,14 +229,24 @@ function SignatureModalContent({
     const maxWidth = 200;
     const scale = img.width && img.width > maxWidth ? maxWidth / img.width : 1;
 
+    // Fabric JSON is stored in BASE coordinates (zoom = 1). The
+    // canvas' `.width` / `.height` are the rendered (post-zoom) size —
+    // dividing by 2 alone puts the signature at `base_width * zoom / 2`,
+    // which lands past the right/bottom edge whenever the user is
+    // zoomed in > 1x. Divide out the current zoom to hit the true page
+    // centre regardless of zoom level.
+    const zoom = fabricCanvas.getZoom() || 1;
+    const centerX = (fabricCanvas.width ?? 600) / (2 * zoom);
+    const centerY = (fabricCanvas.height ?? 800) / (2 * zoom);
+
     img.set({
-      left: (fabricCanvas.width ?? 600) / 2,
+      left: centerX,
       lockUniScaling: true,
       originX: "center",
       originY: "center",
       scaleX: scale,
       scaleY: scale,
-      top: (fabricCanvas.height ?? 800) / 2,
+      top: centerY,
     });
 
     fabricCanvas.add(img);

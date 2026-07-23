@@ -235,10 +235,10 @@ function TopAppBar() {
       >
         <Image
           alt="PDFVault"
-          className="h-[26px] w-auto object-contain"
-          height={26}
+          className="h-[32px] w-auto object-contain"
+          height={32}
           src="/landing/logo-with-text.png"
-          width={104}
+          width={128}
         />
       </Link>
 
@@ -415,37 +415,45 @@ function ToolToolbar() {
   const groups = useMemo(() => [GROUP_A, GROUP_B, GROUP_C, GROUP_MANAGE], []);
 
   return (
-    <div className="flex shrink-0 items-center justify-center gap-3 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
-      {groups.map((group, i) => (
-        <PillGroup key={i}>
-          {group.map((tool) => {
-            if (tool.kind === "mode") {
-              const active = activeTool === tool.id;
+    // Scroll container uses the `mx-auto w-fit` pattern (not
+    // `justify-center`) so an overflowing pill row can be panned all
+    // the way to both edges. `justify-center` on an overflow-auto
+    // container traps the user at the centre and clips the leftmost
+    // tools — same iOS Safari trap documented for `PdfViewerCanvas.tsx`
+    // (2026-06-10 (e) in the skill log).
+    <div className="shrink-0 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
+      <div className="mx-auto flex w-fit items-center gap-3">
+        {groups.map((group, i) => (
+          <PillGroup key={i}>
+            {group.map((tool) => {
+              if (tool.kind === "mode") {
+                const active = activeTool === tool.id;
+
+                return (
+                  <ToolButton
+                    key={tool.id}
+                    active={active}
+                    disabled={disabled}
+                    icon={tool.icon}
+                    label={tool.label}
+                    onClick={() => setActiveTool(tool.id)}
+                  />
+                );
+              }
 
               return (
                 <ToolButton
                   key={tool.id}
-                  active={active}
-                  disabled={disabled}
+                  disabled={isActionDisabled(tool.id)}
                   icon={tool.icon}
                   label={tool.label}
-                  onClick={() => setActiveTool(tool.id)}
+                  onClick={() => handleAction(tool.id)}
                 />
               );
-            }
-
-            return (
-              <ToolButton
-                key={tool.id}
-                disabled={isActionDisabled(tool.id)}
-                icon={tool.icon}
-                label={tool.label}
-                onClick={() => handleAction(tool.id)}
-              />
-            );
-          })}
-        </PillGroup>
-      ))}
+            })}
+          </PillGroup>
+        ))}
+      </div>
     </div>
   );
 }
