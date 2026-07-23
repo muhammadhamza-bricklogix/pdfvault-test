@@ -263,12 +263,17 @@ export function BillingSettingsSection() {
         <InvoicesTable />
       </div>
 
+      {/* Advanced / Close-subscription escape hatch — hidden 2026-07-23
+          per product decision. Keep AdvancedSection + CloseSubscriptionModal
+          mounted-and-ready code below in case we need to re-enable during
+          an incident, but do not render the section by default.
       {hasSubscription ? (
         <AdvancedSection
           busy={hardCancel.isPending}
           onOpenClose={() => setCloseConfirmOpen(true)}
         />
       ) : null}
+      */}
 
       <CancellationFlow
         isOpen={cancelOpen}
