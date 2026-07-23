@@ -242,12 +242,12 @@ export function PaywallModal({
         if (!open) onClose();
       }}
     >
-      <Modal.Container className="items-center justify-center p-4">
+      <Modal.Container className="items-start justify-center p-4 sm:items-center">
         <Modal.Dialog
           className={
             step === "success"
-              ? "w-[min(460px,calc(100vw-32px))] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
-              : "w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
+              ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
+              : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
           <Modal.CloseTrigger />

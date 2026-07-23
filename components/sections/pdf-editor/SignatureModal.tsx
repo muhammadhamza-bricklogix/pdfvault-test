@@ -330,8 +330,8 @@ export function SignatureModal({
   return (
     <Modal>
       <Modal.Backdrop isOpen={isOpen} onOpenChange={handleOpenChange}>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-[480px]">
+        <Modal.Container className="items-start justify-center p-4 sm:items-center">
+          <Modal.Dialog className="max-h-[calc(100dvh-32px)] overflow-y-auto overscroll-contain sm:max-w-[480px]">
             <Modal.CloseTrigger />
             <SignatureModalContent
               key={mountKey}

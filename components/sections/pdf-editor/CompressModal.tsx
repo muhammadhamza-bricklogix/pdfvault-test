@@ -153,8 +153,8 @@ export function CompressModal() {
         if (!open) handleClose();
       }}
     >
-      <Modal.Container>
-        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
+      <Modal.Container className="items-start justify-center p-4 sm:items-center">
+        <Modal.Dialog className="!max-h-[calc(100dvh-32px)] !w-[92vw] !max-w-[520px] overflow-y-auto overscroll-contain">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Compress PDF</Modal.Heading>

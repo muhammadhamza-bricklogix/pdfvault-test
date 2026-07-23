@@ -77,8 +77,8 @@ export function DocPickerModal({
         if (!open) onClose();
       }}
     >
-      <Modal.Container className="items-center justify-center p-4">
-        <Modal.Dialog className="w-full overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:max-w-[560px] dark:bg-content1">
+      <Modal.Container className="items-start justify-center p-4 sm:items-center">
+        <Modal.Dialog className="max-h-[calc(100dvh-32px)] w-full overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:max-w-[560px] dark:bg-content1">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading className="pv-heading text-[18px] font-semibold text-[var(--pv-text-strong,#1a1c21)]">
