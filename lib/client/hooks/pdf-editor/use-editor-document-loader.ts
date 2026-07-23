@@ -1,5 +1,7 @@
 "use client";
 
+import type { Document } from "@/lib/shared/types/documents.types";
+
 import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -376,4 +378,38 @@ function rehydrateEditorState(editorState: string | null) {
   if (Object.keys(patch).length > 0) {
     usePdfEditorStore.setState(patch);
   }
+}
+
+/**
+ * Reload the editor with a `Document` payload returned by a mutation that
+ * changed the current doc's bytes (e.g. `restoreVersion`). The signed
+ * `url` on the payload is fresh, so we fetch straight from there instead
+ * of round-tripping through the loader effect — which sometimes doesn't
+ * refire deterministically after `clearFile()` on the same `?id=`
+ * (reported 2026-07-23: "restore succeeds but I have to refresh").
+ */
+export async function reloadEditorFromDocument(doc: Document): Promise<void> {
+  const res = await fetch(doc.url);
+
+  if (!res.ok) throw new Error(`Failed to fetch restored PDF (${res.status})`);
+  const blob = await res.blob();
+  const nextFile = new File([blob], doc.filename, { type: doc.contentType });
+
+  // Wipe overlay/history state first so stale edits don't paint on top of
+  // the restored bytes. `clearFile` also resets `file` to null; that null
+  // window is fine because we immediately swap in the new file below and
+  // the loader's `alreadyHydratedThisUrl` guard prevents a duplicate fetch
+  // once we've written `file` + `currentDocumentId`.
+  usePdfEditorStore.getState().clearFile();
+
+  // Seed watermark / bg-image / fabricJsonByPage from the version's stored
+  // editor state, matching what the loader does on a cold open.
+  rehydrateEditorState(doc.editorState ?? null);
+
+  usePdfEditorStore.setState({
+    file: nextFile,
+    currentDocumentId: doc.id,
+    currentDocumentName: doc.filename,
+    hasUnsavedChanges: false,
+  });
 }

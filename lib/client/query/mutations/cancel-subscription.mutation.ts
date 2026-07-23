@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { setEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
 import { apiClient } from "@/lib/config/api-client";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 
@@ -26,7 +27,18 @@ export function useCancelSubscriptionMutation() {
     mutationFn: async (input: CancelSubscriptionInput) => {
       await apiClient.post("/billing/subscription/cancel", input);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
+    onSuccess: async () => {
+      // Immediate-revoke: cancel = trial ends now too, no downloads / no
+      // conversions post-cancel. Backend already flipped status to
+      // CANCELLED. The paywall gate reads a module-level snapshot via
+      // `ensureFreshEntitlement`; that fast-path returns `true` until
+      // the subscription query re-fetches AND its mirror effect runs.
+      // Reported 2026-07-23: users cancelled but kept downloading in
+      // the seconds after because the snapshot was still `true`.
+      setEntitledSnapshot(false);
+      qc.removeQueries({ queryKey: billingKeys.all });
+      await qc.refetchQueries({ queryKey: billingKeys.subscription() });
+    },
   });
 }
 
@@ -91,6 +103,7 @@ export function useHardCancelSubscriptionMutation() {
       // the cache entry forces every subscriber into a "loading"
       // state → the very next network round-trip drives the true
       // NONE-status render.
+      setEntitledSnapshot(false);
       qc.removeQueries({ queryKey: billingKeys.all });
       await qc.refetchQueries({ queryKey: billingKeys.subscription() });
     },

@@ -21,6 +21,7 @@ import {
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { reloadEditorFromDocument } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
@@ -351,19 +352,20 @@ export function HamburgerMenu() {
         documentId={currentDocumentId}
         isOpen={isVersionsOpen}
         onClose={() => setIsVersionsOpen(false)}
-        onRestored={() => {
-          // The backend already swapped the root document's s3Key to
-          // point at the restored version's bytes, BUT
-          // `useEditorDocumentLoader` short-circuits when
-          // `currentDocumentId === id && file != null` and so the
-          // editor keeps showing the in-memory file. `router.refresh()`
-          // only re-runs server components — it doesn't refetch the
-          // bytes. Clearing the store forces the loader's effect to
-          // re-run, which re-calls `documentsService.getDocument(id)`
-          // and pulls the NEW signed URL.
-          // (QA report 2026-06-16: "restore says success but PDF
-          // doesn't change.")
-          clearFile();
+        onRestored={(restored) => {
+          // Fetch the restored bytes directly and swap them into the
+          // store. Relying on `clearFile()` to bounce the loader effect
+          // wasn't firing deterministically for every user (QA report
+          // 2026-07-23: "restore succeeds but I have to refresh").
+          void reloadEditorFromDocument(restored).catch((err) => {
+            toast.error({
+              title: "Couldn't reload restored version",
+              description:
+                err instanceof Error
+                  ? err.message
+                  : "Please refresh to see the restored version.",
+            });
+          });
         }}
       />
       <AnnotationsModal
