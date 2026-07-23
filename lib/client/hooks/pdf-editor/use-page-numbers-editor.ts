@@ -186,6 +186,39 @@ export function usePageNumbersEditor(fabricCanvas: FabricCanvas | null) {
     }
   }, []);
 
+  const handleRemove = useCallback(() => {
+    const { currentPage: page, fabricCanvas: liveCanvas } = stateRef.current;
+    const store = usePdfEditorStore.getState();
+    const pdfDocument = store.pdfDocument;
+
+    if (!pdfDocument) {
+      toast.error({
+        title: "No PDF open",
+        description: "Open a PDF before removing page numbers.",
+      });
+
+      return;
+    }
+
+    const removed = removeExistingPageNumbers(liveCanvas, page);
+
+    if (removed === 0) {
+      toast.info({
+        title: "No page numbers to remove",
+        description: "This document has no page-number overlays.",
+      });
+
+      return;
+    }
+
+    store.markDocumentDirty();
+
+    toast.success({
+      title: `Removed page numbers from ${removed} ${removed === 1 ? "page" : "pages"}`,
+      description: "Save to persist.",
+    });
+  }, []);
+
   useEffect(() => {
     const onAdd = (event: Event) => {
       const detail = (event as CustomEvent<PageNumbersEventDetail>).detail;
@@ -195,12 +228,18 @@ export function usePageNumbersEditor(fabricCanvas: FabricCanvas | null) {
       void handleAdd(detail.options);
     };
 
+    const onRemove = () => {
+      handleRemove();
+    };
+
     window.addEventListener("editor:add-page-numbers", onAdd);
+    window.addEventListener("editor:remove-page-numbers", onRemove);
 
     return () => {
       window.removeEventListener("editor:add-page-numbers", onAdd);
+      window.removeEventListener("editor:remove-page-numbers", onRemove);
     };
-  }, [handleAdd]);
+  }, [handleAdd, handleRemove]);
 }
 
 // ---------------------------------------------------------------------------
@@ -352,7 +391,9 @@ function serializeForPage(canvas: FabricCanvas): string {
 function removeExistingPageNumbers(
   liveCanvas: FabricCanvas | null,
   currentDisplayPage: number,
-): void {
+): number {
+  const affectedPages = new Set<number>();
+
   // 1. Remove from the live canvas so the current page repaints clean.
   if (liveCanvas) {
     const toRemove = liveCanvas
@@ -364,36 +405,40 @@ function removeExistingPageNumbers(
     for (const obj of toRemove) {
       liveCanvas.remove(obj);
     }
-    if (toRemove.length) liveCanvas.renderAll();
+    if (toRemove.length) {
+      liveCanvas.renderAll();
+      affectedPages.add(currentDisplayPage);
+    }
   }
 
   // 2. Strip page-number objects from every stored page's JSON.
   const store = usePdfEditorStore.getState();
   const map = store.fabricJsonByPage;
 
-  if (!(map instanceof Map) || map.size === 0) return;
+  if (map instanceof Map && map.size > 0) {
+    // Array.from for TS `--target` compatibility on Map iteration.
+    Array.from(map.entries()).forEach(([page, json]) => {
+      if (!json) return;
+      try {
+        const parsed = JSON.parse(json) as {
+          objects?: { editorType?: string }[];
+          [k: string]: unknown;
+        };
+        const objects = parsed.objects ?? [];
+        const filtered = objects.filter((o) => o.editorType !== "pageNumber");
 
-  // Array.from for TS `--target` compatibility on Map iteration.
-  Array.from(map.entries()).forEach(([page, json]) => {
-    if (!json) return;
-    try {
-      const parsed = JSON.parse(json) as {
-        objects?: { editorType?: string }[];
-        [k: string]: unknown;
-      };
-      const objects = parsed.objects ?? [];
-      const filtered = objects.filter((o) => o.editorType !== "pageNumber");
+        if (filtered.length === objects.length) return;
 
-      if (filtered.length === objects.length) return;
+        const next = { ...parsed, objects: filtered };
 
-      const next = { ...parsed, objects: filtered };
-
-      store.saveFabricJson(page, JSON.stringify(next));
-    } catch {
-      // Bad JSON — leave it alone. Next save will overwrite via the
-      // live-canvas flush anyway.
-    }
-  });
+        store.saveFabricJson(page, JSON.stringify(next));
+        affectedPages.add(page);
+      } catch {
+        // Bad JSON — leave it alone. Next save will overwrite via the
+        // live-canvas flush anyway.
+      }
+    });
+  }
 
   // 3. If we ALSO have the live canvas, flush it to overwrite the
   // current page's stored JSON with the now-clean canvas state.
@@ -403,4 +448,6 @@ function removeExistingPageNumbers(
       JSON.stringify(liveCanvas.toJSON()),
     );
   }
+
+  return affectedPages.size;
 }

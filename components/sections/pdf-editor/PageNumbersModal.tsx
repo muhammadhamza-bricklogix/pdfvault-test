@@ -90,6 +90,12 @@ function PageNumbersModalContent() {
     handleClose();
   };
 
+  const handleRemove = () => {
+    if (!file) return;
+    window.dispatchEvent(new CustomEvent("editor:remove-page-numbers"));
+    handleClose();
+  };
+
   return (
     <Modal.Backdrop
       isOpen
@@ -258,6 +264,13 @@ function PageNumbersModalContent() {
           </Modal.Body>
 
           <Modal.Footer>
+            <Button
+              isDisabled={!file}
+              variant="tertiary"
+              onPress={handleRemove}
+            >
+              Remove all
+            </Button>
             <Button slot="close" variant="secondary">
               Cancel
             </Button>

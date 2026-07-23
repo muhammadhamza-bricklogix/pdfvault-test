@@ -223,7 +223,7 @@ export function PvFileTable({
           </span>
           <div className="flex items-center gap-2">
             <button
-              className="rounded-full px-3 py-1 text-[13px] font-medium text-[var(--pv-text-body)] transition-colors hover:bg-white"
+              className="rounded-full px-3 py-1 text-[13px] font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-surface)]"
               type="button"
               onClick={() => setSelected(new Set())}
             >

@@ -13,6 +13,7 @@ import { Button, Input, Modal, TextField } from "@heroui/react";
 import { useEffect, useState } from "react";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { validateRenameFilename } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { VersionPreviewModal } from "./VersionPreviewModal";
@@ -73,6 +74,7 @@ export function VersionHistoryModal({
   // Inline rename for each version row.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
+  const [editingError, setEditingError] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -137,8 +139,7 @@ export function VersionHistoryModal({
 
       toast.success({
         title: "Restored",
-        description:
-          "The editor will reload with the restored version. Your pre-restore state was kept as a new version.",
+        description: "The editor will reload with the restored version.",
       });
       onRestored?.(restored);
       setPreviewVersion(null);
@@ -157,11 +158,18 @@ export function VersionHistoryModal({
   const startEditing = (v: Document): void => {
     setEditingId(v.id);
     setEditingValue(getVersionLabel(v));
+    setEditingError(null);
   };
 
   const cancelEditing = (): void => {
     setEditingId(null);
     setEditingValue("");
+    setEditingError(null);
+  };
+
+  const handleEditingChange = (val: string): void => {
+    setEditingValue(val);
+    if (editingError) setEditingError(null);
   };
 
   const saveRename = async (v: Document): Promise<void> => {
@@ -169,6 +177,14 @@ export function VersionHistoryModal({
 
     if (!next || next === getVersionLabel(v)) {
       cancelEditing();
+
+      return;
+    }
+
+    const validationError = validateRenameFilename(next);
+
+    if (validationError) {
+      setEditingError(validationError);
 
       return;
     }
@@ -251,8 +267,9 @@ export function VersionHistoryModal({
                           {isEditing ? (
                             <TextField
                               isDisabled={isRenaming}
+                              isInvalid={isEditing && !!editingError}
                               value={editingValue}
-                              onChange={(val) => setEditingValue(val)}
+                              onChange={handleEditingChange}
                             >
                               <Input
                                 autoFocus
@@ -270,6 +287,11 @@ export function VersionHistoryModal({
                                   }
                                 }}
                               />
+                              {isEditing && editingError ? (
+                                <p className="text-xs text-danger">
+                                  {editingError}
+                                </p>
+                              ) : null}
                             </TextField>
                           ) : (
                             <>

@@ -5,7 +5,9 @@ import type { Document } from "@/lib/shared/types/documents.types";
 import { Button, Input, Label, Modal, TextField } from "@heroui/react";
 import { useState } from "react";
 
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
+import { validateRenameFilename } from "@/lib/shared/schemas/documents/rename.schema";
 
 type Props = {
   document: Document | null;
@@ -14,6 +16,8 @@ type Props = {
 
 export function RenameDocumentModal({ document: doc, onClose }: Props) {
   const [name, setName] = useState(doc?.filename ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   // React docs' "adjust state during render" pattern — resets `name` whenever
   // the modal is opened for a different document. Avoids the
   // setState-in-effect anti-pattern.
@@ -22,10 +26,16 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
   if ((doc?.id ?? null) !== lastDocId) {
     setLastDocId(doc?.id ?? null);
     setName(doc?.filename ?? "");
+    setError(null);
   }
 
   const rename = useRenameDocumentMutation();
   const isOpen = !!doc;
+
+  const handleChange = (val: string) => {
+    setName(val);
+    if (error) setError(null);
+  };
 
   const handleSubmit = async () => {
     if (!doc) return;
@@ -37,9 +47,36 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
       return;
     }
 
+    const validationError = validateRenameFilename(trimmed);
+
+    if (validationError) {
+      setError(validationError);
+
+      return;
+    }
+
+    setCheckingDuplicate(true);
+    try {
+      const duplicate = await findDuplicateByFilename(trimmed);
+
+      if (duplicate && duplicate.id !== doc.id) {
+        setError("A document with this name already exists");
+
+        return;
+      }
+    } catch {
+      // Non-fatal — if the duplicate check itself fails, let the backend
+      // adjudicate. Better to surface a rename-mutation error than block
+      // the user on a transient list-fetch hiccup.
+    } finally {
+      setCheckingDuplicate(false);
+    }
+
     await rename.mutateAsync({ id: doc.id, filename: trimmed });
     onClose();
   };
+
+  const busy = rename.isPending || checkingDuplicate;
 
   return (
     <Modal.Backdrop
@@ -62,9 +99,15 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
                 void handleSubmit();
               }}
             >
-              <TextField autoFocus value={name} onChange={setName}>
+              <TextField
+                autoFocus
+                isInvalid={!!error}
+                value={name}
+                onChange={handleChange}
+              >
                 <Label>Name</Label>
                 <Input placeholder="Document name" />
+                {error ? <p className="text-xs text-danger">{error}</p> : null}
               </TextField>
             </form>
           </Modal.Body>
@@ -73,10 +116,10 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
               Cancel
             </Button>
             <Button
-              isDisabled={rename.isPending || !name.trim()}
+              isDisabled={busy || !name.trim()}
               onPress={() => void handleSubmit()}
             >
-              {rename.isPending ? "Saving..." : "Save"}
+              {busy ? "Saving..." : "Save"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

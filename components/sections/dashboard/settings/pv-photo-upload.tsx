@@ -106,7 +106,7 @@ export function PvPhotoUpload({
         </div>
 
         <span className="relative">
-          <span className="flex size-9 items-center justify-center rounded-[6px] bg-white shadow-sm">
+          <span className="flex size-9 items-center justify-center rounded-[6px] bg-[var(--pv-surface)] shadow-sm">
             <svg
               aria-hidden
               fill="none"

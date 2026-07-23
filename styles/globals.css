@@ -89,6 +89,26 @@
   font-weight: 500;
   color: var(--pv-text-body);
 }
+
+/*
+ * Dark-mode token overrides for the dashboard shell. The base tokens above
+ * are light-only; without these the theme picker's "Dark" option flips
+ * `data-theme` on <html> but the dashboard visuals stay unchanged.
+ * Values sampled from a neutral graphite palette that keeps the same
+ * relative contrast as the light tokens.
+ */
+[data-theme="dark"] .pv-dashboard {
+  --pv-canvas: #0b0b0c;
+  --pv-surface: #141416;
+  --pv-nav-active: #1c1c1f;
+  --pv-tile: #1a1a1c;
+  --pv-fill-subtle: #18181a;
+  --pv-hairline: #28282a;
+  --pv-hairline-strong: #3a3a3d;
+  --pv-text-strong: #f5f5f5;
+  --pv-text-body: #c0c0c0;
+  --pv-text-muted: #7a7a7a;
+}
 html,
 body {
   min-height: 100%;

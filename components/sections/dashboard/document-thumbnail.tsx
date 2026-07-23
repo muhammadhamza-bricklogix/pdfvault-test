@@ -74,7 +74,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
 
   if (src) {
     return (
-      <div className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-default-200 bg-white">
+      <div className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-default-200 bg-[var(--pv-surface)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt="" className="h-full w-full object-cover" src={src} />
       </div>
