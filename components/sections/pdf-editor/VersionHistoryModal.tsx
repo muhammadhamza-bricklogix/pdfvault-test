@@ -52,13 +52,23 @@ function formatDate(iso: string): string {
 }
 
 /**
- * Display name for a version row. We reuse the `filename` column —
+ * Base display name for a version row. We reuse the `filename` column —
  * users can rename via the existing `PATCH /documents/:id/rename`
  * endpoint, and the change is purely cosmetic (S3 key + restore
  * mechanics don't depend on it).
  */
 function getVersionLabel(v: Document): string {
   return v.filename?.trim() ? v.filename : `Version ${v.version}`;
+}
+
+/**
+ * Label shown in the version list, appending "(current)" to the root
+ * document row so the user's latest saved state is clearly identified.
+ */
+function getVersionDisplayLabel(v: Document, rootId?: string | null): string {
+  const base = getVersionLabel(v);
+
+  return v.id === rootId ? `${base} (current)` : base;
 }
 
 export function VersionHistoryModal({
@@ -89,9 +99,22 @@ export function VersionHistoryModal({
     const load = async (): Promise<void> => {
       setLoading(true);
       try {
-        const data = await documentsService.listVersions(documentId);
+        const [data, root] = await Promise.all([
+          documentsService.listVersions(documentId),
+          documentsService.getDocument(documentId),
+        ]);
 
-        if (!cancelled) setVersions(data);
+        if (cancelled) return;
+
+        // Surface the current root document as the first row. The backend
+        // version list is a history of snapshots, so the latest saved state
+        // lives on the root doc, not in a snapshot row. Without this, users
+        // can't find a version row that contains their most recent edits.
+        const merged = root
+          ? [root, ...data.filter((v) => v.id !== root.id)]
+          : data;
+
+        setVersions(merged);
       } catch {
         if (!cancelled) {
           toast.error({
@@ -343,7 +366,7 @@ export function VersionHistoryModal({
                           ) : (
                             <>
                               <p className="truncate text-sm font-medium">
-                                {getVersionLabel(v)}
+                                {getVersionDisplayLabel(v, documentId)}
                               </p>
                               <p className="text-xs text-default-500">
                                 v{v.version} · {formatDate(v.createdAt)} ·{" "}
@@ -425,7 +448,9 @@ export function VersionHistoryModal({
         isOpen={previewVersion !== null}
         restoring={restoring}
         versionLabel={
-          previewVersion ? getVersionLabel(previewVersion) : "Version"
+          previewVersion
+            ? getVersionDisplayLabel(previewVersion, documentId)
+            : "Version"
         }
         versionUrl={previewVersion?.url ?? null}
         onClose={closePreview}
