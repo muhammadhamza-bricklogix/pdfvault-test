@@ -19,7 +19,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Watermark rendering — inline renderPageToPng + per-page hasGenuineEdits guard
-lib/client/pdf-editor/merge-pdf.ts
+# lib/client/pdf-editor/merge-pdf.ts
 
 # IText objectCaching=false (Fabric perf vs render-order bug)
 lib/client/hooks/pdf-editor/use-edit-text-mode.ts
