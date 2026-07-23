@@ -29,6 +29,7 @@ import {
   drawGroup,
   drawIText,
   drawLine,
+  drawPath,
   drawRect,
   drawTriangle,
 } from "./vector-drawers";
@@ -442,6 +443,18 @@ async function drawVectorObject(
 
     case "triangle":
       drawTriangle(obj, page, ctx);
+
+      return true;
+
+    case "path":
+      // Freehand drawings (Pencil tool). `vector-drawers` already exposes
+      // `drawPath` — it was reachable only via `drawGroup`'s child dispatch
+      // before, so a top-level Path fell through to the raster fallback and
+      // silently NEVER baked into the saved PDF (QA report 2026-07-23:
+      // "drawings don't show up in the version-history preview" — pdf.js
+      // was rendering the raw bytes and finding no paint operators for
+      // the drawing).
+      drawPath(obj, page, ctx);
 
       return true;
 
