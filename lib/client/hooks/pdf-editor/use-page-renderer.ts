@@ -117,5 +117,12 @@ export function usePageRenderer({
     };
   }, [canvasRef, page, zoom, suppressText, transparent]);
 
-  return { renderedSize };
+  // Derive `renderedSize` from `page` presence so downstream consumers see
+  // the "no page ready" state as soon as pdf.js is torn down (file swap for
+  // version restore / Manage Pages save). Without this, `renderedSize`
+  // retains the previous file's dimensions, `useFabricCanvas`'s
+  // `hasRenderedSize` stays true, and Fabric never unmounts — the OLD
+  // file's overlays keep painting over the NEW PDF page until refresh
+  // (QA report 2026-07-23: "restore doesn't update until refresh").
+  return { renderedSize: page ? renderedSize : null };
 }
