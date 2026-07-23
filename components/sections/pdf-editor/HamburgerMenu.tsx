@@ -25,8 +25,8 @@ import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { reloadEditorFromDocument } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
-import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
@@ -196,7 +196,15 @@ export function HamburgerMenu() {
 
           return;
         }
-        setIsVersionsOpen(true);
+        // Persist any unsaved draw/signature edits before opening history so
+        // the latest snapshot and the "Current" preview include them.
+        void (async () => {
+          const ok = await saveBeforeAction(
+            "Saving your edits before opening version history.",
+          );
+
+          if (ok) setIsVersionsOpen(true);
+        })();
         break;
       }
       case "annotations":
@@ -354,12 +362,19 @@ export function HamburgerMenu() {
         documentId={currentDocumentId}
         isOpen={isVersionsOpen}
         onClose={() => setIsVersionsOpen(false)}
-        onRestored={(restored) => {
+        onRestored={(restored, restoredFileUrl) => {
           // Fetch the restored bytes directly and swap them into the
           // store. Relying on `clearFile()` to bounce the loader effect
           // wasn't firing deterministically for every user (QA report
           // 2026-07-23: "restore succeeds but I have to refresh").
-          void reloadEditorFromDocument(restored, userId).catch((err) => {
+          // We use the immutable version-snapshot URL for the initial load
+          // because the root document URL can still point at the pre-restore
+          // bytes for a short window after the API returns.
+          void reloadEditorFromDocument(
+            restored,
+            userId,
+            restoredFileUrl,
+          ).catch((err) => {
             toast.error({
               title: "Couldn't reload restored version",
               description:

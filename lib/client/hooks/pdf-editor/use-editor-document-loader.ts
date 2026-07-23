@@ -396,11 +396,16 @@ function rehydrateEditorState(editorState: string | null) {
 export async function reloadEditorFromDocument(
   doc: Document,
   userId?: string | null,
+  restoredFileUrl?: string,
 ): Promise<void> {
   // Bypass the browser cache for restored bytes — the signed URL may reuse
   // the same object key, and without this the user sees the pre-restore
   // PDF until they hard-refresh (reported 2026-07-23).
-  const res = await fetch(doc.url, { cache: "no-store" });
+  // `restoredFileUrl` lets the caller pass the immutable version-snapshot
+  // URL instead of relying on the root document URL, which can still point
+  // to the pre-restore bytes immediately after `restoreVersion` returns.
+  const urlToFetch = restoredFileUrl ?? doc.url;
+  const res = await fetch(urlToFetch, { cache: "no-store" });
 
   if (!res.ok) throw new Error(`Failed to fetch restored PDF (${res.status})`);
   const blob = await res.blob();

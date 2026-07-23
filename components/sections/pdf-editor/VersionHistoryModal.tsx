@@ -27,8 +27,12 @@ type VersionHistoryModalProps = {
   /**
    * Called after a successful restore. Parent reloads the editor with
    * the restored bytes — see `HamburgerMenu`'s wiring.
+   *
+   * `restoredFileUrl` is the immutable version-snapshot URL so the parent
+   * doesn't have to rely on the root document URL, which may still point to
+   * the pre-restore bytes immediately after the restore API returns.
    */
-  onRestored?: (restored: Document) => void;
+  onRestored?: (restored: Document, restoredFileUrl: string) => void;
 };
 
 function formatBytes(bytes: number): string {
@@ -128,6 +132,16 @@ export function VersionHistoryModal({
     });
 
     try {
+      // Refresh the version row to get a freshly-signed URL. The URL
+      // returned by `listVersions` can be reused/cached by the browser,
+      // so fetching the snapshot directly busts any stale response and
+      // ensures the candidate preview shows the real version bytes.
+      const refreshedVersion = await documentsService.getDocument(version.id);
+
+      if (refreshedVersion) {
+        setPreviewVersion(refreshedVersion);
+      }
+
       // Prefer the local, already-merged file when it matches the doc
       // we are previewing. This guarantees the "Current" pane reflects
       // the editor's actual bytes (including the latest draw/signature
@@ -139,8 +153,9 @@ export function VersionHistoryModal({
       if (localFile && state.currentDocumentId === documentId) {
         setCurrentUrl(URL.createObjectURL(localFile));
       } else {
-        // Fall back to a fresh signed URL if the local file isn't
-        // available (e.g. the modal was opened from outside the editor).
+        // Fall back to a fresh signed URL for the root doc if the local
+        // file isn't available (e.g. the modal was opened from outside
+        // the editor).
         const current = await documentsService.getDocument(documentId);
 
         setCurrentUrl(current.url ?? null);
@@ -170,7 +185,10 @@ export function VersionHistoryModal({
         title: "Restored",
         description: "The editor will reload with the restored version.",
       });
-      onRestored?.(restored);
+      // Pass the immutable snapshot URL; the root document URL may still
+      // point at the pre-restore bytes for a short window after the API
+      // returns, so using the snapshot URL avoids showing the old PDF.
+      onRestored?.(restored, previewVersion?.url ?? restored.url);
       setPreviewVersion(null);
       setCurrentUrl(null);
       onClose();
