@@ -107,6 +107,13 @@ function humaniseClerkMessage(raw: string, code?: string): string {
 
 type Step = "credentials" | "twoFactor";
 
+type FieldErrors = {
+  email?: string;
+  password?: string;
+  code?: string;
+  form?: string;
+};
+
 // Second-factor strategies we can prompt for. Matches the shape Clerk
 // returns in `signIn.supportedSecondFactors[].strategy`.
 type SecondFactorStrategy =
@@ -124,7 +131,7 @@ export function LoginCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -139,7 +146,10 @@ export function LoginCard() {
   const emailId = useId();
   const passwordId = useId();
   const codeId = useId();
-  const errorId = useId();
+  const emailErrorId = useId();
+  const passwordErrorId = useId();
+  const codeErrorId = useId();
+  const formErrorId = useId();
   const statusId = useId();
 
   const afterSignInPath = useMemo(
@@ -150,7 +160,7 @@ export function LoginCard() {
 
   const onGoogle = async () => {
     if (!signIn) return;
-    setError(null);
+    setErrors({});
     setNotice(null);
     setOauthLoading(true);
 
@@ -162,7 +172,7 @@ export function LoginCard() {
       });
     } catch (err) {
       logger.error("Google sign-in failed", err);
-      setError("Something went wrong with Google sign-in.");
+      setErrors({ form: "Something went wrong with Google sign-in." });
       setOauthLoading(false);
     }
   };
@@ -176,19 +186,25 @@ export function LoginCard() {
     const value = email.trim();
 
     setNotice(null);
-    if (!EMAIL_RE.test(value)) {
-      setError("Please enter a valid email address.");
 
-      return;
+    const nextErrors: FieldErrors = {};
+
+    if (value.length === 0) {
+      nextErrors.email = "Enter your email address.";
+    } else if (!EMAIL_RE.test(value)) {
+      nextErrors.email = "Please enter a valid email address.";
     }
     if (password.length === 0) {
-      setError("Enter your password to continue.");
+      nextErrors.password = "Enter your password to continue.";
+    }
+    if (nextErrors.email || nextErrors.password) {
+      setErrors(nextErrors);
 
       return;
     }
 
     setEmail(value);
-    setError(null);
+    setErrors({});
     setSubmitting(true);
 
     try {
@@ -198,12 +214,12 @@ export function LoginCard() {
       });
 
       if (submitError) {
-        setError(
-          readClerkError(
+        setErrors({
+          form: readClerkError(
             submitError,
             "Couldn't sign you in. Please try again.",
           ),
-        );
+        });
         setSubmitting(false);
 
         return;
@@ -223,9 +239,12 @@ export function LoginCard() {
         });
 
         if (finalizeError) {
-          setError(
-            readClerkError(finalizeError, "Couldn't finish signing you in."),
-          );
+          setErrors({
+            form: readClerkError(
+              finalizeError,
+              "Couldn't finish signing you in.",
+            ),
+          });
           setSubmitting(false);
         }
 
@@ -248,9 +267,9 @@ export function LoginCard() {
           supported[0];
 
         if (!preferred) {
-          setError(
-            "Two-factor authentication is required but no method is available. Contact support.",
-          );
+          setErrors({
+            form: "Two-factor authentication is required but no method is available. Contact support.",
+          });
           setSubmitting(false);
 
           return;
@@ -265,12 +284,12 @@ export function LoginCard() {
           const { error: sendErr } = await signIn.mfa.sendEmailCode();
 
           if (sendErr) {
-            setError(
-              readClerkError(
+            setErrors({
+              form: readClerkError(
                 sendErr,
                 "Couldn't send your verification code. Try again.",
               ),
-            );
+            });
             setSubmitting(false);
 
             return;
@@ -280,12 +299,12 @@ export function LoginCard() {
           const { error: sendErr } = await signIn.mfa.sendPhoneCode();
 
           if (sendErr) {
-            setError(
-              readClerkError(
+            setErrors({
+              form: readClerkError(
                 sendErr,
                 "Couldn't send your verification code. Try again.",
               ),
-            );
+            });
             setSubmitting(false);
 
             return;
@@ -304,7 +323,9 @@ export function LoginCard() {
       router.push(ROUTES.AUTH.SSO_CALLBACK);
     } catch (err) {
       logger.error("Password sign-in failed", err);
-      setError(readClerkError(err, "Couldn't sign you in. Please try again."));
+      setErrors({
+        form: readClerkError(err, "Couldn't sign you in. Please try again."),
+      });
       setSubmitting(false);
     }
   };
@@ -317,12 +338,12 @@ export function LoginCard() {
     const trimmedCode = code.trim();
 
     if (trimmedCode.length === 0) {
-      setError("Enter the code we sent you.");
+      setErrors({ code: "Enter the code we sent you." });
 
       return;
     }
 
-    setError(null);
+    setErrors({});
     setNotice(null);
     setSubmitting(true);
 
@@ -342,16 +363,19 @@ export function LoginCard() {
       const { error: attemptError } = (await verify()) ?? {};
 
       if (attemptError) {
-        setError(
-          readClerkError(attemptError, "That code didn't work. Try again."),
-        );
+        setErrors({
+          code: readClerkError(
+            attemptError,
+            "That code didn't work. Try again.",
+          ),
+        });
         setSubmitting(false);
 
         return;
       }
 
       if (signIn.status !== "complete") {
-        setError("Verification didn't finish. Try again.");
+        setErrors({ code: "Verification didn't finish. Try again." });
         setSubmitting(false);
 
         return;
@@ -364,14 +388,19 @@ export function LoginCard() {
       });
 
       if (finalizeError) {
-        setError(
-          readClerkError(finalizeError, "Couldn't finish signing you in."),
-        );
+        setErrors({
+          form: readClerkError(
+            finalizeError,
+            "Couldn't finish signing you in.",
+          ),
+        });
         setSubmitting(false);
       }
     } catch (err) {
       logger.error("2FA verification failed", err);
-      setError(readClerkError(err, "That code didn't work. Try again."));
+      setErrors({
+        code: readClerkError(err, "That code didn't work. Try again."),
+      });
       setSubmitting(false);
     }
   };
@@ -385,7 +414,7 @@ export function LoginCard() {
       return;
     }
 
-    setError(null);
+    setErrors({});
     setResending(true);
 
     try {
@@ -395,9 +424,12 @@ export function LoginCard() {
           : await signIn.mfa.sendPhoneCode();
 
       if (sendErr) {
-        setError(
-          readClerkError(sendErr, "Couldn't resend the code. Try again."),
-        );
+        setErrors({
+          form: readClerkError(
+            sendErr,
+            "Couldn't resend the code. Try again.",
+          ),
+        });
 
         return;
       }
@@ -408,14 +440,16 @@ export function LoginCard() {
           : "A new code was sent to your phone.",
       );
     } catch (err) {
-      setError(readClerkError(err, "Couldn't resend the code. Try again."));
+      setErrors({
+        form: readClerkError(err, "Couldn't resend the code. Try again."),
+      });
     } finally {
       setResending(false);
     }
   };
 
   const goBackToCredentials = () => {
-    setError(null);
+    setErrors({});
     setNotice(null);
     setCode("");
     setPassword("");
@@ -472,8 +506,8 @@ export function LoginCard() {
             </label>
             <input
               required
-              aria-describedby={error ? errorId : undefined}
-              aria-invalid={error ? true : undefined}
+              aria-describedby={errors.email ? emailErrorId : undefined}
+              aria-invalid={errors.email ? true : undefined}
               autoComplete="email"
               className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
               id={emailId}
@@ -483,8 +517,22 @@ export function LoginCard() {
               spellCheck={false}
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: undefined }));
+                }
+              }}
             />
+            {errors.email ? (
+              <p
+                className="mt-1.5 text-[13px] text-[#f12c23]"
+                id={emailErrorId}
+                role="alert"
+              >
+                {errors.email}
+              </p>
+            ) : null}
 
             <div className="mt-4 flex items-center justify-between">
               <label
@@ -506,8 +554,10 @@ export function LoginCard() {
             <div className="relative mt-2">
               <input
                 required
-                aria-describedby={error ? errorId : undefined}
-                aria-invalid={error ? true : undefined}
+                aria-describedby={
+                  errors.password ? passwordErrorId : undefined
+                }
+                aria-invalid={errors.password ? true : undefined}
                 autoComplete="current-password"
                 className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
                 id={passwordId}
@@ -515,21 +565,35 @@ export function LoginCard() {
                 placeholder="Enter Your Password"
                 type={passwordRevealed ? "text" : "password"}
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  if (errors.password) {
+                    setErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
               />
               <PasswordRevealToggle
                 revealed={passwordRevealed}
                 onToggle={() => setPasswordRevealed((v) => !v)}
               />
             </div>
-
-            {error ? (
+            {errors.password ? (
               <p
-                className="mt-2 text-[13px] text-[#f12c23]"
-                id={errorId}
+                className="mt-1.5 text-[13px] text-[#f12c23]"
+                id={passwordErrorId}
                 role="alert"
               >
-                {error}
+                {errors.password}
+              </p>
+            ) : null}
+
+            {errors.form ? (
+              <p
+                className="mt-2 text-[13px] text-[#f12c23]"
+                id={formErrorId}
+                role="alert"
+              >
+                {errors.form}
               </p>
             ) : null}
 
