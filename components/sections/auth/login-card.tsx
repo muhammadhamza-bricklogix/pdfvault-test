@@ -425,10 +425,7 @@ export function LoginCard() {
 
       if (sendErr) {
         setErrors({
-          form: readClerkError(
-            sendErr,
-            "Couldn't resend the code. Try again.",
-          ),
+          form: readClerkError(sendErr, "Couldn't resend the code. Try again."),
         });
 
         return;
@@ -554,9 +551,7 @@ export function LoginCard() {
             <div className="relative mt-2">
               <input
                 required
-                aria-describedby={
-                  errors.password ? passwordErrorId : undefined
-                }
+                aria-describedby={errors.password ? passwordErrorId : undefined}
                 aria-invalid={errors.password ? true : undefined}
                 autoComplete="current-password"
                 className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
@@ -627,8 +622,8 @@ export function LoginCard() {
           <input
             autoFocus
             required
-            aria-describedby={error ? errorId : undefined}
-            aria-invalid={error ? true : undefined}
+            aria-describedby={errors.code ? codeErrorId : undefined}
+            aria-invalid={errors.code ? true : undefined}
             autoComplete="one-time-code"
             className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-center text-[20px] font-semibold tracking-[0.4em] text-[#1a1c21] outline-none placeholder:text-[#c4c4c4] placeholder:tracking-normal placeholder:font-normal placeholder:text-[16px] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
             id={codeId}
@@ -638,18 +633,30 @@ export function LoginCard() {
             pattern="[0-9]*"
             placeholder="123456"
             value={code}
-            onChange={(event) =>
-              setCode(event.target.value.replace(/[^0-9]/g, ""))
-            }
+            onChange={(event) => {
+              setCode(event.target.value.replace(/[^0-9]/g, ""));
+              if (errors.code) {
+                setErrors((prev) => ({ ...prev, code: undefined }));
+              }
+            }}
           />
 
-          {error ? (
+          {errors.code ? (
             <p
-              className="mt-2 text-[13px] text-[#f12c23]"
-              id={errorId}
+              className="mt-1.5 text-[13px] text-[#f12c23]"
+              id={codeErrorId}
               role="alert"
             >
-              {error}
+              {errors.code}
+            </p>
+          ) : null}
+          {errors.form ? (
+            <p
+              className="mt-2 text-[13px] text-[#f12c23]"
+              id={formErrorId}
+              role="alert"
+            >
+              {errors.form}
             </p>
           ) : null}
 
