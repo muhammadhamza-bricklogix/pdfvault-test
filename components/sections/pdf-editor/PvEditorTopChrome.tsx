@@ -10,7 +10,7 @@ import {
   Comment01Icon,
   Copy01Icon,
   Cursor01Icon,
-  Eraser01Icon,
+  EraserIcon,
   FileExportIcon,
   FileMinusIcon,
   HighlighterIcon,
@@ -71,7 +71,7 @@ const GROUP_A: ToolEntry[] = [
 
 const GROUP_B: ToolEntry[] = [
   { kind: "mode", id: "shape", label: "Shapes", icon: ShapesIcon },
-  { kind: "mode", id: "eraser", label: "Eraser", icon: Eraser01Icon },
+  { kind: "mode", id: "eraser", label: "Eraser", icon: EraserIcon },
   { kind: "mode", id: "whiteout", label: "Whiteout", icon: PaintBucketIcon },
   { kind: "mode", id: "redact", label: "Redact", icon: ViewOffIcon },
   { kind: "mode", id: "image", label: "Image", icon: Image01Icon },
