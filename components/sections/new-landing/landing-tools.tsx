@@ -133,7 +133,8 @@ const TOOLS: Tool[] = [
   {
     icon: "/landing/convert.svg",
     title: "PNG to PDF",
-    description: "Drop one or more PNGs and bundle them into one PDF.",
+    description:
+      "Drop one or more PNGs and we'll bundle them into a single PDF.",
     href: convert("png-to-pdf"),
     tabs: ["convert-to"],
   },

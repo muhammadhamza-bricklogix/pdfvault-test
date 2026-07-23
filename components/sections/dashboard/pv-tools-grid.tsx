@@ -32,7 +32,15 @@ interface ToolCardEntry {
  * Extract the tool slug from a composer-scoped tile href. Returns null
  * for hrefs that shouldn't route through the doc picker (PDF Composer
  * entry, convert routes). Mirrors the helper in `pv-quick-tool-cards.tsx`.
+ *
+ * PICKER_BYPASS: password + flatten tiles go straight to the composer's
+ * empty drop-zone instead of the "pick an existing PDF" modal. Product
+ * decision 2026-07-23: users typically upload a fresh PDF for
+ * password-protect / remove-annotations, and the picker just adds a
+ * dead-end step for anyone with no docs in their library yet.
  */
+const PICKER_BYPASS = new Set(["password", "flatten"]);
+
 function extractComposerToolSlug(href: string): string | null {
   if (!href.startsWith("/pdf-composer")) return null;
   const qIdx = href.indexOf("?");
@@ -41,7 +49,10 @@ function extractComposerToolSlug(href: string): string | null {
   const params = new URLSearchParams(href.slice(qIdx + 1));
   const tool = params.get("tool");
 
-  return tool && tool !== "editor" ? tool : null;
+  if (!tool || tool === "editor") return null;
+  if (PICKER_BYPASS.has(tool)) return null;
+
+  return tool;
 }
 
 const TOOL_CARDS: readonly ToolCardEntry[] = [

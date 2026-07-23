@@ -61,12 +61,14 @@ export interface LandingToolCategory {
 export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
   {
     id: "edit-sign",
-    // Reference spells it "Edit & SIgn" — matches footer + Figma; kept
-    // pixel-accurate. Flag to product if it should read "Edit & Sign".
-    heading: "EDIT & SIgn",
+    // Category renamed 2026-07-23 per product: parent = "PDF COMPOSER"
+    // (all caps to match the other category headings), first tool
+    // relabeled "Edit & Sign" (title case) — the swap the design
+    // review asked for. Same href — tile still opens the PDF editor.
+    heading: "PDF COMPOSER",
     tools: [
       {
-        label: "PDF Composer",
+        label: "Edit & Sign",
         icon: { kind: "line", id: "editor" },
         href: TOOL_ROUTE.editor,
       },
