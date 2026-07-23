@@ -12,6 +12,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Input, Modal, TextField } from "@heroui/react";
 import { useEffect, useState } from "react";
 
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { validateRenameFilename } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
@@ -106,16 +107,44 @@ export function VersionHistoryModal({
     };
   }, [isOpen, documentId]);
 
+  // Revoke any blob URL we created for the current preview so the browser
+  // doesn't accumulate object URLs each time the user previews a version.
+  useEffect(() => {
+    return () => {
+      if (currentUrl?.startsWith("blob:")) URL.revokeObjectURL(currentUrl);
+    };
+  }, [currentUrl]);
+
   const openPreview = async (version: Document): Promise<void> => {
     if (!documentId) return;
     setPreviewVersion(version);
-    setCurrentUrl(null);
-    try {
-      // Fetch a fresh signed URL for the current doc. The version row
-      // already carries its own `url` from `listVersions`.
-      const current = await documentsService.getDocument(documentId);
+    // Drop the previous current preview URL so the pane re-renders.
+    // Blob URLs created from the local file are revoked here to avoid
+    // leaking object URLs every time the preview opens.
+    setCurrentUrl((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
 
-      setCurrentUrl(current.url ?? null);
+      return null;
+    });
+
+    try {
+      // Prefer the local, already-merged file when it matches the doc
+      // we are previewing. This guarantees the "Current" pane reflects
+      // the editor's actual bytes (including the latest draw/signature
+      // edits) and avoids any signed-URL / CDN cache staleness that can
+      // make the preview look like an older version.
+      const state = usePdfEditorStore.getState();
+      const localFile = state.file;
+
+      if (localFile && state.currentDocumentId === documentId) {
+        setCurrentUrl(URL.createObjectURL(localFile));
+      } else {
+        // Fall back to a fresh signed URL if the local file isn't
+        // available (e.g. the modal was opened from outside the editor).
+        const current = await documentsService.getDocument(documentId);
+
+        setCurrentUrl(current.url ?? null);
+      }
     } catch {
       // Non-fatal — the preview pane will just show the loading
       // spinner. User can still confirm restore.

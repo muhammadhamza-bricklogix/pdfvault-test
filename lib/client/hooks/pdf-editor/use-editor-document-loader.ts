@@ -90,7 +90,12 @@ function loadDocument(
 
     try {
       const doc = await documentsService.getDocument(id);
-      const res = await fetch(doc.url);
+      // `cache: "no-store"` — the signed URL often points to the same object
+      // key after a save/restore, so the browser may serve a stale cached
+      // response unless we explicitly bypass the cache (reported 2026-07-23:
+      // restored/current PDFs don't reflect the latest bytes until a hard
+      // refresh).
+      const res = await fetch(doc.url, { cache: "no-store" });
 
       if (!res.ok) throw new Error(`Failed to fetch PDF (${res.status})`);
       const blob = await res.blob();
@@ -392,7 +397,10 @@ export async function reloadEditorFromDocument(
   doc: Document,
   userId?: string | null,
 ): Promise<void> {
-  const res = await fetch(doc.url);
+  // Bypass the browser cache for restored bytes — the signed URL may reuse
+  // the same object key, and without this the user sees the pre-restore
+  // PDF until they hard-refresh (reported 2026-07-23).
+  const res = await fetch(doc.url, { cache: "no-store" });
 
   if (!res.ok) throw new Error(`Failed to fetch restored PDF (${res.status})`);
   const blob = await res.blob();
