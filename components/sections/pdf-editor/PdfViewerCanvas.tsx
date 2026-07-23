@@ -76,6 +76,18 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     };
   }, [sourcePage, pdfDocument]);
 
+  // Gate `page` on the current `pdfDocument`. `setPage` runs asynchronously
+  // (`.then`), so after a file swap (version restore, Manage Pages save)
+  // the `page` state still points at the destroyed proxy from the previous
+  // file — `use-page-renderer`'s `page ? renderedSize : null` guard
+  // (2abb697) can't fire because the stale proxy is truthy, so
+  // `useFabricCanvas`'s `hasRenderedSize` stays true and the OLD file's
+  // overlays keep painting over the restored bytes until the user hard-
+  // refreshes (QA report 2026-07-23). Deriving the effective page here
+  // avoids a setState-in-effect while still flipping the guard the moment
+  // the store's `pdfDocument` clears.
+  const effectivePage = pdfDocument ? page : null;
+
   // Fit-to-width on first open of every file (mobile + desktop). PDF
   // pages (e.g. 612pt-wide US Letter) leave the user staring at white
   // margins at zoom=1.0 on any viewport that isn't roughly page-sized.
@@ -85,7 +97,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // user's subsequent manual zoom adjustments are preserved across page
   // navigation, tool switches, etc.
   useEffect(() => {
-    if (!page || !file || !viewerScrollRef.current) return;
+    if (!effectivePage || !file || !viewerScrollRef.current) return;
     if (fittedFileRef.current === file) return;
 
     // Match the `p-6` (24px) horizontal padding on the scroll container.
@@ -94,7 +106,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     if (available <= 0) return;
 
-    const baseViewport = page.getViewport({ scale: 1 });
+    const baseViewport = effectivePage.getViewport({ scale: 1 });
     // 0.95 leaves a small visual breathing margin so the page doesn't butt
     // against the scroll-area edge.
     const fitZoom = (available / baseViewport.width) * 0.95;
@@ -104,7 +116,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     usePdfEditorStore.getState().setZoom(clamped);
     fittedFileRef.current = file;
-  }, [page, file]);
+  }, [effectivePage, file]);
 
   const bgShouldShow =
     backgroundImageConfig.enabled &&
@@ -130,7 +142,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // `useEditTextMode` is what flips the page from default → extracted.
   const { renderedSize } = usePageRenderer({
     canvasRef,
-    page,
+    page: effectivePage,
     suppressText: isPageExtracted,
     zoom,
   });
@@ -163,7 +175,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // flips `suppressText` above on. The Fabric overlay always receives the
   // canvas — the hook itself guards work, so the IText objects stay
   // tappable even when the user switches back to Select / Draw / etc.
-  useEditTextMode({ fabricCanvas, page });
+  useEditTextMode({ fabricCanvas, page: effectivePage });
   useEraserTool({ fabricCanvas });
   useHighlightTool({ fabricCanvas });
   useImageTool({ fabricCanvas });

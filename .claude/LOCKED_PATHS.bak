@@ -28,8 +28,7 @@ lib/client/hooks/pdf-editor/use-edit-text-mode.ts
 lib/client/hooks/pdf-editor/use-fabric-canvas.ts
 
 # Mobile viewer: suppressText branch, mx-auto w-fit scroll container, pinch floor
-# TEMP unlocked (user approved 2026-07-23 for restore-reload fix)
-# components/sections/pdf-editor/PdfViewerCanvas.tsx
+components/sections/pdf-editor/PdfViewerCanvas.tsx
 
 # pdf.js loader — Safari polyfills + legacy build path
 lib/client/pdf-editor/load-pdfjs.ts
