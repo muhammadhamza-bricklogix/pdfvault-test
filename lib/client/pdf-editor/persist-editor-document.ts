@@ -280,8 +280,31 @@ export async function persistEditorDocument({
       finalRemappedState?.extractedPages,
     );
 
+    // Belt-and-braces: fall back to `?id=<docId>` from the URL if the store's
+    // `currentDocumentId` was cleared (StrictMode double-mount, loader race,
+    // etc.). Sending no `documentId` makes the backend create a fresh
+    // Document row and skip the version snapshot — reported 2026-07-23 as
+    // "save happens but version history not created" on nav-save.
+    const urlDocumentId =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("id") || undefined
+        : undefined;
+    const effectiveDocumentId = currentDocumentId ?? urlDocumentId;
+
+    logger.info("[PDFedits] save: request", {
+      documentId: effectiveDocumentId,
+      documentIdSource:
+        currentDocumentId !== null
+          ? "store"
+          : urlDocumentId
+            ? "url-fallback"
+            : "none",
+      hasUnsavedChanges,
+      force,
+    });
+
     const document = await documentsService.uploadDocument({
-      documentId: currentDocumentId ?? undefined,
+      documentId: effectiveDocumentId,
       file: savedFile,
       editorState,
     });

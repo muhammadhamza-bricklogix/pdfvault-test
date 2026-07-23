@@ -67,8 +67,24 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       });
 
       try {
+        // Match the Save-button flow (`useSaveEditor`): `force: true` so
+        // any edit path that didn't flip `hasUnsavedChanges` still hits
+        // the backend upsert, and `applyPostSaveReset` swaps the local
+        // file to the just-uploaded merged bytes.
+        //
+        // Without `applyPostSaveReset` the store keeps the ORIGINAL
+        // upload as `file` while `fabricJsonByPage` retains its
+        // freshly-pristined overlay entries. Next time the same doc
+        // opens (dashboard → click), `useEditorDocumentLoader` sees
+        // `file != null && currentDocumentId === id` and short-circuits
+        // → no refetch → the on-disk state and the store diverge.
+        // Reported 2026-07-23 QA: "draw → My PDFs → save happens but
+        // no version history entry." Making nav-save mirror Save-button
+        // ensures every save path is fed identical inputs to the
+        // backend snapshot logic.
         const result = await persistEditorDocument({
           fabricCanvas: fabricRef.current,
+          force: true,
         });
 
         if (!result.ok && result.reason === "error") {
@@ -79,6 +95,12 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           });
 
           return;
+        }
+
+        if (result.ok) {
+          usePdfEditorStore
+            .getState()
+            .applyPostSaveReset(result.savedFile, result.remappedState);
         }
 
         router.push(detail.url);
