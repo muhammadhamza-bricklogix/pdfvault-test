@@ -120,13 +120,15 @@ export function LandingFooter() {
       <FooterBackground />
 
       <div className="relative z-[1] w-full px-6 sm:px-10 md:min-h-[589px]">
-        {/* Top: brand + four link columns (measured desktop grid) */}
+        {/* Top: brand + four link columns (measured desktop grid).
+            Content is center-aligned per product 2026-07-23 — brand
+            block, link columns, and copyright all read centered. */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[440px_132px_145px_152px_155px] md:gap-x-[54px] md:pt-[100px]">
           {/* Brand + contact */}
-          <div className="col-span-2 sm:col-span-4 md:col-span-1">
+          <div className="col-span-2 flex flex-col items-center text-center sm:col-span-4 md:col-span-1">
             <Image
               alt="PDFVault"
-              className="h-[40px] w-auto brightness-0 invert"
+              className="mx-auto h-[40px] w-auto brightness-0 invert"
               height={40}
               src="/landing/logo-with-text.png"
               width={116}
@@ -134,9 +136,9 @@ export function LandingFooter() {
             <p className="mt-6 max-w-[250px] text-[16px] leading-[1.55] text-white/80">
               A smarter, more secure place for your PDFs.
             </p>
-            <div className="mt-8 flex flex-col gap-5">
+            <div className="mt-8 flex flex-col items-center gap-5">
               <a
-                className={`flex w-fit items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
+                className={`flex items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
                 href="mailto:support@pdfvault.ai"
               >
                 <SendIcon />
@@ -147,11 +149,15 @@ export function LandingFooter() {
 
           {/* Link columns */}
           {FOOTER_COLUMNS.map((column) => (
-            <nav key={column.heading} aria-label={column.heading}>
+            <nav
+              key={column.heading}
+              aria-label={column.heading}
+              className="text-center"
+            >
               <h2 className="text-[14px] font-semibold uppercase tracking-[0.04em] text-white">
                 {column.heading}
               </h2>
-              <ul className="mt-6 flex flex-col gap-[18px]">
+              <ul className="mt-6 flex flex-col items-center gap-[18px]">
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <a
@@ -173,8 +179,8 @@ export function LandingFooter() {
           SOCIAL_LINKS again once the hrefs are set.
         */}
         <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
-          <div className="flex flex-row flex-nowrap items-center justify-between gap-3 sm:gap-4">
-            <p className="min-w-0 flex-1 truncate text-[11px] text-white/60 sm:text-[14px]">
+          <div className="flex flex-row flex-nowrap items-center justify-center gap-3 sm:gap-4">
+            <p className="text-center text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
