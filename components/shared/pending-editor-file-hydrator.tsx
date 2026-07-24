@@ -18,23 +18,15 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * Tools whose action lives on the backend (auth-gated / paywalled) AND whose
- * per-tool hooks don't have their own signed-out flow. Landing these
- * signed-out kicks the user into the "Couldn't start checkout" dead-end —
- * we redirect to sign-in first instead.
- *
- * `extract-images` and `compress` are intentionally omitted:
- * `useExtractImagesEditor` and `CompressModal.handleCompress` both mirror
- * the `useExportEditor` pattern — a signed-out visitor can open the
- * editor + drop a PDF, then hits the sign-in modal at action time and
- * the paywall on the mutation. Matches the flow used on
- * `/convert/pdf-to-*` (Download → sign-in → paywall).
+ * Every backend-gated tool now owns its own signed-out flow — the modal /
+ * handler calls `dispatchSignInPrompt` with a `redirectUrl` back to
+ * `?tool=<slug>`, so users always reach the composer, can drop a file, and
+ * only hit the sign-in modal at action time (same pattern as
+ * `useExportEditor` / `useExtractImagesEditor` / `CompressModal`).
+ * Redirecting to /sign-in from here would strand the user without a chance
+ * to explore the tool, and the tool's own handler already handles auth.
  */
-const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set([
-  "password",
-  "unlock",
-  "flatten",
-]);
+const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set<string>();
 
 /**
  * Bootstraps the editor on `/pdf-composer` mount:

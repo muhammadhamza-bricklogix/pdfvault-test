@@ -27,8 +27,10 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { AnnotationsModal } from "./AnnotationsModal";
@@ -87,6 +89,26 @@ export function HamburgerMenu() {
     const f = requireFile("flattening");
 
     if (!f) return;
+
+    // Same guest flow as CompressModal / useExportEditor — persist the
+    // working file to IDB, pop the sign-in confirm modal, and return the
+    // user to `?tool=flatten` so the hydrator re-fires the flatten event
+    // after sign-in. Without this the mutation 401s and the user hits
+    // the paywall "couldn't start checkout" dead-end.
+    if (!isSignedIn) {
+      try {
+        await savePendingEditorFile(f);
+      } catch (err) {
+        logger.warn("pending editor file save failed", err);
+      }
+      requireSignIn(
+        "Removing annotations is a paid feature. Sign in and we'll bring you back here to finish.",
+        `${ROUTES.TOOLS.PDF_EDITOR}?tool=flatten`,
+      );
+
+      return;
+    }
+
     try {
       const result = await flatten.mutateAsync({ file: f });
 
@@ -370,9 +392,10 @@ export function HamburgerMenu() {
           // store. Relying on `clearFile()` to bounce the loader effect
           // wasn't firing deterministically for every user (QA report
           // 2026-07-23: "restore succeeds but I have to refresh").
-          // We use the immutable version-snapshot URL for the initial load
-          // because the root document URL can still point at the pre-restore
-          // bytes for a short window after the API returns.
+          // `restoredFileUrl` is a freshly-signed URL for the root document
+          // after the restore, fetched by VersionHistoryModal so we don't
+          // rely on the snapshot URL (which may still point at pre-restore
+          // bytes depending on backend object-swap semantics).
           void reloadEditorFromDocument(
             restored,
             userId,
