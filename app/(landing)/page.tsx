@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { LandingBanner } from "@/components/sections/new-landing/landing-banner";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
+import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
 export default function NewLandingPage() {
   return (
     <div id="top">
+      <LandingFreshStart />
       <LandingHeader />
       <main>
         <LandingHero />

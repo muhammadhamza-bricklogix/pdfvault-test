@@ -383,6 +383,28 @@ function EditorLayout() {
 
 export function PdfEditorShell() {
   const { isSignedIn } = useAuth();
+  const shellSearchParams = useSearchParams();
+
+  // Synchronous fresh-entry clear — runs BEFORE the store selectors
+  // below read `file` on first render. Kills the stale-file →
+  // <EditorLayout /> → usePdfLoader → <EditorLoadingShell /> race that
+  // leaves users stuck on the composer loader after in-SPA navigation
+  // (composer → landing → tool-tile → composer). The hydrator also
+  // clears in its effect, but effects run AFTER first render, so
+  // <EditorLayout /> would still mount for a frame and kick off a pdf.js
+  // parse against a stale File. useState's initializer is the standard
+  // "run once before first render" hook; the return value is ignored.
+  useState(() => {
+    if (
+      shellSearchParams.get("fresh") === "1" &&
+      !shellSearchParams.get("id")
+    ) {
+      usePdfEditorStore.getState().clearFile();
+    }
+
+    return true;
+  });
+
   const file = usePdfEditorStore((s) => s.file);
   const createPdfModalKey = usePdfEditorStore((s) => s.createPdfModalKey);
   const isCreatePdfModalOpen = usePdfEditorStore((s) => s.isCreatePdfModalOpen);
@@ -390,8 +412,7 @@ export function PdfEditorShell() {
     (s) => s.setIsCreatePdfModalOpen,
   );
   const setIsSignedIn = usePdfEditorStore((s) => s.setIsSignedIn);
-  const searchParams = useSearchParams();
-  const pendingDocumentId = searchParams.get("id");
+  const pendingDocumentId = shellSearchParams.get("id");
 
   useEditorDocumentLoader();
 

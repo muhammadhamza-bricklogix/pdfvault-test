@@ -2,16 +2,21 @@
 
 import type { EncryptKeyLength } from "@/lib/shared/types/pdf-tools.types";
 
+import { useAuth } from "@clerk/nextjs";
 import { Button, Label, Modal } from "@heroui/react";
 import { useState } from "react";
 
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import {
   useDecryptFileMutation,
   useEncryptFileMutation,
 } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
+import { logger } from "@/lib/shared/utils/logger";
 
 type Mode = "protect" | "unprotect";
 
@@ -19,6 +24,7 @@ export function PasswordModal() {
   const isOpen = usePdfEditorStore((s) => s.isPasswordModalOpen);
   const setIsOpen = usePdfEditorStore((s) => s.setIsPasswordModalOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const { isSignedIn } = useAuth();
 
   const [mode, setMode] = useState<Mode>("protect");
   const [userPassword, setUserPassword] = useState("");
@@ -46,6 +52,34 @@ export function PasswordModal() {
     setIsOpen(false);
   };
 
+  // Mirrors the Compress / Export flow: save the working PDF to IDB, pop
+  // the sign-in confirm modal, and hand Clerk a `redirect_url` back to the
+  // composer with the tool slug set so the hydrator re-opens this modal
+  // after sign-in and the user picks up where they left off.
+  const guardSignedIn = async (m: Mode): Promise<boolean> => {
+    if (isSignedIn || !file) return true;
+    try {
+      await savePendingEditorFile(file);
+    } catch (err) {
+      logger.warn("pending editor file save failed", err);
+    }
+
+    const slug = m === "protect" ? "password" : "unlock";
+    const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${slug}`;
+
+    dispatchSignInPrompt({
+      title:
+        m === "protect" ? "Sign in to password protect" : "Sign in to unlock",
+      description:
+        "This is a paid feature. Sign in and we'll bring you back here to finish.",
+      confirmLabel: "Sign in & continue",
+      redirectUrl: returnTo,
+    });
+    setIsOpen(false);
+
+    return false;
+  };
+
   const handleProtect = async () => {
     if (!file) return;
     if (userPassword !== confirmPassword) {
@@ -54,6 +88,7 @@ export function PasswordModal() {
       return;
     }
     setMismatchError(false);
+    if (!(await guardSignedIn("protect"))) return;
     try {
       const result = await encrypt.mutateAsync({
         file,
@@ -70,6 +105,7 @@ export function PasswordModal() {
 
   const handleUnprotect = async () => {
     if (!file) return;
+    if (!(await guardSignedIn("unprotect"))) return;
     try {
       const result = await decrypt.mutateAsync({
         file,

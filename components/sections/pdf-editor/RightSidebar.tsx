@@ -802,6 +802,20 @@ export function ShapePropertiesContent({
   );
 
   if (variant === "floating") {
+    // Panel visibility is `activeTool === "shape" || hasSelectedShape`.
+    // Just flipping `activeTool` back to "select" leaves the panel up
+    // when a shape is still selected (X button appears to do nothing).
+    // Discard the active object too so both branches of the visibility
+    // gate turn off and `selectedProps` clears on the resulting
+    // `selection:cleared` event.
+    const handleFloatingClose = () => {
+      if (fabricCanvas) {
+        fabricCanvas.discardActiveObject();
+        fabricCanvas.requestRenderAll();
+      }
+      usePdfEditorStore.getState().setActiveTool("select");
+    };
+
     return (
       <>
         <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
@@ -809,11 +823,7 @@ export function ShapePropertiesContent({
             className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
             variant="default"
           >
-            <FloatingPanelCloseButton
-              onPress={() =>
-                usePdfEditorStore.getState().setActiveTool("select")
-              }
-            />
+            <FloatingPanelCloseButton onPress={handleFloatingClose} />
             {body}
           </Surface>
         </aside>

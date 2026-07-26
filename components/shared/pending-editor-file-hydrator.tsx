@@ -18,23 +18,15 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * Tools whose action lives on the backend (auth-gated / paywalled) AND whose
- * per-tool hooks don't have their own signed-out flow. Landing these
- * signed-out kicks the user into the "Couldn't start checkout" dead-end —
- * we redirect to sign-in first instead.
- *
- * `extract-images` and `compress` are intentionally omitted:
- * `useExtractImagesEditor` and `CompressModal.handleCompress` both mirror
- * the `useExportEditor` pattern — a signed-out visitor can open the
- * editor + drop a PDF, then hits the sign-in modal at action time and
- * the paywall on the mutation. Matches the flow used on
- * `/convert/pdf-to-*` (Download → sign-in → paywall).
+ * Every backend-gated tool now owns its own signed-out flow — the modal /
+ * handler calls `dispatchSignInPrompt` with a `redirectUrl` back to
+ * `?tool=<slug>`, so users always reach the composer, can drop a file, and
+ * only hit the sign-in modal at action time (same pattern as
+ * `useExportEditor` / `useExtractImagesEditor` / `CompressModal`).
+ * Redirecting from here would strand the user before they get a chance to
+ * see the tool's own UI, and the tool's own handler already handles auth.
  */
-const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set([
-  "password",
-  "unlock",
-  "flatten",
-]);
+const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set<string>();
 
 /**
  * Bootstraps the editor on `/pdf-composer` mount:
@@ -73,6 +65,7 @@ const AUTH_GATED_TOOLS: ReadonlySet<string> = new Set([
 export function PendingEditorFileHydrator() {
   const ranRef = useRef(false);
   const resetRef = useRef(false);
+  const redirectRef = useRef(false);
   const launchedRef = useRef(false);
   const autoSavedRef = useRef(false);
 
@@ -103,23 +96,32 @@ export function PendingEditorFileHydrator() {
   const docId = searchParams.get("id");
   const isFreshEntry = searchParams.get("fresh") === "1";
 
-  // Step 1 — auth gate + tool-tile reset. Runs once per mount before
-  // anything else touches the store.
+  // Step 1a — synchronous tool-tile reset. Fires ASAP (no authLoaded gate)
+  // so a stale file from the previous session is out of the store BEFORE
+  // `PdfEditorShell` gets a chance to mount `<EditorLayout />` against it
+  // and drag the user through `usePdfLoader` → `<EditorLoadingShell />`
+  // for a doc the URL already declared "reset". Was previously coupled
+  // with the auth-gated redirect and only cleared after Clerk finished
+  // resolving — long enough for the loader shell to paint and, on some
+  // slower auth resolutions, get stuck.
   useEffect(() => {
     if (resetRef.current) return;
-    if (!authLoaded) return; // wait for auth so the gate doesn't misfire
 
     resetRef.current = true;
 
-    // Landing / dashboard tool tiles route to `/pdf-composer?tool=<slug>`
-    // or bare `/pdf-composer?fresh=1`. Either signal means the user
-    // came from a fresh tool selection and expects an empty
-    // drop-zone — dump any stale file from a prior session so a user
-    // who just converted Word→PDF doesn't see that converted file
-    // waiting for them when they click "PDF Composer".
     if ((tool || exportFormat || isFreshEntry) && !docId) {
       clearFile();
     }
+  }, [clearFile, docId, exportFormat, isFreshEntry, tool]);
+
+  // Step 1b — auth-gated redirects. Splitting them from the reset lets
+  // the store clear happen ASAP and keeps the redirect decision (which
+  // legitimately needs Clerk state) on its own effect.
+  useEffect(() => {
+    if (redirectRef.current) return;
+    if (!authLoaded) return; // wait for auth so the gate doesn't misfire
+
+    redirectRef.current = true;
 
     // Signed-in redirect (product decision 2026-07-23): when a signed-in
     // user lands on the composer with a specific tool but no doc id,
@@ -151,15 +153,7 @@ export function PendingEditorFileHydrator() {
         `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
       );
     }
-  }, [
-    authLoaded,
-    clearFile,
-    docId,
-    exportFormat,
-    isFreshEntry,
-    isSignedIn,
-    tool,
-  ]);
+  }, [authLoaded, docId, isSignedIn, tool]);
 
   // Step 2 — one-shot IDB rehydrate.
   //
