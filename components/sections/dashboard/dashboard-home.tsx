@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { useDebounce } from "@/lib/client/hooks/use-debounce";
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
@@ -53,6 +54,7 @@ const TOOL_LABELS: Record<string, string> = {
  */
 export function DashboardHome() {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [renameTarget, setRenameTarget] = useState<Document | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Document[] | null>(
@@ -60,7 +62,7 @@ export function DashboardHome() {
   );
   const [historyTarget, setHistoryTarget] = useState<Document | null>(null);
 
-  const query = useDocumentsQuery();
+  const query = useDocumentsQuery({ nameQuery: debouncedSearch || undefined });
   const queryClient = useQueryClient();
   const { user } = useUser();
   const router = useRouter();
@@ -113,19 +115,6 @@ export function DashboardHome() {
     [items, uploader],
   );
 
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
-    if (!q) return rows;
-
-    return rows.filter(
-      (row) =>
-        row.name.toLowerCase().includes(q) ||
-        row.uploadedByName.toLowerCase().includes(q) ||
-        row.uploadedByEmail.toLowerCase().includes(q),
-    );
-  }, [rows, search]);
-
   const handleDownload = async (row: PvFileRow) => {
     try {
       await triggerDocumentDownload(row.doc);
@@ -149,7 +138,7 @@ export function DashboardHome() {
       <PvSearchToolbar value={search} onChange={setSearch} />
       <PvFileTable
         isLoading={query.isLoading}
-        rows={filteredRows}
+        rows={rows}
         onBulkDelete={(bulk) => setBulkDeleteTargets(bulk.map((r) => r.doc))}
         onDelete={(row) => setDeleteTarget(row.doc)}
         onDownload={(row) => void handleDownload(row)}

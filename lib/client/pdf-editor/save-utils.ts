@@ -1,4 +1,5 @@
 import type { Canvas as FabricCanvas } from "fabric";
+import type { BackgroundImageConfig } from "@/lib/client/stores/pdf-editor-store";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
@@ -8,15 +9,9 @@ import {
   materializeSidebarReorder,
   stripPageNumberOverlays,
 } from "./materialize-page-order";
+import { parseFabricJson } from "./fabric-render";
 import { mergeFabricEditsIntoPdf } from "./merge-pdf";
 import { sanitizeSourceBytesForPdfLib } from "./sanitize-source-bytes";
-
-export type ParsedFabricJson = {
-  height: number;
-  objects?: unknown[];
-  width: number;
-  [key: string]: unknown;
-};
 
 /**
  * Serializes a Fabric canvas to a JSON string and embeds the base (zoom=1)
@@ -112,97 +107,58 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
   });
 }
 
-export function parseFabricJson(json: string): ParsedFabricJson | null {
-  const parsed = JSON.parse(json) as ParsedFabricJson;
+// Object types the worker can draw without a DOM canvas. Anything else
+// (images, annotations, unknown types) falls back to raster and must stay
+// on the main thread where `document.createElement('canvas')` is available.
+const WORKER_SAFE_TYPES = new Set([
+  "ellipse",
+  "group",
+  "i-text",
+  "itext",
+  "line",
+  "path",
+  "rect",
+  "text",
+  "textbox",
+  "triangle",
+]);
 
-  if (!parsed.objects?.length) return null;
-  if (!parsed.width || !parsed.height) return null;
+function objectNeedsMainThread(obj: Record<string, unknown>): boolean {
+  const type = String(obj.type ?? "").toLowerCase();
+  const editorType = (obj as { editorType?: string }).editorType;
 
-  return parsed;
+  if (editorType === "annotation" || type === "image") return true;
+
+  return !WORKER_SAFE_TYPES.has(type);
 }
 
 /**
- * Renders a Fabric JSON snapshot to a PNG data URL via a temporary offscreen
- * canvas. The width/height in the JSON match the live editor canvas at the
- * time the snapshot was taken, so object coordinates are valid as-is.
+ * Determines whether the merge can safely run inside a Web Worker.
+ *
+ * Background-image baking requires the live pdf.js document proxy, which the
+ * worker does not have. Images, annotations, and any unknown Fabric object
+ * type are rasterized via a DOM canvas, so they also keep the merge on the
+ * main thread.
  */
-export async function renderFabricJsonToPng(
-  parsed: ParsedFabricJson,
-): Promise<string> {
-  const { Canvas } = await import("fabric");
-
-  const el = document.createElement("canvas");
-
-  el.width = Math.round(parsed.width);
-  el.height = Math.round(parsed.height);
-  el.style.position = "fixed";
-  el.style.left = "-9999px";
-  el.style.top = "-9999px";
-  document.body.appendChild(el);
-
-  const fc = new Canvas(el, {
-    backgroundColor: "transparent",
-    enableRetinaScaling: false,
-    height: el.height,
-    width: el.width,
-  });
-
-  try {
-    await fc.loadFromJSON(parsed);
-    fc.renderAll();
-
-    return fc.toDataURL({ format: "png", multiplier: 3 });
-  } finally {
-    fc.dispose();
-
-    if (document.body.contains(el)) {
-      document.body.removeChild(el);
-    }
-  }
-}
-
-/**
- * Renders only the objects at the given indices from a Fabric JSON snapshot
- * to a PNG data URL. Used by the hybrid merge pipeline to rasterize the
- * subset of objects that cannot be drawn as vectors (e.g. images).
- * Returns `null` if no objects pass the filter.
- */
-export async function renderFabricSubsetToPng(
-  parsed: ParsedFabricJson,
-  objectIndices: number[],
-): Promise<string | null> {
-  if (!objectIndices.length || !parsed.objects?.length) return null;
-
-  const filteredObjects = objectIndices
-    .map((i) => parsed.objects![i])
-    .filter(Boolean);
-
-  if (!filteredObjects.length) return null;
-
-  const subset: ParsedFabricJson = {
-    ...parsed,
-    objects: filteredObjects,
-  };
-
-  return renderFabricJsonToPng(subset);
-}
-
-/** Decodes a `data:image/png;base64,...` URL into raw PNG bytes. */
-export function dataUrlToBytes(dataUrl: string): Uint8Array {
-  const base64 = dataUrl.split(",")[1];
-
-  if (!base64) {
-    throw new Error("Invalid data URL: missing base64 payload");
+function canMergeInWorker(
+  backgroundImageConfig: BackgroundImageConfig | null,
+  fabricJsonByPage: Map<number, string>,
+): boolean {
+  if (backgroundImageConfig?.enabled && backgroundImageConfig?.imageData) {
+    return false;
   }
 
-  const binaryStr = atob(base64);
-  const bytes = new Uint8Array(binaryStr.length);
+  for (const json of fabricJsonByPage.values()) {
+    const parsed = parseFabricJson(json);
 
-  for (let i = 0; i < binaryStr.length; i++) {
-    bytes[i] = binaryStr.charCodeAt(i);
+    if (!parsed) continue;
+
+    const objects = (parsed.objects ?? []) as Record<string, unknown>[];
+
+    if (objects.some(objectNeedsMainThread)) return false;
   }
 
-  return bytes;
+  return true;
 }
 
 /** Persists the live Fabric canvas into the store for a display slot. */
@@ -247,6 +203,11 @@ type BuildEditedPdfInput = {
    *   the downloaded copy carries them. The cloud original is untouched.
    */
   bakeOverlays?: boolean;
+  /**
+   * Raster scale for rendered page backgrounds. Capped to the configured
+   * maximum to prevent runaway memory use on high-resolution exports.
+   */
+  rasterScale?: number;
 };
 
 /**
@@ -288,6 +249,7 @@ export async function buildEditedPdfBytes({
   fabricCanvas,
   file,
   bakeOverlays = false,
+  rasterScale,
 }: BuildEditedPdfInput): Promise<BuildEditedPdfResult> {
   if (fabricCanvas) {
     flushLiveFabricPage(currentPage, fabricCanvas);
@@ -375,15 +337,42 @@ export async function buildEditedPdfBytes({
     ? Array.from({ length: pageOrder.length }, (_, i) => i + 1)
     : pageOrder;
 
-  const bytes = await mergeFabricEditsIntoPdf({
+  // Background-image baking needs the live pdf.js document to render source
+  // pages, so it must stay on the main thread. The common Save/Export path
+  // (watermark, text edits, shapes) can run in a worker to keep the UI
+  // responsive on large documents.
+  const mergeInput = {
     backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
     fabricJsonByPage: mergeJsonForBake,
     fontDataMap: fontDataByLoadedName,
     pageOrder: mergePageOrder,
-    pdfDocument,
+    rasterScale,
     sourceBytes: mergeSourceBytes,
     watermarkConfig: wmShouldBake ? watermarkConfig : null,
-  });
+  };
+
+  // Offload the CPU-heavy pdf-lib merge to a worker whenever it does not
+  // need the live pdf.js document or a DOM canvas. On failure we fall back
+  // to the main thread so the save/export still completes.
+  let bytes: Uint8Array;
+
+  if (
+    canMergeInWorker(mergeInput.backgroundImageConfig, mergeFabricJsonByPage)
+  ) {
+    try {
+      const { mergeInWorker } = await import("./workers/pdf-merge.worker.api");
+
+      bytes = await mergeInWorker(mergeInput);
+    } catch (err) {
+      logger.warn(
+        "[PDFedits] Worker merge failed, falling back to main thread",
+        err,
+      );
+      bytes = await mergeFabricEditsIntoPdf({ ...mergeInput, pdfDocument });
+    }
+  } else {
+    bytes = await mergeFabricEditsIntoPdf({ ...mergeInput, pdfDocument });
+  }
 
   return { bytes, remappedState };
 }

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 
-import { LandingBanner } from "@/components/sections/new-landing/landing-banner";
-import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
-// Testimonials hidden per PM review 2026-07 (copy pending).
-// import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
-import { LandingTools } from "@/components/sections/new-landing/landing-tools";
+
+import {
+  LazyLandingBanner,
+  LazyLandingFooter,
+  LazyLandingTools,
+} from "./_lazy-landing-sections";
 
 export const metadata: Metadata = {
   title: "PDFVault — A smarter, more secure home for every PDF",
@@ -31,11 +32,11 @@ export default function NewLandingPage() {
       <main>
         <LandingHero />
         <LandingSteps />
-        <LandingTools />
-        <LandingBanner />
+        <LazyLandingTools />
+        <LazyLandingBanner />
         {/* <LandingTestimonials /> */}
       </main>
-      <LandingFooter />
+      <LazyLandingFooter />
     </div>
   );
 }

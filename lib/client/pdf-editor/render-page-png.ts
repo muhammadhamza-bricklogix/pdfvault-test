@@ -1,11 +1,10 @@
 import type { PDFPageProxy } from "pdfjs-dist";
 
+import { getExportRasterScale } from "./raster-config";
+
 // pdf.js OPS constants for text rendering operations (31–49)
 const TEXT_OPS_MIN = 31;
 const TEXT_OPS_MAX = 49;
-
-// Background raster scale — 3× for high quality output
-const RASTER_SCALE = 3;
 
 export type RenderPageOptions = {
   /** Clockwise rotation in degrees applied to the rendered viewport (default 0). */
@@ -14,20 +13,27 @@ export type RenderPageOptions = {
   suppressText?: boolean;
   /** Render against a transparent background (default false). */
   transparent?: boolean;
+  /** Raster scale override — clamped to the configured maximum. */
+  scale?: number;
 };
 
 /**
  * Renders a pdf.js page to a PNG byte array. Supports text suppression,
- * transparent backgrounds, and explicit rotation — used by the manage-pages
- * save pipeline (build-pages-pdf) to bake a user-applied rotation into the
- * rendered output rather than relying on /Rotate metadata.
+ * transparent backgrounds, explicit rotation, and a configurable/capped
+ * raster scale.
  */
 export async function renderPageToPng(
   page: PDFPageProxy,
   options: RenderPageOptions = {},
 ): Promise<Uint8Array> {
-  const { rotation = 0, suppressText = true, transparent = false } = options;
-  const viewport = page.getViewport({ rotation, scale: RASTER_SCALE });
+  const {
+    rotation = 0,
+    suppressText = true,
+    transparent = false,
+    scale: requestedScale,
+  } = options;
+  const scale = getExportRasterScale(requestedScale);
+  const viewport = page.getViewport({ rotation, scale });
 
   const canvas = document.createElement("canvas");
 

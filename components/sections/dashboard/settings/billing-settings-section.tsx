@@ -21,11 +21,9 @@ import { toast } from "@/lib/shared/utils/toast";
 import { PvSectionHeading } from "./pv-settings-primitives";
 
 /**
- * `/dashboard/settings/billing` — three stacked sections:
+ * `/dashboard/settings/billing` — two stacked sections:
  *   1. "Your subscription" — plan card + Cancel / Renew actions
  *   2. "Billing history" — invoices table
- *   3. "Advanced" — Close-subscription escape hatch, only when a
- *      subscription row exists
  *
  * No third-party payment-processor names in user-visible copy — all
  * "Solidgate" mentions live in code comments / API paths only.
@@ -263,18 +261,6 @@ export function BillingSettingsSection() {
         <InvoicesTable />
       </div>
 
-      {/* Advanced / Close-subscription escape hatch — hidden 2026-07-23
-          per product decision. Keep AdvancedSection + CloseSubscriptionModal
-          mounted-and-ready code below in case we need to re-enable during
-          an incident, but do not render the section by default.
-      {hasSubscription ? (
-        <AdvancedSection
-          busy={hardCancel.isPending}
-          onOpenClose={() => setCloseConfirmOpen(true)}
-        />
-      ) : null}
-      */}
-
       <CancellationFlow
         isOpen={cancelOpen}
         onCancelled={markJustCancelled}
@@ -366,41 +352,6 @@ function SubscriptionCard({
         before your next renewal.
       </p>
     </div>
-  );
-}
-
-function AdvancedSection({
-  busy,
-  onOpenClose,
-}: {
-  busy: boolean;
-  onOpenClose: () => void;
-}) {
-  return (
-    <>
-      <PvSectionHeading
-        description="Rarely needed. Use these only if the standard Cancel option isn't working."
-        title="Advanced"
-      />
-      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-danger-200 bg-danger-50/40 p-5">
-        <div>
-          <p className="text-[13px] font-semibold text-danger-700">
-            Close subscription immediately
-          </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-muted)]">
-            Ends your subscription right away instead of at the end of the
-            billing period. Your account returns to the free plan. Use this when
-            the standard Cancel button isn&apos;t working, when a trial was
-            declined, or when you want a clean slate to restart.
-          </p>
-        </div>
-        <div>
-          <Button isDisabled={busy} variant="danger" onPress={onOpenClose}>
-            {busy ? "Closing…" : "Close subscription"}
-          </Button>
-        </div>
-      </div>
-    </>
   );
 }
 

@@ -25,6 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Virtuoso } from "react-virtuoso";
 
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
@@ -331,6 +332,68 @@ export type SortablePageListProps = {
   thumbnailZoom?: number;
 };
 
+// Only virtualize vertical lists once they exceed this many items.
+const VIRTUALIZE_THRESHOLD = 30;
+
+type VirtualRow = {
+  currentPage: number;
+  displayPage: number;
+  draftPage?: DraftPage;
+  dragWholeCard: boolean;
+  id: string;
+  importBytes?: ArrayBuffer;
+  layout: PageListLayout;
+  onToggleSelect?: (id: string) => void;
+  selectedIds: string[];
+  showPageLabel: boolean;
+  sortableDisabled: boolean;
+  sourcePage?: number;
+  thumbnailZoom?: number;
+  handleSelect: (page: number) => void;
+};
+
+function VirtualItem({ data }: { data: VirtualRow }) {
+  const {
+    currentPage,
+    displayPage,
+    draftPage,
+    dragWholeCard,
+    id,
+    importBytes,
+    layout,
+    onToggleSelect,
+    selectedIds,
+    showPageLabel,
+    sortableDisabled,
+    sourcePage,
+    thumbnailZoom,
+    handleSelect,
+  } = data;
+
+  const selectedSet = new Set(selectedIds);
+
+  return (
+    <SortableThumbnail
+      key={id}
+      displayPageNumber={displayPage}
+      draftPage={draftPage}
+      dragWholeCard={dragWholeCard}
+      id={id}
+      importBytes={importBytes}
+      isActive={!draftPage && displayPage === currentPage}
+      isSelected={draftPage ? selectedSet.has(draftPage.id) : false}
+      layout={layout}
+      rotation={draftPage?.rotation ?? 0}
+      showPageLabel={showPageLabel}
+      sortableDisabled={sortableDisabled}
+      sourcePageNumber={sourcePage}
+      thumbnailZoom={thumbnailZoom}
+      onSelect={handleSelect}
+      onToggleSelect={onToggleSelect}
+    />
+  );
+}
+
 export function SortablePageList({
   className,
   dragWholeCard = false,
@@ -409,7 +472,87 @@ export function SortablePageList({
         ? horizontalListSortingStrategy
         : verticalListSortingStrategy;
 
-  const content = (
+  const shouldVirtualize =
+    layout === "vertical" && listLength > VIRTUALIZE_THRESHOLD;
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(400);
+
+  useEffect(() => {
+    if (!shouldVirtualize) return;
+
+    const el = listContainerRef.current;
+
+    if (!el) return;
+
+    const ro = new ResizeObserver(([entry]) => {
+      setListHeight(Math.floor(entry.contentRect.height));
+    });
+
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, [shouldVirtualize]);
+
+  const virtualRows: VirtualRow[] = useMemo(
+    () =>
+      displayIds.map((id, index) => {
+        const displayPage = draftPages ? index + 1 : Number(id);
+        const draftPage = draftPages?.[index];
+        const sourcePage = draftPage
+          ? draftPage.kind === "source"
+            ? draftPage.sourcePageIndex
+            : undefined
+          : (pageOrder[displayPage - 1] ?? displayPage);
+        const importBytes =
+          draftPage?.kind === "imported" && importedPdfs
+            ? importedPdfs.get(draftPage.importKey)
+            : undefined;
+
+        return {
+          currentPage,
+          displayPage,
+          draftPage,
+          dragWholeCard,
+          handleSelect,
+          id,
+          importBytes,
+          layout,
+          onToggleSelect,
+          selectedIds,
+          showPageLabel,
+          sortableDisabled,
+          sourcePage,
+          thumbnailZoom,
+        };
+      }),
+    [
+      currentPage,
+      displayIds,
+      draftPages,
+      dragWholeCard,
+      handleSelect,
+      importedPdfs,
+      layout,
+      onToggleSelect,
+      pageOrder,
+      selectedIds,
+      showPageLabel,
+      sortableDisabled,
+      thumbnailZoom,
+    ],
+  );
+
+  const content = shouldVirtualize ? (
+    <SortableContext items={displayIds} strategy={strategy}>
+      <div ref={listContainerRef} className="min-h-0 flex-1">
+        <Virtuoso
+          data={virtualRows}
+          itemContent={(_index, data) => <VirtualItem data={data} />}
+          style={{ height: listHeight }}
+        />
+      </div>
+    </SortableContext>
+  ) : (
     <SortableContext items={displayIds} strategy={strategy}>
       {displayIds.map((id, index) => {
         const displayPage = draftPages ? index + 1 : Number(id);
@@ -450,7 +593,17 @@ export function SortablePageList({
   );
 
   if (sortableDisabled) {
-    return <div className={className}>{content}</div>;
+    return (
+      <div
+        className={
+          shouldVirtualize
+            ? className?.replace("overflow-y-auto", "flex flex-col")
+            : className
+        }
+      >
+        {content}
+      </div>
+    );
   }
 
   return (
@@ -459,7 +612,15 @@ export function SortablePageList({
       sensors={sensors}
       onDragEnd={handleDragEnd}
     >
-      <div className={className}>{content}</div>
+      <div
+        className={
+          shouldVirtualize
+            ? className?.replace("overflow-y-auto", "flex flex-col")
+            : className
+        }
+      >
+        {content}
+      </div>
     </DndContext>
   );
 }

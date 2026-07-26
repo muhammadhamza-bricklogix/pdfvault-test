@@ -1,9 +1,9 @@
-/* eslint-disable no-console */
 "use client";
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import { logger } from "@/lib/shared/utils/logger";
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { SectionHeading } from "./section-heading";
@@ -281,13 +281,13 @@ export function LandingTools() {
   // re-translation cycle. The two-step causes a brief English flash so
   // the `search()` path is preferred.
   useEffect(() => {
-    console.log("[LandingTools] activeTab changed:", activeTab);
+    logger.debug("[LandingTools] activeTab changed:", activeTab);
 
     const translateVisibleTab = () => {
       const w = window.Weglot;
       const current = w?.getCurrentLang();
 
-      console.log(
+      logger.debug(
         "[LandingTools] translateVisibleTab — Weglot present?",
         !!w,
         "currentLang:",
@@ -295,7 +295,7 @@ export function LandingTools() {
       );
 
       if (!w || !current || current === "en") {
-        console.log(
+        logger.debug(
           "[LandingTools] Skipping translation — Weglot missing, no current lang, or English",
         );
 
@@ -303,7 +303,7 @@ export function LandingTools() {
       }
 
       const runScan = (delayLabel: string) => {
-        console.log(
+        logger.debug(
           "[LandingTools] Rescanning DOM (",
           delayLabel,
           ") for lang:",
@@ -314,7 +314,7 @@ export function LandingTools() {
         if (typeof w.search === "function") {
           w.search();
         } else {
-          console.log(
+          logger.debug(
             "[LandingTools] Falling back to switchTo(en) -> switchTo(",
             current,
             ")",
@@ -343,7 +343,7 @@ export function LandingTools() {
     // Weglot may still be loading when the component mounts or when a tab
     // is clicked. Wait for initialization, then translate the currently
     // visible panel.
-    console.log(
+    logger.debug(
       "[LandingTools] Weglot not ready — waiting for weglot:initialized",
     );
     const onInit = () => translateVisibleTab();

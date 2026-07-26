@@ -1,7 +1,7 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import type { CoordinateContext } from "./coordinate-transform";
-import type { ParsedFabricJson } from "./save-utils";
+import type { ParsedFabricJson } from "./fabric-render";
 import type { FontData } from "./text-extraction";
 import type {
   BackgroundImageConfig,
@@ -18,12 +18,13 @@ import {
   toPdfDim,
   toPdfX,
 } from "./coordinate-transform";
-import { FontCache } from "./font-mapping";
 import {
   dataUrlToBytes,
   parseFabricJson,
   renderFabricSubsetToPng,
-} from "./save-utils";
+} from "./fabric-render";
+import { FontCache } from "./font-mapping";
+import { getExportRasterScale } from "./raster-config";
 import {
   drawEllipse,
   drawGroup,
@@ -48,22 +49,21 @@ export type MergePdfInput = {
   fontDataMap: Map<string, FontData>;
   /** Display order: each entry is a 1-indexed source PDF page number. */
   pageOrder: number[];
-  /** The pdf.js document proxy — needed to render pages for raster backgrounds. */
-  pdfDocument: PDFDocumentProxy;
+  /** The pdf.js document proxy — needed to render pages for raster backgrounds. Omit in Web Worker. */
+  pdfDocument?: PDFDocumentProxy;
   /** Original PDF bytes. */
   sourceBytes: ArrayBuffer;
   /** Watermark configuration — null means no watermark. */
   watermarkConfig?: WatermarkConfig | null;
   /** Background image configuration — null means no background image. */
   backgroundImageConfig?: BackgroundImageConfig | null;
+  /** Raster scale override for page renders — clamped to the max. */
+  rasterScale?: number;
 };
 
 // pdf.js OPS constants for text rendering operations (31–49)
 const TEXT_OPS_MIN = 31;
 const TEXT_OPS_MAX = 49;
-
-// Background raster scale — 3× for high quality output
-const RASTER_SCALE = 3;
 
 // ---------------------------------------------------------------------------
 // Object classification
@@ -289,10 +289,12 @@ type RenderPageOptions = {
 
 async function renderPageToPng(
   page: PDFPageProxy,
+  rasterScale: number | undefined,
   options: RenderPageOptions = {},
 ): Promise<RenderPagePngResult> {
   const { suppressText = true, transparent = false } = options;
-  const viewport = page.getViewport({ scale: RASTER_SCALE });
+  const scale = getExportRasterScale(rasterScale);
+  const viewport = page.getViewport({ scale });
 
   const canvas = document.createElement("canvas");
 
@@ -335,9 +337,9 @@ async function renderPageToPng(
     });
 
     return {
-      height: viewport.height / RASTER_SCALE,
+      height: viewport.height / scale,
       png: new Uint8Array(await blob.arrayBuffer()),
-      width: viewport.width / RASTER_SCALE,
+      width: viewport.width / scale,
     };
   } finally {
     if (document.body.contains(canvas)) {
@@ -537,6 +539,7 @@ export async function mergeFabricEditsIntoPdf({
   sourceBytes,
   watermarkConfig,
   backgroundImageConfig,
+  rasterScale,
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
 
@@ -587,6 +590,7 @@ export async function mergeFabricEditsIntoPdf({
       );
     const needsBackground =
       bg != null &&
+      pdfDocument != null &&
       shouldWatermarkPage(
         pageNum,
         totalPages,
@@ -618,7 +622,7 @@ export async function mergeFabricEditsIntoPdf({
       newPage.drawImage(bgImg, { ...rect, opacity: bg!.opacity });
 
       const pdfjsPage = await pdfDocument.getPage(pageNum);
-      const transparentRender = await renderPageToPng(pdfjsPage, {
+      const transparentRender = await renderPageToPng(pdfjsPage, rasterScale, {
         // Keep the source text in the raster — modified editModeText
         // gets whiteout + vector drawIText AFTER this render is placed,
         // so the source word is covered and the new text is rendered as

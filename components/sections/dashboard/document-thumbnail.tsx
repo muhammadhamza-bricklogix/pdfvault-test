@@ -4,12 +4,17 @@ import type { Document } from "@/lib/shared/types/documents.types";
 
 import { File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { LRUCache } from "lru-cache";
 import { useEffect, useState } from "react";
 
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 
-const cache = new Map<string, string>();
+// Bounded LRU cache: max 75 entries, ~a few MB of data URLs. Prevents
+// unbounded growth in long-lived dashboard sessions with many documents.
+const cache = new LRUCache<string, string>({
+  max: 75,
+});
 
 function cacheKey(doc: Document): string {
   return `${doc.id}|${doc.updatedAt}`;

@@ -6,6 +6,7 @@ import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/man
 import { useAuth } from "@clerk/nextjs";
 import NextImage from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -39,20 +40,46 @@ import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
-import { CompressModal } from "./CompressModal";
-import { CreatePdfModal } from "./CreatePdfModal";
-import { FindReplaceModal } from "./FindReplaceModal";
-import { FormFieldsModal } from "./FormFieldsModal";
-import { PageNumbersModal } from "./PageNumbersModal";
-import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { PerformancePanel } from "./PerformancePanel";
 import { TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
-import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
+
+const CompressModal = dynamic(
+  () => import("./CompressModal").then((m) => ({ default: m.CompressModal })),
+  { ssr: false },
+);
+const CreatePdfModal = dynamic(
+  () => import("./CreatePdfModal").then((m) => ({ default: m.CreatePdfModal })),
+  { ssr: false },
+);
+const FindReplaceModal = dynamic(
+  () =>
+    import("./FindReplaceModal").then((m) => ({ default: m.FindReplaceModal })),
+  { ssr: false },
+);
+const FormFieldsModal = dynamic(
+  () =>
+    import("./FormFieldsModal").then((m) => ({ default: m.FormFieldsModal })),
+  { ssr: false },
+);
+const ManagePagesModal = dynamic(
+  () =>
+    import("./ManagePagesModal").then((m) => ({ default: m.ManagePagesModal })),
+  { ssr: false },
+);
+const PageNumbersModal = dynamic(
+  () =>
+    import("./PageNumbersModal").then((m) => ({ default: m.PageNumbersModal })),
+  { ssr: false },
+);
+const PasswordModal = dynamic(
+  () => import("./PasswordModal").then((m) => ({ default: m.PasswordModal })),
+  { ssr: false },
+);
 
 function UploadScreenHeader() {
   return (

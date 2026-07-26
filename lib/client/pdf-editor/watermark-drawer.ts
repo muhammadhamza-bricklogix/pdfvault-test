@@ -10,7 +10,7 @@ import { degrees } from "pdf-lib";
 
 import { hexToPdfColor } from "./color-utils";
 import { resolveStandardFont } from "./font-mapping";
-import { dataUrlToBytes } from "./save-utils";
+import { dataUrlToBytes } from "./fabric-render";
 import { calculateTilePositions } from "./watermark-utils";
 
 // ---------------------------------------------------------------------------

@@ -28,6 +28,16 @@ export type DocumentListResponse = Paginated<Document>;
 export type DocumentListParams = {
   page: number;
   pageSize: number;
+  /** Server-side filename search (case-insensitive substring). */
+  nameQuery?: string;
+  /** ISO-8601 start date for server-side updatedAt filtering (inclusive). */
+  dateFrom?: string;
+  /** ISO-8601 end date for server-side updatedAt filtering (inclusive). */
+  dateTo?: string;
+  /** Optional server-side sort field. */
+  sortBy?: "name" | "updatedAt";
+  /** Optional server-side sort direction. */
+  sortOrder?: "asc" | "desc";
 };
 
 export type UploadDocumentInput = {

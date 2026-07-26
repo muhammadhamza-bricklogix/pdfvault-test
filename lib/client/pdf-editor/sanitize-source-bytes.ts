@@ -1,6 +1,6 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 
-import { dataUrlToBytes } from "./save-utils";
+import { dataUrlToBytes } from "./fabric-render";
 
 /**
  * pdf-lib's `ignoreEncryption: true` suppresses the load-time throw but does

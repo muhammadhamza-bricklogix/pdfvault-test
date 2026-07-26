@@ -1,5 +1,8 @@
 import bcrypt from "bcryptjs";
 
+import { getShareStoreType } from "./env";
+import { getConnectedRedisClient, getRedisClient } from "./redis-client";
+
 /**
  * Password hashing for optional share-link passwords.
  *
@@ -9,7 +12,7 @@ import bcrypt from "bcryptjs";
  *   • OWASP-acceptable for this use case (low-value asset, not bank
  *     credentials). Cost factor 12 covers current attack hardware.
  *
- * Hashes live in a server-side map keyed by the token's `jti` — NEVER
+ * Hashes live in a server-side store keyed by the token's `jti` — NEVER
  * inside the token itself. Putting a hash in the URL would hand an
  * offline-crackable artifact to anyone with the link.
  */
@@ -30,9 +33,11 @@ export async function verifyPassword(
 /**
  * Per-`jti` password storage.
  *
- * In-memory `Map` is fine for local dev + single-instance staging. For
- * production / multi-instance, swap the implementation for a Redis-backed
- * (Upstash) or DB-backed one — interface stays the same.
+ * Backend is selected via `SHARE_STORE`:
+ *   - `memory` : in-process Map (default)
+ *   - `redis`  : Redis string storage
+ *
+ * Missing Redis env vars cause a graceful fallback to memory.
  */
 export interface PasswordStore {
   set(jti: string, hash: string, expiresAt: number): Promise<void>;
@@ -65,8 +70,48 @@ class InMemoryPasswordStore implements PasswordStore {
   }
 }
 
-/**
- * Module-level singleton. Resets on every server restart — fine for
- * MVP demo. Production needs a persistent backend (see interface).
- */
-export const passwordStore: PasswordStore = new InMemoryPasswordStore();
+const REDIS_KEY_PREFIX = "share:password:";
+
+class RedisPasswordStore implements PasswordStore {
+  async set(jti: string, hash: string, expiresAt: number): Promise<void> {
+    const redis = await getConnectedRedisClient();
+
+    if (!redis) throw new Error("Redis unavailable");
+
+    const ttlMs = Math.max(0, expiresAt - Date.now());
+
+    await redis.setex(
+      `${REDIS_KEY_PREFIX}${jti}`,
+      Math.ceil(ttlMs / 1000),
+      hash,
+    );
+  }
+
+  async get(jti: string): Promise<string | undefined> {
+    const redis = await getConnectedRedisClient();
+
+    if (!redis) return undefined;
+
+    const hash = await redis.get(`${REDIS_KEY_PREFIX}${jti}`);
+
+    return hash ?? undefined;
+  }
+
+  async delete(jti: string): Promise<void> {
+    const redis = await getConnectedRedisClient();
+
+    if (!redis) return;
+
+    await redis.del(`${REDIS_KEY_PREFIX}${jti}`);
+  }
+}
+
+function createPasswordStore(): PasswordStore {
+  if (getShareStoreType() === "redis" && getRedisClient()) {
+    return new RedisPasswordStore();
+  }
+
+  return new InMemoryPasswordStore();
+}
+
+export const passwordStore: PasswordStore = createPasswordStore();

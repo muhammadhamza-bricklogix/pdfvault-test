@@ -1,6 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import withBundleAnalyzer from "@next/bundle-analyzer";
+
 /** App root (this folder), not a parent that may contain another package-lock.json. */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +17,12 @@ const nextConfig = {
   outputFileTracingRoot: projectRoot,
   turbopack: {
     root: projectRoot,
+  },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.clerk.dev" },
+      { protocol: "https", hostname: "img.clerk.com" },
+    ],
   },
   async headers() {
     // The Google Drive / OneDrive picker opens an OAuth popup that
@@ -35,6 +43,36 @@ const nextConfig = {
           {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin-allow-popups",
+          },
+        ],
+      },
+      // Immutable public assets — hashed/fingerprinted by filename or
+      // expected to change only on deploy. Aggressive caching cuts repeat
+      // load bandwidth and improves Lighthouse scores.
+      {
+        source: "/pdf.worker.min.mjs",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/landing/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
@@ -68,4 +106,6 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" })(
+  nextConfig,
+);

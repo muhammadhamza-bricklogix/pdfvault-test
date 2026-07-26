@@ -20,7 +20,15 @@ import { documentKeys } from "@/lib/shared/constants/query-keys";
 
 export const DEFAULT_PAGE_SIZE = 20;
 
-type UseDocumentsQueryOptions = {
+export type DocumentListFilters = {
+  nameQuery?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: "name" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+};
+
+type UseDocumentsQueryOptions = DocumentListFilters & {
   pageSize?: number;
   enabled?: boolean;
 };
@@ -46,8 +54,16 @@ export function useDocumentsQuery(options?: UseDocumentsQueryOptions) {
   const { userId } = useAuth();
   const isOnline = useOnlineStatus();
 
+  const filters: DocumentListFilters = {
+    dateFrom: options?.dateFrom,
+    dateTo: options?.dateTo,
+    nameQuery: options?.nameQuery,
+    sortBy: options?.sortBy,
+    sortOrder: options?.sortOrder,
+  };
+
   return useInfiniteQuery<DocumentListResponse>({
-    queryKey: documentKeys.list({ page: 0, pageSize }),
+    queryKey: documentKeys.list({ page: 0, pageSize, ...filters }),
     queryFn: async ({ pageParam = 1 }) => {
       const page = pageParam as number;
 
@@ -86,6 +102,7 @@ export function useDocumentsQuery(options?: UseDocumentsQueryOptions) {
         const response = await documentsService.listDocuments({
           page,
           pageSize,
+          ...filters,
         });
 
         if (userId) {
@@ -128,6 +145,8 @@ export function useDocumentsQuery(options?: UseDocumentsQueryOptions) {
       return page < totalPages ? page + 1 : undefined;
     },
     enabled: options?.enabled,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
   });
 }
 
@@ -137,5 +156,7 @@ export function useDocumentQuery(id: string | null | undefined) {
     queryKey: documentKeys.detail(id ?? ""),
     queryFn: () => documentsService.getDocument(id as string),
     enabled: Boolean(id),
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
   });
 }

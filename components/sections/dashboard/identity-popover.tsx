@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Description, Label, ListBox, Popover } from "@heroui/react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -45,11 +46,12 @@ export function IdentityPopover({
   const avatarSize = collapsed ? "size-8" : "size-9";
   const avatarPx = collapsed ? 32 : 36;
   const avatar = user?.imageUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element -- User avatar from Clerk is a dynamic external URL; next/image would require remotePatterns config and offers little benefit for a small avatar.
-    <img
+    <Image
       alt={fullName}
       className={`${avatarSize} shrink-0 rounded-full object-cover`}
+      height={avatarPx}
       src={user.imageUrl}
+      width={avatarPx}
     />
   ) : (
     <HugeiconsIcon icon={UserCircleIcon} size={avatarPx} />

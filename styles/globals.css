@@ -38,8 +38,8 @@
 }
 
 /*
- * PDFVault dashboard tokens — sampled from the Figma export at
- * `public/Dashboard/dashboard.css` (Geist for headings, Inter for body).
+ * PDFVault dashboard tokens — sampled from the original Figma export
+ * (Geist for headings, Inter for body).
  * Scoped under `.pv-dashboard` so the values never leak into HeroUI theme
  * usage elsewhere in the app.
  */

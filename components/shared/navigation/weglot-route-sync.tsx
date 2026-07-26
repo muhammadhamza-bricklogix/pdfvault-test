@@ -1,8 +1,9 @@
-/* eslint-disable no-console */
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+
+import { logger } from "@/lib/shared/utils/logger";
 
 import { WEGLOT_LANG_STORAGE_KEY } from "./weglot-loader";
 
@@ -20,11 +21,11 @@ function rescanWeglot(currentLang: string): (() => void) | undefined {
   if (!w || currentLang === "en") return undefined;
 
   const runScan = (delayLabel: string) => {
-    console.log(`${LOG_PREFIX} rescan (${delayLabel}) for lang:`, currentLang);
+    logger.debug(`${LOG_PREFIX} rescan (${delayLabel}) for lang:`, currentLang);
     if (typeof w.search === "function") {
       w.search();
     } else {
-      console.log(`${LOG_PREFIX} fallback en -> ${currentLang}`);
+      logger.debug(`${LOG_PREFIX} fallback en -> ${currentLang}`);
       w.switchTo("en");
       w.switchTo(currentLang);
     }
@@ -65,7 +66,7 @@ export function WeglotRouteSync() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    console.log(
+    logger.debug(
       `${LOG_PREFIX} Route changed — pathname:`,
       pathname,
       "search:",
@@ -78,35 +79,38 @@ export function WeglotRouteSync() {
       const w = window.Weglot;
 
       if (!w) {
-        console.log(`${LOG_PREFIX} window.Weglot not available yet`);
+        logger.debug(`${LOG_PREFIX} window.Weglot not available yet`);
 
         return;
       }
 
       let current = w.getCurrentLang();
 
-      console.log(`${LOG_PREFIX} currentLang before restore:`, current);
+      logger.debug(`${LOG_PREFIX} currentLang before restore:`, current);
 
       // Restore the user's persisted language if Weglot has reverted to
       // English (e.g. after a route change where its cookie was missing).
       try {
         const stored = window.localStorage.getItem(WEGLOT_LANG_STORAGE_KEY);
 
-        console.log(`${LOG_PREFIX} stored language from localStorage:`, stored);
+        logger.debug(
+          `${LOG_PREFIX} stored language from localStorage:`,
+          stored,
+        );
 
         if (stored && stored !== current) {
-          console.log(`${LOG_PREFIX} Restoring to stored language:`, stored);
+          logger.debug(`${LOG_PREFIX} Restoring to stored language:`, stored);
           w.switchTo(stored);
           current = stored;
         } else {
-          console.log(`${LOG_PREFIX} No restore needed`);
+          logger.debug(`${LOG_PREFIX} No restore needed`);
         }
       } catch (err) {
-        console.error(`${LOG_PREFIX} Error reading localStorage:`, err);
+        logger.error(`${LOG_PREFIX} Error reading localStorage:`, err);
       }
 
       if (!current || current === "en") {
-        console.log(
+        logger.debug(
           `${LOG_PREFIX} Current is English or undefined — skipping DOM rescan`,
         );
 
@@ -130,7 +134,7 @@ export function WeglotRouteSync() {
 
     // First mount before Weglot's script finishes loading — wait for
     // the `weglot:initialized` event the loader dispatches.
-    console.log(
+    logger.debug(
       `${LOG_PREFIX} Weglot not ready — waiting for weglot:initialized`,
     );
     window.addEventListener("weglot:initialized", run, { once: true });

@@ -1,3 +1,6 @@
+import { getShareStoreType } from "./env";
+import { getConnectedRedisClient, getRedisClient } from "./redis-client";
+
 /**
  * Token revocation deny-list.
  *
@@ -5,9 +8,11 @@
  * deleting a DB row — the signature still verifies. Instead the owner
  * adds the `jti` to a deny-list and every resolve checks it.
  *
- * In-memory `Map` for MVP. Production: swap for a Redis/KV-backed impl.
- * Check on every resolve after HMAC verify (cheap) and before any
- * bytes lookup.
+ * Backend is selected via `SHARE_STORE`:
+ *   - `memory` : in-process Map (default)
+ *   - `redis`  : Redis set membership
+ *
+ * Missing Redis env vars cause a graceful fallback to memory.
  */
 
 export interface DenyList {
@@ -36,4 +41,34 @@ class InMemoryDenyList implements DenyList {
   }
 }
 
-export const denyList: DenyList = new InMemoryDenyList();
+const REDIS_KEY = "share:deny-list";
+
+class RedisDenyList implements DenyList {
+  async has(jti: string): Promise<boolean> {
+    const redis = await getConnectedRedisClient();
+
+    if (!redis) return false;
+
+    const score = await redis.zscore(REDIS_KEY, jti);
+
+    return score !== null && Date.now() < Number(score);
+  }
+
+  async revoke(jti: string, expiresAt: number): Promise<void> {
+    const redis = await getConnectedRedisClient();
+
+    if (!redis) return;
+
+    await redis.zadd(REDIS_KEY, expiresAt, jti);
+  }
+}
+
+function createDenyList(): DenyList {
+  if (getShareStoreType() === "redis" && getRedisClient()) {
+    return new RedisDenyList();
+  }
+
+  return new InMemoryDenyList();
+}
+
+export const denyList: DenyList = createDenyList();

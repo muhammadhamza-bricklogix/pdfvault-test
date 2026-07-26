@@ -36,7 +36,9 @@ export function usePageRenderer({
     if (!page || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const dpr = window.devicePixelRatio || 1;
+    // Cap DPR for screen rendering to avoid oversized canvases on high-DPI
+    // displays (3×/4× mobile screens otherwise allocate huge framebuffers).
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const scale = zoom * dpr;
     const viewport = page.getViewport({ scale });
 
