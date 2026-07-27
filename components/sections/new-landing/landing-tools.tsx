@@ -360,7 +360,7 @@ export function LandingTools() {
     >
       <div className="pv-container">
         <SectionHeading
-          description="Every tool you need to use PDFs, at your fingertips. All are 100% FREE and easy to use! Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
+          description="Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
           title={
             <span id="tools-heading">
               Every tool you need to work
