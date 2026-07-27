@@ -166,6 +166,20 @@ Known mobile failure modes to watch for (these have all bitten us before):
 - Pinch-zoom below 0.5 → IText overlay disappears on iOS. The `PINCH_MIN_ZOOM = 0.5` floor in `PdfViewerCanvas` exists for this; don't lower it.
 - Both pdf.js native text rendering AND the Fabric IText overlay enabled at once → visible glyph doubling at DPR=3. `suppressText: true` is set unconditionally now; don't reintroduce the mobile branch that flipped it.
 
+## Project skills (load proactively)
+
+Beyond `pdf-editor-architecture`, this repo ships four project-specific skills at `.claude/skills/`. Load them by name via `Skill({ skill: "…" })` — they are the primary defense against the regression classes this app has been burned by. Descriptions live in each skill's frontmatter; a Claude session should load them without being asked when the trigger applies.
+
+| Skill | Load when |
+|---|---|
+| `pdf-editor-architecture` | Editing anything under `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, `components/sections/pdf-editor/**` |
+| `auth-flow-guardian` | Editing any file in the 21-item "Auth + paywall + export flow" chain (see section above) |
+| `regression-forensics` | User reports a bug that used to work, mentions a fix reverting, or says "broken again" |
+| `pre-push-guardian` | About to push, open a PR, merge, or claim work is ready to ship |
+| `memory-snapshotter` | Wrapping up a session, PreCompact hook fires, or a new preference / decision / root cause emerges worth persisting |
+
+A `PreCompact` and `SessionEnd` hook injects a reminder to invoke `memory-snapshotter` before context is lost. The hook is at `.claude/hooks/remind-memory-snapshot.cjs`.
+
 <!-- repocards:begin -->
 ## Repo context — repocards
 
