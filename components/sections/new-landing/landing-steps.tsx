@@ -12,7 +12,7 @@ const STEPS: Step[] = [
   {
     icon: "/landing/step-1.svg",
     title: "Bring in your document",
-    body: "Upload from your device or import directly from Google Drive or Microsoft OneDrive.",
+    body: "Upload from your device.",
   },
   {
     icon: "/landing/step-2.svg",
