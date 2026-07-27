@@ -16,8 +16,24 @@
  * round-trip of first paint.
  */
 
+import type { SubscriptionSnapshot } from "@/lib/shared/types/billing.types";
+
 let entitledSnapshot = false;
 let billingEnabledSnapshot = false;
+
+/**
+ * Single source of truth for "is the caller entitled to gated features?".
+ * Requires BOTH the backend's `entitled` flag AND a non-NONE subscription
+ * status. Belt-and-braces: some backend deployments have returned
+ * `entitled: true` with `status: "NONE"` when the Solidgate channel keys
+ * were misconfigured, which silently bypassed every paywall gate. Deriving
+ * locally means a bad backend response can no longer unlock premium.
+ */
+export function isEntitledSnapshot(
+  sub: Pick<SubscriptionSnapshot, "entitled" | "status"> | null | undefined,
+): boolean {
+  return !!sub && sub.entitled === true && sub.status !== "NONE";
+}
 
 export function setEntitledSnapshot(value: boolean): void {
   entitledSnapshot = value;

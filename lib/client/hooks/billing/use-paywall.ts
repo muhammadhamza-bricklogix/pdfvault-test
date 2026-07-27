@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 
+import { isEntitledSnapshot } from "./entitlement-cache";
 import { setPaywallHandler } from "./paywall-bus";
 
 /**
@@ -38,7 +39,7 @@ export function usePaywall() {
     null,
   );
 
-  const entitled = subscription?.entitled ?? false;
+  const entitled = isEntitledSnapshot(subscription);
 
   const guard = useCallback(
     async (action: () => void | Promise<void>) => {

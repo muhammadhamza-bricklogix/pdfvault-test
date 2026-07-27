@@ -1,6 +1,10 @@
 import { billingService } from "@/lib/shared/api/services/billing.service";
 
-import { getEntitledSnapshot, setEntitledSnapshot } from "./entitlement-cache";
+import {
+  getEntitledSnapshot,
+  isEntitledSnapshot,
+  setEntitledSnapshot,
+} from "./entitlement-cache";
 
 let inflight: Promise<boolean> | null = null;
 
@@ -32,7 +36,7 @@ export async function ensureFreshEntitlement(): Promise<boolean> {
   inflight = (async () => {
     try {
       const sub = await billingService.getSubscription();
-      const entitled = !!sub?.entitled;
+      const entitled = isEntitledSnapshot(sub);
 
       setEntitledSnapshot(entitled);
 

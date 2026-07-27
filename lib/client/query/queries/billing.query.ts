@@ -3,7 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { setEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import {
+  isEntitledSnapshot,
+  setEntitledSnapshot,
+} from "@/lib/client/hooks/billing/entitlement-cache";
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 
@@ -27,7 +30,7 @@ export function useSubscriptionQuery() {
   // fires the effect when the boolean changes.
   useEffect(() => {
     if (result.data) {
-      setEntitledSnapshot(result.data.entitled);
+      setEntitledSnapshot(isEntitledSnapshot(result.data));
     }
   }, [result.data]);
 
