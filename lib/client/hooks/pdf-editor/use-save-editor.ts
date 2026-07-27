@@ -12,7 +12,10 @@ import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionDetail = {
   force?: boolean;
-  onComplete: (result: { ok: boolean }) => void;
+  onComplete: (result: {
+    ok: boolean;
+    reason?: "error" | "no-changes" | "no-file" | "not-signed-in" | "not-loaded";
+  }) => void;
 };
 
 /**
@@ -196,8 +199,15 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
 
       // `no-changes` is a benign short-circuit (dirty flag was already clean
       // by the time the save ran). Treat as success — nothing to commit and
-      // nothing to lose by proceeding.
-      onComplete({ ok: result.reason === "no-changes" });
+      // nothing to lose by proceeding. Every other failure reason is
+      // forwarded so the caller can decide whether to toast, prompt sign-in,
+      // etc. — specifically, `not-signed-in` must route through the
+      // sign-in prompt modal per the auth chain (CLAUDE.md items 4, 5, 17)
+      // instead of surfacing as a generic "Could not save" error.
+      onComplete({
+        ok: result.reason === "no-changes",
+        reason: result.reason,
+      });
     };
 
     window.addEventListener(
