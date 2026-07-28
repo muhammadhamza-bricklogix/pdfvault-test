@@ -129,13 +129,13 @@ export function LandingFooter() {
             (2fr) so the tagline + support email don't wrap awkwardly.
             Container is capped at 1240px and centered so the footer keeps
             comfortable side gutters on ultra-wide screens. */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[minmax(240px,1.5fr)_repeat(4,minmax(0,1fr))] md:gap-x-10 md:pt-[100px]">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[25%_repeat(4,minmax(0,1fr))] md:gap-x-6 md:pt-[100px]">
           {/* Brand + contact — left-aligned per 2026-07-28 design update
               (was centered from the 2026-07-23 revision; new mockup pushes
               logo, tagline, and support email all flush-left within the
               column so the eye reads brand → tagline → contact in a single
               vertical line). */}
-          <div className="col-span-2 flex flex-col items-start text-left sm:col-span-4 md:col-span-1 md:pr-10 lg:pr-16">
+          <div className="col-span-2 flex flex-col items-start text-left sm:col-span-4 md:col-span-1 md:pr-16 lg:pr-24">
             <Image
               alt="PDFVault"
               className="h-[40px] w-auto brightness-0 invert"
