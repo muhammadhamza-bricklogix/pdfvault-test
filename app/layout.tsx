@@ -100,7 +100,8 @@ export default function RootLayout({
             themeProps={{
               attribute: ["data-theme", "class"],
               defaultTheme: "light",
-              enableSystem: true,
+              enableSystem: false,
+              forcedTheme: "light",
             }}
           >
             {children}
