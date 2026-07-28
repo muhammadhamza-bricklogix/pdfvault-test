@@ -129,12 +129,16 @@ export function LandingFooter() {
             (2fr) so the tagline + support email don't wrap awkwardly.
             Container is capped at 1240px and centered so the footer keeps
             comfortable side gutters on ultra-wide screens. */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[minmax(260px,2fr)_repeat(4,minmax(0,1fr))] md:gap-x-10 md:pt-[100px]">
-          {/* Brand + contact */}
-          <div className="col-span-2 flex flex-col items-center text-center sm:col-span-4 md:col-span-1">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[minmax(240px,1.5fr)_repeat(4,minmax(0,1fr))] md:gap-x-10 md:pt-[100px]">
+          {/* Brand + contact — left-aligned per 2026-07-28 design update
+              (was centered from the 2026-07-23 revision; new mockup pushes
+              logo, tagline, and support email all flush-left within the
+              column so the eye reads brand → tagline → contact in a single
+              vertical line). */}
+          <div className="col-span-2 flex flex-col items-start text-left sm:col-span-4 md:col-span-1">
             <Image
               alt="PDFVault"
-              className="mx-auto h-[40px] w-auto brightness-0 invert"
+              className="h-[40px] w-auto brightness-0 invert"
               height={40}
               src="/landing/logo-with-text.png"
               width={116}
@@ -142,7 +146,7 @@ export function LandingFooter() {
             <p className="mt-6 max-w-[250px] text-[16px] leading-[1.55] text-white/80">
               A smarter, more secure place for your PDFs.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-5">
+            <div className="mt-8 flex flex-col items-start gap-5">
               <a
                 className={`flex items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
                 href="mailto:support@pdfvault.ai"
@@ -153,17 +157,17 @@ export function LandingFooter() {
             </div>
           </div>
 
-          {/* Link columns */}
+          {/* Link columns — left-aligned to match brand column */}
           {FOOTER_COLUMNS.map((column) => (
             <nav
               key={column.heading}
               aria-label={column.heading}
-              className="text-center"
+              className="text-left"
             >
               <h2 className="text-[14px] font-semibold uppercase tracking-[0.04em] text-white">
                 {column.heading}
               </h2>
-              <ul className="mt-6 flex flex-col items-center gap-[18px]">
+              <ul className="mt-6 flex flex-col items-start gap-[18px]">
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <a
@@ -185,8 +189,8 @@ export function LandingFooter() {
           SOCIAL_LINKS again once the hrefs are set.
         */}
         <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
-          <div className="flex flex-row flex-nowrap items-center justify-center gap-3 sm:gap-4">
-            <p className="text-center text-[11px] text-white/60 sm:text-[14px]">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <p className="text-left text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
