@@ -39,6 +39,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
+import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -188,9 +189,18 @@ function ToolButton({
   );
 }
 
-function PillGroup({ children }: { children: React.ReactNode }) {
+function PillGroup({
+  children,
+  dataTour,
+}: {
+  children: React.ReactNode;
+  dataTour?: string;
+}) {
   return (
-    <div className="flex shrink-0 items-center gap-1 rounded-[16px] border border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-1.5 py-1.5 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.15)]">
+    <div
+      className="flex shrink-0 items-center gap-1 rounded-[16px] border border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-1.5 py-1.5 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.15)]"
+      data-tour={dataTour}
+    >
       {children}
     </div>
   );
@@ -285,25 +295,30 @@ function TopAppBar() {
 
       <LanguageSwitcher />
 
+      <TourHelpButton tour="editor" variant="chrome" />
+
+      {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
       <button
         aria-label="Share via link"
-        className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-4 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+        data-tour="editor-share"
         disabled={!canShare}
         type="button"
         onClick={() => fireEditorEvent("editor:open-share")}
       >
         <HugeiconsIcon icon={Link01Icon} size={14} />
-        Share via link
+        <span className="hidden sm:inline">Share via link</span>
       </button>
 
       <Dropdown>
         <Button
           aria-label="Download"
-          className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[var(--color-accent)] !px-4 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50"
+          className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[var(--color-accent)] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
+          data-tour="editor-download"
           isDisabled={!canDownload}
         >
-          Download
-          <HugeiconsIcon icon={ArrowDown01Icon} size={12} />
+          <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+          <span className="hidden sm:inline">Download</span>
         </Button>
         <Dropdown.Popover className="min-w-[180px]">
           <Dropdown.Menu
@@ -412,7 +427,16 @@ function ToolToolbar() {
     }
   };
 
-  const groups = useMemo(() => [GROUP_A, GROUP_B, GROUP_C, GROUP_MANAGE], []);
+  const groups = useMemo(
+    () =>
+      [
+        { entries: GROUP_A, dataTour: "editor-tools-a" },
+        { entries: GROUP_B, dataTour: "editor-tools-b" },
+        { entries: GROUP_C, dataTour: "editor-tools-c" },
+        { entries: GROUP_MANAGE, dataTour: undefined as string | undefined },
+      ] as const,
+    [],
+  );
 
   return (
     // Scroll container uses the `mx-auto w-fit` pattern (not
@@ -424,8 +448,8 @@ function ToolToolbar() {
     <div className="shrink-0 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
       <div className="mx-auto flex w-fit items-center gap-3">
         {groups.map((group, i) => (
-          <PillGroup key={i}>
-            {group.map((tool) => {
+          <PillGroup key={i} dataTour={group.dataTour}>
+            {group.entries.map((tool) => {
               if (tool.kind === "mode") {
                 const active = activeTool === tool.id;
 

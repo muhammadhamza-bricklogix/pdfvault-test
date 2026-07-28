@@ -132,6 +132,18 @@ export function SignupCard() {
     [searchParams],
   );
 
+  // Live validity — disables Create Account until every field passes
+  // the same rules the submit handler runs. Prevents users from
+  // clicking through and hitting a wall of red inline errors.
+  const credentialsValid = useMemo(() => {
+    if (!fullName.trim()) return false;
+    if (!EMAIL_RE.test(email.trim())) return false;
+    if (!evaluatePassword(password).allPassed) return false;
+    if (!agreedToTerms) return false;
+
+    return true;
+  }, [fullName, email, password, agreedToTerms]);
+
   const onGoogle = async () => {
     if (!signUp) return;
     setErrors({});
@@ -525,7 +537,7 @@ export function SignupCard() {
 
             <button
               className="mt-4 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-              disabled={submitting}
+              disabled={submitting || !credentialsValid}
               type="submit"
             >
               {submitting ? "Creating account…" : "Create Account"}

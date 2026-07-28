@@ -120,6 +120,135 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
+/* ----- Product tour (driver.js) -------------------------------------
+ * PDFVault-themed overlay. Rounded card, brand-red primary button,
+ * ghost secondary. Overrides land under `.pv-tour-popover` so the
+ * defaults are contained to our custom class.
+ */
+.driver-popover.pv-tour-popover {
+  background: var(--pv-surface, #ffffff);
+  color: var(--pv-text-strong, #171717);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 24px 60px -20px rgba(23, 23, 23, 0.35),
+    0 8px 24px -14px rgba(23, 23, 23, 0.28);
+  border: 1px solid var(--pv-hairline, #ebebeb);
+  font-family: var(--pv-font-body, "Inter", system-ui, sans-serif);
+  max-width: 340px;
+}
+.driver-popover.pv-tour-popover .driver-popover-title {
+  font-family: var(--pv-font-display, "Geist", "Inter", system-ui, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--pv-text-strong, #171717);
+  padding: 0;
+  margin: 0 0 6px;
+}
+.driver-popover.pv-tour-popover .driver-popover-description {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pv-text-body, #5c5c5c);
+  padding: 0;
+  margin: 0 0 12px;
+}
+.driver-popover.pv-tour-popover .driver-popover-close-btn {
+  color: var(--pv-text-muted, #a4a4a4);
+  transition: color 120ms ease;
+  top: 10px;
+  right: 12px;
+  font-size: 20px;
+  line-height: 1;
+}
+.driver-popover.pv-tour-popover .driver-popover-close-btn:hover {
+  color: var(--pv-text-strong, #171717);
+}
+.driver-popover.pv-tour-popover .driver-popover-footer {
+  margin-top: 4px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.driver-popover.pv-tour-popover .driver-popover-progress-text {
+  font-size: 11px;
+  color: var(--pv-text-muted, #a4a4a4);
+}
+.driver-popover.pv-tour-popover .driver-popover-navigation-btns {
+  display: inline-flex;
+  gap: 8px;
+}
+.driver-popover.pv-tour-popover .driver-popover-prev-btn,
+.driver-popover.pv-tour-popover .driver-popover-next-btn {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+  border: 1px solid transparent;
+  text-shadow: none;
+}
+.driver-popover.pv-tour-popover .driver-popover-prev-btn {
+  background: transparent;
+  color: var(--pv-text-body, #5c5c5c);
+  border-color: var(--pv-hairline-strong, #e1e4ea);
+}
+.driver-popover.pv-tour-popover .driver-popover-prev-btn:hover {
+  background: var(--pv-nav-active, #f3f3f5);
+  color: var(--pv-text-strong, #171717);
+}
+.driver-popover.pv-tour-popover .driver-popover-next-btn {
+  background: var(--pv-brand-red, #f12c23);
+  color: #ffffff;
+  box-shadow: 0 6px 14px -8px rgba(241, 44, 35, 0.55);
+}
+.driver-popover.pv-tour-popover .driver-popover-next-btn:hover {
+  background: var(--pv-brand-red-hover, #d8241c);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow {
+  border: 8px solid transparent;
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-top {
+  border-top-color: var(--pv-surface, #ffffff);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--pv-surface, #ffffff);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-left {
+  border-left-color: var(--pv-surface, #ffffff);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-right {
+  border-right-color: var(--pv-surface, #ffffff);
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover {
+  background: #1a1a1c;
+  color: #f5f5f5;
+  border-color: #28282a;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-title {
+  color: #f5f5f5;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-description {
+  color: #c0c0c0;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-top {
+  border-top-color: #1a1a1c;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: #1a1a1c;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-left {
+  border-left-color: #1a1a1c;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-right {
+  border-right-color: #1a1a1c;
+}
+
 /* Weglot's SDK sometimes injects a floating language-switcher widget in
  * the bottom-right corner regardless of the `switchers: []` init option.
  * We render our own switcher in the header / navbar, so hide every

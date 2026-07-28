@@ -16,7 +16,7 @@ import {
   PaintBucketIcon,
   PencilEdit01Icon,
   RedoIcon,
-  SaveMoneyDollarIcon,
+  FloppyDiskIcon,
   ShapesIcon,
   SignatureIcon,
   Stamp01Icon,
@@ -257,7 +257,7 @@ export function EditorInfoBar() {
             <ButtonGroup isDisabled={!file} size="sm" variant="primary">
               <Tooltip delay={300}>
                 <Button isDisabled={!canSave} onPress={onSaveClick}>
-                  <HugeiconsIcon icon={SaveMoneyDollarIcon} size={14} />
+                  <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
                   <span className="hidden sm:inline">Save</span>
                 </Button>
                 <Tooltip.Content>

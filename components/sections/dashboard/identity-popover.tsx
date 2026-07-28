@@ -7,6 +7,7 @@ import {
   Logout03Icon,
   PaintBucketIcon,
   Setting07Icon,
+  SquareUnlock01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -61,6 +62,10 @@ export function IdentityPopover({
     if (k === "settings") {
       setIsOpen(false);
       router.push(ROUTES.APP.SETTINGS);
+      onNavigate?.();
+    } else if (k === "unlock") {
+      setIsOpen(false);
+      router.push(ROUTES.APP.SETTINGS_BILLING);
       onNavigate?.();
     } else if (k === "terms") {
       setIsOpen(false);
@@ -133,6 +138,19 @@ export function IdentityPopover({
               <div className="flex flex-col">
                 <Label>Settings</Label>
                 <Description>Profile, account, preferences</Description>
+              </div>
+            </ListBox.Item>
+
+            <ListBox.Item id="unlock" textValue="Unlock access to vault">
+              <div className="flex h-8 items-center justify-center">
+                <HugeiconsIcon
+                  className="size-4 shrink-0 text-[var(--pv-brand-red,#f12c23)]"
+                  icon={SquareUnlock01Icon}
+                />
+              </div>
+              <div className="flex flex-col">
+                <Label>Unlock access to vault</Label>
+                <Description>Subscribe, upgrade, or update card</Description>
               </div>
             </ListBox.Item>
 

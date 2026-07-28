@@ -335,6 +335,7 @@ export function HamburgerMenu() {
         <Button
           isIconOnly
           aria-label="Editor menu"
+          data-tour="editor-menu"
           size="sm"
           variant="tertiary"
         >
