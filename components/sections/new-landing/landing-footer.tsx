@@ -135,7 +135,7 @@ export function LandingFooter() {
               logo, tagline, and support email all flush-left within the
               column so the eye reads brand → tagline → contact in a single
               vertical line). */}
-          <div className="col-span-2 flex flex-col items-start text-left sm:col-span-4 md:col-span-1">
+          <div className="col-span-2 flex flex-col items-start text-left sm:col-span-4 md:col-span-1 md:pr-10 lg:pr-16">
             <Image
               alt="PDFVault"
               className="h-[40px] w-auto brightness-0 invert"
