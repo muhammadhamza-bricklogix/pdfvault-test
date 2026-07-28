@@ -34,6 +34,15 @@ export function ThemeSegmented({ size = "sm" }: ThemeSegmentedProps) {
   const { theme, setTheme } = useTheme();
   const mounted = useIsMounted();
 
+  // Temporarily hidden while the app is forced-light (see
+  // app/layout.tsx `forcedTheme: "light"`). Toggling has no visual effect
+  // under a forced theme. Placed AFTER hook calls to satisfy
+  // react-hooks rules-of-hooks. Remove this early return when
+  // re-enabling dark mode alongside removing `forcedTheme` from the
+  // layout.
+
+  if (true) return null;
+
   const current =
     (mounted ? (theme as Mode | undefined) : undefined) ?? "system";
   const iconSize = size === "sm" ? 17 : 19;

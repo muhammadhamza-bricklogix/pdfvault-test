@@ -14,7 +14,12 @@ type SaveBeforeActionDetail = {
   force?: boolean;
   onComplete: (result: {
     ok: boolean;
-    reason?: "error" | "no-changes" | "no-file" | "not-signed-in" | "not-loaded";
+    reason?:
+      | "error"
+      | "no-changes"
+      | "no-file"
+      | "not-signed-in"
+      | "not-loaded";
   }) => void;
 };
 

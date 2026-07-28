@@ -26,6 +26,14 @@ export function ThemeToggle({
     setMounted(true);
   }, []);
 
+  // Temporarily hidden while the app is forced-light (see
+  // app/layout.tsx `forcedTheme: "light"`). Toggling has no visual effect
+  // under a forced theme. Placed AFTER all hook calls to satisfy
+  // rules-of-hooks. Remove this early return when re-enabling dark mode
+  // alongside removing `forcedTheme` from the layout.
+
+  if (true) return null;
+
   const isDarkMode = mounted && resolvedTheme === "dark";
   const label = isDarkMode ? "Switch to light mode" : "Switch to dark mode";
   const iconSize = size === "sm" ? 16 : 18;
