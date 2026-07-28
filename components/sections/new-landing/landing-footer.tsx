@@ -119,11 +119,17 @@ export function LandingFooter() {
     <footer className="relative isolate overflow-hidden bg-[#400000] text-white">
       <FooterBackground />
 
-      <div className="relative z-[1] w-full px-6 sm:px-10 md:min-h-[589px]">
-        {/* Top: brand + four link columns (measured desktop grid).
-            Content is center-aligned per product 2026-07-23 — brand
-            block, link columns, and copyright all read centered. */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[440px_132px_145px_152px_155px] md:gap-x-[54px] md:pt-[100px]">
+      <div className="relative z-[1] mx-auto w-full max-w-[1240px] px-6 sm:px-10 md:min-h-[589px]">
+        {/* Top: brand + four link columns.
+            Grid uses fractional columns so brand + 4 link columns span the
+            full width evenly at every breakpoint — previously fixed pixel
+            widths (440/132/145/152/155) bunched the link columns against
+            the right edge on wide viewports and left a huge dead zone
+            between the brand block and TOOLS. Brand column stays wider
+            (2fr) so the tagline + support email don't wrap awkwardly.
+            Container is capped at 1240px and centered so the footer keeps
+            comfortable side gutters on ultra-wide screens. */}
+        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-14 sm:grid-cols-4 md:grid-cols-[minmax(260px,2fr)_repeat(4,minmax(0,1fr))] md:gap-x-10 md:pt-[100px]">
           {/* Brand + contact */}
           <div className="col-span-2 flex flex-col items-center text-center sm:col-span-4 md:col-span-1">
             <Image
