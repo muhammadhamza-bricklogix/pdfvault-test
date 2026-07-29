@@ -23,7 +23,7 @@ type Tool = {
 };
 
 const TABS: Tab[] = [
-  { id: "edit", label: "Edit & Sign" },
+  { id: "edit", label: "PDF Composer" },
   { id: "convert-to", label: "Convert to PDF" },
   { id: "compress", label: "Compress PDF" },
   { id: "convert-from", label: "Convert from PDF" },
@@ -40,7 +40,7 @@ const TOOLS: Tool[] = [
   // ─── Edit & Sign ────────────────────────────────────────────────────────
   {
     icon: "/landing/editor.svg",
-    title: "PDF Composer",
+    title: "Edit & Sign",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
     href: TOOL_ROUTE.editor,
