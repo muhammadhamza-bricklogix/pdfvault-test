@@ -7,7 +7,7 @@ import { Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   useCreateCheckoutIntentMutation,
@@ -566,6 +566,20 @@ function SuccessStep({
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
   const nextDate = formatFullRenewalDate();
+  const onFinishRef = useRef(onFinish);
+
+  useEffect(() => {
+    onFinishRef.current = onFinish;
+  }, [onFinish]);
+
+  // Auto-proceed after 2 s so gated actions (downloads, conversions)
+  // kick off without requiring an extra click. The user still has the
+  // button to proceed immediately.
+  useEffect(() => {
+    const id = window.setTimeout(() => onFinishRef.current(), 2000);
+
+    return () => window.clearTimeout(id);
+  }, []);
 
   return (
     <div className="flex flex-col items-center gap-5 p-8 text-center">

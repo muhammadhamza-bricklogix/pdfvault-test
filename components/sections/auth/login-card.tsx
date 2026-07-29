@@ -694,7 +694,11 @@ export function LoginCard() {
         Don’t have an account yet?{" "}
         <Link
           className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={ROUTES.AUTH.SIGN_UP}
+          href={
+            afterSignInPath !== ROUTES.APP.DASHBOARD
+              ? `${ROUTES.AUTH.SIGN_UP}?redirect_url=${encodeURIComponent(afterSignInPath)}`
+              : ROUTES.AUTH.SIGN_UP
+          }
         >
           Sign Up
         </Link>
