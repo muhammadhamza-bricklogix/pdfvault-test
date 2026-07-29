@@ -25,6 +25,7 @@ import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-a
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
 import { remapFabricAfterPageOps } from "@/lib/client/pdf-editor/remap-fabric-after-page-ops";
 import {
@@ -158,6 +159,7 @@ function EditorLayout() {
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
   useAnnotationsEditor(fabricCanvas);
+  useProductTour("editor");
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),

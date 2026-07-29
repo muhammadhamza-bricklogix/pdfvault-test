@@ -162,6 +162,25 @@ function BackgroundColorPickerControl({
     setIsOpen(false);
   };
 
+  // Warn when the picked colour is very dark. The export pipeline blends
+  // page content on top of the colour with `BlendMode.Multiply`, so
+  // near-black backgrounds wipe every glyph and vector to black on
+  // export (QA feedback 2026-07-29 item 84). We render an inline warning
+  // rather than block, since a small user set of pages (title pages,
+  // spacer sheets) legitimately want a dark bg.
+  const isVeryDark = (() => {
+    const hex = draftColor.replace(/^#/, "");
+
+    if (hex.length !== 6) return false;
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    // Rec. 709 relative luminance.
+    const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+    return l < 0.15;
+  })();
+
   // Switched away from `ColorPicker` + `ColorPicker.Popover` because
   // RAC's `ColorPicker` doesn't expose top-level `isOpen` and the
   // `Trigger` couldn't drive the controlled popover state (clicks
@@ -239,6 +258,12 @@ function BackgroundColorPickerControl({
                 </Button>
               </div>
             </div>
+            {isVeryDark && (
+              <p className="text-[11px] leading-tight text-amber-700">
+                Very dark colour — page text and vectors may be hard to read
+                after apply. Consider a mid tone instead.
+              </p>
+            )}
           </div>
         </Popover.Dialog>
       </Popover.Content>

@@ -7,6 +7,7 @@ import {
   Logout03Icon,
   PaintBucketIcon,
   Setting07Icon,
+  SquareUnlock01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -15,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ThemeSegmented } from "@/components/ui/theme/theme-segmented";
+import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -38,6 +40,7 @@ export function IdentityPopover({
   const { signOut } = useClerk();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const entitled = useIsEntitled();
 
   const fullName = user?.fullName ?? "User";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -61,6 +64,10 @@ export function IdentityPopover({
     if (k === "settings") {
       setIsOpen(false);
       router.push(ROUTES.APP.SETTINGS);
+      onNavigate?.();
+    } else if (k === "unlock") {
+      setIsOpen(false);
+      router.push(ROUTES.APP.SETTINGS_BILLING);
       onNavigate?.();
     } else if (k === "terms") {
       setIsOpen(false);
@@ -136,6 +143,31 @@ export function IdentityPopover({
               </div>
             </ListBox.Item>
 
+            {entitled ? null : (
+              <ListBox.Item id="unlock" textValue="Unlock access to vault">
+                <div className="flex h-8 items-center justify-center">
+                  <HugeiconsIcon
+                    className="size-4 shrink-0 text-[var(--pv-brand-red,#f12c23)]"
+                    icon={SquareUnlock01Icon}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <Label>Unlock access to vault</Label>
+                  <Description>Subscribe, upgrade, or update card</Description>
+                </div>
+              </ListBox.Item>
+            )}
+
+            <ListBox.Item id="terms" textValue="Terms and Conditions">
+              <div className="flex h-8 items-center justify-center">
+                <HugeiconsIcon
+                  className="size-4 shrink-0 text-default-600"
+                  icon={LegalDocumentIcon}
+                />
+              </div>
+              <Label>Terms and Conditions</Label>
+            </ListBox.Item>
+
             <ListBox.Item id="theme" textValue="Theme">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
@@ -161,21 +193,15 @@ export function IdentityPopover({
                 <Description>Account, billing, access</Description>
               </div>
             </ListBox.Item>
-
-            <ListBox.Item id="terms" textValue="Terms and Conditions">
-              <div className="flex h-8 items-center justify-center">
-                <HugeiconsIcon
-                  className="size-4 shrink-0 text-default-600"
-                  icon={LegalDocumentIcon}
-                />
-              </div>
-              <Label>Terms and Conditions</Label>
-            </ListBox.Item>
           </ListBox>
 
+          {/* Extra top margin + thicker divider isolates the destructive
+              Log out action from T&C / Help / Theme rows above. QA
+              testers reported hitting T&C when going for Log out
+              (2026-07-29 item 49). */}
           <ListBox
             aria-label="Session"
-            className="border-t border-default-200 px-2 pb-2 pt-1"
+            className="border-t-2 border-default-200 px-2 pb-2 pt-2"
             selectionMode="none"
             onAction={handleAction}
           >

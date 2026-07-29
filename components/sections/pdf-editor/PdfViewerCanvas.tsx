@@ -17,6 +17,7 @@ import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
 import { useTestHarness } from "@/lib/client/hooks/pdf-editor/use-test-harness";
 import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
+import { setLastPointer } from "@/lib/client/pdf-editor/last-pointer";
 import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -354,10 +355,30 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     fc.on("object:scaling", handleScaling);
     fc.on("object:modified", handleScaling);
 
+    // Track the last pointer position in BASE coords so tools that open
+    // a modal (signature, image) can drop their object where the user
+    // was hovering. Falls back to page centre if unset (mobile taps
+    // without a preceding hover).
+    let lastMoveTs = 0;
+    const handleMouseMove = (opt: TPointerEventInfo) => {
+      const now = Date.now();
+
+      if (now - lastMoveTs < 32) return;
+      lastMoveTs = now;
+      const p = (opt as unknown as { scenePoint?: { x: number; y: number } })
+        .scenePoint;
+
+      if (!p) return;
+      setLastPointer(p.x, p.y, usePdfEditorStore.getState().currentPage);
+    };
+
+    fc.on("mouse:move", handleMouseMove);
+
     return () => {
       fc.off("mouse:down", handleMouseDown);
       fc.off("object:scaling", handleScaling);
       fc.off("object:modified", handleScaling);
+      fc.off("mouse:move", handleMouseMove);
     };
   }, [activeTool, fabricCanvas]);
 

@@ -110,7 +110,6 @@ export function SignupCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [code, setCode] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -131,6 +130,18 @@ export function SignupCard() {
       safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
     [searchParams],
   );
+
+  // Live validity — disables Create Account until every field passes
+  // the same rules the submit handler runs. Prevents users from
+  // clicking through and hitting a wall of red inline errors.
+  const credentialsValid = useMemo(() => {
+    if (!fullName.trim()) return false;
+    if (!EMAIL_RE.test(email.trim())) return false;
+    if (!evaluatePassword(password).allPassed) return false;
+    if (!agreedToTerms) return false;
+
+    return true;
+  }, [fullName, email, password, agreedToTerms]);
 
   const onGoogle = async () => {
     if (!signUp) return;
@@ -442,9 +453,7 @@ export function SignupCard() {
                   placeholder="Enter Your Password"
                   type={passwordRevealed ? "text" : "password"}
                   value={password}
-                  onBlur={() => setPasswordFocused(false)}
                   onChange={(event) => setPassword(event.target.value)}
-                  onFocus={() => setPasswordFocused(true)}
                 />
                 <PasswordRevealToggle
                   revealed={passwordRevealed}
@@ -456,26 +465,29 @@ export function SignupCard() {
                   {errors.password}
                 </p>
               ) : null}
-              {(passwordFocused || password.length > 0) && !errors.password ? (
-                <ul
-                  aria-label="Password requirements"
-                  className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2"
-                >
-                  {PASSWORD_RULES.map((rule) => {
-                    const passed = rule.test(password);
+              {/* Password rules always visible so users see them BEFORE
+                  typing and stay visible after a submit error (QA
+                  feedback 2026-07-29 items 39, 56, 64). Previously
+                  hidden when there was an error, which is exactly
+                  when users want the checklist most. */}
+              <ul
+                aria-label="Password requirements"
+                className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2"
+              >
+                {PASSWORD_RULES.map((rule) => {
+                  const passed = rule.test(password);
 
-                    return (
-                      <li
-                        key={rule.key}
-                        className={`flex items-center gap-1.5 text-[12px] ${passed ? "text-[#0a9e5a]" : "text-[#8a8a8a]"}`}
-                      >
-                        <span aria-hidden>{passed ? "✓" : "○"}</span>
-                        <span>{rule.label}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
+                  return (
+                    <li
+                      key={rule.key}
+                      className={`flex items-center gap-1.5 text-[12px] ${passed ? "text-[#0a9e5a]" : "text-[#8a8a8a]"}`}
+                    >
+                      <span aria-hidden>{passed ? "✓" : "○"}</span>
+                      <span>{rule.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
 
             <div className="mt-4">
@@ -525,7 +537,7 @@ export function SignupCard() {
 
             <button
               className="mt-4 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-              disabled={submitting}
+              disabled={submitting || !credentialsValid}
               type="submit"
             >
               {submitting ? "Creating account…" : "Create Account"}

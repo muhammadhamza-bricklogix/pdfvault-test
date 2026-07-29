@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { CancellationFlow } from "@/components/sections/billing/CancellationFlow";
 import { InvoicesTable } from "@/components/sections/billing/InvoicesTable";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import {
   useHardCancelSubscriptionMutation,
   useRestoreSubscriptionMutation,
@@ -292,6 +293,10 @@ export function BillingSettingsSection() {
 }
 
 function NoSubscriptionCard() {
+  const handleAdd = () => {
+    void requestPaywall();
+  };
+
   return (
     <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[var(--pv-hairline-strong)] bg-[var(--pv-surface)] p-8 text-center">
       <p className="text-[15px] font-semibold text-[var(--pv-text-strong)]">
@@ -301,8 +306,12 @@ function NoSubscriptionCard() {
         Start a 7-day trial for $0.99 to unlock conversions, exports, and
         sharing. Cancel anytime.
       </p>
+      <Button variant="primary" onPress={handleAdd}>
+        Add billing method
+      </Button>
       <p className="text-[12px] text-[var(--pv-text-muted)]">
-        The paywall appears the next time you convert, share, or export a file.
+        The paywall also appears the next time you convert, share, or export a
+        file.
       </p>
     </div>
   );
@@ -356,6 +365,9 @@ function SubscriptionCard({
             Cancel subscription
           </Button>
         )}
+        <Button variant="secondary" onPress={() => void requestPaywall()}>
+          Add billing method
+        </Button>
       </div>
 
       <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-muted)]">

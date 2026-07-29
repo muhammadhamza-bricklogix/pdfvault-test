@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
@@ -47,6 +48,12 @@ export default async function ConvertPage({
       <main>
         <section className="bg-white pb-8 pt-14 sm:pb-10 sm:pt-20">
           <div className="pv-container flex flex-col items-center text-center">
+            <Link
+              className="mb-4 inline-flex items-center gap-1 text-[13px] font-medium text-[#5f5f5f] transition-colors hover:text-[var(--pv-brand-red,#f12c23)]"
+              href="/"
+            >
+              <span aria-hidden>←</span> Back to all tools
+            </Link>
             <h1 className="pv-display max-w-[820px] text-[#121212]">
               {route.title}
             </h1>

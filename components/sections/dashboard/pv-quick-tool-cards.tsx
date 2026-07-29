@@ -147,25 +147,55 @@ function QuickToolCard({
   );
 }
 
+// Mobile initial-view cap. Reviewers reported the six-card single column
+// stretched the fold on small phones; showing four then a "View more"
+// toggle keeps the fold tight without hiding the tools behind a route.
+const MOBILE_INITIAL_COUNT = 4;
+
 export function PvQuickToolCards() {
   const [picker, setPicker] = useState<{
     slug: string;
     label: string;
   } | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const hiddenOnMobile = QUICK_TOOLS.length - MOBILE_INITIAL_COUNT;
+  const showViewMore = hiddenOnMobile > 0 && !expanded;
 
   return (
     <>
-      <section aria-label="Quick tools">
+      <section aria-label="Quick tools" data-tour="dashboard-quick-tools">
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_TOOLS.map((tool) => (
-            <li key={tool.title}>
-              <QuickToolCard
-                tool={tool}
-                onOpenPicker={(slug, label) => setPicker({ slug, label })}
-              />
-            </li>
-          ))}
+          {QUICK_TOOLS.map((tool, index) => {
+            const hideOnMobile = !expanded && index >= MOBILE_INITIAL_COUNT;
+
+            return (
+              <li
+                key={tool.title}
+                className={hideOnMobile ? "hidden sm:block" : undefined}
+              >
+                <QuickToolCard
+                  tool={tool}
+                  onOpenPicker={(slug, label) => setPicker({ slug, label })}
+                />
+              </li>
+            );
+          })}
         </ul>
+        {showViewMore ? (
+          <div className="mt-3 sm:hidden">
+            <button
+              className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-[12px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-4 text-[13px] font-semibold text-[var(--pv-text-strong)] transition-colors hover:border-[var(--pv-hairline-strong)] hover:bg-[var(--pv-nav-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
+              type="button"
+              onClick={() => setExpanded(true)}
+            >
+              View more
+              <span className="text-[var(--pv-text-muted)]">
+                (+{hiddenOnMobile})
+              </span>
+            </button>
+          </div>
+        ) : null}
       </section>
       <DocPickerModal
         isOpen={picker !== null}

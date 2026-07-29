@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { Upload04Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, Upload04Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
@@ -16,22 +16,47 @@ interface PvPageHeaderProps {
   title: string;
   subtitle: string;
   action?: ReactNode;
+  /**
+   * When set, renders a left back arrow (mobile only) that navigates
+   * to this href. Desktop already has the sidebar; the arrow only
+   * appears at <sm to keep the mobile flow shallow.
+   */
+  backHref?: string;
 }
 
 /**
  * Dashboard page header — title + subtitle on the left, action slot on the
  * right (usually <UploadPdfButton />).
  */
-export function PvPageHeader({ title, subtitle, action }: PvPageHeaderProps) {
+export function PvPageHeader({
+  title,
+  subtitle,
+  action,
+  backHref,
+}: PvPageHeaderProps) {
+  const router = useRouter();
+
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-      <div className="min-w-0">
-        <h1 className="pv-heading text-[26px] font-semibold leading-tight text-[var(--pv-text-strong)] sm:text-[28px]">
-          {title}
-        </h1>
-        <p className="mt-1 text-[15px] text-[var(--pv-text-body)]">
-          {subtitle}
-        </p>
+      <div className="flex min-w-0 items-start gap-2">
+        {backHref ? (
+          <button
+            aria-label="Back"
+            className="mt-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] sm:hidden"
+            type="button"
+            onClick={() => router.push(backHref)}
+          >
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={20} />
+          </button>
+        ) : null}
+        <div className="min-w-0">
+          <h1 className="pv-heading text-[26px] font-semibold leading-tight text-[var(--pv-text-strong)] sm:text-[28px]">
+            {title}
+          </h1>
+          <p className="mt-1 text-[15px] text-[var(--pv-text-body)]">
+            {subtitle}
+          </p>
+        </div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </header>
@@ -74,6 +99,7 @@ export function UploadPdfButton() {
       />
       <button
         className="inline-flex h-11 items-center gap-2 rounded-[12px] bg-[var(--pv-brand-red)] px-5 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--pv-brand-red-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2"
+        data-tour="dashboard-upload"
         type="button"
         onClick={onPick}
       >

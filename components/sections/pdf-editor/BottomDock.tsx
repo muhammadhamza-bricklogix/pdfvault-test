@@ -91,7 +91,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
         </Tooltip>
 
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ToolsContent showLabels={false} toolIconSize={20} />
+E          <ToolsContent showLabels toolIconSize={18} />
         </div>
 
         {pageCount > 0 && (

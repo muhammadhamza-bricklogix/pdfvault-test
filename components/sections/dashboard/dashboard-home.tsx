@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
+import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -52,6 +53,7 @@ const TOOL_LABELS: Record<string, string> = {
  *   history / download all keep their existing UX + optimistic updates.
  */
 export function DashboardHome() {
+  useProductTour("dashboard");
   const [search, setSearch] = useState("");
   const [renameTarget, setRenameTarget] = useState<Document | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);

@@ -23,7 +23,7 @@ type Tool = {
 };
 
 const TABS: Tab[] = [
-  { id: "edit", label: "Edit & Sign" },
+  { id: "edit", label: "PDF Composer" },
   { id: "convert-to", label: "Convert to PDF" },
   { id: "compress", label: "Compress PDF" },
   { id: "convert-from", label: "Convert from PDF" },
@@ -40,7 +40,7 @@ const TOOLS: Tool[] = [
   // ─── Edit & Sign ────────────────────────────────────────────────────────
   {
     icon: "/landing/editor.svg",
-    title: "PDF Composer",
+    title: "Edit & Sign",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
     href: TOOL_ROUTE.editor,
@@ -244,8 +244,27 @@ function ArrowIcon() {
   );
 }
 
+// Mobile initial-view cap per tab. Users on small screens had to scroll
+// through the full 8-tool "Edit & Sign" tab before reaching the next
+// section — reviewers flagged it. Cap the first paint at 4 with a
+// "View more" toggle that expands to the full list for the active tab.
+const MOBILE_INITIAL_COUNT = 4;
+
 export function LandingTools() {
   const [activeTab, setActiveTab] = useState<TabId>("edit");
+  const [expanded, setExpanded] = useState(false);
+  // Reset "View more" whenever the active tab changes so a fresh tab
+  // always paints its capped view. React's adjust-state-during-render
+  // pattern (used elsewhere in this repo — see dashboard-home.tsx) is
+  // preferred over a mount effect + setState so the initial paint of
+  // the new tab is already in the correct state, and to satisfy the
+  // repo's `react-hooks/set-state-in-effect` lint rule.
+  const [lastTab, setLastTab] = useState<TabId>(activeTab);
+
+  if (lastTab !== activeTab) {
+    setLastTab(activeTab);
+    setExpanded(false);
+  }
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Roving-tabindex keyboard navigation across the segmented control.
@@ -414,38 +433,57 @@ export function LandingTools() {
           key={activeTab}
           className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
         >
-          {visibleTools.map((tool, index) => (
-            <li
-              key={tool.title}
-              className="pv-fade-up"
-              style={{ animationDelay: `${index * 55}ms` }}
-            >
-              <a
-                className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
-                href={tool.href}
+          {visibleTools.map((tool, index) => {
+            const hideOnMobile = !expanded && index >= MOBILE_INITIAL_COUNT;
+
+            return (
+              <li
+                key={tool.title}
+                className={`pv-fade-up ${hideOnMobile ? "hidden sm:block" : ""}`.trim()}
+                style={{ animationDelay: `${index * 55}ms` }}
               >
-                <span className="flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">
-                  <Image
-                    alt=""
-                    className="size-6 object-contain transition-transform duration-300 group-hover:scale-110"
-                    height={24}
-                    src={tool.icon}
-                    width={24}
-                  />
-                </span>
-                <h3 className="mt-5 text-[18px] font-bold text-[var(--pv-text-primary)]">
-                  {tool.title}
-                </h3>
-                <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]">
-                  {tool.description}
-                </p>
-                <span className="mt-4 text-[var(--pv-text-primary)] transition-transform duration-300 group-hover:translate-x-1.5">
-                  <ArrowIcon />
-                </span>
-              </a>
-            </li>
-          ))}
+                <a
+                  className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
+                  href={tool.href}
+                >
+                  <span className="flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">
+                    <Image
+                      alt=""
+                      className="size-6 object-contain transition-transform duration-300 group-hover:scale-110"
+                      height={24}
+                      src={tool.icon}
+                      width={24}
+                    />
+                  </span>
+                  <h3 className="mt-5 text-[18px] font-bold text-[var(--pv-text-primary)]">
+                    {tool.title}
+                  </h3>
+                  <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]">
+                    {tool.description}
+                  </p>
+                  <span className="mt-4 text-[var(--pv-text-primary)] transition-transform duration-300 group-hover:translate-x-1.5">
+                    <ArrowIcon />
+                  </span>
+                </a>
+              </li>
+            );
+          })}
         </ul>
+
+        {visibleTools.length > MOBILE_INITIAL_COUNT && !expanded ? (
+          <div className="mt-6 flex justify-center sm:hidden">
+            <button
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-[var(--pv-card-border)] bg-white px-6 text-[14px] font-semibold text-[var(--pv-text-primary)] shadow-sm transition-colors hover:bg-[var(--pv-section-gray)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
+              type="button"
+              onClick={() => setExpanded(true)}
+            >
+              View more
+              <span className="text-[var(--pv-text-secondary)]">
+                (+{visibleTools.length - MOBILE_INITIAL_COUNT})
+              </span>
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

@@ -215,26 +215,43 @@ export function WatermarkPropertiesContent() {
           </Section>
 
           <Section title="Font Size">
-            <NumberField
-              aria-label="Font size"
-              className="w-full"
-              maxValue={200}
-              minValue={8}
-              value={config.fontSize}
-              onChange={(val) => {
-                if (Number.isFinite(val)) setConfig({ fontSize: val });
-              }}
-            >
-              <NumberField.Group>
-                <NumberField.DecrementButton>
-                  <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
-                </NumberField.DecrementButton>
-                <NumberField.Input />
-                <NumberField.IncrementButton>
-                  <HugeiconsIcon icon={ArrowUp01Icon} size={16} />
-                </NumberField.IncrementButton>
-              </NumberField.Group>
-            </NumberField>
+            <div className="flex flex-col gap-2">
+              <Slider
+                aria-label="Font size slider"
+                className="p-1"
+                maxValue={200}
+                minValue={8}
+                step={1}
+                value={config.fontSize}
+                onChange={(value) => setConfig({ fontSize: value as number })}
+              >
+                <Slider.Output className="text-xs text-default-500" />
+                <Slider.Track>
+                  <Slider.Fill />
+                  <Slider.Thumb />
+                </Slider.Track>
+              </Slider>
+              <NumberField
+                aria-label="Font size"
+                className="w-full"
+                maxValue={200}
+                minValue={8}
+                value={config.fontSize}
+                onChange={(val) => {
+                  if (Number.isFinite(val)) setConfig({ fontSize: val });
+                }}
+              >
+                <NumberField.Group>
+                  <NumberField.DecrementButton>
+                    <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+                  </NumberField.DecrementButton>
+                  <NumberField.Input />
+                  <NumberField.IncrementButton>
+                    <HugeiconsIcon icon={ArrowUp01Icon} size={16} />
+                  </NumberField.IncrementButton>
+                </NumberField.Group>
+              </NumberField>
+            </div>
           </Section>
 
           <Section title="Color">
@@ -300,6 +317,18 @@ export function WatermarkPropertiesContent() {
             >
               {config.imageData ? "Change Image" : "Upload Image"}
             </Button>
+            <Switch
+              isSelected={config.scaleToPage}
+              size="sm"
+              onChange={() => setConfig({ scaleToPage: !config.scaleToPage })}
+            >
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+              <Switch.Content>
+                <Label className="text-xs">Scale image to page width</Label>
+              </Switch.Content>
+            </Switch>
           </div>
         </Section>
       )}

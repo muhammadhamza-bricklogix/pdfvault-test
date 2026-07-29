@@ -16,6 +16,7 @@ export default function DashboardToolsPage() {
     <div className="flex flex-col gap-6">
       <PvPageHeader
         action={<UploadPdfButton />}
+        backHref="/dashboard"
         subtitle="Tools that you can use to make changes on your PDF"
         title="Tools"
       />

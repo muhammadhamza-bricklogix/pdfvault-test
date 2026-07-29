@@ -253,16 +253,41 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       // The mutation owns its own loading/success/error toasts; we await the
       // result here so we can trigger the browser download from the returned
       // blob (otherwise the file is converted but never offered to the user).
-      const result = await convertRef.current.mutateAsync({
-        file: pdfFile,
-        type: conversionType,
-      });
+      let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
 
-      triggerBlobDownload(result.blob, result.fileName);
+      try {
+        result = await convertRef.current.mutateAsync({
+          file: pdfFile,
+          type: conversionType,
+        });
+      } catch (err) {
+        // The axios interceptor throws a well-known PaywallCancelledError
+        // when the user dismisses the payment modal on a 402/403 retry.
+        // Treat that as a normal user action — no error toast.
+        if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+          return;
+        }
+        logger.error("Failed to export PDF", err);
+        toast.error({
+          title: "Export failed",
+          description: "We couldn't export your edits. Please try again.",
+        });
+
+        return;
+      }
+
+      // Conversion mutation already fired its own success toast in
+      // onSuccess — DO NOT re-toast an error if the blob download itself
+      // fails (QA feedback 2026-07-29 item 81: "failed export message
+      // even though the file downloaded fine"). Log only.
+      try {
+        triggerBlobDownload(result.blob, result.fileName);
+      } catch (err) {
+        logger.error("blob download failed after successful conversion", err);
+      }
     } catch (err) {
-      // The axios interceptor throws a well-known PaywallCancelledError
-      // when the user dismisses the payment modal on a 402/403 retry.
-      // Treat that as a normal user action — no error toast.
+      // Any pre-mutation exception (buildEditedPdfBytes, file
+      // preparation) still surfaces to the user.
       if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
         return;
       }
