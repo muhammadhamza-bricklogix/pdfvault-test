@@ -1,7 +1,7 @@
 "use client";
 
 import { driver } from "driver.js";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 
 import { TOUR_STORAGE_KEYS, TOURS, type TourKey } from "./tour-config";
 
@@ -11,6 +11,14 @@ import "driver.js/dist/driver.css";
 // hamburger and the editor's chrome differs — a driven overlay would
 // mis-anchor. The help button (`?`) still lets a mobile user replay.
 const AUTO_LAUNCH_MIN_WIDTH = 768;
+
+// Module-level singletons so the hook stays safe when multiple
+// components mount it for the same surface (e.g. DashboardHome +
+// TourHelpButton both call useProductTour("dashboard")). Without
+// these guards, each caller spawns its own driver instance and the
+// overlays overlap on screen — two "Next" buttons visible at once.
+const autoLaunchedKeys = new Set<TourKey>();
+let activeInstance: ReturnType<typeof driver> | null = null;
 
 function alreadySeen(key: TourKey): boolean {
   if (typeof window === "undefined") return true;
@@ -31,10 +39,17 @@ function markSeen(key: TourKey): void {
 }
 
 export function useProductTour(key: TourKey) {
-  const driverRef = useRef<ReturnType<typeof driver> | null>(null);
-
   const start = useCallback(() => {
     if (typeof window === "undefined") return;
+
+    // Kill any prior instance BEFORE spawning a new one. Guards against
+    // two callers of this hook racing to `.drive()` on top of each
+    // other, or the user hitting the help button while a tour is
+    // already running.
+    if (activeInstance) {
+      activeInstance.destroy();
+      activeInstance = null;
+    }
 
     // Wait a frame so the target elements are actually mounted when the
     // caller fires immediately after a route transition.
@@ -54,19 +69,24 @@ export function useProductTour(key: TourKey) {
         steps: TOURS[key],
         onDestroyed: () => {
           markSeen(key);
+          if (activeInstance === instance) activeInstance = null;
         },
       });
 
-      driverRef.current = instance;
+      activeInstance = instance;
       instance.drive();
     });
   }, [key]);
 
-  // Auto-launch once per surface, desktop only.
+  // Auto-launch once per surface, desktop only. Module-level Set makes
+  // sure only ONE caller triggers the tour per session even when
+  // several components share the same `useProductTour(key)` call.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return;
     if (alreadySeen(key)) return;
+    if (autoLaunchedKeys.has(key)) return;
+    autoLaunchedKeys.add(key);
 
     const id = window.setTimeout(() => {
       start();
@@ -74,12 +94,6 @@ export function useProductTour(key: TourKey) {
 
     return () => window.clearTimeout(id);
   }, [key, start]);
-
-  useEffect(() => {
-    return () => {
-      driverRef.current?.destroy();
-    };
-  }, []);
 
   return { start };
 }
