@@ -5,6 +5,7 @@ import type { Canvas } from "fabric";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Modal, Tabs } from "@heroui/react";
 
+import { getLastPointer } from "@/lib/client/pdf-editor/last-pointer";
 import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { FileUpload } from "@/components/ui/file-upload/file-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -233,14 +234,68 @@ function SignatureModalContent({
     const scale = img.width && img.width > maxWidth ? maxWidth / img.width : 1;
 
     // Fabric JSON is stored in BASE coordinates (zoom = 1). The
-    // canvas' `.width` / `.height` are the rendered (post-zoom) size —
-    // dividing by 2 alone puts the signature at `base_width * zoom / 2`,
-    // which lands past the right/bottom edge whenever the user is
-    // zoomed in > 1x. Divide out the current zoom to hit the true page
-    // centre regardless of zoom level.
+    // canvas' `.width` / `.height` are the rendered (post-zoom) size.
+    // Placement priority (QA feedback 2026-07-29 — signatures "landing
+    // in unexpected spots"):
+    //   1. Last known pointer position on THIS page (`last-pointer.ts`),
+    //      set by PdfViewerCanvas's mouse:move listener. Desktop users
+    //      get the signature where they were hovering.
+    //   2. Intersection of the canvas rect with the scroll container —
+    //      if the user has scrolled or zoomed in, drop it in the
+    //      currently VISIBLE region so it doesn't land off-screen.
+    //   3. Raw page centre — mobile without a scrolled viewport.
     const zoom = fabricCanvas.getZoom() || 1;
-    const centerX = (fabricCanvas.width ?? 600) / (2 * zoom);
-    const centerY = (fabricCanvas.height ?? 800) / (2 * zoom);
+    let centerX = (fabricCanvas.width ?? 600) / (2 * zoom);
+    let centerY = (fabricCanvas.height ?? 800) / (2 * zoom);
+
+    const lastPointer = getLastPointer();
+
+    if (lastPointer && lastPointer.page === currentPage) {
+      centerX = lastPointer.x;
+      centerY = lastPointer.y;
+    } else {
+      try {
+        const canvasEl = fabricCanvas.getElement();
+        const canvasRect = canvasEl.getBoundingClientRect();
+        let scrollEl: HTMLElement | null = canvasEl.parentElement;
+
+        while (scrollEl && scrollEl !== document.body) {
+          const style = getComputedStyle(scrollEl);
+          const yScroll = style.overflowY;
+          const xScroll = style.overflowX;
+
+          if (
+            yScroll === "auto" ||
+            yScroll === "scroll" ||
+            xScroll === "auto" ||
+            xScroll === "scroll"
+          ) {
+            break;
+          }
+          scrollEl = scrollEl.parentElement;
+        }
+        const scrollRect = scrollEl?.getBoundingClientRect() ?? {
+          top: 0,
+          left: 0,
+          right: window.innerWidth,
+          bottom: window.innerHeight,
+        };
+        const vLeft = Math.max(canvasRect.left, scrollRect.left);
+        const vRight = Math.min(canvasRect.right, scrollRect.right);
+        const vTop = Math.max(canvasRect.top, scrollRect.top);
+        const vBottom = Math.min(canvasRect.bottom, scrollRect.bottom);
+
+        if (vRight > vLeft && vBottom > vTop) {
+          const localX = (vLeft + vRight) / 2 - canvasRect.left;
+          const localY = (vTop + vBottom) / 2 - canvasRect.top;
+
+          centerX = localX / zoom;
+          centerY = localY / zoom;
+        }
+      } catch {
+        // fall back to page centre
+      }
+    }
 
     img.set({
       left: centerX,

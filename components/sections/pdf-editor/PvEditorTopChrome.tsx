@@ -46,6 +46,7 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { HamburgerMenu } from "./HamburgerMenu";
+import { SaveStatusChip } from "./SaveStatusChip";
 
 // ---------------------------------------------------------------------------
 // Icon type alias (matches the hugeicons SVG type).
@@ -260,6 +261,8 @@ function TopAppBar() {
       >
         {fileName}
       </span>
+
+      <SaveStatusChip />
 
       <div className="ml-3 flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
         <Tooltip delay={300}>

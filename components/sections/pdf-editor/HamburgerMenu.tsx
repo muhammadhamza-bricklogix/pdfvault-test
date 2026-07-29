@@ -5,10 +5,15 @@ import type { Key } from "@heroui/react";
 import {
   Add01Icon,
   Clock01Icon,
+  FileExportIcon,
+  FileMinusIcon,
   FolderOpenIcon,
+  Layers01Icon,
+  Link01Icon,
   Menu01Icon,
   NoteIcon,
   Search01Icon,
+  SplitIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -58,6 +63,9 @@ export function HamburgerMenu() {
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
     (s) => s.setIsCreatePdfModalOpen,
+  );
+  const setIsCompressModalOpen = usePdfEditorStore(
+    (s) => s.setIsCompressModalOpen,
   );
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -192,6 +200,14 @@ export function HamburgerMenu() {
         break;
       case "flatten":
         void runFlatten();
+        break;
+      case "compress":
+        if (!requireFile("compressing")) return;
+        setIsCompressModalOpen(true);
+        break;
+      case "extract-images":
+        if (!requireFile("extracting images")) return;
+        window.dispatchEvent(new CustomEvent("editor:extract-images"));
         break;
       case "find-replace":
         if (!requireFile("searching")) return;
@@ -358,6 +374,26 @@ export function HamburgerMenu() {
             <Dropdown.Item id="find-replace" textValue="Find and Replace">
               <HugeiconsIcon icon={Search01Icon} size={14} />
               <Label>Find and Replace</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="compress" textValue="Compress PDF">
+              <HugeiconsIcon icon={FileMinusIcon} size={14} />
+              <Label>Compress PDF</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="split" textValue="Split PDF">
+              <HugeiconsIcon icon={SplitIcon} size={14} />
+              <Label>Split PDF</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="extract-images" textValue="Extract Images">
+              <HugeiconsIcon icon={FileExportIcon} size={14} />
+              <Label>Extract Images</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="flatten" textValue="Flatten PDF">
+              <HugeiconsIcon icon={Layers01Icon} size={14} />
+              <Label>Flatten PDF</Label>
+            </Dropdown.Item>
+            <Dropdown.Item id="share" textValue="Share via link">
+              <HugeiconsIcon icon={Link01Icon} size={14} />
+              <Label>Share via link</Label>
             </Dropdown.Item>
             <Dropdown.Item id="versions" textValue="Version History">
               <HugeiconsIcon icon={Clock01Icon} size={14} />

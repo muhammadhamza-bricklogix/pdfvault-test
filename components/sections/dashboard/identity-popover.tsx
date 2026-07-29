@@ -158,6 +158,16 @@ export function IdentityPopover({
               </ListBox.Item>
             )}
 
+            <ListBox.Item id="terms" textValue="Terms and Conditions">
+              <div className="flex h-8 items-center justify-center">
+                <HugeiconsIcon
+                  className="size-4 shrink-0 text-default-600"
+                  icon={LegalDocumentIcon}
+                />
+              </div>
+              <Label>Terms and Conditions</Label>
+            </ListBox.Item>
+
             <ListBox.Item id="theme" textValue="Theme">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
@@ -183,21 +193,15 @@ export function IdentityPopover({
                 <Description>Account, billing, access</Description>
               </div>
             </ListBox.Item>
-
-            <ListBox.Item id="terms" textValue="Terms and Conditions">
-              <div className="flex h-8 items-center justify-center">
-                <HugeiconsIcon
-                  className="size-4 shrink-0 text-default-600"
-                  icon={LegalDocumentIcon}
-                />
-              </div>
-              <Label>Terms and Conditions</Label>
-            </ListBox.Item>
           </ListBox>
 
+          {/* Extra top margin + thicker divider isolates the destructive
+              Log out action from T&C / Help / Theme rows above. QA
+              testers reported hitting T&C when going for Log out
+              (2026-07-29 item 49). */}
           <ListBox
             aria-label="Session"
-            className="border-t border-default-200 px-2 pb-2 pt-1"
+            className="border-t-2 border-default-200 px-2 pb-2 pt-2"
             selectionMode="none"
             onAction={handleAction}
           >

@@ -44,6 +44,7 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { HamburgerMenu } from "./HamburgerMenu";
+import { SaveStatusChip } from "./SaveStatusChip";
 import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -239,6 +240,8 @@ export function EditorInfoBar() {
               </Tooltip.Content>
             </Tooltip>
 
+            <SaveStatusChip />
+
             <Separator
               className="!h-4 hidden self-center md:block"
               orientation="vertical"
@@ -305,6 +308,7 @@ export function EditorInfoBar() {
           {pageNav}
           <Separator className="!h-4 self-center" orientation="vertical" />
           {zoomNav}
+          <SaveStatusChip compact />
         </div>
       </div>
     </>

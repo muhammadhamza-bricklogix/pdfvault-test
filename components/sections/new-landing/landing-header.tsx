@@ -1,8 +1,6 @@
 "use client";
 
 import { useAuth, useClerk } from "@clerk/nextjs";
-import { SquareUnlock01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";

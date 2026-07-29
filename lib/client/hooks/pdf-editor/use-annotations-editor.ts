@@ -49,25 +49,37 @@ export type AnnotationDef = {
  *     unknown glyphs with `?` rather than crashing the save.
  */
 export const ANNOTATIONS: ReadonlyArray<AnnotationDef> = [
-  { id: "check", label: "Check", glyph: "✓", fill: "#16a34a", fontSize: 36 },
-  { id: "cross", label: "Cross", glyph: "✗", fill: "#dc2626", fontSize: 36 },
+  {
+    id: "check",
+    label: "Check mark",
+    glyph: "✓",
+    fill: "#16a34a",
+    fontSize: 36,
+  },
+  {
+    id: "cross",
+    label: "Cross out",
+    glyph: "✗",
+    fill: "#dc2626",
+    fontSize: 36,
+  },
   {
     id: "arrow-right",
-    label: "Arrow →",
+    label: "Right arrow",
     glyph: "→",
     fill: "#111111",
     fontSize: 36,
   },
   {
     id: "arrow-up",
-    label: "Arrow ↑",
+    label: "Up arrow",
     glyph: "↑",
     fill: "#111111",
     fontSize: 36,
   },
   {
     id: "question",
-    label: "Question",
+    label: "Question mark",
     glyph: "?",
     fill: "#2563eb",
     fontSize: 40,
@@ -87,7 +99,7 @@ export const ANNOTATIONS: ReadonlyArray<AnnotationDef> = [
     fill: "#111111",
     fontSize: 40,
   },
-  { id: "pin", label: "Pin", glyph: "⚑", fill: "#111111", fontSize: 36 },
+  { id: "pin", label: "Flag", glyph: "⚑", fill: "#111111", fontSize: 36 },
   {
     id: "paragraph",
     label: "Paragraph",
@@ -102,7 +114,7 @@ export const ANNOTATIONS: ReadonlyArray<AnnotationDef> = [
     fill: "#111111",
     fontSize: 40,
   },
-  { id: "dash", label: "Dash", glyph: "—", fill: "#111111", fontSize: 36 },
+  { id: "dash", label: "Dash line", glyph: "—", fill: "#111111", fontSize: 36 },
 ];
 
 export type AnnotationEventDetail = { id: AnnotationId };
