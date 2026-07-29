@@ -166,19 +166,6 @@ export function LandingHeader() {
                   >
                     Dashboard
                   </a>
-                  {entitled ? null : (
-                    <a
-                      className="pv-btn-secondary hidden items-center gap-1.5 px-5 py-1.5 text-[14px] sm:inline-flex"
-                      href={ROUTES.APP.SETTINGS_BILLING}
-                    >
-                      <HugeiconsIcon
-                        className="text-[var(--pv-brand-red,#f12c23)]"
-                        icon={SquareUnlock01Icon}
-                        size={16}
-                      />
-                      Unlock access
-                    </a>
-                  )}
                   <button
                     className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
                     type="button"
@@ -274,20 +261,6 @@ export function LandingHeader() {
                       >
                         Dashboard
                       </a>
-                      {entitled ? null : (
-                        <a
-                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                          href={ROUTES.APP.SETTINGS_BILLING}
-                          onClick={() => setMobileOpen(false)}
-                        >
-                          <HugeiconsIcon
-                            className="text-[var(--pv-brand-red,#f12c23)]"
-                            icon={SquareUnlock01Icon}
-                            size={16}
-                          />
-                          Unlock access
-                        </a>
-                      )}
                       <button
                         className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
                         type="button"

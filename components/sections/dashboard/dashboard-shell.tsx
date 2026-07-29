@@ -232,26 +232,28 @@ function SidebarBody({
             onNavigate={onNavigate}
           />
         ))}
-        {entitled ? null : (
-          <Link
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
-            href={ROUTES.APP.SETTINGS_BILLING}
-            onClick={onNavigate}
-          >
-            <HugeiconsIcon
-              className="shrink-0 text-[var(--pv-brand-red)]"
-              icon={SquareUnlock01Icon}
-              size={18}
-              strokeWidth={1.5}
-            />
-            <span>Unlock access</span>
-          </Link>
-        )}
       </nav>
       <div className="mt-auto">
         <div className="border-t border-[var(--pv-hairline)] px-3 pb-1 pt-2">
           <TourHelpButton tour="dashboard" />
         </div>
+        {entitled ? null : (
+          <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
+            <Link
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
+              href={ROUTES.APP.SETTINGS_BILLING}
+              onClick={onNavigate}
+            >
+              <HugeiconsIcon
+                className="shrink-0 text-[var(--pv-brand-red)]"
+                icon={SquareUnlock01Icon}
+                size={18}
+                strokeWidth={1.5}
+              />
+              <span>Unlock access</span>
+            </Link>
+          </div>
+        )}
         <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
           <LanguageSwitcher />
         </div>
