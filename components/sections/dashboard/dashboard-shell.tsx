@@ -9,21 +9,20 @@ import {
   Cancel01Icon,
   CheckmarkBadge01Icon,
   Home01Icon,
-  Logout03Icon,
   Menu01Icon,
   MenuSquareIcon,
   SquareUnlock01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
+import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
-import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 
@@ -204,6 +203,8 @@ function SidebarBody({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const entitled = useIsEntitled();
+
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 pb-6 pt-6">
@@ -231,24 +232,25 @@ function SidebarBody({
             onNavigate={onNavigate}
           />
         ))}
-        <Link
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
-          href={ROUTES.APP.SETTINGS_BILLING}
-          onClick={onNavigate}
-        >
-          <HugeiconsIcon
-            className="shrink-0 text-[var(--pv-brand-red)]"
-            icon={SquareUnlock01Icon}
-            size={18}
-            strokeWidth={1.5}
-          />
-          <span>Unlock access</span>
-        </Link>
+        {entitled ? null : (
+          <Link
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
+            href={ROUTES.APP.SETTINGS_BILLING}
+            onClick={onNavigate}
+          >
+            <HugeiconsIcon
+              className="shrink-0 text-[var(--pv-brand-red)]"
+              icon={SquareUnlock01Icon}
+              size={18}
+              strokeWidth={1.5}
+            />
+            <span>Unlock access</span>
+          </Link>
+        )}
       </nav>
       <div className="mt-auto">
         <div className="border-t border-[var(--pv-hairline)] px-3 pb-1 pt-2">
           <TourHelpButton tour="dashboard" />
-          <SidebarLogOut />
         </div>
         <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
           <LanguageSwitcher />
@@ -256,30 +258,6 @@ function SidebarBody({
         <ProfileRow onNavigate={onNavigate} />
       </div>
     </div>
-  );
-}
-
-function SidebarLogOut() {
-  const { signOut } = useClerk();
-  const handleClick = () => {
-    void usersService.signOutAudit().catch(() => undefined);
-    void signOut();
-  };
-
-  return (
-    <button
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
-      type="button"
-      onClick={handleClick}
-    >
-      <HugeiconsIcon
-        className="shrink-0"
-        icon={Logout03Icon}
-        size={18}
-        strokeWidth={1.5}
-      />
-      <span>Log out</span>
-    </button>
   );
 }
 

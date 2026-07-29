@@ -218,7 +218,6 @@ export function EditorInfoBar() {
                 onPress={() => setIsToolsModalOpen(true)}
               >
                 <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
-                <span className="hidden sm:inline">Tools</span>
               </Button>
               <Tooltip.Content>
                 <p>Browse PDF and image tools</p>
@@ -227,10 +226,12 @@ export function EditorInfoBar() {
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
-              mobile (the dedicated nav row below carries page navigation). */}
+              mobile (the dedicated nav row below carries page navigation).
+              Filename itself is hidden below md so the row doesn't get
+              squeezed between save/tools/zoom on tablets. */}
           <div className="hidden min-w-0 items-center gap-2 sm:flex lg:gap-3">
             <Tooltip delay={300}>
-              <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] sm:inline lg:max-w-40">
+              <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] md:inline lg:max-w-40">
                 {fileName}
               </span>
               <Tooltip.Content>
@@ -239,7 +240,7 @@ export function EditorInfoBar() {
             </Tooltip>
 
             <Separator
-              className="!h-4 hidden self-center sm:block"
+              className="!h-4 hidden self-center md:block"
               orientation="vertical"
             />
 
@@ -256,9 +257,12 @@ export function EditorInfoBar() {
             />
             <ButtonGroup isDisabled={!file} size="sm" variant="primary">
               <Tooltip delay={300}>
-                <Button isDisabled={!canSave} onPress={onSaveClick}>
+                <Button
+                  aria-label="Save"
+                  isDisabled={!canSave}
+                  onPress={onSaveClick}
+                >
                   <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
-                  <span className="hidden sm:inline">Save</span>
                 </Button>
                 <Tooltip.Content>
                   <p>{saveTooltip}</p>

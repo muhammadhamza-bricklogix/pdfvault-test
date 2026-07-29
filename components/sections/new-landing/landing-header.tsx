@@ -1,12 +1,16 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
+import { SquareUnlock01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
+import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
@@ -30,7 +34,14 @@ export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const { isLoaded, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
   const pathname = usePathname();
+  const entitled = useIsEntitled();
+
+  const handleLogOut = () => {
+    void usersService.signOutAudit().catch(() => undefined);
+    void signOut();
+  };
 
   // Auto-dismiss the All Tools + mobile drawer whenever the route
   // changes. Tiles inside the modal used to leave the modal open behind
@@ -148,12 +159,34 @@ export function LandingHeader() {
 
             {showAuthButtons ? (
               isSignedIn ? (
-                <a
-                  className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
-                  href={ROUTES.APP.DASHBOARD}
-                >
-                  Dashboard
-                </a>
+                <>
+                  <a
+                    className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                    href={ROUTES.APP.DASHBOARD}
+                  >
+                    Dashboard
+                  </a>
+                  {entitled ? null : (
+                    <a
+                      className="pv-btn-secondary hidden items-center gap-1.5 px-5 py-1.5 text-[14px] sm:inline-flex"
+                      href={ROUTES.APP.SETTINGS_BILLING}
+                    >
+                      <HugeiconsIcon
+                        className="text-[var(--pv-brand-red,#f12c23)]"
+                        icon={SquareUnlock01Icon}
+                        size={16}
+                      />
+                      Unlock access
+                    </a>
+                  )}
+                  <button
+                    className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                    type="button"
+                    onClick={handleLogOut}
+                  >
+                    Log out
+                  </button>
+                </>
               ) : (
                 <>
                   <a
@@ -233,13 +266,39 @@ export function LandingHeader() {
               <li className="flex flex-col gap-2 px-2 pt-1">
                 {showAuthButtons ? (
                   isSignedIn ? (
-                    <a
-                      className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                      href={ROUTES.APP.DASHBOARD}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      Dashboard
-                    </a>
+                    <>
+                      <a
+                        className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                        href={ROUTES.APP.DASHBOARD}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        Dashboard
+                      </a>
+                      {entitled ? null : (
+                        <a
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                          href={ROUTES.APP.SETTINGS_BILLING}
+                          onClick={() => setMobileOpen(false)}
+                        >
+                          <HugeiconsIcon
+                            className="text-[var(--pv-brand-red,#f12c23)]"
+                            icon={SquareUnlock01Icon}
+                            size={16}
+                          />
+                          Unlock access
+                        </a>
+                      )}
+                      <button
+                        className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                        type="button"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          handleLogOut();
+                        }}
+                      >
+                        Log out
+                      </button>
+                    </>
                   ) : (
                     <>
                       <a

@@ -170,6 +170,22 @@ body {
   align-items: center;
   gap: 8px;
 }
+.driver-popover.pv-tour-popover .pv-tour-skip-btn {
+  margin-right: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pv-text-muted, #a4a4a4);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+.driver-popover.pv-tour-popover .pv-tour-skip-btn:hover {
+  color: var(--pv-text-strong, #171717);
+  background: var(--pv-nav-active, #f3f3f5);
+}
 .driver-popover.pv-tour-popover .driver-popover-progress-text {
   font-size: 11px;
   color: var(--pv-text-muted, #a4a4a4);

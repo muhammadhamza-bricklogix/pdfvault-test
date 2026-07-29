@@ -67,6 +67,21 @@ export function useProductTour(key: TourKey) {
         prevBtnText: "Back",
         doneBtnText: "Got it",
         steps: TOURS[key],
+        onPopoverRender: (popover) => {
+          // Inject a "Skip all" button on the left of the footer.
+          // driver.js re-renders the popover on every step, so this
+          // fires per step — safe to build the button from scratch
+          // each time.
+          const skipBtn = document.createElement("button");
+
+          skipBtn.type = "button";
+          skipBtn.textContent = "Skip all";
+          skipBtn.className = "pv-tour-skip-btn";
+          skipBtn.addEventListener("click", () => {
+            activeInstance?.destroy();
+          });
+          popover.footer.insertBefore(skipBtn, popover.footer.firstChild);
+        },
         onDestroyed: () => {
           markSeen(key);
           if (activeInstance === instance) activeInstance = null;
