@@ -457,10 +457,9 @@ function PlanStep({
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
             href="/terms-and-conditions"
           >
-            Subscription terms
+            Terms and Conditions
           </a>{" "}
-          for details on cancellation and refunds. We provide refunds in
-          accordance with our{" "}
+          for details. We provide refunds in accordance with our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
             href="/refund"
