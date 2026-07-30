@@ -741,10 +741,10 @@ function BrandLogo() {
   return (
     <Image
       alt="PDFVault"
-      className="h-[26px] w-auto object-contain"
-      height={26}
+      className="h-[36px] w-auto object-contain"
+      height={36}
       src="/landing/logo-with-text.png"
-      width={104}
+      width={144}
     />
   );
 }
@@ -783,7 +783,7 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
       {/* Blurred mock document preview */}
       <div
         aria-hidden
-        className="pointer-events-none flex select-none flex-col gap-1.5"
+        className="pointer-events-none flex select-none flex-col gap-2"
         style={{ filter: "blur(3px)" }}
       >
         <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
@@ -791,9 +791,12 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
         <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
         <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
         <div className="h-2 w-full rounded bg-[#eaeaea]" />
-        <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
+        <div className="mt-2 h-24 w-full rounded bg-[#f0f0f0]" />
         <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-full rounded bg-[#eaeaea]" />
         <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
       </div>
 
       {/* Lock overlay */}
@@ -853,7 +856,7 @@ function GenericPreviewCard() {
     <div className="relative overflow-hidden rounded-xl border border-black/5 bg-white p-4 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
       <div
         aria-hidden
-        className="pointer-events-none flex select-none flex-col gap-1.5"
+        className="pointer-events-none flex select-none flex-col gap-2"
         style={{ filter: "blur(3px)" }}
       >
         <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
@@ -861,9 +864,12 @@ function GenericPreviewCard() {
         <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
         <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
         <div className="h-2 w-full rounded bg-[#eaeaea]" />
-        <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
+        <div className="mt-2 h-24 w-full rounded bg-[#f0f0f0]" />
         <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-full rounded bg-[#eaeaea]" />
         <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
       </div>
       <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-lg">
