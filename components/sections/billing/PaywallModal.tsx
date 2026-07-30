@@ -430,41 +430,45 @@ function PlanStep({
             <CardBadge label="Amex" />
           </div>
 
-          {selectedPlan === "trial" ? (
-            <p className="text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-              You&apos;ll be charged {today} today for 7-day full access, then{" "}
-              {renew} every 30 days unless you cancel before the trial ends.
-            </p>
-          ) : (
-            <p className="text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-              You&apos;ll be charged {annualPrice} today, then {annualPrice}{" "}
-              every 365 days. Cancel anytime before the next renewal.
-            </p>
-          )}
-
-          <p className="mt-2 text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-            After 7 days, you will be charged $24.99/month unless you cancel 24
-            hours before the trial ends. Charged in USD. Amount in local
-            currency is an estimate and may differ.
-            <br />
-            See our{" "}
-            <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/terms-and-conditions"
-            >
-              Subscription terms
-            </a>{" "}
-            for details on cancellation and refunds. We provide refunds in
-            accordance with our{" "}
-            <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/refund"
-            >
-              Refund Policy
-            </a>
-            .
-          </p>
         </div>
+      </div>
+
+      {/* Full-width centered disclaimer footer — spans both columns */}
+      <div className="border-t border-[#ececec] px-6 py-5 md:px-8">
+        {selectedPlan === "trial" ? (
+          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+            You&apos;ll be charged {today} today for 7-day full access, then{" "}
+            {renew} every 30 days unless you cancel before the trial ends.
+          </p>
+        ) : (
+          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+            You&apos;ll be charged {annualPrice} today, then {annualPrice}{" "}
+            every 365 days. Cancel anytime before the next renewal.
+          </p>
+        )}
+
+        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+          After 7 days, you will be charged $24.99/month unless you cancel 24
+          hours before the trial ends. Charged in USD. Amount in local currency
+          is an estimate and may differ.
+          <br />
+          See our{" "}
+          <a
+            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            href="/terms-and-conditions"
+          >
+            Subscription terms
+          </a>{" "}
+          for details on cancellation and refunds. We provide refunds in
+          accordance with our{" "}
+          <a
+            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            href="/refund"
+          >
+            Refund Policy
+          </a>
+          .
+        </p>
       </div>
     </div>
   );
