@@ -468,6 +468,7 @@ export function PendingEditorFileHydrator() {
 
     return () => window.clearTimeout(timeoutId);
   }, [
+    authLoaded,
     currentFile,
     exportFormat,
     setActiveTool,
