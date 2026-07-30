@@ -207,9 +207,11 @@ export function PendingEditorFileHydrator() {
           return;
         }
 
-        const file = await loadPendingEditorFile();
+        const pending = await loadPendingEditorFile();
 
-        if (cancelled || !file) return;
+        if (cancelled || !pending) return;
+
+        const { file, fabricJsonByPage: pendingFabricState } = pending;
 
         // Guard: /pdf-composer is PDF-only. If a non-PDF is sitting in
         // IDB (e.g. a .docx dropped by the signed-out user on
@@ -273,6 +275,19 @@ export function PendingEditorFileHydrator() {
             autoSavedRef.current = true; // Step 3 already covered
             uploadToasts.succeed(trackingId, document);
 
+            // Seed the store with the user's pre-redirect edits BEFORE
+            // router.replace so the document loader's rehydrateEditorState
+            // call (which receives null editorState for a freshly uploaded
+            // doc) is a no-op and our fabric state survives the setFile
+            // transition. setFile only patches `file` — it does not touch
+            // fabricJsonByPage — so the edits remain in place and both
+            // the Fabric canvas and buildEditedPdfBytes pick them up.
+            if (pendingFabricState && pendingFabricState.size > 0) {
+              usePdfEditorStore
+                .getState()
+                .replaceFabricJsonByPage(pendingFabricState);
+            }
+
             // Add the fresh id to the URL. The document loader takes
             // over from here — GET /documents/<id> hydrates the store
             // and the auto-launch effect fires once the file lands.
@@ -291,6 +306,11 @@ export function PendingEditorFileHydrator() {
             // Fall back to plain rehydrate so the user isn't stranded.
             setCurrentDocument(null);
             setFile(file);
+            if (pendingFabricState && pendingFabricState.size > 0) {
+              usePdfEditorStore
+                .getState()
+                .replaceFabricJsonByPage(pendingFabricState);
+            }
             await clearPendingEditorFile();
           } finally {
             setIsRestoringSession(false);
@@ -302,6 +322,11 @@ export function PendingEditorFileHydrator() {
         // Normal rehydrate path.
         setCurrentDocument(null);
         setFile(file);
+        if (pendingFabricState && pendingFabricState.size > 0) {
+          usePdfEditorStore
+            .getState()
+            .replaceFabricJsonByPage(pendingFabricState);
+        }
         await clearPendingEditorFile();
       } catch (err) {
         logger.warn("pending editor file hydrate failed", err);

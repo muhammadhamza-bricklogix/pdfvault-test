@@ -10,6 +10,10 @@
  *
  * Markers expire after 30 minutes so a stale file can't silently override
  * a fresh explicit upload later on.
+ *
+ * `fabricState` captures the per-page Fabric overlay JSON so that any edits
+ * the user made before clicking Download (while signed out) survive the
+ * sign-in redirect and appear correctly on return.
  */
 
 const DB_NAME = "pdfvault_pending_editor";
@@ -21,6 +25,14 @@ const MAX_AGE_MS = 30 * 60 * 1000;
 interface PendingRecord {
   file: File;
   ts: number;
+  /** Serialized Map<number, string> — IDB can't store Map directly. */
+  fabricState?: Array<[number, string]>;
+}
+
+export interface PendingEditorFileResult {
+  file: File;
+  /** Restored per-page Fabric JSON, or null if no edits were saved. */
+  fabricJsonByPage: Map<number, string> | null;
 }
 
 function open(): Promise<IDBDatabase | null> {
@@ -45,14 +57,27 @@ function open(): Promise<IDBDatabase | null> {
   });
 }
 
-export async function savePendingEditorFile(file: File): Promise<void> {
+export async function savePendingEditorFile(
+  file: File,
+  fabricJsonByPage?: Map<number, string>,
+): Promise<void> {
   const db = await open();
 
   if (!db) return;
+
+  const record: PendingRecord = {
+    file,
+    ts: Date.now(),
+    fabricState:
+      fabricJsonByPage && fabricJsonByPage.size > 0
+        ? Array.from(fabricJsonByPage.entries())
+        : undefined,
+  };
+
   await new Promise<void>((resolve) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
 
-    tx.objectStore(STORE_NAME).put({ file, ts: Date.now() }, RECORD_KEY);
+    tx.objectStore(STORE_NAME).put(record, RECORD_KEY);
     tx.oncomplete = () => resolve();
     tx.onerror = () => resolve();
     tx.onabort = () => resolve();
@@ -60,7 +85,7 @@ export async function savePendingEditorFile(file: File): Promise<void> {
   db.close();
 }
 
-export async function loadPendingEditorFile(): Promise<File | null> {
+export async function loadPendingEditorFile(): Promise<PendingEditorFileResult | null> {
   const db = await open();
 
   if (!db) return null;
@@ -81,7 +106,12 @@ export async function loadPendingEditorFile(): Promise<File | null> {
     return null;
   }
 
-  return record.file;
+  return {
+    file: record.file,
+    fabricJsonByPage: record.fabricState
+      ? new Map(record.fabricState)
+      : null,
+  };
 }
 
 export async function clearPendingEditorFile(): Promise<void> {

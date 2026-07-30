@@ -549,22 +549,23 @@ export function UploadWorkspace({
 
     void (async () => {
       try {
-        const pending = await loadPendingEditorFile();
+        const pendingResult = await loadPendingEditorFile();
 
-        if (!pending) return;
+        if (!pendingResult) return;
 
-        const ext = pending.name.split(".").pop()?.toLowerCase() ?? "";
+        const { file: pendingFile } = pendingResult;
+        const ext = pendingFile.name.split(".").pop()?.toLowerCase() ?? "";
 
         // Only auto-resume files that match this route's accept list.
         // Prevents a leftover PDF-to-word source picking up on a
         // Word-to-PDF page (or vice-versa).
         if (!acceptedExtensions.includes(ext)) return;
-        if (pending.size > MAX_SIZE_BYTES) return;
+        if (pendingFile.size > MAX_SIZE_BYTES) return;
 
         await clearPendingEditorFile();
         setError(null);
-        setFile(pending);
-        void openFileInEditor(pending);
+        setFile(pendingFile);
+        void openFileInEditor(pendingFile);
       } catch (err) {
         logger.warn("convert-page auto-resume failed", err);
       }

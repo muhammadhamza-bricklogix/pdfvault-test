@@ -11,7 +11,10 @@ import {
   requestPaywall,
 } from "@/lib/client/hooks/billing/paywall-bus";
 import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
-import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
+import {
+  buildEditedPdfBytes,
+  flushLiveFabricPage,
+} from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
@@ -169,9 +172,18 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       // re-fires automatically.
       if (!signedIn) {
         try {
-          // Persist the file across the full-page sign-in redirect so
-          // the editor can rehydrate it on return.
-          await savePendingEditorFile(sourceFile);
+          // Flush the live canvas for the current page into the store so
+          // the serialized fabric state includes the user's latest edits
+          // (the store may lag the live canvas by one page-navigation).
+          if (liveCanvas) {
+            flushLiveFabricPage(page, liveCanvas);
+          }
+          // Persist the file AND any per-page Fabric edits across the
+          // full-page sign-in redirect so the editor can rehydrate both
+          // on return — otherwise the user loses all unsaved changes.
+          const { fabricJsonByPage } = usePdfEditorStore.getState();
+
+          await savePendingEditorFile(sourceFile, fabricJsonByPage);
         } catch (err) {
           logger.warn("pending editor file save failed", err);
         }
