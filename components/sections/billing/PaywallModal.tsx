@@ -1016,18 +1016,18 @@ function PlanAccordion({
                     </span>
                   ) : null}
                 </span>
-                <span>
-                  {plan.badge ? (
-                    <span
-                      aria-hidden
-                      className="absolute -top-3 left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-2 my-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
-                    >
-                      <span aria-hidden>🚀</span>
-                      {plan.badge}
-                    </span>
-                  ) : null}
-                </span>
               </Accordion.Trigger>
+              <span>
+                {plan.badge ? (
+                  <span
+                    aria-hidden
+                    className="absolute -top-3 left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-2 my-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
+                  >
+                    <span aria-hidden>🚀</span>
+                    {plan.badge}
+                  </span>
+                ) : null}
+              </span>
             </Accordion.Heading>
             <Accordion.Panel>
               <Accordion.Body className="px-4 pb-4 pt-0">
