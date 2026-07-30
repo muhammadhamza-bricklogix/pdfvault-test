@@ -181,9 +181,10 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           // Persist the file AND any per-page Fabric edits across the
           // full-page sign-in redirect so the editor can rehydrate both
           // on return — otherwise the user loses all unsaved changes.
-          const { fabricJsonByPage } = usePdfEditorStore.getState();
+          const { fabricJsonByPage, extractedPages } =
+            usePdfEditorStore.getState();
 
-          await savePendingEditorFile(sourceFile, fabricJsonByPage);
+          await savePendingEditorFile(sourceFile, fabricJsonByPage, extractedPages);
         } catch (err) {
           logger.warn("pending editor file save failed", err);
         }

@@ -211,7 +211,11 @@ export function PendingEditorFileHydrator() {
 
         if (cancelled || !pending) return;
 
-        const { file, fabricJsonByPage: pendingFabricState } = pending;
+        const {
+          file,
+          fabricJsonByPage: pendingFabricState,
+          extractedPages: pendingExtractedPages,
+        } = pending;
 
         // Guard: /pdf-composer is PDF-only. If a non-PDF is sitting in
         // IDB (e.g. a .docx dropped by the signed-out user on
@@ -280,12 +284,21 @@ export function PendingEditorFileHydrator() {
             // call (which receives null editorState for a freshly uploaded
             // doc) is a no-op and our fabric state survives the setFile
             // transition. setFile only patches `file` — it does not touch
-            // fabricJsonByPage — so the edits remain in place and both
-            // the Fabric canvas and buildEditedPdfBytes pick them up.
+            // fabricJsonByPage or extractedPages — so the edits remain in
+            // place and both the Fabric canvas and buildEditedPdfBytes pick
+            // them up. extractedPages must also be restored so PdfViewerCanvas
+            // sets suppressText=true for those pages, preventing pdf.js from
+            // rendering native text underneath the Fabric IText overlay
+            // (which would produce a visible double text layer after sign-in).
             if (pendingFabricState && pendingFabricState.size > 0) {
               usePdfEditorStore
                 .getState()
                 .replaceFabricJsonByPage(pendingFabricState);
+            }
+            if (pendingExtractedPages && pendingExtractedPages.size > 0) {
+              usePdfEditorStore.setState({
+                extractedPages: pendingExtractedPages,
+              });
             }
 
             // Add the fresh id to the URL. The document loader takes
@@ -311,6 +324,11 @@ export function PendingEditorFileHydrator() {
                 .getState()
                 .replaceFabricJsonByPage(pendingFabricState);
             }
+            if (pendingExtractedPages && pendingExtractedPages.size > 0) {
+              usePdfEditorStore.setState({
+                extractedPages: pendingExtractedPages,
+              });
+            }
             await clearPendingEditorFile();
           } finally {
             setIsRestoringSession(false);
@@ -326,6 +344,9 @@ export function PendingEditorFileHydrator() {
           usePdfEditorStore
             .getState()
             .replaceFabricJsonByPage(pendingFabricState);
+        }
+        if (pendingExtractedPages && pendingExtractedPages.size > 0) {
+          usePdfEditorStore.setState({ extractedPages: pendingExtractedPages });
         }
         await clearPendingEditorFile();
       } catch (err) {

@@ -27,12 +27,21 @@ interface PendingRecord {
   ts: number;
   /** Serialized Map<number, string> — IDB can't store Map directly. */
   fabricState?: Array<[number, string]>;
+  /** Source page numbers that had their text extracted into Fabric IText. */
+  extractedPages?: number[];
 }
 
 export interface PendingEditorFileResult {
   file: File;
   /** Restored per-page Fabric JSON, or null if no edits were saved. */
   fabricJsonByPage: Map<number, string> | null;
+  /**
+   * Pages that were in IText-overlay mode before the redirect. Restoring
+   * this keeps `suppressText=true` for those pages so pdf.js doesn't render
+   * native text underneath the recovered Fabric overlay (which would produce
+   * a double text layer visible to the user after sign-in).
+   */
+  extractedPages: Set<number> | null;
 }
 
 function open(): Promise<IDBDatabase | null> {
@@ -60,6 +69,7 @@ function open(): Promise<IDBDatabase | null> {
 export async function savePendingEditorFile(
   file: File,
   fabricJsonByPage?: Map<number, string>,
+  extractedPages?: Set<number>,
 ): Promise<void> {
   const db = await open();
 
@@ -71,6 +81,10 @@ export async function savePendingEditorFile(
     fabricState:
       fabricJsonByPage && fabricJsonByPage.size > 0
         ? Array.from(fabricJsonByPage.entries())
+        : undefined,
+    extractedPages:
+      extractedPages && extractedPages.size > 0
+        ? Array.from(extractedPages)
         : undefined,
   };
 
@@ -110,6 +124,9 @@ export async function loadPendingEditorFile(): Promise<PendingEditorFileResult |
     file: record.file,
     fabricJsonByPage: record.fabricState
       ? new Map(record.fabricState)
+      : null,
+    extractedPages: record.extractedPages
+      ? new Set(record.extractedPages)
       : null,
   };
 }
