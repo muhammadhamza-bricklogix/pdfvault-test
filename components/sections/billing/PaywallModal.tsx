@@ -360,20 +360,32 @@ function PlanStep({
     <div className="flex flex-col">
       {/* Header row — title (left) + Continue (right) */}
       <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
-        <h2 className="pv-heading text-[20px] font-semibold text-[#1a1c21] sm:text-[24px]">
-          {preview
-            ? "Choose a plan to download your file"
-            : "Choose a plan to unlock full access"}
-        </h2>
+        <div className="flex flex-col gap-1">
+          <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
+            {preview
+              ? "Choose a plan to download your file"
+              : "Choose a plan to unlock full access"}
+          </h2>
+          <p className="text-[13px] text-[#6c6c6c]">
+            Cancel anytime · Secure checkout · Instant access
+          </p>
+        </div>
         <div className="flex flex-col items-stretch gap-1 sm:items-end">
           <button
-            className="inline-flex h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[14px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none active:translate-y-px"
+            className="group inline-flex h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[14px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(241,44,35,0.6)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_14px_28px_-8px_rgba(241,44,35,0.7)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px"
             disabled={continueDisabled}
             type="button"
             onClick={onContinue}
           >
             {continueLoading ? "Preparing…" : "Continue"}
-            {continueLoading ? null : <span aria-hidden>→</span>}
+            {continueLoading ? null : (
+              <span
+                aria-hidden
+                className="transition-transform group-hover:translate-x-0.5"
+              >
+                →
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -389,8 +401,13 @@ function PlanStep({
 
           {preview ? (
             <>
-              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58]">
-                <span aria-hidden>✓</span>
+              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
+                <span
+                  aria-hidden
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
+                >
+                  ✓
+                </span>
                 Your document is ready
               </span>
               <PreviewFileCard preview={preview} />
@@ -401,8 +418,13 @@ function PlanStep({
             </>
           ) : (
             <>
-              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58]">
-                <span aria-hidden>✓</span>
+              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
+                <span
+                  aria-hidden
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
+                >
+                  ✓
+                </span>
                 Your document is ready
               </span>
               <GenericPreviewCard />
@@ -796,7 +818,7 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
 
       {/* Lock overlay */}
       <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-lg">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
           <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
             <path
               d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
@@ -865,7 +887,7 @@ function GenericPreviewCard() {
         <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
       </div>
       <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-lg">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
           <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
             <path
               d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
@@ -960,7 +982,7 @@ function PlanAccordion({
   return (
     <Accordion
       hideSeparator
-      className="flex w-full flex-col gap-4 rounded-2xl border border-[#ececec] bg-[#fafafa] p-3 pt-8"
+      className="flex w-full flex-col gap-4 rounded-2xl border border-[#ececec] bg-gradient-to-b from-[#fbfbfb] to-[#f5f5f5] p-3 pt-8"
       expandedKeys={new Set([selectedPlan])}
       variant="default"
       onExpandedChange={(keys) => {
@@ -981,10 +1003,10 @@ function PlanAccordion({
         return (
           <Accordion.Item
             key={plan.id}
-            className={`relative rounded-2xl border bg-white transition-colors ${
+            className={`relative rounded-2xl border bg-white transition-all ${
               selected
-                ? "border-2 border-[var(--pv-brand-red,#f12c23)]"
-                : "border-[#ececec]"
+                ? "border-2 border-[var(--pv-brand-red,#f12c23)] shadow-[0_10px_28px_-14px_rgba(241,44,35,0.35)]"
+                : "border-[#ececec] hover:border-[#d5d5d5]"
             }`}
             id={plan.id}
           >
@@ -1021,7 +1043,7 @@ function PlanAccordion({
                 {plan.badge ? (
                   <span
                     aria-hidden
-                    className="absolute -top-[13px] left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
+                    className="absolute -top-[13px] left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-[#ffcc7a] to-[#fdb45e] px-3 py-1 text-[11px] font-semibold text-[#7a4d0f] shadow-[0_6px_14px_-6px_rgba(253,180,94,0.9)] ring-1 ring-white/60"
                   >
                     <span aria-hidden>🚀</span>
                     {plan.badge}
@@ -1036,7 +1058,7 @@ function PlanAccordion({
                     <li key={feature} className="flex items-start gap-2.5">
                       <span
                         aria-hidden
-                        className="mt-0.5 flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[9px] font-bold text-[#0f9d58]"
+                        className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15"
                       >
                         ✓
                       </span>
@@ -1055,7 +1077,7 @@ function PlanAccordion({
 
 function CardBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex h-6 items-center rounded-md border border-[#ececec] bg-white px-2 text-[10px] font-semibold text-[#1a1c21]">
+    <span className="inline-flex h-7 items-center rounded-md border border-[#ececec] bg-white px-2.5 text-[10px] font-semibold tracking-wide text-[#1a1c21] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       {label}
     </span>
   );
