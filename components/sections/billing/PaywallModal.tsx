@@ -31,7 +31,7 @@ const CREAM = "#fdf3f0";
 const CREAM_CARD = "#fef5f1";
 
 type Step = "plan" | "pay" | "success";
-type PlanId = "trial" | "monthly" | "annual";
+type PlanId = "trial" | "annual";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -304,10 +304,9 @@ function PlanStep({
   // checkout-intent currently returns a single plan's amounts
   // (`intent.amountTodayMinor` / `amountRenewMinor`); until per-plan
   // intents are wired, the displayed prices below are the source of
-  // truth for the picker. Trial and Monthly still fire the same intent
-  // on Continue — see PayStep for the actual charge amounts.
-  const trialPrice = "$0.99";
-  const monthlyPrice = "$3.99";
+  // truth for the picker. Trial still fires the same intent on
+  // Continue — see PayStep for the actual charge amounts.
+  const fullAccessPrice = "$0.99";
   const annualPrice = "$24.99";
   // Fallback display for entry points where `intent` is loaded but no
   // preview exists — reuse the intent-derived amounts in the small
@@ -402,9 +401,8 @@ function PlanStep({
         <div className="flex flex-col gap-4 p-6 md:p-8">
           <PlanAccordion
             annualPrice={annualPrice}
-            limitedPrice={trialPrice}
+            fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
-            standardPrice={monthlyPrice}
             onSelectPlan={onSelectPlan}
           />
 
@@ -417,19 +415,13 @@ function PlanStep({
 
           {selectedPlan === "trial" ? (
             <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-              You&apos;ll be charged {today} today for 7-day limited access,
-              then {renew} every 30 days unless you cancel before the trial
-              ends.
-            </p>
-          ) : selectedPlan === "monthly" ? (
-            <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
               You&apos;ll be charged {today} today for 7-day full access, then{" "}
               {renew} every 30 days unless you cancel before the trial ends.
             </p>
           ) : (
             <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-              Annual pricing details are coming soon. Choose 7-Day Limited or
-              7-Day Full Access to continue today.
+              Annual pricing details are coming soon. Choose 7-Day Full Access
+              to continue today.
             </p>
           )}
         </div>
@@ -825,7 +817,7 @@ const PLAN_FEATURES = [
   "Use PDFVault on mobile",
 ] as const;
 
-const PLAN_ORDER: readonly PlanId[] = ["trial", "monthly", "annual"] as const;
+const PLAN_ORDER: readonly PlanId[] = ["trial", "annual"] as const;
 
 interface PlanRow {
   id: PlanId;
@@ -839,22 +831,19 @@ interface PlanRow {
 function PlanAccordion({
   selectedPlan,
   onSelectPlan,
-  limitedPrice,
-  standardPrice,
+  fullAccessPrice,
   annualPrice,
 }: {
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
-  limitedPrice: string;
-  standardPrice: string;
+  fullAccessPrice: string;
   annualPrice: string;
 }) {
   const plans: PlanRow[] = [
-    { id: "trial", title: "7-Day Limited Access", price: limitedPrice },
     {
-      id: "monthly",
+      id: "trial",
       title: "7-Day Full Access",
-      price: standardPrice,
+      price: fullAccessPrice,
       badge: "Most popular",
       highlight: true,
     },
