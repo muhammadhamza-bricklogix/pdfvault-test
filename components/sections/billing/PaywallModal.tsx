@@ -1015,6 +1015,8 @@ function PlanAccordion({
                       {plan.priceSuffix}
                     </span>
                   ) : null}
+                </span>
+                <span>
                   {plan.badge ? (
                     <span
                       aria-hidden

@@ -29,7 +29,7 @@ const DRAWER_LINKS = [
 // Route prefixes that render their own bespoke chrome (logo + language) and
 // don't want the marketing SiteNavbar stacked on top. Keeping this local so
 // SiteFooter can mirror the same list without a shared import cycle.
-const HIDE_ON_PATHNAMES = ["/sign-in", "/sign-up"];
+const HIDE_ON_PATHNAMES = ["/sign-in", "/sign-up", "/forgot-password"];
 
 export function SiteNavbar() {
   const router = useRouter();
