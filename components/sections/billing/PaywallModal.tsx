@@ -248,7 +248,7 @@ export function PaywallModal({
             step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
-                ? "max-h-[calc(100dvh-32px)] w-[min(1040px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[1040px] dark:bg-content1"
+                ? "max-h-[calc(100dvh-32px)] w-[min(1200px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[1200px] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
@@ -366,33 +366,15 @@ function PlanStep({
             </>
           ) : (
             <>
-              <span className="inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red,#f12c23)]">
-                Limited-time offer
+              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58]">
+                <span aria-hidden>✓</span>
+                Your document is ready
               </span>
-
-              <h2 className="pv-heading text-[24px] font-semibold leading-tight text-[#1a1c21] sm:text-[28px]">
-                Unlock the full PDFVault toolkit
-              </h2>
-              <p className="-mt-2 text-[14px] leading-relaxed text-[#5c5c5c]">
-                Everything you need to convert, share, and edit — in one secure
-                workspace.
+              <GenericPreviewCard />
+              <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
+                Subscribe below to download instantly and keep unlimited access
+                to every PDFVault tool.
               </p>
-
-              <ul className="mt-1 flex flex-col gap-3 text-[14px] text-[#1a1c21]">
-                <Feature>
-                  Convert to and from Word, Excel, PowerPoint, JPG &amp; PNG
-                </Feature>
-                <Feature>Merge, split, compress &amp; organize pages</Feature>
-                <Feature>
-                  Unlimited edits, priority processing &amp; cloud sync
-                </Feature>
-              </ul>
-
-              <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <TrustPill label="SSL secure checkout" />
-                <TrustPill label="Cancel anytime" />
-                <TrustPill label="30-day support" />
-              </div>
             </>
           )}
         </div>
@@ -790,6 +772,58 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
   );
 }
 
+/**
+ * Blurred generic document card used when the paywall opens without a
+ * concrete `PaywallPreview` (billing settings → Add billing method, or
+ * the axios interceptor gate). Same visual language as PreviewFileCard
+ * so the left column always shows a "your file is ready" moment
+ * regardless of entry point.
+ */
+function GenericPreviewCard() {
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-black/5 bg-white p-4 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
+      <div
+        aria-hidden
+        className="pointer-events-none flex select-none flex-col gap-1.5"
+        style={{ filter: "blur(3px)" }}
+      >
+        <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
+        <div className="h-2 w-full rounded bg-[#eaeaea]" />
+        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
+        <div className="h-2 w-full rounded bg-[#eaeaea]" />
+        <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
+        <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+        <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-lg">
+          <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+            <path
+              d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+            />
+          </svg>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-2 border-t border-[#ececec] pt-3">
+        <span
+          aria-hidden
+          className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white"
+        >
+          PDF
+        </span>
+        <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#1a1c21]">
+          Your document is ready to download
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Feature({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2.5">
@@ -858,7 +892,7 @@ function PlanAccordion({
   return (
     <Accordion
       hideSeparator
-      className="flex w-full flex-col gap-3"
+      className="flex w-full flex-col gap-3 rounded-2xl border border-[#ececec] bg-[#fafafa] p-3"
       expandedKeys={new Set([selectedPlan])}
       variant="default"
       onExpandedChange={(keys) => {
@@ -945,17 +979,6 @@ function PlanAccordion({
         );
       })}
     </Accordion>
-  );
-}
-
-function TrustPill({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-[#1a1c21]">
-      <span aria-hidden className="text-[#6c6c6c]">
-        🔒
-      </span>
-      {label}
-    </span>
   );
 }
 
