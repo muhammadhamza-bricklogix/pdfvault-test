@@ -960,7 +960,7 @@ function PlanAccordion({
   return (
     <Accordion
       hideSeparator
-      className="flex w-full flex-col gap-4 rounded-2xl border border-[#ececec] bg-[#fafafa] p-3 pt-5"
+      className="flex w-full flex-col gap-4 rounded-2xl border border-[#ececec] bg-[#fafafa] p-3 pt-8"
       expandedKeys={new Set([selectedPlan])}
       variant="default"
       onExpandedChange={(keys) => {
@@ -1021,7 +1021,7 @@ function PlanAccordion({
                 {plan.badge ? (
                   <span
                     aria-hidden
-                    className="absolute -top-3 left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-2 my-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
+                    className="absolute -top-[13px] left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
                   >
                     <span aria-hidden>🚀</span>
                     {plan.badge}
