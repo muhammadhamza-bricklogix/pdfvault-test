@@ -431,18 +431,18 @@ function PlanStep({
           </div>
 
           {selectedPlan === "trial" ? (
-            <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+            <p className="text-center text-[11px] leading-relaxed text-[#6c6c6c]">
               You&apos;ll be charged {today} today for 7-day full access, then{" "}
               {renew} every 30 days unless you cancel before the trial ends.
             </p>
           ) : (
-            <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+            <p className="text-center text-[11px] leading-relaxed text-[#6c6c6c]">
               You&apos;ll be charged {annualPrice} today, then {annualPrice}{" "}
               every 365 days. Cancel anytime before the next renewal.
             </p>
           )}
 
-          <p className="mt-2 text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             After 7 days, you will be charged $24.99/month unless you cancel 24
             hours before the trial ends. Charged in USD. Amount in local
             currency is an estimate and may differ.
@@ -978,7 +978,7 @@ function PlanAccordion({
         return (
           <Accordion.Item
             key={plan.id}
-            className={`relative overflow-hidden rounded-2xl border bg-white transition-colors ${
+            className={`relative rounded-2xl border bg-white transition-colors ${
               selected
                 ? "border-2 border-[var(--pv-brand-red,#f12c23)]"
                 : "border-[#ececec]"
