@@ -382,7 +382,7 @@ function PlanStep({
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Left — preview column (or fallback content) */}
         <div
-          className="flex flex-col gap-5 p-6 md:p-8"
+          className="flex flex-col justify-center gap-5 p-6 md:p-8"
           style={{ backgroundColor: CREAM }}
         >
           <BrandLogo />
