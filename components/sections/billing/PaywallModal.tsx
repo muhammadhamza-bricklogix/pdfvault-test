@@ -284,7 +284,7 @@ export function PaywallModal({
             step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
-                ? "max-h-[calc(100dvh-32px)] min-h-[min(85vh,calc(100dvh-32px))] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
+                ? "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
@@ -441,6 +441,29 @@ function PlanStep({
               every 365 days. Cancel anytime before the next renewal.
             </p>
           )}
+
+          <p className="mt-2 text-[11px] leading-relaxed text-[#6c6c6c]">
+            After 7 days, you will be charged $24.99/month unless you cancel 24
+            hours before the trial ends. Charged in USD. Amount in local
+            currency is an estimate and may differ.
+            <br />
+            See our{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/terms-and-conditions"
+            >
+              Subscription terms
+            </a>{" "}
+            for details on cancellation and refunds. We provide refunds in
+            accordance with our{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/refund"
+            >
+              Refund Policy
+            </a>
+            .
+          </p>
         </div>
       </div>
     </div>
@@ -965,7 +988,7 @@ function PlanAccordion({
             {plan.badge ? (
               <span
                 aria-hidden
-                className="absolute -top-5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-4 py-2 my-2 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
+                className="absolute -top-3 left-4 z-10 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
               >
                 <span aria-hidden>🚀</span>
                 {plan.badge}
