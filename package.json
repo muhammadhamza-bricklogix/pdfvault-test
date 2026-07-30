@@ -1,5 +1,5 @@
 {
-	"name": "pdfedits-frontend",
+	"name": "pdf-vault",
 	"engines": {
 		"bun": "1.2.19"
 	},
