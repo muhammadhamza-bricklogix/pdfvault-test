@@ -122,9 +122,7 @@ export async function loadPendingEditorFile(): Promise<PendingEditorFileResult |
 
   return {
     file: record.file,
-    fabricJsonByPage: record.fabricState
-      ? new Map(record.fabricState)
-      : null,
+    fabricJsonByPage: record.fabricState ? new Map(record.fabricState) : null,
     extractedPages: record.extractedPages
       ? new Set(record.extractedPages)
       : null,

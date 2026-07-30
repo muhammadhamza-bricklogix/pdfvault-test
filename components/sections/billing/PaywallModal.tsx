@@ -3,7 +3,7 @@
 import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
-import { Modal } from "@heroui/react";
+import { Accordion, Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -31,7 +31,7 @@ const CREAM = "#fdf3f0";
 const CREAM_CARD = "#fef5f1";
 
 type Step = "plan" | "pay" | "success";
-type PlanId = "trial" | "monthly";
+type PlanId = "trial" | "monthly" | "annual";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -247,7 +247,9 @@ export function PaywallModal({
           className={
             step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
-              : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
+              : step === "plan"
+                ? "max-h-[calc(100dvh-32px)] w-[min(1040px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[1040px] dark:bg-content1"
+                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
           <Modal.CloseTrigger />
@@ -298,104 +300,139 @@ function PlanStep({
   onSelectPlan: (id: PlanId) => void;
   onContinue: () => void;
 }) {
+  // UI-only pricing per product spec (2026-07-30). The backend
+  // checkout-intent currently returns a single plan's amounts
+  // (`intent.amountTodayMinor` / `amountRenewMinor`); until per-plan
+  // intents are wired, the displayed prices below are the source of
+  // truth for the picker. Trial and Monthly still fire the same intent
+  // on Continue — see PayStep for the actual charge amounts.
+  const trialPrice = "$0.99";
+  const monthlyPrice = "$3.99";
+  const annualPrice = "$24.99";
+  // Fallback display for entry points where `intent` is loaded but no
+  // preview exists — reuse the intent-derived amounts in the small
+  // print so it never contradicts what will actually be charged.
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
 
+  const continueDisabled = selectedPlan === "annual";
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      {/* Left — cream value column */}
-      <div
-        className="flex flex-col gap-6 p-6 md:p-8"
-        style={{ backgroundColor: CREAM }}
-      >
-        <BrandLogo />
-
-        {preview ? <PreviewFileCard preview={preview} /> : null}
-
-        <span className="inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red,#f12c23)]">
-          {preview ? "Ready to download" : "Limited-time offer"}
-        </span>
-
-        <h2 className="pv-heading text-[26px] font-semibold leading-tight text-[#1a1c21] sm:text-[30px]">
+    <div className="flex flex-col">
+      {/* Header row — title (left) + Continue (right) */}
+      <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
+        <h2 className="pv-heading text-[20px] font-semibold text-[#1a1c21] sm:text-[24px]">
           {preview
-            ? "Your converted file is ready"
-            : "Unlock the full PDFVault toolkit"}
+            ? "Choose a plan to download your file"
+            : "Choose a plan to unlock full access"}
         </h2>
-        <p className="-mt-3 text-[14px] leading-relaxed text-[#5c5c5c]">
-          {preview
-            ? "Subscribe to download the converted file instantly and unlock every professional tool in PDFVault."
-            : "Everything you need to convert, share, and edit — in one secure workspace."}
-        </p>
-
-        <ul className="mt-1 flex flex-col gap-3 text-[14px] text-[#1a1c21]">
-          <Feature>
-            Convert to and from Word, Excel, PowerPoint, JPG &amp; PNG
-          </Feature>
-          <Feature>Merge, split, compress &amp; organize pages</Feature>
-          <Feature>
-            Unlimited edits, priority processing &amp; cloud sync
-          </Feature>
-        </ul>
-
-        <div className="mt-auto flex flex-wrap gap-2 pt-4">
-          <TrustPill label="SSL secure checkout" />
-          <TrustPill label="Cancel anytime" />
-          <TrustPill label="30-day support" />
+        <div className="flex flex-col items-stretch gap-1 sm:items-end">
+          <button
+            className="inline-flex h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[14px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none active:translate-y-px"
+            disabled={continueDisabled}
+            type="button"
+            onClick={onContinue}
+          >
+            Continue
+            {continueDisabled ? null : <span aria-hidden>→</span>}
+          </button>
+          {continueDisabled ? (
+            <p className="text-[11px] text-[#6c6c6c]">
+              Annual plan coming soon
+            </p>
+          ) : null}
         </div>
       </div>
 
-      {/* Right — plan picker column */}
-      <div className="flex flex-col gap-5 p-6 md:p-8">
-        <div>
-          <h3 className="pv-heading text-[22px] font-semibold text-[#1a1c21]">
-            Choose your plan
-          </h3>
-          <p className="mt-1 text-[13px] text-[#6c6c6c]">
-            Start with a 7-day trial. Switch or cancel anytime.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <PlanCard
-            highlight
-            badge="Most popular"
-            price={today}
-            priceSuffix="today"
-            selected={selectedPlan === "trial"}
-            subtitle={`Then ${renew}/month · cancel anytime`}
-            title="7-Day Full Access Trial"
-            onSelect={() => onSelectPlan("trial")}
-          />
-          <PlanCard
-            price={renew}
-            priceSuffix="/mo"
-            selected={selectedPlan === "monthly"}
-            subtitle="Billed every 30 days"
-            title="Monthly"
-            onSelect={() => onSelectPlan("monthly")}
-          />
-        </div>
-
-        <button
-          className="mt-2 flex h-[54px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] text-[16px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] active:translate-y-px"
-          type="button"
-          onClick={onContinue}
+      {/* Body — two columns */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        {/* Left — preview column (or fallback content) */}
+        <div
+          className="flex flex-col gap-5 p-6 md:p-8"
+          style={{ backgroundColor: CREAM }}
         >
-          Continue to payment
-          <span aria-hidden>→</span>
-        </button>
+          <BrandLogo />
 
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
-          <span>We accept</span>
-          <CardBadge label="VISA" />
-          <CardBadge label="Mastercard" />
-          <CardBadge label="Amex" />
+          {preview ? (
+            <>
+              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58]">
+                <span aria-hidden>✓</span>
+                Your document is ready
+              </span>
+              <PreviewFileCard preview={preview} />
+              <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
+                Subscribe below to download the converted file instantly and
+                keep unlimited access to every PDFVault tool.
+              </p>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--pv-brand-red,#f12c23)]">
+                Limited-time offer
+              </span>
+
+              <h2 className="pv-heading text-[24px] font-semibold leading-tight text-[#1a1c21] sm:text-[28px]">
+                Unlock the full PDFVault toolkit
+              </h2>
+              <p className="-mt-2 text-[14px] leading-relaxed text-[#5c5c5c]">
+                Everything you need to convert, share, and edit — in one secure
+                workspace.
+              </p>
+
+              <ul className="mt-1 flex flex-col gap-3 text-[14px] text-[#1a1c21]">
+                <Feature>
+                  Convert to and from Word, Excel, PowerPoint, JPG &amp; PNG
+                </Feature>
+                <Feature>Merge, split, compress &amp; organize pages</Feature>
+                <Feature>
+                  Unlimited edits, priority processing &amp; cloud sync
+                </Feature>
+              </ul>
+
+              <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                <TrustPill label="SSL secure checkout" />
+                <TrustPill label="Cancel anytime" />
+                <TrustPill label="30-day support" />
+              </div>
+            </>
+          )}
         </div>
 
-        <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-          You&apos;ll be charged {today} today for a 7-day trial, then {renew}{" "}
-          every 30 days unless you cancel before the trial ends.
-        </p>
+        {/* Right — plan accordion column */}
+        <div className="flex flex-col gap-4 p-6 md:p-8">
+          <PlanAccordion
+            annualPrice={annualPrice}
+            limitedPrice={trialPrice}
+            selectedPlan={selectedPlan}
+            standardPrice={monthlyPrice}
+            onSelectPlan={onSelectPlan}
+          />
+
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
+            <span>We accept</span>
+            <CardBadge label="VISA" />
+            <CardBadge label="Mastercard" />
+            <CardBadge label="Amex" />
+          </div>
+
+          {selectedPlan === "trial" ? (
+            <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+              You&apos;ll be charged {today} today for 7-day limited access,
+              then {renew} every 30 days unless you cancel before the trial
+              ends.
+            </p>
+          ) : selectedPlan === "monthly" ? (
+            <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+              You&apos;ll be charged {today} today for 7-day full access, then{" "}
+              {renew} every 30 days unless you cancel before the trial ends.
+            </p>
+          ) : (
+            <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+              Annual pricing details are coming soon. Choose 7-Day Limited or
+              7-Day Full Access to continue today.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -775,67 +812,150 @@ function Feature({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PlanCard({
-  title,
-  subtitle,
-  price,
-  priceSuffix,
-  selected,
-  highlight,
-  badge,
-  onSelect,
-}: {
+// Feature bullets shown inside every expanded plan panel. Same list
+// for every plan per product spec (2026-07-30 screenshots).
+const PLAN_FEATURES = [
+  "Unlimited edits",
+  "Unlimited downloads",
+  "Multi-format conversion",
+  "No installation required",
+  "Edit text and images in PDF files",
+  "Organize and reorder PDF pages",
+  "Protect PDF with password",
+  "Use PDFVault on mobile",
+] as const;
+
+const PLAN_ORDER: readonly PlanId[] = ["trial", "monthly", "annual"] as const;
+
+interface PlanRow {
+  id: PlanId;
   title: string;
-  subtitle: string;
   price: string;
-  priceSuffix: string;
-  selected: boolean;
-  highlight?: boolean;
+  priceSuffix?: string;
   badge?: string;
-  onSelect: () => void;
+  highlight?: boolean;
+}
+
+function PlanAccordion({
+  selectedPlan,
+  onSelectPlan,
+  limitedPrice,
+  standardPrice,
+  annualPrice,
+}: {
+  selectedPlan: PlanId;
+  onSelectPlan: (id: PlanId) => void;
+  limitedPrice: string;
+  standardPrice: string;
+  annualPrice: string;
 }) {
-  const border = selected
-    ? "border-2 border-[var(--pv-brand-red,#f12c23)]"
-    : "border border-[#ececec]";
-  const bg = highlight && selected ? { backgroundColor: CREAM_CARD } : {};
+  const plans: PlanRow[] = [
+    { id: "trial", title: "7-Day Limited Access", price: limitedPrice },
+    {
+      id: "monthly",
+      title: "7-Day Full Access",
+      price: standardPrice,
+      badge: "Most popular",
+      highlight: true,
+    },
+    {
+      id: "annual",
+      title: "Annual Plan",
+      price: annualPrice,
+      priceSuffix: "per month",
+    },
+  ];
 
   return (
-    <button
-      className={`relative flex w-full flex-col gap-1 rounded-2xl p-4 text-left transition-colors ${border} hover:border-[var(--pv-brand-red,#f12c23)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)]`}
-      style={bg}
-      type="button"
-      onClick={onSelect}
+    <Accordion
+      hideSeparator
+      className="flex w-full flex-col gap-3"
+      expandedKeys={new Set([selectedPlan])}
+      variant="default"
+      onExpandedChange={(keys) => {
+        // HeroUI Accordion is single-expanded by default. Ignore the
+        // empty-set (user collapsed the current) — a paywall always
+        // needs one selected plan; the accordion is our source of
+        // truth for the picker selection.
+        const next = Array.from(keys)[0] as PlanId | undefined;
+
+        if (next && PLAN_ORDER.includes(next)) {
+          onSelectPlan(next);
+        }
+      }}
     >
-      {badge ? (
-        <span className="absolute -top-2.5 left-4 inline-flex h-5 items-center rounded-full bg-[var(--pv-brand-red,#f12c23)] px-2 text-[10px] font-semibold uppercase tracking-wide text-white">
-          {badge}
-        </span>
-      ) : null}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span
-            aria-hidden
-            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${selected ? "border-[var(--pv-brand-red,#f12c23)]" : "border-[#d5d5d5]"}`}
+      {plans.map((plan) => {
+        const selected = plan.id === selectedPlan;
+
+        return (
+          <Accordion.Item
+            key={plan.id}
+            className={`relative overflow-hidden rounded-2xl border bg-white transition-colors ${
+              selected
+                ? "border-2 border-[var(--pv-brand-red,#f12c23)]"
+                : "border-[#ececec]"
+            }`}
+            id={plan.id}
           >
-            {selected ? (
-              <span className="block h-2.5 w-2.5 rounded-full bg-[var(--pv-brand-red,#f12c23)]" />
+            {plan.badge ? (
+              <span
+                aria-hidden
+                className="absolute -top-2.5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-[#fde5c4] px-3 py-0.5 text-[11px] font-semibold text-[#8a5a1a]"
+              >
+                <span aria-hidden>🚀</span>
+                {plan.badge}
+              </span>
             ) : null}
-          </span>
-          <div className="min-w-0">
-            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {title}
-            </p>
-            <p className="mt-0.5 text-[12px] text-[#6c6c6c]">{subtitle}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="pv-heading text-[22px] font-semibold leading-none text-[#1a1c21]">
-            {price}
-          </p>
-          <p className="mt-1 text-[11px] text-[#6c6c6c]">{priceSuffix}</p>
-        </div>
-      </div>
-    </button>
+            <Accordion.Heading>
+              <Accordion.Trigger className="flex w-full items-center gap-4 px-4 py-4 text-start">
+                <span
+                  aria-hidden
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    selected
+                      ? "border-[var(--pv-brand-red,#f12c23)]"
+                      : "border-[#d5d5d5]"
+                  }`}
+                >
+                  {selected ? (
+                    <span className="block h-2.5 w-2.5 rounded-full bg-[var(--pv-brand-red,#f12c23)]" />
+                  ) : null}
+                </span>
+                <span className="pv-heading flex-1 text-[15px] font-semibold text-[#1a1c21]">
+                  {plan.title}
+                </span>
+                <span className="flex flex-col items-end leading-none">
+                  <span className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
+                    {plan.price}
+                  </span>
+                  {plan.priceSuffix ? (
+                    <span className="mt-1 text-[11px] text-[#6c6c6c]">
+                      {plan.priceSuffix}
+                    </span>
+                  ) : null}
+                </span>
+              </Accordion.Trigger>
+            </Accordion.Heading>
+            <Accordion.Panel>
+              <Accordion.Body className="px-4 pb-4 pt-0">
+                <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
+                  {PLAN_FEATURES.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5">
+                      <span
+                        aria-hidden
+                        className="mt-0.5 flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[9px] font-bold text-[#0f9d58]"
+                      >
+                        ✓
+                      </span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Accordion.Body>
+            </Accordion.Panel>
+          </Accordion.Item>
+        );
+      })}
+    </Accordion>
   );
 }
 

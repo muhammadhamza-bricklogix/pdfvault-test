@@ -184,7 +184,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           const { fabricJsonByPage, extractedPages } =
             usePdfEditorStore.getState();
 
-          await savePendingEditorFile(sourceFile, fabricJsonByPage, extractedPages);
+          await savePendingEditorFile(
+            sourceFile,
+            fabricJsonByPage,
+            extractedPages,
+          );
         } catch (err) {
           logger.warn("pending editor file save failed", err);
         }
