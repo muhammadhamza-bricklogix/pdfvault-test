@@ -235,6 +235,42 @@ export function PaywallModal({
     onPaymentSuccess();
   };
 
+  // Continue-from-plan-step handler. Trial reuses the intent already
+  // fetched on modal open. Annual re-fetches the intent with
+  // `planKind: "ANNUAL"` so the backend swaps to the annual price ID
+  // (Solidgate product b1ed4002-ab3f-4f56-b822-1489c538c6c7) and
+  // returns the annual amounts before we mount the payment iframe.
+  const [continueLoading, setContinueLoading] = useState(false);
+  const handleContinue = () => {
+    if (selectedPlan === "trial") {
+      setStep("pay");
+
+      return;
+    }
+    setContinueLoading(true);
+    createIntent.mutate(
+      { disclaimerVersion: DISCLAIMER_VERSION, planKind: "ANNUAL" },
+      {
+        onSuccess: (fresh) => {
+          setIntent(fresh);
+          setStep("pay");
+          setContinueLoading(false);
+        },
+        onError: (err) => {
+          logger.error("annual checkout intent failed", err);
+          setContinueLoading(false);
+          toast.error({
+            title: "Couldn't start annual checkout",
+            description:
+              err instanceof Error
+                ? err.message
+                : "Please try again in a moment.",
+          });
+        },
+      },
+    );
+  };
+
   return (
     <Modal.Backdrop
       isOpen={isOpen}
@@ -248,7 +284,7 @@ export function PaywallModal({
             step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
-                ? "max-h-[calc(100dvh-32px)] w-[min(1200px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[1200px] dark:bg-content1"
+                ? "max-h-[calc(100dvh-32px)] w-[min(1440px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[1440px] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
@@ -259,10 +295,11 @@ export function PaywallModal({
             <LoadingState />
           ) : step === "plan" ? (
             <PlanStep
+              continueLoading={continueLoading}
               intent={intent}
               preview={preview}
               selectedPlan={selectedPlan}
-              onContinue={() => setStep("pay")}
+              onContinue={handleContinue}
               onSelectPlan={setSelectedPlan}
             />
           ) : step === "pay" ? (
@@ -271,6 +308,7 @@ export function PaywallModal({
               payFailed={payFailed}
               retryKey={retryKey}
               retryLoading={retryLoading}
+              selectedPlan={selectedPlan}
               onFail={handleIframeFail}
               onRetry={handleRetry}
               onSuccess={handleIframeSuccess}
@@ -293,12 +331,14 @@ function PlanStep({
   selectedPlan,
   onSelectPlan,
   onContinue,
+  continueLoading,
 }: {
   intent: CheckoutIntent;
   preview: PaywallPreview | null;
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
   onContinue: () => void;
+  continueLoading: boolean;
 }) {
   // UI-only pricing per product spec (2026-07-30). The backend
   // checkout-intent currently returns a single plan's amounts
@@ -314,7 +354,7 @@ function PlanStep({
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
 
-  const continueDisabled = selectedPlan === "annual";
+  const continueDisabled = continueLoading;
 
   return (
     <div className="flex flex-col">
@@ -332,14 +372,9 @@ function PlanStep({
             type="button"
             onClick={onContinue}
           >
-            Continue
-            {continueDisabled ? null : <span aria-hidden>→</span>}
+            {continueLoading ? "Preparing…" : "Continue"}
+            {continueLoading ? null : <span aria-hidden>→</span>}
           </button>
-          {continueDisabled ? (
-            <p className="text-[11px] text-[#6c6c6c]">
-              Annual plan coming soon
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -402,8 +437,8 @@ function PlanStep({
             </p>
           ) : (
             <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-              Annual pricing details are coming soon. Choose 7-Day Full Access
-              to continue today.
+              You&apos;ll be charged {annualPrice} today, then {annualPrice}{" "}
+              every 365 days. Cancel anytime before the next renewal.
             </p>
           )}
         </div>
@@ -423,6 +458,7 @@ function PayStep({
   retryKey,
   retryLoading,
   onRetry,
+  selectedPlan,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
@@ -431,6 +467,7 @@ function PayStep({
   retryKey: number;
   retryLoading: boolean;
   onRetry: () => void;
+  selectedPlan: PlanId;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
@@ -452,7 +489,9 @@ function PayStep({
         <div className="rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between">
             <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              7-Day Full Access Trial
+              {selectedPlan === "annual"
+                ? "Annual Plan"
+                : "7-Day Full Access Trial"}
             </p>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
               {today}
@@ -462,10 +501,12 @@ function PayStep({
           <div className="my-4 h-px bg-[#ececec]" />
           <div className="flex items-baseline justify-between">
             <p className="text-[13px] text-[#5c5c5c]">
-              After trial ({nextChargeLabel})
+              {selectedPlan === "annual"
+                ? "Renews yearly"
+                : `After trial (${nextChargeLabel})`}
             </p>
             <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {renew} / month
+              {renew} {selectedPlan === "annual" ? "/ year" : "/ month"}
             </p>
           </div>
         </div>
@@ -536,7 +577,8 @@ function PayStep({
 
         <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
           By continuing you agree to be charged {today} today, then {renew}{" "}
-          every 30 days unless cancelled. See our{" "}
+          {selectedPlan === "annual" ? "every 365 days" : "every 30 days"}{" "}
+          unless cancelled. See our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
             href="/terms-and-conditions"
@@ -892,7 +934,7 @@ function PlanAccordion({
   return (
     <Accordion
       hideSeparator
-      className="flex w-full flex-col gap-3 rounded-2xl border border-[#ececec] bg-[#fafafa] p-3"
+      className="flex w-full flex-col gap-4 rounded-2xl border border-[#ececec] bg-[#fafafa] p-3 pt-5"
       expandedKeys={new Set([selectedPlan])}
       variant="default"
       onExpandedChange={(keys) => {
@@ -923,7 +965,7 @@ function PlanAccordion({
             {plan.badge ? (
               <span
                 aria-hidden
-                className="absolute -top-2.5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-[#fde5c4] px-3 py-0.5 text-[11px] font-semibold text-[#8a5a1a]"
+                className="absolute -top-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-4 py-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
               >
                 <span aria-hidden>🚀</span>
                 {plan.badge}
