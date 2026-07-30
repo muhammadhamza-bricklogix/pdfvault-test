@@ -365,9 +365,6 @@ function SubscriptionCard({
             Cancel subscription
           </Button>
         )}
-        <Button variant="secondary" onPress={() => void requestPaywall()}>
-          Add billing method
-        </Button>
       </div>
 
       <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-muted)]">
