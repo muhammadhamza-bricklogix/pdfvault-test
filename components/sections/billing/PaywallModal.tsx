@@ -429,7 +429,6 @@ function PlanStep({
             <CardBadge label="Mastercard" />
             <CardBadge label="Amex" />
           </div>
-
         </div>
       </div>
 
@@ -442,8 +441,8 @@ function PlanStep({
           </p>
         ) : (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-            You&apos;ll be charged {annualPrice} today, then {annualPrice}{" "}
-            every 365 days. Cancel anytime before the next renewal.
+            You&apos;ll be charged {annualPrice} today, then {annualPrice} every
+            365 days. Cancel anytime before the next renewal.
           </p>
         )}
 
@@ -989,15 +988,6 @@ function PlanAccordion({
             }`}
             id={plan.id}
           >
-            {plan.badge ? (
-              <span
-                aria-hidden
-                className="absolute -top-3 left-4 z-10 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
-              >
-                <span aria-hidden>🚀</span>
-                {plan.badge}
-              </span>
-            ) : null}
             <Accordion.Heading>
               <Accordion.Trigger className="flex w-full items-center gap-4 px-4 py-4 text-start">
                 <span
@@ -1010,6 +1000,16 @@ function PlanAccordion({
                 >
                   {selected ? (
                     <span className="block h-2.5 w-2.5 rounded-full bg-[var(--pv-brand-red,#f12c23)]" />
+                  ) : null}
+
+                  {plan.badge ? (
+                    <span
+                      aria-hidden
+                      className="absolute -top-3 left-4 z-10 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-2 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
+                    >
+                      <span aria-hidden>🚀</span>
+                      {plan.badge}
+                    </span>
                   ) : null}
                 </span>
                 <span className="pv-heading flex-1 text-[15px] font-semibold text-[#1a1c21]">
