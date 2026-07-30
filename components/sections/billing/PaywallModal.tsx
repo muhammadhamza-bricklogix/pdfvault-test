@@ -1005,15 +1005,7 @@ function PlanAccordion({
                 <span className="pv-heading flex-1 text-[15px] font-semibold text-[#1a1c21]">
                   {plan.title}
                 </span>
-                {plan.badge ? (
-                  <span
-                    aria-hidden
-                    className="absolute -top-3 left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-2 my-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
-                  >
-                    <span aria-hidden>🚀</span>
-                    {plan.badge}
-                  </span>
-                ) : null}
+
                 <span className="flex flex-col items-end leading-none">
                   <span className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
                     {plan.price}
@@ -1021,6 +1013,15 @@ function PlanAccordion({
                   {plan.priceSuffix ? (
                     <span className="mt-1 text-[11px] text-[#6c6c6c]">
                       {plan.priceSuffix}
+                    </span>
+                  ) : null}
+                  {plan.badge ? (
+                    <span
+                      aria-hidden
+                      className="absolute -top-3 left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#fde5c4] px-3 py-2 my-1 text-[11px] font-semibold text-[#8a5a1a] shadow-sm"
+                    >
+                      <span aria-hidden>🚀</span>
+                      {plan.badge}
                     </span>
                   ) : null}
                 </span>
