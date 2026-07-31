@@ -36,7 +36,20 @@ export interface PaywallPreview {
   targetExt: string;
 }
 
-type PaywallHandler = (preview?: PaywallPreview) => Promise<PaywallOutcome>;
+export interface PaywallRequestOptions {
+  /**
+   * Hide the entire left "your document is ready" preview column and
+   * render the plan picker on its own. Used by billing settings ("Add
+   * billing method") where there is no document context — the generic
+   * blurred card would just be confusing there.
+   */
+  hidePreview?: boolean;
+}
+
+type PaywallHandler = (
+  preview?: PaywallPreview,
+  options?: PaywallRequestOptions,
+) => Promise<PaywallOutcome>;
 
 let handler: PaywallHandler | null = null;
 
@@ -55,13 +68,16 @@ export function setPaywallHandler(next: PaywallHandler | null): void {
  *
  * Pass `preview` when the caller has file metadata to show above the
  * plan picker so the user can see the file they're about to unlock.
+ * Pass `options.hidePreview` to suppress the preview column entirely
+ * (settings-triggered opens where no document context exists).
  */
 export function requestPaywall(
   preview?: PaywallPreview,
+  options?: PaywallRequestOptions,
 ): Promise<PaywallOutcome> {
   if (!handler) return Promise.resolve("cancelled");
 
-  return handler(preview);
+  return handler(preview, options);
 }
 
 /**

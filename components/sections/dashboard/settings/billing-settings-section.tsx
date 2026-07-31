@@ -294,7 +294,7 @@ export function BillingSettingsSection() {
 
 function NoSubscriptionCard() {
   const handleAdd = () => {
-    void requestPaywall();
+    void requestPaywall(undefined, { hidePreview: true });
   };
 
   return (

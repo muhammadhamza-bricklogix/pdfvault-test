@@ -39,10 +39,17 @@ interface PaywallModalProps {
    * Optional preview of the file the user is trying to unlock — e.g.
    * the source Word doc on `/convert/word-to-pdf`. Rendered above the
    * plan picker as a blurred file card so the user sees "here is your
-   * converted file" before paying. Falls back to the plain plan-picker
-   * layout when undefined (axios interceptor path, generic downloads).
+   * converted file" before paying. Falls back to a generic blurred
+   * "document is ready" card when undefined (axios interceptor path,
+   * generic downloads).
    */
   preview: PaywallPreview | null;
+  /**
+   * Suppress the entire left preview column and render the plan picker
+   * on its own. Set by billing settings ("Add billing method") where
+   * there is no document context to preview.
+   */
+  hidePreview?: boolean;
   onClose: () => void;
   onPaymentSuccess: () => void;
 }
@@ -66,6 +73,7 @@ interface PaywallModalProps {
 export function PaywallModal({
   isOpen,
   preview,
+  hidePreview = false,
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
@@ -284,7 +292,9 @@ export function PaywallModal({
             step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
-                ? "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
+                ? hidePreview
+                  ? "max-h-[calc(100dvh-32px)] w-[min(560px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
+                  : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
@@ -296,6 +306,7 @@ export function PaywallModal({
           ) : step === "plan" ? (
             <PlanStep
               continueLoading={continueLoading}
+              hidePreview={hidePreview}
               intent={intent}
               preview={preview}
               selectedPlan={selectedPlan}
@@ -328,6 +339,7 @@ export function PaywallModal({
 function PlanStep({
   intent,
   preview,
+  hidePreview,
   selectedPlan,
   onSelectPlan,
   onContinue,
@@ -335,6 +347,7 @@ function PlanStep({
 }: {
   intent: CheckoutIntent;
   preview: PaywallPreview | null;
+  hidePreview: boolean;
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
   onContinue: () => void;
@@ -362,9 +375,11 @@ function PlanStep({
       <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
         <div className="flex flex-col gap-1">
           <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            {preview
-              ? "Choose a plan to download your file"
-              : "Choose a plan to unlock full access"}
+            {hidePreview
+              ? "Choose a plan to unlock full access"
+              : preview
+                ? "Choose a plan to download your file"
+                : "Choose a plan to unlock full access"}
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
             Cancel anytime · Secure checkout · Instant access
@@ -390,53 +405,9 @@ function PlanStep({
         </div>
       </div>
 
-      {/* Body — two columns */}
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        {/* Left — preview column (or fallback content) */}
-        <div
-          className="flex flex-col justify-center gap-5 p-6 md:p-8"
-          style={{ backgroundColor: CREAM }}
-        >
-          <BrandLogo />
-
-          {preview ? (
-            <>
-              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
-                <span
-                  aria-hidden
-                  className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
-                >
-                  ✓
-                </span>
-                Your document is ready
-              </span>
-              <PreviewFileCard preview={preview} />
-              <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                Subscribe below to download the converted file instantly and
-                keep unlimited access to every PDFVault tool.
-              </p>
-            </>
-          ) : (
-            <>
-              <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
-                <span
-                  aria-hidden
-                  className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
-                >
-                  ✓
-                </span>
-                Your document is ready
-              </span>
-              <GenericPreviewCard />
-              <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                Subscribe below to download instantly and keep unlimited access
-                to every PDFVault tool.
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* Right — plan accordion column */}
+      {/* Body — two columns, or plan-picker only when the caller
+          suppresses the preview (billing settings entry point). */}
+      {hidePreview ? (
         <div className="flex flex-col gap-4 p-6 md:p-8">
           <PlanAccordion
             annualPrice={annualPrice}
@@ -452,7 +423,70 @@ function PlanStep({
             <CardBadge label="Amex" />
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          {/* Left — preview column (or fallback content) */}
+          <div
+            className="flex flex-col justify-center gap-5 p-6 md:p-8"
+            style={{ backgroundColor: CREAM }}
+          >
+            <BrandLogo />
+
+            {preview ? (
+              <>
+                <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
+                  <span
+                    aria-hidden
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
+                  >
+                    ✓
+                  </span>
+                  Your document is ready
+                </span>
+                <PreviewFileCard preview={preview} />
+                <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
+                  Subscribe below to download the converted file instantly and
+                  keep unlimited access to every PDFVault tool.
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
+                  <span
+                    aria-hidden
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
+                  >
+                    ✓
+                  </span>
+                  Your document is ready
+                </span>
+                <GenericPreviewCard />
+                <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
+                  Subscribe below to download instantly and keep unlimited
+                  access to every PDFVault tool.
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Right — plan accordion column */}
+          <div className="flex flex-col gap-4 p-6 md:p-8">
+            <PlanAccordion
+              annualPrice={annualPrice}
+              fullAccessPrice={fullAccessPrice}
+              selectedPlan={selectedPlan}
+              onSelectPlan={onSelectPlan}
+            />
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
+              <span>We accept</span>
+              <CardBadge label="VISA" />
+              <CardBadge label="Mastercard" />
+              <CardBadge label="Amex" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full-width centered disclaimer footer — spans both columns */}
       <div className="border-t border-[#ececec] px-6 py-5 md:px-8">

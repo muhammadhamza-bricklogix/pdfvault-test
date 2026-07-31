@@ -36,6 +36,7 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
     isLoading,
     guard,
     preview,
+    hidePreview,
     close,
     onPaymentSuccess,
   } = usePaywall();
@@ -44,6 +45,7 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
     <PaywallContext.Provider value={{ entitled, isLoading, guard }}>
       {children}
       <PaywallModal
+        hidePreview={hidePreview}
         isOpen={isOpen}
         preview={preview}
         onClose={close}
