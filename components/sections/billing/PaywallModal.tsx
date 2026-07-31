@@ -360,7 +360,7 @@ function PlanStep({
   // truth for the picker. Trial still fires the same intent on
   // Continue — see PayStep for the actual charge amounts.
   const fullAccessPrice = "$0.99";
-  const annualPrice = "$24.99";
+  const annualPrice = "$25";
   // Fallback display for entry points where `intent` is loaded but no
   // preview exists — reuse the intent-derived amounts in the small
   // print so it never contradicts what will actually be charged.
