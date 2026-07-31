@@ -67,7 +67,12 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // `.well-known/**` is excluded so Apple Pay domain verification
+    // (`apple-developer-merchantid-domain-association`) and any future
+    // machine-readable metadata are served straight from `public/`
+    // without a Clerk redirect. The file has no extension, so the
+    // static-file exclusion below doesn't catch it.
+    "/((?!\\.well-known|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
   ],
 };

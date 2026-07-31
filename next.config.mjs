@@ -64,6 +64,16 @@ const nextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
+      // Apple Pay domain verification file — Solidgate/Apple require
+      // `text/plain` and no auth. Extension-less filename means Next
+      // defaults to `application/octet-stream`, which Apple rejects.
+      {
+        source: "/.well-known/apple-developer-merchantid-domain-association",
+        headers: [
+          { key: "Content-Type", value: "text/plain" },
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
     ];
   },
 };

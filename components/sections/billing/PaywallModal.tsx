@@ -22,13 +22,40 @@ import { toast } from "@/lib/shared/utils/toast";
 // The payment SDK's iframe loader touches `window` at import time —
 // dynamic import with `ssr: false` keeps the Next.js server bundle
 // clean and avoids a 500 on the first request.
+//
+// SdkLoader.load(chargeAuthCdnUrl) swaps the underlying form runtime
+// from the legacy solid-form.js to charge-auth.js. charge-auth handles
+// 3DS challenges via a proper redirect flow rather than a nested
+// iframe layered on top of the payment form — which fixes the modal
+// focus/click issue where the 3DS OTP prompt appeared above the form
+// but wasn't interactable because our modal's focus scope trapped
+// keyboard input on the underlying iframe. Awaiting the load call
+// inside the dynamic import guarantees PaymentForm never renders
+// against the old runtime.
 const PaymentForm = dynamic(
-  () => import("@solidgate/react-sdk").then((m) => m.default),
+  async () => {
+    const m = await import("@solidgate/react-sdk");
+
+    await m.SdkLoader.load("https://cdn.charge-auth.com/js/form.js");
+
+    return m.default;
+  },
   { ssr: false },
 );
 
 const CREAM = "#fdf3f0";
 const CREAM_CARD = "#fef5f1";
+
+// Wallet button styling passed to the Solidgate SDK. Black on both to
+// match Apple's HIG default and read well against the modal's white
+// background. Update `color` here — Solidgate maps these onto the
+// respective platform button APIs (PaymentButton / PKPaymentButton).
+const GOOGLE_PAY_BUTTON_PARAMS = { color: "black" } as const;
+const APPLE_PAY_BUTTON_PARAMS = {
+  integrationType: "js",
+  type: "plain",
+  color: "black",
+} as const;
 
 type Step = "plan" | "pay" | "success";
 type PlanId = "trial" | "annual";
@@ -554,6 +581,15 @@ function PayStep({
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
   const nextChargeLabel = formatRenewalDate();
 
+  // Solidgate renders Apple Pay + Google Pay into detached container
+  // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
+  // mounts. On non-Safari browsers Apple Pay silently no-ops (SDK
+  // hides the container); on non-supporting Android/iOS Google Pay
+  // does the same. Both wallets also require merchant-side dashboard
+  // enablement + domain verification (Apple Pay only).
+  const applePayContainerRef = useRef<HTMLDivElement>(null);
+  const googlePayContainerRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* Left — cream order summary */}
@@ -612,8 +648,25 @@ function PayStep({
             Pay securely
           </h3>
           <p className="mt-1 text-[13px] text-[#6c6c6c]">
-            Visa, Mastercard, or Amex
+            Apple Pay, Google Pay, Visa, Mastercard, or Amex
           </p>
+        </div>
+
+        {/* Wallet buttons — Solidgate mounts Apple/Google Pay into
+            these containers. Each hides itself when the current
+            browser/device can't render it, so the "or pay with card"
+            divider only shows when at least one wallet is present. */}
+        <div className="flex flex-col gap-2">
+          <div ref={applePayContainerRef} className="empty:hidden" />
+          <div ref={googlePayContainerRef} className="empty:hidden" />
+        </div>
+
+        <div className="relative flex items-center gap-3 has-[+_.rounded-xl:only-child]:hidden">
+          <div className="h-px flex-1 bg-[#ececec]" />
+          <span className="text-[11px] uppercase tracking-wide text-[#9a9a9a]">
+            or pay with card
+          </span>
+          <div className="h-px flex-1 bg-[#ececec]" />
         </div>
 
         <div className="rounded-xl">
@@ -622,6 +675,10 @@ function PayStep({
               state internally and a second submit is a no-op. */}
           <PaymentForm
             key={retryKey}
+            applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+            applePayContainerRef={applePayContainerRef}
+            googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
+            googlePayContainerRef={googlePayContainerRef}
             merchantData={{
               merchant: intent.merchant,
               signature: intent.signature,
