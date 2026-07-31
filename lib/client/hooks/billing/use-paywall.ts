@@ -1,6 +1,10 @@
 "use client";
 
-import type { PaywallOutcome, PaywallPreview } from "./paywall-bus";
+import type {
+  PaywallOutcome,
+  PaywallPreview,
+  PaywallRequestOptions,
+} from "./paywall-bus";
 
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -28,6 +32,7 @@ export function usePaywall() {
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [preview, setPreview] = useState<PaywallPreview | null>(null);
+  const [hidePreview, setHidePreview] = useState(false);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
     null,
   );
@@ -60,6 +65,7 @@ export function usePaywall() {
     setIsOpen(false);
     setPending(null);
     setPreview(null);
+    setHidePreview(false);
     // Notify the bus-side promise that the user bailed so the axios
     // interceptor can reject with PaywallCancelledError instead of
     // hanging forever.
@@ -72,6 +78,7 @@ export function usePaywall() {
   const onPaymentSuccess = useCallback(async () => {
     setIsOpen(false);
     setPreview(null);
+    setHidePreview(false);
     // Give React one microtask to unmount the modal cleanly before
     // firing the queued action — otherwise a download or router-push
     // can race the modal teardown.
@@ -100,7 +107,10 @@ export function usePaywall() {
   // "You need to sign in to continue" error state with no way out.
   useEffect(() => {
     setPaywallHandler(
-      (incomingPreview?: PaywallPreview) =>
+      (
+        incomingPreview?: PaywallPreview,
+        options?: PaywallRequestOptions,
+      ) =>
         new Promise<PaywallOutcome>((resolve) => {
           if (entitled) {
             resolve("success");
@@ -126,6 +136,7 @@ export function usePaywall() {
           }
           busResolverRef.current = resolve;
           setPreview(incomingPreview ?? null);
+          setHidePreview(options?.hidePreview ?? false);
           setIsOpen(true);
         }),
     );
@@ -139,6 +150,7 @@ export function usePaywall() {
     isLoading,
     guard,
     preview,
+    hidePreview,
     close,
     onPaymentSuccess,
   };
