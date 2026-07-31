@@ -308,6 +308,7 @@ export function PaywallModal({
 
   return (
     <Modal.Backdrop
+      isDismissable={false}
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) onClose();
