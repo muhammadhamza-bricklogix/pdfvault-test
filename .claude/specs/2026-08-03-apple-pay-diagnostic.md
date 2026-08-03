@@ -1,6 +1,6 @@
 ---
 name: 2026-08-03-apple-pay-diagnostic
-description: Apple Pay button not rendering on staging/prod — root cause was a double-hex-encoded domain-association file. Fixed by hex-decoding + redeploying.
+description: Apple Pay button not rendering — flipped format twice before Solidgate clarified they want the hex-encoded 9118-byte version, not the raw-JSON 4559-byte version.
 metadata: 
   node_type: memory
   type: project
@@ -13,7 +13,15 @@ Uzair reported the Apple Pay button was not visible on staging or production aft
 
 ## TL;DR — verdict
 
-**Client + backend wiring was correct; hosted file was WRONG.** Backend correctly sends `apple_pay_merchant_name: "PDFVault"` in every `payment_intent`. Frontend SDK + refs + params all correct. BUT the domain-association file we were hosting was **double-encoded** — bytes were the ASCII characters `"7B22707370…"` (hex representation of `{"pspId":…`), not the literal JSON bytes Solidgate expected. Solidgate's byte-for-byte compare against Apple failed with "the 2 files are still not the same." Fixed 2026-08-03 by `xxd -r -p` decode + replace + push. Solidgate re-verifying after redeploy.
+**Correct hosted format = UPPERCASE ASCII hex, 9118 bytes exact, no trailing newline.** The file starts with the literal ASCII characters `7B22707370496422…` and Solidgate's verifier byte-compares against that. It looks like a "double-encoded mistake" but it is intentional — Solidgate's aggregator stores + transports the file in hex form and decodes internally before forwarding to Apple.
+
+Client + backend wiring was correct throughout the session. Backend sends `apple_pay_merchant_name: "PDFVault"` in every `payment_intent`. Frontend SDK + refs + params all correct.
+
+**Format churn during this session (don't repeat):**
+
+1. Original state (commits `5a82d96` + `70716ab`): hex-encoded 9118 bytes ✓ CORRECT
+2. My mistaken "fix" (commit `f17dd82`): I misread `head -c 200` output as a hex-view of `{"pspId":…}` when it was the literal file content — decoded with `xxd -r -p` to raw JSON 4559 bytes ✗ WRONG
+3. Solidgate re-flagged mismatch → reverted back to hex-encoded 9118 bytes ✓ CORRECT
 
 Also confirmed by Solidgate: `apple_pay_merchant_name` has **no restrictions** — any string that customers will recognize on the Apple Pay sheet is fine. `"PDFVault"` stays.
 
@@ -23,46 +31,46 @@ Also confirmed by Solidgate: `apple_pay_merchant_name` has **no restrictions** �
 |---|---|---|---|
 | File hosted → HTTP 200 | ✓ | ✓ | `curl -sI` |
 | `Content-Type: text/plain` | ✓ | ✓ | `curl -sI` |
-| Bytes match repo (~~9118~~ 4559 exact after fix) | ✓ (post-fix) | ✓ (post-fix) | `diff` |
+| Bytes match repo (9118 exact — hex-encoded) | ✓ | ✓ | `diff` |
 | No trailing newline | ✓ | ✓ | commit `70716ab` fix intact |
-| **File is raw JSON, NOT hex-encoded** | ✓ (post-fix) | ✓ (post-fix) | `head -c 20` must print `{"pspId":"88E04631` |
+| **File IS hex-encoded (uppercase ASCII)** | ✓ | ✓ | `head -c 20` must print `7B22707370496422223A22` |
 | Middleware skips `.well-known` | ✓ | ✓ | `proxy.ts:75` |
 | Client `enabled: true` on both wallets | ✓ | ✓ | `PaywallModal.tsx:57-63` |
 | charge-auth SDK loaded before form mounts | ✓ | ✓ | `PaywallModal.tsx:35-44` |
 | Container refs exist before `<PaymentForm>` | ✓ | ✓ | `PaywallModal.tsx:596-667` |
 | Backend passes `apple_pay_merchant_name` | ✓ | ✓ | `pdf-viewer-backend/src/billing/services/solidgate.service.ts:123` |
 
-## Root cause — file was double-hex-encoded
+## Root cause of the churn — Solidgate wants the hex-encoded format
 
-Solidgate came back after initial verification attempt: **"the 2 files are still not the same — validation failed."**
+First round (mid-day): Solidgate said **"the 2 files are still not the same — validation failed."** I saw the file bytes were the ASCII characters `"7B22707370…"` and concluded (wrongly) that this was a "double-encoded mistake" — that the real file should start with the literal `{` character. Ran `xxd -r -p` to "decode" it to raw JSON, committed as `f17dd82`, pushed.
 
-Diagnosis:
+Second round (later): Solidgate re-flagged the same error. Their message quoted:
+- What they saw at our URL: `{"pspId":"88E046314E5A179C5015…"}` (my decoded raw JSON)
+- What they expected: `7B227073704964223A2238384530343633313445354131373943353031354334353835443441393643413232334132463032…` (the UPPERCASE ASCII hex representation of the same JSON)
 
-```
-$ head -c 20 public/.well-known/apple-developer-merchantid-domain-association
-7B227073704964223A22383845303436
+That confirmed: **Solidgate's aggregator wants the hex-encoded 9118-byte form** — not because Apple wants it that way, but because Solidgate's internal store + fetch pipeline hex-encodes everything and does a byte-for-byte compare on the fetched file. They decode internally before forwarding to Apple.
 
-$ xxd public/.well-known/… | head -1
-00000000: 3742 3232 3730 3733 3730 3439 3634 3232  7B22707370496422
-```
-
-Every byte in the file was `0x37 0x42 0x32 0x32 …` — the ASCII bytes for the characters `"7"`, `"B"`, `"2"`, `"2"`. So the file was **double-encoded**: someone took the binary/JSON Solidgate provided and turned each byte into two ASCII hex characters before saving.
-
-**The initial diagnostic in the "TL;DR" and "matrix" above was WRONG.** I read `head -c 200`'s output as a hex-view of `{"pspId":"88E04631"}`, but that same output was actually the *literal file content*. Both interpretations look identical in a terminal — the tell is that the real file must start with byte `0x7B` (a `{` character), not the ASCII bytes for the string `"7B"`.
-
-Fix:
+**Revert path:**
 
 ```bash
-xxd -r -p public/.well-known/apple-developer-merchantid-domain-association \
-  > /tmp/fixed && mv /tmp/fixed public/.well-known/apple-developer-merchantid-domain-association
+# restore the correct hex-encoded file from commit 70716ab
+git show 70716ab:public/.well-known/apple-developer-merchantid-domain-association \
+  > public/.well-known/apple-developer-merchantid-domain-association
 ```
 
-After decode:
-- Size: 9118 → 4559 bytes (halved, matches the hex→bin 2:1 ratio)
-- First bytes: literal `{"pspId":"88E046314E5A179C5015C4585D4A96CA223A2F0249671F9A8426EE8C151889CE","version":1,"createdOn":1633962250699,"signature":"3080…"}`
-- Ends with `"}` (no trailing newline preserved — commit `70716ab` intent kept)
+Or re-encode from a raw JSON version:
 
-Guard: `public/.well-known/README.md` now has a "Pitfall — do NOT hex-encode the file" section with a `head -c 20` sanity check and the `xxd -r -p` fix recipe. Don't reintroduce.
+```bash
+xxd -p -c 999999 public/.well-known/apple-developer-merchantid-domain-association \
+  | tr 'a-z' 'A-Z' | tr -d '\n' > /tmp/hex \
+  && mv /tmp/hex public/.well-known/apple-developer-merchantid-domain-association
+```
+
+Verified: 9118 bytes, no trailing newline, starts `7B22707370496422223A22` (ASCII hex, uppercase). Matches Solidgate's expected byte-for-byte.
+
+**Note on the Solidgate reply attachment:** the base64/PKCS7 file Solidgate attached (`MIIQXwYJKoZIhvcN…`) decodes to a payload for domain `tryastro.org` team `RP423FWHCR` — that's a DIFFERENT customer's file. Solidgate support attached the wrong file by mistake. Ignore that attachment; the hex string in the message body IS the correct expected content for our aggregator (pspId `88E046314E5A179C…`).
+
+**Guard:** `public/.well-known/README.md` now documents the hex-encoded format as CORRECT and warns against decoding it. Don't repeat the churn.
 
 ## Solidgate aggregator model (important — do not confuse with self-managed Apple Pay)
 
@@ -78,26 +86,27 @@ Message from Hamza (Solidgate) confirms:
 - We DO pass `apple_pay_merchant_name` — currently hardcoded as `"PDFVault"` in `solidgate.service.ts:123`.
 - We DO host the domain-association file at `/.well-known/…` (both prod + staging).
 
-## Post-fix status
+## Post-fix status (after hex-restore commit)
 
-After the hex-decode fix + push + redeploy:
-1. Ping Solidgate integrator to re-run verification for `pdfvault.ai` and `staging.pdfvault.ai`.
+1. Ping Solidgate to re-run verification for `pdfvault.ai` and `staging.pdfvault.ai`.
 2. On success, Solidgate confirms `Verified` in Hub → Apple Pay → Domains.
 3. Test in Safari on real Apple device (see procedure below).
 
 `apple_pay_merchant_name`: Solidgate confirmed 2026-08-03 there are **no restrictions** — any string customers will recognize on the Apple Pay sheet is fine. `"PDFVault"` stays.
 
-## Reply to Solidgate (post-fix, send this)
+## Reply to Solidgate (send after hex-restore deployed)
 
-> Thanks for flagging — you were right, the files didn't match. Root cause on our side: the file had been saved double-encoded (each byte as two ASCII hex characters, so `{"pspId":…` became the literal string `"7B227073704964…"`). Solidgate's byte-for-byte compare against Apple would always fail against that.
+> Thanks for the clarification — you're right, the correct format is the hex-encoded one. I had briefly "fixed" it by decoding to raw JSON (misread the byte pattern as double-encoding); Solidgate's fetch obviously flagged the mismatch immediately. Reverted to the hex-encoded 9118-byte version and redeployed.
 >
-> Fixed and pushed. Both domains now serve the raw 4559-byte JSON:
+> Both domains now serve the expected content:
 > - https://pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
 > - https://staging.pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
 >
-> Sanity check either domain — `curl` should return content starting with `{"pspId":"88E046314E5A179C…"`, size 4559 bytes, `Content-Type: text/plain`.
+> Sanity check either URL — `curl` should return `text/plain`, 9118 bytes, starting `7B227073704964223A2238384530343633313445354131373943353031354334353835443441393643413232334132463032…` (matches the "expected" hex you quoted).
 >
-> Please re-run verification for both domains. On `apple_pay_merchant_name`: thanks for confirming no restrictions — we'll keep `"PDFVault"`.
+> Note on the file you attached (`MIIQXw…`) — that decodes to `teamId=RP423FWHCR`, `domain=tryastro.org`, which looks like a different customer. I ignored it and stuck with the pspId `88E046314E5A179C…` payload matching our aggregator. Let me know if that's actually meant for us and I've misread it.
+>
+> Please re-run verification for both domains.
 
 ## Test procedure (after Hamza confirms)
 
@@ -112,7 +121,7 @@ Trigger paywall → Pay step. Button appears ABOVE the "or pay with card" divide
 ## Why this is easy to misdiagnose
 
 Silent failure modes make this look like a code bug when it's not:
-- **Domain-association file byte-mismatch** (this session's root cause) → SDK renders nothing, no console warning. Sanity-check with `head -c 20` on the hosted file — must be JSON, not hex.
+- **Domain-association file byte-mismatch** (this session's root cause) → SDK renders nothing, no console warning. Sanity-check with `head -c 20` on the hosted file — must print `7B22707370496422223A22` (UPPERCASE ASCII hex), NOT `{"pspId":"88E04631`. Solidgate's aggregator stores the file hex-encoded and compares byte-for-byte; hosting the raw-JSON decoded form fails their integrity check.
 - Non-Safari browser → SDK renders nothing, no console warning
 - Unverified domain → SDK renders nothing, no console warning
 - Verified but device has no Wallet card → SDK renders nothing, no console warning

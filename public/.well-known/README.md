@@ -31,27 +31,34 @@ Repeat per env (staging domain needs its own verification).
 `next.config.ts` sets `text/plain` on requests to this path — required
 by Solidgate/Apple; without it Apple silently rejects the file.
 
-## Pitfall — do NOT hex-encode the file
+## Format — hex-encoded ASCII, 9118 bytes exact
 
-The file Solidgate provides is a JSON envelope that starts with the
-literal characters `{"pspId":"…"}`. It is roughly 4.5 KB and ends with
-`"}` (no trailing newline).
+Solidgate's aggregator hands you a file whose bytes are the UPPERCASE
+ASCII hex representation of the underlying signed JSON. It starts with
+the literal characters `7B 22 70 73 70 49 64 22 3A 22 …` (i.e. `"7B22707370496422…"`
+when read as text) — NOT with the literal `{`.
 
-If you open it in an editor that shows it as a hex dump and then save
-what the editor displays, you will end up with a ~9 KB file whose bytes
-are the ASCII characters `7B 22 70 73 70 …` (i.e. two hex digits per
-original byte). Solidgate's verifier compares byte-for-byte against what
-Apple hands back and reports "the 2 files are still not the same".
+This looks like a "double-encoded" mistake but it is intentional.
+Solidgate's verifier fetches the file, byte-compares it against the
+copy in their internal store (which is also hex-encoded), then decodes
+before forwarding to Apple. If you save the raw-JSON decoded form,
+Solidgate's byte-compare fails with "the 2 files are still not the
+same" — even though the underlying content is equivalent. Do not
+`xxd -r -p` this file.
 
 Sanity check before commit:
 
     head -c 20 public/.well-known/apple-developer-merchantid-domain-association
 
-Must print `{"pspId":"88E04631` (JSON), NOT `7B22707370496422` (hex). If
-you see the hex form, run:
+Must print `7B22707370496422223A22` (ASCII hex, uppercase). If it prints
+literal `{"pspId":"88E04631` instead, you accidentally decoded the file —
+re-encode with:
 
-    xxd -r -p public/.well-known/apple-developer-merchantid-domain-association \
-      > /tmp/fixed && mv /tmp/fixed public/.well-known/apple-developer-merchantid-domain-association
+    xxd -p -c 999999 public/.well-known/apple-developer-merchantid-domain-association \
+      | tr 'a-z' 'A-Z' | tr -d '\n' > /tmp/fixed \
+      && mv /tmp/fixed public/.well-known/apple-developer-merchantid-domain-association
 
-That reverses the double-encoding. Re-run the sanity check to confirm.
-This bug was fixed on 2026-08-03 — don't reintroduce it.
+Expected size: exactly 9118 bytes, no trailing newline. See spec
+`.claude/specs/2026-08-03-apple-pay-diagnostic.md` for the incident
+trail — we flipped this format twice in one day before Solidgate
+clarified which side they want.
