@@ -11,54 +11,46 @@ Filename (no extension, exact name required by Apple):
 
     apple-developer-merchantid-domain-association
 
-To generate:
+### Canonical source (single source of truth)
+
+Solidgate's aggregator publishes ONE file that every merchant under their
+umbrella must host verbatim:
+
+    https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt
+
+Documented at <https://docs.solidgate.com/payments/integrate/payment-form/apple-pay-button/>.
+To refresh our copy:
+
+    curl -s https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt \
+      > public/.well-known/apple-developer-merchantid-domain-association
+
+Expected bytes (verify BEFORE committing):
+
+- Exactly **9118 bytes**, no trailing newline
+- MD5 `022ab7b28e7cb3ea45d82c3f69b62dc0` (as of 2021-10-27 — Solidgate rarely rotates)
+- First 20 chars: `7B22707370496422223A22` (uppercase ASCII hex)
+
+Do NOT transcribe this file by hand from a support-ticket message. Do NOT
+edit it in place. Do NOT `xxd -r -p` (decode) it. Any of those has already
+bitten us — see spec `.claude/specs/2026-08-03-apple-pay-diagnostic.md`.
+Always re-`curl` from the CDN.
+
+### Format explanation
+
+The file's bytes are the UPPERCASE ASCII hex representation of an
+underlying signed JSON envelope `{"pspId":"...","version":1,"createdOn":...,"signature":"..."}`.
+Solidgate's verifier fetches the file, byte-compares against their
+internal copy (also hex-encoded), then decodes before forwarding to
+Apple. Hosting the raw-JSON decoded form fails Solidgate's byte-compare
+even though the content is equivalent.
+
+### Verification steps
 
 1. Solidgate Hub → Developers → Apple Pay → Domains → Add domain.
-2. Solidgate returns a domain-association file. Download it.
-3. Drop it in this folder as `apple-developer-merchantid-domain-association`
-   (rename if the download adds a `.txt` suffix — Apple Pay explicitly
-   rejects the `.txt` variant per Solidgate docs).
-4. Deploy. Verify with:
+2. Confirm the copy in this repo matches the CDN (`md5` above).
+3. Deploy. `curl -sI` the domain — expect `HTTP/2 200`, `content-type: text/plain`, `content-length: 9118`.
+4. Back in Solidgate Hub, click "Verify domain".
+5. Repeat per env (staging + prod both need to be added in Solidgate Hub).
 
-       curl -sI https://pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
-       # expect: HTTP/2 200 + content-type: text/plain
-
-5. Back in Solidgate Hub, click "Verify domain". Apple Pay button will
-   start rendering once verification passes.
-
-Repeat per env (staging domain needs its own verification).
-
-`next.config.ts` sets `text/plain` on requests to this path — required
-by Solidgate/Apple; without it Apple silently rejects the file.
-
-## Format — hex-encoded ASCII, 9118 bytes exact
-
-Solidgate's aggregator hands you a file whose bytes are the UPPERCASE
-ASCII hex representation of the underlying signed JSON. It starts with
-the literal characters `7B 22 70 73 70 49 64 22 3A 22 …` (i.e. `"7B22707370496422…"`
-when read as text) — NOT with the literal `{`.
-
-This looks like a "double-encoded" mistake but it is intentional.
-Solidgate's verifier fetches the file, byte-compares it against the
-copy in their internal store (which is also hex-encoded), then decodes
-before forwarding to Apple. If you save the raw-JSON decoded form,
-Solidgate's byte-compare fails with "the 2 files are still not the
-same" — even though the underlying content is equivalent. Do not
-`xxd -r -p` this file.
-
-Sanity check before commit:
-
-    head -c 20 public/.well-known/apple-developer-merchantid-domain-association
-
-Must print `7B22707370496422223A22` (ASCII hex, uppercase). If it prints
-literal `{"pspId":"88E04631` instead, you accidentally decoded the file —
-re-encode with:
-
-    xxd -p -c 999999 public/.well-known/apple-developer-merchantid-domain-association \
-      | tr 'a-z' 'A-Z' | tr -d '\n' > /tmp/fixed \
-      && mv /tmp/fixed public/.well-known/apple-developer-merchantid-domain-association
-
-Expected size: exactly 9118 bytes, no trailing newline. See spec
-`.claude/specs/2026-08-03-apple-pay-diagnostic.md` for the incident
-trail — we flipped this format twice in one day before Solidgate
-clarified which side they want.
+`next.config.mjs` sets `text/plain` on requests to this path — Solidgate/Apple
+silently reject any other content-type.

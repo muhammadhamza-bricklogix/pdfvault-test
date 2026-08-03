@@ -1,6 +1,6 @@
 ---
 name: 2026-08-03-apple-pay-diagnostic
-description: Apple Pay button not rendering — flipped format twice before Solidgate clarified they want the hex-encoded 9118-byte version, not the raw-JSON 4559-byte version.
+description: Apple Pay button not rendering — flipped format twice before finding Solidgate's canonical CDN file at cdn.solidgate.com/apple/... Real root cause was a 2-byte typo in the human-transcribed original commit.
 metadata: 
   node_type: memory
   type: project
@@ -13,17 +13,18 @@ Uzair reported the Apple Pay button was not visible on staging or production aft
 
 ## TL;DR — verdict
 
-**Correct hosted format = UPPERCASE ASCII hex, 9118 bytes exact, no trailing newline.** The file starts with the literal ASCII characters `7B22707370496422…` and Solidgate's verifier byte-compares against that. It looks like a "double-encoded mistake" but it is intentional — Solidgate's aggregator stores + transports the file in hex form and decodes internally before forwarding to Apple.
+**Canonical file lives at Solidgate's CDN:** `https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt` (9118 bytes, MD5 `022ab7b28e7cb3ea45d82c3f69b62dc0`, unchanged since 2021-10-27). Every merchant under Solidgate's aggregator hosts THAT exact file verbatim. Documented at <https://docs.solidgate.com/payments/integrate/payment-form/apple-pay-button/>.
 
-Client + backend wiring was correct throughout the session. Backend sends `apple_pay_merchant_name: "PDFVault"` in every `payment_intent`. Frontend SDK + refs + params all correct.
+**Real root cause:** commit `5a82d96` (Hamza's transcription of the file into our repo) had a **2-byte typo** at offsets 1196 and 1198 — two hex chars `3` and `5` were swapped in the middle of the signature field. Solidgate's byte-for-byte verifier caught it and complained "the 2 files are still not the same." All the "hex vs raw JSON" churn during this session was chasing the wrong bug.
+
+Client + backend wiring was correct throughout. Backend sends `apple_pay_merchant_name: "PDFVault"` in every `payment_intent`. Frontend SDK + refs + params all correct. `apple_pay_merchant_name` value is unrestricted (Solidgate confirmed).
 
 **Format churn during this session (don't repeat):**
 
-1. Original state (commits `5a82d96` + `70716ab`): hex-encoded 9118 bytes ✓ CORRECT
-2. My mistaken "fix" (commit `f17dd82`): I misread `head -c 200` output as a hex-view of `{"pspId":…}` when it was the literal file content — decoded with `xxd -r -p` to raw JSON 4559 bytes ✗ WRONG
-3. Solidgate re-flagged mismatch → reverted back to hex-encoded 9118 bytes ✓ CORRECT
-
-Also confirmed by Solidgate: `apple_pay_merchant_name` has **no restrictions** — any string that customers will recognize on the Apple Pay sheet is fine. `"PDFVault"` stays.
+1. `5a82d96` + `70716ab`: hex-encoded 9118 bytes, but **2-byte typo** vs canonical ✗ WRONG (but format-correct)
+2. `f17dd82` — my mistaken "fix": misread `head -c 200` output as a hex-view of `{"pspId":…}` when it was the literal file content. Decoded with `xxd -r -p` to raw JSON 4559 bytes ✗ WRONG format
+3. `0d0b9f5` — my "revert": restored from `70716ab` (still had the 2-byte typo) ✗ STILL WRONG
+4. This commit — replaced with `curl https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt` output ✓ CORRECT
 
 ## Verification matrix (all passed)
 
@@ -40,37 +41,32 @@ Also confirmed by Solidgate: `apple_pay_merchant_name` has **no restrictions** �
 | Container refs exist before `<PaymentForm>` | ✓ | ✓ | `PaywallModal.tsx:596-667` |
 | Backend passes `apple_pay_merchant_name` | ✓ | ✓ | `pdf-viewer-backend/src/billing/services/solidgate.service.ts:123` |
 
-## Root cause of the churn — Solidgate wants the hex-encoded format
+## Root cause — 2-byte typo in Hamza's transcription
 
-First round (mid-day): Solidgate said **"the 2 files are still not the same — validation failed."** I saw the file bytes were the ASCII characters `"7B22707370…"` and concluded (wrongly) that this was a "double-encoded mistake" — that the real file should start with the literal `{` character. Ran `xxd -r -p` to "decode" it to raw JSON, committed as `f17dd82`, pushed.
+The real bug was a byte-level mismatch, not a format mismatch. Solidgate's byte-for-byte verifier compares against the file at their CDN. Our repo copy differed by exactly two bytes at offsets 1196 and 1198 — two hex characters (`3` and `5`) were transposed in the middle of the signature field. Verifier flagged mismatch; we assumed the WHOLE format was wrong; we thrashed.
 
-Second round (later): Solidgate re-flagged the same error. Their message quoted:
-- What they saw at our URL: `{"pspId":"88E046314E5A179C5015…"}` (my decoded raw JSON)
-- What they expected: `7B227073704964223A2238384530343633313445354131373943353031354334353835443441393643413232334132463032…` (the UPPERCASE ASCII hex representation of the same JSON)
-
-That confirmed: **Solidgate's aggregator wants the hex-encoded 9118-byte form** — not because Apple wants it that way, but because Solidgate's internal store + fetch pipeline hex-encodes everything and does a byte-for-byte compare on the fetched file. They decode internally before forwarding to Apple.
-
-**Revert path:**
+**Definitive fix — use Solidgate's canonical CDN file:**
 
 ```bash
-# restore the correct hex-encoded file from commit 70716ab
-git show 70716ab:public/.well-known/apple-developer-merchantid-domain-association \
+curl -s https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt \
   > public/.well-known/apple-developer-merchantid-domain-association
+
+md5 public/.well-known/apple-developer-merchantid-domain-association
+# expect: 022ab7b28e7cb3ea45d82c3f69b62dc0
 ```
 
-Or re-encode from a raw JSON version:
+`cmp -l` between the wrong hex file (from commit `70716ab`) and the CDN canonical showed exactly 2 differing bytes:
 
-```bash
-xxd -p -c 999999 public/.well-known/apple-developer-merchantid-domain-association \
-  | tr 'a-z' 'A-Z' | tr -d '\n' > /tmp/hex \
-  && mv /tmp/hex public/.well-known/apple-developer-merchantid-domain-association
+```
+  1196  63  65     (CDN='3' vs repo='5')
+  1198  65  63     (CDN='5' vs repo='3')
 ```
 
-Verified: 9118 bytes, no trailing newline, starts `7B22707370496422223A22` (ASCII hex, uppercase). Matches Solidgate's expected byte-for-byte.
+Solidgate rarely rotates this file — last-modified 2021-10-27. Should be considered a static asset. Don't ever hand-edit it.
 
-**Note on the Solidgate reply attachment:** the base64/PKCS7 file Solidgate attached (`MIIQXwYJKoZIhvcN…`) decodes to a payload for domain `tryastro.org` team `RP423FWHCR` — that's a DIFFERENT customer's file. Solidgate support attached the wrong file by mistake. Ignore that attachment; the hex string in the message body IS the correct expected content for our aggregator (pspId `88E046314E5A179C…`).
+**Note on the Solidgate reply attachment:** the base64/PKCS7 file Solidgate attached (`MIIQXwYJKoZIhvcN…`) decodes to a payload for domain `tryastro.org` team `RP423FWHCR` — a different customer's Apple-standard (non-aggregator) file. Solidgate support attached the wrong file by mistake. Ignore that attachment; the hex string in the message body was the correct hint (though hosting the CDN file directly is even more reliable than transcribing from their message).
 
-**Guard:** `public/.well-known/README.md` now documents the hex-encoded format as CORRECT and warns against decoding it. Don't repeat the churn.
+**Guard:** `public/.well-known/README.md` now documents the CDN URL as the single source of truth with the MD5 to verify against. Never re-transcribe.
 
 ## Solidgate aggregator model (important — do not confuse with self-managed Apple Pay)
 
@@ -94,19 +90,19 @@ Message from Hamza (Solidgate) confirms:
 
 `apple_pay_merchant_name`: Solidgate confirmed 2026-08-03 there are **no restrictions** — any string customers will recognize on the Apple Pay sheet is fine. `"PDFVault"` stays.
 
-## Reply to Solidgate (send after hex-restore deployed)
+## Reply to Solidgate (send after canonical file deployed)
 
-> Thanks for the clarification — you're right, the correct format is the hex-encoded one. I had briefly "fixed" it by decoding to raw JSON (misread the byte pattern as double-encoding); Solidgate's fetch obviously flagged the mismatch immediately. Reverted to the hex-encoded 9118-byte version and redeployed.
+> Root cause found: our file matched the correct format (uppercase hex, 9118 bytes) but had a 2-byte typo at offsets 1196 and 1198 — two hex chars were transposed in the middle of the signature field. Verifier caught it every time.
 >
-> Both domains now serve the expected content:
+> Fix: replaced our copy with the canonical file from `https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt` (MD5 `022ab7b28e7cb3ea45d82c3f69b62dc0`). Both domains now serve the identical bytes:
 > - https://pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
 > - https://staging.pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
 >
-> Sanity check either URL — `curl` should return `text/plain`, 9118 bytes, starting `7B227073704964223A2238384530343633313445354131373943353031354334353835443441393643413232334132463032…` (matches the "expected" hex you quoted).
+> Please re-run Apple verification for both domains.
 >
-> Note on the file you attached (`MIIQXw…`) — that decodes to `teamId=RP423FWHCR`, `domain=tryastro.org`, which looks like a different customer. I ignored it and stuck with the pspId `88E046314E5A179C…` payload matching our aggregator. Let me know if that's actually meant for us and I've misread it.
->
-> Please re-run verification for both domains.
+> Two side-notes for your team:
+> 1. The `MIIQXw…` file you attached decodes to `teamId=RP423FWHCR domain=tryastro.org` — looks like a different customer's file. Might be worth a ticket to whoever attached it.
+> 2. It would help future integrations if the Solidgate Hub "Add Domain" flow linked to your CDN URL rather than delivering the file over Slack/email — humans transcribing a 9118-byte hex string introduce byte-level typos that look identical to a format bug.
 
 ## Test procedure (after Hamza confirms)
 
