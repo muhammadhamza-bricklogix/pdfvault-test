@@ -180,6 +180,33 @@ Beyond `pdf-editor-architecture`, this repo ships four project-specific skills a
 
 A `PreCompact` and `SessionEnd` hook injects a reminder to invoke `memory-snapshotter` before context is lost. The hook is at `.claude/hooks/remind-memory-snapshot.cjs`.
 
+## Session specs (project history for handoff)
+
+`.claude/specs/` contains dated markdown files that capture the full evidence trail for non-trivial sessions — bugs diagnosed, decisions made, work shipped, work blocked. Unlike the user's personal auto-memory (which lives outside this repo), these ship with the codebase so any developer or AI model taking over the project has the story behind the current state.
+
+**Read specs when:** starting work on billing/Solidgate, auth/paywall, or Apple Pay; the user references a past session; or the current problem overlaps with the topics listed below.
+
+Current specs:
+
+| Spec | Topic |
+|---|---|
+| [`2026-07-30-signout-edit-persistence.md`](./.claude/specs/2026-07-30-signout-edit-persistence.md) | Signed-out edit → download → sign-in return flow — three bugs, full evidence |
+| [`2026-07-31-solidgate-audit.md`](./.claude/specs/2026-07-31-solidgate-audit.md) | Client Solidgate audit — charge-auth SDK migration, React Aria dismiss fix, hard-cancel webhook |
+| [`2026-08-03-apple-pay-diagnostic.md`](./.claude/specs/2026-08-03-apple-pay-diagnostic.md) | Apple Pay button not rendering — full stack green, blocked on Solidgate-side Apple verification |
+
+Add new specs as `YYYY-MM-DD-<slug>.md` and append a row to this table.
+
+## Persisted memory (project handoff)
+
+`.claude/memory/` mirrors Uzair's personal auto-memory for this project so it travels with the repo. `.claude/memory/MEMORY.md` is the index; individual files hold user profile, feedback rules, project state, and reference pointers. Read the index first — each entry has a one-line hook. Fields to note:
+
+- `feedback_*.md` — behavioural rules with **Why** + **How to apply** lines. Follow them.
+- `project_*.md` — active work, decisions, in-flight bugs, external blockers. Verify against current code before acting on file:line citations (memory is point-in-time).
+- `reference_*.md` — pointers to external systems / conventions.
+- `user_role.md` — who the primary developer is and how to frame work for them.
+
+These are a snapshot as of 2026-08-03. When Uzair updates his live memory during a session, prefer that live copy — but for a fresh developer or AI without access to Uzair's home directory, this folder is the source of truth for context that isn't in `git log` or the code itself.
+
 <!-- repocards:begin -->
 ## Repo context — repocards
 
