@@ -50,8 +50,13 @@ const CREAM_CARD = "#fef5f1";
 // match Apple's HIG default and read well against the modal's white
 // background. Update `color` here — Solidgate maps these onto the
 // respective platform button APIs (PaymentButton / PKPaymentButton).
-const GOOGLE_PAY_BUTTON_PARAMS = { color: "black" } as const;
+// `enabled: true` is set explicitly because the SDK defaults it to
+// undefined/false when the params object is present but omits the
+// key; without it the button silently never mounts even after the
+// Apple domain is verified.
+const GOOGLE_PAY_BUTTON_PARAMS = { enabled: true, color: "black" } as const;
 const APPLE_PAY_BUTTON_PARAMS = {
+  enabled: true,
   integrationType: "js",
   type: "plain",
   color: "black",
