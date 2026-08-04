@@ -40,8 +40,8 @@ export function DoNotSellContent() {
           <strong>Updated date:</strong> 22 July 2026.
         </p>
         <p className="mt-2">
-          <strong>Address:</strong> Shams Business Center, Sharjah Media City
-          Free Zone, Al Messaned, Sharjah, UAE.
+          <strong>Address:</strong> Dimostheni Severi 12, 6th floor, Flat/Office
+          601, 1080, Nicosia, Cyprus.
         </p>
       </div>
 
@@ -51,7 +51,7 @@ export function DoNotSellContent() {
           &ldquo;sharing&rdquo; of your personal information under the
           California Consumer Privacy Act, as amended by the California Privacy
           Rights Act (CCPA / CPRA), and under similar laws in other US states.
-          It is issued by Content Clicks LLC (&ldquo;Company,&rdquo;
+          It is issued by FLUTTWINGS INVESTMENTS LIMITED (&ldquo;Company,&rdquo;
           &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), the
           operator of pdfvault.ai (the &ldquo;Service&rdquo;), and should be
           read together with our{" "}
@@ -232,10 +232,10 @@ export function DoNotSellContent() {
 
       <LegalSectionCard icon={Mail01Icon} id="d-6-11" title="Contact">
         <p>
-          Content Clicks LLC
+          FLUTTWINGS INVESTMENTS LIMITED
           <br />
-          Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
-          Sharjah, UAE.
+          Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,
+          Cyprus.
           <br />
           For privacy rights requests or questions:{" "}
           <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>.

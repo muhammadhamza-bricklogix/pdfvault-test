@@ -521,26 +521,72 @@ function PlanStep({
         </div>
       )}
 
-      {/* Full-width centered disclaimer footer — spans both columns */}
+      {/* Full-width centered disclaimer footer — spans both columns.
+          Wording follows the Solidgate compliance template: state the
+          subscription frequency, exact recurring price, source card,
+          and cancellation paths. */}
       <div className="border-t border-[#ececec] px-6 py-5 md:px-8">
         {selectedPlan === "trial" ? (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-            You&apos;ll be charged {today} today for 7-day full access, then{" "}
-            {renew} every 30 days unless you cancel before the trial ends.
+            You are enrolling in a 7-day trial and monthly subscription to
+            pdfvault.ai. You&apos;ll be charged {today} today for the 7-day
+            trial, then {renew} per month until you cancel. Payments will be
+            charged from the card you specified below. To cancel, visit your{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/dashboard/settings/billing"
+            >
+              account settings
+            </a>
+            , see our{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/refund"
+            >
+              Cancellation Policy
+            </a>
+            , or email{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="mailto:support@pdfvault.ai"
+            >
+              support@pdfvault.ai
+            </a>
+            .
           </p>
         ) : (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-            You&apos;ll be charged {annualPrice} today, then {annualPrice} every
-            365 days. Cancel anytime before the next renewal.
+            You are enrolling in an annual subscription to pdfvault.ai. You
+            agree to be billed {annualPrice} per year until you cancel. Payments
+            will be charged from the card you specified below. To cancel, visit
+            your{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/dashboard/settings/billing"
+            >
+              account settings
+            </a>
+            , see our{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/refund"
+            >
+              Cancellation Policy
+            </a>
+            , or email{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="mailto:support@pdfvault.ai"
+            >
+              support@pdfvault.ai
+            </a>
+            .
           </p>
         )}
 
         <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-          After 7 days, you will be charged $24.99/month unless you cancel 24
-          hours before the trial ends. Charged in USD. Amount in local currency
-          is an estimate and may differ.
-          <br />
-          See our{" "}
+          Charged in USD. Amount in local currency is an estimate and may
+          differ. See our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
             href="/terms-and-conditions"

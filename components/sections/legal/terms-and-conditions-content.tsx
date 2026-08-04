@@ -50,8 +50,8 @@ export function TermsAndConditionsContent() {
           <strong>Updated date:</strong> 22 July 2026.
         </p>
         <p className="mt-2">
-          <strong>Address:</strong> Shams Business Center, Sharjah Media City
-          Free Zone, Al Messaned, Sharjah, UAE.
+          <strong>Address:</strong> Dimostheni Severi 12, 6th floor, Flat/Office
+          601, 1080, Nicosia, Cyprus.
         </p>
       </div>
 
@@ -62,20 +62,21 @@ export function TermsAndConditionsContent() {
       >
         <p>
           These Terms and Conditions (&ldquo;Terms&rdquo;) are a binding
-          agreement between you and Content Clicks LLC (&ldquo;Company,&rdquo;
-          &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), the
-          operator of the website pdfvault.ai and the services and products
-          provided through it (together, the &ldquo;Service&rdquo;). By
-          accessing or using the Service, you agree to be bound by these Terms
-          and by our <Link href={ROUTES.LEGAL.PRIVACY}>Privacy Policy</Link>,{" "}
+          agreement between you and FLUTTWINGS INVESTMENTS LIMITED
+          (&ldquo;Company,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
+          &ldquo;our&rdquo;), the operator of the website pdfvault.ai and the
+          services and products provided through it (together, the
+          &ldquo;Service&rdquo;). By accessing or using the Service, you agree
+          to be bound by these Terms and by our{" "}
+          <Link href={ROUTES.LEGAL.PRIVACY}>Privacy Policy</Link>,{" "}
           <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>, Subscription
           Terms, and <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>, each
           of which is incorporated by reference. If you do not agree, do not use
           the Service.
         </p>
         <p className="mt-3">
-          Company registered address: Shams Business Center, Sharjah Media City
-          Free Zone, Al Messaned, Sharjah, UAE.
+          Company registered address: Dimostheni Severi 12, 6th floor,
+          Flat/Office 601, 1080, Nicosia, Cyprus.
         </p>
       </LegalSectionCard>
 
@@ -193,10 +194,10 @@ export function TermsAndConditionsContent() {
       >
         <p>
           The Service and its content (excluding User Content) are owned by
-          Content Clicks LLC and its licensors and are protected by copyright,
-          trademark, and other laws. Except as expressly permitted, you may not
-          copy, modify, distribute, or create derivative works of any part of
-          the Service.
+          FLUTTWINGS INVESTMENTS LIMITED and its licensors and are protected by
+          copyright, trademark, and other laws. Except as expressly permitted,
+          you may not copy, modify, distribute, or create derivative works of
+          any part of the Service.
         </p>
       </LegalSectionCard>
 
@@ -298,11 +299,11 @@ export function TermsAndConditionsContent() {
         <p>
           The Company makes no representation that the Service is appropriate,
           accessible, or legally available for use in every jurisdiction. If you
-          access the Service from outside the United Arab Emirates, you do so on
-          your own initiative and are responsible for compliance with the laws
-          applicable in your location, including any restrictions on the export,
-          import, or use of the Service. You may not use the Service if you are
-          located in, or ordinarily resident in, a country or region subject to
+          access the Service from outside Cyprus, you do so on your own
+          initiative and are responsible for compliance with the laws applicable
+          in your location, including any restrictions on the export, import, or
+          use of the Service. You may not use the Service if you are located in,
+          or ordinarily resident in, a country or region subject to
           comprehensive trade sanctions, or if you are a person or entity
           subject to applicable sanctions or restricted-party lists.
         </p>
@@ -313,40 +314,18 @@ export function TermsAndConditionsContent() {
         id="t-2-15"
         title="Governing Law and Dispute Resolution"
       >
-        <p>
-          These Terms, and any dispute or claim arising out of or in connection
-          with them or the Service (including non-contractual disputes), are
-          governed by and construed in accordance with the laws of the Emirate
-          of Sharjah and, to the extent applicable, the federal laws of the
-          United Arab Emirates, without regard to conflict-of-law principles.
-        </p>
+        <p>These terms are governed by the laws of Cyprus.</p>
         <p className="mt-3">
-          The courts and arbitral seat of Sharjah, United Arab Emirates, shall
-          have exclusive jurisdiction over all matters arising under these
-          Terms, subject to the arbitration agreement below.
+          The courts of Cyprus shall have exclusive jurisdiction over all
+          matters arising under these Terms.
         </p>
         <p className="mt-3">
           Any dispute shall first be addressed through good-faith negotiation:
           contact us at{" "}
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>{" "}
           describing the dispute, and the parties will attempt to resolve it
-          within 60 days. Unresolved disputes shall be referred to and finally
-          resolved by arbitration administered by the Sharjah International
-          Commercial Arbitration Centre (&ldquo;Tahkeem&rdquo;) in accordance
-          with its arbitration rules then in force, on an individual basis (not
-          as a class, consolidated, or representative action). The seat of
-          arbitration shall be Sharjah, United Arab Emirates, the language of
-          the arbitration shall be English, and the tribunal shall consist of
-          ONE arbitrator appointed in accordance with Tahkeem rules. Judgment on
-          the award may be entered in any court of competent jurisdiction.
-        </p>
-        <p className="mt-3">
-          You may opt out of this arbitration agreement within 30 days of first
-          accepting these Terms by writing to{" "}
-          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>. To the
-          extent permitted by law, you waive the right to participate in class,
-          consolidated, or representative actions. Nothing in this section
-          limits any non-waivable consumer rights in your country of residence.
+          within 60 days. Nothing in this section limits any non-waivable
+          consumer rights in your country of residence.
         </p>
       </LegalSectionCard>
 
@@ -415,10 +394,10 @@ export function TermsAndConditionsContent() {
 
       <LegalSectionCard icon={Mail01Icon} id="t-2-18" title="Contact">
         <p>
-          Content Clicks LLC
+          FLUTTWINGS INVESTMENTS LIMITED
           <br />
-          Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
-          Sharjah, UAE.
+          Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,
+          Cyprus.
           <br />
           Email: <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
         </p>

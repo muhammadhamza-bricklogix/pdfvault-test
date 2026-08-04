@@ -37,8 +37,8 @@ export function RefundPolicyContent() {
           <strong>Updated date:</strong> 22 July 2026.
         </p>
         <p className="mt-2">
-          <strong>Address:</strong> Shams Business Center, Sharjah Media City
-          Free Zone, Al Messaned, Sharjah, UAE.
+          <strong>Address:</strong> Dimostheni Severi 12, 6th floor, Flat/Office
+          601, 1080, Nicosia, Cyprus.
         </p>
       </div>
 
@@ -177,10 +177,10 @@ export function RefundPolicyContent() {
 
       <LegalSectionCard icon={Mail01Icon} id="r-5-10" title="Contact">
         <p>
-          Content Clicks LLC
+          FLUTTWINGS INVESTMENTS LIMITED
           <br />
-          Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
-          Sharjah, UAE.
+          Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,
+          Cyprus.
           <br />
           Email: <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
         </p>

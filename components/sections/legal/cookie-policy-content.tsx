@@ -70,8 +70,8 @@ export function CookiePolicyContent() {
           <strong>Updated date:</strong> 22 July 2026.
         </p>
         <p className="mt-2">
-          <strong>Address:</strong> Shams Business Center, Sharjah Media City
-          Free Zone, Al Messaned, Sharjah, UAE.
+          <strong>Address:</strong> Dimostheni Severi 12, 6th floor, Flat/Office
+          601, 1080, Nicosia, Cyprus.
         </p>
       </div>
 
@@ -94,9 +94,9 @@ export function CookiePolicyContent() {
         title="Who Sets Cookies on This Site"
       >
         <p>
-          This Cookie Policy is issued by Content Clicks LLC, the operator of
-          pdfvault.ai. First-party cookies are set by us; third-party cookies
-          are set by our service providers (see Section 4).
+          This Cookie Policy is issued by FLUTTWINGS INVESTMENTS LIMITED, the
+          operator of pdfvault.ai. First-party cookies are set by us;
+          third-party cookies are set by our service providers (see Section 4).
         </p>
       </LegalSectionCard>
 
@@ -350,10 +350,10 @@ export function CookiePolicyContent() {
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
         </p>
         <p className="mt-3">
-          Content Clicks LLC
+          FLUTTWINGS INVESTMENTS LIMITED
           <br />
-          Shams Business Center, Sharjah Media City Free Zone, Al Messaned,
-          Sharjah, UAE.
+          Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,
+          Cyprus.
         </p>
       </LegalSectionCard>
     </>
