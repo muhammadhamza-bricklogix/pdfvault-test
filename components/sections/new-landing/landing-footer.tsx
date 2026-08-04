@@ -1,5 +1,9 @@
 import Image from "next/image";
 
+import {
+  FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
+  FOOTER_COMPANY_ENTITY,
+} from "@/lib/shared/constants/footer";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
@@ -189,11 +193,17 @@ export function LandingFooter() {
           SOCIAL_LINKS again once the hrefs are set.
         */}
         <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <p className="text-left text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
+            </p>
+            {/* Legal entity + short-form address required by Solidgate
+                compliance (EU-visible footer). Full postal address lives in
+                the Terms and Conditions + Privacy Policy pages. */}
+            <p className="text-center text-[11px] text-white/60 sm:text-right sm:text-[13px]">
+              {FOOTER_COMPANY_ENTITY}, {FOOTER_COMPANY_ADDRESS_PLACEHOLDER}
             </p>
           </div>
         </div>
