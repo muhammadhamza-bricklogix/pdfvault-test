@@ -11,6 +11,35 @@ import { logger } from "@/lib/shared/utils/logger";
 const TEXT_OPS_MIN = 31;
 const TEXT_OPS_MAX = 49;
 
+// PRD §7.1 — cache the parsed text-op index set per page proxy. Without
+// this, every zoom change re-fetches page.getOperatorList() (the render
+// effect depends on `zoom`, so it re-runs), which is 5–30ms on large
+// pages. The WeakMap dies with the page proxy so a Manage-Pages rebuild
+// or file swap naturally invalidates the cache.
+const textIndexCache = new WeakMap<PDFPageProxy, Set<number>>();
+
+function getTextOpIndices(
+  page: PDFPageProxy,
+  opList: { fnArray: ReadonlyArray<number> },
+): Set<number> {
+  const cached = textIndexCache.get(page);
+
+  if (cached) return cached;
+
+  const indices = new Set<number>();
+
+  for (let i = 0; i < opList.fnArray.length; i++) {
+    const op = opList.fnArray[i];
+
+    if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
+      indices.add(i);
+    }
+  }
+  textIndexCache.set(page, indices);
+
+  return indices;
+}
+
 type UsePageRendererParams = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   page: PDFPageProxy | null;
@@ -56,18 +85,17 @@ export function usePageRenderer({
         let operationsFilter: ((i: number) => boolean) | undefined;
 
         if (suppressText) {
-          const opList = await page.getOperatorList();
+          const cachedIndices = textIndexCache.get(page);
+          let textIndices: Set<number>;
 
-          if (cancelled) return;
+          if (cachedIndices) {
+            textIndices = cachedIndices;
+          } else {
+            const opList = await page.getOperatorList();
 
-          const textIndices = new Set<number>();
+            if (cancelled) return;
 
-          for (let i = 0; i < opList.fnArray.length; i++) {
-            const op = opList.fnArray[i];
-
-            if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
-              textIndices.add(i);
-            }
+            textIndices = getTextOpIndices(page, opList);
           }
           operationsFilter = (i: number) => !textIndices.has(i);
         }

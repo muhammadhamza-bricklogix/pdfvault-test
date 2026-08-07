@@ -14,6 +14,7 @@ import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotations-editor";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
@@ -421,6 +422,21 @@ export function PdfEditorShell() {
   useEffect(() => {
     setIsSignedIn(isSignedIn ?? false);
   }, [isSignedIn, setIsSignedIn]);
+
+  // PRD §7.1 — prefetch the pdf.js legacy build + worker as soon as the
+  // editor mounts, so the first file lands into a warm module cache. On a
+  // cold session this saves ~200–800ms depending on browser cache state
+  // (the module + `pdf.worker.min.mjs` fetches are the bulk of first-
+  // upload variability). Fire-and-forget; loadPdfJs handles polyfills
+  // and the dynamic import is memoized by the runtime, so a subsequent
+  // real `usePdfLoader` call gets the cached module for free.
+  useEffect(() => {
+    void loadPdfJs().catch(() => {
+      // Prefetch failures are harmless — the real load call surfaces
+      // the error to the user with the friendly PasswordException /
+      // InvalidPDFException / generic branches in usePdfLoader.
+    });
+  }, []);
 
   const isRestoringSession = usePdfEditorStore((s) => s.isRestoringSession);
 
