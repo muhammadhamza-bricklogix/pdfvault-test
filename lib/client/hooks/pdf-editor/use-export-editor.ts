@@ -35,6 +35,12 @@ export type ExportFormat =
 
 export type EditorExportEventDetail = {
   format: ExportFormat;
+  /**
+   * Optional user-chosen base name (no extension). Emitted by the top-bar
+   * format modal so the download honours the "File name" field. When absent
+   * the source file's own basename is used, preserving the pre-modal default.
+   */
+  filename?: string;
 };
 
 const FORMAT_TO_CONVERSION_TYPE: Record<
@@ -61,6 +67,16 @@ function buildPdfExportFilename(name: string): string {
   const base = dot > 0 ? name.slice(0, dot) : name;
 
   return `${base} (edited).pdf`;
+}
+
+function sanitizeBaseName(input: string): string {
+  const stripped = input.replace(/\.[^./\\]+$/, "").trim();
+
+  return stripped.length > 0 ? stripped : "document";
+}
+
+function ensureExtension(base: string, ext: string): string {
+  return base.toLowerCase().endsWith(`.${ext}`) ? base : `${base}.${ext}`;
 }
 
 function downloadBytes(bytes: Uint8Array, filename: string) {
@@ -121,166 +137,208 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     convertRef.current = convert;
   }, [convert]);
 
-  const handleExport = useCallback(async (format: ExportFormat) => {
-    if (isExportingRef.current) return;
+  const handleExport = useCallback(
+    async (format: ExportFormat, customFilename?: string) => {
+      if (isExportingRef.current) return;
 
-    const {
-      currentPage: page,
-      fabricCanvas: liveCanvas,
-      file: sourceFile,
-      authLoaded: authReady,
-      clerkIsSignedIn: signedIn,
-    } = stateRef.current;
-
-    if (!sourceFile) {
-      toast.error({
-        title: "Nothing to export",
-        description: "Open a PDF before exporting.",
-      });
-
-      return;
-    }
-
-    // If Clerk hasn't finished hydrating yet, defer for a short beat and
-    // re-dispatch the export event. Otherwise a fresh-return-from-sign-in
-    // load can fire editor:export before authLoaded flips to true — we'd
-    // read isSignedIn=false and pointlessly redirect the user back into
-    // the sign-in flow they just completed. Re-dispatching (rather than
-    // recursing into handleExport) keeps the closure lint rule happy and
-    // still routes through the listener once auth is ready.
-    if (!authReady) {
-      isExportingRef.current = false;
-      window.setTimeout(() => {
-        window.dispatchEvent(
-          new CustomEvent("editor:export", { detail: { format } }),
-        );
-      }, 250);
-
-      return;
-    }
-
-    isExportingRef.current = true;
-
-    try {
-      // ALL downloads (including plain PDF) require sign-in + subscription.
-      // Guests can open a PDF and edit it locally, but downloading —
-      // in any format — is a paid feature. Gate the auth check FIRST so
-      // a signed-out user is routed through sign-in before we even open
-      // the paywall — otherwise the paywall opens on an anon client and
-      // hits "Couldn't start checkout". After sign-in the user returns
-      // to the same editor with `?export=<fmt>` set, so the export
-      // re-fires automatically.
-      if (!signedIn) {
-        try {
-          // Flush the live canvas for the current page into the store so
-          // the serialized fabric state includes the user's latest edits
-          // (the store may lag the live canvas by one page-navigation).
-          if (liveCanvas) {
-            flushLiveFabricPage(page, liveCanvas);
-          }
-          // Persist the file AND any per-page Fabric edits across the
-          // full-page sign-in redirect so the editor can rehydrate both
-          // on return — otherwise the user loses all unsaved changes.
-          const { fabricJsonByPage, extractedPages } =
-            usePdfEditorStore.getState();
-
-          await savePendingEditorFile(
-            sourceFile,
-            fabricJsonByPage,
-            extractedPages,
-          );
-        } catch (err) {
-          logger.warn("pending editor file save failed", err);
-        }
-
-        const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
-
-        // Prompt with a real confirm modal (not a fire-and-forget
-        // toast + redirect). The user always knows what's about to
-        // happen and can cancel to keep editing locally.
-        dispatchSignInPrompt({
-          title: "Sign in to download",
-          description:
-            "Downloading is a paid feature. Sign in and we'll bring you back to finish the download right where you left off.",
-          confirmLabel: "Sign in & continue",
-          redirectUrl: returnTo,
-        });
-
-        isExportingRef.current = false;
-
-        return;
-      }
-
-      // Paywall gate for signed-in but unentitled users. Runs BEFORE the
-      // CPU-heavy bake so the modal doesn't pop while the export
-      // busy-spinner is grinding — and so cancelling the paywall doesn't
-      // leave a "failed" toast on a build that never needed to run.
-      // `ensureFreshEntitlement()` forces a network read when the
-      // snapshot is `false` (may be stale immediately post-signin
-      // before `useSubscriptionQuery` resolves) so we don't fire the
-      // paywall for an already-subscribed user.
-      const entitled = await ensureFreshEntitlement();
-
-      if (!entitled) {
-        const outcome = await requestPaywall();
-
-        if (outcome !== "success") {
-          // User dismissed the paywall — silent bail-out. Not an error;
-          // the user simply chose not to buy.
-          return;
-        }
-      }
-
-      // Export bakes the watermark + bg image into the downloaded copy. The
-      // cloud-saved PDF intentionally does NOT have them baked (that's why
-      // Save passes `bakeOverlays: false` / default) — keeping the source
-      // file clean prevents per-save stacking and text-position drift. The
-      // user's downloaded copy is the only place we bake on demand.
-      // Export discards `remappedState`. The download is a one-shot file —
-      // there's no in-app editor state to keep in sync with the rebuilt
-      // page order, just bytes the browser will save to disk. The store
-      // stays on the original `file` until the user explicitly hits Save.
-      const { bytes } = await buildEditedPdfBytes({
+      const {
         currentPage: page,
         fabricCanvas: liveCanvas,
         file: sourceFile,
-        bakeOverlays: true,
-      });
+        authLoaded: authReady,
+        clerkIsSignedIn: signedIn,
+      } = stateRef.current;
 
-      if (format === "pdf") {
-        downloadBytes(bytes, buildPdfExportFilename(sourceFile.name));
-        toast.success({
-          title: "Exported",
-          description: "Your edited PDF has been downloaded.",
+      if (!sourceFile) {
+        toast.error({
+          title: "Nothing to export",
+          description: "Open a PDF before exporting.",
         });
 
         return;
       }
 
-      const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
-      const baseName = sourceFile.name.replace(/\.[^.]+$/, "") || "document";
-      const pdfFile = new File(
-        [bytes.buffer as ArrayBuffer],
-        `${baseName}.pdf`,
-        {
-          type: "application/pdf",
-        },
-      );
+      // If Clerk hasn't finished hydrating yet, defer for a short beat and
+      // re-dispatch the export event. Otherwise a fresh-return-from-sign-in
+      // load can fire editor:export before authLoaded flips to true — we'd
+      // read isSignedIn=false and pointlessly redirect the user back into
+      // the sign-in flow they just completed. Re-dispatching (rather than
+      // recursing into handleExport) keeps the closure lint rule happy and
+      // still routes through the listener once auth is ready.
+      if (!authReady) {
+        isExportingRef.current = false;
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("editor:export", {
+              detail: { filename: customFilename, format },
+            }),
+          );
+        }, 250);
 
-      // The mutation owns its own loading/success/error toasts; we await the
-      // result here so we can trigger the browser download from the returned
-      // blob (otherwise the file is converted but never offered to the user).
-      let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
+        return;
+      }
+
+      isExportingRef.current = true;
 
       try {
-        result = await convertRef.current.mutateAsync({
-          file: pdfFile,
-          type: conversionType,
+        // ALL downloads (including plain PDF) require sign-in + subscription.
+        // Guests can open a PDF and edit it locally, but downloading —
+        // in any format — is a paid feature. Gate the auth check FIRST so
+        // a signed-out user is routed through sign-in before we even open
+        // the paywall — otherwise the paywall opens on an anon client and
+        // hits "Couldn't start checkout". After sign-in the user returns
+        // to the same editor with `?export=<fmt>` set, so the export
+        // re-fires automatically.
+        if (!signedIn) {
+          try {
+            // Flush the live canvas for the current page into the store so
+            // the serialized fabric state includes the user's latest edits
+            // (the store may lag the live canvas by one page-navigation).
+            if (liveCanvas) {
+              flushLiveFabricPage(page, liveCanvas);
+            }
+            // Persist the file AND any per-page Fabric edits across the
+            // full-page sign-in redirect so the editor can rehydrate both
+            // on return — otherwise the user loses all unsaved changes.
+            const { fabricJsonByPage, extractedPages } =
+              usePdfEditorStore.getState();
+
+            await savePendingEditorFile(
+              sourceFile,
+              fabricJsonByPage,
+              extractedPages,
+            );
+          } catch (err) {
+            logger.warn("pending editor file save failed", err);
+          }
+
+          const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
+
+          // Prompt with a real confirm modal (not a fire-and-forget
+          // toast + redirect). The user always knows what's about to
+          // happen and can cancel to keep editing locally.
+          dispatchSignInPrompt({
+            title: "Sign in to download",
+            description:
+              "Downloading is a paid feature. Sign in and we'll bring you back to finish the download right where you left off.",
+            confirmLabel: "Sign in & continue",
+            redirectUrl: returnTo,
+          });
+
+          isExportingRef.current = false;
+
+          return;
+        }
+
+        // Paywall gate for signed-in but unentitled users. Runs BEFORE the
+        // CPU-heavy bake so the modal doesn't pop while the export
+        // busy-spinner is grinding — and so cancelling the paywall doesn't
+        // leave a "failed" toast on a build that never needed to run.
+        // `ensureFreshEntitlement()` forces a network read when the
+        // snapshot is `false` (may be stale immediately post-signin
+        // before `useSubscriptionQuery` resolves) so we don't fire the
+        // paywall for an already-subscribed user.
+        const entitled = await ensureFreshEntitlement();
+
+        if (!entitled) {
+          const outcome = await requestPaywall();
+
+          if (outcome !== "success") {
+            // User dismissed the paywall — silent bail-out. Not an error;
+            // the user simply chose not to buy.
+            return;
+          }
+        }
+
+        // Export bakes the watermark + bg image into the downloaded copy. The
+        // cloud-saved PDF intentionally does NOT have them baked (that's why
+        // Save passes `bakeOverlays: false` / default) — keeping the source
+        // file clean prevents per-save stacking and text-position drift. The
+        // user's downloaded copy is the only place we bake on demand.
+        // Export discards `remappedState`. The download is a one-shot file —
+        // there's no in-app editor state to keep in sync with the rebuilt
+        // page order, just bytes the browser will save to disk. The store
+        // stays on the original `file` until the user explicitly hits Save.
+        const { bytes } = await buildEditedPdfBytes({
+          currentPage: page,
+          fabricCanvas: liveCanvas,
+          file: sourceFile,
+          bakeOverlays: true,
         });
+
+        const userBase = customFilename
+          ? sanitizeBaseName(customFilename)
+          : null;
+
+        if (format === "pdf") {
+          const outName = userBase
+            ? ensureExtension(userBase, "pdf")
+            : buildPdfExportFilename(sourceFile.name);
+
+          downloadBytes(bytes, outName);
+          toast.success({
+            title: "Exported",
+            description: "Your edited PDF has been downloaded.",
+          });
+
+          return;
+        }
+
+        const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
+        const baseName =
+          userBase ?? (sourceFile.name.replace(/\.[^.]+$/, "") || "document");
+        const pdfFile = new File(
+          [bytes.buffer as ArrayBuffer],
+          `${baseName}.pdf`,
+          {
+            type: "application/pdf",
+          },
+        );
+
+        // The mutation owns its own loading/success/error toasts; we await the
+        // result here so we can trigger the browser download from the returned
+        // blob (otherwise the file is converted but never offered to the user).
+        let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
+
+        try {
+          result = await convertRef.current.mutateAsync({
+            file: pdfFile,
+            type: conversionType,
+          });
+        } catch (err) {
+          // The axios interceptor throws a well-known PaywallCancelledError
+          // when the user dismisses the payment modal on a 402/403 retry.
+          // Treat that as a normal user action — no error toast.
+          if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+            return;
+          }
+          logger.error("Failed to export PDF", err);
+          toast.error({
+            title: "Export failed",
+            description: "We couldn't export your edits. Please try again.",
+          });
+
+          return;
+        }
+
+        // Conversion mutation already fired its own success toast in
+        // onSuccess — DO NOT re-toast an error if the blob download itself
+        // fails (QA feedback 2026-07-29 item 81: "failed export message
+        // even though the file downloaded fine"). Log only.
+        try {
+          const serverExt = result.fileName.match(/\.[^.]+$/)?.[0]?.slice(1);
+          const outName =
+            userBase && serverExt
+              ? ensureExtension(userBase, serverExt)
+              : result.fileName;
+
+          triggerBlobDownload(result.blob, outName);
+        } catch (err) {
+          logger.error("blob download failed after successful conversion", err);
+        }
       } catch (err) {
-        // The axios interceptor throws a well-known PaywallCancelledError
-        // when the user dismisses the payment modal on a 402/403 retry.
-        // Treat that as a normal user action — no error toast.
+        // Any pre-mutation exception (buildEditedPdfBytes, file
+        // preparation) still surfaces to the user.
         if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
           return;
         }
@@ -289,41 +347,19 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           title: "Export failed",
           description: "We couldn't export your edits. Please try again.",
         });
-
-        return;
+      } finally {
+        isExportingRef.current = false;
       }
-
-      // Conversion mutation already fired its own success toast in
-      // onSuccess — DO NOT re-toast an error if the blob download itself
-      // fails (QA feedback 2026-07-29 item 81: "failed export message
-      // even though the file downloaded fine"). Log only.
-      try {
-        triggerBlobDownload(result.blob, result.fileName);
-      } catch (err) {
-        logger.error("blob download failed after successful conversion", err);
-      }
-    } catch (err) {
-      // Any pre-mutation exception (buildEditedPdfBytes, file
-      // preparation) still surfaces to the user.
-      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
-        return;
-      }
-      logger.error("Failed to export PDF", err);
-      toast.error({
-        title: "Export failed",
-        description: "We couldn't export your edits. Please try again.",
-      });
-    } finally {
-      isExportingRef.current = false;
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     const onExport = (event: Event) => {
       const detail = (event as CustomEvent<EditorExportEventDetail>).detail;
       const format = detail?.format ?? "pdf";
 
-      void handleExport(format);
+      void handleExport(format, detail?.filename);
     };
 
     window.addEventListener("editor:export", onExport);
