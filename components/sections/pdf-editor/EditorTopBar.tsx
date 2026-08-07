@@ -19,6 +19,7 @@ import {
   PrinterIcon,
   RedoIcon,
   FloppyDiskIcon,
+  Share01Icon,
   ShapesIcon,
   SignatureIcon,
   Stamp01Icon,
@@ -303,9 +304,10 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* PRD §7.3 — export controls trio. All three open the shared
-                format-selection modal; distinction is visual affordance
-                only (matches PDF Guru reference). */}
+            {/* Export controls quad — Print / Download / Share / Done.
+                All four open the shared format-selection modal
+                (reference: image #2). Print + Download are icon-only,
+                Share is an outline pill, Done is the primary CTA. */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Print"
@@ -334,6 +336,16 @@ export function EditorInfoBar() {
                 <p>Download</p>
               </Tooltip.Content>
             </Tooltip>
+            <Button
+              aria-label="Share"
+              isDisabled={!file}
+              size="sm"
+              variant="secondary"
+              onPress={openExportModal}
+            >
+              <HugeiconsIcon icon={Share01Icon} size={14} />
+              <span className="ml-1 hidden sm:inline">Share</span>
+            </Button>
             <Button
               aria-label="Done"
               isDisabled={!file}

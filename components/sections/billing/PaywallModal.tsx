@@ -54,11 +54,17 @@ const CREAM_CARD = "#fef5f1";
 // undefined/false when the params object is present but omits the
 // key; without it the button silently never mounts even after the
 // Apple domain is verified.
+//
+// Apple Pay `type` is "subscribe" instead of "plain" so the button
+// renders "Subscribe with " — matches the paywall's actual
+// intent (recurring plan checkout) and reads as a call-to-action
+// rather than a bare logo tile. Google Pay's SDK doesn't take an
+// equivalent type param; it stays a black wallet chip.
 const GOOGLE_PAY_BUTTON_PARAMS = { enabled: true, color: "black" } as const;
 const APPLE_PAY_BUTTON_PARAMS = {
   enabled: true,
   integrationType: "js",
-  type: "plain",
+  type: "subscribe",
   color: "black",
 } as const;
 
@@ -707,10 +713,21 @@ function PayStep({
         {/* Wallet buttons — Solidgate mounts Apple/Google Pay into
             these containers. Each hides itself when the current
             browser/device can't render it, so the "or pay with card"
-            divider only shows when at least one wallet is present. */}
+            divider only shows when at least one wallet is present.
+            The wrapper enforces a consistent 48px min-height + full
+            width so the wallet button reads as a polished CTA row
+            (matches the card-form submit button below). Rounded
+            corners on the inner iframe survive Apple's own button
+            radius via overflow-hidden. */}
         <div className="flex flex-col gap-2">
-          <div ref={applePayContainerRef} className="empty:hidden" />
-          <div ref={googlePayContainerRef} className="empty:hidden" />
+          <div
+            ref={applePayContainerRef}
+            className="empty:hidden overflow-hidden rounded-xl [&>*]:!w-full [&>*]:!min-h-[48px] [&_iframe]:!w-full [&_iframe]:!min-h-[48px] [&_iframe]:!rounded-xl"
+          />
+          <div
+            ref={googlePayContainerRef}
+            className="empty:hidden overflow-hidden rounded-xl [&>*]:!w-full [&>*]:!min-h-[48px] [&_iframe]:!w-full [&_iframe]:!min-h-[48px] [&_iframe]:!rounded-xl"
+          />
         </div>
 
         <div className="relative flex items-center gap-3 has-[+_.rounded-xl:only-child]:hidden">

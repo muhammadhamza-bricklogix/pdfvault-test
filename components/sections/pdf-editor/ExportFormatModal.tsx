@@ -13,15 +13,13 @@ import { useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
-// PRD §7.3: 4 formats — PDF, Word, JPG, PNG.
-// (The wider set — xlsx/pptx/html/txt — stays available via the hamburger
-// menu / older code paths; the top-bar surface intentionally narrows to the
-// four the PRD calls out to match the PDF Guru reference.)
+// 6 format tiles matching the reference in image #3 (PDF Guru / user
+// spec): PDF, PNG, Word, Excel, JPG, PPTX. All route through the same
+// editor:export event pipeline in useExportEditor.
 type FormatOption = {
-  id: Extract<ExportFormat, "pdf" | "docx" | "jpg" | "png">;
+  id: Extract<ExportFormat, "pdf" | "docx" | "xlsx" | "pptx" | "jpg" | "png">;
   label: string;
   icon: typeof Pdf01Icon;
-  tileClass: string;
   iconClass: string;
 };
 
@@ -31,28 +29,36 @@ const FORMAT_OPTIONS: FormatOption[] = [
     iconClass: "bg-red-100 text-red-600",
     id: "pdf",
     label: "PDF",
-    tileClass: "",
   },
   {
     icon: FileImageIcon,
     iconClass: "bg-orange-100 text-orange-600",
     id: "png",
     label: "PNG",
-    tileClass: "",
   },
   {
     icon: Doc01Icon,
     iconClass: "bg-blue-100 text-blue-600",
     id: "docx",
     label: "Word",
-    tileClass: "",
+  },
+  {
+    icon: Doc01Icon,
+    iconClass: "bg-emerald-100 text-emerald-600",
+    id: "xlsx",
+    label: "Excel",
   },
   {
     icon: FileImageIcon,
     iconClass: "bg-pink-100 text-pink-600",
     id: "jpg",
     label: "JPG",
-    tileClass: "",
+  },
+  {
+    icon: FileImageIcon,
+    iconClass: "bg-amber-100 text-amber-600",
+    id: "pptx",
+    label: "PPTX",
   },
 ];
 

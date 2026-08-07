@@ -1,4 +1,3 @@
-import { HeroBackground } from "./hero-background";
 import { UploadWorkspace } from "./upload-workspace";
 
 export function LandingHero() {
@@ -7,8 +6,8 @@ export function LandingHero() {
       aria-labelledby="hero-heading"
       className="relative isolate overflow-hidden bg-white"
     >
-      {/* Designer geometric grid, inverted over white (see HeroBackground). */}
-      <HeroBackground />
+      {/* HeroBackground grid removed per user request — plain white
+          background under the hero copy. */}
 
       <div className="pv-container relative z-10 flex flex-col items-center pt-24 text-center sm:pt-32">
         <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
