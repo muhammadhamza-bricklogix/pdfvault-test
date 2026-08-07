@@ -69,13 +69,17 @@ const QUICK_TOOLS: readonly QuickTool[] = [
   {
     title: "Edit PDF",
     description: "Edit text, draw, highlight, and annotate.",
-    href: TOOL_ROUTE.editor,
+    // PRD §6 — lands directly in the edit-text tool, not the generic
+    // composer with no tool selected.
+    href: TOOL_ROUTE.edit,
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Edit%20PDF.svg`,
   },
   {
     title: "Sign & Watermark",
     description: "Sign and watermark with vector strokes.",
-    href: TOOL_ROUTE.watermark,
+    // PRD §6 — signature tool is the default entry (watermark still
+    // reachable one tap away in the toolbar).
+    href: TOOL_ROUTE.sign,
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Sign%20%26%20Watermark.svg`,
   },
   {
