@@ -8,14 +8,20 @@ import { useId, useMemo, useState } from "react";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
-import {
-  evaluatePassword,
-  PASSWORD_RULES,
-} from "@/lib/shared/utils/password-strength";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// PRD §4.2 — simplified password rule: 8+ characters, alphanumeric.
+// No mixed case / symbol requirement. Server-side (Clerk dashboard) must
+// be relaxed to match; otherwise strong-password errors still surface.
+const SIMPLE_PASSWORD_HINT =
+  "Password must be at least 8 characters, letters and numbers (alphanumeric).";
+
+function isPasswordValid(value: string): boolean {
+  return value.length >= 8 && /^[A-Za-z0-9]+$/.test(value);
+}
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
@@ -47,7 +53,7 @@ function humaniseClerkMessage(raw: string, code?: string): string {
     code === "form_password_not_strong_enough" ||
     /not strong enough/i.test(s)
   ) {
-    return "Password isn't strong enough. Use at least 8 characters with a mix of upper, lower, number, and symbol.";
+    return "Password isn't strong enough. Try 8+ characters combining letters and numbers.";
   }
   if (
     code === "form_identifier_exists" ||
@@ -77,18 +83,8 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   return raw;
 }
 
-function splitName(fullName: string): { firstName: string; lastName: string } {
-  const trimmed = fullName.trim();
-  const parts = trimmed.split(/\s+/);
-  const firstName = parts[0] ?? "";
-  const lastName = parts.slice(1).join(" ");
-
-  return { firstName, lastName };
-}
-
 type FieldErrors = {
   email?: string;
-  fullName?: string;
   password?: string;
   code?: string;
   terms?: string;
@@ -106,7 +102,6 @@ export function SignupCard() {
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>("credentials");
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
@@ -118,7 +113,6 @@ export function SignupCard() {
   const [submitting, setSubmitting] = useState(false);
 
   const headingId = useId();
-  const fullNameId = useId();
   const emailId = useId();
   const passwordId = useId();
   const codeId = useId();
@@ -135,13 +129,12 @@ export function SignupCard() {
   // the same rules the submit handler runs. Prevents users from
   // clicking through and hitting a wall of red inline errors.
   const credentialsValid = useMemo(() => {
-    if (!fullName.trim()) return false;
     if (!EMAIL_RE.test(email.trim())) return false;
-    if (!evaluatePassword(password).allPassed) return false;
+    if (!isPasswordValid(password)) return false;
     if (!agreedToTerms) return false;
 
     return true;
-  }, [fullName, email, password, agreedToTerms]);
+  }, [email, password, agreedToTerms]);
 
   const onGoogle = async () => {
     if (!signUp) return;
@@ -171,17 +164,11 @@ export function SignupCard() {
     const nextErrors: FieldErrors = {};
     const trimmedEmail = email.trim();
 
-    if (!fullName.trim()) {
-      nextErrors.fullName = "Please enter your full name.";
-    }
     if (!EMAIL_RE.test(trimmedEmail)) {
       nextErrors.email = "Please enter a valid email address.";
     }
-    const strength = evaluatePassword(password);
-
-    if (!strength.allPassed) {
-      nextErrors.password =
-        "Password must be at least 8 characters and include upper, lower, number, and a symbol.";
+    if (!isPasswordValid(password)) {
+      nextErrors.password = SIMPLE_PASSWORD_HINT;
     }
     if (!agreedToTerms) {
       nextErrors.terms =
@@ -194,12 +181,9 @@ export function SignupCard() {
 
     setSubmitting(true);
     try {
-      const { firstName, lastName } = splitName(fullName);
-
-      // Future-API Clerk sign-up: create the attempt, attach the name
-      // (best-effort — some Clerk instances reject unknown fields, in which
-      // case we still ship the account and let the user set names later
-      // from Settings), then send the email verification code.
+      // PRD §4 — Name is no longer collected at sign-up. Users can set
+      // first/last from Settings later. Keep the sign-up call minimal so
+      // the fewest possible Clerk fields can reject the request.
       const { error: passwordError } = await signUp.password({
         emailAddress: trimmedEmail,
         password,
@@ -214,14 +198,6 @@ export function SignupCard() {
         });
 
         return;
-      }
-
-      if (firstName || lastName) {
-        try {
-          await signUp.update({ firstName, lastName });
-        } catch (nameErr) {
-          logger.warn?.("Signup name update failed (non-fatal)", nameErr);
-        }
       }
 
       const sendCode = await signUp.verifications.sendEmailCode();
@@ -380,33 +356,6 @@ export function SignupCard() {
 
           <form noValidate className="mt-[30px]" onSubmit={onSubmitCredentials}>
             <div>
-              <label className={LABEL_CLASS} htmlFor={fullNameId}>
-                Name
-                <span aria-hidden className="text-[#f12c23]">
-                  *
-                </span>
-              </label>
-              <input
-                required
-                aria-invalid={errors.fullName ? true : undefined}
-                autoComplete="name"
-                className={INPUT_CLASS}
-                id={fullNameId}
-                name="fullName"
-                placeholder="Enter Your Name"
-                spellCheck={false}
-                type="text"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-              {errors.fullName ? (
-                <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
-                  {errors.fullName}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="mt-[8px]">
               <label className={LABEL_CLASS} htmlFor={emailId}>
                 Email
                 <span aria-hidden className="text-[#f12c23]">
@@ -465,29 +414,13 @@ export function SignupCard() {
                   {errors.password}
                 </p>
               ) : null}
-              {/* Password rules always visible so users see them BEFORE
-                  typing and stay visible after a submit error (QA
-                  feedback 2026-07-29 items 39, 56, 64). Previously
-                  hidden when there was an error, which is exactly
-                  when users want the checklist most. */}
-              <ul
-                aria-label="Password requirements"
-                className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2"
-              >
-                {PASSWORD_RULES.map((rule) => {
-                  const passed = rule.test(password);
-
-                  return (
-                    <li
-                      key={rule.key}
-                      className={`flex items-center gap-1.5 text-[12px] ${passed ? "text-[#0a9e5a]" : "text-[#8a8a8a]"}`}
-                    >
-                      <span aria-hidden>{passed ? "✓" : "○"}</span>
-                      <span>{rule.label}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+              {/* PRD §4 — single helper line replacing the 5-chip
+                  checklist (length + upper + lower + number + symbol).
+                  Kept visible always so users see the rule before typing
+                  and after a submit error. */}
+              <p className="mt-2 text-[12px] text-[#8a8a8a]">
+                {SIMPLE_PASSWORD_HINT}
+              </p>
             </div>
 
             <div className="mt-4">
