@@ -107,10 +107,7 @@ export function usePaywall() {
   // "You need to sign in to continue" error state with no way out.
   useEffect(() => {
     setPaywallHandler(
-      (
-        incomingPreview?: PaywallPreview,
-        options?: PaywallRequestOptions,
-      ) =>
+      (incomingPreview?: PaywallPreview, options?: PaywallRequestOptions) =>
         new Promise<PaywallOutcome>((resolve) => {
           if (entitled) {
             resolve("success");
