@@ -754,7 +754,13 @@ function PayStep({
               paymentIntent: intent.paymentIntent,
             }}
             width="100%"
+            onError={(error) => {
+              logger.error("[paywall] Solidgate iframe error", error);
+            }}
             onFail={onFail}
+            onMounted={() => {
+              logger.info("[paywall] Solidgate iframe mounted");
+            }}
             onSuccess={onSuccess}
           />
         </div>

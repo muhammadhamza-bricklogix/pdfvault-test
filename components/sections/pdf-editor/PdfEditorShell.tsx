@@ -4,6 +4,7 @@ import type { Canvas } from "fabric";
 import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
+import dynamic from "next/dynamic";
 import NextImage from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -41,20 +42,46 @@ import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
-import { CompressModal } from "./CompressModal";
-import { CreatePdfModal } from "./CreatePdfModal";
-import { FindReplaceModal } from "./FindReplaceModal";
-import { FormFieldsModal } from "./FormFieldsModal";
-import { PageNumbersModal } from "./PageNumbersModal";
-import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
-import { PerformancePanel } from "./PerformancePanel";
 import { TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
-import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
+
+// Heavy modals — lazy-loaded so they don't inflate the editor's initial bundle.
+const CompressModal = dynamic(
+  () => import("./CompressModal").then((m) => m.CompressModal),
+  { ssr: false, loading: () => null },
+);
+const CreatePdfModal = dynamic(
+  () => import("./CreatePdfModal").then((m) => m.CreatePdfModal),
+  { ssr: false, loading: () => null },
+);
+const FindReplaceModal = dynamic(
+  () => import("./FindReplaceModal").then((m) => m.FindReplaceModal),
+  { ssr: false, loading: () => null },
+);
+const FormFieldsModal = dynamic(
+  () => import("./FormFieldsModal").then((m) => m.FormFieldsModal),
+  { ssr: false, loading: () => null },
+);
+const ManagePagesModal = dynamic(
+  () => import("./ManagePagesModal").then((m) => m.ManagePagesModal),
+  { ssr: false, loading: () => null },
+);
+const PageNumbersModal = dynamic(
+  () => import("./PageNumbersModal").then((m) => m.PageNumbersModal),
+  { ssr: false, loading: () => null },
+);
+const PasswordModal = dynamic(
+  () => import("./PasswordModal").then((m) => m.PasswordModal),
+  { ssr: false, loading: () => null },
+);
+const PerformancePanel = dynamic(
+  () => import("./PerformancePanel").then((m) => m.PerformancePanel),
+  { ssr: false, loading: () => null },
+);
 
 function UploadScreenHeader() {
   return (

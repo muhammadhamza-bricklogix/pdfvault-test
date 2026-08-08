@@ -29,11 +29,27 @@ export const metadata: Metadata = {
     template: "%s | pdfvault.ai",
   },
   description:
-    "pdfvault.ai is a cloud-based PDF tools platform currently being built as a focused, single-page frontend foundation.",
+    "pdfvault.ai — Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
   icons: {
     apple: "/PDFVault_stacked_layers.png",
     icon: "/PDFVault_stacked_layers.png",
     shortcut: "/PDFVault_stacked_layers.png",
+  },
+  openGraph: {
+    description:
+      "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
+    images: [{ height: 630, url: "/og.png", width: 1200 }],
+    siteName: "pdfvault.ai",
+    title: "pdfvault.ai — PDF tools that work",
+    type: "website",
+    url: "https://pdfvault.ai",
+  },
+  twitter: {
+    card: "summary_large_image",
+    description:
+      "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
+    images: ["/og.png"],
+    title: "pdfvault.ai — PDF tools that work",
   },
   // Weglot serves translated versions at `<lang>.pdfvault.ai` subdomains.
   // The alternates block emits the `<link rel="alternate" hreflang="...">`
