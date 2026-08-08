@@ -24,8 +24,8 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "COMPANY",
     links: [
-      // "About Us" hidden until the /about page ships (was a dead #hash link).
-      // "Pricing" hidden until the public pricing page ships.
+      // "Pricing" still hidden until the public pricing page ships.
+      { label: "About Us", href: ROUTES.PUBLIC.ABOUT },
       { label: "Contact Us", href: ROUTES.LEGAL.CONTACT },
     ],
   },
@@ -34,6 +34,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       { label: "Privacy Policy", href: ROUTES.LEGAL.PRIVACY },
       { label: "Terms & Conditions", href: ROUTES.LEGAL.TERMS },
+      { label: "Subscription Terms", href: ROUTES.LEGAL.SUBSCRIPTION_TERMS },
       { label: "Refund Policy", href: ROUTES.LEGAL.REFUND },
       { label: "Cookie Policy", href: ROUTES.LEGAL.COOKIES },
       { label: "Do Not Sell", href: ROUTES.LEGAL.DO_NOT_SELL },
