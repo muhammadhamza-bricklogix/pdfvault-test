@@ -276,7 +276,7 @@ function FaqRow({
   triggerId: string;
 }) {
   return (
-    <li className="border-b border-[var(--pv-hairline)] last:border-b-0">
+    <li className="border-b border-black/5 last:border-b-0">
       <button
         aria-controls={panelId}
         aria-expanded={isOpen}
@@ -290,7 +290,7 @@ function FaqRow({
         </span>
         <span
           aria-hidden
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--pv-hairline)] text-[var(--pv-text-body)] transition-transform duration-200 ${
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)] transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
         >
@@ -312,10 +312,13 @@ function FaqRow({
 }
 
 export function LandingFAQ() {
-  // Track open state as "group:idx". Only one item open at a time keeps
-  // scroll position predictable; users can compare answers by tapping
-  // sequentially.
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  // Active tab (index into GROUPS). Only one item open at a time keeps
+  // scroll position predictable; switching tabs collapses everything.
+  const [activeTab, setActiveTab] = useState(0);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  const activeGroup = GROUPS[activeTab];
+  const tablistId = "faq-tablist";
 
   return (
     <section
@@ -339,35 +342,66 @@ export function LandingFAQ() {
           </p>
         </div>
 
-        <div className="mx-auto mt-12 max-w-[820px] space-y-10">
-          {GROUPS.map((group, gIdx) => (
-            <div key={group.heading}>
-              <h3 className="text-[18px] font-bold text-[var(--pv-text-strong)]">
-                {group.heading}
-              </h3>
-              <ul className="mt-2 rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-5 sm:px-6">
-                {group.items.map((item, iIdx) => {
-                  const key = `${gIdx}:${iIdx}`;
+        {/* Tab strip — one tab per FAQ category. Horizontally scrolls on
+            small screens so labels don't wrap or shrink. */}
+        <div
+          aria-label="FAQ categories"
+          className="mx-auto mt-10 flex max-w-full gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center"
+          id={tablistId}
+          role="tablist"
+        >
+          {GROUPS.map((group, gIdx) => {
+            const selected = activeTab === gIdx;
 
-                  return (
-                    <FaqRow
-                      key={item.q}
-                      isOpen={openKey === key}
-                      item={item}
-                      panelId={`faq-panel-${gIdx}-${iIdx}`}
-                      triggerId={`faq-trigger-${gIdx}-${iIdx}`}
-                      onToggle={() =>
-                        setOpenKey((prev) => (prev === key ? null : key))
-                      }
-                    />
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+            return (
+              <button
+                key={group.heading}
+                aria-controls={`faq-tabpanel-${gIdx}`}
+                aria-selected={selected}
+                className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors sm:px-5 sm:text-[14px] ${
+                  selected
+                    ? "bg-[var(--pv-brand-red)] text-white"
+                    : "bg-black/5 text-[var(--pv-text-strong)] hover:bg-black/10"
+                }`}
+                id={`faq-tab-${gIdx}`}
+                role="tab"
+                tabIndex={selected ? 0 : -1}
+                type="button"
+                onClick={() => {
+                  setActiveTab(gIdx);
+                  setOpenIdx(null);
+                }}
+              >
+                {group.heading}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mx-auto mt-14 max-w-[720px] rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-brand-red)]/5 p-6 text-center sm:p-8">
+        {/* Active tab panel */}
+        <div
+          aria-labelledby={`faq-tab-${activeTab}`}
+          className="mx-auto mt-8 max-w-[820px]"
+          id={`faq-tabpanel-${activeTab}`}
+          role="tabpanel"
+        >
+          <ul>
+            {activeGroup.items.map((item, iIdx) => (
+              <FaqRow
+                key={item.q}
+                isOpen={openIdx === iIdx}
+                item={item}
+                panelId={`faq-panel-${activeTab}-${iIdx}`}
+                triggerId={`faq-trigger-${activeTab}-${iIdx}`}
+                onToggle={() =>
+                  setOpenIdx((prev) => (prev === iIdx ? null : iIdx))
+                }
+              />
+            ))}
+          </ul>
+        </div>
+
+        <div className="mx-auto mt-14 max-w-[720px] rounded-2xl bg-[var(--pv-brand-red)]/5 p-6 text-center sm:p-8">
           <h3 className="text-[18px] font-bold text-[var(--pv-text-strong)] sm:text-[20px]">
             Still have questions?
           </h3>
