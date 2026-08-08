@@ -9,6 +9,7 @@ export const ROUTES = {
     HOME: "/",
     PRICING: "/pricing",
     ALL_TOOLS: "/all-tools",
+    ABOUT: "/about",
   },
   LEGAL: {
     CONTACT: "/contact",
@@ -16,6 +17,7 @@ export const ROUTES = {
     DO_NOT_SELL: "/do-not-sell",
     PRIVACY: "/privacy",
     REFUND: "/refund",
+    SUBSCRIPTION_TERMS: "/subscription-terms",
     TERMS: "/terms-and-conditions",
   },
   APP: {
