@@ -70,7 +70,10 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "Edit & Sign",
         icon: { kind: "line", id: "editor" },
-        href: TOOL_ROUTE.editor,
+        // PRD §5 — tool-specific routing: land in the edit-text tool
+        // directly instead of the generic composer. Signature is one
+        // tap away in the toolbar for the "& Sign" half.
+        href: TOOL_ROUTE.edit,
       },
       {
         label: "Compress",

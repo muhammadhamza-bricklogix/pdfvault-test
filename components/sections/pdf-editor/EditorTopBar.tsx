@@ -4,10 +4,11 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
-  ArrowDown01Icon,
+  ArrowLeft01Icon,
   BackgroundIcon,
   Cursor01Icon,
   DashboardSpeed01Icon,
+  DownloadIcon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
@@ -15,12 +16,15 @@ import {
   PaintBrush01Icon,
   PaintBucketIcon,
   PencilEdit01Icon,
+  PrinterIcon,
   RedoIcon,
   FloppyDiskIcon,
+  Share01Icon,
   ShapesIcon,
   SignatureIcon,
   Stamp01Icon,
   TextFontIcon,
+  Tick01Icon,
   UndoIcon,
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
@@ -28,40 +32,27 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Button,
   ButtonGroup,
-  Dropdown,
-  Label,
   Separator,
   ToggleButton,
   ToggleButtonGroup,
   Toolbar,
   Tooltip,
 } from "@heroui/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { SaveStatusChip } from "./SaveStatusChip";
 import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-
-// Format options shown in the Save dropdown. The editor only opens PDFs, so
-// every non-PDF entry routes through the `/conversion` backend
-// (pdf_to_<format>) via the editor:export event in use-export-editor.ts.
-const EXPORT_FORMATS = [
-  { id: "pdf", label: "PDF (.pdf)" },
-  { id: "docx", label: "Word (.docx)" },
-  { id: "xlsx", label: "Excel (.xlsx)" },
-  { id: "pptx", label: "PowerPoint (.pptx)" },
-  { id: "jpg", label: "JPG image" },
-  { id: "png", label: "PNG image" },
-  { id: "html", label: "HTML" },
-  { id: "txt", label: "Plain text (.txt)" },
-] as const;
 
 // ---------------------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, save
@@ -76,7 +67,9 @@ export function EditorInfoBar() {
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
 
+  const router = useRouter();
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
@@ -116,10 +109,20 @@ export function EditorInfoBar() {
     window.dispatchEvent(new CustomEvent("editor:save"));
   };
 
-  const handleExportAction = (key: Key) => {
-    window.dispatchEvent(
-      new CustomEvent("editor:export", { detail: { format: String(key) } }),
-    );
+  // PRD §7.2: Back arrow returns the user to their dashboard (or the
+  // landing page if the app itself hasn't authenticated them yet, so a
+  // signed-out visitor exploring the editor isn't bounced through a
+  // sign-in dead-end just for pressing Back).
+  const handleBack = () => {
+    router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
+  };
+
+  // PRD §7.3: Print / Download / Done all open the same format modal.
+  // Behavioral parity across the trio matches the reference; the modal
+  // itself is what dispatches editor:export with the chosen format.
+  const openExportModal = () => {
+    if (!file) return;
+    setIsExportModalOpen(true);
   };
 
   const pageNav = (
@@ -197,6 +200,10 @@ export function EditorInfoBar() {
         isOpen={isToolsModalOpen}
         onClose={() => setIsToolsModalOpen(false)}
       />
+      <ExportFormatModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
       {/*
         Mobile (<sm) gets a two-row layout: action bar on row 1, page + zoom
         nav on row 2. The single-row variant crammed five button groups into
@@ -210,6 +217,21 @@ export function EditorInfoBar() {
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
+            {/* PRD §7.2 — back arrow returns to dashboard (or landing if
+                no session yet). Present on mobile + web layouts. */}
+            <Tooltip delay={300}>
+              <Button
+                aria-label="Back to dashboard"
+                size="sm"
+                variant="tertiary"
+                onPress={handleBack}
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Back to dashboard</p>
+              </Tooltip.Content>
+            </Tooltip>
             <HamburgerMenu />
             <Tooltip delay={300}>
               <Button
@@ -250,7 +272,7 @@ export function EditorInfoBar() {
             {pageNav}
           </div>
 
-          {/* Right: zoom (sm+ only) + save + theme. */}
+          {/* Right: zoom (sm+ only) + save + export trio + theme. */}
           <div className="flex items-center gap-1">
             <div className="hidden sm:block">{zoomNav}</div>
 
@@ -258,42 +280,82 @@ export function EditorInfoBar() {
               className="!h-4 hidden self-center sm:block"
               orientation="vertical"
             />
-            <ButtonGroup isDisabled={!file} size="sm" variant="primary">
-              <Tooltip delay={300}>
-                <Button
-                  aria-label="Save"
-                  isDisabled={!canSave}
-                  onPress={onSaveClick}
-                >
-                  <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
-                </Button>
-                <Tooltip.Content>
-                  <p>{saveTooltip}</p>
-                </Tooltip.Content>
-              </Tooltip>
-              <Dropdown>
-                <Button isIconOnly aria-label="Export options">
-                  <ButtonGroup.Separator />
-                  <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-                </Button>
-                <Dropdown.Popover className="min-w-[200px]">
-                  <Dropdown.Menu
-                    aria-label="Export format"
-                    onAction={handleExportAction}
-                  >
-                    {EXPORT_FORMATS.map((fmt) => (
-                      <Dropdown.Item
-                        key={fmt.id}
-                        id={fmt.id}
-                        textValue={`Export as ${fmt.label}`}
-                      >
-                        <Label>{fmt.label}</Label>
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown.Menu>
-                </Dropdown.Popover>
-              </Dropdown>
-            </ButtonGroup>
+
+            {/* Save stays as a discrete icon — the PRD only reshapes the
+                right-most export controls, and Save is a distinct action
+                (cloud persist) from the download/checkout trio below. */}
+            <Tooltip delay={300}>
+              <Button
+                aria-label="Save"
+                isDisabled={!canSave}
+                size="sm"
+                variant="tertiary"
+                onPress={onSaveClick}
+              >
+                <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>{saveTooltip}</p>
+              </Tooltip.Content>
+            </Tooltip>
+
+            <Separator
+              className="!h-4 hidden self-center sm:block"
+              orientation="vertical"
+            />
+
+            {/* Export controls quad — Print / Download / Share / Done.
+                All four open the shared format-selection modal
+                (reference: image #2). Print + Download are icon-only,
+                Share is an outline pill, Done is the primary CTA. */}
+            <Tooltip delay={300}>
+              <Button
+                aria-label="Print"
+                isDisabled={!file}
+                size="sm"
+                variant="tertiary"
+                onPress={openExportModal}
+              >
+                <HugeiconsIcon icon={PrinterIcon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Print</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Tooltip delay={300}>
+              <Button
+                aria-label="Download"
+                isDisabled={!file}
+                size="sm"
+                variant="tertiary"
+                onPress={openExportModal}
+              >
+                <HugeiconsIcon icon={DownloadIcon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Download</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Button
+              aria-label="Share"
+              isDisabled={!file}
+              size="sm"
+              variant="secondary"
+              onPress={openExportModal}
+            >
+              <HugeiconsIcon icon={Share01Icon} size={14} />
+              <span className="ml-1 hidden sm:inline">Share</span>
+            </Button>
+            <Button
+              aria-label="Done"
+              isDisabled={!file}
+              size="sm"
+              variant="primary"
+              onPress={openExportModal}
+            >
+              <HugeiconsIcon icon={Tick01Icon} size={14} />
+              <span className="ml-1 hidden sm:inline">Done</span>
+            </Button>
 
             <Separator
               className="!h-4 hidden self-center sm:block"

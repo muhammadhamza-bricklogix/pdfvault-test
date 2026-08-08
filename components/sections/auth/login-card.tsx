@@ -2,10 +2,9 @@
 
 import { useSignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
-import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -64,23 +63,9 @@ function readClerkError(err: unknown, fallback: string): string {
   return humaniseClerkMessage(raw, first?.code) || fallback;
 }
 
-/**
- * Rewrites Clerk's terse / awkward error strings into copy that fits
- * PDFVault's voice. Falls through to the raw message when we don't have
- * a specific rewrite, so newly-added Clerk error codes aren't hidden.
- */
 function humaniseClerkMessage(raw: string, code?: string): string {
   const s = raw.toLowerCase();
 
-  if (code === "form_password_pwned" || /pwned/i.test(s)) {
-    return "This password appeared in a public data breach. Choose a different one.";
-  }
-  if (
-    code === "form_password_not_strong_enough" ||
-    /not strong enough/i.test(s)
-  ) {
-    return "Password isn't strong enough. Use at least 8 characters with a mix of upper, lower, number, and symbol.";
-  }
   if (
     code === "form_identifier_exists" ||
     /that email address is taken/i.test(s)
@@ -88,12 +73,10 @@ function humaniseClerkMessage(raw: string, code?: string): string {
     return "This email is already registered. Try signing in instead.";
   }
   if (
-    code === "form_password_incorrect" ||
-    code === "strategy_for_user_invalid" ||
-    /password is incorrect/i.test(s) ||
-    /verification strategy is not valid/i.test(s)
+    code === "form_code_incorrect" ||
+    /code is incorrect|didn.?t work/i.test(s)
   ) {
-    return "Wrong password. Please enter your correct password.";
+    return "That code doesn't match. Check your inbox or resend a new one.";
   }
   if (
     code === "form_identifier_not_found" ||
@@ -105,17 +88,23 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   return raw;
 }
 
-type Step = "credentials" | "twoFactor";
+// PRD §3 — password path is retired. Flow is now:
+//   1. "email"     → user enters address, we call signIn.create() +
+//                    signIn.emailCode.sendCode()
+//   2. "code"      → user enters the 6-digit first-factor OTP; success
+//                    either finalizes (status "complete") or advances to
+//                    "twoFactor" if the account still has a 2FA layer.
+//   3. "twoFactor" → preserved 2FA path (email/phone/TOTP/backup). Invariant
+//                    #16 lives here; do not delete without a 2FA-account
+//                    test pass.
+type Step = "email" | "code" | "twoFactor";
 
 type FieldErrors = {
   email?: string;
-  password?: string;
   code?: string;
   form?: string;
 };
 
-// Second-factor strategies we can prompt for. Matches the shape Clerk
-// returns in `signIn.supportedSecondFactors[].strategy`.
 type SecondFactorStrategy =
   | "email_code"
   | "phone_code"
@@ -124,30 +113,24 @@ type SecondFactorStrategy =
 
 export function LoginCard() {
   const { signIn } = useSignIn();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [step, setStep] = useState<Step>("credentials");
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordRevealed, setPasswordRevealed] = useState(false);
+  const [code, setCode] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
   // Second-factor state. `strategy` is picked once we detect
-  // `needs_second_factor` on the sign-in attempt; `code` holds what the
-  // user types in the 6-digit input.
+  // `needs_second_factor`; `code` is shared with the first-factor step.
   const [secondFactorStrategy, setSecondFactorStrategy] =
     useState<SecondFactorStrategy | null>(null);
-  const [code, setCode] = useState("");
-  const [resending, setResending] = useState(false);
 
   const emailId = useId();
-  const passwordId = useId();
   const codeId = useId();
   const emailErrorId = useId();
-  const passwordErrorId = useId();
   const codeErrorId = useId();
   const formErrorId = useId();
   const statusId = useId();
@@ -157,6 +140,25 @@ export function LoginCard() {
       safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
     [searchParams],
   );
+
+  // Post-verify navigation. Invariant #15: iOS Safari commits the Clerk
+  // session cookie during a full-page navigation; router.push outruns the
+  // commit and lands on middleware that reads the user as signed-out,
+  // bouncing them to /sign-up. window.location.assign is required.
+  const finalizeAndRedirect = async () => {
+    const { error: finalizeError } = await signIn.finalize({
+      navigate: ({ decorateUrl }) => {
+        window.location.assign(decorateUrl(afterSignInPath));
+      },
+    });
+
+    if (finalizeError) {
+      setErrors({
+        form: readClerkError(finalizeError, "Couldn't finish signing you in."),
+      });
+      setSubmitting(false);
+    }
+  };
 
   const onGoogle = async () => {
     if (!signIn) return;
@@ -177,16 +179,11 @@ export function LoginCard() {
     }
   };
 
-  const onSubmitCredentials = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const onSubmitEmail = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!signIn) return;
 
     const value = email.trim();
-
-    setNotice(null);
-
     const nextErrors: FieldErrors = {};
 
     if (value.length === 0) {
@@ -194,10 +191,7 @@ export function LoginCard() {
     } else if (!EMAIL_RE.test(value)) {
       nextErrors.email = "Please enter a valid email address.";
     }
-    if (password.length === 0) {
-      nextErrors.password = "Enter your password to continue.";
-    }
-    if (nextErrors.email || nextErrors.password) {
+    if (nextErrors.email) {
       setErrors(nextErrors);
 
       return;
@@ -205,19 +199,17 @@ export function LoginCard() {
 
     setEmail(value);
     setErrors({});
+    setNotice(null);
     setSubmitting(true);
 
     try {
-      const { error: submitError } = await signIn.password({
-        emailAddress: value,
-        password,
-      });
+      const { error: createError } = await signIn.create({ identifier: value });
 
-      if (submitError) {
+      if (createError) {
         setErrors({
           form: readClerkError(
-            submitError,
-            "Couldn't sign you in. Please try again.",
+            createError,
+            "Couldn't start sign-in. Please try again.",
           ),
         });
         setSubmitting(false);
@@ -225,115 +217,94 @@ export function LoginCard() {
         return;
       }
 
-      if (signIn.status === "complete") {
-        const { error: finalizeError } = await signIn.finalize({
-          navigate: ({ decorateUrl }) => {
-            // Full-page navigation (not `router.push`). Clerk sets the
-            // session cookie during finalize; on mobile Safari the SPA
-            // transition can outrun the cookie commit, so the middleware
-            // sees the user as signed-out and bounces them to /sign-up.
-            // `window.location.assign` forces a fresh document request
-            // that always includes the freshly-set cookie.
-            window.location.assign(decorateUrl(afterSignInPath));
-          },
+      const { error: sendError } = await signIn.emailCode.sendCode();
+
+      if (sendError) {
+        setErrors({
+          form: readClerkError(
+            sendError,
+            "Couldn't send your verification code. Try again.",
+          ),
         });
-
-        if (finalizeError) {
-          setErrors({
-            form: readClerkError(
-              finalizeError,
-              "Couldn't finish signing you in.",
-            ),
-          });
-          setSubmitting(false);
-        }
-
-        return;
-      }
-
-      // Account has 2FA enabled → password verified, now prompt for the
-      // second-factor code. We prefer email_code because that's what our
-      // Clerk instance defaults to, but fall back to whatever the account
-      // supports.
-      if (signIn.status === "needs_second_factor") {
-        const supported =
-          (signIn.supportedSecondFactors as
-            | { strategy: SecondFactorStrategy; emailAddressId?: string }[]
-            | undefined) ?? [];
-        const preferred =
-          supported.find((f) => f.strategy === "email_code") ??
-          supported.find((f) => f.strategy === "totp") ??
-          supported.find((f) => f.strategy === "phone_code") ??
-          supported[0];
-
-        if (!preferred) {
-          setErrors({
-            form: "Two-factor authentication is required but no method is available. Contact support.",
-          });
-          setSubmitting(false);
-
-          return;
-        }
-
-        setSecondFactorStrategy(preferred.strategy);
-
-        // TOTP + backup codes are user-typed — no prep call needed. For
-        // email_code / phone_code we ask Clerk to send the code now via
-        // the `mfa` namespace of the Future-API sign-in resource.
-        if (preferred.strategy === "email_code") {
-          const { error: sendErr } = await signIn.mfa.sendEmailCode();
-
-          if (sendErr) {
-            setErrors({
-              form: readClerkError(
-                sendErr,
-                "Couldn't send your verification code. Try again.",
-              ),
-            });
-            setSubmitting(false);
-
-            return;
-          }
-          setNotice("We sent a 6-digit code to your email.");
-        } else if (preferred.strategy === "phone_code") {
-          const { error: sendErr } = await signIn.mfa.sendPhoneCode();
-
-          if (sendErr) {
-            setErrors({
-              form: readClerkError(
-                sendErr,
-                "Couldn't send your verification code. Try again.",
-              ),
-            });
-            setSubmitting(false);
-
-            return;
-          }
-          setNotice("We sent a 6-digit code to your phone.");
-        }
-
-        setStep("twoFactor");
         setSubmitting(false);
 
         return;
       }
 
-      // Some other unexpected status — fall through to SSO callback so
-      // Clerk's own recovery UI can pick up the pieces.
-      router.push(ROUTES.AUTH.SSO_CALLBACK);
+      setNotice("We sent a 6-digit code to your email.");
+      setCode("");
+      setStep("code");
     } catch (err) {
-      logger.error("Password sign-in failed", err);
+      logger.error("Sign-in email step failed", err);
       setErrors({
         form: readClerkError(err, "Couldn't sign you in. Please try again."),
       });
+    } finally {
       setSubmitting(false);
     }
+  };
+
+  // Adapts a supportedSecondFactors list into a preferred strategy +
+  // triggers the prep call for the ones that need one (email/phone).
+  const prepSecondFactor = async () => {
+    const supported =
+      (signIn.supportedSecondFactors as
+        | { strategy: SecondFactorStrategy; emailAddressId?: string }[]
+        | undefined) ?? [];
+    const preferred =
+      supported.find((f) => f.strategy === "email_code") ??
+      supported.find((f) => f.strategy === "totp") ??
+      supported.find((f) => f.strategy === "phone_code") ??
+      supported[0];
+
+    if (!preferred) {
+      setErrors({
+        form: "Two-factor authentication is required but no method is available. Contact support.",
+      });
+
+      return false;
+    }
+
+    setSecondFactorStrategy(preferred.strategy);
+
+    if (preferred.strategy === "email_code") {
+      const { error: sendErr } = await signIn.mfa.sendEmailCode();
+
+      if (sendErr) {
+        setErrors({
+          form: readClerkError(
+            sendErr,
+            "Couldn't send your verification code. Try again.",
+          ),
+        });
+
+        return false;
+      }
+      setNotice("We sent a 6-digit code to your email.");
+    } else if (preferred.strategy === "phone_code") {
+      const { error: sendErr } = await signIn.mfa.sendPhoneCode();
+
+      if (sendErr) {
+        setErrors({
+          form: readClerkError(
+            sendErr,
+            "Couldn't send your verification code. Try again.",
+          ),
+        });
+
+        return false;
+      }
+      setNotice("We sent a 6-digit code to your phone.");
+    } else {
+      setNotice(null);
+    }
+
+    return true;
   };
 
   const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!signIn) return;
-    if (!secondFactorStrategy) return;
 
     const trimmedCode = code.trim();
 
@@ -348,19 +319,13 @@ export function LoginCard() {
     setSubmitting(true);
 
     try {
-      const verify = async () => {
-        switch (secondFactorStrategy) {
-          case "email_code":
-            return signIn.mfa.verifyEmailCode({ code: trimmedCode });
-          case "phone_code":
-            return signIn.mfa.verifyPhoneCode({ code: trimmedCode });
-          case "totp":
-            return signIn.mfa.verifyTOTP({ code: trimmedCode });
-          case "backup_code":
-            return signIn.mfa.verifyBackupCode({ code: trimmedCode });
-        }
-      };
-      const { error: attemptError } = (await verify()) ?? {};
+      // Two paths through this handler:
+      // - step === "code" → first-factor email OTP (the new PRD path)
+      // - step === "twoFactor" → account has 2FA on top of first-factor
+      const verifyResult = await (step === "twoFactor"
+        ? verifySecondFactor(trimmedCode)
+        : signIn.emailCode.verifyCode({ code: trimmedCode }));
+      const attemptError = verifyResult?.error ?? null;
 
       if (attemptError) {
         setErrors({
@@ -374,30 +339,30 @@ export function LoginCard() {
         return;
       }
 
-      if (signIn.status !== "complete") {
-        setErrors({ code: "Verification didn't finish. Try again." });
-        setSubmitting(false);
+      if (signIn.status === "complete") {
+        await finalizeAndRedirect();
 
         return;
       }
 
-      const { error: finalizeError } = await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          window.location.assign(decorateUrl(afterSignInPath));
-        },
-      });
+      // First-factor code accepted but account still has a 2FA layer.
+      // Invariant #16 — 2FA-enabled accounts must not silently loop back.
+      if (step === "code" && signIn.status === "needs_second_factor") {
+        const ok = await prepSecondFactor();
 
-      if (finalizeError) {
-        setErrors({
-          form: readClerkError(
-            finalizeError,
-            "Couldn't finish signing you in.",
-          ),
-        });
         setSubmitting(false);
+        if (ok) {
+          setCode("");
+          setStep("twoFactor");
+        }
+
+        return;
       }
+
+      setErrors({ code: "Verification didn't finish. Try again." });
+      setSubmitting(false);
     } catch (err) {
-      logger.error("2FA verification failed", err);
+      logger.error("Verification failed", err);
       setErrors({
         code: readClerkError(err, "That code didn't work. Try again."),
       });
@@ -405,19 +370,53 @@ export function LoginCard() {
     }
   };
 
-  const onResendCode = async () => {
-    if (!signIn || !secondFactorStrategy) return;
-    if (
-      secondFactorStrategy !== "email_code" &&
-      secondFactorStrategy !== "phone_code"
-    ) {
-      return;
+  const verifySecondFactor = async (value: string) => {
+    switch (secondFactorStrategy) {
+      case "email_code":
+        return signIn.mfa.verifyEmailCode({ code: value });
+      case "phone_code":
+        return signIn.mfa.verifyPhoneCode({ code: value });
+      case "totp":
+        return signIn.mfa.verifyTOTP({ code: value });
+      case "backup_code":
+        return signIn.mfa.verifyBackupCode({ code: value });
+      default:
+        return { error: null } as const;
     }
+  };
 
+  const onResendCode = async () => {
+    if (!signIn) return;
     setErrors({});
     setResending(true);
 
     try {
+      if (step === "code") {
+        const { error: sendErr } = await signIn.emailCode.sendCode();
+
+        if (sendErr) {
+          setErrors({
+            form: readClerkError(
+              sendErr,
+              "Couldn't resend the code. Try again.",
+            ),
+          });
+
+          return;
+        }
+        setNotice("A new code was sent to your email.");
+
+        return;
+      }
+
+      if (
+        secondFactorStrategy !== "email_code" &&
+        secondFactorStrategy !== "phone_code"
+      ) {
+        // TOTP / backup codes are user-generated — nothing to resend.
+        return;
+      }
+
       const { error: sendErr } =
         secondFactorStrategy === "email_code"
           ? await signIn.mfa.sendEmailCode()
@@ -445,14 +444,32 @@ export function LoginCard() {
     }
   };
 
-  const goBackToCredentials = () => {
+  const goBackToEmail = () => {
     setErrors({});
     setNotice(null);
     setCode("");
-    setPassword("");
     setSecondFactorStrategy(null);
-    setStep("credentials");
+    setStep("email");
+    // Reset the underlying Clerk sign-in so a fresh identifier can be
+    // submitted without hitting "sign-in already exists" state.
+    try {
+      signIn?.reset?.();
+    } catch (err) {
+      logger.warn?.("signIn.reset failed", err);
+    }
   };
+
+  const isCodeStep = step === "code" || step === "twoFactor";
+
+  const codeSubtitle =
+    step === "twoFactor"
+      ? "Enter your two-factor authentication code"
+      : `We sent a 6-digit code to ${email}.`;
+
+  const canResendInline =
+    step === "code" ||
+    secondFactorStrategy === "email_code" ||
+    secondFactorStrategy === "phone_code";
 
   return (
     <section
@@ -463,15 +480,15 @@ export function LoginCard() {
         className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
         id={`${emailId}-title`}
       >
-        Login to PDFVault
+        {isCodeStep ? "Check your email" : "Welcome back to PDF Vault"}
       </h1>
-      <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
-        {step === "credentials"
-          ? "Please enter your details below to sign in"
-          : "Enter the verification code we sent you"}
-      </p>
+      {isCodeStep ? (
+        <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
+          {codeSubtitle}
+        </p>
+      ) : null}
 
-      {step === "credentials" ? (
+      {step === "email" ? (
         <>
           <div className="mt-[30px] flex flex-col gap-3">
             <button
@@ -481,7 +498,7 @@ export function LoginCard() {
               onClick={onGoogle}
             >
               <GoogleIcon />
-              {oauthLoading ? "Connecting to Google…" : "Login with Google"}
+              {oauthLoading ? "Connecting to Google…" : "Continue with Google"}
             </button>
           </div>
 
@@ -491,7 +508,7 @@ export function LoginCard() {
             <span className="h-px bg-[#d9d9d9]" />
           </div>
 
-          <form noValidate className="mt-6" onSubmit={onSubmitCredentials}>
+          <form noValidate className="mt-6" onSubmit={onSubmitEmail}>
             <label
               className="block text-[14px] text-[#5f5f5f]"
               htmlFor={emailId}
@@ -531,57 +548,6 @@ export function LoginCard() {
               </p>
             ) : null}
 
-            <div className="mt-4 flex items-center justify-between">
-              <label
-                className="text-[14px] text-[#5f5f5f]"
-                htmlFor={passwordId}
-              >
-                Password
-                <span aria-hidden className="text-[#f12c23]">
-                  *
-                </span>
-              </label>
-              <Link
-                className="text-[13px] font-medium text-[#f12c23] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-                href={ROUTES.AUTH.FORGOT_PASSWORD}
-              >
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative mt-2">
-              <input
-                required
-                aria-describedby={errors.password ? passwordErrorId : undefined}
-                aria-invalid={errors.password ? true : undefined}
-                autoComplete="current-password"
-                className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] pl-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
-                id={passwordId}
-                name="password"
-                placeholder="Enter Your Password"
-                type={passwordRevealed ? "text" : "password"}
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  if (errors.password) {
-                    setErrors((prev) => ({ ...prev, password: undefined }));
-                  }
-                }}
-              />
-              <PasswordRevealToggle
-                revealed={passwordRevealed}
-                onToggle={() => setPasswordRevealed((v) => !v)}
-              />
-            </div>
-            {errors.password ? (
-              <p
-                className="mt-1.5 text-[13px] text-[#f12c23]"
-                id={passwordErrorId}
-                role="alert"
-              >
-                {errors.password}
-              </p>
-            ) : null}
-
             {errors.form ? (
               <p
                 className="mt-2 text-[13px] text-[#f12c23]"
@@ -597,7 +563,7 @@ export function LoginCard() {
               disabled={submitting}
               type="submit"
             >
-              {submitting ? "Signing in…" : "Sign In"}
+              {submitting ? "Sending code…" : "Continue"}
               {submitting ? null : <ArrowIcon />}
             </button>
           </form>
@@ -607,10 +573,10 @@ export function LoginCard() {
           <button
             className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
             type="button"
-            onClick={goBackToCredentials}
+            onClick={goBackToEmail}
           >
             <BackChevron />
-            Back to sign in
+            Use a different email
           </button>
 
           <label className="block text-[14px] text-[#5f5f5f]" htmlFor={codeId}>
@@ -665,12 +631,11 @@ export function LoginCard() {
             disabled={submitting || code.length === 0}
             type="submit"
           >
-            {submitting ? "Verifying…" : "Verify"}
+            {submitting ? "Verifying…" : "Continue"}
             {submitting ? null : <ArrowIcon />}
           </button>
 
-          {secondFactorStrategy === "email_code" ||
-          secondFactorStrategy === "phone_code" ? (
+          {canResendInline ? (
             <button
               className="mt-3 block w-full text-center text-[13px] text-[#666666] hover:text-[#1a1c21] disabled:opacity-60"
               disabled={resending}
@@ -686,23 +651,25 @@ export function LoginCard() {
       <p aria-live="polite" className="sr-only" id={statusId}>
         {notice}
       </p>
-      {notice ? (
+      {notice && step === "email" ? (
         <p className="mt-3 text-center text-[13px] text-[#666666]">{notice}</p>
       ) : null}
 
-      <p className="mt-6 text-center text-[16px] text-[#5f5f5f]">
-        Don’t have an account yet?{" "}
-        <Link
-          className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={
-            afterSignInPath !== ROUTES.APP.DASHBOARD
-              ? `${ROUTES.AUTH.SIGN_UP}?redirect_url=${encodeURIComponent(afterSignInPath)}`
-              : ROUTES.AUTH.SIGN_UP
-          }
-        >
-          Sign Up
-        </Link>
-      </p>
+      {step === "email" ? (
+        <p className="mt-6 text-center text-[16px] text-[#5f5f5f]">
+          Don’t have an account yet?{" "}
+          <Link
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            href={
+              afterSignInPath !== ROUTES.APP.DASHBOARD
+                ? `${ROUTES.AUTH.SIGN_UP}?redirect_url=${encodeURIComponent(afterSignInPath)}`
+                : ROUTES.AUTH.SIGN_UP
+            }
+          >
+            Sign Up
+          </Link>
+        </p>
+      ) : null}
     </section>
   );
 }

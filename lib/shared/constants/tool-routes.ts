@@ -19,7 +19,9 @@ export type EditorToolSlug =
   | "split"
   | "watermark"
   | "extract-images"
-  | "flatten"; // remove annotations
+  | "flatten" // remove annotations
+  | "edit" // land in edit-text tool (PRD §5/§6 dashboard "Edit PDF")
+  | "sign"; // land in signature tool (PRD §5/§6 dashboard "Sign …")
 
 /**
  * All composer tool routes carry `?fresh=1` so the hydrator wipes the
@@ -44,6 +46,8 @@ const composer = (tool?: EditorToolSlug, extra?: Record<string, string>) => {
 
 export const TOOL_ROUTE = {
   editor: composer(),
+  edit: composer("edit"),
+  sign: composer("sign"),
   compress: composer("compress"),
   password: composer("password"),
   unlock: composer("unlock"),

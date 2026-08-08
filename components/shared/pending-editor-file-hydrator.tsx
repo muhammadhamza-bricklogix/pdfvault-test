@@ -493,6 +493,18 @@ export function PendingEditorFileHydrator() {
           case "watermark":
             setActiveTool("watermark");
             break;
+          case "edit":
+            // PRD §5/§6 — dashboard "Edit PDF" tile lands the user
+            // directly in the edit-text tool instead of the generic
+            // composer with no tool selected.
+            setActiveTool("editText");
+            break;
+          case "sign":
+            // PRD §5/§6 — dashboard "Sign & Watermark" tile lands the
+            // user in the signature tool. Watermark stays reachable via
+            // the toolbar.
+            setActiveTool("signature");
+            break;
           case "extract-images":
             window.dispatchEvent(new CustomEvent("editor:extract-images"));
             break;

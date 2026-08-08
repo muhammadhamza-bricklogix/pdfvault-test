@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LandingBanner } from "@/components/sections/new-landing/landing-banner";
+import { LandingFAQ } from "@/components/sections/new-landing/landing-faq";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
@@ -34,6 +35,7 @@ export default function NewLandingPage() {
         <LandingTools />
         <LandingBanner />
         {/* <LandingTestimonials /> */}
+        <LandingFAQ />
       </main>
       <LandingFooter />
     </div>
