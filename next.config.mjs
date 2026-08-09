@@ -17,6 +17,14 @@ const nextConfig = {
   // only the node_modules actually referenced at runtime — the image we ship
   // to ECS Fargate is ~10x smaller than a full node_modules copy.
   output: "standalone",
+
+  // Serve AVIF first (best compression), fall back to WebP, then original.
+  // Next.js image optimizer converts on the fly and caches at the CDN edge.
+  // minimumCacheTTL: 30 days — public assets don't change without a new deploy.
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2_592_000,
+  },
   // Parent dirs (e.g. /Users/softaims/package-lock.json) must not win lockfile discovery —
   // wrong root breaks output tracing and can break Turbopack HMR / stale UI in dev.
   outputFileTracingRoot: projectRoot,

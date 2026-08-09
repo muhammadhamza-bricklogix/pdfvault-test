@@ -108,14 +108,26 @@ function SendIcon() {
  * top-centred, and clipped to the footer's height by `overflow-hidden`. No
  * inversion, tint, overlay, or extra gradient — the artwork is deliberately
  * very low contrast.
+ *
+ * Served through next/image (fill + object-cover) so the optimizer converts
+ * the 512 KB PNG to WebP/AVIF (~40–80 KB) and caches it at the CDN edge.
+ * `loading="lazy"` because the footer is always below the fold.
  */
 function FooterBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-0 select-none bg-cover bg-top bg-no-repeat"
-      style={{ backgroundImage: "url('/landing/footer-bg.png')" }}
-    />
+      className="pointer-events-none absolute inset-0 z-0 select-none overflow-hidden"
+    >
+      <Image
+        fill
+        alt=""
+        className="object-cover object-top"
+        loading="lazy"
+        quality={80}
+        src="/landing/footer-bg.png"
+      />
+    </div>
   );
 }
 
@@ -145,6 +157,7 @@ export function LandingFooter() {
               alt="PDFVault"
               className="h-[40px] w-auto brightness-0 invert"
               height={40}
+              loading="lazy"
               src="/landing/logo-with-text.png"
               width={116}
             />

@@ -88,6 +88,35 @@ export default function RootLayout({
       lang="en"
     >
       {/*
+        Preconnect to critical third-party origins so the TCP + TLS handshakes
+        happen in parallel with HTML parsing rather than on demand. Order
+        matters: Clerk is used on every authenticated request, Weglot on every
+        page, Solidgate only in the paywall — but the penalty for an unused
+        preconnect is near zero so we include all three.
+      */}
+      {/* Clerk */}
+      <link
+        crossOrigin="anonymous"
+        href="https://clerk.pdfvault.ai"
+        rel="preconnect"
+      />
+      <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
+      {/* Weglot */}
+      <link
+        crossOrigin="anonymous"
+        href="https://cdn.weglot.com"
+        rel="preconnect"
+      />
+      <link href="https://cdn.weglot.com" rel="dns-prefetch" />
+      {/* Solidgate charge-auth */}
+      <link
+        crossOrigin="anonymous"
+        href="https://cdn.charge-auth.com"
+        rel="preconnect"
+      />
+      <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
+
+      {/*
         Read the persisted Weglot language as early as possible (before the
         page becomes interactive) so WeglotLoader can switch to it
         immediately after initialization. This minimizes the English flash

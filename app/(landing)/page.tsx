@@ -1,22 +1,36 @@
 import type { Metadata } from "next";
 
-import { LandingBanner } from "@/components/sections/new-landing/landing-banner";
-import { LandingFAQ } from "@/components/sections/new-landing/landing-faq";
+import dynamic from "next/dynamic";
+
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
-// Testimonials hidden per PM review 2026-07 (copy pending).
-// import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
-import { LandingTools } from "@/components/sections/new-landing/landing-tools";
+
+// Below-fold client components — split into separate JS chunks so the browser
+// can prioritise above-fold hydration first. SSR is kept on (default) so
+// the HTML content is still present for crawlers and for users on slow JS.
+const LandingTools = dynamic(() =>
+  import("@/components/sections/new-landing/landing-tools").then(
+    (m) => m.LandingTools,
+  ),
+);
+
+const LandingBanner = dynamic(() =>
+  import("@/components/sections/new-landing/landing-banner").then(
+    (m) => m.LandingBanner,
+  ),
+);
+
+const LandingFAQ = dynamic(() =>
+  import("@/components/sections/new-landing/landing-faq").then(
+    (m) => m.LandingFAQ,
+  ),
+);
 
 export const metadata: Metadata = {
   title: "PDFVault — A smarter, more secure home for every PDF",
-  // Root layout already sets the PDFVault stacked-layers favicon
-  // globally, but Next.js metadata resolution merges per-route
-  // overrides — restating it here makes the landing tab keep the
-  // brand icon even if the root layout is ever restructured.
   icons: {
     apple: "/PDFVault_stacked_layers.png",
     icon: "/PDFVault_stacked_layers.png",
