@@ -13,50 +13,61 @@ import { useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
-// 6 format tiles matching the reference in image #3 (PDF Guru / user
-// spec): PDF, PNG, Word, Excel, JPG, PPTX. All route through the same
-// editor:export event pipeline in useExportEditor.
 type FormatOption = {
   id: Extract<ExportFormat, "pdf" | "docx" | "xlsx" | "pptx" | "jpg" | "png">;
   label: string;
+  ext: string;
   icon: typeof Pdf01Icon;
-  iconClass: string;
+  iconBg: string;
+  iconColor: string;
 };
 
 const FORMAT_OPTIONS: FormatOption[] = [
   {
+    ext: ".pdf",
     icon: Pdf01Icon,
-    iconClass: "bg-red-100 text-red-600",
+    iconBg: "bg-red-50",
+    iconColor: "text-red-500",
     id: "pdf",
     label: "PDF",
   },
   {
+    ext: ".png",
     icon: FileImageIcon,
-    iconClass: "bg-orange-100 text-orange-600",
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-500",
     id: "png",
     label: "PNG",
   },
   {
+    ext: ".docx",
     icon: Doc01Icon,
-    iconClass: "bg-blue-100 text-blue-600",
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-500",
     id: "docx",
     label: "Word",
   },
   {
+    ext: ".xlsx",
     icon: Doc01Icon,
-    iconClass: "bg-emerald-100 text-emerald-600",
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-500",
     id: "xlsx",
     label: "Excel",
   },
   {
+    ext: ".jpg",
     icon: FileImageIcon,
-    iconClass: "bg-pink-100 text-pink-600",
+    iconBg: "bg-pink-50",
+    iconColor: "text-pink-500",
     id: "jpg",
     label: "JPG",
   },
   {
+    ext: ".pptx",
     icon: FileImageIcon,
-    iconClass: "bg-amber-100 text-amber-600",
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-500",
     id: "pptx",
     label: "PPTX",
   },
@@ -94,21 +105,22 @@ function ExportFormatModalBody({
   };
 
   return (
-    <Modal.Dialog className="!max-h-[calc(100dvh-32px)] !w-[92vw] !max-w-[560px] overflow-y-auto overscroll-contain">
+    <Modal.Dialog className="!max-h-[calc(100dvh-32px)] !w-[92vw] !max-w-[520px] overflow-y-auto overscroll-contain">
       <Modal.CloseTrigger />
-      <Modal.Header className="!pb-2 text-center">
-        <Modal.Heading className="text-center text-2xl font-bold">
-          Great Job!
+      <Modal.Header className="!pb-3 text-center">
+        <Modal.Heading className="text-center text-xl font-bold">
+          Download File
         </Modal.Heading>
         <p className="mt-1 text-center text-sm text-default-500">
-          Select the format to download your file.
+          Choose a format to export your document.
         </p>
       </Modal.Header>
 
       <Modal.Body className="space-y-5">
+        {/* Format tiles — 3-column grid of visual cards */}
         <div
           aria-label="Export format"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          className="grid grid-cols-3 gap-3"
           role="radiogroup"
         >
           {FORMAT_OPTIONS.map((opt) => {
@@ -118,33 +130,26 @@ function ExportFormatModalBody({
               <button
                 key={opt.id}
                 aria-checked={checked}
-                className={`flex items-center justify-between rounded-lg border p-3 text-left transition ${
+                className={`flex flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 text-center transition-all ${
                   checked
-                    ? "border-accent bg-accent/5 ring-2 ring-accent"
-                    : "border-default-200 hover:bg-default-50"
+                    ? "border-[#f12c23] bg-red-50 shadow-sm"
+                    : "border-default-200 hover:border-default-300 hover:bg-default-50"
                 }`}
                 role="radio"
                 type="button"
                 onClick={() => setSelected(opt.id)}
               >
-                <span className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                      checked ? "border-accent" : "border-default-300"
-                    }`}
-                  >
-                    {checked && (
-                      <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-                    )}
-                  </span>
-                  <span className="text-base font-medium">{opt.label}</span>
+                <span
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${opt.iconBg} ${opt.iconColor}`}
+                >
+                  <HugeiconsIcon icon={opt.icon} size={26} />
                 </span>
                 <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-md ${opt.iconClass}`}
+                  className={`text-sm font-semibold ${checked ? "text-[#f12c23]" : "text-default-700"}`}
                 >
-                  <HugeiconsIcon icon={opt.icon} size={18} />
+                  {opt.label}
                 </span>
+                <span className="text-[11px] text-default-400">{opt.ext}</span>
               </button>
             );
           })}
@@ -187,10 +192,6 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
       }}
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
-        {/* Remount the body each open so the format + name defaults are
-            recomputed from the current file — avoids setState-in-effect
-            reset patterns and cleanly discards the user's last-open edits
-            when they cancel without shipping. */}
         {isOpen && (
           <ExportFormatModalBody
             key={`${initialName}::${isOpen}`}
