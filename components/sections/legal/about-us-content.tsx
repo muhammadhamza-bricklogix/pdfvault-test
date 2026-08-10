@@ -241,7 +241,7 @@ export function AboutUsContent() {
           you need them.
         </p>
         <Link
-          className="mt-5 inline-flex h-12 items-center justify-center rounded-full border border-[var(--pv-brand-red)] bg-[var(--pv-brand-red)] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-dark,#d21f17)] hover:border-[var(--pv-brand-red-dark,#d21f17)]"
+          className="mt-5 inline-flex h-12 items-center justify-center rounded-full border border-[var(--pv-brand-red)] bg-[var(--pv-brand-red)] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-dark,#d21f17)] hover:border-[var(--pv-brand-red-dark,#d21f17)] hover:text-white"
           href={ROUTES.PUBLIC.HOME}
         >
           Start Now
