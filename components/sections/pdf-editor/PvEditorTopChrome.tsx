@@ -1,6 +1,5 @@
 "use client";
 
-import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import type { ComponentProps } from "react";
 
@@ -33,10 +32,10 @@ import {
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Dropdown, Label, Tooltip } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
@@ -45,6 +44,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
+import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { SaveStatusChip } from "./SaveStatusChip";
 
@@ -129,16 +129,6 @@ function fireEditorEvent(name: string) {
   window.dispatchEvent(new CustomEvent(name));
 }
 
-const EXPORT_FORMATS = [
-  { id: "pdf", label: "PDF (.pdf)" },
-  { id: "docx", label: "Word (.docx)" },
-  { id: "xlsx", label: "Excel (.xlsx)" },
-  { id: "pptx", label: "PowerPoint (.pptx)" },
-  { id: "jpg", label: "JPG image" },
-  { id: "png", label: "PNG image" },
-  { id: "html", label: "HTML" },
-  { id: "txt", label: "Plain text (.txt)" },
-] as const;
 
 // ---------------------------------------------------------------------------
 // Tool pill button (icon on top, small label under).
@@ -227,13 +217,7 @@ function TopAppBar() {
 
   const canShare = !!file && isSignedIn;
   const canDownload = !!file;
-
-  const handleExportAction = (key: Key) => {
-    if (!canDownload) return;
-    window.dispatchEvent(
-      new CustomEvent("editor:export", { detail: { format: String(key) } }),
-    );
-  };
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
@@ -313,33 +297,21 @@ function TopAppBar() {
         <span className="hidden sm:inline">Share via link</span>
       </button>
 
-      <Dropdown>
-        <Button
-          aria-label="Download"
-          className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[var(--color-accent)] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
-          data-tour="editor-download"
-          isDisabled={!canDownload}
-        >
-          <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-          <span className="hidden sm:inline">Download</span>
-        </Button>
-        <Dropdown.Popover className="min-w-[180px]">
-          <Dropdown.Menu
-            aria-label="Download format"
-            onAction={handleExportAction}
-          >
-            {EXPORT_FORMATS.map((format) => (
-              <Dropdown.Item
-                key={format.id}
-                id={format.id}
-                textValue={format.label}
-              >
-                <Label>{format.label}</Label>
-              </Dropdown.Item>
-            ))}
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
+      <Button
+        aria-label="Download"
+        className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
+        data-tour="editor-download"
+        isDisabled={!canDownload}
+        onPress={() => setIsExportModalOpen(true)}
+      >
+        <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+        <span className="hidden sm:inline">Download</span>
+      </Button>
+
+      <ExportFormatModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
     </div>
   );
 }
