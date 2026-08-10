@@ -360,7 +360,7 @@ export function LandingFAQ() {
                 aria-selected={selected}
                 className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors sm:px-5 sm:text-[14px] ${
                   selected
-                    ? "bg-[var(--pv-brand-red)] text-white"
+                    ? "bg-[var(--pv-brand-red,#f12c23)] text-white"
                     : "bg-black/5 text-[var(--pv-text-strong)] hover:bg-black/10"
                 }`}
                 id={`faq-tab-${gIdx}`}

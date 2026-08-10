@@ -150,19 +150,19 @@ export function AboutUsContent() {
           {TOOLS.map((t) => (
             <div
               key={t.title}
-              className="flex items-start gap-4 rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
+              className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
-                <HugeiconsIcon icon={t.icon} size={22} />
-              </span>
-              <div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
+                  <HugeiconsIcon icon={t.icon} size={20} />
+                </span>
                 <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
                   {t.title}
                 </h3>
-                <p className="mt-1 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
-                  {t.body}
-                </p>
               </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
+                {t.body}
+              </p>
             </div>
           ))}
         </div>
@@ -186,15 +186,13 @@ export function AboutUsContent() {
               key={s.n}
               className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[16px] font-bold text-white">
-                  {s.n}
-                </span>
-                <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
-                  {s.title}
-                </h3>
-              </div>
-              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
+              <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[16px] font-bold text-white">
+                {s.n}
+              </span>
+              <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
+                {s.title}
+              </h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
                 {s.body}
               </p>
             </li>
@@ -243,7 +241,7 @@ export function AboutUsContent() {
           you need them.
         </p>
         <Link
-          className="mt-5 inline-flex h-12 items-center justify-center rounded-full bg-[var(--pv-brand-red)] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-dark,#d21f17)]"
+          className="mt-5 inline-flex h-12 items-center justify-center rounded-full border border-[var(--pv-brand-red)] bg-[var(--pv-brand-red)] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-dark,#d21f17)] hover:border-[var(--pv-brand-red-dark,#d21f17)]"
           href={ROUTES.PUBLIC.HOME}
         >
           Start Now
