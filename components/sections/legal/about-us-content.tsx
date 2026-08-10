@@ -180,9 +180,9 @@ export function AboutUsContent() {
           From upload to done, in three steps.
         </h2>
 
-        <ol className="mt-6 list-none grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {STEPS.map((s) => (
-            <li
+            <div
               key={s.n}
               className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
             >
@@ -195,9 +195,9 @@ export function AboutUsContent() {
               <p className="mt-2 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
                 {s.body}
               </p>
-            </li>
+            </div>
           ))}
-        </ol>
+        </div>
       </section>
 
       {/* Trust and security */}
