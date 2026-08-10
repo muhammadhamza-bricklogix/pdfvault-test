@@ -220,7 +220,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           dispatchSignInPrompt({
             title: "Sign in to download",
             description:
-              "Downloading is a paid feature. Sign in and we'll bring you back to finish the download right where you left off.",
+              "Sign in and we'll bring you back to finish the download right where you left off.",
             confirmLabel: "Sign in & continue",
             redirectUrl: returnTo,
           });

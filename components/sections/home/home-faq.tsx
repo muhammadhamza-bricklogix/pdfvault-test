@@ -205,7 +205,7 @@ export function HomeFaq() {
               {TAB_CONFIG.map((t) => (
                 <Tabs.Tab
                   key={t.id}
-                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--color-accent)] data-[selected=true]:text-white data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--color-accent)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--color-accent)] dark:data-[hovered=true]:bg-default-50/10"
+                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--pv-brand-red,#f12c23)] data-[selected=true]:text-white data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--pv-brand-red,#f12c23)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--pv-brand-red,#f12c23)] dark:data-[hovered=true]:bg-default-50/10"
                   id={t.id}
                 >
                   {t.label}

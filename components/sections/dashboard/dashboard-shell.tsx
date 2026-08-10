@@ -298,7 +298,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <SidebarBody pathname={pathname} />
         </aside>
         <main className="flex-1 overflow-hidden p-4 pl-0">
-          <div className="h-full w-full overflow-y-auto rounded-3xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-8 py-7">
+          <div className="h-full w-full overflow-y-auto rounded-3xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-8 py-4">
             {children}
           </div>
         </main>
@@ -365,7 +365,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       </div>
 
       <main className="flex-1 overflow-hidden p-3">
-        <div className="h-full w-full overflow-y-auto rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-4 py-5">
+        <div className="h-full w-full overflow-y-auto rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-4 py-3">
           {children}
         </div>
       </main>
