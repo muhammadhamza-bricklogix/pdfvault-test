@@ -86,8 +86,13 @@ export function SubscriptionTermsContent() {
           <li>In your account settings, under Subscription.</li>
           <li>
             By emailing{" "}
-            <a href="mailto:billing@pdfvault.ai">billing@pdfvault.ai</a> before
-            your next renewal date.
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)]"
+              href="mailto:billing@pdfvault.ai"
+            >
+              billing@pdfvault.ai
+            </a>{" "}
+            before your next renewal date.
           </li>
         </ul>
         <p>
@@ -156,7 +161,7 @@ export function SubscriptionTermsContent() {
           day you informed us of your decision, using the same payment method as
           the original transaction, at no extra cost to you.
         </p>
-        <p className="mt-4 rounded-lg border border-[var(--pv-hairline)] bg-[var(--pv-brand-red)]/5 p-4 text-[14px] italic">
+        <p className="mt-4 rounded-lg border border-[var(--pv-brand-red,#f12c23)] bg-[var(--pv-brand-red,#f12c23)]/10 p-4 text-[14px] italic">
           If you asked us to begin providing the download or service immediately
           during the withdrawal period and acknowledged that you would lose your
           right of withdrawal by doing so, then — unless the Service is
@@ -172,14 +177,22 @@ export function SubscriptionTermsContent() {
         title="Got Questions?"
       >
         <p>Our support team is here to help.</p>
-        <ul>
-          <li>
-            Email: <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>
-          </li>
-          <li>
-            <Link href={ROUTES.LEGAL.CONTACT}>Contact Us</Link>
-          </li>
-        </ul>
+        <p className="mt-2">
+          <a
+            className="text-[var(--pv-brand-red,#f12c23)]"
+            href="mailto:support@pdfvault.ai"
+          >
+            support@pdfvault.ai
+          </a>
+        </p>
+        <p className="mt-1">
+          <Link
+            className="text-[var(--pv-brand-red,#f12c23)]"
+            href={ROUTES.LEGAL.CONTACT}
+          >
+            Contact Us
+          </Link>
+        </p>
       </LegalSectionCard>
     </>
   );
