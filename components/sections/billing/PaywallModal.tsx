@@ -549,7 +549,7 @@ function PlanStep({
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/refund"
             >
-              Cancellation Policy
+              Subscription Terms
             </a>
             , or email{" "}
             <a
@@ -577,7 +577,7 @@ function PlanStep({
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/refund"
             >
-              Cancellation Policy
+              Subscription Terms
             </a>
             , or email{" "}
             <a
