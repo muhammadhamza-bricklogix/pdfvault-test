@@ -547,7 +547,7 @@ function PlanStep({
             , see our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/refund"
+              href="/subscription-terms"
             >
               Subscription Terms
             </a>
@@ -575,7 +575,7 @@ function PlanStep({
             , see our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/refund"
+              href="/subscription-terms"
             >
               Subscription Terms
             </a>
