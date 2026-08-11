@@ -368,7 +368,7 @@ export function UploadWorkspace({
         dispatchSignInPrompt({
           title: "Sign in to convert",
           description:
-            "Converting is a paid feature. Sign in and we'll bring you back here to finish — you won't have to re-upload.",
+            "Sign in and we'll bring you back here to finish — you won't have to re-upload.",
           confirmLabel: "Sign in & continue",
           redirectUrl: returnPath,
         });
