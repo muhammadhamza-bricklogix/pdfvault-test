@@ -1,13 +1,14 @@
 "use client";
 
-import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import type { ComponentProps } from "react";
 
 import {
-  ArrowDown01Icon,
+  Tick01Icon,
   BackgroundIcon,
+  PrinterIcon,
   Comment01Icon,
+  Search01Icon,
   Copy01Icon,
   Cursor01Icon,
   EraserIcon,
@@ -33,18 +34,22 @@ import {
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Dropdown, Label, Tooltip } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
+import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
+import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { SaveStatusChip } from "./SaveStatusChip";
 
@@ -128,17 +133,6 @@ const GROUP_MANAGE: ToolEntry[] = [
 function fireEditorEvent(name: string) {
   window.dispatchEvent(new CustomEvent(name));
 }
-
-const EXPORT_FORMATS = [
-  { id: "pdf", label: "PDF (.pdf)" },
-  { id: "docx", label: "Word (.docx)" },
-  { id: "xlsx", label: "Excel (.xlsx)" },
-  { id: "pptx", label: "PowerPoint (.pptx)" },
-  { id: "jpg", label: "JPG image" },
-  { id: "png", label: "PNG image" },
-  { id: "html", label: "HTML" },
-  { id: "txt", label: "Plain text (.txt)" },
-] as const;
 
 // ---------------------------------------------------------------------------
 // Tool pill button (icon on top, small label under).
@@ -225,13 +219,28 @@ function TopAppBar() {
 
   const fileName = file?.name ?? "Untitled.pdf";
 
+  const entitled = useIsEntitled();
   const canShare = !!file && isSignedIn;
   const canDownload = !!file;
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const handleExportAction = (key: Key) => {
-    if (!canDownload) return;
+  const {
+    isOpen: isSearchOpen,
+    open: openSearch,
+    close: closeSearch,
+  } = usePdfSearchStore();
+
+  const handlePrint = async () => {
+    if (!file) return;
+    if (!entitled) {
+      const outcome = await requestPaywall();
+
+      if (outcome !== "success") return;
+    }
     window.dispatchEvent(
-      new CustomEvent("editor:export", { detail: { format: String(key) } }),
+      new CustomEvent("editor:export", {
+        detail: { format: "pdf", print: true },
+      }),
     );
   };
 
@@ -300,6 +309,46 @@ function TopAppBar() {
 
       <TourHelpButton tour="editor" variant="chrome" />
 
+      {/* Search — PDF-wide text search with highlight + navigation. */}
+      <Tooltip delay={300}>
+        <button
+          aria-label="Search in PDF"
+          aria-pressed={isSearchOpen}
+          className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
+            isSearchOpen
+              ? "border-[#f12c23] bg-red-50 text-[#f12c23]"
+              : "border-default-200 bg-white text-[var(--color-foreground)] hover:bg-default-100"
+          }`}
+          disabled={!file}
+          type="button"
+          onClick={() => (isSearchOpen ? closeSearch() : openSearch())}
+        >
+          <HugeiconsIcon icon={Search01Icon} size={14} />
+          <span className="hidden sm:inline">Search</span>
+        </button>
+        <Tooltip.Content>
+          <p>Search in PDF</p>
+        </Tooltip.Content>
+      </Tooltip>
+
+      {/* Print — paid users only; builds the final edited PDF then opens
+          the browser print dialog via a hidden iframe. */}
+      <Tooltip delay={300}>
+        <button
+          aria-label="Print"
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+          disabled={!file}
+          type="button"
+          onClick={() => void handlePrint()}
+        >
+          <HugeiconsIcon icon={PrinterIcon} size={14} />
+          <span className="hidden sm:inline">Print</span>
+        </button>
+        <Tooltip.Content>
+          <p>Print</p>
+        </Tooltip.Content>
+      </Tooltip>
+
       {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
       <button
         aria-label="Share via link"
@@ -313,33 +362,22 @@ function TopAppBar() {
         <span className="hidden sm:inline">Share via link</span>
       </button>
 
-      <Dropdown>
-        <Button
-          aria-label="Download"
-          className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[var(--color-accent)] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
-          data-tour="editor-download"
-          isDisabled={!canDownload}
-        >
-          <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-          <span className="hidden sm:inline">Download</span>
-        </Button>
-        <Dropdown.Popover className="min-w-[180px]">
-          <Dropdown.Menu
-            aria-label="Download format"
-            onAction={handleExportAction}
-          >
-            {EXPORT_FORMATS.map((format) => (
-              <Dropdown.Item
-                key={format.id}
-                id={format.id}
-                textValue={format.label}
-              >
-                <Label>{format.label}</Label>
-              </Dropdown.Item>
-            ))}
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
+      <Button
+        aria-label="Download"
+        className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
+        data-tour="editor-download"
+        isDisabled={!canDownload}
+        onPress={() => setIsExportModalOpen(true)}
+      >
+        <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
+
+        <span className="hidden sm:inline">Done</span>
+      </Button>
+
+      <ExportFormatModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
     </div>
   );
 }

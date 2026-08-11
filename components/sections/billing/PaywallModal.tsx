@@ -415,10 +415,10 @@ function PlanStep({
         <div className="flex flex-col gap-1">
           <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
             {hidePreview
-              ? "Choose a plan to unlock full access"
+              ? "Choose a plan to unlock full access and download your documents immediately"
               : preview
-                ? "Choose a plan to download your file"
-                : "Choose a plan to unlock full access"}
+                ? "Choose a plan to unlock full access and download your documents immediately"
+                : "Choose a plan to unlock full access and download your documents immediately"}
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
             Cancel anytime · Secure checkout · Instant access
@@ -480,7 +480,7 @@ function PlanStep({
                   >
                     ✓
                   </span>
-                  Your document is ready
+                  Your document is ready for download
                 </span>
                 <PreviewFileCard preview={preview} />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
@@ -497,7 +497,7 @@ function PlanStep({
                   >
                     ✓
                   </span>
-                  Your document is ready
+                  Your document is ready for download
                 </span>
                 <GenericPreviewCard />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
@@ -547,9 +547,9 @@ function PlanStep({
             , see our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/refund"
+              href="/subscription-terms"
             >
-              Cancellation Policy
+              Subscription Terms
             </a>
             , or email{" "}
             <a
@@ -575,9 +575,9 @@ function PlanStep({
             , see our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/refund"
+              href="/subscription-terms"
             >
-              Cancellation Policy
+              Subscription Terms
             </a>
             , or email{" "}
             <a
@@ -754,7 +754,13 @@ function PayStep({
               paymentIntent: intent.paymentIntent,
             }}
             width="100%"
+            onError={(error) => {
+              logger.error("[paywall] Solidgate iframe error", error);
+            }}
             onFail={onFail}
+            onMounted={() => {
+              logger.info("[paywall] Solidgate iframe mounted");
+            }}
             onSuccess={onSuccess}
           />
         </div>
@@ -1067,7 +1073,7 @@ function GenericPreviewCard() {
           PDF
         </span>
         <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#1a1c21]">
-          Your document is ready to download
+          Your document is ready for download
         </p>
       </div>
     </div>

@@ -328,18 +328,12 @@ export function LandingFAQ() {
     >
       <div className="pv-container">
         <div className="mx-auto max-w-[720px] text-center">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--pv-brand-red)]">
-            FAQs
-          </p>
           <h2
             className="mt-2 text-[32px] font-bold leading-tight text-[var(--pv-text-strong)] sm:text-[40px]"
             id="faq-heading"
           >
             Frequently Asked Questions
           </h2>
-          <p className="mt-3 text-[15px] text-[var(--pv-text-body)] sm:text-[16px]">
-            Everything you need to know about using PDFVault.
-          </p>
         </div>
 
         {/* Tab strip — one tab per FAQ category. Horizontally scrolls on
@@ -360,7 +354,7 @@ export function LandingFAQ() {
                 aria-selected={selected}
                 className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors sm:px-5 sm:text-[14px] ${
                   selected
-                    ? "bg-[var(--pv-brand-red)] text-white"
+                    ? "bg-[var(--pv-brand-red,#f12c23)] text-white"
                     : "bg-black/5 text-[var(--pv-text-strong)] hover:bg-black/10"
                 }`}
                 id={`faq-tab-${gIdx}`}

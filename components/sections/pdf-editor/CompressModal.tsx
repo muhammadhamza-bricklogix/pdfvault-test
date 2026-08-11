@@ -98,8 +98,7 @@ export function CompressModal() {
 
       dispatchSignInPrompt({
         title: "Sign in to compress",
-        description:
-          "Compressing is a paid feature. Sign in and we'll bring you back here to finish.",
+        description: "Sign in and we'll bring you back here to finish.",
         confirmLabel: "Sign in & continue",
         redirectUrl: returnTo,
       });

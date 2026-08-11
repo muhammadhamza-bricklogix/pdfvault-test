@@ -19,6 +19,7 @@ import {
   PrinterIcon,
   RedoIcon,
   FloppyDiskIcon,
+  Search01Icon,
   Share01Icon,
   ShapesIcon,
   SignatureIcon,
@@ -65,6 +66,7 @@ export function EditorInfoBar() {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const zoom = usePdfEditorStore((s) => s.zoom);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
+  const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
 
   const router = useRouter();
@@ -304,10 +306,23 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* Export controls quad — Print / Download / Share / Done.
-                All four open the shared format-selection modal
-                (reference: image #2). Print + Download are icon-only,
-                Share is an outline pill, Done is the primary CTA. */}
+            {/* Export controls — Search / Print / Download / Share / Done.
+                Search opens Find & Replace. Print/Download/Share/Done
+                open the shared format-selection modal. */}
+            <Tooltip delay={300}>
+              <Button
+                aria-label="Search"
+                isDisabled={!file}
+                size="sm"
+                variant="tertiary"
+                onPress={() => setIsFindReplaceOpen(true)}
+              >
+                <HugeiconsIcon icon={Search01Icon} size={16} />
+              </Button>
+              <Tooltip.Content>
+                <p>Find &amp; Replace</p>
+              </Tooltip.Content>
+            </Tooltip>
             <Tooltip delay={300}>
               <Button
                 aria-label="Print"

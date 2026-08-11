@@ -4,6 +4,7 @@ import type { Canvas } from "fabric";
 import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
+import dynamic from "next/dynamic";
 import NextImage from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -22,6 +23,7 @@ import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extrac
 import { useFormFieldsEditor } from "@/lib/client/hooks/pdf-editor/use-form-fields-editor";
 import { usePageNumbersEditor } from "@/lib/client/hooks/pdf-editor/use-page-numbers-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
+import { usePdfSearch } from "@/lib/client/hooks/pdf-editor/use-pdf-search";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
@@ -41,20 +43,47 @@ import { toast } from "@/lib/shared/utils/toast";
 import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
-import { CompressModal } from "./CompressModal";
-import { CreatePdfModal } from "./CreatePdfModal";
-import { FindReplaceModal } from "./FindReplaceModal";
-import { FormFieldsModal } from "./FormFieldsModal";
-import { PageNumbersModal } from "./PageNumbersModal";
-import { PasswordModal } from "./PasswordModal";
 import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
+import { PdfSearchBar } from "./PdfSearchBar";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
-import { PerformancePanel } from "./PerformancePanel";
 import { TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
-import { ManagePagesModal } from "./ManagePagesModal";
 import { ThumbnailSidebar } from "./ThumbnailSidebar";
+
+// Heavy modals — lazy-loaded so they don't inflate the editor's initial bundle.
+const CompressModal = dynamic(
+  () => import("./CompressModal").then((m) => m.CompressModal),
+  { ssr: false, loading: () => null },
+);
+const CreatePdfModal = dynamic(
+  () => import("./CreatePdfModal").then((m) => m.CreatePdfModal),
+  { ssr: false, loading: () => null },
+);
+const FindReplaceModal = dynamic(
+  () => import("./FindReplaceModal").then((m) => m.FindReplaceModal),
+  { ssr: false, loading: () => null },
+);
+const FormFieldsModal = dynamic(
+  () => import("./FormFieldsModal").then((m) => m.FormFieldsModal),
+  { ssr: false, loading: () => null },
+);
+const ManagePagesModal = dynamic(
+  () => import("./ManagePagesModal").then((m) => m.ManagePagesModal),
+  { ssr: false, loading: () => null },
+);
+const PageNumbersModal = dynamic(
+  () => import("./PageNumbersModal").then((m) => m.PageNumbersModal),
+  { ssr: false, loading: () => null },
+);
+const PasswordModal = dynamic(
+  () => import("./PasswordModal").then((m) => m.PasswordModal),
+  { ssr: false, loading: () => null },
+);
+const PerformancePanel = dynamic(
+  () => import("./PerformancePanel").then((m) => m.PerformancePanel),
+  { ssr: false, loading: () => null },
+);
 
 function UploadScreenHeader() {
   return (
@@ -160,6 +189,9 @@ function EditorLayout() {
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
   useAnnotationsEditor(fabricCanvas);
+
+  const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
+
   useProductTour("editor");
 
   const handleFabricCanvasReady = useCallback(
@@ -336,6 +368,7 @@ function EditorLayout() {
       <>
         <EditorInfoBar />
         <div className="relative flex flex-1 overflow-hidden">
+          <PdfSearchBar goToNext={searchGoToNext} goToPrev={searchGoToPrev} />
           <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
           <div className="pointer-events-none absolute right-4 top-4 z-10">
             <div className="pointer-events-auto">
@@ -362,8 +395,9 @@ function EditorLayout() {
       <TopAppBar />
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar onReorderPages={handleReorderPages} />
-        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
+        <div className="relative flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
           <ToolToolbar />
+          <PdfSearchBar goToNext={searchGoToNext} goToPrev={searchGoToPrev} />
           <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
         </div>
         <RightSidebar fabricCanvas={fabricCanvas} />

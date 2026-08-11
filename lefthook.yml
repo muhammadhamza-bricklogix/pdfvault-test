@@ -1,0 +1,5 @@
+pre-commit:
+  jobs:
+    - name: locked-paths-guard
+      run: bash scripts/check-locked-paths-precommit.sh
+      fail_text: "Staged file matches a locked path. See .claude/LOCKED_PATHS. Get approval or export CLAUDE_UNLOCK_PATHS=1."

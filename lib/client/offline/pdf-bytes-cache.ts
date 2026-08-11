@@ -13,11 +13,14 @@ type StoredBytes = {
   bytes: number;
 };
 
+// Hard cap: evict oldest entries until total cached size is below this limit.
+// iOS Safari enforces ~50 MB origin quota; 80 MB gives headroom for doc cache.
+const MAX_CACHE_BYTES = 80 * 1024 * 1024;
+
 /**
- * Cache a PDF blob for offline viewing. Best-effort: a quota failure evicts
- * the oldest cached entry and retries once. If it still fails (e.g. a single
- * blob larger than the origin's quota) we log + bail without surfacing the
- * error to the UI — online mode is unaffected.
+ * Cache a PDF blob for offline viewing. Enforces an 80 MB LRU cap across all
+ * cached entries before writing. Best-effort: a quota failure evicts the oldest
+ * entry and retries once. Failures are non-fatal — online mode is unaffected.
  */
 export async function putPdfBytes(
   userId: string,
@@ -37,6 +40,9 @@ export async function putPdfBytes(
     bytes: payload.blob.size,
   };
 
+  // Enforce the LRU cap before attempting the write.
+  await enforceSizeCap(userId, entry.bytes);
+
   const ok = await tryPut(userId, entry);
 
   if (ok) return;
@@ -51,6 +57,40 @@ export async function putPdfBytes(
       bytes: entry.bytes,
     });
   }
+}
+
+async function enforceSizeCap(
+  userId: string,
+  incomingBytes: number,
+): Promise<void> {
+  await withStore(
+    userId,
+    OBJECT_STORES.pdfBytes,
+    "readwrite",
+    async (_tx, store) => {
+      const all = await reqToPromise(store(OBJECT_STORES.pdfBytes).getAll());
+      const entries = (all ?? []) as StoredBytes[];
+
+      let totalBytes = entries.reduce((sum, e) => sum + (e.bytes ?? 0), 0);
+
+      if (totalBytes + incomingBytes <= MAX_CACHE_BYTES) return;
+
+      // Sort oldest-first and evict until we have room.
+      entries.sort((a, b) => a.cachedAt - b.cachedAt);
+
+      for (const entry of entries) {
+        if (totalBytes + incomingBytes <= MAX_CACHE_BYTES) break;
+
+        store(OBJECT_STORES.pdfBytes).delete(entry.id);
+        totalBytes -= entry.bytes ?? 0;
+
+        logger.info("[offline] evicted cached PDF to enforce size cap", {
+          id: entry.id,
+          bytes: entry.bytes,
+        });
+      }
+    },
+  );
 }
 
 async function tryPut(userId: string, entry: StoredBytes): Promise<boolean> {

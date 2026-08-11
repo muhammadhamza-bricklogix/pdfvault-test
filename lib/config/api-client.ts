@@ -16,6 +16,7 @@ import {
   requestPaywall,
 } from "@/lib/client/hooks/billing/paywall-bus";
 import { toApiError } from "@/lib/shared/utils/api-error";
+import { toast } from "@/lib/shared/utils/toast";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -50,6 +51,7 @@ type RetriableConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
   _hadToken?: boolean;
   _paywallRetry?: boolean;
+  _rateLimitRetry?: boolean;
 };
 
 function isGatedRequest(config: InternalAxiosRequestConfig): boolean {
@@ -131,6 +133,27 @@ apiClient.interceptors.response.use(
       if (original._hadToken) {
         await signOutAndRedirect();
       }
+    }
+
+    // Rate-limit handler — 429 from the backend (or CDN) means the server
+    // is busy. Read Retry-After, show a friendly toast, auto-retry once
+    // after the delay for idempotent operations.
+    if (status === 429 && original && !original._rateLimitRetry) {
+      original._rateLimitRetry = true;
+      const retryAfterHeader = error.response?.headers?.["retry-after"];
+      const retryAfterSeconds = retryAfterHeader
+        ? parseInt(String(retryAfterHeader), 10)
+        : 5;
+      const delay = isNaN(retryAfterSeconds) ? 5000 : retryAfterSeconds * 1000;
+
+      toast.info({
+        description: `We're a bit busy — retrying in ${Math.round(delay / 1000)}s.`,
+        title: "Too many requests",
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      return apiClient.request(original);
     }
 
     // Paywall gate — a 402 (or 403 with `x-billing-required` header)

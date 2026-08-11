@@ -109,18 +109,23 @@ export function AboutUsContent() {
       {/* Pillars */}
       <section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {PILLARS.map((p) => (
+          {PILLARS.map((p, idx) => (
             <div
               key={p.title}
               className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
-                <HugeiconsIcon icon={p.icon} size={22} />
-              </span>
-              <h3 className="mt-4 text-[16px] font-semibold text-[var(--pv-text-strong)]">
-                {p.title}
-              </h3>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[13px] font-bold text-white">
+                  0{idx + 1}
+                </span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
+                  <HugeiconsIcon icon={p.icon} size={20} />
+                </span>
+                <h3 className="text-[15px] font-semibold text-[var(--pv-text-strong)]">
+                  {p.title}
+                </h3>
+              </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
                 {p.body}
               </p>
             </div>
@@ -145,19 +150,19 @@ export function AboutUsContent() {
           {TOOLS.map((t) => (
             <div
               key={t.title}
-              className="flex items-start gap-4 rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
+              className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
-                <HugeiconsIcon icon={t.icon} size={22} />
-              </span>
-              <div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
+                  <HugeiconsIcon icon={t.icon} size={20} />
+                </span>
                 <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
                   {t.title}
                 </h3>
-                <p className="mt-1 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
-                  {t.body}
-                </p>
               </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
+                {t.body}
+              </p>
             </div>
           ))}
         </div>
@@ -175,24 +180,24 @@ export function AboutUsContent() {
           From upload to done, in three steps.
         </h2>
 
-        <ol className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {STEPS.map((s) => (
-            <li
+            <div
               key={s.n}
               className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[16px] font-bold text-white">
+              <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-[16px] font-bold text-white">
                 {s.n}
               </span>
-              <h3 className="mt-4 text-[16px] font-semibold text-[var(--pv-text-strong)]">
+              <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
                 {s.title}
               </h3>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
+              <p className="mt-2 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
                 {s.body}
               </p>
-            </li>
+            </div>
           ))}
-        </ol>
+        </div>
       </section>
 
       {/* Trust and security */}
@@ -236,7 +241,7 @@ export function AboutUsContent() {
           you need them.
         </p>
         <Link
-          className="mt-5 inline-flex h-12 items-center justify-center rounded-full bg-[var(--pv-brand-red)] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-dark,#d21f17)]"
+          className="mt-5 inline-flex h-12 items-center justify-center rounded-full border border-[var(--pv-brand-red)] bg-[var(--pv-brand-red)] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--pv-brand-red-dark,#d21f17)] hover:border-[var(--pv-brand-red-dark,#d21f17)] hover:text-white"
           href={ROUTES.PUBLIC.HOME}
         >
           Start Now

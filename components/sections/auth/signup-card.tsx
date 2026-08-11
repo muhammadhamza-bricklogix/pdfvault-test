@@ -13,14 +13,10 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// PRD §4.2 — simplified password rule: 8+ characters, alphanumeric.
-// No mixed case / symbol requirement. Server-side (Clerk dashboard) must
-// be relaxed to match; otherwise strong-password errors still surface.
-const SIMPLE_PASSWORD_HINT =
-  "Password must be at least 8 characters, letters and numbers (alphanumeric).";
+const SIMPLE_PASSWORD_HINT = "Password must be at least 8 characters.";
 
 function isPasswordValid(value: string): boolean {
-  return value.length >= 8 && /^[A-Za-z0-9]+$/.test(value);
+  return value.length >= 8;
 }
 
 function safeRedirectPath(raw: string | null, fallback: string): string {

@@ -1,8 +1,15 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import bundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** App root (this folder), not a parent that may contain another package-lock.json. */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -10,6 +17,14 @@ const nextConfig = {
   // only the node_modules actually referenced at runtime — the image we ship
   // to ECS Fargate is ~10x smaller than a full node_modules copy.
   output: "standalone",
+
+  // Serve AVIF first (best compression), fall back to WebP, then original.
+  // Next.js image optimizer converts on the fly and caches at the CDN edge.
+  // minimumCacheTTL: 30 days — public assets don't change without a new deploy.
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2_592_000,
+  },
   // Parent dirs (e.g. /Users/softaims/package-lock.json) must not win lockfile discovery —
   // wrong root breaks output tracing and can break Turbopack HMR / stale UI in dev.
   outputFileTracingRoot: projectRoot,
@@ -78,4 +93,18 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+  // Suppress the Sentry CLI output during builds unless SENTRY_LOG=true.
+  silent: process.env.SENTRY_LOG !== "true",
+
+  // Upload source maps to Sentry for readable stack traces.
+  // Requires SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT in CI env.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Automatically tree-shake unused Sentry features from the client bundle.
+  disableLogger: true,
+
+  // Don't add sourcemaps to production builds — upload only, then delete.
+  hideSourceMaps: true,
+});

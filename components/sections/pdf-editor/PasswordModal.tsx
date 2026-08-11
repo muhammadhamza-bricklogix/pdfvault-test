@@ -70,8 +70,7 @@ export function PasswordModal() {
     dispatchSignInPrompt({
       title:
         m === "protect" ? "Sign in to password protect" : "Sign in to unlock",
-      description:
-        "This is a paid feature. Sign in and we'll bring you back here to finish.",
+      description: "Sign in and we'll bring you back here to finish.",
       confirmLabel: "Sign in & continue",
       redirectUrl: returnTo,
     });

@@ -127,8 +127,7 @@ export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
 
         dispatchSignInPrompt({
           title: "Sign in to extract images",
-          description:
-            "Extracting images is a paid feature. Sign in and we'll bring you back here to finish.",
+          description: "Sign in and we'll bring you back here to finish.",
           confirmLabel: "Sign in & continue",
           redirectUrl: returnTo,
         });
