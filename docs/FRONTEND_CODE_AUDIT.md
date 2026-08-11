@@ -1,7 +1,7 @@
 # PDFVault — Frontend Code Audit (Scale & Concurrent Users)
 
-Owner: Uzair · Prepared: 2026-08-08
-Repo: `/Users/softaims/pdf-viewer-app` (branch `feat/prd-signin-onboarding-composer-revamp`)
+Owner: Hamza · Prepared: 2026-08-08
+Repo: `/Users/brickslogix/pdf-viewer-app` (branch `feat/prd-signin-onboarding-composer-revamp`)
 Scope: Next.js 16 App Router frontend. **Findings only — no code changes proposed here.** Implementation is on the product team.
 Target: 1,000+ concurrent users on marketing + editor + checkout.
 
@@ -149,7 +149,7 @@ Each finding: **Severity** (P0 launch-blocker · P1 launch-day risk · P2 near-t
 
 ### 4.4 [P2] No client-side request coalescing for the same file.
 
-**Evidence.** `use-editor-document-loader.ts` has a `Map<id, Promise>` inflight cache — good, StrictMode-safe. But this only dedupes doc *loads*, not the many parallel background calls a heavy editor session makes (thumbnails, IText color extraction, save auto-persist, etc.).
+**Evidence.** `use-editor-document-loader.ts` has a `Map<id, Promise>` inflight cache — good, StrictMode-safe. But this only dedupes doc _loads_, not the many parallel background calls a heavy editor session makes (thumbnails, IText color extraction, save auto-persist, etc.).
 
 **Risk at scale.** Under real user load this is fine — each user has their own tab. Under concurrent-user load (1000s), the backend absorbs the fan-out. Watch backend logs for repeated identical requests from one session.
 

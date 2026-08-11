@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 /**
  * "Cancel sticks" regression suite — guards the 2026-07-23 fix chain
- * documented in /Users/softaims/.claude/plans/hi-i-want-you-mutable-quiche.md.
+ * documented in /Users/brickslogix/.claude/plans/hi-i-want-you-mutable-quiche.md.
  *
  * The bug being guarded: user calls POST /billing/subscription/cancel
  * (or /hard-cancel), backend returns success, but the very next GET
@@ -132,8 +132,6 @@ test.describe("Cancel sticks — API-level guarantees", () => {
     // page loaded without automatic entitlement — the paywall itself
     // opens on gated action, but we can at least verify no
     // "entitled" state leaked into DOM.
-    await expect(
-      page.locator("[data-testid=entitled-badge]"),
-    ).toHaveCount(0);
+    await expect(page.locator("[data-testid=entitled-badge]")).toHaveCount(0);
   });
 });

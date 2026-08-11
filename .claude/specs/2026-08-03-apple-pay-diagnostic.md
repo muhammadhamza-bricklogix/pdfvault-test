@@ -1,7 +1,7 @@
 ---
 name: 2026-08-03-apple-pay-diagnostic
 description: Apple Pay button not rendering — flipped format twice before finding Solidgate's canonical CDN file at cdn.solidgate.com/apple/... Real root cause was a 2-byte typo in the human-transcribed original commit.
-metadata: 
+metadata:
   node_type: memory
   type: project
   originSessionId: 21a02c5b-a731-423b-9d9a-e1e14136e521
@@ -9,7 +9,7 @@ metadata:
 
 # Apple Pay visibility diagnostic — 2026-08-03 session
 
-Uzair reported the Apple Pay button was not visible on staging or production after enabling it. This session verified every layer of our integration and traced the blocker to Solidgate's side.
+Hamza reported the Apple Pay button was not visible on staging or production after enabling it. This session verified every layer of our integration and traced the blocker to Solidgate's side.
 
 ## TL;DR — verdict
 
@@ -28,18 +28,18 @@ Client + backend wiring was correct throughout. Backend sends `apple_pay_merchan
 
 ## Verification matrix (all passed)
 
-| Check | Prod (pdfvault.ai) | Staging (staging.pdfvault.ai) | Source |
-|---|---|---|---|
-| File hosted → HTTP 200 | ✓ | ✓ | `curl -sI` |
-| `Content-Type: text/plain` | ✓ | ✓ | `curl -sI` |
-| Bytes match repo (9118 exact — hex-encoded) | ✓ | ✓ | `diff` |
-| No trailing newline | ✓ | ✓ | commit `70716ab` fix intact |
-| **File IS hex-encoded (uppercase ASCII)** | ✓ | ✓ | `head -c 20` must print `7B22707370496422223A22` |
-| Middleware skips `.well-known` | ✓ | ✓ | `proxy.ts:75` |
-| Client `enabled: true` on both wallets | ✓ | ✓ | `PaywallModal.tsx:57-63` |
-| charge-auth SDK loaded before form mounts | ✓ | ✓ | `PaywallModal.tsx:35-44` |
-| Container refs exist before `<PaymentForm>` | ✓ | ✓ | `PaywallModal.tsx:596-667` |
-| Backend passes `apple_pay_merchant_name` | ✓ | ✓ | `pdf-viewer-backend/src/billing/services/solidgate.service.ts:123` |
+| Check                                       | Prod (pdfvault.ai) | Staging (staging.pdfvault.ai) | Source                                                             |
+| ------------------------------------------- | ------------------ | ----------------------------- | ------------------------------------------------------------------ |
+| File hosted → HTTP 200                      | ✓                  | ✓                             | `curl -sI`                                                         |
+| `Content-Type: text/plain`                  | ✓                  | ✓                             | `curl -sI`                                                         |
+| Bytes match repo (9118 exact — hex-encoded) | ✓                  | ✓                             | `diff`                                                             |
+| No trailing newline                         | ✓                  | ✓                             | commit `70716ab` fix intact                                        |
+| **File IS hex-encoded (uppercase ASCII)**   | ✓                  | ✓                             | `head -c 20` must print `7B22707370496422223A22`                   |
+| Middleware skips `.well-known`              | ✓                  | ✓                             | `proxy.ts:75`                                                      |
+| Client `enabled: true` on both wallets      | ✓                  | ✓                             | `PaywallModal.tsx:57-63`                                           |
+| charge-auth SDK loaded before form mounts   | ✓                  | ✓                             | `PaywallModal.tsx:35-44`                                           |
+| Container refs exist before `<PaymentForm>` | ✓                  | ✓                             | `PaywallModal.tsx:596-667`                                         |
+| Backend passes `apple_pay_merchant_name`    | ✓                  | ✓                             | `pdf-viewer-backend/src/billing/services/solidgate.service.ts:123` |
 
 ## Root cause — 2-byte typo in Hamza's transcription
 
@@ -77,6 +77,7 @@ Message from Hamza (Solidgate) confirms:
 > You do not even touch Apple configuration or Merchant certificates management, we do it for you.
 
 **Consequences for our code:**
+
 - We do NOT manage an Apple Developer account, an Apple merchant ID, or Apple Pay certificates.
 - We do NOT pass `apple_pay_merchant_domain` in the payment_intent — Solidgate resolves it from the file we host. Backend comment at `solidgate.service.ts:119-122` already warns against this.
 - We DO pass `apple_pay_merchant_name` — currently hardcoded as `"PDFVault"` in `solidgate.service.ts:123`.
@@ -95,18 +96,21 @@ Message from Hamza (Solidgate) confirms:
 > Root cause found: our file matched the correct format (uppercase hex, 9118 bytes) but had a 2-byte typo at offsets 1196 and 1198 — two hex chars were transposed in the middle of the signature field. Verifier caught it every time.
 >
 > Fix: replaced our copy with the canonical file from `https://cdn.solidgate.com/apple/apple-developer-merchantid-domain-association.txt` (MD5 `022ab7b28e7cb3ea45d82c3f69b62dc0`). Both domains now serve the identical bytes:
+>
 > - https://pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
 > - https://staging.pdfvault.ai/.well-known/apple-developer-merchantid-domain-association
 >
 > Please re-run Apple verification for both domains.
 >
 > Two side-notes for your team:
+>
 > 1. The `MIIQXw…` file you attached decodes to `teamId=RP423FWHCR domain=tryastro.org` — looks like a different customer's file. Might be worth a ticket to whoever attached it.
 > 2. It would help future integrations if the Solidgate Hub "Add Domain" flow linked to your CDN URL rather than delivering the file over Slack/email — humans transcribing a 9118-byte hex string introduce byte-level typos that look identical to a format bug.
 
 ## Test procedure (after Hamza confirms)
 
 Apple Pay button will only render when ALL of these are true:
+
 1. Safari on macOS 12+ or iOS 15+ (Chrome/Firefox/Edge = silent no-op, no console error)
 2. Device has Apple Pay set up (card in Wallet + Touch/Face ID configured)
 3. Exact verified HTTPS domain (`https://pdfvault.ai` or `https://staging.pdfvault.ai` — NOT `*.up.railway.app`, NOT `localhost`)
@@ -117,6 +121,7 @@ Trigger paywall → Pay step. Button appears ABOVE the "or pay with card" divide
 ## Why this is easy to misdiagnose
 
 Silent failure modes make this look like a code bug when it's not:
+
 - **Domain-association file byte-mismatch** (this session's root cause) → SDK renders nothing, no console warning. Sanity-check with `head -c 20` on the hosted file — must print `7B22707370496422223A22` (UPPERCASE ASCII hex), NOT `{"pspId":"88E04631`. Solidgate's aggregator stores the file hex-encoded and compares byte-for-byte; hosting the raw-JSON decoded form fails their integrity check.
 - Non-Safari browser → SDK renders nothing, no console warning
 - Unverified domain → SDK renders nothing, no console warning
@@ -127,7 +132,7 @@ The only way to differentiate "our bug" vs "Solidgate not verified yet" is to en
 
 ## Update to prior spec
 
-This closes out item **3 — Digital Wallets (Apple Pay / Google Pay)** in [[2026-07-31-solidgate-audit]]. That spec's status matrix marked it as "skipped per Uzair's instruction 2026-07-31" — Uzair changed direction and shipped the integration between 2026-07-31 and 2026-08-03. Frontend + backend wiring complete as of `849c8ad` (2026-08-03). Blocked on Solidgate merchant-side verification only.
+This closes out item **3 — Digital Wallets (Apple Pay / Google Pay)** in [[2026-07-31-solidgate-audit]]. That spec's status matrix marked it as "skipped per Hamza's instruction 2026-07-31" — Hamza changed direction and shipped the integration between 2026-07-31 and 2026-08-03. Frontend + backend wiring complete as of `849c8ad` (2026-08-03). Blocked on Solidgate merchant-side verification only.
 
 ## Solidgate MCP limitation (reference)
 

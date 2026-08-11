@@ -16,18 +16,18 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { Client } = require(
-  "/Users/softaims/Downloads/pdf-viewer-backend-main/node_modules/pg",
-);
+const {
+  Client,
+} = require("/Users/brickslogix/Downloads/pdf-viewer-backend-main/node_modules/pg");
 
 const BACKEND = "http://localhost:7403";
 const PG_CONFIG = {
-  connectionString: "postgresql://softaims@localhost:5432/pdfvault_dev",
+  connectionString: "postgresql://brickslogix@localhost:5432/pdfvault_dev",
 };
 
 function loadEnv() {
   const src = fs.readFileSync(
-    "/Users/softaims/Downloads/pdf-viewer-backend-main/.env",
+    "/Users/brickslogix/Downloads/pdf-viewer-backend-main/.env",
     "utf8",
   );
   const env = {};
@@ -194,7 +194,10 @@ async function main() {
 
     assert(rows.length === 1, "Subscription row created");
     if (rows.length === 1) {
-      assert(rows[0].status === "TRIALING", `status = TRIALING (got '${rows[0].status}')`);
+      assert(
+        rows[0].status === "TRIALING",
+        `status = TRIALING (got '${rows[0].status}')`,
+      );
       assert(rows[0].userId === USER_ID, `userId = ${USER_ID}`);
       assert(rows[0].trialEndsAt !== null, "trialEndsAt is set");
       assert(rows[0].planId, "planId is linked");
@@ -208,7 +211,10 @@ async function main() {
     assert(payments.length === 1, "Payment row created");
     if (payments.length === 1) {
       assert(payments[0].amountMinor === 99, `Payment.amountMinor = 99`);
-      assert(payments[0].type === "TRIAL", `Payment.type = TRIAL (got '${payments[0].type}')`);
+      assert(
+        payments[0].type === "TRIAL",
+        `Payment.type = TRIAL (got '${payments[0].type}')`,
+      );
     }
   }
 
@@ -220,7 +226,10 @@ async function main() {
     // eventKey index and be silently ignored.
     const res = await sendWebhook(createPayload);
 
-    assert(res.status === 201 || res.status === 200, `replay returned ${res.status}`);
+    assert(
+      res.status === 201 || res.status === 200,
+      `replay returned ${res.status}`,
+    );
     const after = (await q('SELECT COUNT(*) FROM "WebhookEvent"'))[0].count;
 
     assert(after === before, `WebhookEvent count unchanged (${before})`);
@@ -247,13 +256,19 @@ async function main() {
     };
     const res = await sendWebhook(updatePayload);
 
-    assert(res.status === 201 || res.status === 200, `webhook returned ${res.status}`);
+    assert(
+      res.status === 201 || res.status === 200,
+      `webhook returned ${res.status}`,
+    );
     const rows = await q(
       'SELECT status FROM "Subscription" WHERE "solidgateSubscriptionId" = $1',
       [SUB_ID],
     );
 
-    assert(rows[0]?.status === "ACTIVE", `Subscription.status = ACTIVE (got '${rows[0]?.status}')`);
+    assert(
+      rows[0]?.status === "ACTIVE",
+      `Subscription.status = ACTIVE (got '${rows[0]?.status}')`,
+    );
   }
 
   // === Test 5: "cancel" webhook ===
@@ -275,15 +290,24 @@ async function main() {
     };
     const res = await sendWebhook(cancelPayload);
 
-    assert(res.status === 201 || res.status === 200, `webhook returned ${res.status}`);
+    assert(
+      res.status === 201 || res.status === 200,
+      `webhook returned ${res.status}`,
+    );
     const rows = await q(
       'SELECT status, "cancelledAt", "currentPeriodEnd" FROM "Subscription" WHERE "solidgateSubscriptionId" = $1',
       [SUB_ID],
     );
 
-    assert(rows[0]?.status === "CANCELLED", `status = CANCELLED (got '${rows[0]?.status}')`);
+    assert(
+      rows[0]?.status === "CANCELLED",
+      `status = CANCELLED (got '${rows[0]?.status}')`,
+    );
     assert(rows[0]?.cancelledAt !== null, "cancelledAt populated");
-    assert(rows[0]?.currentPeriodEnd > now, "currentPeriodEnd still in future (grace)");
+    assert(
+      rows[0]?.currentPeriodEnd > now,
+      "currentPeriodEnd still in future (grace)",
+    );
   }
 
   // === Test 6: invoices show up as Payment rows ===
@@ -294,14 +318,15 @@ async function main() {
       [USER_ID],
     );
 
-    assert(rows.length >= 1, `At least one Payment row exists (${rows.length})`);
+    assert(
+      rows.length >= 1,
+      `At least one Payment row exists (${rows.length})`,
+    );
   }
 
   await pg.end();
 
-  console.log(
-    `\n═══ ${passed} PASSED, ${failed} FAILED ═══\n`,
-  );
+  console.log(`\n═══ ${passed} PASSED, ${failed} FAILED ═══\n`);
   process.exit(failed > 0 ? 1 : 0);
 }
 

@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/Users/softaims/pdf-viewer-app/playwright.config.ts",
-    "rootDir": "/Users/softaims/pdf-viewer-app/tests",
+    "configFile": "/Users/brickslogix/pdf-viewer-app/playwright.config.ts",
+    "rootDir": "/Users/brickslogix/pdf-viewer-app/tests",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -16,7 +16,7 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/Users/softaims/pdf-viewer-app/test-results",
+        "outputDir": "/Users/brickslogix/pdf-viewer-app/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -24,15 +24,13 @@
         },
         "id": "setup",
         "name": "setup",
-        "testDir": "/Users/softaims/pdf-viewer-app/tests",
+        "testDir": "/Users/brickslogix/pdf-viewer-app/tests",
         "testIgnore": [],
-        "testMatch": [
-          "/auth\\.setup\\.ts/"
-        ],
+        "testMatch": ["/auth\\.setup\\.ts/"],
         "timeout": 30000
       },
       {
-        "outputDir": "/Users/softaims/pdf-viewer-app/test-results",
+        "outputDir": "/Users/brickslogix/pdf-viewer-app/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -40,11 +38,9 @@
         },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/Users/softaims/pdf-viewer-app/tests",
+        "testDir": "/Users/brickslogix/pdf-viewer-app/tests",
         "testIgnore": [],
-        "testMatch": [
-          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
         "timeout": 30000
       }
     ],
@@ -62,10 +58,7 @@
           "outputFile": "test-results/results.json"
         }
       ],
-      [
-        "list",
-        null
-      ]
+      ["list", null]
     ],
     "reportSlowTests": {
       "max": 5,

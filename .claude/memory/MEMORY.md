@@ -1,6 +1,6 @@
 # Memory Index
 
-- [User role](user_role.md) — Uzair, owner/builder of PDFedits (Next.js 16 PDF editor)
+- [User role](user_role.md) — Hamza, owner/builder of PDFedits (Next.js 16 PDF editor)
 - [Current work](project_current_work.md) — active branch `main`, Solidgate billing hardening + Apple Pay rollout
 - [Mobile priority](project_mobile_priority.md) — iOS Safari + Android Chrome is #1 regression surface; walk CLAUDE.md mobile checklist before push
 - [Caveman mode](feedback_caveman_mode.md) — terse replies default, normal English for code/commits/security

@@ -5,9 +5,9 @@ set -euo pipefail
 # This avoids manually passing Clerk/API keys and prevents mismatched builds.
 #
 # Usage:
-#   AWS_PROFILE=uzair ./scripts/build-frontend-image.sh
+#   AWS_PROFILE=Hamza ./scripts/build-frontend-image.sh
 
-AWS_PROFILE="${AWS_PROFILE:-uzair}"
+AWS_PROFILE="${AWS_PROFILE:-Hamza}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 SECRET_ARN="${SECRET_ARN:-arn:aws:secretsmanager:us-east-1:633321546885:secret:pdfvault-pYG5qu}"
 ECR_REPO="${ECR_REPO:-633321546885.dkr.ecr.us-east-1.amazonaws.com/pdfvault-frontend}"

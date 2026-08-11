@@ -25,7 +25,7 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2_592_000,
   },
-  // Parent dirs (e.g. /Users/softaims/package-lock.json) must not win lockfile discovery —
+  // Parent dirs (e.g. /Users/brickslogix/package-lock.json) must not win lockfile discovery —
   // wrong root breaks output tracing and can break Turbopack HMR / stale UI in dev.
   outputFileTracingRoot: projectRoot,
   turbopack: {

@@ -12,6 +12,7 @@ Your job: when a regression is reported, spend the first five minutes reconstruc
 ## When this skill fires
 
 Any user message that includes phrasing about a bug returning, a fix reverting, or a previously-working feature being broken. Also fires on:
+
 - "The X page is blank on mobile again"
 - "Sign in loops back to sign-up now"
 - "Watermark PDF lost its selectable text"
@@ -46,7 +47,7 @@ For non-editor regressions (auth, paywall, upload), read the "Auth + paywall + e
 
 ### 4. Read memory
 
-Check `/Users/softaims/.claude/projects/-Users-softaims-pdf-viewer-app/memory/` for any `project_*` or `feedback_*` entries mentioning the surface. The user's `feedback_off_limits_revisable` memory is especially relevant — off-limits calls get revised when the trade-off changes.
+Check `/Users/brickslogix/.claude/projects/-Users-brickslogix-pdf-viewer-app/memory/` for any `project_*` or `feedback_*` entries mentioning the surface. The user's `feedback_off_limits_revisable` memory is especially relevant — off-limits calls get revised when the trade-off changes.
 
 ### 5. Run `git log -S` for the invariant
 
@@ -95,6 +96,7 @@ If the root cause is a reverted invariant, the fix is `git show <revert-hash>` i
 ### 8. Trigger the safety net
 
 After the fix:
+
 - Invoke `pre-push-guardian` before pushing — the mobile checklist catches the class of regression you're fixing.
 - Invoke `memory-snapshotter` to record what got reverted and when, so this doesn't happen a third time. Ideally add or update a `feedback_*` memory that names the specific code the next Claude session must preserve.
 - If the reverted invariant wasn't already in `.claude/LOCKED_PATHS`, propose adding it. This is the mechanical guard against a repeat.

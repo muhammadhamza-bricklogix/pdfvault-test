@@ -27,7 +27,7 @@ try {
     ``,
     `Extract any new user preferences, project state changes, feedback, or`,
     `non-obvious decisions from this conversation into the memory system at`,
-    `/Users/softaims/.claude/projects/-Users-softaims-pdf-viewer-app/memory/`,
+    `/Users/brickslogix/.claude/projects/-Users-brickslogix-pdf-viewer-app/memory/`,
     `so they survive into the next session.`,
     ``,
     `If nothing in this conversation is worth persisting, say so plainly.`,

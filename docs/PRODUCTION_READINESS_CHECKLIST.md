@@ -1,6 +1,6 @@
 # PDFVault — Production Readiness Checklist
 
-Owner: Uzair · Prepared: 2026-08-08
+Owner: Hamza · Prepared: 2026-08-08
 Scope: everything that must be verified before we open pdfvault.ai to public users.
 
 Use the checkboxes as a working sign-off sheet. Anything left unchecked is a launch blocker unless explicitly waived, in writing, with the risk noted.
@@ -253,7 +253,7 @@ Every external dependency needs a production account, production keys stored in 
 - [ ] Any unchecked box above is either resolved or explicitly waived with a note here:
 
   | Waived item | Reason | Owner | Revisit date |
-  |---|---|---|---|
-  |  |  |  |  |
+  | ----------- | ------ | ----- | ------------ |
+  |             |        |       |              |
 
 Launch time / date fixed only after this sheet is complete.
