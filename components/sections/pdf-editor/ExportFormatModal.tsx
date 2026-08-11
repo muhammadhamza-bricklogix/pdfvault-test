@@ -6,6 +6,7 @@ import {
   Doc01Icon,
   FileImageIcon,
   Pdf01Icon,
+  Tick01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Input, Modal, TextField } from "@heroui/react";
@@ -173,7 +174,8 @@ function ExportFormatModalBody({
           Cancel
         </Button>
         <Button isDisabled={!file} onPress={handleDownload}>
-          Download
+          <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
+          Done
         </Button>
       </Modal.Footer>
     </Modal.Dialog>
