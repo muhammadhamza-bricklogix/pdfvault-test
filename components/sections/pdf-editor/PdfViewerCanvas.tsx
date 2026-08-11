@@ -23,6 +23,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
 import { FloatingShapeToolbar } from "./FloatingShapeToolbar";
+import { SearchHighlightLayer } from "./SearchHighlightLayer";
 import { SignatureModal } from "./SignatureModal";
 
 type PdfViewerCanvasProps = {
@@ -577,6 +578,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
               aria-label={`PDF editing canvas, page ${currentPage} of ${pageCount}`}
               role="application"
             />
+            <SearchHighlightLayer currentPage={currentPage} zoom={zoom} />
             <FloatingTextToolbar
               canvasContainerRef={containerRef}
               fabricCanvas={fabricCanvas}

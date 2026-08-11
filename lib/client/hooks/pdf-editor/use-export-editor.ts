@@ -140,7 +140,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   }, [convert]);
 
   const handleExport = useCallback(
-    async (format: ExportFormat, customFilename?: string, shouldPrint?: boolean) => {
+    async (
+      format: ExportFormat,
+      customFilename?: string,
+      shouldPrint?: boolean,
+    ) => {
       if (isExportingRef.current) return;
 
       const {

@@ -23,6 +23,7 @@ import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extrac
 import { useFormFieldsEditor } from "@/lib/client/hooks/pdf-editor/use-form-fields-editor";
 import { usePageNumbersEditor } from "@/lib/client/hooks/pdf-editor/use-page-numbers-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
+import { usePdfSearch } from "@/lib/client/hooks/pdf-editor/use-pdf-search";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
@@ -44,6 +45,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { BottomDock } from "./BottomDock";
 import { EditorInfoBar } from "./EditorTopBar";
 import { EditorLoadingShell } from "./EditorLoadingShell";
+import { PdfSearchBar } from "./PdfSearchBar";
 import { PdfViewerCanvas } from "./PdfViewerCanvas";
 import { TopAppBar, ToolToolbar } from "./PvEditorTopChrome";
 import { RightSidebar } from "./RightSidebar";
@@ -187,6 +189,9 @@ function EditorLayout() {
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
   useAnnotationsEditor(fabricCanvas);
+
+  const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
+
   useProductTour("editor");
 
   const handleFabricCanvasReady = useCallback(
@@ -363,6 +368,7 @@ function EditorLayout() {
       <>
         <EditorInfoBar />
         <div className="relative flex flex-1 overflow-hidden">
+          <PdfSearchBar goToNext={searchGoToNext} goToPrev={searchGoToPrev} />
           <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
           <div className="pointer-events-none absolute right-4 top-4 z-10">
             <div className="pointer-events-auto">
@@ -389,8 +395,9 @@ function EditorLayout() {
       <TopAppBar />
       <div className="relative flex flex-1 overflow-hidden">
         <ThumbnailSidebar onReorderPages={handleReorderPages} />
-        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
+        <div className="relative flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
           <ToolToolbar />
+          <PdfSearchBar goToNext={searchGoToNext} goToPrev={searchGoToPrev} />
           <PdfViewerCanvas onFabricCanvasReady={handleFabricCanvasReady} />
         </div>
         <RightSidebar fabricCanvas={fabricCanvas} />

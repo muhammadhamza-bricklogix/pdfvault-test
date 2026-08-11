@@ -8,6 +8,7 @@ import {
   BackgroundIcon,
   PrinterIcon,
   Comment01Icon,
+  Search01Icon,
   Copy01Icon,
   Cursor01Icon,
   EraserIcon,
@@ -42,6 +43,7 @@ import { LanguageSwitcher } from "@/components/shared/navigation/language-switch
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -222,6 +224,12 @@ function TopAppBar() {
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
+  const {
+    isOpen: isSearchOpen,
+    open: openSearch,
+    close: closeSearch,
+  } = usePdfSearchStore();
+
   const handlePrint = async () => {
     if (!file) return;
     if (!entitled) {
@@ -300,6 +308,28 @@ function TopAppBar() {
       <LanguageSwitcher />
 
       <TourHelpButton tour="editor" variant="chrome" />
+
+      {/* Search — PDF-wide text search with highlight + navigation. */}
+      <Tooltip delay={300}>
+        <button
+          aria-label="Search in PDF"
+          aria-pressed={isSearchOpen}
+          className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
+            isSearchOpen
+              ? "border-[#f12c23] bg-red-50 text-[#f12c23]"
+              : "border-default-200 bg-white text-[var(--color-foreground)] hover:bg-default-100"
+          }`}
+          disabled={!file}
+          type="button"
+          onClick={() => (isSearchOpen ? closeSearch() : openSearch())}
+        >
+          <HugeiconsIcon icon={Search01Icon} size={14} />
+          <span className="hidden sm:inline">Search</span>
+        </button>
+        <Tooltip.Content>
+          <p>Search in PDF</p>
+        </Tooltip.Content>
+      </Tooltip>
 
       {/* Print — paid users only; builds the final edited PDF then opens
           the browser print dialog via a hidden iframe. */}
