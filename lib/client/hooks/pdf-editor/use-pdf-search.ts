@@ -137,10 +137,8 @@ export function usePdfSearch() {
 
           if (cancelled) return;
 
-          const items = content.items
-            .filter(
-              (item): item is import("pdfjs-dist").TextItem => "str" in item,
-            )
+          type RawTextItem = { str: string; transform: ArrayLike<number>; width: number; height: number };
+          const items = (content.items.filter((item) => "str" in item) as RawTextItem[])
             .filter((item) => item.str.trim().length > 0)
             .map((item) => ({
               str: item.str,
