@@ -177,14 +177,15 @@ body {
   font-weight: 500;
   color: var(--pv-text-muted, #a4a4a4);
   background: transparent;
-  border: none;
+  border: 1.5px solid var(--pv-text-muted, #a4a4a4);
   border-radius: 999px;
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 .driver-popover.pv-tour-popover .pv-tour-skip-btn:hover {
   color: var(--pv-text-strong, #171717);
   background: var(--pv-nav-active, #f3f3f5);
+  border-color: var(--pv-text-strong, #171717);
 }
 .driver-popover.pv-tour-popover .driver-popover-progress-text {
   font-size: 11px;
