@@ -175,17 +175,17 @@ body {
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--pv-text-muted, #a4a4a4);
+  color: #f12c23;
   background: transparent;
-  border: 1.5px solid var(--pv-text-muted, #a4a4a4);
+  border: 1.5px solid #f12c23;
   border-radius: 999px;
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 .driver-popover.pv-tour-popover .pv-tour-skip-btn:hover {
-  color: var(--pv-text-strong, #171717);
-  background: var(--pv-nav-active, #f3f3f5);
-  border-color: var(--pv-text-strong, #171717);
+  color: #c9221a;
+  background: #fff1f0;
+  border-color: #c9221a;
 }
 .driver-popover.pv-tour-popover .driver-popover-progress-text {
   font-size: 11px;
