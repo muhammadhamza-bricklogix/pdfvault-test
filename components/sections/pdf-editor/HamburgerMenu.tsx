@@ -110,7 +110,7 @@ export function HamburgerMenu() {
         logger.warn("pending editor file save failed", err);
       }
       requireSignIn(
-        "Removing annotations is a paid feature. Sign in and we'll bring you back here to finish.",
+        "Sign in and we'll bring you back here to finish.",
         `${ROUTES.TOOLS.PDF_EDITOR}?tool=flatten`,
       );
 
