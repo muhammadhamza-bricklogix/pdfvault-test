@@ -4,8 +4,9 @@ import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import type { ComponentProps } from "react";
 
 import {
-  ArrowDown01Icon,
+  Tick01Icon,
   BackgroundIcon,
+  PrinterIcon,
   Comment01Icon,
   Copy01Icon,
   Cursor01Icon,
@@ -39,6 +40,8 @@ import { useMemo, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
+import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -129,7 +132,6 @@ function fireEditorEvent(name: string) {
   window.dispatchEvent(new CustomEvent(name));
 }
 
-
 // ---------------------------------------------------------------------------
 // Tool pill button (icon on top, small label under).
 // ---------------------------------------------------------------------------
@@ -215,9 +217,24 @@ function TopAppBar() {
 
   const fileName = file?.name ?? "Untitled.pdf";
 
+  const entitled = useIsEntitled();
   const canShare = !!file && isSignedIn;
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  const handlePrint = async () => {
+    if (!file) return;
+    if (!entitled) {
+      const outcome = await requestPaywall();
+
+      if (outcome !== "success") return;
+    }
+    window.dispatchEvent(
+      new CustomEvent("editor:export", {
+        detail: { format: "pdf", print: true },
+      }),
+    );
+  };
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
@@ -284,6 +301,24 @@ function TopAppBar() {
 
       <TourHelpButton tour="editor" variant="chrome" />
 
+      {/* Print — paid users only; builds the final edited PDF then opens
+          the browser print dialog via a hidden iframe. */}
+      <Tooltip delay={300}>
+        <button
+          aria-label="Print"
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+          disabled={!file}
+          type="button"
+          onClick={() => void handlePrint()}
+        >
+          <HugeiconsIcon icon={PrinterIcon} size={14} />
+          <span className="hidden sm:inline">Print</span>
+        </button>
+        <Tooltip.Content>
+          <p>Print</p>
+        </Tooltip.Content>
+      </Tooltip>
+
       {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
       <button
         aria-label="Share via link"
@@ -304,8 +339,9 @@ function TopAppBar() {
         isDisabled={!canDownload}
         onPress={() => setIsExportModalOpen(true)}
       >
-        <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-        <span className="hidden sm:inline">Download</span>
+        <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
+
+        <span className="hidden sm:inline">Done</span>
       </Button>
 
       <ExportFormatModal

@@ -41,6 +41,8 @@ export type EditorExportEventDetail = {
    * the source file's own basename is used, preserving the pre-modal default.
    */
   filename?: string;
+  /** When true, open the browser print dialog instead of downloading. */
+  print?: boolean;
 };
 
 const FORMAT_TO_CONVERSION_TYPE: Record<
@@ -138,7 +140,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   }, [convert]);
 
   const handleExport = useCallback(
-    async (format: ExportFormat, customFilename?: string) => {
+    async (format: ExportFormat, customFilename?: string, shouldPrint?: boolean) => {
       if (isExportingRef.current) return;
 
       const {
@@ -271,6 +273,28 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           : null;
 
         if (format === "pdf") {
+          if (shouldPrint) {
+            const blob = new Blob([bytes.buffer as ArrayBuffer], {
+              type: "application/pdf",
+            });
+            const url = URL.createObjectURL(blob);
+            const iframe = document.createElement("iframe");
+
+            iframe.style.cssText =
+              "position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none";
+            iframe.src = url;
+            document.body.appendChild(iframe);
+            iframe.onload = () => {
+              iframe.contentWindow?.print();
+              setTimeout(() => {
+                URL.revokeObjectURL(url);
+                document.body.removeChild(iframe);
+              }, 60_000);
+            };
+
+            return;
+          }
+
           const outName = userBase
             ? ensureExtension(userBase, "pdf")
             : buildPdfExportFilename(sourceFile.name);
@@ -359,7 +383,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       const detail = (event as CustomEvent<EditorExportEventDetail>).detail;
       const format = detail?.format ?? "pdf";
 
-      void handleExport(format, detail?.filename);
+      void handleExport(format, detail?.filename, detail?.print);
     };
 
     window.addEventListener("editor:export", onExport);

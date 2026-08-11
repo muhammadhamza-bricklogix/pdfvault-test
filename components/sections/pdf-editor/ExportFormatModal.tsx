@@ -174,8 +174,7 @@ function ExportFormatModalBody({
           Cancel
         </Button>
         <Button isDisabled={!file} onPress={handleDownload}>
-          <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
-          Done
+          Download
         </Button>
       </Modal.Footer>
     </Modal.Dialog>
