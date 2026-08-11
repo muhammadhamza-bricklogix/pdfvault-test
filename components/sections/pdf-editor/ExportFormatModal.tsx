@@ -95,13 +95,25 @@ function ExportFormatModalBody({
   const file = usePdfEditorStore((s) => s.file);
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");
   const [fileName, setFileName] = useState(initialName);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    setIsSaving(true);
+
+    await new Promise<void>((resolve) => {
+      window.dispatchEvent(
+        new CustomEvent("editor:save-before-action", {
+          detail: { force: false, onComplete: () => resolve() },
+        }),
+      );
+    });
+
     window.dispatchEvent(
       new CustomEvent("editor:export", {
         detail: { filename: fileName, format: selected },
       }),
     );
+
     onClose();
   };
 
@@ -173,9 +185,9 @@ function ExportFormatModalBody({
         <Button slot="close" variant="secondary">
           Cancel
         </Button>
-        <Button isDisabled={!file} onPress={handleDownload}>
-          <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
-          Done
+        <Button isDisabled={!file || isSaving} onPress={handleDownload}>
+          {!isSaving && <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />}
+          {isSaving ? "Saving…" : "Done"}
         </Button>
       </Modal.Footer>
     </Modal.Dialog>
