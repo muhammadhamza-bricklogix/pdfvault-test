@@ -468,15 +468,6 @@ function PlanStep({
 
             {preview ? (
               <>
-                <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
-                  <span
-                    aria-hidden
-                    className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
-                  >
-                    ✓
-                  </span>
-                  Your document is ready for download
-                </span>
                 <PreviewFileCard preview={preview} />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
                   Subscribe below to download the converted file instantly and
@@ -485,15 +476,6 @@ function PlanStep({
               </>
             ) : (
               <>
-                <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full border border-[#0f9d58]/15 bg-white py-1 pl-1 pr-3 text-[11px] font-semibold uppercase tracking-wide text-[#0f9d58] shadow-[0_2px_8px_-4px_rgba(15,157,88,0.35)]">
-                  <span
-                    aria-hidden
-                    className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0f9d58] text-[10px] font-bold text-white"
-                  >
-                    ✓
-                  </span>
-                  Your document is ready for download
-                </span>
                 <GenericPreviewCard />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
                   Subscribe below to download instantly and keep unlimited
@@ -1025,16 +1007,8 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
 
   return (
     <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
-      {/* Green "ready" header — matches reference screenshot style */}
-      <div className="flex items-center justify-between bg-[#e6f5ec] px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0f9d58] text-[11px] font-bold text-white">
-            ✓
-          </span>
-          <span className="text-[13px] font-semibold text-[#0f9d58]">
-            Your document is ready!
-          </span>
-        </div>
+      {/* File type badge header */}
+      <div className="flex items-center justify-end bg-[#f7f7f9] px-4 py-2.5">
         <span
           className="inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[10px] font-bold text-white"
           style={{ backgroundColor: targetBadge }}
@@ -1116,16 +1090,8 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
 function GenericPreviewCard() {
   return (
     <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
-      {/* Green "ready" header */}
-      <div className="flex items-center justify-between bg-[#e6f5ec] px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0f9d58] text-[11px] font-bold text-white">
-            ✓
-          </span>
-          <span className="text-[13px] font-semibold text-[#0f9d58]">
-            Your document is ready!
-          </span>
-        </div>
+      {/* File type badge header */}
+      <div className="flex items-center justify-end bg-[#f7f7f9] px-4 py-2.5">
         <span className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white">
           PDF
         </span>
@@ -1163,14 +1129,6 @@ function GenericPreviewCard() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-[#ececec] px-4 py-3">
-        <span className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white">
-          PDF
-        </span>
-        <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#1a1c21]">
-          Your document is ready for download
-        </p>
-      </div>
     </div>
   );
 }
