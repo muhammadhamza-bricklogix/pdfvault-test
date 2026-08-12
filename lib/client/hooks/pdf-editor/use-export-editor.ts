@@ -236,8 +236,8 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        // Build the edited PDF bytes first so the paywall can show the real
-        // converted document instead of a blurred mock.
+        // Build PDF bytes client-side first — no network call, always succeeds
+        // for an entitled user and gives us a real preview for the paywall.
         const { bytes } = await buildEditedPdfBytes({
           currentPage: page,
           fabricCanvas: liveCanvas,
@@ -249,31 +249,34 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           ? sanitizeBaseName(customFilename)
           : null;
 
-        if (format === "pdf") {
-          // Gate entitlement with a real PDF preview so the user sees their
-          // actual document before choosing to subscribe.
-          const entitled = await ensureFreshEntitlement();
+        // Gate entitlement NOW, before any network conversion, so the axios
+        // pre-flight interceptor never fires its own (preview-less) paywall.
+        // We use the PDF bytes as the preview so the user sees their real
+        // document in the paywall regardless of the target format.
+        const entitled = await ensureFreshEntitlement();
 
-          if (!entitled) {
-            const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
-              type: "application/pdf",
+        if (!entitled) {
+          const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
+            type: "application/pdf",
+          });
+          const objectUrl = URL.createObjectURL(pdfBlob);
+
+          try {
+            const outcome = await requestPaywall({
+              filename: sourceFile.name,
+              previewObjectUrl: objectUrl,
+              sourceExt: "pdf",
+              targetExt: format,
             });
-            const objectUrl = URL.createObjectURL(pdfBlob);
 
-            try {
-              const outcome = await requestPaywall({
-                filename: sourceFile.name,
-                previewObjectUrl: objectUrl,
-                sourceExt: "pdf",
-                targetExt: "pdf",
-              });
-
-              if (outcome !== "success") return;
-            } finally {
-              URL.revokeObjectURL(objectUrl);
-            }
+            if (outcome !== "success") return;
+          } finally {
+            URL.revokeObjectURL(objectUrl);
           }
+        }
 
+        // User is entitled — proceed with the format-specific export.
+        if (format === "pdf") {
           if (shouldPrint) {
             const blob = new Blob([bytes.buffer as ArrayBuffer], {
               type: "application/pdf",
@@ -309,8 +312,8 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        // Non-PDF: convert via backend first, then gate entitlement so the
-        // paywall shows the real converted file preview.
+        // Non-PDF: convert now — user is entitled so the axios pre-flight
+        // passes without opening a second paywall.
         const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
         const baseName =
           userBase ?? (sourceFile.name.replace(/\.[^.]+$/, "") || "document");
@@ -342,28 +345,6 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        // Entitlement gate after conversion — show real file in the paywall.
-        const entitled = await ensureFreshEntitlement();
-
-        if (!entitled) {
-          const objectUrl = URL.createObjectURL(result.blob);
-
-          try {
-            const outcome = await requestPaywall({
-              filename: sourceFile.name,
-              previewObjectUrl: objectUrl,
-              sourceExt: "pdf",
-              targetExt: format,
-            });
-
-            if (outcome !== "success") return;
-          } finally {
-            URL.revokeObjectURL(objectUrl);
-          }
-        }
-
-        // Conversion mutation already fired its own success toast — log only
-        // if the blob download itself fails so we don't double-toast.
         try {
           const serverExt = result.fileName.match(/\.[^.]+$/)?.[0]?.slice(1);
           const outName =
