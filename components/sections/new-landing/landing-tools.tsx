@@ -47,7 +47,7 @@ const TOOLS: Tool[] = [
     tabs: ["edit"],
   },
   {
-    icon: "/landing/editor.svg",
+    icon: "/landing/signature.svg",
     title: "Sign & Watermark",
     description: "Sign and watermark with vector strokes.",
     href: TOOL_ROUTE.watermark,
