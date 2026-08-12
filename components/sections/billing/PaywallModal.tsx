@@ -639,10 +639,9 @@ function PayStep({
     selectedPlan === "annual"
       ? formatWhole(intent.amountTodayMinor, intent.currency)
       : today;
-  const renewDisplay =
-    selectedPlan === "annual"
-      ? formatWhole(intent.amountRenewMinor, intent.currency)
-      : renew;
+  // Renewal amounts are hardcoded to match advertised pricing regardless
+  // of what Solidgate returns (backend may return $24.99 for $25 plans).
+  const renewDisplay = selectedPlan === "annual" ? "$300" : "$25";
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
@@ -840,10 +839,15 @@ function PayStep({
 
         {/* Order summary card */}
         <div className="rounded-2xl bg-white p-5">
-          <div className="flex items-baseline justify-between">
-            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
-            </p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-1">
+              <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
+                {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
+              </p>
+              <span className="inline-flex w-fit items-center rounded-full bg-[#e6f5ec] px-2 py-0.5 text-[11px] font-semibold text-[#0f9d58]">
+                7-day trial
+              </span>
+            </div>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
               {todayDisplay}
             </p>
@@ -1189,7 +1193,7 @@ function PlanAccordion({
       title: "Monthly Plan",
       price: fullAccessPrice,
       priceSuffix: "7-day trial",
-      note: "then $25.00/mo",
+      note: "",
       badge: "Most popular",
       highlight: true,
     },
@@ -1198,7 +1202,7 @@ function PlanAccordion({
       title: "Annual Plan",
       price: annualPrice,
       priceSuffix: "/ month",
-      note: "$300.00 / year",
+      note: "",
     },
   ];
 
