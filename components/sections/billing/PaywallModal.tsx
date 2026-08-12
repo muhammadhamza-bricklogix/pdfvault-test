@@ -664,42 +664,31 @@ function PayStep({
             Express checkout
           </p>
 
-          {/* Express checkout buttons — Apple Pay first, Google Pay second,
-              Pay with card third. Custom styled baseline is always visible;
-              Solidgate SDK containers overlay when the native button mounts.
-              PaymentForm is always mounted (even when hidden) so the wallet
-              button injection and SDK init happen immediately on step entry. */}
-          <div className="flex flex-col gap-3">
-            {/* Apple Pay */}
-            <div className="relative h-[42px] rounded-xl">
-              <div className="flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-[#1a1a1a] px-4">
+          {/* Two states:
+              1. Before card form → non-functional visual placeholders for
+                 Apple Pay / Google Pay / Pay with card. No SDK mounted.
+              2. After clicking "Pay with card" → SDK container divs +
+                 PaymentForm only. Placeholders unmount so there is exactly
+                 one set of wallet buttons — the real ones from the SDK. */}
+          {!showCardForm && !payFailed ? (
+            <div className="flex flex-col gap-3">
+              {/* Apple Pay visual placeholder */}
+              <div className="flex h-[42px] w-full items-center justify-center gap-1.5 rounded-xl bg-[#1a1a1a] px-4">
                 <AppleLogoIcon />
                 <span className="text-[14px] font-medium tracking-tight text-white">
                   Pay
                 </span>
               </div>
-              <div
-                ref={applePayContainerRef}
-                className="absolute inset-0 empty:hidden overflow-hidden rounded-xl [&>*]:!h-full [&>*]:!w-full [&_iframe]:!h-full [&_iframe]:!w-full [&_iframe]:!rounded-xl"
-              />
-            </div>
 
-            {/* Google Pay */}
-            <div className="relative h-[42px] rounded-xl">
-              <div className="flex h-full w-full items-center justify-center gap-2.5 rounded-xl bg-[#1a1a1a] px-4">
+              {/* Google Pay visual placeholder */}
+              <div className="flex h-[42px] w-full items-center justify-center gap-2.5 rounded-xl bg-[#1a1a1a] px-4">
                 <GoogleGIcon />
                 <span className="text-[14px] font-medium tracking-tight text-white">
                   Pay
                 </span>
               </div>
-              <div
-                ref={googlePayContainerRef}
-                className="absolute inset-0 empty:hidden overflow-hidden rounded-xl [&>*]:!h-full [&>*]:!w-full [&_iframe]:!h-full [&_iframe]:!w-full [&_iframe]:!rounded-xl"
-              />
-            </div>
 
-            {/* Pay with card — visible until user expands the card form */}
-            {!showCardForm && !payFailed ? (
+              {/* Pay with card button */}
               <button
                 className="flex h-[42px] w-full cursor-pointer items-center justify-between rounded-xl bg-[#3a3a3a] px-4 transition-colors hover:bg-[#2d2d2d]"
                 type="button"
@@ -716,41 +705,48 @@ function PayStep({
                   <JcbBadge />
                 </div>
               </button>
-            ) : null}
-          </div>
-
-          {/* Card form — mounted lazily when the user clicks "Pay with card"
-              or after a payment decline. Lazy mount avoids the SDK injecting
-              wallet buttons into the container refs before the user has chosen
-              their payment method, which caused the buttons to overlap. */}
-          {showCardForm || payFailed ? (
-            <div className="rounded-xl">
-              {/* `key` bumps on retry so the Solidgate iframe fully remounts
-                  — otherwise the SDK holds onto its "Payment declined"
-                  state internally and a second submit is a no-op. */}
-              <PaymentForm
-                key={retryKey}
-                applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
-                applePayContainerRef={applePayContainerRef}
-                googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
-                googlePayContainerRef={googlePayContainerRef}
-                merchantData={{
-                  merchant: intent.merchant,
-                  signature: intent.signature,
-                  paymentIntent: intent.paymentIntent,
-                }}
-                width="100%"
-                onError={(error) => {
-                  logger.error("[paywall] Solidgate iframe error", error);
-                }}
-                onFail={onFail}
-                onMounted={() => {
-                  logger.info("[paywall] Solidgate iframe mounted");
-                }}
-                onSuccess={onSuccess}
-              />
             </div>
-          ) : null}
+          ) : (
+            <div className="flex flex-col gap-3">
+              {/* Real Apple Pay — SDK injects here; hidden until mounted */}
+              <div
+                ref={applePayContainerRef}
+                className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              />
+              {/* Real Google Pay — SDK injects here; hidden until mounted */}
+              <div
+                ref={googlePayContainerRef}
+                className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              />
+              {/* Card form */}
+              <div className="rounded-xl">
+                {/* `key` bumps on retry so the Solidgate iframe fully
+                    remounts — declined intents are terminal on Solidgate's
+                    side and won't accept a second attempt on the same key. */}
+                <PaymentForm
+                  key={retryKey}
+                  applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+                  applePayContainerRef={applePayContainerRef}
+                  googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
+                  googlePayContainerRef={googlePayContainerRef}
+                  merchantData={{
+                    merchant: intent.merchant,
+                    signature: intent.signature,
+                    paymentIntent: intent.paymentIntent,
+                  }}
+                  width="100%"
+                  onError={(error) => {
+                    logger.error("[paywall] Solidgate iframe error", error);
+                  }}
+                  onFail={onFail}
+                  onMounted={() => {
+                    logger.info("[paywall] Solidgate iframe mounted");
+                  }}
+                  onSuccess={onSuccess}
+                />
+              </div>
+            </div>
+          )}
 
           {payFailed ? (
             <div
