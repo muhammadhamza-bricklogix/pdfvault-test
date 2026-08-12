@@ -1192,7 +1192,7 @@ function PlanAccordion({
       id: "monthly",
       title: "Monthly Plan",
       price: fullAccessPrice,
-      priceSuffix: "7-day trial",
+      priceSuffix: "",
       note: "",
       badge: "Most popular",
       highlight: true,
