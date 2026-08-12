@@ -19,8 +19,6 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { conversionService } from "@/lib/shared/api/services/conversion.service";
-import { ApiError } from "@/lib/shared/utils/api-error";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -310,12 +308,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        // ── Non-PDF export: convert first, paywall only if needed ─────────
-        // Attempt conversion before opening the paywall so the user can see
-        // the real converted document in the paywall preview. The request
-        // bypasses the client-side pre-flight gate (the server still validates
-        // entitlement). If the server returns 402, we fall back to a PDF
-        // preview in the paywall, then retry after payment.
+        // ── Non-PDF export ────────────────────────────────────────────────
+        // Check entitlement first. Non-entitled users see the paywall with a
+        // PDF preview of their document; conversion only runs after payment so
+        // there is never a wasted server-side conversion for non-premium users.
+        const entitled = await ensureFreshEntitlement();
+
         const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
         const baseName =
           userBase ?? (sourceFile.name.replace(/\.[^.]+$/, "") || "document");
@@ -325,47 +323,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           { type: "application/pdf" },
         );
 
-        const loadingKey = toast.loading({
-          title: "Converting your file",
-          description: `${pdfFile.name} → ${format.toUpperCase()}`,
-        });
-
-        let convResult: { blob: Blob; fileName: string } | null = null;
-        let is402 = false;
-
-        try {
-          convResult = await conversionService.convertPreview({
-            file: pdfFile,
-            type: conversionType,
-          });
-          toast.close(loadingKey);
-          toast.success({
-            title: "Conversion complete",
-            description: `Ready to download — ${convResult.fileName}`,
-          });
-        } catch (err) {
-          toast.close(loadingKey);
-
-          if (err instanceof ApiError && err.statusCode === 402) {
-            is402 = true;
-          } else if (
-            (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
-          ) {
-            return;
-          } else {
-            logger.error("Failed to export PDF", err);
-            toast.error({
-              title: "Export failed",
-              description: "We couldn't export your edits. Please try again.",
-            });
-
-            return;
-          }
-        }
-
-        if (is402) {
-          // Not entitled — open paywall with PDF bytes as preview,
-          // then retry conversion after successful payment.
+        if (!entitled) {
           const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
             type: "application/pdf",
           });
@@ -383,53 +341,39 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           } finally {
             URL.revokeObjectURL(objectUrl);
           }
-
-          // Entitled now — retry conversion through the normal mutation
-          // (which shows its own loading + success/error toasts).
-          let result: Awaited<
-            ReturnType<typeof convertRef.current.mutateAsync>
-          >;
-
-          try {
-            result = await convertRef.current.mutateAsync({
-              file: pdfFile,
-              type: conversionType,
-            });
-          } catch (err) {
-            if (
-              (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
-            ) {
-              return;
-            }
-            logger.error("Failed to export PDF", err);
-            toast.error({
-              title: "Export failed",
-              description: "We couldn't export your edits. Please try again.",
-            });
-
-            return;
-          }
-
-          convResult = { blob: result.blob, fileName: result.fileName };
         }
 
-        if (convResult) {
-          try {
-            const serverExt = convResult.fileName
-              .match(/\.[^.]+$/)?.[0]
-              ?.slice(1);
-            const outName =
-              userBase && serverExt
-                ? ensureExtension(userBase, serverExt)
-                : convResult.fileName;
+        // Entitled (or just paid) — convert and download.
+        let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
 
-            triggerBlobDownload(convResult.blob, outName);
-          } catch (err) {
-            logger.error(
-              "blob download failed after successful conversion",
-              err,
-            );
+        try {
+          result = await convertRef.current.mutateAsync({
+            file: pdfFile,
+            type: conversionType,
+          });
+        } catch (err) {
+          if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+            return;
           }
+          logger.error("Failed to export PDF", err);
+          toast.error({
+            title: "Export failed",
+            description: "We couldn't export your edits. Please try again.",
+          });
+
+          return;
+        }
+
+        try {
+          const serverExt = result.fileName.match(/\.[^.]+$/)?.[0]?.slice(1);
+          const outName =
+            userBase && serverExt
+              ? ensureExtension(userBase, serverExt)
+              : result.fileName;
+
+          triggerBlobDownload(result.blob, outName);
+        } catch (err) {
+          logger.error("blob download failed after successful conversion", err);
         }
       } catch (err) {
         // Any pre-mutation exception (buildEditedPdfBytes, file
