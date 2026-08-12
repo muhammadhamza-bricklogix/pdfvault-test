@@ -356,6 +356,7 @@ export function PaywallModal({
             <PayStep
               intent={intent}
               payFailed={payFailed}
+              preview={preview}
               retryKey={retryKey}
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
@@ -364,7 +365,11 @@ export function PaywallModal({
               onSuccess={handleIframeSuccess}
             />
           ) : (
-            <SuccessStep intent={intent} selectedPlan={selectedPlan} onFinish={finish} />
+            <SuccessStep
+              intent={intent}
+              selectedPlan={selectedPlan}
+              onFinish={finish}
+            />
           )}
         </Modal.Dialog>
       </Modal.Container>
@@ -392,19 +397,9 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  // UI-only pricing per product spec (2026-07-30). The backend
-  // checkout-intent currently returns a single plan's amounts
-  // (`intent.amountTodayMinor` / `amountRenewMinor`); until per-plan
-  // intents are wired, the displayed prices below are the source of
-  // truth for the picker. Trial still fires the same intent on
-  // Continue — see PayStep for the actual charge amounts.
   const fullAccessPrice = "$25";
   const annualPrice = "$300";
-  // Fallback display for entry points where `intent` is loaded but no
-  // preview exists — reuse the intent-derived amounts in the small
-  // print so it never contradicts what will actually be charged.
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  const renew = formatMinor(intent.amountRenewMinor, intent.currency);
 
   const continueDisabled = continueLoading;
 
@@ -564,8 +559,7 @@ function PlanStep({
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in an annual subscription to pdfvault.ai. You
             agree to be billed $300.00 per year until you cancel. Payments will
-            be charged from the card you specified below. To cancel, visit
-            your{" "}
+            be charged from the card you specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"
@@ -625,6 +619,7 @@ function PayStep({
   retryLoading,
   onRetry,
   selectedPlan,
+  preview,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
@@ -634,10 +629,10 @@ function PayStep({
   retryLoading: boolean;
   onRetry: () => void;
   selectedPlan: PlanId;
+  preview: PaywallPreview | null;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
-  const nextChargeLabel = formatRenewalDate();
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
@@ -650,23 +645,162 @@ function PayStep({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      {/* Left — cream order summary */}
+      {/* ── Left column — payment (white) ── */}
+      <div className="flex flex-col gap-0">
+        {/* Total due today header */}
+        <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-5 md:px-8">
+          <span className="text-[14px] font-medium text-[#5c5c5c]">
+            Total due today:
+          </span>
+          <span className="pv-heading text-[22px] font-bold text-[#1a1c21]">
+            {today}
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-4 p-6 md:p-8">
+          {/* Express checkout label */}
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-[#1a1c21]">
+            Express checkout
+          </p>
+
+          {/* Wallet buttons — Solidgate mounts Apple/Google Pay into
+              these containers. Each hides itself when the current
+              browser/device can't render it. The wrapper enforces a
+              consistent 48px min-height + full width so the wallet
+              button reads as a polished CTA row. Rounded corners on
+              the inner iframe survive Apple's own button radius via
+              overflow-hidden. */}
+          <div className="flex flex-col gap-2">
+            <div
+              ref={googlePayContainerRef}
+              className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[48px] [&>*]:!w-full [&_iframe]:!min-h-[48px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+            />
+            <div
+              ref={applePayContainerRef}
+              className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[48px] [&>*]:!w-full [&_iframe]:!min-h-[48px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+            />
+          </div>
+
+          <div className="relative flex items-center gap-3 has-[+_.rounded-xl:only-child]:hidden">
+            <div className="h-px flex-1 bg-[#ececec]" />
+            <span className="text-[11px] uppercase tracking-wide text-[#9a9a9a]">
+              or pay with card
+            </span>
+            <div className="h-px flex-1 bg-[#ececec]" />
+          </div>
+
+          <div className="rounded-xl">
+            {/* `key` bumps on retry so the Solidgate iframe fully remounts
+                — otherwise the SDK holds onto its "Payment declined"
+                state internally and a second submit is a no-op. */}
+            <PaymentForm
+              key={retryKey}
+              applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+              applePayContainerRef={applePayContainerRef}
+              googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
+              googlePayContainerRef={googlePayContainerRef}
+              merchantData={{
+                merchant: intent.merchant,
+                signature: intent.signature,
+                paymentIntent: intent.paymentIntent,
+              }}
+              width="100%"
+              onError={(error) => {
+                logger.error("[paywall] Solidgate iframe error", error);
+              }}
+              onFail={onFail}
+              onMounted={() => {
+                logger.info("[paywall] Solidgate iframe mounted");
+              }}
+              onSuccess={onSuccess}
+            />
+          </div>
+
+          {payFailed ? (
+            <div
+              aria-live="polite"
+              className="flex flex-col gap-2 rounded-xl border border-danger-200 bg-danger-50 p-4 text-[13px] text-danger-800 dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
+            >
+              <p className="font-semibold">
+                Your card was declined and hasn&apos;t been charged.
+              </p>
+              <p>
+                Try another card or contact your bank. You can re-enter details
+                below.
+              </p>
+              <button
+                className="mt-1 inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={retryLoading}
+                type="button"
+                onClick={onRetry}
+              >
+                {retryLoading ? "Preparing…" : "Try another card"}
+              </button>
+            </div>
+          ) : null}
+
+          {/* Plan features */}
+          <div className="flex flex-col gap-3">
+            <p className="text-[12px] font-bold uppercase tracking-widest text-[#1a1c21]">
+              {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
+            </p>
+            <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
+              <Feature>Unlimited downloads</Feature>
+              <Feature>Unlimited edits</Feature>
+              <Feature>Convert to any format</Feature>
+              <Feature>Full access to 80+ tools</Feature>
+              <Feature>Password-protect your documents</Feature>
+            </ul>
+          </div>
+
+          {/* Legal small-print */}
+          <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+            By continuing you agree to be charged {today}{" "}
+            {selectedPlan === "annual"
+              ? "today, then $300.00 every 365 days"
+              : "per month"}{" "}
+            unless cancelled. See our{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/terms-and-conditions"
+            >
+              Subscription
+            </a>{" "}
+            &amp;{" "}
+            <a
+              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              href="/refund"
+            >
+              Refund
+            </a>{" "}
+            policies.
+          </p>
+
+          {process.env.NODE_ENV !== "production" ? (
+            <p className="rounded-md bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
+              <strong>Sandbox test card:</strong> 4067 4299 7471 9265 · any
+              future expiry · any CVV
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {/* ── Right column — document preview (cream) ── */}
       <div
-        className="flex flex-col gap-6 p-6 md:p-8"
+        className="flex flex-col gap-5 p-6 md:p-8"
         style={{ backgroundColor: CREAM }}
       >
-        <BrandLogo />
+        {preview ? (
+          <PreviewFileCard preview={preview} />
+        ) : (
+          <GenericPreviewCard />
+        )}
 
-        <h3 className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-          Order summary
-        </h3>
-
-        <div className="rounded-2xl bg-white p-5">
+        {/* Order summary card */}
+        <div className="mt-auto rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between">
             <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual"
-                ? "Annual Plan"
-                : "7-Day Full Access Trial"}
+              {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
             </p>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
               {today}
@@ -676,9 +810,7 @@ function PayStep({
           <div className="my-4 h-px bg-[#ececec]" />
           <div className="flex items-baseline justify-between">
             <p className="text-[13px] text-[#5c5c5c]">
-              {selectedPlan === "annual"
-                ? "Renews yearly"
-                : `After trial (${nextChargeLabel})`}
+              {selectedPlan === "annual" ? "Renews yearly" : "Renews monthly"}
             </p>
             <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
               {renew} {selectedPlan === "annual" ? "/ year" : "/ month"}
@@ -686,134 +818,11 @@ function PayStep({
           </div>
         </div>
 
-        <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
-          <Feature>Full access to 80+ tools</Feature>
-          <Feature>Unlimited edits &amp; downloads</Feature>
-          <Feature>Cancel anytime, no questions</Feature>
-        </ul>
-
-        <p className="mt-auto flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
+        <p className="flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
           <span aria-hidden>🔒</span>
           Card details never touch our servers. Payments run through a
           PCI-compliant partner.
         </p>
-      </div>
-
-      {/* Right — iframe */}
-      <div className="flex flex-col gap-4 p-6 md:p-8">
-        <div>
-          <h3 className="pv-heading text-[22px] font-semibold text-[#1a1c21]">
-            Pay securely
-          </h3>
-          <p className="mt-1 text-[13px] text-[#6c6c6c]">
-            Apple Pay, Google Pay, Visa, Mastercard, or Amex
-          </p>
-        </div>
-
-        {/* Wallet buttons — Solidgate mounts Apple/Google Pay into
-            these containers. Each hides itself when the current
-            browser/device can't render it, so the "or pay with card"
-            divider only shows when at least one wallet is present.
-            The wrapper enforces a consistent 48px min-height + full
-            width so the wallet button reads as a polished CTA row
-            (matches the card-form submit button below). Rounded
-            corners on the inner iframe survive Apple's own button
-            radius via overflow-hidden. */}
-        <div className="flex flex-col gap-2">
-          <div
-            ref={applePayContainerRef}
-            className="empty:hidden overflow-hidden rounded-xl [&>*]:!w-full [&>*]:!min-h-[48px] [&_iframe]:!w-full [&_iframe]:!min-h-[48px] [&_iframe]:!rounded-xl"
-          />
-          <div
-            ref={googlePayContainerRef}
-            className="empty:hidden overflow-hidden rounded-xl [&>*]:!w-full [&>*]:!min-h-[48px] [&_iframe]:!w-full [&_iframe]:!min-h-[48px] [&_iframe]:!rounded-xl"
-          />
-        </div>
-
-        <div className="relative flex items-center gap-3 has-[+_.rounded-xl:only-child]:hidden">
-          <div className="h-px flex-1 bg-[#ececec]" />
-          <span className="text-[11px] uppercase tracking-wide text-[#9a9a9a]">
-            or pay with card
-          </span>
-          <div className="h-px flex-1 bg-[#ececec]" />
-        </div>
-
-        <div className="rounded-xl">
-          {/* `key` bumps on retry so the Solidgate iframe fully remounts
-              — otherwise the SDK holds onto its "Payment declined"
-              state internally and a second submit is a no-op. */}
-          <PaymentForm
-            key={retryKey}
-            applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
-            applePayContainerRef={applePayContainerRef}
-            googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
-            googlePayContainerRef={googlePayContainerRef}
-            merchantData={{
-              merchant: intent.merchant,
-              signature: intent.signature,
-              paymentIntent: intent.paymentIntent,
-            }}
-            width="100%"
-            onError={(error) => {
-              logger.error("[paywall] Solidgate iframe error", error);
-            }}
-            onFail={onFail}
-            onMounted={() => {
-              logger.info("[paywall] Solidgate iframe mounted");
-            }}
-            onSuccess={onSuccess}
-          />
-        </div>
-
-        {payFailed ? (
-          <div
-            aria-live="polite"
-            className="flex flex-col gap-2 rounded-xl border border-danger-200 bg-danger-50 p-4 text-[13px] text-danger-800 dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
-          >
-            <p className="font-semibold">
-              Your card was declined and hasn&apos;t been charged.
-            </p>
-            <p>
-              Try another card or contact your bank. You can re-enter details
-              below.
-            </p>
-            <button
-              className="mt-1 inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={retryLoading}
-              type="button"
-              onClick={onRetry}
-            >
-              {retryLoading ? "Preparing…" : "Try another card"}
-            </button>
-          </div>
-        ) : null}
-
-        <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-          By continuing you agree to be charged {today} today, then {renew}{" "}
-          {selectedPlan === "annual" ? "every 365 days" : "every 30 days"}{" "}
-          unless cancelled. See our{" "}
-          <a
-            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-            href="/terms-and-conditions"
-          >
-            Subscription
-          </a>{" "}
-          &amp;{" "}
-          <a
-            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-            href="/refund"
-          >
-            Refund
-          </a>{" "}
-          policies.
-        </p>
-
-        {process.env.NODE_ENV !== "production" ? (
-          <p className="rounded-md bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
-            <strong>Sandbox test card:</strong> 4067 4299 7471 9265 · any future
-            expiry · any CVV
-          </p>
-        ) : null}
       </div>
     </div>
   );
@@ -876,8 +885,8 @@ function SuccessStep({
           You&apos;re all set!
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#5c5c5c]">
-          Your subscription is active. You now have full access to every PDFVault
-          tool.
+          Your subscription is active. You now have full access to every
+          PDFVault tool.
         </p>
       </div>
 
@@ -1305,19 +1314,6 @@ function formatMinor(minor: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(minor / 100);
-}
-
-// Trial ends 7 days from today. Short label like "Jul 24" for the
-// order-summary row.
-function formatRenewalDate(): string {
-  const d = new Date();
-
-  d.setDate(d.getDate() + 7);
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-  }).format(d);
 }
 
 // Long label like "Jul 24, 2026" for the success card.
