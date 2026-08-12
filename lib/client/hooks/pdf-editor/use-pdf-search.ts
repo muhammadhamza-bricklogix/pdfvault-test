@@ -137,8 +137,15 @@ export function usePdfSearch() {
 
           if (cancelled) return;
 
-          type RawTextItem = { str: string; transform: ArrayLike<number>; width: number; height: number };
-          const items = (content.items.filter((item) => "str" in item) as RawTextItem[])
+          type RawTextItem = {
+            str: string;
+            transform: ArrayLike<number>;
+            width: number;
+            height: number;
+          };
+          const items = (
+            content.items.filter((item) => "str" in item) as RawTextItem[]
+          )
             .filter((item) => item.str.trim().length > 0)
             .map((item) => ({
               str: item.str,

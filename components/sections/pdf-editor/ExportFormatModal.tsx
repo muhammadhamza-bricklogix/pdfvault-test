@@ -186,7 +186,9 @@ function ExportFormatModalBody({
           Cancel
         </Button>
         <Button isDisabled={!file || isSaving} onPress={handleDownload}>
-          {!isSaving && <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />}
+          {!isSaving && (
+            <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
+          )}
           {isSaving ? "Saving…" : "Done"}
         </Button>
       </Modal.Footer>

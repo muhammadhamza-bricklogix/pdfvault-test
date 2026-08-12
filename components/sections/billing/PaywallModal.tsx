@@ -711,7 +711,7 @@ function PayStep({
               {/* Real Apple Pay — SDK injects here; hidden until mounted */}
               <div
                 ref={applePayContainerRef}
-                className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+                className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
               />
               {/* Real Google Pay — SDK injects here; hidden until mounted */}
               <div
