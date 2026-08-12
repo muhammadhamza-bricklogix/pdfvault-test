@@ -3,7 +3,7 @@
 import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
-import { Accordion, Modal } from "@heroui/react";
+import { Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -443,7 +443,7 @@ function PlanStep({
           suppresses the preview (billing settings entry point). */}
       {hidePreview ? (
         <div className="flex flex-col gap-4 p-6 md:p-8">
-          <PlanAccordion
+          <PlanCards
             annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
@@ -503,9 +503,9 @@ function PlanStep({
             )}
           </div>
 
-          {/* Right — plan accordion column */}
+          {/* Right — plan cards column */}
           <div className="flex flex-col gap-4 p-6 md:p-8">
-            <PlanAccordion
+            <PlanCards
               annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
               selectedPlan={selectedPlan}
@@ -1024,40 +1024,60 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
     filename.length > 32 ? `${filename.slice(0, 29)}…` : filename;
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-black/5 bg-white p-4 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
-      {/* Blurred mock document preview */}
-      <div
-        aria-hidden
-        className="pointer-events-none flex select-none flex-col gap-1.5"
-        style={{ filter: "blur(3px)" }}
-      >
-        <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
-        <div className="h-2 w-full rounded bg-[#eaeaea]" />
-        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
-        <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
-        <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
-        <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
-        <div className="h-2 w-full rounded bg-[#eaeaea]" />
-        <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+    <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
+      {/* Green "ready" header — matches reference screenshot style */}
+      <div className="flex items-center justify-between bg-[#e6f5ec] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0f9d58] text-[11px] font-bold text-white">
+            ✓
+          </span>
+          <span className="text-[13px] font-semibold text-[#0f9d58]">
+            Your document is ready!
+          </span>
+        </div>
+        <span
+          className="inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[10px] font-bold text-white"
+          style={{ backgroundColor: targetBadge }}
+        >
+          {targetExt.toUpperCase()}
+        </span>
       </div>
 
-      {/* Lock overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
-          <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-            <path
-              d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-            />
-          </svg>
+      {/* Blurred mock document content */}
+      <div className="relative p-4">
+        <div
+          aria-hidden
+          className="pointer-events-none flex select-none flex-col gap-1.5"
+          style={{ filter: "blur(3px)" }}
+        >
+          <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
+          <div className="h-2 w-full rounded bg-[#eaeaea]" />
+          <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+          <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
+          <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
+          <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+          <div className="h-2 w-full rounded bg-[#eaeaea]" />
+          <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+        </div>
+
+        {/* Lock overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
+            <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+              <path
+                d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+          </div>
         </div>
       </div>
 
       {/* File-name + format transition */}
-      <div className="mt-3 flex items-center gap-2 border-t border-[#ececec] pt-3">
+      <div className="flex items-center gap-2 border-t border-[#ececec] px-4 py-3">
         <span
           aria-hidden
           className="inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[10px] font-bold text-white"
@@ -1095,40 +1115,56 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
  */
 function GenericPreviewCard() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-black/5 bg-white p-4 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
-      <div
-        aria-hidden
-        className="pointer-events-none flex select-none flex-col gap-1.5"
-        style={{ filter: "blur(3px)" }}
-      >
-        <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
-        <div className="h-2 w-full rounded bg-[#eaeaea]" />
-        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
-        <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
-        <div className="mt-2 h-20 w-full rounded bg-[#f0f0f0]" />
-        <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
-        <div className="h-2 w-full rounded bg-[#eaeaea]" />
-        <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
-        <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+    <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
+      {/* Green "ready" header */}
+      <div className="flex items-center justify-between bg-[#e6f5ec] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0f9d58] text-[11px] font-bold text-white">
+            ✓
+          </span>
+          <span className="text-[13px] font-semibold text-[#0f9d58]">
+            Your document is ready!
+          </span>
+        </div>
+        <span className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white">
+          PDF
+        </span>
       </div>
-      <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
-          <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-            <path
-              d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-            />
-          </svg>
+
+      {/* Blurred mock content */}
+      <div className="relative p-4">
+        <div
+          aria-hidden
+          className="pointer-events-none flex select-none flex-col gap-1.5"
+          style={{ filter: "blur(3px)" }}
+        >
+          <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
+          <div className="h-2 w-full rounded bg-[#eaeaea]" />
+          <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+          <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
+          <div className="mt-2 h-20 w-full rounded bg-[#f0f0f0]" />
+          <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+          <div className="h-2 w-full rounded bg-[#eaeaea]" />
+          <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+          <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
+            <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+              <path
+                d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+          </div>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 border-t border-[#ececec] pt-3">
-        <span
-          aria-hidden
-          className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white"
-        >
+
+      <div className="flex items-center gap-2 border-t border-[#ececec] px-4 py-3">
+        <span className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white">
           PDF
         </span>
         <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#1a1c21]">
@@ -1166,19 +1202,7 @@ const PLAN_FEATURES = [
   "Use PDFVault on mobile",
 ] as const;
 
-const PLAN_ORDER: readonly PlanId[] = ["monthly", "annual"] as const;
-
-interface PlanRow {
-  id: PlanId;
-  title: string;
-  price: string;
-  priceSuffix?: string;
-  note?: string;
-  badge?: string;
-  highlight?: boolean;
-}
-
-function PlanAccordion({
+function PlanCards({
   selectedPlan,
   onSelectPlan,
   fullAccessPrice,
@@ -1189,123 +1213,100 @@ function PlanAccordion({
   fullAccessPrice: string;
   annualPrice: string;
 }) {
-  const plans: PlanRow[] = [
+  const plans = [
     {
-      id: "monthly",
+      id: "monthly" as PlanId,
       title: "7-day trial",
       price: fullAccessPrice,
-      priceSuffix: "",
-      note: "",
+      priceSuffix: undefined as string | undefined,
+      note: "then $25.00/mo",
       badge: "Most popular",
-      highlight: true,
     },
     {
-      id: "annual",
+      id: "annual" as PlanId,
       title: "Annual Plan",
       price: annualPrice,
       priceSuffix: "/ month",
-      note: "",
+      note: "$300.00 / year",
+      badge: undefined as string | undefined,
     },
   ];
 
   return (
-    <Accordion
-      hideSeparator
-      className="flex w-full flex-col gap-4 rounded-2xl border border-[#ececec] bg-gradient-to-b from-[#fbfbfb] to-[#f5f5f5] p-3 pt-8"
-      expandedKeys={new Set([selectedPlan])}
-      variant="default"
-      onExpandedChange={(keys) => {
-        // HeroUI Accordion is single-expanded by default. Ignore the
-        // empty-set (user collapsed the current) — a paywall always
-        // needs one selected plan; the accordion is our source of
-        // truth for the picker selection.
-        const next = Array.from(keys)[0] as PlanId | undefined;
-
-        if (next && PLAN_ORDER.includes(next)) {
-          onSelectPlan(next);
-        }
-      }}
-    >
+    <div className="flex w-full flex-col gap-3">
       {plans.map((plan) => {
         const selected = plan.id === selectedPlan;
 
         return (
-          <Accordion.Item
+          <button
             key={plan.id}
-            className={`relative rounded-2xl border bg-white transition-all ${
+            className={`w-full overflow-hidden rounded-2xl border bg-white text-left transition-all ${
               selected
-                ? "border-2 border-[var(--pv-brand-red,#f12c23)] shadow-[0_10px_28px_-14px_rgba(241,44,35,0.35)]"
-                : "border-[#ececec] hover:border-[#d5d5d5]"
+                ? "border-2 border-[var(--pv-brand-red,#f12c23)] shadow-[0_10px_28px_-14px_rgba(241,44,35,0.3)]"
+                : "border border-[#e5e7eb] hover:border-[#c7c7c7]"
             }`}
-            id={plan.id}
+            type="button"
+            onClick={() => onSelectPlan(plan.id)}
           >
-            <Accordion.Heading>
-              <Accordion.Trigger className="flex w-full items-center gap-4 px-4 py-4 text-start">
-                <span
-                  aria-hidden
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                    selected
-                      ? "border-[var(--pv-brand-red,#f12c23)]"
-                      : "border-[#d5d5d5]"
-                  }`}
-                >
-                  {selected ? (
-                    <span className="block h-2.5 w-2.5 rounded-full bg-[var(--pv-brand-red,#f12c23)]" />
-                  ) : null}
-                </span>
-                <span className="pv-heading flex-1 text-[15px] font-semibold text-[#1a1c21]">
-                  {plan.title}
-                </span>
+            {/* "Most popular" full-width banner inside the card */}
+            {plan.badge ? (
+              <div className="w-full bg-gradient-to-r from-[#ffcc7a] to-[#fdb45e] py-2 text-center text-[12px] font-semibold text-[#7a4d0f]">
+                🚀 {plan.badge}
+              </div>
+            ) : null}
 
-                <span className="flex flex-col items-end leading-none">
-                  <span className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-                    {plan.price}
-                  </span>
-                  {plan.priceSuffix ? (
-                    <span className="mt-1 text-[11px] text-[#6c6c6c]">
-                      {plan.priceSuffix}
-                    </span>
-                  ) : null}
-                  {plan.note ? (
-                    <span className="mt-0.5 text-[10px] text-[#9a9a9a]">
-                      {plan.note}
-                    </span>
-                  ) : null}
+            {/* Radio + title + price */}
+            <div className="flex items-center gap-4 px-5 py-4">
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                  selected
+                    ? "border-[var(--pv-brand-red,#f12c23)] bg-[var(--pv-brand-red,#f12c23)]"
+                    : "border-[#d1d5db]"
+                }`}
+              >
+                {selected ? (
+                  <span className="block h-2 w-2 rounded-full bg-white" />
+                ) : null}
+              </span>
+              <span className="pv-heading flex-1 text-[16px] font-semibold text-[#1a1c21]">
+                {plan.title}
+              </span>
+              <span className="flex flex-col items-end leading-none">
+                <span className="pv-heading text-[18px] font-bold text-[#1a1c21]">
+                  {plan.price}
                 </span>
-              </Accordion.Trigger>
-              <span>
-                {plan.badge ? (
-                  <span
-                    aria-hidden
-                    className="absolute -top-[13px] left-4 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-[#ffcc7a] to-[#fdb45e] px-3 py-1 text-[11px] font-semibold text-[#7a4d0f] shadow-[0_6px_14px_-6px_rgba(253,180,94,0.9)] ring-1 ring-white/60"
-                  >
-                    <span aria-hidden>🚀</span>
-                    {plan.badge}
+                {plan.priceSuffix ? (
+                  <span className="mt-1 text-[11px] text-[#6c6c6c]">
+                    {plan.priceSuffix}
+                  </span>
+                ) : null}
+                {plan.note ? (
+                  <span className="mt-0.5 text-[10px] text-[#9a9a9a]">
+                    {plan.note}
                   </span>
                 ) : null}
               </span>
-            </Accordion.Heading>
-            <Accordion.Panel>
-              <Accordion.Body className="px-4 pb-4 pt-0">
+            </div>
+
+            {/* Feature list — only for the selected plan */}
+            {selected ? (
+              <div className="border-t border-[#f5f5f5] px-5 pb-5 pt-3">
                 <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
                   {PLAN_FEATURES.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2.5">
-                      <span
-                        aria-hidden
-                        className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15"
-                      >
+                    <li key={feature} className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15">
                         ✓
                       </span>
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </Accordion.Body>
-            </Accordion.Panel>
-          </Accordion.Item>
+              </div>
+            ) : null}
+          </button>
         );
       })}
-    </Accordion>
+    </div>
   );
 }
 
