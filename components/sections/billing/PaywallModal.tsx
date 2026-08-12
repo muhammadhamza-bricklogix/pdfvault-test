@@ -476,8 +476,10 @@ function PlanStep({
 
             {preview ? (
               <>
-                <span className="flex w-fit items-center gap-1.5 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
-                  <HugeiconsIcon color="white" icon={Tick01Icon} size={14} />
+                <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
+                  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
+                    <HugeiconsIcon color="white" icon={Tick01Icon} size={11} strokeWidth={2.5} />
+                  </span>
                   Your document is ready to download
                 </span>
                 <PreviewFileCard preview={preview} />
@@ -488,8 +490,10 @@ function PlanStep({
               </>
             ) : (
               <>
-                <span className="flex w-fit items-center gap-1.5 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
-                  <HugeiconsIcon color="white" icon={Tick01Icon} size={14} />
+                <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
+                  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
+                    <HugeiconsIcon color="white" icon={Tick01Icon} size={11} strokeWidth={2.5} />
+                  </span>
                   Your document is ready to download
                 </span>
                 <GenericPreviewCard />
