@@ -1023,16 +1023,48 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
         </span>
       </div>
 
-      {/* Document preview — real iframe when available, mock otherwise */}
+      {/* Document preview — real content when available, blurred mock otherwise */}
       {previewObjectUrl ? (
-        <div className="h-[220px] w-full overflow-hidden">
-          <iframe
-            className="h-full w-full border-none"
-            src={previewObjectUrl}
-            style={{ pointerEvents: "none" }}
-            title={filename}
-          />
-        </div>
+        ["jpg", "jpeg", "png"].includes(targetExt.toLowerCase()) ? (
+          <div className="flex h-[220px] w-full items-center justify-center overflow-hidden bg-[#f7f7f9]">
+            <img
+              alt={filename}
+              className="max-h-full max-w-full object-contain"
+              src={previewObjectUrl}
+              style={{ pointerEvents: "none" }}
+            />
+          </div>
+        ) : ["pdf", "html", "htm", "txt"].includes(targetExt.toLowerCase()) ? (
+          <div className="h-[220px] w-full overflow-hidden">
+            <iframe
+              className="h-full w-full border-none"
+              src={previewObjectUrl}
+              style={{ pointerEvents: "none" }}
+              title={filename}
+            />
+          </div>
+        ) : (
+          /* docx/xlsx/pptx — can't render natively; show a "ready" state */
+          <div className="flex h-[160px] flex-col items-center justify-center gap-3 bg-[#f7f7f9] px-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-[#e5e7eb]">
+              <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
+                <path
+                  d="M20 6L9 17l-5-5"
+                  stroke="#0f9d58"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </span>
+            <p className="text-[13px] font-semibold text-[#1a1c21]">
+              Converted successfully
+            </p>
+            <p className="text-center text-[12px] text-[#6c6c6c]">
+              Subscribe to download your {targetExt.toUpperCase()} file
+            </p>
+          </div>
+        )
       ) : (
         <div className="relative p-4">
           <div
