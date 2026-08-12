@@ -474,9 +474,9 @@ function PlanStep({
 
             {preview ? (
               <>
-                <p className="text-[15px] font-semibold text-[#1a1c21]">
+                <span className="w-fit rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
                   Your document is ready to download
-                </p>
+                </span>
                 <PreviewFileCard preview={preview} />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
                   Subscribe below to download the converted file instantly and
@@ -485,9 +485,9 @@ function PlanStep({
               </>
             ) : (
               <>
-                <p className="text-[15px] font-semibold text-[#1a1c21]">
+                <span className="w-fit rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
                   Your document is ready to download
-                </p>
+                </span>
                 <GenericPreviewCard />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
                   Subscribe below to download instantly and keep unlimited
