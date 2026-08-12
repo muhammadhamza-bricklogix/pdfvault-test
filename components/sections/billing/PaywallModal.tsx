@@ -322,7 +322,11 @@ export function PaywallModal({
       isDismissable={false}
       isOpen={isOpen}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open) {
+          // On the success step, any close gesture (ESC, X) should resolve
+          // as success so the pending download/action still fires.
+          step === "success" ? finish() : onClose();
+        }
       }}
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
@@ -337,7 +341,9 @@ export function PaywallModal({
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
-          <Modal.CloseTrigger />
+          {/* Hide X on SuccessStep — clicking it would resolve the bus promise
+              with "cancelled" and cancel the pending download. */}
+          {step !== "success" && <Modal.CloseTrigger />}
           {error ? (
             <ErrorState error={error} />
           ) : !intent ? (
@@ -885,11 +891,11 @@ function SuccessStep({
     onFinishRef.current = onFinish;
   }, [onFinish]);
 
-  // Auto-proceed after 2 s so gated actions (downloads, conversions)
+  // Auto-proceed after 1.5 s so gated actions (downloads, conversions)
   // kick off without requiring an extra click. The user still has the
   // button to proceed immediately.
   useEffect(() => {
-    const id = window.setTimeout(() => onFinishRef.current(), 2000);
+    const id = window.setTimeout(() => onFinishRef.current(), 1500);
 
     return () => window.clearTimeout(id);
   }, []);
@@ -953,7 +959,7 @@ function SuccessStep({
         type="button"
         onClick={onFinish}
       >
-        Start editing
+        Continue
         <span aria-hidden>→</span>
       </button>
       <a
