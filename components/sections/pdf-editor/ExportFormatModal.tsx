@@ -189,7 +189,7 @@ function ExportFormatModalBody({
           {!isSaving && (
             <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
           )}
-          {isSaving ? "Saving…" : "Done"}
+          {isSaving ? "Converting..." : "Download"}
         </Button>
       </Modal.Footer>
     </Modal.Dialog>
