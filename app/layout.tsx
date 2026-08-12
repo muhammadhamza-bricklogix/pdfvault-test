@@ -2,26 +2,11 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
-import { Dancing_Script, Playfair_Display } from "next/font/google";
 import Script from "next/script";
 
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
 import { Providers } from "./providers";
-
-const dancingScript = Dancing_Script({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-dancing-script",
-  weight: ["400", "700"],
-});
-
-const playfairDisplay = Playfair_Display({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-legal-serif",
-  weight: ["400", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -84,7 +69,7 @@ export default function RootLayout({
   return (
     <html
       suppressHydrationWarning
-      className={`${dancingScript.variable} ${playfairDisplay.variable}`}
+      className=""
       lang="en"
     >
       {/*
@@ -94,6 +79,17 @@ export default function RootLayout({
         page, Solidgate only in the paywall — but the penalty for an unused
         preconnect is near zero so we include all three.
       */}
+      {/* Google Fonts — loaded at runtime to avoid build-time network deps */}
+      <link href="https://fonts.googleapis.com" rel="preconnect" />
+      <link
+        crossOrigin="anonymous"
+        href="https://fonts.gstatic.com"
+        rel="preconnect"
+      />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Playfair+Display:wght@400;600;700&display=swap"
+        rel="stylesheet"
+      />
       {/* Clerk */}
       <link
         crossOrigin="anonymous"

@@ -35,6 +35,10 @@
   --legal-callout-green-text: #065f46;
   --legal-cta-deep: #7f1d1d;
   --legal-border-subtle: #e7e5e4;
+
+  /* Google Fonts loaded at runtime via <link> in layout.tsx */
+  --font-legal-serif: 'Playfair Display', Georgia, serif;
+  --font-dancing-script: 'Dancing Script', cursive;
 }
 
 /*
