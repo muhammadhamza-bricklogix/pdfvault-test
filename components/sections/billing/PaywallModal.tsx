@@ -3,6 +3,8 @@
 import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
+import { Tick01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
@@ -474,7 +476,8 @@ function PlanStep({
 
             {preview ? (
               <>
-                <span className="w-fit rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
+                <span className="flex w-fit items-center gap-1.5 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
+                  <HugeiconsIcon color="white" icon={Tick01Icon} size={14} />
                   Your document is ready to download
                 </span>
                 <PreviewFileCard preview={preview} />
@@ -485,7 +488,8 @@ function PlanStep({
               </>
             ) : (
               <>
-                <span className="w-fit rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
+                <span className="flex w-fit items-center gap-1.5 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
+                  <HugeiconsIcon color="white" icon={Tick01Icon} size={14} />
                   Your document is ready to download
                 </span>
                 <GenericPreviewCard />
