@@ -67,11 +67,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      suppressHydrationWarning
-      className=""
-      lang="en"
-    >
+    <html suppressHydrationWarning className="" lang="en">
       {/*
         Preconnect to critical third-party origins so the TCP + TLS handshakes
         happen in parallel with HTML parsing rather than on demand. Order

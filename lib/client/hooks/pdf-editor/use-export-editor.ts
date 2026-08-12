@@ -19,6 +19,8 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { conversionService } from "@/lib/shared/api/services/conversion.service";
+import { ApiError } from "@/lib/shared/utils/api-error";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -98,9 +100,10 @@ function downloadBytes(bytes: Uint8Array, filename: string) {
 
 /**
  * Listens for `editor:export` (dispatched by the Export menu) and either:
- * - Runs the flatten-and-download PDF pipeline locally (format === "pdf"), or
- * - Flattens to a PDF blob first, then routes it through the /conversion
- *   backend to produce the requested non-PDF format.
+ * - For PDF: checks entitlement, downloads/prints (paywall if not entitled).
+ * - For non-PDF: attempts conversion first (bypassing client gate so the
+ *   server decides); if 402 (not entitled) opens paywall with PDF preview,
+ *   then retries conversion after payment.
  */
 export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
@@ -236,8 +239,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        // Build PDF bytes client-side first — no network call, always succeeds
-        // for an entitled user and gives us a real preview for the paywall.
+        // Build PDF bytes client-side first — no network call, always fast.
         const { bytes } = await buildEditedPdfBytes({
           currentPage: page,
           fabricCanvas: liveCanvas,
@@ -249,34 +251,30 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           ? sanitizeBaseName(customFilename)
           : null;
 
-        // Gate entitlement NOW, before any network conversion, so the axios
-        // pre-flight interceptor never fires its own (preview-less) paywall.
-        // We use the PDF bytes as the preview so the user sees their real
-        // document in the paywall regardless of the target format.
-        const entitled = await ensureFreshEntitlement();
-
-        if (!entitled) {
-          const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
-            type: "application/pdf",
-          });
-          const objectUrl = URL.createObjectURL(pdfBlob);
-
-          try {
-            const outcome = await requestPaywall({
-              filename: sourceFile.name,
-              previewObjectUrl: objectUrl,
-              sourceExt: "pdf",
-              targetExt: format,
-            });
-
-            if (outcome !== "success") return;
-          } finally {
-            URL.revokeObjectURL(objectUrl);
-          }
-        }
-
-        // User is entitled — proceed with the format-specific export.
+        // ── PDF export (download or print) ────────────────────────────────
         if (format === "pdf") {
+          const entitled = await ensureFreshEntitlement();
+
+          if (!entitled) {
+            const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
+              type: "application/pdf",
+            });
+            const objectUrl = URL.createObjectURL(pdfBlob);
+
+            try {
+              const outcome = await requestPaywall({
+                filename: sourceFile.name,
+                previewObjectUrl: objectUrl,
+                sourceExt: "pdf",
+                targetExt: "pdf",
+              });
+
+              if (outcome !== "success") return;
+            } finally {
+              URL.revokeObjectURL(objectUrl);
+            }
+          }
+
           if (shouldPrint) {
             const blob = new Blob([bytes.buffer as ArrayBuffer], {
               type: "application/pdf",
@@ -312,49 +310,126 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        // Non-PDF: convert now — user is entitled so the axios pre-flight
-        // passes without opening a second paywall.
+        // ── Non-PDF export: convert first, paywall only if needed ─────────
+        // Attempt conversion before opening the paywall so the user can see
+        // the real converted document in the paywall preview. The request
+        // bypasses the client-side pre-flight gate (the server still validates
+        // entitlement). If the server returns 402, we fall back to a PDF
+        // preview in the paywall, then retry after payment.
         const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
         const baseName =
           userBase ?? (sourceFile.name.replace(/\.[^.]+$/, "") || "document");
         const pdfFile = new File(
           [bytes.buffer as ArrayBuffer],
           `${baseName}.pdf`,
-          {
-            type: "application/pdf",
-          },
+          { type: "application/pdf" },
         );
 
-        let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
+        const loadingKey = toast.loading({
+          title: "Converting your file",
+          description: `${pdfFile.name} → ${format.toUpperCase()}`,
+        });
+
+        let convResult: { blob: Blob; fileName: string } | null = null;
+        let is402 = false;
 
         try {
-          result = await convertRef.current.mutateAsync({
+          convResult = await conversionService.convertPreview({
             file: pdfFile,
             type: conversionType,
           });
+          toast.close(loadingKey);
+          toast.success({
+            title: "Conversion complete",
+            description: `Ready to download — ${convResult.fileName}`,
+          });
         } catch (err) {
-          if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+          toast.close(loadingKey);
+
+          if (err instanceof ApiError && err.statusCode === 402) {
+            is402 = true;
+          } else if (
+            (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
+          ) {
+            return;
+          } else {
+            logger.error("Failed to export PDF", err);
+            toast.error({
+              title: "Export failed",
+              description: "We couldn't export your edits. Please try again.",
+            });
+
             return;
           }
-          logger.error("Failed to export PDF", err);
-          toast.error({
-            title: "Export failed",
-            description: "We couldn't export your edits. Please try again.",
-          });
-
-          return;
         }
 
-        try {
-          const serverExt = result.fileName.match(/\.[^.]+$/)?.[0]?.slice(1);
-          const outName =
-            userBase && serverExt
-              ? ensureExtension(userBase, serverExt)
-              : result.fileName;
+        if (is402) {
+          // Not entitled — open paywall with PDF bytes as preview,
+          // then retry conversion after successful payment.
+          const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
+            type: "application/pdf",
+          });
+          const objectUrl = URL.createObjectURL(pdfBlob);
 
-          triggerBlobDownload(result.blob, outName);
-        } catch (err) {
-          logger.error("blob download failed after successful conversion", err);
+          try {
+            const outcome = await requestPaywall({
+              filename: sourceFile.name,
+              previewObjectUrl: objectUrl,
+              sourceExt: "pdf",
+              targetExt: format,
+            });
+
+            if (outcome !== "success") return;
+          } finally {
+            URL.revokeObjectURL(objectUrl);
+          }
+
+          // Entitled now — retry conversion through the normal mutation
+          // (which shows its own loading + success/error toasts).
+          let result: Awaited<
+            ReturnType<typeof convertRef.current.mutateAsync>
+          >;
+
+          try {
+            result = await convertRef.current.mutateAsync({
+              file: pdfFile,
+              type: conversionType,
+            });
+          } catch (err) {
+            if (
+              (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
+            ) {
+              return;
+            }
+            logger.error("Failed to export PDF", err);
+            toast.error({
+              title: "Export failed",
+              description: "We couldn't export your edits. Please try again.",
+            });
+
+            return;
+          }
+
+          convResult = { blob: result.blob, fileName: result.fileName };
+        }
+
+        if (convResult) {
+          try {
+            const serverExt = convResult.fileName
+              .match(/\.[^.]+$/)?.[0]
+              ?.slice(1);
+            const outName =
+              userBase && serverExt
+                ? ensureExtension(userBase, serverExt)
+                : convResult.fileName;
+
+            triggerBlobDownload(convResult.blob, outName);
+          } catch (err) {
+            logger.error(
+              "blob download failed after successful conversion",
+              err,
+            );
+          }
         }
       } catch (err) {
         // Any pre-mutation exception (buildEditedPdfBytes, file

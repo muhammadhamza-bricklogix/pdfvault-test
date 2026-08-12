@@ -52,6 +52,14 @@ type RetriableConfig = InternalAxiosRequestConfig & {
   _hadToken?: boolean;
   _paywallRetry?: boolean;
   _rateLimitRetry?: boolean;
+  /**
+   * Skip the client-side paywall pre-flight check AND the 402 response
+   * handler for this request. The server still validates entitlement.
+   * Callers are responsible for catching ApiError with statusCode 402.
+   * Used by conversionService.convertPreview() to attempt conversion
+   * before the paywall opens (convert-first UX pattern).
+   */
+  _skipPaywallGate?: boolean;
 };
 
 function isGatedRequest(config: InternalAxiosRequestConfig): boolean {
@@ -85,7 +93,11 @@ apiClient.interceptors.request.use(async (config) => {
   // know would be rejected. The response interceptor's 402/403 branch
   // is still the safety net for stale snapshots and server-side edge
   // cases.
-  if (isGatedRequest(config) && !getEntitledSnapshot()) {
+  if (
+    isGatedRequest(config) &&
+    !getEntitledSnapshot() &&
+    !(config as RetriableConfig)._skipPaywallGate
+  ) {
     const outcome = await requestPaywall();
 
     if (outcome !== "success") {
@@ -169,7 +181,13 @@ apiClient.interceptors.response.use(
         (error.response?.headers?.["x-billing-required"] === "true" ||
           error.response?.headers?.[BYPASS_HEADER] !== "true"));
 
-    if (gated && paywallSignal && original && !original._paywallRetry) {
+    if (
+      gated &&
+      paywallSignal &&
+      original &&
+      !original._paywallRetry &&
+      !original._skipPaywallGate
+    ) {
       original._paywallRetry = true;
       const outcome = await requestPaywall();
 

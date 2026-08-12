@@ -1151,7 +1151,6 @@ function GenericPreviewCard() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }
@@ -1200,7 +1199,7 @@ function PlanCards({
       title: "7-day trial",
       price: fullAccessPrice,
       priceSuffix: undefined as string | undefined,
-      note: "then $25.00/mo",
+      note: "",
       badge: "Most popular",
     },
     {
@@ -1208,7 +1207,7 @@ function PlanCards({
       title: "Annual Plan",
       price: annualPrice,
       priceSuffix: "/ month",
-      note: "$300.00 / year",
+      note: "",
       badge: undefined as string | undefined,
     },
   ];
