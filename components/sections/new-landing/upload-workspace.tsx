@@ -12,7 +12,7 @@ import {
   useState,
 } from "react";
 
-import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
+import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
@@ -376,31 +376,55 @@ export function UploadWorkspace({
         return;
       }
 
-      // Convert-TO-PDF entitlement gate (signed-in unentitled). Fire the
-      // paywall BEFORE `uploadAsPdf` so we don't burn a backend
-      // conversion call for a user who can't download the result, and
-      // don't flash a misleading "Converting to PDF" toast on a request
-      // that's about to hit the paywall.
+      // Convert-to-PDF flow for signed-in users on convert routes.
+      // We convert FIRST so the paywall can show the real document
+      // instead of a blurred mock, then check entitlement.
       //
       // Use `ensureFreshEntitlement()` (not the raw snapshot) — the
       // snapshot fails closed while `useSubscriptionQuery` hasn't
       // resolved yet, and this call-site runs on the very first render
       // after a post-signin auto-resume, well before the query lands.
-      // Trusting the snapshot here would open the paywall for an
-      // already-subscribed user until they navigate away and back.
+      let earlyConvertedPdf: File | null = null;
+
       if (requiresAuth && authLoaded && isSignedIn) {
+        if (!isPdf(picked)) {
+          const convKey = toast.loading({
+            description: `Preparing ${picked.name}…`,
+            title: "Converting to PDF",
+          });
+
+          try {
+            earlyConvertedPdf = await uploadAsPdf(picked);
+          } catch (convErr) {
+            toast.close(convKey);
+            toast.error({
+              title: "Conversion failed",
+              description:
+                convErr instanceof Error ? convErr.message : undefined,
+            });
+
+            return;
+          }
+
+          toast.close(convKey);
+        } else {
+          earlyConvertedPdf = picked;
+        }
+
         const entitled = await ensureFreshEntitlement();
 
         if (!entitled) {
+          const objectUrl = URL.createObjectURL(earlyConvertedPdf);
+
           try {
             const outcome = await requestPaywall({
               filename: picked.name,
+              previewObjectUrl: objectUrl,
               sourceExt: getExtension(picked.name),
               targetExt: "pdf",
             });
 
             if (outcome !== "success") {
-              // User dismissed the paywall — silent bail-out.
               return;
             }
           } catch (err) {
@@ -410,21 +434,26 @@ export function UploadWorkspace({
               return;
             }
             throw err;
+          } finally {
+            URL.revokeObjectURL(objectUrl);
           }
         }
       }
 
       setOpening(true);
+      // Skip the conversion toast when we already converted above.
       const loadingKey =
-        picked.type === "application/pdf"
+        earlyConvertedPdf !== null
           ? null
-          : toast.loading({
-              description: `Preparing ${picked.name} for the editor.`,
-              title: "Converting to PDF",
-            });
+          : picked.type === "application/pdf"
+            ? null
+            : toast.loading({
+                description: `Preparing ${picked.name} for the editor.`,
+                title: "Converting to PDF",
+              });
 
       try {
-        const pdfFile = await uploadAsPdf(picked);
+        const pdfFile = earlyConvertedPdf ?? (await uploadAsPdf(picked));
 
         // Save-first-then-open (signed-in users only). The QA-expected
         // flow: file lands in `/documents/upload` BEFORE the editor

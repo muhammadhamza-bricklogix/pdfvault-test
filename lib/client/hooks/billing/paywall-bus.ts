@@ -34,6 +34,12 @@ export interface PaywallPreview {
   /** Target extension the user is trying to produce, e.g. "pdf",
    *  "docx", "png". Lower-case. */
   targetExt: string;
+  /**
+   * Object URL of the already-converted file. When present, the paywall
+   * shows the real document instead of a blurred mock. Caller is
+   * responsible for revoking this URL after `requestPaywall()` resolves.
+   */
+  previewObjectUrl?: string;
 }
 
 export interface PaywallRequestOptions {

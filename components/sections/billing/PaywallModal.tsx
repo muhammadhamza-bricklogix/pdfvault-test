@@ -991,7 +991,7 @@ function BrandLogo() {
  * "here is your converted file" moment before they see the price.
  */
 function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
-  const { filename, sourceExt, targetExt } = preview;
+  const { filename, sourceExt, targetExt, previewObjectUrl } = preview;
   const badgeColor = (ext: string): string => {
     const normalized = ext.toLowerCase();
 
@@ -1023,38 +1023,49 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
         </span>
       </div>
 
-      {/* Blurred mock document content */}
-      <div className="relative p-4">
-        <div
-          aria-hidden
-          className="pointer-events-none flex select-none flex-col gap-1.5"
-          style={{ filter: "blur(3px)" }}
-        >
-          <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
-          <div className="h-2 w-full rounded bg-[#eaeaea]" />
-          <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
-          <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
-          <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
-          <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
-          <div className="h-2 w-full rounded bg-[#eaeaea]" />
-          <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+      {/* Document preview — real iframe when available, mock otherwise */}
+      {previewObjectUrl ? (
+        <div className="h-[220px] w-full overflow-hidden">
+          <iframe
+            className="h-full w-full border-none"
+            src={previewObjectUrl}
+            style={{ pointerEvents: "none" }}
+            title={filename}
+          />
         </div>
+      ) : (
+        <div className="relative p-4">
+          <div
+            aria-hidden
+            className="pointer-events-none flex select-none flex-col gap-1.5"
+            style={{ filter: "blur(3px)" }}
+          >
+            <div className="h-2 w-3/4 rounded bg-[#e5e5e5]" />
+            <div className="h-2 w-full rounded bg-[#eaeaea]" />
+            <div className="h-2 w-5/6 rounded bg-[#eaeaea]" />
+            <div className="h-2 w-2/3 rounded bg-[#e5e5e5]" />
+            <div className="mt-2 h-16 w-full rounded bg-[#f0f0f0]" />
+            <div className="h-2 w-4/5 rounded bg-[#eaeaea]" />
+            <div className="h-2 w-full rounded bg-[#eaeaea]" />
+            <div className="h-2 w-3/5 rounded bg-[#e5e5e5]" />
+          </div>
 
-        {/* Lock overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
-            <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-              <path
-                d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.8"
-              />
-            </svg>
+          {/* Lock overlay */}
+          <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pv-brand-red,#f12c23)] text-white shadow-[0_10px_24px_-6px_rgba(241,44,35,0.55)] ring-4 ring-white">
+              <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+                <path
+                  d="M6 10V7a6 6 0 1 1 12 0v3M5 10h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* File-name + format transition */}
       <div className="flex items-center gap-2 border-t border-[#ececec] px-4 py-3">
