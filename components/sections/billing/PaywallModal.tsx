@@ -1192,10 +1192,10 @@ function PlanAccordion({
   const plans: PlanRow[] = [
     {
       id: "monthly",
-      title: "Monthly Plan",
+      title: "7-day trial",
       price: fullAccessPrice,
       priceSuffix: "",
-      note: "",
+      note: "then $25.00/mo",
       badge: "Most popular",
       highlight: true,
     },
