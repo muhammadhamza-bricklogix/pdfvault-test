@@ -397,7 +397,7 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  const fullAccessPrice = "$25";
+  const fullAccessPrice = "$0.99";
   const annualPrice = "$300";
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
 
@@ -642,6 +642,7 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  const [showCardForm, setShowCardForm] = useState(false);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -663,17 +664,31 @@ function PayStep({
             Express checkout
           </p>
 
-          {/* Wallet buttons — custom styled baseline; SDK containers overlay
-              when Solidgate mounts the real payment button. When the SDK
-              doesn't mount (unsupported browser/device) the styled button
-              stays visible. empty:hidden on the SDK layer collapses it so
-              the visible base button is the fallback UI. */}
-          <div className="flex flex-col gap-2">
+          {/* Express checkout buttons — Apple Pay first, Google Pay second,
+              Pay with card third. Custom styled baseline is always visible;
+              Solidgate SDK containers overlay when the native button mounts.
+              PaymentForm is always mounted (even when hidden) so the wallet
+              button injection and SDK init happen immediately on step entry. */}
+          <div className="flex flex-col gap-3">
+            {/* Apple Pay */}
+            <div className="relative h-[42px] rounded-xl">
+              <div className="flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-[#1a1a1a] px-4">
+                <AppleLogoIcon />
+                <span className="text-[14px] font-medium tracking-tight text-white">
+                  Pay
+                </span>
+              </div>
+              <div
+                ref={applePayContainerRef}
+                className="absolute inset-0 empty:hidden overflow-hidden rounded-xl [&>*]:!h-full [&>*]:!w-full [&_iframe]:!h-full [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              />
+            </div>
+
             {/* Google Pay */}
-            <div className="relative h-[48px] rounded-xl">
-              <div className="flex h-full w-full items-center justify-center gap-2.5 rounded-xl bg-[#1a1a1a] px-4 text-white">
+            <div className="relative h-[42px] rounded-xl">
+              <div className="flex h-full w-full items-center justify-center gap-2.5 rounded-xl bg-[#1a1a1a] px-4">
                 <GoogleGIcon />
-                <span className="text-[15px] font-medium tracking-tight">
+                <span className="text-[14px] font-medium tracking-tight text-white">
                   Pay
                 </span>
               </div>
@@ -683,30 +698,31 @@ function PayStep({
               />
             </div>
 
-            {/* Apple Pay */}
-            <div className="relative h-[48px] rounded-xl">
-              <div className="flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-[#1a1a1a] px-4 text-white">
-                <AppleLogoIcon />
-                <span className="text-[15px] font-medium tracking-tight">
-                  Pay
+            {/* Pay with card — visible until user expands the card form */}
+            {!showCardForm && !payFailed ? (
+              <button
+                className="flex h-[42px] w-full cursor-pointer items-center justify-between rounded-xl bg-[#3a3a3a] px-4 transition-colors hover:bg-[#2d2d2d]"
+                type="button"
+                onClick={() => setShowCardForm(true)}
+              >
+                <span className="text-[14px] font-medium text-white">
+                  Pay with card
                 </span>
-              </div>
-              <div
-                ref={applePayContainerRef}
-                className="absolute inset-0 empty:hidden overflow-hidden rounded-xl [&>*]:!h-full [&>*]:!w-full [&_iframe]:!h-full [&_iframe]:!w-full [&_iframe]:!rounded-xl"
-              />
-            </div>
+                <div className="flex items-center gap-1">
+                  <MastercardBadge />
+                  <MaestroBadge />
+                  <VisaBadge />
+                  <AmexBadge />
+                  <JcbBadge />
+                </div>
+              </button>
+            ) : null}
           </div>
 
-          <div className="relative flex items-center gap-3 has-[+_.rounded-xl:only-child]:hidden">
-            <div className="h-px flex-1 bg-[#ececec]" />
-            <span className="text-[11px] uppercase tracking-wide text-[#9a9a9a]">
-              or pay with card
-            </span>
-            <div className="h-px flex-1 bg-[#ececec]" />
-          </div>
-
-          <div className="rounded-xl">
+          {/* Card form — PaymentForm always mounted for wallet-button SDK init;
+              wrapper is hidden until "Pay with card" is clicked or after a
+              payment decline, so the card fields don't distract until needed. */}
+          <div className={showCardForm || payFailed ? "rounded-xl" : "hidden"}>
             {/* `key` bumps on retry so the Solidgate iframe fully remounts
                 — otherwise the SDK holds onto its "Payment declined"
                 state internally and a second submit is a no-op. */}
@@ -804,7 +820,7 @@ function PayStep({
 
       {/* ── Right column — document preview (cream) ── */}
       <div
-        className="flex flex-col gap-5 p-6 md:p-8"
+        className="flex flex-col gap-3 p-6 md:p-8"
         style={{ backgroundColor: CREAM }}
       >
         {preview ? (
@@ -814,7 +830,7 @@ function PayStep({
         )}
 
         {/* Order summary card */}
-        <div className="mt-auto rounded-2xl bg-white p-5">
+        <div className="rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between">
             <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
               {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
@@ -1322,6 +1338,88 @@ function ErrorState({ error }: { error: string }) {
         </button>
       ) : null}
     </div>
+  );
+}
+
+function MastercardBadge() {
+  return (
+    <svg height="20" viewBox="0 0 38 24" width="32">
+      <rect fill="#252525" height="24" rx="4" width="38" />
+      <circle cx="15" cy="12" fill="#EB001B" r="7" />
+      <circle cx="23" cy="12" fill="#F79E1B" r="7" />
+      <path d="M19 6.8a7 7 0 0 1 0 10.4A7 7 0 0 1 19 6.8z" fill="#FF5F00" />
+    </svg>
+  );
+}
+
+function MaestroBadge() {
+  return (
+    <svg height="20" viewBox="0 0 38 24" width="32">
+      <rect fill="#252525" height="24" rx="4" width="38" />
+      <circle cx="15" cy="12" fill="#EB001B" r="7" />
+      <circle cx="23" cy="12" fill="#0099DF" r="7" />
+      <path d="M19 6.8a7 7 0 0 1 0 10.4A7 7 0 0 1 19 6.8z" fill="#6C6BBD" />
+    </svg>
+  );
+}
+
+function VisaBadge() {
+  return (
+    <svg height="20" viewBox="0 0 38 24" width="32">
+      <rect fill="#1A1F71" height="24" rx="4" width="38" />
+      <text
+        dominantBaseline="middle"
+        fill="white"
+        fontFamily="Arial, sans-serif"
+        fontSize="11"
+        fontWeight="bold"
+        textAnchor="middle"
+        x="19"
+        y="13"
+      >
+        VISA
+      </text>
+    </svg>
+  );
+}
+
+function AmexBadge() {
+  return (
+    <svg height="20" viewBox="0 0 38 24" width="32">
+      <rect fill="#2557D6" height="24" rx="4" width="38" />
+      <text
+        dominantBaseline="middle"
+        fill="white"
+        fontFamily="Arial, sans-serif"
+        fontSize="7"
+        fontWeight="bold"
+        textAnchor="middle"
+        x="19"
+        y="13"
+      >
+        AMEX
+      </text>
+    </svg>
+  );
+}
+
+function JcbBadge() {
+  return (
+    <svg height="20" viewBox="0 0 38 24" width="32">
+      <rect fill="#003087" height="24" rx="4" width="38" />
+      <text
+        dominantBaseline="middle"
+        fill="white"
+        fontFamily="Arial, sans-serif"
+        fontSize="9"
+        fontWeight="bold"
+        textAnchor="middle"
+        x="19"
+        y="13"
+      >
+        JCB
+      </text>
+    </svg>
   );
 }
 
