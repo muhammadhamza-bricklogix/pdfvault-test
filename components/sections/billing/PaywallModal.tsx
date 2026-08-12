@@ -69,7 +69,7 @@ const APPLE_PAY_BUTTON_PARAMS = {
 } as const;
 
 type Step = "plan" | "pay" | "success";
-type PlanId = "trial" | "annual";
+type PlanId = "monthly" | "annual";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -116,7 +116,7 @@ export function PaywallModal({
   onPaymentSuccess,
 }: PaywallModalProps) {
   const [step, setStep] = useState<Step>("plan");
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("trial");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
   // When Solidgate reports a decline, we surface a "Try another card"
@@ -138,7 +138,7 @@ export function PaywallModal({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStep("plan");
 
-    setSelectedPlan("trial");
+    setSelectedPlan("monthly");
 
     createIntent.mutate(
       { disclaimerVersion: DISCLAIMER_VERSION },
@@ -288,7 +288,7 @@ export function PaywallModal({
   // returns the annual amounts before we mount the payment iframe.
   const [continueLoading, setContinueLoading] = useState(false);
   const handleContinue = () => {
-    if (selectedPlan === "trial") {
+    if (selectedPlan === "monthly") {
       setStep("pay");
 
       return;
@@ -364,7 +364,7 @@ export function PaywallModal({
               onSuccess={handleIframeSuccess}
             />
           ) : (
-            <SuccessStep intent={intent} onFinish={finish} />
+            <SuccessStep intent={intent} selectedPlan={selectedPlan} onFinish={finish} />
           )}
         </Modal.Dialog>
       </Modal.Container>
@@ -398,8 +398,8 @@ function PlanStep({
   // intents are wired, the displayed prices below are the source of
   // truth for the picker. Trial still fires the same intent on
   // Continue — see PayStep for the actual charge amounts.
-  const fullAccessPrice = "$0.99";
-  const annualPrice = "$25";
+  const fullAccessPrice = "$25";
+  const annualPrice = "$300";
   // Fallback display for entry points where `intent` is loaded but no
   // preview exists — reuse the intent-derived amounts in the small
   // print so it never contradicts what will actually be charged.
@@ -532,12 +532,12 @@ function PlanStep({
           subscription frequency, exact recurring price, source card,
           and cancellation paths. */}
       <div className="border-t border-[#ececec] px-6 py-5 md:px-8">
-        {selectedPlan === "trial" ? (
+        {selectedPlan === "monthly" ? (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-            You are enrolling in a 7-day trial and monthly subscription to
-            pdfvault.ai. You&apos;ll be charged {today} today for the 7-day
-            trial, then {renew} per month until you cancel. Payments will be
-            charged from the card you specified below. To cancel, visit your{" "}
+            You are enrolling in a monthly subscription to pdfvault.ai.
+            You&apos;ll be charged {today} per month until you cancel. Payments
+            will be charged from the card you specified below. To cancel, visit
+            your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"
@@ -563,8 +563,8 @@ function PlanStep({
         ) : (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in an annual subscription to pdfvault.ai. You
-            agree to be billed {annualPrice} per year until you cancel. Payments
-            will be charged from the card you specified below. To cancel, visit
+            agree to be billed $300.00 per year until you cancel. Payments will
+            be charged from the card you specified below. To cancel, visit
             your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
@@ -824,9 +824,11 @@ function PayStep({
 // ─────────────────────────────────────────────────────────────
 function SuccessStep({
   intent,
+  selectedPlan,
   onFinish,
 }: {
   intent: CheckoutIntent;
+  selectedPlan: PlanId;
   onFinish: () => void;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
@@ -874,7 +876,7 @@ function SuccessStep({
           You&apos;re all set!
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#5c5c5c]">
-          Your 7-day trial is active. You now have full access to every PDFVault
+          Your subscription is active. You now have full access to every PDFVault
           tool.
         </p>
       </div>
@@ -886,7 +888,7 @@ function SuccessStep({
         <div className="flex items-center justify-between">
           <span className="text-[#5c5c5c]">Plan</span>
           <span className="font-semibold text-[#1a1c21]">
-            Full Access · Trial
+            Full Access · {selectedPlan === "annual" ? "Annual" : "Monthly"}
           </span>
         </div>
         <div className="mt-2 flex items-center justify-between">
@@ -1107,7 +1109,7 @@ const PLAN_FEATURES = [
   "Use PDFVault on mobile",
 ] as const;
 
-const PLAN_ORDER: readonly PlanId[] = ["trial", "annual"] as const;
+const PLAN_ORDER: readonly PlanId[] = ["monthly", "annual"] as const;
 
 interface PlanRow {
   id: PlanId;
@@ -1131,9 +1133,10 @@ function PlanAccordion({
 }) {
   const plans: PlanRow[] = [
     {
-      id: "trial",
-      title: "7-Day Full Access",
+      id: "monthly",
+      title: "Monthly Plan",
       price: fullAccessPrice,
+      priceSuffix: "per month",
       badge: "Most popular",
       highlight: true,
     },
@@ -1141,7 +1144,7 @@ function PlanAccordion({
       id: "annual",
       title: "Annual Plan",
       price: annualPrice,
-      priceSuffix: "per month",
+      priceSuffix: "per year",
     },
   ];
 
