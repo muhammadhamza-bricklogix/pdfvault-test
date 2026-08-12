@@ -633,6 +633,16 @@ function PayStep({
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
+  // Annual plan: Solidgate returns $24.99 but we advertise $25 — round
+  // to nearest whole dollar for display only. Actual charge is unchanged.
+  const todayDisplay =
+    selectedPlan === "annual"
+      ? formatWhole(intent.amountTodayMinor, intent.currency)
+      : today;
+  const renewDisplay =
+    selectedPlan === "annual"
+      ? formatWhole(intent.amountRenewMinor, intent.currency)
+      : renew;
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
@@ -654,7 +664,7 @@ function PayStep({
             Total due today:
           </span>
           <span className="pv-heading text-[22px] font-bold text-[#1a1c21]">
-            {today}
+            {todayDisplay}
           </span>
         </div>
 
@@ -787,7 +797,7 @@ function PayStep({
 
           {/* Legal small-print */}
           <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-            By continuing you agree to be charged {today}{" "}
+            By continuing you agree to be charged {todayDisplay}{" "}
             {selectedPlan === "annual"
               ? "today, then $300.00 every 365 days"
               : "today for a 7-day trial, then $25.00 per month"}{" "}
@@ -835,7 +845,7 @@ function PayStep({
               {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
             </p>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-              {today}
+              {todayDisplay}
             </p>
           </div>
           <p className="mt-0.5 text-[12px] text-[#6c6c6c]">Due today</p>
@@ -845,7 +855,7 @@ function PayStep({
               {selectedPlan === "annual" ? "Renews yearly" : "Renews monthly"}
             </p>
             <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {renew} {selectedPlan === "annual" ? "/ year" : "/ month"}
+              {renewDisplay} {selectedPlan === "annual" ? "/ year" : "/ month"}
             </p>
           </div>
         </div>
@@ -1467,6 +1477,15 @@ function formatMinor(minor: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(minor / 100);
+}
+
+function formatWhole(minor: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(minor / 100));
 }
 
 // Long label like "Jul 24, 2026" for the success card.
