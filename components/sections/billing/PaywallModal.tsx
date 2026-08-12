@@ -397,8 +397,8 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  const fullAccessPrice = "$25";
-  const annualPrice = "$300";
+  const fullAccessPrice = "$0.99";
+  const annualPrice = "$25";
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
 
   const continueDisabled = continueLoading;
@@ -530,9 +530,9 @@ function PlanStep({
         {selectedPlan === "monthly" ? (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in a monthly subscription to pdfvault.ai.
-            You&apos;ll be charged {today} per month until you cancel. Payments
-            will be charged from the card you specified below. To cancel, visit
-            your{" "}
+            You&apos;ll be charged {today} today for a 7-day trial, then $25.00
+            per month until you cancel. Payments will be charged from the card
+            you specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"
@@ -790,7 +790,7 @@ function PayStep({
             By continuing you agree to be charged {today}{" "}
             {selectedPlan === "annual"
               ? "today, then $300.00 every 365 days"
-              : "per month"}{" "}
+              : "today for a 7-day trial, then $25.00 per month"}{" "}
             unless cancelled. See our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
@@ -1157,6 +1157,7 @@ interface PlanRow {
   title: string;
   price: string;
   priceSuffix?: string;
+  note?: string;
   badge?: string;
   highlight?: boolean;
 }
@@ -1177,7 +1178,8 @@ function PlanAccordion({
       id: "monthly",
       title: "Monthly Plan",
       price: fullAccessPrice,
-      priceSuffix: "per month",
+      priceSuffix: "7-day trial",
+      note: "then $25.00/mo",
       badge: "Most popular",
       highlight: true,
     },
@@ -1185,7 +1187,8 @@ function PlanAccordion({
       id: "annual",
       title: "Annual Plan",
       price: annualPrice,
-      priceSuffix: "per year",
+      priceSuffix: "/ month",
+      note: "$300.00 / year",
     },
   ];
 
@@ -1245,6 +1248,11 @@ function PlanAccordion({
                   {plan.priceSuffix ? (
                     <span className="mt-1 text-[11px] text-[#6c6c6c]">
                       {plan.priceSuffix}
+                    </span>
+                  ) : null}
+                  {plan.note ? (
+                    <span className="mt-0.5 text-[10px] text-[#9a9a9a]">
+                      {plan.note}
                     </span>
                   ) : null}
                 </span>
