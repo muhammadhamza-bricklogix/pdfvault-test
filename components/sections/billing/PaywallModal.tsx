@@ -844,9 +844,11 @@ function PayStep({
               <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
                 {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
               </p>
-              <span className="inline-flex w-fit items-center rounded-full bg-[#e6f5ec] px-2 py-0.5 text-[11px] font-semibold text-[#0f9d58]">
-                7-day trial
-              </span>
+              {selectedPlan === "monthly" ? (
+                <span className="inline-flex w-fit items-center rounded-full bg-[#e6f5ec] px-2 py-0.5 text-[11px] font-semibold text-[#0f9d58]">
+                  7-day trial
+                </span>
+              ) : null}
             </div>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
               {todayDisplay}
