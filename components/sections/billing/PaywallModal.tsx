@@ -719,35 +719,38 @@ function PayStep({
             ) : null}
           </div>
 
-          {/* Card form — PaymentForm always mounted for wallet-button SDK init;
-              wrapper is hidden until "Pay with card" is clicked or after a
-              payment decline, so the card fields don't distract until needed. */}
-          <div className={showCardForm || payFailed ? "rounded-xl" : "hidden"}>
-            {/* `key` bumps on retry so the Solidgate iframe fully remounts
-                — otherwise the SDK holds onto its "Payment declined"
-                state internally and a second submit is a no-op. */}
-            <PaymentForm
-              key={retryKey}
-              applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
-              applePayContainerRef={applePayContainerRef}
-              googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
-              googlePayContainerRef={googlePayContainerRef}
-              merchantData={{
-                merchant: intent.merchant,
-                signature: intent.signature,
-                paymentIntent: intent.paymentIntent,
-              }}
-              width="100%"
-              onError={(error) => {
-                logger.error("[paywall] Solidgate iframe error", error);
-              }}
-              onFail={onFail}
-              onMounted={() => {
-                logger.info("[paywall] Solidgate iframe mounted");
-              }}
-              onSuccess={onSuccess}
-            />
-          </div>
+          {/* Card form — mounted lazily when the user clicks "Pay with card"
+              or after a payment decline. Lazy mount avoids the SDK injecting
+              wallet buttons into the container refs before the user has chosen
+              their payment method, which caused the buttons to overlap. */}
+          {showCardForm || payFailed ? (
+            <div className="rounded-xl">
+              {/* `key` bumps on retry so the Solidgate iframe fully remounts
+                  — otherwise the SDK holds onto its "Payment declined"
+                  state internally and a second submit is a no-op. */}
+              <PaymentForm
+                key={retryKey}
+                applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+                applePayContainerRef={applePayContainerRef}
+                googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
+                googlePayContainerRef={googlePayContainerRef}
+                merchantData={{
+                  merchant: intent.merchant,
+                  signature: intent.signature,
+                  paymentIntent: intent.paymentIntent,
+                }}
+                width="100%"
+                onError={(error) => {
+                  logger.error("[paywall] Solidgate iframe error", error);
+                }}
+                onFail={onFail}
+                onMounted={() => {
+                  logger.info("[paywall] Solidgate iframe mounted");
+                }}
+                onSuccess={onSuccess}
+              />
+            </div>
+          ) : null}
 
           {payFailed ? (
             <div
