@@ -64,7 +64,7 @@ const GOOGLE_PAY_BUTTON_PARAMS = { enabled: true, color: "black" } as const;
 const APPLE_PAY_BUTTON_PARAMS = {
   enabled: true,
   integrationType: "js",
-  type: "subscribe",
+  type: "plain",
   color: "black",
 } as const;
 
