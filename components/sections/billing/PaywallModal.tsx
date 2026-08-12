@@ -397,7 +397,7 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  const fullAccessPrice = "$0.99";
+  const fullAccessPrice = "$25";
   const annualPrice = "$300";
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
 
