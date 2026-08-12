@@ -1195,7 +1195,7 @@ function PlanAccordion({
       title: "7-day trial",
       price: fullAccessPrice,
       priceSuffix: "",
-      note: "then $25.00/mo",
+      note: "",
       badge: "Most popular",
       highlight: true,
     },
