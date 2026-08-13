@@ -653,7 +653,7 @@ function PayStep({
       : today;
   // Renewal amounts are hardcoded to match advertised pricing regardless
   // of what Solidgate returns (backend may return $24.99 for $25 plans).
-  const renewDisplay = selectedPlan === "annual" ? "$300" : "$25";
+  const renewDisplay = selectedPlan === "annual" ? "$300" : "$300";
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
