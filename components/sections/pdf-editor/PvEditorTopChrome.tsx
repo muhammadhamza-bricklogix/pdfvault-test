@@ -233,8 +233,11 @@ function TopAppBar() {
 
   // Editable filename — Canva-style inline edit. Uncontrolled input
   // keyed on `fileName` so external renames (post-save, restore-version)
-  // reset the input without needing a setState-in-effect sync.
+  // reset the input without needing a setState-in-effect sync. Display
+  // strips `.pdf` because the extension is redundant in an editor that
+  // only handles PDFs — commit re-appends it before saving.
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const displayName = fileName.replace(/\.pdf$/i, "");
 
   const handleBack = () => {
     router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
@@ -244,12 +247,18 @@ function TopAppBar() {
     if (!file || !nameInputRef.current) return;
     const trimmed = nameInputRef.current.value.trim();
 
-    if (!trimmed || trimmed === file.name) {
-      nameInputRef.current.value = file.name;
+    if (!trimmed) {
+      nameInputRef.current.value = displayName;
 
       return;
     }
     const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+
+    if (withExt === file.name) {
+      nameInputRef.current.value = displayName;
+
+      return;
+    }
     const renamed = new File([file], withExt, {
       lastModified: file.lastModified,
       type: file.type,
@@ -321,7 +330,7 @@ function TopAppBar() {
         ref={nameInputRef}
         aria-label="Document name"
         className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-[14px] font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white"
-        defaultValue={fileName}
+        defaultValue={displayName}
         disabled={!file}
         title="Click to rename"
         type="text"
@@ -331,7 +340,7 @@ function TopAppBar() {
             e.preventDefault();
             nameInputRef.current?.blur();
           } else if (e.key === "Escape") {
-            if (nameInputRef.current) nameInputRef.current.value = fileName;
+            if (nameInputRef.current) nameInputRef.current.value = displayName;
             nameInputRef.current?.blur();
           }
         }}

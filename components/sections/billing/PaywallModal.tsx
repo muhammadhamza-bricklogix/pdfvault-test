@@ -663,7 +663,56 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
-  const [showCardForm, setShowCardForm] = useState(false);
+
+  // Un-inert Solidgate/Apple/Google Pay portals injected into document.body.
+  //
+  // React Aria's ModalOverlay (via HeroUI Modal.Backdrop) marks every
+  // sibling of the modal root as `inert` / `aria-hidden="true"` so focus
+  // and pointer events stay inside our modal. Solidgate's SDK renders
+  // the Apple Pay "Scan with iPhone" QR modal (and equivalent Google Pay
+  // sheets) as a NEW child of document.body — a sibling of our modal
+  // that inherits the inert marker. Users can see the QR modal's close
+  // button but their clicks silently no-op because the container is
+  // inert. This observer walks new/mutated body children looking for
+  // wallet iframes (charge-auth.com, solidgate.com, applepay/*, pay.google)
+  // and strips inert/aria-hidden from the container and its ancestors
+  // up to body. Fragile if Solidgate changes their iframe hosts — flag
+  // to update this list if wallet dismissal regresses.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const walletIframeSelector =
+      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
+
+    const uninertWalletPortals = () => {
+      document.querySelectorAll(walletIframeSelector).forEach((iframe) => {
+        let node: HTMLElement | null = iframe.parentElement;
+
+        while (node && node !== document.body) {
+          if (node.hasAttribute("inert")) node.removeAttribute("inert");
+          if (node.getAttribute("aria-hidden") === "true") {
+            node.removeAttribute("aria-hidden");
+          }
+          node = node.parentElement;
+        }
+      });
+    };
+
+    const observer = new MutationObserver(uninertWalletPortals);
+
+    observer.observe(document.body, {
+      attributeFilter: ["inert", "aria-hidden"],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+
+    // Run once on mount in case a portal is already present when the
+    // effect fires (e.g. after a retry key bump remounts PayStep while
+    // the wallet iframe is still attached).
+    uninertWalletPortals();
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -685,89 +734,50 @@ function PayStep({
             Express checkout
           </p>
 
-          {/* Two states:
-              1. Before card form → non-functional visual placeholders for
-                 Apple Pay / Google Pay / Pay with card. No SDK mounted.
-              2. After clicking "Pay with card" → SDK container divs +
-                 PaymentForm only. Placeholders unmount so there is exactly
-                 one set of wallet buttons — the real ones from the SDK. */}
-          {!showCardForm && !payFailed ? (
-            <div className="flex flex-col gap-3">
-              {/* Apple Pay visual placeholder */}
-              <div className="flex h-[42px] w-full items-center justify-center gap-1.5 rounded-xl bg-[#1a1a1a] px-4">
-                <AppleLogoIcon />
-                <span className="text-[14px] font-medium tracking-tight text-white">
-                  Pay
-                </span>
-              </div>
-
-              {/* Google Pay visual placeholder */}
-              <div className="flex h-[42px] w-full items-center justify-center gap-2.5 rounded-xl bg-[#1a1a1a] px-4">
-                <GoogleGIcon />
-                <span className="text-[14px] font-medium tracking-tight text-white">
-                  Pay
-                </span>
-              </div>
-
-              {/* Pay with card button */}
-              <button
-                className="flex h-[42px] w-full cursor-pointer items-center justify-between rounded-xl bg-[#3a3a3a] px-4 transition-colors hover:bg-[#2d2d2d]"
-                type="button"
-                onClick={() => setShowCardForm(true)}
-              >
-                <span className="text-[14px] font-medium text-white">
-                  Pay with card
-                </span>
-                <div className="flex items-center gap-1">
-                  <MastercardBadge />
-                  <MaestroBadge />
-                  <VisaBadge />
-                  <AmexBadge />
-                  <JcbBadge />
-                </div>
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {/* Real Apple Pay — SDK injects here; hidden until mounted */}
-              <div
-                ref={applePayContainerRef}
-                className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+          {/* Real SDK wallet buttons + card form. Mounted immediately on
+              PayStep open so the user sees exactly one Apple Pay / Google
+              Pay button (the SDK-rendered one), never a placeholder that
+              silently swaps for a real button after a click. Also gets the
+              SDK load happening as soon as Continue is pressed, so the
+              wallet buttons are ready when the user reaches them. */}
+          <div className="flex flex-col gap-3">
+            {/* Apple Pay — SDK injects here; hidden until mounted */}
+            <div
+              ref={applePayContainerRef}
+              className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+            />
+            {/* Google Pay — SDK injects here; hidden until mounted */}
+            <div
+              ref={googlePayContainerRef}
+              className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+            />
+            {/* Card form. `key` bumps on retry so the Solidgate iframe fully
+                remounts — declined intents are terminal on Solidgate's side
+                and won't accept a second attempt on the same key. */}
+            <div className="rounded-xl">
+              <PaymentForm
+                key={retryKey}
+                applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+                applePayContainerRef={applePayContainerRef}
+                googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
+                googlePayContainerRef={googlePayContainerRef}
+                merchantData={{
+                  merchant: intent.merchant,
+                  signature: intent.signature,
+                  paymentIntent: intent.paymentIntent,
+                }}
+                width="100%"
+                onError={(error) => {
+                  logger.error("[paywall] Solidgate iframe error", error);
+                }}
+                onFail={onFail}
+                onMounted={() => {
+                  logger.info("[paywall] Solidgate iframe mounted");
+                }}
+                onSuccess={onSuccess}
               />
-              {/* Real Google Pay — SDK injects here; hidden until mounted */}
-              <div
-                ref={googlePayContainerRef}
-                className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
-              />
-              {/* Card form */}
-              <div className="rounded-xl">
-                {/* `key` bumps on retry so the Solidgate iframe fully
-                    remounts — declined intents are terminal on Solidgate's
-                    side and won't accept a second attempt on the same key. */}
-                <PaymentForm
-                  key={retryKey}
-                  applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
-                  applePayContainerRef={applePayContainerRef}
-                  googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
-                  googlePayContainerRef={googlePayContainerRef}
-                  merchantData={{
-                    merchant: intent.merchant,
-                    signature: intent.signature,
-                    paymentIntent: intent.paymentIntent,
-                  }}
-                  width="100%"
-                  onError={(error) => {
-                    logger.error("[paywall] Solidgate iframe error", error);
-                  }}
-                  onFail={onFail}
-                  onMounted={() => {
-                    logger.info("[paywall] Solidgate iframe mounted");
-                  }}
-                  onSuccess={onSuccess}
-                />
-              </div>
             </div>
-          )}
+          </div>
 
           {payFailed ? (
             <div
@@ -1357,119 +1367,6 @@ function ErrorState({ error }: { error: string }) {
         </button>
       ) : null}
     </div>
-  );
-}
-
-function MastercardBadge() {
-  return (
-    <svg height="20" viewBox="0 0 38 24" width="32">
-      <rect fill="#252525" height="24" rx="4" width="38" />
-      <circle cx="15" cy="12" fill="#EB001B" r="7" />
-      <circle cx="23" cy="12" fill="#F79E1B" r="7" />
-      <path d="M19 6.8a7 7 0 0 1 0 10.4A7 7 0 0 1 19 6.8z" fill="#FF5F00" />
-    </svg>
-  );
-}
-
-function MaestroBadge() {
-  return (
-    <svg height="20" viewBox="0 0 38 24" width="32">
-      <rect fill="#252525" height="24" rx="4" width="38" />
-      <circle cx="15" cy="12" fill="#EB001B" r="7" />
-      <circle cx="23" cy="12" fill="#0099DF" r="7" />
-      <path d="M19 6.8a7 7 0 0 1 0 10.4A7 7 0 0 1 19 6.8z" fill="#6C6BBD" />
-    </svg>
-  );
-}
-
-function VisaBadge() {
-  return (
-    <svg height="20" viewBox="0 0 38 24" width="32">
-      <rect fill="#1A1F71" height="24" rx="4" width="38" />
-      <text
-        dominantBaseline="middle"
-        fill="white"
-        fontFamily="Arial, sans-serif"
-        fontSize="11"
-        fontWeight="bold"
-        textAnchor="middle"
-        x="19"
-        y="13"
-      >
-        VISA
-      </text>
-    </svg>
-  );
-}
-
-function AmexBadge() {
-  return (
-    <svg height="20" viewBox="0 0 38 24" width="32">
-      <rect fill="#2557D6" height="24" rx="4" width="38" />
-      <text
-        dominantBaseline="middle"
-        fill="white"
-        fontFamily="Arial, sans-serif"
-        fontSize="7"
-        fontWeight="bold"
-        textAnchor="middle"
-        x="19"
-        y="13"
-      >
-        AMEX
-      </text>
-    </svg>
-  );
-}
-
-function JcbBadge() {
-  return (
-    <svg height="20" viewBox="0 0 38 24" width="32">
-      <rect fill="#003087" height="24" rx="4" width="38" />
-      <text
-        dominantBaseline="middle"
-        fill="white"
-        fontFamily="Arial, sans-serif"
-        fontSize="9"
-        fontWeight="bold"
-        textAnchor="middle"
-        x="19"
-        y="13"
-      >
-        JCB
-      </text>
-    </svg>
-  );
-}
-
-function GoogleGIcon() {
-  return (
-    <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-      <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
-      />
-      <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-        fill="#EA4335"
-      />
-    </svg>
-  );
-}
-
-function AppleLogoIcon() {
-  return (
-    <svg fill="white" height="20" viewBox="0 0 24 24" width="20">
-      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-    </svg>
   );
 }
 
