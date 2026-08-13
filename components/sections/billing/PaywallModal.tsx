@@ -189,27 +189,27 @@ export function PaywallModal({
 
     window.addEventListener("blur", checkWalletFocus);
 
-    // (b) MutationObserver on body for new wallet iframes.
-    let preExisting = new Set<Element>();
-    const snapshotTimer = window.setTimeout(() => {
-      preExisting = new Set(document.querySelectorAll(walletIframeSelector));
-    }, 800);
+    // (b) MutationObserver on body for wallet PORTAL iframes only.
+    // The wallet BUTTON iframes live inside our container refs and
+    // must be ignored — otherwise the paywall hides the moment
+    // PaymentForm mounts the button, before the user has even
+    // clicked it.
+    const isPortalIframe = (frame: Element) =>
+      !applePayContainerRef.current?.contains(frame) &&
+      !googlePayContainerRef.current?.contains(frame);
 
     const observer = new MutationObserver(() => {
-      const current = Array.from(
+      const portals = Array.from(
         document.querySelectorAll(walletIframeSelector),
-      );
+      ).filter(isPortalIframe);
 
-      if (current.some((frame) => !preExisting.has(frame))) {
-        setIsWalletActive(true);
-      }
+      if (portals.length > 0) setIsWalletActive(true);
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       window.removeEventListener("blur", checkWalletFocus);
-      window.clearTimeout(snapshotTimer);
       observer.disconnect();
     };
   }, [isOpen, step]);
