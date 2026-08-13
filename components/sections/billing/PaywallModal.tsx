@@ -408,13 +408,10 @@ function PlanStep({
   const fullAccessPrice = "$0.99";
   const annualPrice = "$25";
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  // Annual plan shows the whole-dollar today charge (e.g. "$300")
-  // instead of the trial-formatted "$0.99" — reads cleaner in the
-  // disclaimer footer for the annual clause.
-  const todayDisplay =
-    selectedPlan === "annual"
-      ? formatWhole(intent.amountTodayMinor, intent.currency)
-      : today;
+  // Annual plan advertises $300/year total. Display is hardcoded
+  // because Solidgate returns the monthly-equivalent ($25) on
+  // `amountTodayMinor` for the annual product.
+  const todayDisplay = selectedPlan === "annual" ? "$300" : today;
 
   const continueDisabled = continueLoading;
 
@@ -652,14 +649,10 @@ function PayStep({
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
-  // Annual plan: Solidgate returns $24.99 but we advertise $25 — round
-  // to nearest whole dollar for display only. Actual charge is unchanged.
-  const todayDisplay =
-    selectedPlan === "annual"
-      ? formatWhole(intent.amountTodayMinor, intent.currency)
-      : today;
-  // Renewal amounts are hardcoded to match advertised pricing regardless
-  // of what Solidgate returns (backend may return $24.99 for $25 plans).
+  // Annual plan advertises $300/year total (billed once). Display is
+  // hardcoded because Solidgate returns the monthly-equivalent ($25)
+  // on `amountTodayMinor` for the annual product.
+  const todayDisplay = selectedPlan === "annual" ? "$300" : today;
   const renewDisplay = selectedPlan === "annual" ? "$300" : "$300";
 
   // Solidgate renders Apple Pay + Google Pay into detached container
