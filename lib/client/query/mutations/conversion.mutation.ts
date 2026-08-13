@@ -7,6 +7,7 @@ import type {
 
 import { useMutation } from "@tanstack/react-query";
 
+import { PAYWALL_CANCELLED_ERR_NAME } from "@/lib/client/hooks/billing/paywall-bus";
 import { conversionService } from "@/lib/shared/api/services/conversion.service";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -32,6 +33,12 @@ export function useConvertFileMutation() {
     },
     onError: (error, _input, loadingKey) => {
       if (loadingKey) toast.close(loadingKey);
+      // Suppress the failure toast when the user cancelled the paywall
+      // mid-request — the axios interceptor throws PaywallCancelledError
+      // and the caller already knows to bail out silently.
+      if ((error as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       toast.error({
         title: "Conversion failed",
         description: extractMessage(error),
