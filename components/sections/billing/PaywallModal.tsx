@@ -130,9 +130,63 @@ export function PaywallModal({
   const [payFailed, setPayFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [retryLoading, setRetryLoading] = useState(false);
+  // True while Solidgate's Apple Pay QR / Google Pay overlay is
+  // attached to document.body. We visually hide our paywall Dialog +
+  // Backdrop while it's up so the wallet flow gets the full screen —
+  // Modal stays mounted so PaymentForm's SDK doesn't tear down mid-
+  // handshake.
+  const [isWalletActive, setIsWalletActive] = useState(false);
   const createIntent = useCreateCheckoutIntentMutation();
   const syncSubscription = useSyncSubscriptionMutation();
   const queryClient = useQueryClient();
+
+  // Watch document.body for Solidgate's wallet portals (Apple Pay QR
+  // "Scan with iPhone", Google Pay sheet). When one appears: (1) hide
+  // our paywall Dialog so the wallet UI has the screen to itself, and
+  // (2) walk the portal's ancestor chain and strip any inert /
+  // aria-hidden markers React Aria's ModalOverlay auto-applied to
+  // body-level siblings of our modal — otherwise Apple's own close
+  // button silently no-ops. Fragile if Solidgate changes their iframe
+  // hosts; add new hosts to `walletIframeSelector` if wallets regress.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const walletIframeSelector =
+      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
+
+    const syncWalletState = () => {
+      const wallets = document.querySelectorAll(walletIframeSelector);
+
+      wallets.forEach((iframe) => {
+        let node: HTMLElement | null = iframe.parentElement;
+
+        while (node && node !== document.body) {
+          if (node.hasAttribute("inert")) node.removeAttribute("inert");
+          if (node.getAttribute("aria-hidden") === "true") {
+            node.removeAttribute("aria-hidden");
+          }
+          node = node.parentElement;
+        }
+      });
+
+      setIsWalletActive(wallets.length > 0);
+    };
+
+    const observer = new MutationObserver(syncWalletState);
+
+    observer.observe(document.body, {
+      attributeFilter: ["inert", "aria-hidden"],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+
+    syncWalletState();
+
+    return () => {
+      observer.disconnect();
+      setIsWalletActive(false);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -331,7 +385,11 @@ export function PaywallModal({
         }
       }}
     >
-      <Modal.Container className="items-start justify-center p-4 sm:items-center">
+      <Modal.Container
+        className={`items-start justify-center p-4 sm:items-center ${
+          isWalletActive ? "invisible pointer-events-none" : ""
+        }`}
+      >
         <Modal.Dialog
           className={
             step === "success"
@@ -663,56 +721,6 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
-
-  // Un-inert Solidgate/Apple/Google Pay portals injected into document.body.
-  //
-  // React Aria's ModalOverlay (via HeroUI Modal.Backdrop) marks every
-  // sibling of the modal root as `inert` / `aria-hidden="true"` so focus
-  // and pointer events stay inside our modal. Solidgate's SDK renders
-  // the Apple Pay "Scan with iPhone" QR modal (and equivalent Google Pay
-  // sheets) as a NEW child of document.body — a sibling of our modal
-  // that inherits the inert marker. Users can see the QR modal's close
-  // button but their clicks silently no-op because the container is
-  // inert. This observer walks new/mutated body children looking for
-  // wallet iframes (charge-auth.com, solidgate.com, applepay/*, pay.google)
-  // and strips inert/aria-hidden from the container and its ancestors
-  // up to body. Fragile if Solidgate changes their iframe hosts — flag
-  // to update this list if wallet dismissal regresses.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const walletIframeSelector =
-      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
-
-    const uninertWalletPortals = () => {
-      document.querySelectorAll(walletIframeSelector).forEach((iframe) => {
-        let node: HTMLElement | null = iframe.parentElement;
-
-        while (node && node !== document.body) {
-          if (node.hasAttribute("inert")) node.removeAttribute("inert");
-          if (node.getAttribute("aria-hidden") === "true") {
-            node.removeAttribute("aria-hidden");
-          }
-          node = node.parentElement;
-        }
-      });
-    };
-
-    const observer = new MutationObserver(uninertWalletPortals);
-
-    observer.observe(document.body, {
-      attributeFilter: ["inert", "aria-hidden"],
-      attributes: true,
-      childList: true,
-      subtree: true,
-    });
-
-    // Run once on mount in case a portal is already present when the
-    // effect fires (e.g. after a retry key bump remounts PayStep while
-    // the wallet iframe is still attached).
-    uninertWalletPortals();
-
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
