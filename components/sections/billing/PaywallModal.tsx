@@ -801,7 +801,7 @@ function PayStep({
               <Feature>Unlimited downloads</Feature>
               <Feature>Unlimited edits</Feature>
               <Feature>Convert to any format</Feature>
-              <Feature>Full access to 80+ tools</Feature>
+              <Feature>Full access to 30+ tools</Feature>
               <Feature>Password-protect your documents</Feature>
             </ul>
           </div>
@@ -858,7 +858,7 @@ function PayStep({
               </p>
             </div>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual" ? "$300 / year" : todayDisplay}
+              {selectedPlan === "annual" ? "$25 / month" : todayDisplay}
             </p>
           </div>
           <p className="mt-0.5 text-[12px] text-[#6c6c6c]">
