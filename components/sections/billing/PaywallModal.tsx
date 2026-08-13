@@ -478,7 +478,12 @@ function PlanStep({
               <>
                 <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
                   <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
-                    <HugeiconsIcon color="white" icon={Tick01Icon} size={15} strokeWidth={3} />
+                    <HugeiconsIcon
+                      color="white"
+                      icon={Tick01Icon}
+                      size={15}
+                      strokeWidth={3}
+                    />
                   </span>
                   Your document is ready to download
                 </span>
@@ -492,7 +497,12 @@ function PlanStep({
               <>
                 <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
                   <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
-                    <HugeiconsIcon color="white" icon={Tick01Icon} size={15} strokeWidth={3} />
+                    <HugeiconsIcon
+                      color="white"
+                      icon={Tick01Icon}
+                      size={15}
+                      strokeWidth={3}
+                    />
                   </span>
                   Your document is ready to download
                 </span>
@@ -844,13 +854,13 @@ function PayStep({
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-col gap-1">
               <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-                {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
+                {selectedPlan === "annual" ? "Monthly Plan" : "7-day trial"}
               </p>
-              {selectedPlan === "monthly" ? (
+              {/* {selectedPlan === "monthly" ? (
                 <span className="inline-flex w-fit items-center rounded-full bg-[#e6f5ec] px-2 py-0.5 text-[11px] font-semibold text-[#0f9d58]">
                   7-day trial
                 </span>
-              ) : null}
+              ) : null} */}
             </div>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
               {todayDisplay}
