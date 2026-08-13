@@ -226,6 +226,92 @@ export function PaywallModal({
     }
   }, [isOpen, step, payFailed]);
 
+  // stepRef mirrors `step` so the wallet-portal-removal observer
+  // below can read the LIVE step (not a captured closure value) at
+  // fire time — otherwise a Solidgate onSuccess that races the
+  // portal teardown would cause us to call onClose after we've
+  // already advanced to Success, which cancels the queued download.
+  const stepRef = useRef(step);
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  // Detect when the wallet portal (Apple QR modal / Google Pay
+  // sheet) is torn down. Solidgate's QR modal has its own X but
+  // clicking it only closes THEIR overlay — our paywall stayed on
+  // screen with the wallet iframe empty and no way for the user to
+  // continue. Watch for wallet iframes added to document.body AFTER
+  // the wallet button click (portals, not the always-present button
+  // iframes). When all tracked portals are gone → close the whole
+  // paywall so the user isn't stranded.
+  //
+  // 500ms debounce protects against "Get New Code" / "Code Timed Out"
+  // reflows where Apple remounts the QR iframe with a fresh code.
+  useEffect(() => {
+    if (!isWalletActive || typeof window === "undefined") return;
+    const walletIframeSelector =
+      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
+
+    const preExisting = new Set(
+      document.querySelectorAll(walletIframeSelector),
+    );
+    const trackedPortals = new Set<Element>();
+    let closeTimer: number | undefined;
+
+    const observer = new MutationObserver(() => {
+      // Skip if payment already succeeded — onSuccess advances step
+      // to "success" first, then Solidgate tears down the portal.
+      // We must NOT call onClose in that window.
+      if (stepRef.current !== "pay") return;
+
+      document.querySelectorAll(walletIframeSelector).forEach((frame) => {
+        if (!preExisting.has(frame)) trackedPortals.add(frame);
+      });
+
+      if (trackedPortals.size === 0) return;
+
+      const anyStillPresent = Array.from(trackedPortals).some((frame) =>
+        document.body.contains(frame),
+      );
+
+      if (!anyStillPresent) {
+        if (closeTimer !== undefined) return;
+        closeTimer = window.setTimeout(() => {
+          closeTimer = undefined;
+          if (stepRef.current !== "pay") return;
+
+          // Re-check after debounce — Apple may have remounted the
+          // portal ("Get New Code"). If so, track the new frames
+          // and DON'T close.
+          const nowPortals = Array.from(
+            document.querySelectorAll(walletIframeSelector),
+          ).filter((f) => !preExisting.has(f));
+
+          if (nowPortals.length > 0) {
+            nowPortals.forEach((f) => trackedPortals.add(f));
+
+            return;
+          }
+          onClose();
+        }, 500);
+      } else if (closeTimer !== undefined) {
+        window.clearTimeout(closeTimer);
+        closeTimer = undefined;
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      observer.disconnect();
+      if (closeTimer !== undefined) window.clearTimeout(closeTimer);
+    };
+  }, [isWalletActive, onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
 
