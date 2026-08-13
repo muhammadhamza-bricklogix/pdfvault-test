@@ -147,32 +147,41 @@ export function PaywallModal({
   const syncSubscription = useSyncSubscriptionMutation();
   const queryClient = useQueryClient();
 
-  // Wallet button click detection. Runs at capture phase on the window
-  // so it fires before Solidgate's own handlers — an iframe click's
-  // target IS the iframe element, so `.contains(iframe)` on the parent
-  // container ref returns true even though the click never bubbles
-  // out of the iframe's document. Once flipped, the Backdrop below
-  // hides via `invisible pointer-events-none`.
+  // Wallet button click detection.
+  //
+  // Cross-origin iframes (Solidgate hosts the Apple / Google Pay
+  // buttons) do NOT forward pointerdown/click events to the parent
+  // when the click happens INSIDE the iframe content — the browser
+  // routes the event to the iframe's own document and the parent
+  // never sees it. So a `pointerdown` listener at capture phase does
+  // nothing here.
+  //
+  // What DOES work: clicking a wallet iframe pulls focus into it,
+  // which fires `blur` on the window and moves `document.activeElement`
+  // to the iframe element. If activeElement matches one of our wallet
+  // container refs, we know the user just clicked a wallet button.
   useEffect(() => {
     if (!isOpen || step !== "pay" || typeof window === "undefined") return;
 
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
+    const checkWalletFocus = () => {
+      // Poll on next tick — some browsers update activeElement
+      // asynchronously after the blur event fires.
+      window.setTimeout(() => {
+        const active = document.activeElement as HTMLElement | null;
 
-      if (!target) return;
-      if (
-        applePayContainerRef.current?.contains(target) ||
-        googlePayContainerRef.current?.contains(target)
-      ) {
-        setIsWalletActive(true);
-      }
+        if (!active || active.tagName !== "IFRAME") return;
+        if (
+          applePayContainerRef.current?.contains(active) ||
+          googlePayContainerRef.current?.contains(active)
+        ) {
+          setIsWalletActive(true);
+        }
+      }, 0);
     };
 
-    window.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("blur", checkWalletFocus);
 
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown, true);
-    };
+    return () => window.removeEventListener("blur", checkWalletFocus);
   }, [isOpen, step]);
 
   // Un-inert Solidgate wallet portals so their own close buttons
