@@ -408,6 +408,13 @@ function PlanStep({
   const fullAccessPrice = "$0.99";
   const annualPrice = "$25";
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
+  // Annual plan shows the whole-dollar today charge (e.g. "$300")
+  // instead of the trial-formatted "$0.99" — reads cleaner in the
+  // disclaimer footer for the annual clause.
+  const todayDisplay =
+    selectedPlan === "annual"
+      ? formatWhole(intent.amountTodayMinor, intent.currency)
+      : today;
 
   const continueDisabled = continueLoading;
 
@@ -570,7 +577,7 @@ function PlanStep({
         ) : (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in an annual subscription to pdfvault.ai. You
-            agree to be billed $300.00 per year until you cancel. Payments will
+            agree to be billed {todayDisplay} per year until you cancel. Payments will
             be charged from the card you specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
