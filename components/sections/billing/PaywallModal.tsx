@@ -147,25 +147,33 @@ export function PaywallModal({
   const syncSubscription = useSyncSubscriptionMutation();
   const queryClient = useQueryClient();
 
-  // Wallet button click detection.
+  // Wallet button click / portal detection.
   //
-  // Cross-origin iframes (Solidgate hosts the Apple / Google Pay
-  // buttons) do NOT forward pointerdown/click events to the parent
-  // when the click happens INSIDE the iframe content — the browser
-  // routes the event to the iframe's own document and the parent
-  // never sees it. So a `pointerdown` listener at capture phase does
-  // nothing here.
+  // Two independent detection strategies — whichever fires first
+  // flips isWalletActive:
   //
-  // What DOES work: clicking a wallet iframe pulls focus into it,
-  // which fires `blur` on the window and moves `document.activeElement`
-  // to the iframe element. If activeElement matches one of our wallet
-  // container refs, we know the user just clicked a wallet button.
+  //  (a) Focus/blur: clicking a wallet iframe steals focus into it,
+  //      firing `blur` on the window and moving document.activeElement
+  //      to the iframe. Cross-origin iframes don't forward
+  //      pointerdown/click to the parent, so focus is the only click-
+  //      time signal we can catch.
+  //
+  //  (b) MutationObserver on document.body: after the wallet button
+  //      is clicked, Solidgate injects a NEW wallet iframe (the QR
+  //      portal / native sheet) as a body-level sibling of our
+  //      paywall. When we see a wallet iframe that wasn't in the
+  //      snapshot taken shortly after PayStep mounted, it's the
+  //      portal, and the wallet flow is definitely active.
+  //
+  // (b) is the reliable fallback for browsers where (a) doesn't fire
+  // consistently. Both point at the same setter so it's idempotent.
   useEffect(() => {
     if (!isOpen || step !== "pay" || typeof window === "undefined") return;
+    const walletIframeSelector =
+      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
 
+    // (a) Focus/blur signal.
     const checkWalletFocus = () => {
-      // Poll on next tick — some browsers update activeElement
-      // asynchronously after the blur event fires.
       window.setTimeout(() => {
         const active = document.activeElement as HTMLElement | null;
 
@@ -181,45 +189,86 @@ export function PaywallModal({
 
     window.addEventListener("blur", checkWalletFocus);
 
-    return () => window.removeEventListener("blur", checkWalletFocus);
+    // (b) MutationObserver on body for new wallet iframes.
+    let preExisting = new Set<Element>();
+    const snapshotTimer = window.setTimeout(() => {
+      preExisting = new Set(document.querySelectorAll(walletIframeSelector));
+    }, 800);
+
+    const observer = new MutationObserver(() => {
+      const current = Array.from(
+        document.querySelectorAll(walletIframeSelector),
+      );
+
+      if (current.some((frame) => !preExisting.has(frame))) {
+        setIsWalletActive(true);
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.removeEventListener("blur", checkWalletFocus);
+      window.clearTimeout(snapshotTimer);
+      observer.disconnect();
+    };
   }, [isOpen, step]);
 
-  // Un-inert Solidgate wallet portals so their own close buttons
-  // still work in the corner case the QR modal is visible above our
-  // hidden paywall. React Aria's ModalOverlay marks siblings of the
-  // modal `inert`; Solidgate injects the QR portal as a body-level
-  // sibling that inherits the inert marker. Fragile if Solidgate
-  // changes their iframe hosts — add new hosts to the selector if
-  // wallet dismissal regresses.
+  // Force Solidgate wallet portals to be interactive + on top:
+  //  - Strip `inert` and `aria-hidden="true"` that React Aria's
+  //    ModalOverlay auto-applies to body-level siblings of our modal
+  //    (would otherwise silently swallow the click on Apple's own X)
+  //  - Force `pointer-events: auto` on the ancestor chain so nothing
+  //    is blocking clicks
+  //  - Force `z-index: 2147483647` (max i32) on the portal's
+  //    top-level container so it stacks above our Modal.Backdrop
+  //
+  // Fragile if Solidgate changes iframe hosts — add new hosts to the
+  // selector if wallet dismissal regresses.
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
     const walletIframeSelector =
       'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
 
-    const uninertWalletPortals = () => {
+    const forceWalletInteractive = () => {
       document.querySelectorAll(walletIframeSelector).forEach((iframe) => {
+        // Skip our own wallet BUTTON iframes (they live inside our
+        // container refs and don't need z-index promotion).
+        if (
+          applePayContainerRef.current?.contains(iframe) ||
+          googlePayContainerRef.current?.contains(iframe)
+        ) {
+          return;
+        }
         let node: HTMLElement | null = iframe.parentElement;
+        let topLevel: HTMLElement | null = null;
 
         while (node && node !== document.body) {
           if (node.hasAttribute("inert")) node.removeAttribute("inert");
           if (node.getAttribute("aria-hidden") === "true") {
             node.removeAttribute("aria-hidden");
           }
+          node.style.pointerEvents = "auto";
+          topLevel = node;
           node = node.parentElement;
+        }
+        if (topLevel) {
+          topLevel.style.zIndex = "2147483647";
+          topLevel.style.position ||= "fixed";
         }
       });
     };
 
-    const observer = new MutationObserver(uninertWalletPortals);
+    const observer = new MutationObserver(forceWalletInteractive);
 
     observer.observe(document.body, {
-      attributeFilter: ["inert", "aria-hidden"],
+      attributeFilter: ["inert", "aria-hidden", "style"],
       attributes: true,
       childList: true,
       subtree: true,
     });
 
-    uninertWalletPortals();
+    forceWalletInteractive();
 
     return () => observer.disconnect();
   }, [isOpen]);
@@ -508,6 +557,11 @@ export function PaywallModal({
 
   return (
     <Modal.Backdrop
+      className={
+        isWalletActive
+          ? "!bg-transparent !pointer-events-none [&_[role=dialog]]:invisible"
+          : ""
+      }
       isDismissable={false}
       isOpen={isOpen}
       onOpenChange={(open) => {
