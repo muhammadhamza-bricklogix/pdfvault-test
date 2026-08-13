@@ -406,7 +406,6 @@ function PlanStep({
   continueLoading: boolean;
 }) {
   const fullAccessPrice = "$0.99";
-  const annualPrice = "$25";
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
 
   const continueDisabled = continueLoading;
@@ -452,7 +451,6 @@ function PlanStep({
       {hidePreview ? (
         <div className="flex flex-col gap-4 p-6 md:p-8">
           <PlanCards
-            annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
             onSelectPlan={onSelectPlan}
@@ -518,7 +516,6 @@ function PlanStep({
           {/* Right — plan cards column */}
           <div className="flex flex-col gap-4 p-6 md:p-8">
             <PlanCards
-              annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
               selectedPlan={selectedPlan}
               onSelectPlan={onSelectPlan}
@@ -854,7 +851,7 @@ function PayStep({
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-col gap-1">
               <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-                {selectedPlan === "annual" ? "Monthly Plan" : "7-day trial"}
+                {selectedPlan === "annual" ? "Annually Plan" : "7-day trial"}
               </p>
               {/* {selectedPlan === "monthly" ? (
                 <span className="inline-flex w-fit items-center rounded-full bg-[#e6f5ec] px-2 py-0.5 text-[11px] font-semibold text-[#0f9d58]">
@@ -1204,12 +1201,10 @@ function PlanCards({
   selectedPlan,
   onSelectPlan,
   fullAccessPrice,
-  annualPrice,
 }: {
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
   fullAccessPrice: string;
-  annualPrice: string;
 }) {
   const plans = [
     {
@@ -1223,8 +1218,8 @@ function PlanCards({
     {
       id: "annual" as PlanId,
       title: "Annual Plan",
-      price: annualPrice,
-      priceSuffix: "/ month",
+      price: "$300",
+      priceSuffix: "/ year",
       note: "",
       badge: undefined as string | undefined,
     },
