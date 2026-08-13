@@ -30,7 +30,7 @@ const LandingFAQ = dynamic(() =>
 );
 
 export const metadata: Metadata = {
-  title: "PDFVault — A smarter, more secure home for every PDF",
+  title: "PDFVault — Edit, sign, or convert any PDF in seconds",
   icons: {
     apple: "/PDFVault_stacked_layers.png",
     icon: "/PDFVault_stacked_layers.png",

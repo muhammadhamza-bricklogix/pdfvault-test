@@ -91,19 +91,27 @@ export function EditorInfoBar() {
 
   const fileName = file?.name ?? "PDF Editor";
   // Uncontrolled input keyed on `fileName` so external renames reset
-  // it without a setState-in-effect anti-pattern.
+  // it without a setState-in-effect anti-pattern. Display strips `.pdf`
+  // — commit re-appends it before saving.
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const displayName = fileName.replace(/\.pdf$/i, "");
 
   const commitRename = () => {
     if (!file || !nameInputRef.current) return;
     const trimmed = nameInputRef.current.value.trim();
 
-    if (!trimmed || trimmed === file.name) {
-      nameInputRef.current.value = file.name;
+    if (!trimmed) {
+      nameInputRef.current.value = displayName;
 
       return;
     }
     const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+
+    if (withExt === file.name) {
+      nameInputRef.current.value = displayName;
+
+      return;
+    }
     const renamed = new File([file], withExt, {
       lastModified: file.lastModified,
       type: file.type,
@@ -289,7 +297,7 @@ export function EditorInfoBar() {
               ref={nameInputRef}
               aria-label="Document name"
               className="hidden max-w-24 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white md:inline-block lg:max-w-40"
-              defaultValue={fileName}
+              defaultValue={displayName}
               disabled={!file}
               title="Click to rename"
               type="text"
@@ -300,7 +308,7 @@ export function EditorInfoBar() {
                   nameInputRef.current?.blur();
                 } else if (e.key === "Escape") {
                   if (nameInputRef.current)
-                    nameInputRef.current.value = fileName;
+                    nameInputRef.current.value = displayName;
                   nameInputRef.current?.blur();
                 }
               }}

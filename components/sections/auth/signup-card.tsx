@@ -13,12 +13,6 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const SIMPLE_PASSWORD_HINT = "Password must be at least 8 characters.";
-
-function isPasswordValid(value: string): boolean {
-  return value.length >= 8;
-}
-
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
     return fallback;
@@ -42,15 +36,6 @@ function readClerkError(err: unknown, fallback: string): string {
 function humaniseClerkMessage(raw: string, code?: string): string {
   const s = raw.toLowerCase();
 
-  if (code === "form_password_pwned" || /pwned/i.test(s)) {
-    return "This password appeared in a public data breach. Choose a different one.";
-  }
-  if (
-    code === "form_password_not_strong_enough" ||
-    /not strong enough/i.test(s)
-  ) {
-    return "Password isn't strong enough. Try 8+ characters combining letters and numbers.";
-  }
   if (
     code === "form_identifier_exists" ||
     /that email address is taken/i.test(s)
@@ -126,7 +111,7 @@ export function SignupCard() {
   // clicking through and hitting a wall of red inline errors.
   const credentialsValid = useMemo(() => {
     if (!EMAIL_RE.test(email.trim())) return false;
-    if (!isPasswordValid(password)) return false;
+    if (!password) return false;
     if (!agreedToTerms) return false;
 
     return true;
@@ -162,9 +147,6 @@ export function SignupCard() {
 
     if (!EMAIL_RE.test(trimmedEmail)) {
       nextErrors.email = "Please enter a valid email address.";
-    }
-    if (!isPasswordValid(password)) {
-      nextErrors.password = SIMPLE_PASSWORD_HINT;
     }
     if (!agreedToTerms) {
       nextErrors.terms =
@@ -393,7 +375,6 @@ export function SignupCard() {
                   autoComplete="new-password"
                   className={`${INPUT_CLASS} mt-0 pr-11`}
                   id={passwordId}
-                  minLength={8}
                   name="password"
                   placeholder="Enter Your Password"
                   type={passwordRevealed ? "text" : "password"}
@@ -410,13 +391,6 @@ export function SignupCard() {
                   {errors.password}
                 </p>
               ) : null}
-              {/* PRD §4 — single helper line replacing the 5-chip
-                  checklist (length + upper + lower + number + symbol).
-                  Kept visible always so users see the rule before typing
-                  and after a submit error. */}
-              <p className="mt-2 text-[12px] text-[#8a8a8a]">
-                {SIMPLE_PASSWORD_HINT}
-              </p>
             </div>
 
             <div className="mt-4">
