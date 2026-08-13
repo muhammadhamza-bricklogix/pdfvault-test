@@ -4,6 +4,7 @@ import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 import type { ComponentProps } from "react";
 
 import {
+  ArrowLeft01Icon,
   Tick01Icon,
   BackgroundIcon,
   PrinterIcon,
@@ -37,12 +38,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useRef, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -207,10 +210,14 @@ function PillGroup({
 
 function TopAppBar() {
   const file = usePdfEditorStore((s) => s.file);
+  const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  const router = useRouter();
+  const renameDoc = useRenameDocumentMutation();
 
   const history = historyByPage.get(currentPage) ?? [];
   const idx = historyIndexByPage.get(currentPage) ?? -1;
@@ -223,6 +230,37 @@ function TopAppBar() {
   const canShare = !!file && isSignedIn;
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Editable filename — Canva-style inline edit. Uncontrolled input
+  // keyed on `fileName` so external renames (post-save, restore-version)
+  // reset the input without needing a setState-in-effect sync.
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBack = () => {
+    router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
+  };
+
+  const commitRename = () => {
+    if (!file || !nameInputRef.current) return;
+    const trimmed = nameInputRef.current.value.trim();
+
+    if (!trimmed || trimmed === file.name) {
+      nameInputRef.current.value = file.name;
+
+      return;
+    }
+    const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+    const renamed = new File([file], withExt, {
+      lastModified: file.lastModified,
+      type: file.type,
+    });
+
+    setFile(renamed);
+
+    if (currentDocumentId) {
+      renameDoc.mutate({ filename: withExt, id: currentDocumentId });
+    }
+  };
 
   const {
     isOpen: isSearchOpen,
@@ -246,6 +284,20 @@ function TopAppBar() {
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
+      <Tooltip delay={300}>
+        <button
+          aria-label="Back to dashboard"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
+          type="button"
+          onClick={handleBack}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
+        </button>
+        <Tooltip.Content>
+          <p>Back to dashboard</p>
+        </Tooltip.Content>
+      </Tooltip>
+
       <HamburgerMenu />
 
       <Link
@@ -264,12 +316,26 @@ function TopAppBar() {
 
       <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
 
-      <span
-        aria-label="Document"
-        className="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--color-foreground)]"
-      >
-        {fileName}
-      </span>
+      <input
+        key={fileName}
+        ref={nameInputRef}
+        aria-label="Document name"
+        className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-[14px] font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white"
+        defaultValue={fileName}
+        disabled={!file}
+        title="Click to rename"
+        type="text"
+        onBlur={commitRename}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            nameInputRef.current?.blur();
+          } else if (e.key === "Escape") {
+            if (nameInputRef.current) nameInputRef.current.value = fileName;
+            nameInputRef.current?.blur();
+          }
+        }}
+      />
 
       <SaveStatusChip />
 

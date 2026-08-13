@@ -574,8 +574,9 @@ function PlanStep({
         ) : (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in an annual subscription to pdfvault.ai. You
-            agree to be billed {todayDisplay} per year until you cancel. Payments will
-            be charged from the card you specified below. To cancel, visit your{" "}
+            agree to be billed {todayDisplay} per year until you cancel.
+            Payments will be charged from the card you specified below. To
+            cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"
@@ -648,7 +649,6 @@ function PayStep({
   preview: PaywallPreview | null;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  const renew = formatMinor(intent.amountRenewMinor, intent.currency);
   // Annual plan advertises $300/year total (billed once). Display is
   // hardcoded because Solidgate returns the monthly-equivalent ($25)
   // on `amountTodayMinor` for the annual product.
@@ -1479,15 +1479,6 @@ function formatMinor(minor: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(minor / 100);
-}
-
-function formatWhole(minor: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(minor / 100));
 }
 
 // Long label like "Jul 24, 2026" for the success card.

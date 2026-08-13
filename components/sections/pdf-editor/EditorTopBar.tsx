@@ -40,10 +40,11 @@ import {
   Tooltip,
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -62,14 +63,17 @@ const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
+  const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const zoom = usePdfEditorStore((s) => s.zoom);
+  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
 
   const router = useRouter();
+  const renameDoc = useRenameDocumentMutation();
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -86,6 +90,31 @@ export function EditorInfoBar() {
   };
 
   const fileName = file?.name ?? "PDF Editor";
+  // Uncontrolled input keyed on `fileName` so external renames reset
+  // it without a setState-in-effect anti-pattern.
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const commitRename = () => {
+    if (!file || !nameInputRef.current) return;
+    const trimmed = nameInputRef.current.value.trim();
+
+    if (!trimmed || trimmed === file.name) {
+      nameInputRef.current.value = file.name;
+
+      return;
+    }
+    const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+    const renamed = new File([file], withExt, {
+      lastModified: file.lastModified,
+      type: file.type,
+    });
+
+    setFile(renamed);
+
+    if (currentDocumentId) {
+      renameDoc.mutate({ filename: withExt, id: currentDocumentId });
+    }
+  };
 
   // Enable Save whenever a file is open. Signed-out users get bounced into
   // the sign-in flow (with a redirect back to `/pdf-composer`) instead of
@@ -255,14 +284,27 @@ export function EditorInfoBar() {
               Filename itself is hidden below md so the row doesn't get
               squeezed between save/tools/zoom on tablets. */}
           <div className="hidden min-w-0 items-center gap-2 sm:flex lg:gap-3">
-            <Tooltip delay={300}>
-              <span className="hidden max-w-24 cursor-default truncate text-sm font-medium text-[var(--color-foreground)] md:inline lg:max-w-40">
-                {fileName}
-              </span>
-              <Tooltip.Content>
-                <p>{fileName}</p>
-              </Tooltip.Content>
-            </Tooltip>
+            <input
+              key={fileName}
+              ref={nameInputRef}
+              aria-label="Document name"
+              className="hidden max-w-24 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white md:inline-block lg:max-w-40"
+              defaultValue={fileName}
+              disabled={!file}
+              title="Click to rename"
+              type="text"
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  nameInputRef.current?.blur();
+                } else if (e.key === "Escape") {
+                  if (nameInputRef.current)
+                    nameInputRef.current.value = fileName;
+                  nameInputRef.current?.blur();
+                }
+              }}
+            />
 
             <SaveStatusChip />
 
