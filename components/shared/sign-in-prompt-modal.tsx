@@ -10,6 +10,13 @@ export type SignInPromptDetail = {
   description?: string;
   redirectUrl?: string;
   confirmLabel?: string;
+  /**
+   * Where the confirm button sends the user. Defaults to `"sign-in"`;
+   * callers that would rather route new users into account creation
+   * (e.g. the download-then-sign-up flow for a guest export) can pass
+   * `"sign-up"` and set `confirmLabel` accordingly.
+   */
+  destination?: "sign-in" | "sign-up";
 };
 
 /**
@@ -55,9 +62,13 @@ export function SignInPromptModal() {
     const returnTo =
       detail?.redirectUrl ??
       `${window.location.pathname}${window.location.search}`;
+    const dest =
+      detail?.destination === "sign-up"
+        ? ROUTES.AUTH.SIGN_UP
+        : ROUTES.AUTH.SIGN_IN;
 
     window.location.assign(
-      `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
+      `${dest}?redirect_url=${encodeURIComponent(returnTo)}`,
     );
   }, [detail]);
 

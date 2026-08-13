@@ -223,12 +223,15 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
           // Prompt with a real confirm modal (not a fire-and-forget
           // toast + redirect). The user always knows what's about to
-          // happen and can cancel to keep editing locally.
+          // happen and can cancel to keep editing locally. Route new
+          // users to sign-up first — existing users can flip to sign-in
+          // from that page.
           dispatchSignInPrompt({
-            title: "Sign in to download",
+            title: "Sign up to download",
             description:
-              "Sign in and we'll bring you back to finish the download right where you left off.",
-            confirmLabel: "Sign in & continue",
+              "Create an account and we'll bring you back to finish the download right where you left off.",
+            confirmLabel: "Sign up & continue",
+            destination: "sign-up",
             redirectUrl: returnTo,
           });
 
