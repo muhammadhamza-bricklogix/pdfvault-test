@@ -653,7 +653,7 @@ function PayStep({
   // hardcoded because Solidgate returns the monthly-equivalent ($25)
   // on `amountTodayMinor` for the annual product.
   const todayDisplay = selectedPlan === "annual" ? "$300" : today;
-  const renewDisplay = selectedPlan === "annual" ? "$300" : "$300";
+  const renewDisplay = selectedPlan === "annual" ? "$300" : "$25";
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
