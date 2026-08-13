@@ -815,10 +815,10 @@ function PayStep({
 
           {/* Legal small-print */}
           <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
-            By continuing you agree to be charged {todayDisplay}{" "}
+            By continuing you agree to be charged{" "}
             {selectedPlan === "annual"
-              ? "today, then $300.00 every 365 days"
-              : "today for a 7-day trial, then $25.00 per month"}{" "}
+              ? `${todayDisplay} every 365 days`
+              : `${todayDisplay} today for a 7-day trial, then $25.00 per month`}{" "}
             unless cancelled. See our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
