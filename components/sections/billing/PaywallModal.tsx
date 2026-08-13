@@ -135,44 +135,36 @@ export function PaywallModal({
   const queryClient = useQueryClient();
 
   // Keep Solidgate's Apple Pay / Google Pay portal overlays interactive.
-  // When the user clicks a wallet button, Solidgate injects a new iframe
-  // (QR modal, native sheet) directly into document.body — outside our
-  // HeroUI modal's DOM tree. React Aria's useModalOverlay passes
-  // shouldUseInert: true to ariaHideOutside, so it sets the `inert`
-  // attribute on every body-level sibling of the modal (via its own
-  // MutationObserver). That silently blocks every click on the overlay —
-  // including its own X button. Counter-act by watching for `inert` /
-  // `aria-hidden` being set on wallet-portal ancestors and removing them.
+  // charge-auth.js injects the Apple Pay QR modal as a NEW div into
+  // document.body (not an iframe). React Aria's useModalOverlay passes
+  // shouldUseInert: true to ariaHideOutside, which watches for new body
+  // children and immediately marks them `inert` — blocking every click,
+  // scroll, and keyboard event including the overlay's own X button.
+  //
+  // Fix: snapshot pre-existing body children when the modal opens, then
+  // watch for any NEW body-level child that gets marked inert by React
+  // Aria and immediately strip it.
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
-    const walletIframeSelector =
-      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
 
-    const forceWalletInteractive = () => {
-      document.querySelectorAll(walletIframeSelector).forEach((iframe) => {
-        // Skip wallet BUTTON iframes that live inside our paywall dialog —
-        // only portal iframes injected at body level need the override.
-        if (iframe.closest('[role="dialog"]')) return;
+    // Snapshot taken at modal-open time. Anything added after this is a
+    // third-party portal (Solidgate QR overlay, wallet sheet, etc.).
+    const preExistingChildren = new Set(document.body.children);
 
-        let node: HTMLElement | null = iframe.parentElement;
-        let topLevel: HTMLElement | null = null;
-
-        while (node && node !== document.body) {
-          (node as HTMLElement & { inert: boolean }).inert = false;
-          if (node.getAttribute("aria-hidden") === "true")
-            node.removeAttribute("aria-hidden");
-          node.style.pointerEvents = "auto";
-          topLevel = node;
-          node = node.parentElement;
-        }
-        if (topLevel) {
-          topLevel.style.zIndex = "2147483647";
-          topLevel.style.position ||= "fixed";
-        }
-      });
+    const unInertNewPortals = () => {
+      for (const child of Array.from(document.body.children)) {
+        if (preExistingChildren.has(child)) continue;
+        const el = child as HTMLElement;
+        // Only fix elements that React Aria actually marked inert/hidden.
+        if (!el.inert && el.getAttribute("aria-hidden") !== "true") continue;
+        el.inert = false;
+        el.removeAttribute("aria-hidden");
+        el.style.pointerEvents = "auto";
+        el.style.zIndex = "2147483647";
+      }
     };
 
-    const observer = new MutationObserver(forceWalletInteractive);
+    const observer = new MutationObserver(unInertNewPortals);
 
     observer.observe(document.body, {
       attributeFilter: ["inert", "aria-hidden"],
@@ -180,7 +172,7 @@ export function PaywallModal({
       childList: true,
       subtree: true,
     });
-    forceWalletInteractive();
+    unInertNewPortals();
 
     return () => observer.disconnect();
   }, [isOpen]);
