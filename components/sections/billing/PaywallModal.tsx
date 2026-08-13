@@ -134,6 +134,57 @@ export function PaywallModal({
   const syncSubscription = useSyncSubscriptionMutation();
   const queryClient = useQueryClient();
 
+  // Keep Solidgate's Apple Pay / Google Pay portal overlays interactive.
+  // When the user clicks a wallet button, Solidgate injects a new iframe
+  // (QR modal, native sheet) directly into document.body — outside our
+  // HeroUI modal's DOM tree. React Aria's useModalOverlay passes
+  // shouldUseInert: true to ariaHideOutside, so it sets the `inert`
+  // attribute on every body-level sibling of the modal (via its own
+  // MutationObserver). That silently blocks every click on the overlay —
+  // including its own X button. Counter-act by watching for `inert` /
+  // `aria-hidden` being set on wallet-portal ancestors and removing them.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const walletIframeSelector =
+      'iframe[src*="charge-auth"], iframe[src*="solidgate"], iframe[src*="applepay"], iframe[src*="apple-pay"], iframe[src*="pay.google"], iframe[src*="google-pay"]';
+
+    const forceWalletInteractive = () => {
+      document.querySelectorAll(walletIframeSelector).forEach((iframe) => {
+        // Skip wallet BUTTON iframes that live inside our paywall dialog —
+        // only portal iframes injected at body level need the override.
+        if (iframe.closest('[role="dialog"]')) return;
+
+        let node: HTMLElement | null = iframe.parentElement;
+        let topLevel: HTMLElement | null = null;
+
+        while (node && node !== document.body) {
+          (node as HTMLElement & { inert: boolean }).inert = false;
+          if (node.getAttribute("aria-hidden") === "true")
+            node.removeAttribute("aria-hidden");
+          node.style.pointerEvents = "auto";
+          topLevel = node;
+          node = node.parentElement;
+        }
+        if (topLevel) {
+          topLevel.style.zIndex = "2147483647";
+          topLevel.style.position ||= "fixed";
+        }
+      });
+    };
+
+    const observer = new MutationObserver(forceWalletInteractive);
+
+    observer.observe(document.body, {
+      attributeFilter: ["inert", "aria-hidden"],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    forceWalletInteractive();
+
+    return () => observer.disconnect();
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
