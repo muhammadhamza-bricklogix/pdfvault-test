@@ -33,9 +33,14 @@ type EditorStateEnvelope = {
   extractedPages?: number[];
 };
 
-// Module-scope in-flight cache so React StrictMode's double-invocation (and
+// Module-scope in-flight caches so React StrictMode's double-invocation (and
 // any concurrent mounts) share a single network round-trip per document id.
-const inflight = new Map<string, Promise<LoadedDoc>>();
+
+// Fast path: just the API call that returns the signed URL + editorState.
+const inflightMeta = new Map<string, Promise<Document>>();
+
+// Full path: API call + blob download + IDB write-through.
+const inflightDoc = new Map<string, Promise<LoadedDoc>>();
 
 /**
  * Read the doc from the IDB offline cache. Returns null if either the bytes
@@ -66,11 +71,39 @@ async function loadFromOfflineCache(
   };
 }
 
+/**
+ * Fast phase — fetches only the API metadata (signed URL + editorState). Used
+ * by `useEditorDocumentLoader` to set `pdfSourceUrl` immediately so pdf.js can
+ * start streaming pages via range requests while the blob download runs in
+ * parallel. Deduped with `inflightMeta` to avoid double API calls.
+ *
+ * Not called when offline — callers should fall through to `loadDocument` which
+ * handles the IDB cache path.
+ */
+function fetchDocumentMeta(id: string): Promise<Document> {
+  const existing = inflightMeta.get(id);
+
+  if (existing) return existing;
+
+  const promise = documentsService.getDocument(id).finally(() => {
+    inflightMeta.delete(id);
+  });
+
+  inflightMeta.set(id, promise);
+
+  return promise;
+}
+
+/**
+ * Full load — API call (deduped with `inflightMeta`) + blob download + IDB
+ * write-through. Returns the bytes as a File so the save/export pipeline has
+ * local bytes in memory. Falls back to IDB cache when offline or on error.
+ */
 function loadDocument(
   id: string,
   userId: string | null | undefined,
 ): Promise<LoadedDoc> {
-  const existing = inflight.get(id);
+  const existing = inflightDoc.get(id);
 
   if (existing) return existing;
 
@@ -89,7 +122,10 @@ function loadDocument(
     }
 
     try {
-      const doc = await documentsService.getDocument(id);
+      // Reuse the in-flight meta promise so the API call only happens once
+      // even when fetchDocumentMeta() and loadDocument() fire concurrently.
+      const doc = await fetchDocumentMeta(id);
+
       // `cache: "no-store"` — the signed URL often points to the same object
       // key after a save/restore, so the browser may serve a stale cached
       // response unless we explicitly bypass the cache (reported 2026-07-23:
@@ -139,10 +175,10 @@ function loadDocument(
       throw err;
     }
   })().finally(() => {
-    inflight.delete(id);
+    inflightDoc.delete(id);
   });
 
-  inflight.set(id, promise);
+  inflightDoc.set(id, promise);
 
   return promise;
 }
@@ -161,6 +197,7 @@ export function useEditorDocumentLoader() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  const setPdfSourceUrl = usePdfEditorStore((s) => s.setPdfSourceUrl);
   const lastHydratedDocumentId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -211,7 +248,37 @@ export function useEditorDocumentLoader() {
     }
 
     let cancelled = false;
+    // Set to true when Phase 1 successfully seeds the editor state.
+    // Phase 2 skips rehydrateEditorState when this is true to avoid
+    // overwriting edits the user might have started during the blob download.
+    let editorStateHydrated = false;
 
+    const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
+
+    // Phase 1 (fast, ~200ms): fetch signed URL from the API and pass it to
+    // pdf.js immediately so the editor can stream pages via range requests
+    // while the full blob downloads in the background. Skipped when offline
+    // since there's no URL to stream from.
+    if (isOnline) {
+      fetchDocumentMeta(id)
+        .then((doc) => {
+          if (cancelled) return;
+
+          // Seed overlay state BEFORE setting the URL — usePdfLoader opens
+          // the pdf.js document as soon as pdfSourceUrl is set, which triggers
+          // the render pipeline. fabricJsonByPage must be in store by then.
+          rehydrateEditorState(doc.editorState ?? null);
+          editorStateHydrated = true;
+          setPdfSourceUrl(doc.url);
+        })
+        .catch(() => {
+          // Swallow: loadDocument (Phase 2) will handle the error and may
+          // fall back to the IDB offline cache.
+        });
+    }
+
+    // Phase 2 (slow, seconds for large PDFs): download the full bytes for the
+    // save/export pipeline, write to IDB for offline use, then seed the store.
     loadDocument(id, userId)
       .then((loaded) => {
         if (cancelled) return;
@@ -226,13 +293,13 @@ export function useEditorDocumentLoader() {
           return;
         }
 
-        // Rehydrate the editor overlay state BEFORE we set the file. The
-        // file change triggers use-pdf-loader → pdf.js parse → page render,
-        // and use-edit-text-mode reads fabricJsonByPage to decide whether
-        // to re-extract text. Seeding first means re-extraction is skipped
-        // for any page with stored Fabric JSON, so text lands exactly where
-        // the user left it (no fontkit/pdf.js width drift).
-        rehydrateEditorState(loaded.editorState);
+        // Only rehydrate if Phase 1 didn't already do it — otherwise we could
+        // overwrite edits the user made during the (potentially long) blob
+        // download. For the offline path (Phase 1 skipped), this is the first
+        // and only call, so the BEFORE-setFile invariant still holds.
+        if (!editorStateHydrated) {
+          rehydrateEditorState(loaded.editorState);
+        }
 
         setFile(loaded.file);
         setCurrentDocument({ id: loaded.id, name: loaded.name });
@@ -302,6 +369,7 @@ export function useEditorDocumentLoader() {
     clearFile,
     setFile,
     setCurrentDocument,
+    setPdfSourceUrl,
     authLoaded,
     isSignedIn,
     userId,
