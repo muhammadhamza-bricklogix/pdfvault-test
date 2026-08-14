@@ -522,11 +522,7 @@ function ToolToolbar() {
         setIsPageNumbersModalOpen(true);
         break;
       case "merge":
-        toast.info({
-          title: "Merge coming soon",
-          description:
-            "Merging multiple PDFs isn't wired up in this editor yet — use the Dashboard tools.",
-        });
+        fireEditorEvent("editor:open-merge");
         break;
       case "split":
         fireEditorEvent("editor:open-split");

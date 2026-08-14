@@ -71,7 +71,9 @@ export default clerkMiddleware(async (auth, req) => {
       return redirectToSignIn(req, DASHBOARD_PATH);
     }
 
-    return NextResponse.redirect(new URL(DASHBOARD_PATH, getCanonicalOrigin(req)));
+    return NextResponse.redirect(
+      new URL(DASHBOARD_PATH, getCanonicalOrigin(req)),
+    );
   }
 
   // Auth-gate the protected app routes + `/pdf-composer?id=<docId>`. Signed-out

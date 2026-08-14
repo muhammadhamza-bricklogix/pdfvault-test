@@ -155,6 +155,7 @@ export function PaywallModal({
       for (const child of Array.from(document.body.children)) {
         if (preExistingChildren.has(child)) continue;
         const el = child as HTMLElement;
+
         // Only fix elements that React Aria actually marked inert/hidden.
         if (!el.inert && el.getAttribute("aria-hidden") !== "true") continue;
         el.inert = false;

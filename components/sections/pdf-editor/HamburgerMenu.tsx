@@ -37,8 +37,13 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import {
+  fileToMergeEntry,
+  type MergeEntry,
+} from "@/lib/client/pdf-tools/merge-pdfs";
 
 import { AnnotationsModal } from "./AnnotationsModal";
+import { MergePdfModal } from "./MergePdfModal";
 import { ShareModal } from "./ShareModal";
 import { SplitPdfModal, type SplitPdfModalSource } from "./SplitPdfModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
@@ -48,6 +53,7 @@ import { VersionHistoryModal } from "./VersionHistoryModal";
 // these events; we handle them via the same switch a menu click would use so
 // there's one source of truth for the guards (sign-in, requireFile, etc.).
 const BRIDGE_EVENTS = {
+  "editor:open-merge": "merge",
   "editor:open-split": "split",
   "editor:open-share": "share",
   "editor:open-annotations": "annotations",
@@ -76,6 +82,8 @@ export function HamburgerMenu() {
   const [splitSource, setSplitSource] = useState<SplitPdfModalSource | null>(
     null,
   );
+  const [isMergeOpen, setIsMergeOpen] = useState(false);
+  const [mergeSource, setMergeSource] = useState<MergeEntry | null>(null);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -163,6 +171,31 @@ export function HamburgerMenu() {
     }
   };
 
+  const openMergeModal = async () => {
+    const target = requireFile("merging");
+
+    if (!target) return;
+
+    const loadingKey = toast.loading({
+      title: "Preparing merge",
+      description: "Reading the PDF…",
+    });
+
+    try {
+      const entry = await fileToMergeEntry(target);
+
+      setMergeSource(entry);
+      setIsMergeOpen(true);
+    } catch (err) {
+      toast.error({
+        title: "Couldn't read this PDF",
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      toast.close(loadingKey);
+    }
+  };
+
   const requireSignIn = (
     description = "Sign in to access this feature. We'll bring you back to the editor.",
     redirectUrl?: string,
@@ -212,6 +245,9 @@ export function HamburgerMenu() {
       case "find-replace":
         if (!requireFile("searching")) return;
         setIsFindReplaceOpen(true);
+        break;
+      case "merge":
+        void openMergeModal();
         break;
       case "split":
         void openSplitModal();
@@ -450,6 +486,14 @@ export function HamburgerMenu() {
       <AnnotationsModal
         isOpen={isAnnotationsOpen}
         onClose={() => setIsAnnotationsOpen(false)}
+      />
+      <MergePdfModal
+        isOpen={isMergeOpen}
+        source={mergeSource}
+        onClose={() => {
+          setIsMergeOpen(false);
+          setTimeout(() => setMergeSource(null), 200);
+        }}
       />
       <SplitPdfModal
         isOpen={isSplitOpen}
