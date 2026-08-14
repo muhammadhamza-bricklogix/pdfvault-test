@@ -4,6 +4,27 @@ import { type NextRequest, NextResponse } from "next/server";
 const DASHBOARD_PATH = "/dashboard";
 const SIGN_IN_PATH = "/sign-in";
 
+/**
+ * When the app runs behind CloudFront (http-only origin), CloudFront replaces
+ * the `Host` header with the ALB domain. Clerk's SDK then constructs redirect
+ * URLs using that host, which Clerk's API rejects as an invalid redirect_url.
+ *
+ * CloudFront is configured to inject `X-Forwarded-Host: pdfvault.ai` and
+ * `X-Forwarded-Proto: https` as static origin custom headers. Use those to
+ * reconstruct the canonical origin so all server-side URL construction
+ * references the real public domain, not the ALB.
+ */
+function getCanonicalOrigin(req: NextRequest): string {
+  const fwdHost = req.headers.get("x-forwarded-host");
+  const fwdProto = req.headers.get("x-forwarded-proto") ?? "https";
+
+  if (fwdHost) return `${fwdProto}://${fwdHost}`;
+
+  // Fallback: use NEXT_PUBLIC_APP_URL (set in ECS task definition for prod)
+  // or the request's own origin when running locally / without CloudFront.
+  return process.env.NEXT_PUBLIC_APP_URL ?? req.nextUrl.origin;
+}
+
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/tools/(.*)"]);
 
 /**
@@ -29,7 +50,7 @@ function editorDocIdState(req: NextRequest): "absent" | "empty" | "present" {
 }
 
 function redirectToSignIn(req: NextRequest, returnTo: string): NextResponse {
-  const signInUrl = new URL(SIGN_IN_PATH, req.url);
+  const signInUrl = new URL(SIGN_IN_PATH, getCanonicalOrigin(req));
 
   signInUrl.searchParams.set("redirect_url", returnTo);
 
@@ -50,7 +71,7 @@ export default clerkMiddleware(async (auth, req) => {
       return redirectToSignIn(req, DASHBOARD_PATH);
     }
 
-    return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
+    return NextResponse.redirect(new URL(DASHBOARD_PATH, getCanonicalOrigin(req)));
   }
 
   // Auth-gate the protected app routes + `/pdf-composer?id=<docId>`. Signed-out
