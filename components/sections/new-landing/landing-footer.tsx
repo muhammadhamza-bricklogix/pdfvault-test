@@ -124,7 +124,6 @@ function FooterBackground() {
         alt=""
         className="object-cover object-top"
         loading="lazy"
-        quality={80}
         src="/landing/footer-bg.png"
       />
     </div>
