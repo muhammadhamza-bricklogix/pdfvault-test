@@ -99,6 +99,16 @@ type PdfEditorStore = {
   /** Fabric JSON keyed by source PDF page number (stable across reorder). */
   fabricJsonByPage: Map<number, string>;
   file: File | null;
+  /**
+   * Presigned S3 URL for the currently open cloud document. When set,
+   * `usePdfLoader` passes this URL directly to pdf.js (range requests) instead
+   * of loading the full ArrayBuffer — the editor becomes usable after the first
+   * range fetch (~200KB) rather than after the full download.
+   *
+   * Cleared in `clearFile` and `applyPostSaveReset` so post-save reloads use
+   * the local saved bytes (ArrayBuffer path) which are already in memory.
+   */
+  pdfSourceUrl: string | null;
   hasUnsavedChanges: boolean;
   pendingCloudSaveAfterReload: boolean;
   fontDataByLoadedName: Map<string, FontData>;
@@ -212,6 +222,7 @@ type PdfEditorStore = {
   ) => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
+  setPdfSourceUrl: (url: string | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
   setIsFormFieldsModalOpen: (value: boolean) => void;
@@ -245,6 +256,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
+  pdfSourceUrl: null,
   hasUnsavedChanges: false,
   pendingCloudSaveAfterReload: false,
   fontDataByLoadedName: new Map(),
@@ -345,6 +357,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       editorMode: "editText",
       fabricJsonByPage: new Map(),
       file: null,
+      pdfSourceUrl: null,
       hasUnsavedChanges: false,
       pendingCloudSaveAfterReload: false,
       fontDataByLoadedName: new Map(),
@@ -553,6 +566,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       historyIndexByPage: remappedState
         ? new Map(remappedState.historyIndexByPage)
         : new Map(),
+      // After save, reload uses local bytes (ArrayBuffer path) — clear the URL
+      // so usePdfLoader doesn't re-trigger range requests against an expired
+      // presigned URL.
+      pdfSourceUrl: null,
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
     })),
@@ -589,6 +606,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     }),
 
   setFile: (file) => set({ file }),
+  setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),

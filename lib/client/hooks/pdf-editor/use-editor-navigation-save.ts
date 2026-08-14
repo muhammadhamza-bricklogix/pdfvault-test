@@ -138,5 +138,4 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       window.removeEventListener("pagehide", onPageHide);
     };
   }, [file, isSignedIn]);
-
 }
