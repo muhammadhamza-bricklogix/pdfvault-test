@@ -156,6 +156,15 @@ function LineIcon({ id }: { id: LineIconId }) {
           <path d="M5.5 12.5h7M5.5 10h5" />
         </svg>
       );
+    case "forms":
+      return (
+        <svg {...common}>
+          <path d="M4 2.5h7l3.5 3.5V15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Z" />
+          <path d="M11 2.5V6h3.5" />
+          <path d="M5.5 9l1.4 1.4L9.7 7.6" />
+          <path d="M5.5 12.8h7" />
+        </svg>
+      );
     default:
       return null;
   }

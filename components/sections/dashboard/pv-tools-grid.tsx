@@ -4,6 +4,7 @@ import {
   ArrowRight02Icon,
   Delete02Icon,
   Edit02Icon,
+  File01Icon,
   LayerAddIcon,
   LayoutGridIcon,
   RefreshIcon,
@@ -15,6 +16,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { FormsModal } from "@/components/shared/forms-modal";
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { DocPickerModal } from "./doc-picker-modal";
@@ -26,6 +28,7 @@ interface ToolCardEntry {
   description: string;
   href: string;
   icon: IconGlyph;
+  action?: "forms";
 }
 
 /**
@@ -98,6 +101,14 @@ const TOOL_CARDS: readonly ToolCardEntry[] = [
     href: TOOL_ROUTE.managePages,
     icon: Delete02Icon,
   },
+  {
+    title: "Forms",
+    description:
+      "Fill IRS forms like W-9 online. Type, sign, and export a clean PDF.",
+    href: "#forms",
+    icon: File01Icon,
+    action: "forms",
+  },
 ];
 
 const TOOL_CARD_CLASSNAME =
@@ -133,10 +144,24 @@ function ToolCardContent({ tool }: { tool: ToolCardEntry }) {
 function ToolCard({
   tool,
   onOpenPicker,
+  onOpenForms,
 }: {
   tool: ToolCardEntry;
   onOpenPicker: (slug: string, label: string) => void;
+  onOpenForms: () => void;
 }) {
+  if (tool.action === "forms") {
+    return (
+      <button
+        className={TOOL_CARD_CLASSNAME}
+        type="button"
+        onClick={onOpenForms}
+      >
+        <ToolCardContent tool={tool} />
+      </button>
+    );
+  }
+
   const pickerSlug = extractComposerToolSlug(tool.href);
 
   if (pickerSlug) {
@@ -163,6 +188,7 @@ export function PvToolsGrid() {
     slug: string;
     label: string;
   } | null>(null);
+  const [formsOpen, setFormsOpen] = useState(false);
 
   return (
     <>
@@ -172,6 +198,7 @@ export function PvToolsGrid() {
             <li key={tool.title}>
               <ToolCard
                 tool={tool}
+                onOpenForms={() => setFormsOpen(true)}
                 onOpenPicker={(slug, label) => setPicker({ slug, label })}
               />
             </li>
@@ -184,6 +211,7 @@ export function PvToolsGrid() {
         toolSlug={picker?.slug ?? null}
         onClose={() => setPicker(null)}
       />
+      <FormsModal isOpen={formsOpen} onOpenChange={setFormsOpen} />
     </>
   );
 }
