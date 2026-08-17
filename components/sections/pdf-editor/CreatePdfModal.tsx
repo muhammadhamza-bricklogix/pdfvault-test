@@ -23,9 +23,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { useTrackedUpload } from "@/lib/client/hooks/upload/use-tracked-upload";
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
+import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { toast } from "@/lib/shared/utils/toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -210,13 +212,19 @@ type Props = {
 
 export function CreatePdfModal({ isOpen, onClose }: Props) {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
+  const clearDocumentDirty = usePdfEditorStore((s) => s.clearDocumentDirty);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const setFileInStore = usePdfEditorStore((s) => s.setFile);
   const router = useRouter();
-  const { start } = useTrackedUpload();
+  const { duplicate, start } = useUploadWithDuplicateCheck();
 
   const [form, setForm] = useState<FormState>(() => buildDefault(++openCount));
   const [isGenerating, setIsGenerating] = useState(false);
+  const [unsavedPromptOpen, setUnsavedPromptOpen] = useState(false);
+  const [unsavedAction, setUnsavedAction] = useState<
+    null | "saving" | "discarding"
+  >(null);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -303,7 +311,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     patch(updates);
   };
 
-  const handleCreate = async () => {
+  const generateNewDocument = async () => {
     const trimmed = documentName.trim() || `Untitled-${openCount}`;
     const fileName = trimmed.endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
     const clampedPages = Math.min(Math.max(1, pageCount), PAGE_COUNT_MAX);
@@ -336,337 +344,493 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
         type: "application/pdf",
       });
 
+      // Mark this as a freshly created blank PDF so the text-edit hook can
+      // skip the "No editable text found" notice — a blank doc trivially has
+      // no text, and the toast just reads as noise on the Create-New flow.
+      (file as File & { __createdBlank?: boolean }).__createdBlank = true;
+
+      // Replace the editor immediately with the new blank doc, regardless of
+      // sign-in state. Strip any `?id=…` first so the document loader doesn't
+      // re-fetch the previously opened cloud doc once `clearFile` runs.
+      router.replace(ROUTES.TOOLS.PDF_EDITOR, { scroll: false });
+      clearFile();
+      onClose();
+      setTimeout(() => setFileInStore(file), 0);
+
       if (isSignedIn) {
-        start({
+        // Upload to the cloud in the background. When the new id is known,
+        // associate it with the already-loaded file and sync the URL — the
+        // loader skips re-fetching because the file+currentDocumentId match.
+        void start({
           file,
           onOpen: (id) => {
-            router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`);
+            setCurrentDocument({ id, name: fileName });
+            router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`, {
+              scroll: false,
+            });
           },
         });
-        onClose();
-      } else {
-        clearFile();
-        onClose();
-        setTimeout(() => setFileInStore(file), 0);
       }
     } finally {
       setIsGenerating(false);
     }
   };
 
+  const handleCreate = async () => {
+    // Gate creation on unsaved edits in the current document. Switching to a
+    // blank PDF mid-edit would silently drop those changes.
+    const hasUnsaved = usePdfEditorStore.getState().hasUnsavedChanges;
+
+    if (hasUnsaved) {
+      setUnsavedPromptOpen(true);
+
+      return;
+    }
+
+    await generateNewDocument();
+  };
+
+  const handleSaveAndCreate = async () => {
+    if (unsavedAction) return;
+    setUnsavedAction("saving");
+
+    const loadingKey = toast.loading({
+      title: "Saving…",
+      description: "Saving your current PDF before creating a new one.",
+    });
+
+    try {
+      // Route the save through `editor:save-before-action` so it runs inside
+      // `useSaveEditor`, which holds the live Fabric canvas ref. Calling
+      // `persistEditorDocument` directly from here passes a null canvas and
+      // uploads stale `fabricJsonByPage` — the current page's edits never get
+      // flushed.
+      const { ok } = await new Promise<{ ok: boolean }>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:save-before-action", {
+            detail: { onComplete: resolve },
+          }),
+        );
+      });
+
+      if (!ok) {
+        toast.error({
+          title: "Could not save",
+          description:
+            "We couldn't save your current PDF. Try again or choose Discard.",
+        });
+
+        return;
+      }
+
+      setUnsavedPromptOpen(false);
+      await generateNewDocument();
+    } finally {
+      toast.close(loadingKey);
+      setUnsavedAction(null);
+    }
+  };
+
+  const handleDiscardAndCreate = async () => {
+    if (unsavedAction) return;
+    setUnsavedAction("discarding");
+
+    try {
+      clearDocumentDirty();
+      setUnsavedPromptOpen(false);
+      await generateNewDocument();
+    } finally {
+      setUnsavedAction(null);
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Modal.Backdrop
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[780px]">
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>Create new PDF document</Modal.Heading>
-          </Modal.Header>
+    <>
+      <Modal.Backdrop
+        isOpen={isOpen}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="!w-[92vw] !max-w-[780px]">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>Create new PDF document</Modal.Heading>
+            </Modal.Header>
 
-          <Modal.Body className="overflow-hidden p-0">
-            <div className="flex max-h-[min(520px,calc(85vh-12rem))] flex-col md:flex-row">
-              {/* ── Left: preset grid ──────────────────────────────────── */}
-              <div className="flex shrink-0 flex-col gap-3 overflow-y-auto p-5 md:w-[42%]">
-                <SectionHeading>Select page size</SectionHeading>
+            <Modal.Body className="overflow-hidden p-0">
+              <div className="flex max-h-[min(520px,calc(85vh-12rem))] flex-col md:flex-row">
+                {/* ── Left: preset grid ──────────────────────────────────── */}
+                <div className="flex shrink-0 flex-col gap-3 overflow-y-auto p-5 md:w-[42%]">
+                  <SectionHeading>Select page size</SectionHeading>
 
-                <div className="grid grid-cols-2 gap-3 pb-1">
-                  {PAGE_PRESETS.map((preset) => {
-                    const { h, w } = thumbSize(preset.widthPt, preset.heightPt);
-                    const isSelected = selectedPresetId === preset.id;
+                  <div className="grid grid-cols-2 gap-3 pb-1">
+                    {PAGE_PRESETS.map((preset) => {
+                      const { h, w } = thumbSize(
+                        preset.widthPt,
+                        preset.heightPt,
+                      );
+                      const isSelected = selectedPresetId === preset.id;
 
-                    return (
-                      <button
-                        key={preset.id}
-                        aria-pressed={isSelected}
-                        className={[
-                          "flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition",
-                          "hover:bg-default-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                          isSelected
-                            ? "border-accent bg-accent/5 ring-2 ring-accent"
-                            : "border-default-200",
-                        ].join(" ")}
-                        type="button"
-                        onClick={() => handlePresetSelect(preset)}
-                      >
-                        {/* Proportional page thumbnail */}
-                        <div
-                          className="flex items-center justify-center"
-                          style={{ height: THUMB_MAX, width: THUMB_MAX }}
+                      return (
+                        <button
+                          key={preset.id}
+                          aria-pressed={isSelected}
+                          className={[
+                            "flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition",
+                            "hover:bg-default-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                            isSelected
+                              ? "border-accent bg-accent/5 ring-2 ring-accent"
+                              : "border-default-200",
+                          ].join(" ")}
+                          type="button"
+                          onClick={() => handlePresetSelect(preset)}
                         >
+                          {/* Proportional page thumbnail */}
                           <div
-                            className="rounded-sm border border-default-300 bg-background shadow-sm"
-                            style={{ height: h, width: w }}
-                          />
-                        </div>
+                            className="flex items-center justify-center"
+                            style={{ height: THUMB_MAX, width: THUMB_MAX }}
+                          >
+                            <div
+                              className="rounded-sm border border-default-300 bg-background shadow-sm"
+                              style={{ height: h, width: w }}
+                            />
+                          </div>
 
-                        <div>
-                          <p className="text-sm font-medium leading-tight text-[var(--color-foreground)]">
-                            {preset.label}
-                          </p>
-                          <p className="mt-0.5 text-xs text-default-500">
-                            {formatDims(preset.widthPt, preset.heightPt, unit)}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── Divider ────────────────────────────────────────────── */}
-              <div className="hidden shrink-0 bg-default-200/70 md:block md:w-px" />
-
-              {/* ── Right: options ─────────────────────────────────────── */}
-              <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
-                {/* Document Name */}
-                <div className="space-y-1.5">
-                  <SectionHeading>Document name</SectionHeading>
-                  <TextField
-                    value={documentName}
-                    onChange={(v) => patch({ documentName: v })}
-                  >
-                    <Input placeholder="Untitled" />
-                  </TextField>
+                          <div>
+                            <p className="text-sm font-medium leading-tight text-[var(--color-foreground)]">
+                              {preset.label}
+                            </p>
+                            <p className="mt-0.5 text-xs text-default-500">
+                              {formatDims(
+                                preset.widthPt,
+                                preset.heightPt,
+                                unit,
+                              )}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Customize size */}
-                <div className="space-y-3">
-                  <SectionHeading>Customize size</SectionHeading>
+                {/* ── Divider ────────────────────────────────────────────── */}
+                <div className="hidden shrink-0 bg-default-200/70 md:block md:w-px" />
 
-                  {/* Unit selector */}
+                {/* ── Right: options ─────────────────────────────────────── */}
+                <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
+                  {/* Document Name */}
                   <div className="space-y-1.5">
-                    <p className="text-xs text-default-500">Measurements</p>
-                    <div className="flex gap-1">
-                      {(["pt", "in", "mm", "cm"] as const).map((u) => (
-                        <Button
-                          key={u}
-                          aria-pressed={unit === u}
-                          size="sm"
-                          variant={unit === u ? "secondary" : "ghost"}
-                          onPress={() => patch({ unit: u })}
-                        >
-                          {u}
-                        </Button>
-                      ))}
-                    </div>
+                    <SectionHeading>Document name</SectionHeading>
+                    <TextField
+                      value={documentName}
+                      onChange={(v) => patch({ documentName: v })}
+                    >
+                      <Input placeholder="Untitled" />
+                    </TextField>
                   </div>
 
-                  {/* Width / Height with proportions lock */}
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-default-500">Dimensions</p>
-                    <div className="flex items-end gap-2">
-                      <div className="flex-1">
-                        <NumberField
-                          aria-label="Width"
-                          formatOptions={formatOptions}
-                          minValue={step}
-                          step={step}
-                          value={displayW}
-                          onChange={handleWidthChange}
-                        >
-                          <Label className="text-xs text-default-500">
-                            Width
-                          </Label>
-                          <NumberField.Group>
-                            <NumberField.DecrementButton>
-                              <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-                            </NumberField.DecrementButton>
-                            <NumberField.Input />
-                            <NumberField.IncrementButton>
-                              <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
-                            </NumberField.IncrementButton>
-                          </NumberField.Group>
-                        </NumberField>
-                      </div>
+                  {/* Customize size */}
+                  <div className="space-y-3">
+                    <SectionHeading>Customize size</SectionHeading>
 
-                      <Tooltip delay={300}>
-                        <Button
-                          isIconOnly
-                          aria-label={
-                            proportionsLocked
-                              ? "Unlock proportions"
-                              : "Lock proportions"
-                          }
-                          aria-pressed={proportionsLocked}
-                          className="mb-0.5 shrink-0"
-                          size="sm"
-                          variant={proportionsLocked ? "secondary" : "ghost"}
-                          onPress={() =>
-                            patch({ proportionsLocked: !proportionsLocked })
-                          }
-                        >
-                          <HugeiconsIcon
-                            icon={proportionsLocked ? Link01Icon : Unlink01Icon}
-                            size={14}
-                          />
-                        </Button>
-                        <Tooltip.Content>
-                          <p>
-                            {proportionsLocked
-                              ? "Unlock proportions"
-                              : "Lock proportions"}
-                          </p>
-                        </Tooltip.Content>
-                      </Tooltip>
-
-                      <div className="flex-1">
-                        <NumberField
-                          aria-label="Height"
-                          formatOptions={formatOptions}
-                          minValue={step}
-                          step={step}
-                          value={displayH}
-                          onChange={handleHeightChange}
-                        >
-                          <Label className="text-xs text-default-500">
-                            Height
-                          </Label>
-                          <NumberField.Group>
-                            <NumberField.DecrementButton>
-                              <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-                            </NumberField.DecrementButton>
-                            <NumberField.Input />
-                            <NumberField.IncrementButton>
-                              <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
-                            </NumberField.IncrementButton>
-                          </NumberField.Group>
-                        </NumberField>
+                    {/* Unit selector */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-default-500">Measurements</p>
+                      <div className="flex gap-1">
+                        {(["pt", "in", "mm", "cm"] as const).map((u) => (
+                          <Button
+                            key={u}
+                            aria-pressed={unit === u}
+                            size="sm"
+                            variant={unit === u ? "secondary" : "ghost"}
+                            onPress={() => patch({ unit: u })}
+                          >
+                            {u}
+                          </Button>
+                        ))}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Orientation */}
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-default-500">Orientation</p>
-                    <div className="flex gap-2">
-                      <Button
-                        aria-pressed={orientation === "portrait"}
-                        size="sm"
-                        variant={
-                          orientation === "portrait" ? "secondary" : "ghost"
-                        }
-                        onPress={() => handleOrientationChange("portrait")}
-                      >
-                        Portrait
-                      </Button>
-                      <Button
-                        aria-pressed={orientation === "landscape"}
-                        size="sm"
-                        variant={
-                          orientation === "landscape" ? "secondary" : "ghost"
-                        }
-                        onPress={() => handleOrientationChange("landscape")}
-                      >
-                        Landscape
-                      </Button>
+                    {/* Width / Height with proportions lock */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-default-500">Dimensions</p>
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <NumberField
+                            aria-label="Width"
+                            formatOptions={formatOptions}
+                            minValue={step}
+                            step={step}
+                            value={displayW}
+                            onChange={handleWidthChange}
+                          >
+                            <Label className="text-xs text-default-500">
+                              Width
+                            </Label>
+                            <NumberField.Group>
+                              <NumberField.DecrementButton>
+                                <HugeiconsIcon
+                                  icon={ArrowDown01Icon}
+                                  size={14}
+                                />
+                              </NumberField.DecrementButton>
+                              <NumberField.Input />
+                              <NumberField.IncrementButton>
+                                <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
+                              </NumberField.IncrementButton>
+                            </NumberField.Group>
+                          </NumberField>
+                        </div>
+
+                        <Tooltip delay={300}>
+                          <Button
+                            isIconOnly
+                            aria-label={
+                              proportionsLocked
+                                ? "Unlock proportions"
+                                : "Lock proportions"
+                            }
+                            aria-pressed={proportionsLocked}
+                            className="mb-0.5 shrink-0"
+                            size="sm"
+                            variant={proportionsLocked ? "secondary" : "ghost"}
+                            onPress={() =>
+                              patch({ proportionsLocked: !proportionsLocked })
+                            }
+                          >
+                            <HugeiconsIcon
+                              icon={
+                                proportionsLocked ? Link01Icon : Unlink01Icon
+                              }
+                              size={14}
+                            />
+                          </Button>
+                          <Tooltip.Content>
+                            <p>
+                              {proportionsLocked
+                                ? "Unlock proportions"
+                                : "Lock proportions"}
+                            </p>
+                          </Tooltip.Content>
+                        </Tooltip>
+
+                        <div className="flex-1">
+                          <NumberField
+                            aria-label="Height"
+                            formatOptions={formatOptions}
+                            minValue={step}
+                            step={step}
+                            value={displayH}
+                            onChange={handleHeightChange}
+                          >
+                            <Label className="text-xs text-default-500">
+                              Height
+                            </Label>
+                            <NumberField.Group>
+                              <NumberField.DecrementButton>
+                                <HugeiconsIcon
+                                  icon={ArrowDown01Icon}
+                                  size={14}
+                                />
+                              </NumberField.DecrementButton>
+                              <NumberField.Input />
+                              <NumberField.IncrementButton>
+                                <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
+                              </NumberField.IncrementButton>
+                            </NumberField.Group>
+                          </NumberField>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Orientation */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-default-500">Orientation</p>
+                      <div className="flex gap-2">
+                        <Button
+                          aria-pressed={orientation === "portrait"}
+                          size="sm"
+                          variant={
+                            orientation === "portrait" ? "secondary" : "ghost"
+                          }
+                          onPress={() => handleOrientationChange("portrait")}
+                        >
+                          Portrait
+                        </Button>
+                        <Button
+                          aria-pressed={orientation === "landscape"}
+                          size="sm"
+                          variant={
+                            orientation === "landscape" ? "secondary" : "ghost"
+                          }
+                          onPress={() => handleOrientationChange("landscape")}
+                        >
+                          Landscape
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Number of pages */}
-                <div className="space-y-1.5">
-                  <SectionHeading>Number of pages</SectionHeading>
-                  <p className="text-xs text-default-400">
-                    Maximum {PAGE_COUNT_MAX} pages
-                  </p>
-                  <NumberField
-                    aria-label="Number of pages"
-                    maxValue={PAGE_COUNT_MAX}
-                    minValue={1}
-                    step={1}
-                    value={pageCount}
-                    onChange={(v) => {
-                      if (Number.isFinite(v)) patch({ pageCount: v });
-                    }}
-                  >
-                    <NumberField.Group className="w-28">
-                      <NumberField.DecrementButton>
-                        <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-                      </NumberField.DecrementButton>
-                      <NumberField.Input />
-                      <NumberField.IncrementButton>
-                        <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
-                      </NumberField.IncrementButton>
-                    </NumberField.Group>
-                  </NumberField>
-                </div>
-
-                {/* Page color */}
-                <div className="space-y-2">
-                  <SectionHeading>Page color</SectionHeading>
-                  <div className="flex flex-wrap items-center gap-2 p-1">
-                    {PAGE_COLOR_SWATCHES.map((swatch) => (
-                      <PageColorSwatch
-                        key={swatch.color}
-                        color={swatch.color}
-                        isSelected={pageColor === swatch.color}
-                        label={swatch.label}
-                        onPress={() => patch({ pageColor: swatch.color })}
-                      />
-                    ))}
-
-                    <ColorPicker
-                      value={pageColor}
-                      onChange={(color) => {
-                        patch({
-                          pageColor: color.toString("hex").toUpperCase(),
-                        });
+                  {/* Number of pages */}
+                  <div className="space-y-1.5">
+                    <SectionHeading>Number of pages</SectionHeading>
+                    <p className="text-xs text-default-400">
+                      Maximum {PAGE_COUNT_MAX} pages
+                    </p>
+                    <NumberField
+                      aria-label="Number of pages"
+                      maxValue={PAGE_COUNT_MAX}
+                      minValue={1}
+                      step={1}
+                      value={pageCount}
+                      onChange={(v) => {
+                        if (Number.isFinite(v)) patch({ pageCount: v });
                       }}
                     >
-                      <ColorPicker.Trigger>
-                        <ColorSwatch
-                          aria-label="Custom page color"
-                          shape="square"
-                          size="sm"
+                      <NumberField.Group className="w-28">
+                        <NumberField.DecrementButton>
+                          <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+                        </NumberField.DecrementButton>
+                        <NumberField.Input />
+                        <NumberField.IncrementButton>
+                          <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
+                        </NumberField.IncrementButton>
+                      </NumberField.Group>
+                    </NumberField>
+                  </div>
+
+                  {/* Page color */}
+                  <div className="space-y-2">
+                    <SectionHeading>Page color</SectionHeading>
+                    <div className="flex flex-wrap items-center gap-2 p-1">
+                      {PAGE_COLOR_SWATCHES.map((swatch) => (
+                        <PageColorSwatch
+                          key={swatch.color}
+                          color={swatch.color}
+                          isSelected={pageColor === swatch.color}
+                          label={swatch.label}
+                          onPress={() => patch({ pageColor: swatch.color })}
                         />
-                      </ColorPicker.Trigger>
-                      <ColorPicker.Popover>
-                        <ColorArea
-                          aria-label="Page color picker area"
-                          className="max-w-full"
-                          colorSpace="hsb"
-                          xChannel="saturation"
-                          yChannel="brightness"
-                        >
-                          <ColorArea.Thumb />
-                        </ColorArea>
-                        <ColorSlider
-                          channel="hue"
-                          className="gap-1 px-1"
-                          colorSpace="hsb"
-                        >
-                          <ColorSlider.Track>
-                            <ColorSlider.Thumb />
-                          </ColorSlider.Track>
-                        </ColorSlider>
-                      </ColorPicker.Popover>
-                    </ColorPicker>
+                      ))}
+
+                      <ColorPicker
+                        value={pageColor}
+                        onChange={(color) => {
+                          patch({
+                            pageColor: color.toString("hex").toUpperCase(),
+                          });
+                        }}
+                      >
+                        <ColorPicker.Trigger>
+                          <ColorSwatch
+                            aria-label="Custom page color"
+                            shape="square"
+                            size="sm"
+                          />
+                        </ColorPicker.Trigger>
+                        <ColorPicker.Popover>
+                          <ColorArea
+                            aria-label="Page color picker area"
+                            className="max-w-full"
+                            colorSpace="hsb"
+                            xChannel="saturation"
+                            yChannel="brightness"
+                          >
+                            <ColorArea.Thumb />
+                          </ColorArea>
+                          <ColorSlider
+                            channel="hue"
+                            className="gap-1 px-1"
+                            colorSpace="hsb"
+                          >
+                            <ColorSlider.Track>
+                              <ColorSlider.Thumb />
+                            </ColorSlider.Track>
+                          </ColorSlider>
+                        </ColorPicker.Popover>
+                      </ColorPicker>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Modal.Body>
+            </Modal.Body>
 
-          <Modal.Footer>
-            <Button slot="close" variant="secondary">
-              Cancel
-            </Button>
-            <Button
-              isDisabled={isGenerating}
-              onPress={() => void handleCreate()}
-            >
-              {isGenerating ? "Creating..." : "Create"}
-            </Button>
-          </Modal.Footer>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+            <Modal.Footer>
+              <Button slot="close" variant="secondary">
+                Cancel
+              </Button>
+              <Button
+                isDisabled={isGenerating}
+                onPress={() => void handleCreate()}
+              >
+                {isGenerating ? "Creating..." : "Create"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+
+        <DuplicateUploadModal
+          filename={duplicate?.filename ?? null}
+          onIgnore={duplicate?.onIgnore ?? (() => undefined)}
+          onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
+        />
+      </Modal.Backdrop>
+
+      {/*
+        Unsaved-changes prompt — kept as a SIBLING of the main backdrop so
+        HeroUI doesn't nest two `Modal.Backdrop`s (which silently hides
+        the inner one in some stacking contexts). When this opens we
+        suppress further Create clicks behind it; closing it returns the
+        user to the main Create dialog.
+      */}
+      <Modal.Backdrop
+        isOpen={unsavedPromptOpen}
+        onOpenChange={(open) => {
+          if (!open && !unsavedAction) setUnsavedPromptOpen(false);
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="!w-[92vw] !max-w-[440px]">
+            <Modal.Header>
+              <Modal.Heading>Unsaved changes</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <p className="text-sm text-default-700">
+                Your current PDF has unsaved changes. Save them to your library
+                before creating a new document, or discard to continue without
+                saving.
+              </p>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                isDisabled={unsavedAction !== null}
+                variant="ghost"
+                onPress={() => setUnsavedPromptOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                isDisabled={unsavedAction !== null}
+                variant="secondary"
+                onPress={() => void handleDiscardAndCreate()}
+              >
+                {unsavedAction === "discarding" ? "Discarding..." : "Discard"}
+              </Button>
+              <Button
+                isDisabled={unsavedAction !== null || !isSignedIn}
+                onPress={() => void handleSaveAndCreate()}
+              >
+                {unsavedAction === "saving" ? "Saving..." : "Save & Create"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </>
   );
 }

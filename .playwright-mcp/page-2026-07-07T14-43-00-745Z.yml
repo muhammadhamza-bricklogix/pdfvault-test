@@ -1,0 +1,12 @@
+- generic [active]:
+  - generic [ref=f19e4]:
+    - button "File upload dropzone" [ref=f19e6] [cursor=pointer]:
+      - generic [ref=f19e8]:
+        - generic [ref=f19e9]: +
+        - paragraph [ref=f19e10]: Drop your file here
+        - paragraph [ref=f19e11]: Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first.
+        - generic [ref=f19e12]: PDF, Word, Excel, PowerPoint, Image · Up to 100.0 MB
+    - paragraph [ref=f19e13]:
+      - text: or
+      - button "create a blank PDF" [ref=f19e14]
+  - alert [ref=f19e15]

@@ -1,0 +1,62 @@
+name: Deploy frontend to ECS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: pdfvault-frontend
+  ECS_CLUSTER: pdfvault-cluster
+  ECS_SERVICE: pdfvault-frontend-service-arskp30n
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::633321546885:role/github-actions-pdfvault
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Pull build-time (NEXT_PUBLIC_*) values from AWS Secrets Manager so the
+      # frontend bundle always matches the backend's Clerk instance. These keys
+      # are public by design and are baked into the JS bundle; they cannot be
+      # read at runtime from Secrets Manager.
+      - name: Fetch build-time secrets from AWS Secrets Manager
+        id: build-secrets
+        run: |
+          set -euo pipefail
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id arn:aws:secretsmanager:us-east-1:633321546885:secret:pdfvault-pYG5qu \
+            --query 'SecretString' \
+            --output text)
+          echo "api_base_url=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_API_BASE_URL // "https://api.pdfvault.ai"')" >> "$GITHUB_OUTPUT"
+          echo "clerk_publishable_key=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY // .CLERK_PUBLISHABLE_KEY // empty')" >> "$GITHUB_OUTPUT"
+          echo "weglot_key=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_WEGLOT_API_KEY // empty')" >> "$GITHUB_OUTPUT"
+
+      - name: Build, tag, push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ steps.build-secrets.outputs.api_base_url }} \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ steps.build-secrets.outputs.clerk_publishable_key }} \
+            --build-arg NEXT_PUBLIC_WEGLOT_API_KEY=${{ steps.build-secrets.outputs.weglot_key }} \
+            -t $REGISTRY/$ECR_REPOSITORY:latest \
+            -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
+          docker push $REGISTRY/$ECR_REPOSITORY:latest
+          docker push $REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+
+      - name: Force new deployment
+        run: aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment

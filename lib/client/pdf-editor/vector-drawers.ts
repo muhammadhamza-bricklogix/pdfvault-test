@@ -1,4 +1,4 @@
-import type { Color, PDFPage } from "pdf-lib";
+import type { Color, PDFFont, PDFPage } from "pdf-lib";
 import type { FontCache } from "./font-mapping";
 
 import {
@@ -15,6 +15,43 @@ import {
   setTextMatrix,
   showText,
 } from "pdf-lib";
+
+import { logger } from "@/lib/shared/utils/logger";
+
+/**
+ * pdf-lib's StandardFonts use WinAnsi encoding and throw an exception
+ * the moment they encounter a character outside that range — e.g. `↔`
+ * (U+2194), `→`, en-dashes, emoji. The throw propagates all the way up
+ * through `mergeFabricEditsIntoPdf` → `persistEditorDocument` and aborts
+ * the entire save, including completely unrelated pages.
+ *
+ * Replace any character the resolved font can't encode with `?`. Losing
+ * a single glyph is a smaller harm than losing the whole save, and the
+ * fallback only kicks in when the StandardFont path was already taken
+ * (real PDF-extracted fonts via fontkit handle Unicode natively, so
+ * this is a no-op for them).
+ */
+function sanitizeTextForFont(font: PDFFont, text: string): string {
+  if (!text) return text;
+  try {
+    font.encodeText(text);
+
+    return text;
+  } catch {
+    let out = "";
+
+    for (const ch of text) {
+      try {
+        font.encodeText(ch);
+        out += ch;
+      } catch {
+        out += "?";
+      }
+    }
+
+    return out;
+  }
+}
 
 import { hexToPdfColor } from "./color-utils";
 import {
@@ -66,9 +103,40 @@ export async function drawIText(
   ctx: CoordinateContext,
   fontCache: FontCache,
 ): Promise<void> {
-  const text = obj.text as string | undefined;
+  const editorTypeEarly = (obj.editorType as string) || "";
+  let rawText = obj.text as string | undefined;
 
-  if (!text) return;
+  if (!rawText) return;
+
+  if (editorTypeEarly === "editModeText") {
+    logger.debug("[PDFedits] drawIText: editModeText drawing", {
+      text: rawText.slice(0, 30),
+      textLen: rawText.length,
+      pristine: (obj as { pristine?: boolean }).pristine,
+      originalText:
+        typeof (obj as { originalText?: string }).originalText === "string"
+          ? (obj as { originalText?: string }).originalText!.slice(0, 30)
+          : null,
+      left: obj.left,
+      top: obj.top,
+      originalLeft: (obj as { originalLeft?: number }).originalLeft,
+      originalTop: (obj as { originalTop?: number }).originalTop,
+    });
+  }
+
+  // editModeText overlays mirror pdf.js's extracted text runs, which often
+  // carry a trailing space (pdf.js exposes word breaks via the `str` field
+  // of each TextItem). Inter-word spacing in PDFs is normally produced by
+  // explicit advance operators, not by drawing a space glyph — so embedded
+  // SUBSET fonts often omit the space glyph entirely. `drawText`-ing that
+  // trailing space then renders as the font's `.notdef` glyph (a small
+  // box `□`), producing the "trailing-box after every word" symptom
+  // reported 2026-06-17. Strip trailing whitespace for editModeText only;
+  // positions on the source page already encode the spacing.
+  if (editorTypeEarly === "editModeText") {
+    rawText = rawText.replace(/\s+$/, "");
+    if (!rawText) return;
+  }
 
   const fontFamily = (obj.fontFamily as string) || "Helvetica";
   const fontWeight = (obj.fontWeight as string) || "normal";
@@ -82,11 +150,46 @@ export async function drawIText(
 
   // The object's bounding box width in Fabric units (what the user sees as the text container)
   const objWidth = ((obj.width as number) || 0) * objScaleX;
-  const editorType = (obj.editorType as string) || "";
+  const editorType = editorTypeEarly;
 
   const { left, top } = resolveTopLeft(obj);
 
-  const font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+  let font = await fontCache.getFont(fontFamily, fontWeight, fontStyle);
+
+  // For editModeText where the user CHANGED the text (text !==
+  // originalText), the new characters they typed are very likely NOT in
+  // the source PDF's subset font — typing "test" into a word that
+  // didn't contain `t/e/s` means those glyphs simply aren't embedded.
+  // pdf-lib's `encodeText` silently maps unknown codepoints to the
+  // `.notdef` glyph (it doesn't throw), so a try/catch can't detect
+  // the miss — the saved PDF renders the missing chars as `?` boxes
+  // (QA report 2026-06-17: "I added 4 characters and the version
+  // preview shows 4 ????").
+  //
+  // Fix: detect the text-change case and switch the WHOLE string to
+  // the StandardFont equivalent (Helvetica / Times / Courier per the
+  // family). StandardFonts are full WinAnsi so they cover ASCII +
+  // common Latin reliably. Trade-off is a tiny font-metric drift from
+  // the surrounding source text — far better than `????`. Unmodified
+  // text (text === originalText, just moved/resized) keeps the
+  // embedded font because every glyph it needs is guaranteed to be
+  // in the subset.
+  if (editorTypeEarly === "editModeText") {
+    const originalText = (obj as { originalText?: string }).originalText;
+
+    if (typeof originalText === "string" && rawText !== originalText) {
+      font = await fontCache.getStandardFallback(
+        fontFamily,
+        fontWeight,
+        fontStyle,
+      );
+    }
+  }
+
+  // Pre-sanitize against the resolved font so every downstream
+  // `font.encodeText` / `font.widthOfTextAtSize` / `page.drawText` call
+  // sees only characters that font can represent.
+  const text = sanitizeTextForFont(font, rawText);
   const color = hexToPdfColor(obj.fill as string) ?? rgb(0, 0, 0);
 
   const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
@@ -140,20 +243,26 @@ export async function drawIText(
   const nextLineX = advanceY;
   const nextLineY = -advanceX;
 
-  // Compute what pdf-lib/fontkit thinks the text width is
-  const pdfLibTextWidth = font.widthOfTextAtSize(text, pdfFontSize);
   // Use Fabric's obj.width as the target — it's what the user sees on screen.
   // This correctly reflects both unedited text AND user edits (added/removed words).
   const fabricObjWidth = toPdfDim(objWidth, ctx.scaleX);
   const targetWidth = fabricObjWidth;
 
-  if (editorType === "editModeText") {
-    console.log(
-      `[DrawIText] "${text.slice(0, 40)}" | fabricObjWidth=${fabricObjWidth.toFixed(2)} targetWidth=${targetWidth.toFixed(2)} pdfLibWidth=${pdfLibTextWidth.toFixed(2)} | gap(target-pdfLib)=${(targetWidth - pdfLibTextWidth).toFixed(2)} gap(fabric-pdfLib)=${(fabricObjWidth - pdfLibTextWidth).toFixed(2)}`,
-    );
-  }
-
-  const lines = text.split("\n");
+  // Textbox stores wrapped lines on `_textLines` (each entry is a grapheme
+  // array). `text` is the unwrapped string with hard \n only — splitting
+  // on \n alone collapses visually-wrapped Textbox content to one line in
+  // the saved PDF (overflowing the original bbox). Prefer the wrapped
+  // representation when present; fall back to the \n split for IText
+  // (annotations, page numbers, watermark, text tool) so their behaviour
+  // is unchanged.
+  const wrapped = obj as {
+    _textLines?: ReadonlyArray<ReadonlyArray<string> | string>;
+  };
+  const visualLines: string[] | undefined = Array.isArray(wrapped._textLines)
+    ? wrapped._textLines.map((l) => (Array.isArray(l) ? l.join("") : String(l)))
+    : undefined;
+  const lines =
+    visualLines && visualLines.length > 0 ? visualLines : text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
   const pdfLineHeight = pdfFontSize * lineHeight;
 
@@ -182,7 +291,11 @@ export async function drawIText(
       // direction. For angle 0 this collapses to pdfY - i * pdfLineHeight.
       const lineX = pdfX + i * pdfLineHeight * nextLineX;
       const lineY = pdfY + i * pdfLineHeight * nextLineY;
-      const words = line.split(" ");
+      // Split on ANY whitespace (NBSP U+00A0, thin space U+2009, tab, etc.) —
+      // not just U+0020. Typographic PDFs frequently use NBSP between words,
+      // and the embedded subset font often lacks the NBSP glyph, so leaving it
+      // in the encoded string renders as a .notdef "tofu" box on every space.
+      const words = line.split(/\s/);
 
       if (words.length <= 1) {
         // Single word — no space issue, draw directly
@@ -344,6 +457,12 @@ export function drawRect(
 
   if (editorType === "whiteout") {
     fillColor = rgb(1, 1, 1);
+  } else if (editorType === "redaction") {
+    // Solid black. The merge pipeline renders the source page with
+    // `suppressText: true` and embeds it as a raster, so glyphs underneath
+    // this rect are already pixels in the saved bytes — there's no text
+    // layer left to leak content. This is a permanent removal, not a cover.
+    fillColor = rgb(0, 0, 0);
   } else if (editorType === "highlight") {
     fillColor = hexToPdfColor(obj.fill as string);
   } else {
@@ -360,7 +479,9 @@ export function drawRect(
     borderWidth: borderWidth || undefined,
     color: fillColor ?? undefined,
     height: pdfH,
-    opacity,
+    // Redaction rectangles MUST be fully opaque — a translucent black box
+    // wouldn't conceal anything visually under the rasterized page render.
+    opacity: editorType === "redaction" ? 1 : opacity,
     rotate: angle ? degrees(-angle) : undefined,
     width: pdfW,
     x: pdfX,

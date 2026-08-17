@@ -1,50 +1,128 @@
 "use client";
 
 import { Skeleton } from "@heroui/react";
+import { useEffect, useState } from "react";
 
 /**
- * Editor placeholder shown while a document referenced by `?id=` is loading.
- * Mirrors the chrome layout so heights/positions don't shift on hydration.
+ * Editor placeholder shown while a document referenced by `?id=` (or a
+ * post-signin save-first flow) is loading. Mirrors the chrome layout so
+ * heights/positions don't shift on hydration, and centers a spinner +
+ * status text on top so the user never wonders whether the app is
+ * frozen. An apologetic second line fades in after `LONG_LOAD_DELAY_MS`
+ * for large files — sets the expectation without hiding the underlying
+ * skeleton structure.
  */
+const LONG_LOAD_DELAY_MS = 3000;
+
 export function EditorLoadingShell() {
+  const [showApology, setShowApology] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setShowApology(true),
+      LONG_LOAD_DELAY_MS,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <>
-      <div className="flex h-10 shrink-0 items-center justify-between gap-3 px-3">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-6 w-6 rounded-md" />
-          <Skeleton className="h-4 w-40 rounded" />
+      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
+        <Skeleton className="h-6 w-6 rounded-md" />
+        <Skeleton className="h-[26px] w-[104px] rounded" />
+        <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
+        <Skeleton className="h-4 w-40 flex-1 rounded" />
+        <div className="ml-3 flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
+          <Skeleton className="size-6 rounded-full" />
+          <span aria-hidden className="h-4 w-px bg-default-200" />
+          <Skeleton className="size-6 rounded-full" />
         </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-6 w-24 rounded-md" />
-          <Skeleton className="h-6 w-16 rounded-md" />
-          <Skeleton className="h-6 w-6 rounded-md" />
-        </div>
-      </div>
-
-      <div className="flex h-10 shrink-0 items-center gap-2 px-3">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <Skeleton key={i} className="h-6 w-6 rounded-md" />
-        ))}
+        <Skeleton className="h-9 w-28 rounded-full" />
+        <Skeleton className="h-9 w-24 rounded-full" />
       </div>
 
       <div className="relative flex flex-1 overflow-hidden">
-        <div className="flex w-44 shrink-0 flex-col gap-3 border-r border-default-200 bg-default-100 p-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-md" />
-          ))}
+        <aside
+          aria-label="Page thumbnails"
+          className="flex w-44 shrink-0 flex-col border-r border-default-200 bg-default-100 px-2 pb-2 pt-0"
+        >
+          <div className="flex items-center justify-center px-0 py-3">
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </div>
+          <div className="flex flex-col gap-1 overflow-y-auto">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-md" />
+            ))}
+          </div>
+        </aside>
+
+        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--pv-canvas,#f5f5f7)]">
+          <div className="flex shrink-0 items-center justify-center gap-3 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-[200px] rounded-[16px]" />
+            ))}
+          </div>
+          <div className="flex flex-1 items-start justify-center overflow-hidden bg-default-100 p-6">
+            <Skeleton className="h-[calc(100%-2rem)] w-[640px] max-w-full rounded-lg shadow-lg" />
+          </div>
         </div>
 
-        <div className="flex flex-1 items-start justify-center overflow-hidden bg-default-100 p-6">
-          <Skeleton className="h-[calc(100%-2rem)] w-[640px] max-w-full rounded-lg shadow-lg" />
-        </div>
-
-        <div aria-hidden className="w-44 shrink-0 bg-default-100" />
         <div className="flex w-60 shrink-0 flex-col gap-3 border-l border-default-200 bg-default-100 p-3">
           <Skeleton className="h-5 w-24 rounded" />
           <Skeleton className="h-20 w-full rounded-md" />
           <Skeleton className="h-20 w-full rounded-md" />
         </div>
+
+        {/* Centered loading overlay. Non-blocking (pointer-events-none)
+            so the skeletons behind stay accessible; the visible signal
+            is what matters to the user. */}
+        <div
+          aria-live="polite"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          role="status"
+        >
+          <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/95 px-8 py-6 shadow-[0_20px_50px_-20px_rgba(23,23,23,0.35)] backdrop-blur">
+            <PdfLoadingSpinner />
+            <div className="text-center">
+              <p className="pv-heading text-[15px] font-semibold text-[var(--pv-text-strong,#1a1c21)]">
+                Loading your PDF…
+              </p>
+              <p
+                className={`mt-1.5 text-[12px] leading-relaxed text-[var(--pv-text-body,#5c5c5c)] transition-opacity duration-500 ${
+                  showApology ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                Your PDF is a little larger — hang tight, we&apos;re almost
+                there. Apologies for the wait.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Two-ring rotating spinner. Outer ring rotates clockwise, inner arc
+ * counter-clockwise for a subtle "PDF being processed" vibe. Colour
+ * uses the brand red so it visually anchors to the site palette.
+ */
+function PdfLoadingSpinner() {
+  return (
+    <div aria-hidden className="relative h-12 w-12">
+      <span
+        className="absolute inset-0 animate-spin rounded-full border-[3px] border-[var(--pv-hairline,rgb(235,235,235))] border-t-[var(--pv-brand-red,#f12c23)]"
+        style={{ animationDuration: "0.9s" }}
+      />
+      <span
+        className="absolute inset-1.5 animate-spin rounded-full border-2 border-transparent border-b-[var(--pv-brand-red,#f12c23)]"
+        style={{
+          animationDirection: "reverse",
+          animationDuration: "1.4s",
+        }}
+      />
+    </div>
   );
 }

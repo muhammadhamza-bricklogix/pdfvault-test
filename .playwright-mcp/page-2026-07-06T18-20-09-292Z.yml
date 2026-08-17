@@ -1,0 +1,137 @@
+- generic [active] [ref=f17e1]:
+  - generic [ref=f17e3]:
+    - banner [ref=f17e4]:
+      - generic [ref=f17e5]:
+        - link "PDFVault" [ref=f17e7] [cursor=pointer]:
+          - /url: "#top"
+          - img "PDFVault" [ref=f17e8]
+        - generic [ref=f17e9]:
+          - link "Get started" [ref=f17e10] [cursor=pointer]:
+            - /url: /sign-up
+          - button "Toggle navigation menu" [ref=f17e11]:
+            - img [ref=f17e12]
+    - main [ref=f17e14]:
+      - generic [ref=f17e16]:
+        - heading "Convert PDF to Word" [level=1] [ref=f17e17]
+        - paragraph [ref=f17e18]: Turn a PDF into an editable .docx so you can keep working in Word.
+      - generic [ref=f17e21]:
+        - generic [ref=f17e23]:
+          - button "Upload a file. Drop a file here, or activate to browse." [ref=f17e24]:
+            - img
+            - button "Choose File" [ref=f17e25]
+            - generic [ref=f17e26]:
+              - heading "Drop your file here to get started" [level=2] [ref=f17e27]
+              - paragraph [ref=f17e28]: Upload a PDF or import from your cloud storage.
+              - paragraph [ref=f17e29]: Supports PDF, DOC, DOCX, JPG, PNG
+              - button "Choose File" [ref=f17e30]
+            - paragraph [ref=f17e31]
+          - generic [ref=f17e32]:
+            - generic [ref=f17e33]:
+              - paragraph [ref=f17e34]: Upload a file to continue
+              - paragraph [ref=f17e35]: Drop or choose a file above, then hit Convert.
+            - button "Convert now" [disabled] [ref=f17e36]
+          - generic [ref=f17e37]:
+            - button "Upload from Google drive" [ref=f17e38]:
+              - text: Upload from Google drive
+              - img [ref=f17e39]
+            - button "Upload from Dropbox" [ref=f17e46]:
+              - text: Upload from Dropbox
+              - img [ref=f17e48]
+            - button "Upload from one drive" [ref=f17e50]:
+              - text: Upload from one drive
+              - img [ref=f17e51]
+        - list [ref=f17e54]:
+          - listitem [ref=f17e55]:
+            - img [ref=f17e56]
+            - text: Secure document storage
+          - listitem [ref=f17e59]:
+            - img [ref=f17e60]
+            - text: Edit in your browser
+          - listitem [ref=f17e63]:
+            - img [ref=f17e64]
+            - text: Personal file library
+    - contentinfo [ref=f17e67]:
+      - generic [ref=f17e68]:
+        - generic [ref=f17e69]:
+          - generic [ref=f17e70]:
+            - img "PDFVault" [ref=f17e71]
+            - paragraph [ref=f17e72]: A smarter, more secure place for your PDFs.
+            - generic [ref=f17e73]:
+              - link "Info@pdfvault.com" [ref=f17e74] [cursor=pointer]:
+                - /url: mailto:Info@pdfvault.com
+                - img [ref=f17e75]
+                - text: Info@pdfvault.com
+              - link "+88 123 456 789" [ref=f17e77] [cursor=pointer]:
+                - /url: tel:+88123456789
+                - img [ref=f17e78]
+                - text: +88 123 456 789
+          - navigation "TOOLS" [ref=f17e80]:
+            - heading "TOOLS" [level=2] [ref=f17e81]
+            - list [ref=f17e82]:
+              - listitem [ref=f17e83]:
+                - link "Edit & SIgn" [ref=f17e84] [cursor=pointer]:
+                  - /url: /pdf-editor
+              - listitem [ref=f17e85]:
+                - link "Compress" [ref=f17e86] [cursor=pointer]:
+                  - /url: /tools/compress
+              - listitem [ref=f17e87]:
+                - link "Convert" [ref=f17e88] [cursor=pointer]:
+                  - /url: /tools/convert
+          - navigation "COMPANY" [ref=f17e89]:
+            - heading "COMPANY" [level=2] [ref=f17e90]
+            - list [ref=f17e91]:
+              - listitem [ref=f17e92]:
+                - link "Pricing" [ref=f17e93] [cursor=pointer]:
+                  - /url: /pricing
+              - listitem [ref=f17e94]:
+                - link "Contact Us" [ref=f17e95] [cursor=pointer]:
+                  - /url: /contact
+              - listitem [ref=f17e96]:
+                - link "About Us" [ref=f17e97] [cursor=pointer]:
+                  - /url: "#about"
+          - navigation "HELP" [ref=f17e98]:
+            - heading "HELP" [level=2] [ref=f17e99]
+            - list [ref=f17e100]:
+              - listitem [ref=f17e101]:
+                - link "FAQ" [ref=f17e102] [cursor=pointer]:
+                  - /url: "#faq"
+              - listitem [ref=f17e103]:
+                - link "Privacy" [ref=f17e104] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f17e105]:
+                - link "Terms & Condition" [ref=f17e106] [cursor=pointer]:
+                  - /url: /terms
+          - navigation "ACCOUNT" [ref=f17e107]:
+            - heading "ACCOUNT" [level=2] [ref=f17e108]
+            - list [ref=f17e109]:
+              - listitem [ref=f17e110]:
+                - link "Log In" [ref=f17e111] [cursor=pointer]:
+                  - /url: /sign-in
+              - listitem [ref=f17e112]:
+                - link "Sign Up" [ref=f17e113] [cursor=pointer]:
+                  - /url: /sign-up
+              - listitem [ref=f17e114]:
+                - link "Changelog" [ref=f17e115] [cursor=pointer]:
+                  - /url: "#changelog"
+        - generic [ref=f17e117]:
+          - paragraph [ref=f17e118]: © 2026, PDFVault All rights reserved.
+          - list [ref=f17e119]:
+            - listitem [ref=f17e120]:
+              - link "PDFVault on LinkedIn" [ref=f17e121] [cursor=pointer]:
+                - /url: "#linkedin"
+                - img [ref=f17e122]
+            - listitem [ref=f17e124]:
+              - link "PDFVault on Facebook" [ref=f17e125] [cursor=pointer]:
+                - /url: "#facebook"
+                - img [ref=f17e126]
+            - listitem [ref=f17e128]:
+              - link "PDFVault on X" [ref=f17e129] [cursor=pointer]:
+                - /url: "#x"
+                - img [ref=f17e130]
+            - listitem [ref=f17e132]:
+              - link "PDFVault on Instagram" [ref=f17e133] [cursor=pointer]:
+                - /url: "#instagram"
+                - img [ref=f17e134]
+  - button "Open Next.js Dev Tools" [ref=f17e141] [cursor=pointer]:
+    - img [ref=f17e142]
+  - alert [ref=f17e145]

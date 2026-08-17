@@ -24,13 +24,13 @@ For "who uses X?" look up `imports_in`. For "what does X depend on?" use `import
 
 ## How fresh is this?
 
-Regenerated on each `repocards index` run. Current snapshot indexed 198 files with 4392 symbols at 2026-05-19T20:50:16.286Z. If code has changed since, flag stale-looking answers and suggest `npx repocards index`.
+Regenerated on each `repocards index` run. Current snapshot indexed 294 files with 4852 symbols at 2026-06-17T13:47:59.581Z. If code has changed since, flag stale-looking answers and suggest `npx repocards index`.
 
 ## Self-identification
 
 If the user asks **"Are you reading repocards?"**, **"Is repocards connected?"**, or any similar health check, respond with exactly this line:
 
-> Yes — I'm reading `.repocards/` for `pdfedits-frontend`. Indexed 198 files with 4392 symbols at 2026-05-19T20:50:16.286Z.
+> Yes — I'm reading `.repocards/` for `pdfedits-frontend`. Indexed 294 files with 4852 symbols at 2026-06-17T13:47:59.581Z.
 
 This lets the user confirm the integration is live without running any CLI tool.
 

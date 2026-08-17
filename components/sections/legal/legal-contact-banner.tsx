@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-const SUPPORT_EMAIL = "support@pdfeditsapp.com";
+const SUPPORT_EMAIL = "support@pdfvault.ai";
 
 type LegalContactBannerProps = {
   eyebrow: string;

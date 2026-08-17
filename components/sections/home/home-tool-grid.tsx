@@ -50,36 +50,14 @@ function ToolCardTextDesktopHover({
   return (
     <div
       className={[
-        "hidden min-w-0 flex-1 flex-col justify-center gap-0 text-start",
-        "motion-reduce:transition-none",
+        "hidden min-w-0 flex-1 flex-col justify-center gap-1 text-start",
         "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:flex",
-        "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:transition-[gap] [@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:duration-300",
-        "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:gap-1",
       ].join(" ")}
     >
-      <p
-        className={[
-          "line-clamp-2 text-lg font-semibold leading-snug text-[var(--color-foreground)]",
-          "motion-reduce:transition-none",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:transition-[font-size,line-height] [@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:duration-300",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:line-clamp-1",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:text-sm",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:leading-tight",
-        ].join(" ")}
-      >
+      <p className="line-clamp-1 text-base font-semibold leading-tight text-[var(--color-foreground)]">
         {title}
       </p>
-      <p
-        className={[
-          "line-clamp-3 text-sm leading-snug text-default-500 dark:text-default-400",
-          "max-h-0 overflow-hidden opacity-0",
-          "motion-reduce:transition-none",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:transition-[max-height,opacity,margin-top] [@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:duration-300",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:mt-0.5",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:max-h-[4.75rem]",
-          "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:opacity-100",
-        ].join(" ")}
-      >
+      <p className="line-clamp-2 text-sm leading-snug text-default-500 dark:text-default-400">
         {description}
       </p>
     </div>
@@ -92,10 +70,17 @@ function ToolCardGrid({ cards }: { cards: readonly HomeToolCard[] }) {
       {cards.map((card) => (
         <Link
           key={card.title}
-          className="group block rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"
+          // Stable card height (`min-h-[7.5rem]`) reserves space for the
+          // two-line description that appears under the title. Without it,
+          // tool cards whose descriptions wrap differently than their
+          // siblings produced a noticeable jitter when the hover
+          // border/shadow transition kicked in — QA flagged this as
+          // "flicker on rollover". A fixed minimum locks the layout so the
+          // transition only animates color, never size.
+          className="group block min-h-[7.5rem] rounded-xl border-2 border-default-200 bg-[var(--color-background)]/80 outline-none backdrop-blur-sm transition-[border-color,background-color] duration-200 hover:border-[color-mix(in_oklab,var(--color-accent)_50%,transparent)] hover:shadow-md focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent dark:border-default-700"
           href={card.href}
         >
-          <div className="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-6 sm:py-4">
+          <div className="flex h-full min-h-[inherit] items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-6 sm:py-4">
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border-2 border-[color-mix(in_oklab,var(--color-accent)_40%,transparent)] bg-[var(--color-background)] sm:size-14">
               <HugeiconsIcon
                 className="text-[var(--color-accent)]"
@@ -113,19 +98,10 @@ function ToolCardGrid({ cards }: { cards: readonly HomeToolCard[] }) {
               title={card.title}
             />
 
-            <span
-              className={[
-                "inline-flex shrink-0 overflow-hidden pt-0.5 motion-reduce:transition-none sm:pt-0",
-                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:transition-[width,opacity,min-width]",
-                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:duration-300",
-                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:w-0",
-                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:min-w-0",
-                "[@media(hover:hover)_and_(pointer:fine)_and_(min-width:1024px)]:group-hover:opacity-0",
-              ].join(" ")}
-            >
+            <span className="inline-flex shrink-0 pt-0.5 sm:pt-0">
               <HugeiconsIcon
                 aria-hidden
-                className="translate-y-px text-default-400 transition-transform duration-200 [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0"
+                className="translate-y-px text-default-400 transition-transform duration-200 group-hover:translate-x-0.5"
                 icon={ArrowRight01Icon}
                 size={20}
               />

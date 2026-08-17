@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 2
+      "actualWorkers": 4
     },
     "preserveOutput": "always",
     "projects": [
@@ -20,7 +20,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 4
         },
         "id": "setup",
         "name": "setup",
@@ -36,7 +36,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 4
         },
         "id": "chromium",
         "name": "chromium",
@@ -76,133 +76,367 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.60.0",
-    "workers": 2,
+    "workers": 4,
     "webServer": null
   },
   "suites": [
     {
-      "title": "conversion/tool-pages.spec.ts",
-      "file": "conversion/tool-pages.spec.ts",
+      "title": "billing/paywall-flow.spec.ts",
+      "file": "billing/paywall-flow.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Conversion tool pages — frontend fires POST /conversion",
-          "file": "conversion/tool-pages.spec.ts",
-          "line": 24,
+          "title": "Public landing — no paywall",
+          "file": "billing/paywall-flow.spec.ts",
+          "line": 34,
           "column": 6,
           "specs": [
             {
-              "title": "/tools/pdf-to-jpg → type=pdf_to_jpg",
+              "title": "landing page renders without showing the paywall modal",
               "ok": true,
               "tags": [],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
-                      "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                        "line": 16,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
+                  "annotations": [],
+                  "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "skipped",
-                      "duration": 3,
+                      "status": "passed",
+                      "duration": 11191,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.410Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
-                          "location": {
-                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                            "line": 16,
-                            "column": 8
-                          }
-                        }
-                      ],
+                      "startTime": "2026-08-13T18:10:39.460Z",
+                      "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "dc18f0739ff7f753e83b-92f075b52c85bf5e13aa",
-              "file": "conversion/tool-pages.spec.ts",
-              "line": 26,
-              "column": 5
+              "id": "8b157b96688027ac0308-6d33df6f223eb22a900e",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 37,
+              "column": 3
             },
             {
-              "title": "/tools/pdf-to-word → type=pdf_to_docx",
-              "ok": true,
+              "title": "landing page hits the backend /billing/plans endpoint successfully",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
-                      "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                        "line": 16,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
+                  "annotations": [],
+                  "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
                       "workerIndex": 1,
                       "parallelIndex": 1,
-                      "status": "skipped",
-                      "duration": 4,
-                      "errors": [],
+                      "status": "failed",
+                      "duration": 5982,
+                      "error": {
+                        "message": "Error: apiRequestContext.get: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → GET http://localhost:7403/billing/plans\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n",
+                        "stack": "Error: apiRequestContext.get: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → GET http://localhost:7403/billing/plans\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n    at apiRequestContext.get: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:54:36",
+                        "location": {
+                          "file": "apiRequestContext.get: connect ECONNREFUSED :",
+                          "column": 7403,
+                          "line": 1
+                        }
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "apiRequestContext.get: connect ECONNREFUSED :",
+                            "column": 7403,
+                            "line": 1
+                          },
+                          "message": "Error: apiRequestContext.get: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → GET http://localhost:7403/billing/plans\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n    at apiRequestContext.get: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:54:36"
+                        }
+                      ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.418Z",
-                      "annotations": [
+                      "startTime": "2026-08-13T18:10:39.445Z",
+                      "annotations": [],
+                      "attachments": [
                         {
-                          "type": "skip",
-                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
-                          "location": {
-                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                            "line": 16,
-                            "column": 8
-                          }
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Publi-6a610-plans-endpoint-successfully-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Publi-6a610-plans-endpoint-successfully-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Publi-6a610-plans-endpoint-successfully-chromium/trace.zip"
                         }
                       ],
-                      "attachments": []
+                      "errorLocation": {
+                        "file": "apiRequestContext.get: connect ECONNREFUSED :",
+                        "column": 7403,
+                        "line": 1
+                      }
                     }
                   ],
-                  "status": "skipped"
+                  "status": "unexpected"
                 }
               ],
-              "id": "dc18f0739ff7f753e83b-374c46ed5303fa7a9114",
-              "file": "conversion/tool-pages.spec.ts",
-              "line": 26,
-              "column": 5
+              "id": "8b157b96688027ac0308-1ae614542fe9121443d8",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 48,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Backend security smoke",
+          "file": "billing/paywall-flow.spec.ts",
+          "line": 69,
+          "column": 6,
+          "specs": [
+            {
+              "title": "checkout intent requires authentication",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 4519,
+                      "error": {
+                        "message": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/checkout-intent\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 37\u001b[22m\n",
+                        "stack": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/checkout-intent\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 37\u001b[22m\n\n    at apiRequestContext.post: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:73:36",
+                        "location": {
+                          "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                          "column": 7403,
+                          "line": 1
+                        }
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                            "column": 7403,
+                            "line": 1
+                          },
+                          "message": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/checkout-intent\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 37\u001b[22m\n\n    at apiRequestContext.post: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:73:36"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-13T18:10:39.477Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-b00fa-ent-requires-authentication-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-b00fa-ent-requires-authentication-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-b00fa-ent-requires-authentication-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                        "column": 7403,
+                        "line": 1
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "8b157b96688027ac0308-d2d73a2c64d349fcc6f8",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 72,
+              "column": 3
             },
             {
-              "title": "/tools/pdf-to-excel → type=pdf_to_xlsx",
+              "title": "webhook endpoint rejects unsigned bodies with 400",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 5888,
+                      "error": {
+                        "message": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/webhooks/solidgate\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 2\u001b[22m\n",
+                        "stack": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/webhooks/solidgate\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 2\u001b[22m\n\n    at apiRequestContext.post: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:88:36",
+                        "location": {
+                          "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                          "column": 7403,
+                          "line": 1
+                        }
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                            "column": 7403,
+                            "line": 1
+                          },
+                          "message": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/webhooks/solidgate\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 2\u001b[22m\n\n    at apiRequestContext.post: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:88:36"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-13T18:10:39.441Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-b89b0-ts-unsigned-bodies-with-400-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-b89b0-ts-unsigned-bodies-with-400-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-b89b0-ts-unsigned-bodies-with-400-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                        "column": 7403,
+                        "line": 1
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "8b157b96688027ac0308-21e704e25e3da4fbb695",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 85,
+              "column": 3
+            },
+            {
+              "title": "webhook endpoint rejects bad signature with 400",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 920,
+                      "error": {
+                        "message": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/webhooks/solidgate\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - Merchant: wh_pk_not_our_merchant\u001b[22m\n\u001b[2m    - Signature: definitely-not-a-real-hmac\u001b[22m\n\u001b[2m    - Content-Type: application/json\u001b[22m\n\u001b[2m    - content-length: 56\u001b[22m\n",
+                        "stack": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/webhooks/solidgate\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - Merchant: wh_pk_not_our_merchant\u001b[22m\n\u001b[2m    - Signature: definitely-not-a-real-hmac\u001b[22m\n\u001b[2m    - Content-Type: application/json\u001b[22m\n\u001b[2m    - content-length: 56\u001b[22m\n\n    at apiRequestContext.post: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:98:36",
+                        "location": {
+                          "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                          "column": 7403,
+                          "line": 1
+                        }
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                            "column": 7403,
+                            "line": 1
+                          },
+                          "message": "Error: apiRequestContext.post: connect ECONNREFUSED ::1:7403\nCall log:\n\u001b[2m  - → POST http://localhost:7403/billing/webhooks/solidgate\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - Merchant: wh_pk_not_our_merchant\u001b[22m\n\u001b[2m    - Signature: definitely-not-a-real-hmac\u001b[22m\n\u001b[2m    - Content-Type: application/json\u001b[22m\n\u001b[2m    - content-length: 56\u001b[22m\n\n    at apiRequestContext.post: connect ECONNREFUSED ::1:7403\n    at /Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts:98:36"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-13T18:10:55.179Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-4ad8d-ects-bad-signature-with-400-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-4ad8d-ects-bad-signature-with-400-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/softaims/pdf-viewer-app/test-results/billing-paywall-flow-Backe-4ad8d-ects-bad-signature-with-400-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "apiRequestContext.post: connect ECONNREFUSED :",
+                        "column": 7403,
+                        "line": 1
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "8b157b96688027ac0308-10b7ccd57e45d87f5dc4",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 97,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Billing dashboard — signed-in with no subscription",
+          "file": "billing/paywall-flow.spec.ts",
+          "line": 115,
+          "column": 6,
+          "specs": [
+            {
+              "title": "renders the free-plan empty state",
               "ok": true,
               "tags": [],
               "tests": [
@@ -211,10 +445,10 @@
                   "annotations": [
                     {
                       "type": "skip",
-                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "description": "Clerk auth storage state not present",
                       "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                        "line": 16,
+                        "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                        "line": 116,
                         "column": 8
                       }
                     }
@@ -224,22 +458,22 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.443Z",
+                      "startTime": "2026-08-13T18:10:54.724Z",
                       "annotations": [
                         {
                           "type": "skip",
-                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "description": "Clerk auth storage state not present",
                           "location": {
-                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                            "line": 16,
+                            "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                            "line": 116,
                             "column": 8
                           }
                         }
@@ -250,13 +484,21 @@
                   "status": "skipped"
                 }
               ],
-              "id": "dc18f0739ff7f753e83b-7f466b7b89f91b6a1906",
-              "file": "conversion/tool-pages.spec.ts",
-              "line": 26,
-              "column": 5
-            },
+              "id": "8b157b96688027ac0308-e0e4f2230e082001d9cf",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 118,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Billing dashboard — trial state",
+          "file": "billing/paywall-flow.spec.ts",
+          "line": 158,
+          "column": 6,
+          "specs": [
             {
-              "title": "/tools/jpg-to-pdf → type=jpg_to_pdf",
+              "title": "shows Trial pill + trial-ends date + Cancel button",
               "ok": true,
               "tags": [],
               "tests": [
@@ -265,10 +507,10 @@
                   "annotations": [
                     {
                       "type": "skip",
-                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "description": "Clerk auth storage state not present",
                       "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                        "line": 16,
+                        "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                        "line": 159,
                         "column": 8
                       }
                     }
@@ -278,76 +520,22 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "skipped",
-                      "duration": 1,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.451Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
-                          "location": {
-                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                            "line": 16,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "dc18f0739ff7f753e83b-215aba9d35b40d9c8a38",
-              "file": "conversion/tool-pages.spec.ts",
-              "line": 26,
-              "column": 5
-            },
-            {
-              "title": "/tools/word-to-pdf → type=docx_to_pdf",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
-                      "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                        "line": 16,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.454Z",
+                      "startTime": "2026-08-13T18:10:54.724Z",
                       "annotations": [
                         {
                           "type": "skip",
-                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "description": "Clerk auth storage state not present",
                           "location": {
-                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                            "line": 16,
+                            "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                            "line": 159,
                             "column": 8
                           }
                         }
@@ -358,64 +546,13 @@
                   "status": "skipped"
                 }
               ],
-              "id": "dc18f0739ff7f753e83b-bf86eca2dd6f8b2d5e9e",
-              "file": "conversion/tool-pages.spec.ts",
-              "line": 26,
-              "column": 5
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "conversion/tools-modal.spec.ts",
-      "file": "conversion/tools-modal.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Conversion — Tools modal in editor",
-          "file": "conversion/tools-modal.spec.ts",
-          "line": 10,
-          "column": 6,
-          "specs": [
-            {
-              "title": "opens from the editor top bar",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 6976,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.488Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c85e3b0861f84ef22dd0-c20f1512af9f9e55e5d7",
-              "file": "conversion/tools-modal.spec.ts",
-              "line": 11,
+              "id": "8b157b96688027ac0308-57d37405ca32af8ecfcf",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 190,
               "column": 3
             },
             {
-              "title": "clicking a tile navigates to a real /tools/<slug> page",
+              "title": "Cancel button opens the two-step cancellation modal",
               "ok": true,
               "tags": [],
               "tests": [
@@ -424,10 +561,10 @@
                   "annotations": [
                     {
                       "type": "skip",
-                      "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                      "description": "Clerk auth storage state not present",
                       "location": {
-                        "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                        "line": 16,
+                        "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                        "line": 159,
                         "column": 8
                       }
                     }
@@ -437,22 +574,22 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
                       "status": "skipped",
-                      "duration": 4391,
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:17.488Z",
+                      "startTime": "2026-08-13T18:10:54.725Z",
                       "annotations": [
                         {
                           "type": "skip",
-                          "description": "Auth-gated test — run sign-in setup first (see tests/auth.setup.ts and README).",
+                          "description": "Clerk auth storage state not present",
                           "location": {
-                            "file": "/Users/softaims/pdf-viewer-app/tests/helpers/auth.ts",
-                            "line": 16,
+                            "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                            "line": 159,
                             "column": 8
                           }
                         }
@@ -463,656 +600,134 @@
                   "status": "skipped"
                 }
               ],
-              "id": "c85e3b0861f84ef22dd0-ffba6adbe60f9c411e16",
-              "file": "conversion/tools-modal.spec.ts",
-              "line": 22,
+              "id": "8b157b96688027ac0308-1c0015e58a9bb644a71d",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 204,
               "column": 3
             }
           ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/controls.spec.ts",
-      "file": "pdf-editor/controls.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
+        },
         {
-          "title": "PDF editor — top-bar controls",
-          "file": "pdf-editor/controls.spec.ts",
-          "line": 9,
+          "title": "Billing dashboard — cancelled but active",
+          "file": "billing/paywall-flow.spec.ts",
+          "line": 220,
           "column": 6,
           "specs": [
             {
-              "title": "Redo button is disabled when there is nothing to redo",
+              "title": "shows access-until date + Renew button",
               "ok": true,
               "tags": [],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Clerk auth storage state not present",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                        "line": 221,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3097,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:23.903Z",
-                      "annotations": [],
+                      "startTime": "2026-08-13T18:10:54.725Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Clerk auth storage state not present",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                            "line": 221,
+                            "column": 8
+                          }
+                        }
+                      ],
                       "attachments": []
                     }
                   ],
-                  "status": "expected"
+                  "status": "skipped"
                 }
               ],
-              "id": "e301254aa141050c1d86-154d84f2672ae0e1d4ce",
-              "file": "pdf-editor/controls.spec.ts",
-              "line": 10,
-              "column": 3
-            },
-            {
-              "title": "zoom-in changes the zoom percentage",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3410,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:26.471Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "e301254aa141050c1d86-54743e38494fe314d5c8",
-              "file": "pdf-editor/controls.spec.ts",
-              "line": 18,
-              "column": 3
-            },
-            {
-              "title": "next-page button advances the page indicator",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3378,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:27.012Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "e301254aa141050c1d86-858eb93df30a706b7d75",
-              "file": "pdf-editor/controls.spec.ts",
-              "line": 30,
+              "id": "8b157b96688027ac0308-c35914bb6eccead768c9",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 252,
               "column": 3
             }
           ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/manage-pages.spec.ts",
-      "file": "pdf-editor/manage-pages.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
+        },
         {
-          "title": "PDF editor — Manage Pages",
-          "file": "pdf-editor/manage-pages.spec.ts",
-          "line": 9,
+          "title": "Billing dashboard — invoice history",
+          "file": "billing/paywall-flow.spec.ts",
+          "line": 264,
           "column": 6,
           "specs": [
             {
-              "title": "modal opens without runtime errors",
+              "title": "renders invoice rows when the API returns Payments",
               "ok": true,
               "tags": [],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Clerk auth storage state not present",
+                      "location": {
+                        "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                        "line": 265,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3849,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-25T05:29:29.915Z",
-                      "annotations": [],
+                      "startTime": "2026-08-13T18:10:54.726Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Clerk auth storage state not present",
+                          "location": {
+                            "file": "/Users/softaims/pdf-viewer-app/tests/billing/paywall-flow.spec.ts",
+                            "line": 265,
+                            "column": 8
+                          }
+                        }
+                      ],
                       "attachments": []
                     }
                   ],
-                  "status": "expected"
+                  "status": "skipped"
                 }
               ],
-              "id": "384f5fa235f4e18ca19d-780a46b0970277e2bd31",
-              "file": "pdf-editor/manage-pages.spec.ts",
-              "line": 10,
+              "id": "8b157b96688027ac0308-4fe521f8338b3cdd5965",
+              "file": "billing/paywall-flow.spec.ts",
+              "line": 267,
               "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/save-export.spec.ts",
-      "file": "pdf-editor/save-export.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "PDF editor — Save dropdown",
-          "file": "pdf-editor/save-export.spec.ts",
-          "line": 20,
-          "column": 6,
-          "specs": [
-            {
-              "title": "Save button + Export options dropdown are present",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3797,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:30.428Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "63181d3227ec15740c58-a119e3aea50ced0625a8",
-              "file": "pdf-editor/save-export.spec.ts",
-              "line": 21,
-              "column": 3
-            },
-            {
-              "title": "Export menu lists all 8 formats",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3940,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:33.820Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "63181d3227ec15740c58-c7b5c7c9f651420c1b07",
-              "file": "pdf-editor/save-export.spec.ts",
-              "line": 30,
-              "column": 3
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "pdf-editor/tools.spec.ts",
-      "file": "pdf-editor/tools.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "PDF editor — tool activation",
-          "file": "pdf-editor/tools.spec.ts",
-          "line": 23,
-          "column": 6,
-          "specs": [
-            {
-              "title": "Select tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3471,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:34.265Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-40e386e6664aeb695b03",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Text tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 4480,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:37.760Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-c57c2c0f1a67936db10c",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Draw tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4342,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:37.787Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-1c6a6b78c7380b921d53",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Highlight tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3801,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:42.144Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-3677fd84711606a3f462",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Shapes tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3699,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:42.255Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-8ab1327134a70b94231e",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Eraser tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2888,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:45.968Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-a505cfd60fbf797a833c",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Whiteout tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 2847,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:45.968Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-7a9af2d7784f982b2938",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Signature tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 3545,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:48.828Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-dd76a133bca237be5db3",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Image tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3396,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:48.873Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-7fea3120929ac26f4e70",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Watermark tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4239,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:52.323Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-225b80dfd26885980cee",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
-            },
-            {
-              "title": "Background tool activates without runtime errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 4324,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-25T05:29:52.410Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "6547b0f80d8d52cf780b-3082ab8fd7a720e83702",
-              "file": "pdf-editor/tools.spec.ts",
-              "line": 25,
-              "column": 5
             }
           ]
         }
@@ -1121,11 +736,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-25T05:29:16.818Z",
-    "duration": 40170.189999999995,
-    "expected": 18,
-    "skipped": 6,
-    "unexpected": 0,
+    "startTime": "2026-08-13T18:10:38.250Z",
+    "duration": 21367.989,
+    "expected": 1,
+    "skipped": 5,
+    "unexpected": 4,
     "flaky": 0
   }
 }

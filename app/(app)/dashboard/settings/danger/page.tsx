@@ -7,8 +7,17 @@ import { Button, Modal } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  PvFormRow,
+  PvSectionHeading,
+} from "@/components/sections/dashboard/settings/pv-settings-primitives";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+/**
+ * Danger zone — permanently delete the Clerk user + downstream data.
+ * Rendered inside the new PvFormRow rhythm so it matches the other tabs.
+ * Confirmation still requires typing the account email.
+ */
 export default function DangerZonePage() {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -44,39 +53,41 @@ export default function DangerZonePage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
-          Danger zone
-        </h2>
-        <p className="text-sm text-default-500">
-          Irreversible actions. Proceed with care.
-        </p>
-      </header>
+    <section>
+      <PvSectionHeading
+        description="Irreversible actions. Proceed with care."
+        title="Danger zone"
+      />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-danger/40 bg-[var(--color-background)] p-5">
-        <div className="flex items-start gap-3">
+      <PvFormRow
+        last
+        description="Permanently delete your account and all associated documents. This action cannot be undone."
+        label="Delete account"
+      >
+        <div className="flex items-start gap-3 rounded-[12px] border border-red-200 bg-red-50/60 px-4 py-3">
           <HugeiconsIcon
-            className="mt-0.5 shrink-0 text-danger"
+            className="mt-0.5 shrink-0 text-red-500"
             icon={Alert01Icon}
-            size={20}
+            size={18}
           />
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-[var(--color-foreground)]">
-              Delete account
+          <div className="flex-1">
+            <p className="text-[13px] font-semibold text-red-800">
+              This will remove all of your PDFs and cannot be recovered.
             </p>
-            <p className="text-sm text-default-500">
-              Permanently delete your account and all associated documents. This
-              action cannot be undone.
+            <p className="mt-1 text-[12px] text-red-700/80">
+              You&apos;ll be asked to confirm your email before the account is
+              deleted.
             </p>
           </div>
-        </div>
-        <div className="flex justify-end">
-          <Button variant="danger" onPress={() => setIsOpen(true)}>
+          <button
+            className="inline-flex h-9 shrink-0 items-center rounded-full bg-red-600 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-700"
+            type="button"
+            onClick={() => setIsOpen(true)}
+          >
             Delete account
-          </Button>
+          </button>
         </div>
-      </div>
+      </PvFormRow>
 
       <Modal.Backdrop
         isOpen={isOpen}
@@ -124,6 +135,6 @@ export default function DangerZonePage() {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
-    </div>
+    </section>
   );
 }

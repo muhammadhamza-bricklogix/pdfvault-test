@@ -1,8 +1,11 @@
 "use client";
 
 import type { DraftPage } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
-import type { PDFPageProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
+import { AddCircleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@heroui/react";
 import {
   DndContext,
   type DragEndEvent,
@@ -24,6 +27,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 const DEFAULT_THUMBNAIL_ZOOM = 0.2;
@@ -98,17 +102,33 @@ function Thumbnail({
     if (!isVisible || isBlank) return;
 
     let cancelled = false;
+    let importedDoc: PDFDocumentProxy | null = null;
+    let importedTask: { destroy: () => void } | null = null;
 
     const loadPage = async () => {
-      if (isImported && importBytes) {
-        const pdfjs = await import("pdfjs-dist");
+      if (isImported && importBytes && draftPage) {
+        const pdfjs = await loadPdfJs();
         const task = pdfjs.getDocument({ data: importBytes.slice(0) });
-        const doc = await task.promise;
-        const p = await doc.getPage(draftPage.importPageIndex);
 
-        if (!cancelled) setPage(p);
-        doc.destroy();
-        task.destroy();
+        importedTask = task;
+        try {
+          const doc = await task.promise;
+
+          if (cancelled) {
+            doc.destroy();
+
+            return;
+          }
+          importedDoc = doc;
+          // Keep the document alive — pdf.js destroys pages when the doc is
+          // destroyed, which leaves usePageRenderer rendering against an
+          // invalidated proxy. Cleanup below disposes both on unmount.
+          const p = await doc.getPage(draftPage.importPageIndex);
+
+          if (!cancelled) setPage(p);
+        } catch {
+          // task was cancelled or document failed to load
+        }
 
         return;
       }
@@ -124,6 +144,8 @@ function Thumbnail({
 
     return () => {
       cancelled = true;
+      importedDoc?.destroy();
+      importedTask?.destroy();
     };
   }, [
     draftPage,
@@ -447,12 +469,28 @@ type ThumbnailSidebarProps = {
 };
 
 export function ThumbnailSidebar({ onReorderPages }: ThumbnailSidebarProps) {
+  const file = usePdfEditorStore((s) => s.file);
+  const addBlankPage = usePdfEditorStore((s) => s.addBlankPage);
+  const isLoading = !file;
+
   return (
     <aside
       aria-label="Page thumbnails"
-      className="flex w-44 shrink-0 flex-col border-r border-default-200 bg-default-100 p-2"
+      className="flex w-44 shrink-0 flex-col border-r border-default-200 bg-default-100 px-2 pb-2 pt-0"
       role="listbox"
     >
+      <div className="flex items-center justify-center px-0 py-3">
+        <Button
+          aria-label="Add page"
+          className="justify-center gap-2 rounded-lg border border-default-200 bg-white px-4 py-2 text-sm font-medium text-[var(--color-foreground)] shadow-sm hover:bg-default-50 disabled:opacity-50"
+          isDisabled={isLoading}
+          onPress={() => void addBlankPage()}
+        >
+          <HugeiconsIcon icon={AddCircleIcon} size={18} strokeWidth={1.5} />
+          Add Page
+        </Button>
+      </div>
+
       <SortablePageList
         className="flex flex-col gap-1 overflow-y-auto"
         layout="vertical"

@@ -4,6 +4,7 @@ import { openSamplePdfInEditor, waitForPdfReady } from "../helpers/editor";
 
 test.beforeEach(async ({ page }) => {
   await openSamplePdfInEditor(page);
+  await waitForPdfReady(page);
 });
 
 test.describe("PDF editor — top-bar controls", () => {
@@ -15,29 +16,37 @@ test.describe("PDF editor — top-bar controls", () => {
     ).toBeDisabled();
   });
 
-  test("zoom-in changes the zoom percentage", async ({ page }) => {
-    const zoomLabel = page.locator("text=/^\\d+%$/").first();
-    const before = (await zoomLabel.textContent())?.trim();
+  test("Undo/Redo state updates after a canvas edit", async ({ page }) => {
+    const undoButton = page.getByRole("button", { name: /^undo$/i }).first();
+    const redoButton = page.getByRole("button", { name: /^redo$/i }).first();
 
-    await page.getByRole("button", { name: /^\+$/ }).first().click();
-    await page.waitForTimeout(150);
+    await expect(undoButton).toBeDisabled();
+    await expect(redoButton).toBeDisabled();
 
-    const after = (await zoomLabel.textContent())?.trim();
+    // Add a small text object to the canvas to create undoable history.
+    await page.getByRole("button", { name: /^text$/i }).first().click();
+    // Fabric renders an upper canvas on top of the accessibility "application"
+    // canvas; click the upper canvas to hit the live drawing surface.
+    await page
+      .locator("canvas.upper-canvas")
+      .first()
+      .click({ position: { x: 200, y: 200 } });
+    await page.keyboard.type("QA");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
 
-    expect(after, `before=${before} after=${after}`).not.toBe(before);
-  });
+    await expect(undoButton).toBeEnabled();
+    await expect(redoButton).toBeDisabled();
 
-  test("next-page button advances the page indicator", async ({ page }) => {
-    await waitForPdfReady(page);
-
-    const label = page.getByText(/Page\s*\d+/i).first();
-    const before = (await label.innerText())?.trim();
-
-    await page.getByRole("button", { name: /^›$/ }).first().click();
+    await undoButton.click();
     await page.waitForTimeout(200);
 
-    const after = (await label.innerText())?.trim();
+    await expect(redoButton).toBeEnabled();
+  });
 
-    expect(after, `before=${before} after=${after}`).not.toBe(before);
+  test("Share via link is disabled when signed out", async ({ page }) => {
+    await expect(
+      page.getByRole("button", { name: /share via link/i }).first(),
+    ).toBeDisabled();
   });
 });

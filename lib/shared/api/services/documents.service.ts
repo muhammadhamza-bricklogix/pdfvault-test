@@ -36,6 +36,9 @@ async function uploadDocument(
   if (input.trackingId) {
     formData.append("trackingId", input.trackingId);
   }
+  if (input.editorState) {
+    formData.append("editorState", input.editorState);
+  }
 
   const { data } = await apiClient.post<Document>(DOCUMENTS.UPLOAD, formData, {
     onUploadProgress: options?.onUploadProgress,
@@ -93,6 +96,35 @@ async function bulkDeleteDocuments(ids: string[]): Promise<void> {
   await apiClient.post(DOCUMENTS.BULK_DELETE, { ids });
 }
 
+/**
+ * Versioning (added 2026-06-15).
+ *
+ * Backend snapshots the current doc state as a child Document row
+ * (parentDocumentId === rootDocumentId) every time a save overwrites
+ * an existing document. `listVersions` returns those snapshots
+ * newest-first; `restoreVersion` flips the current doc back to a
+ * snapshot's bytes and creates ANOTHER snapshot of the pre-restore
+ * state so the operation is reversible.
+ */
+async function listVersions(documentId: string): Promise<Document[]> {
+  const { data } = await apiClient.get<Document[]>(
+    DOCUMENTS.VERSIONS(documentId),
+  );
+
+  return data;
+}
+
+async function restoreVersion(
+  documentId: string,
+  versionId: string,
+): Promise<Document> {
+  const { data } = await apiClient.post<Document>(
+    DOCUMENTS.RESTORE_VERSION(documentId, versionId),
+  );
+
+  return data;
+}
+
 export const documentsService = {
   uploadDocument,
   uploadCloudDocument,
@@ -101,4 +133,6 @@ export const documentsService = {
   renameDocument,
   deleteDocument,
   bulkDeleteDocuments,
+  listVersions,
+  restoreVersion,
 };

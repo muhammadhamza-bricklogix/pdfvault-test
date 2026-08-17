@@ -28,26 +28,82 @@ type OAuthPopupOptions = {
   url: string;
 };
 
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+// Non-sensitive scope. Grants access ONLY to files the user picks through the
+// Google Picker (or that this app creates) — not the whole Drive. Requires the
+// PickerBuilder to call `.setOAuthToken(accessToken)` so each pick emits a
+// per-file grant against THIS OAuth client; without it, the backend
+// `files.get` would 403. Verified in `google-drive-picker.ts`.
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const MICROSOFT_SCOPE = "Files.Read User.Read";
 const POPUP_FEATURES =
   "width=520,height=700,menubar=no,toolbar=no,location=yes,resizable=yes,scrollbars=yes,status=no";
+const OAUTH_CALLBACK_PATH = "/oauth-callback";
 
-function parseOAuthResponse(urlValue: string) {
-  const url = new URL(urlValue);
-  const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
-  const query = new URLSearchParams(url.search);
+type OAuthMessagePayload = {
+  accessToken: string | null;
+  error: string | null;
+  errorDescription: string | null;
+  source: "pdfedits-oauth";
+  state: string | null;
+};
 
-  return {
-    accessToken: hash.get("access_token") ?? query.get("access_token"),
-    error: hash.get("error") ?? query.get("error"),
-    errorDescription:
-      hash.get("error_description") ?? query.get("error_description"),
-    state: hash.get("state") ?? query.get("state"),
-  };
+/**
+ * Build the redirect URI used by both the Google and Microsoft popups.
+ * Has to live on the SAME origin as the parent window so the callback
+ * page can call `window.opener.postMessage` back to us — and has to match
+ * the URI whitelisted in the OAuth client's console exactly (scheme + host
+ * + port + path, no trailing slash).
+ */
+function buildRedirectUri(): string {
+  return `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
 }
 
+/**
+ * Extract the Google Cloud project number from an OAuth client ID.
+ * Client IDs have the form `<project-number>-<random>.apps.googleusercontent.com`.
+ * The project number is also shown in Google Cloud Console → Project info.
+ */
+function deriveProjectNumber(clientId: string): string | null {
+  const match = /^(\d+)-[^.]+\.apps\.googleusercontent\.com$/.exec(clientId);
+
+  return match?.[1] ?? null;
+}
+
+/**
+ * Drive the OAuth popup via `postMessage` instead of polling
+ * `popup.location.href`.
+ *
+ * Previously: the parent ran a 400ms `setInterval` reading `popup.closed`
+ * and `popup.location.href`. Modern browsers block both reads under the
+ * `Cross-Origin-Opener-Policy` header (Next.js + Vercel + Clerk all ship
+ * COOP=`same-origin` by default), which produced the console error chain
+ * users saw and left the picker waiting forever even after a successful
+ * Google sign-in.
+ *
+ * Now: `/oauth-callback` (rendered in this app, same origin as parent)
+ * parses the token from the URL hash and posts it back to `window.opener`.
+ * The parent only has to listen — no cross-origin property reads.
+ */
+const OAUTH_STORAGE_KEY = "pdfedits:oauth-result";
+
+const isDev = process.env.NODE_ENV !== "production";
+const log = (...args: unknown[]) => {
+  if (isDev) {
+    // eslint-disable-next-line no-console
+    console.log("[runOAuthPopup]", ...args);
+  }
+};
+
 async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
+  // Clear any stale storage payload from a previous flow before we start —
+  // otherwise the parent's `storage` listener could trip on its own old
+  // write.
+  try {
+    window.localStorage.removeItem(OAUTH_STORAGE_KEY);
+  } catch {
+    // Ignore — same-origin localStorage can be disabled in private mode.
+  }
+
   const popup = window.open(url, "_blank", POPUP_FEATURES);
 
   if (!popup) {
@@ -56,59 +112,189 @@ async function runOAuthPopup({ timeoutMs = 120000, url }: OAuthPopupOptions) {
 
   return new Promise<{ accessToken: string; state: string | null }>(
     (resolve, reject) => {
-      const startedAt = Date.now();
-      const interval = window.setInterval(() => {
+      const cleanup = () => {
+        window.removeEventListener("message", onMessage);
+        window.removeEventListener("storage", onStorage);
+        window.removeEventListener("focus", onWindowFocus);
+        window.clearTimeout(timer);
         try {
-          if (popup.closed) {
-            window.clearInterval(interval);
-            reject(new Error("Sign-in popup was closed."));
-
-            return;
-          }
-
-          if (Date.now() - startedAt > timeoutMs) {
-            window.clearInterval(interval);
-            popup.close();
-            reject(new Error("Sign-in timed out. Please try again."));
-
-            return;
-          }
-
-          const href = popup.location.href;
-
-          if (!href.startsWith(window.location.origin)) return;
-
-          const parsed = parseOAuthResponse(href);
-
-          window.clearInterval(interval);
-          popup.close();
-
-          if (parsed.error) {
-            reject(
-              new Error(
-                parsed.errorDescription ??
-                  parsed.error.replace(/_/g, " ") ??
-                  "Sign-in failed.",
-              ),
-            );
-
-            return;
-          }
-
-          if (!parsed.accessToken) {
-            reject(new Error("No access token was returned by the provider."));
-
-            return;
-          }
-
-          resolve({
-            accessToken: parsed.accessToken,
-            state: parsed.state,
-          });
+          window.localStorage.removeItem(OAUTH_STORAGE_KEY);
         } catch {
-          // Cross-origin popup is expected before redirect; keep polling.
+          // Ignore.
         }
-      }, 400);
+        try {
+          if (!popup.closed) popup.close();
+        } catch {
+          // Closing across COOP may throw — ignore.
+        }
+      };
+
+      // Guard so the closedPoll interval doesn't reject after we have
+      // already received and processed the token.
+      let hasReceived = false;
+
+      const handlePayload = (data: Partial<OAuthMessagePayload>) => {
+        if (hasReceived) return;
+        hasReceived = true;
+        cleanup();
+
+        if (data.error) {
+          reject(
+            new Error(
+              data.errorDescription ??
+                data.error.replace(/_/g, " ") ??
+                "Sign-in failed.",
+            ),
+          );
+
+          return;
+        }
+
+        if (!data.accessToken) {
+          reject(new Error("No access token was returned by the provider."));
+
+          return;
+        }
+
+        // Notify the popup that we got the token so it can close
+        // immediately instead of waiting for the auto-close timeout.
+        try {
+          if (popup && !popup.closed) {
+            popup.postMessage(
+              { source: "pdfedits-oauth-ack" },
+              window.location.origin,
+            );
+          }
+        } catch {
+          // COOP may block postMessage to the popup — ignore.
+        }
+
+        resolve({
+          accessToken: data.accessToken,
+          state: data.state ?? null,
+        });
+      };
+
+      const onMessage = (event: MessageEvent) => {
+        // Don't log `event.data` — it holds the OAuth access token when
+        // the callback page posts back. Origin + shape is enough to debug
+        // origin-mismatch drops without leaking the token to console.
+        // eslint-disable-next-line no-console
+        console.log(
+          "[runOAuthPopup] raw message event:",
+          event.origin,
+          typeof event.data === "object" && event.data !== null
+            ? Object.keys(event.data as object)
+            : typeof event.data,
+        );
+        if (event.origin !== window.location.origin) {
+          log("message origin mismatch, ignoring", event.origin);
+
+          return;
+        }
+        const data = event.data as Partial<OAuthMessagePayload> | null;
+
+        if (!data || data.source !== "pdfedits-oauth") return;
+        log("message received", {
+          accessToken: data.accessToken ? "present" : null,
+          error: data.error,
+        });
+        handlePayload(data);
+      };
+
+      // Storage-event fallback. When strict COOP severs `window.opener` in
+      // the popup, our callback page can't `postMessage` — instead it
+      // writes the token to `localStorage`. The `storage` event fires in
+      // OTHER same-origin windows (i.e. this one), so the parent still
+      // gets the payload.
+      const onStorage = (event: StorageEvent) => {
+        // Log key + has-payload only. The payload contains the OAuth
+        // access token; slicing 30 chars off the front used to include the
+        // token prefix in browser console history / screen recordings.
+        // eslint-disable-next-line no-console
+        console.log(
+          "[runOAuthPopup] raw storage event:",
+          event.key,
+          event.newValue ? "(payload present)" : "(empty)",
+        );
+        if (event.key !== OAUTH_STORAGE_KEY || !event.newValue) return;
+        try {
+          const data = JSON.parse(
+            event.newValue,
+          ) as Partial<OAuthMessagePayload> | null;
+
+          if (!data || data.source !== "pdfedits-oauth") return;
+          log("storage received", {
+            accessToken: data.accessToken ? "present" : null,
+            error: data.error,
+          });
+          handlePayload(data);
+        } catch (err) {
+          log("storage payload parse failed", err);
+        }
+      };
+
+      // Last-chance recovery: drain localStorage synchronously and try to
+      // settle from a payload that's already been written there. Used when
+      // the popup closes (or the timer fires) before the `storage` event
+      // had a chance to deliver — which we've seen happen on Chrome under
+      // strict COOP, where Google's own redirect handling can race the
+      // popup close with our event-loop turn. Returns true if a usable
+      // payload was found and consumed.
+      const drainStoredPayload = (): boolean => {
+        try {
+          const raw = window.localStorage.getItem(OAUTH_STORAGE_KEY);
+
+          if (!raw) return false;
+          const data = JSON.parse(raw) as Partial<OAuthMessagePayload> | null;
+
+          if (!data || data.source !== "pdfedits-oauth") return false;
+          log("recovered payload from localStorage on fallback");
+          handlePayload(data);
+
+          return hasReceived;
+        } catch (err) {
+          log("localStorage drain failed", err);
+
+          return false;
+        }
+      };
+
+      // Popup-close detection is intentionally handled by the parent's
+      // `focus` listener below, NOT a `popup.closed` poll. Reading
+      // `popup.closed` on a cross-origin popup under COOP
+      // `same-origin-allow-popups` doesn't throw — Chrome silently drops
+      // the read AND logs a `"Cross-Origin-Opener-Policy policy would block
+      // the window.closed call"` warning per read. Polling at 500ms
+      // therefore spammed dozens of warnings per sign-in, which was the
+      // symptom QA reported (no functional bug — the postMessage path
+      // still resolved). Removed.
+      //
+      // Detection strategy that replaces it:
+      //   1. Popup succeeds → posts `pdfedits-oauth` message → resolved.
+      //   2. Popup fails to postMessage (Chrome dropped `storage` on close,
+      //      COOP blocked postMessage, etc.) → localStorage drain on focus.
+      //   3. User closes the popup without granting → parent regains focus,
+      //      drain finds nothing → we wait for `timer` to time out.
+      const onWindowFocus = () => {
+        if (hasReceived) return;
+        drainStoredPayload();
+      };
+
+      window.addEventListener("focus", onWindowFocus);
+
+      const timer = window.setTimeout(() => {
+        // Same recovery path as the popup-close branch: a slow OAuth
+        // round-trip may have written the token to storage but missed the
+        // event. Don't time out without checking.
+        if (drainStoredPayload()) return;
+        cleanup();
+        reject(new Error("Sign-in timed out. Please try again."));
+      }, timeoutMs);
+
+      window.addEventListener("message", onMessage);
+      window.addEventListener("storage", onStorage);
+      log("listeners attached, awaiting OAuth callback");
     },
   );
 }
@@ -130,7 +316,10 @@ export function useCloudUpload() {
     }
 
     const state = crypto.randomUUID();
-    const redirectUri = `${window.location.origin}/`;
+    const redirectUri = buildRedirectUri();
+
+    // eslint-disable-next-line no-console
+    console.log("[beginGoogleFlow] redirectUri =", redirectUri);
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
 
     authUrl.searchParams.set("client_id", clientId);
@@ -157,7 +346,33 @@ export function useCloudUpload() {
       );
     }
 
-    const picked = await pickGoogleDrivePdfFiles(accessToken, apiKey);
+    // Required by drive.file — Picker uses this to grant the picked file
+    // to THIS Cloud project. Without it, the follow-up gadget/files.get
+    // returns 401 "Invalid Credentials" even with a valid OAuth token.
+    // We prefer the explicit env var, but fall back to deriving it from the
+    // client ID so one less secret can be misconfigured.
+    const explicitProjectNumber = process.env.NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER;
+    const derivedProjectNumber = deriveProjectNumber(clientId);
+    const projectNumber = explicitProjectNumber ?? derivedProjectNumber;
+
+    if (!projectNumber) {
+      throw new Error(
+        "Missing NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER and could not derive it from NEXT_PUBLIC_GOOGLE_CLIENT_ID. Set NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER to your Google Cloud project number.",
+      );
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(
+      "[beginGoogleFlow] projectNumber source =",
+      explicitProjectNumber ? "env" : "derived",
+      { length: projectNumber.length },
+    );
+
+    const picked = await pickGoogleDrivePdfFiles(
+      accessToken,
+      apiKey,
+      projectNumber,
+    );
 
     return picked as CloudBrowserItem[];
   }, []);
@@ -171,7 +386,7 @@ export function useCloudUpload() {
     }
 
     const state = crypto.randomUUID();
-    const redirectUri = `${window.location.origin}/`;
+    const redirectUri = buildRedirectUri();
     const authUrl = new URL(
       `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`,
     );

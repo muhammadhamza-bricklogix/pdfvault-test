@@ -5,6 +5,8 @@ import type { Canvas } from "fabric";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Modal, Tabs } from "@heroui/react";
 
+import { getLastPointer } from "@/lib/client/pdf-editor/last-pointer";
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { FileUpload } from "@/components/ui/file-upload/file-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -213,7 +215,9 @@ function SignatureModalContent({
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
 
   const handleTabChange = useCallback((key: React.Key) => {
     setActiveTab(String(key));
@@ -229,14 +233,78 @@ function SignatureModalContent({
     const maxWidth = 200;
     const scale = img.width && img.width > maxWidth ? maxWidth / img.width : 1;
 
+    // Fabric JSON is stored in BASE coordinates (zoom = 1). The
+    // canvas' `.width` / `.height` are the rendered (post-zoom) size.
+    // Placement priority (QA feedback 2026-07-29 — signatures "landing
+    // in unexpected spots"):
+    //   1. Last known pointer position on THIS page (`last-pointer.ts`),
+    //      set by PdfViewerCanvas's mouse:move listener. Desktop users
+    //      get the signature where they were hovering.
+    //   2. Intersection of the canvas rect with the scroll container —
+    //      if the user has scrolled or zoomed in, drop it in the
+    //      currently VISIBLE region so it doesn't land off-screen.
+    //   3. Raw page centre — mobile without a scrolled viewport.
+    const zoom = fabricCanvas.getZoom() || 1;
+    let centerX = (fabricCanvas.width ?? 600) / (2 * zoom);
+    let centerY = (fabricCanvas.height ?? 800) / (2 * zoom);
+
+    const lastPointer = getLastPointer();
+
+    if (lastPointer && lastPointer.page === currentPage) {
+      centerX = lastPointer.x;
+      centerY = lastPointer.y;
+    } else {
+      try {
+        const canvasEl = fabricCanvas.getElement();
+        const canvasRect = canvasEl.getBoundingClientRect();
+        let scrollEl: HTMLElement | null = canvasEl.parentElement;
+
+        while (scrollEl && scrollEl !== document.body) {
+          const style = getComputedStyle(scrollEl);
+          const yScroll = style.overflowY;
+          const xScroll = style.overflowX;
+
+          if (
+            yScroll === "auto" ||
+            yScroll === "scroll" ||
+            xScroll === "auto" ||
+            xScroll === "scroll"
+          ) {
+            break;
+          }
+          scrollEl = scrollEl.parentElement;
+        }
+        const scrollRect = scrollEl?.getBoundingClientRect() ?? {
+          top: 0,
+          left: 0,
+          right: window.innerWidth,
+          bottom: window.innerHeight,
+        };
+        const vLeft = Math.max(canvasRect.left, scrollRect.left);
+        const vRight = Math.min(canvasRect.right, scrollRect.right);
+        const vTop = Math.max(canvasRect.top, scrollRect.top);
+        const vBottom = Math.min(canvasRect.bottom, scrollRect.bottom);
+
+        if (vRight > vLeft && vBottom > vTop) {
+          const localX = (vLeft + vRight) / 2 - canvasRect.left;
+          const localY = (vTop + vBottom) / 2 - canvasRect.top;
+
+          centerX = localX / zoom;
+          centerY = localY / zoom;
+        }
+      } catch {
+        // fall back to page centre
+      }
+    }
+
     img.set({
-      left: (fabricCanvas.width ?? 600) / 2,
+      left: centerX,
       lockUniScaling: true,
       originX: "center",
       originY: "center",
       scaleX: scale,
       scaleY: scale,
-      top: (fabricCanvas.height ?? 800) / 2,
+      top: centerY,
     });
 
     fabricCanvas.add(img);
@@ -244,8 +312,21 @@ function SignatureModalContent({
     fabricCanvas.renderAll();
 
     pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+    // Persist the signature into the page map immediately so the next save
+    // (including the auto-save before Version History) cannot miss it if the
+    // generic dirty-flag listener fails to fire (reported 2026-07-23).
+    saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+    markDocumentDirty();
     onClose();
-  }, [signatureDataUrl, fabricCanvas, currentPage, pushHistory, onClose]);
+  }, [
+    signatureDataUrl,
+    fabricCanvas,
+    currentPage,
+    pushHistory,
+    saveFabricJson,
+    markDocumentDirty,
+    onClose,
+  ]);
 
   return (
     <>
@@ -320,8 +401,8 @@ export function SignatureModal({
   return (
     <Modal>
       <Modal.Backdrop isOpen={isOpen} onOpenChange={handleOpenChange}>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-[480px]">
+        <Modal.Container className="items-start justify-center p-4 sm:items-center">
+          <Modal.Dialog className="max-h-[calc(100dvh-32px)] overflow-y-auto overscroll-contain sm:max-w-[480px]">
             <Modal.CloseTrigger />
             <SignatureModalContent
               key={mountKey}

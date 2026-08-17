@@ -10,23 +10,32 @@ import { parseContentDispositionFilename } from "@/lib/shared/utils/download";
 
 const FALLBACK_FILENAME = "converted-file";
 
-async function convert(input: ConvertFileInput): Promise<ConvertFileResult> {
+async function _convert(
+  input: ConvertFileInput,
+  bypassPaywallGate: boolean,
+): Promise<ConvertFileResult> {
   const formData = new FormData();
 
   formData.append("file", input.file);
   formData.append("type", input.type);
 
+  const cfg: any = {
+    headers: { Accept: "*/*" },
+    // CloudConvert jobs can run for tens of seconds for large/complex files.
+    // Disable Axios' default timeout so the request waits for the backend.
+    responseType: "blob",
+    timeout: 0,
+    signal: input.signal,
+  };
+
+  if (bypassPaywallGate) cfg._skipPaywallGate = true;
+
   try {
-    const response = await apiClient.post<Blob>(CONVERSION.CONVERT, formData, {
-      headers: {
-        Accept: "*/*",
-      },
-      responseType: "blob",
-      // CloudConvert jobs can run for tens of seconds for large/complex files.
-      // Disable Axios' default timeout so the request waits for the backend.
-      timeout: 0,
-      signal: input.signal,
-    });
+    const response = await apiClient.post<Blob>(
+      CONVERSION.CONVERT,
+      formData,
+      cfg,
+    );
 
     const fileName =
       parseContentDispositionFilename(
@@ -41,6 +50,25 @@ async function convert(input: ConvertFileInput): Promise<ConvertFileResult> {
     // than the generic fallback from `toApiError`.
     throw await inflateBlobError(error);
   }
+}
+
+async function convert(input: ConvertFileInput): Promise<ConvertFileResult> {
+  return _convert(input, false);
+}
+
+/**
+ * Same as `convert` but bypasses the client-side paywall pre-flight gate.
+ * The server still validates entitlement and returns 402 if not entitled.
+ * Callers must catch ApiError with statusCode 402 and handle it themselves
+ * (e.g. open the paywall, then retry via the normal `convert` path).
+ *
+ * Used by useExportEditor to attempt conversion before showing the paywall
+ * so the user can see the converted result in the paywall preview.
+ */
+async function convertPreview(
+  input: ConvertFileInput,
+): Promise<ConvertFileResult> {
+  return _convert(input, true);
 }
 
 async function inflateBlobError(error: unknown): Promise<Error> {
@@ -78,4 +106,5 @@ function deriveFallbackName(input: ConvertFileInput): string {
 
 export const conversionService = {
   convert,
+  convertPreview,
 };

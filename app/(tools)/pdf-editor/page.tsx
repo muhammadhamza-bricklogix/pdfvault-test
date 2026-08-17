@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { Suspense } from "react";
+export default async function PdfEditorAliasPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const suffix = new URLSearchParams();
 
-import { PdfEditorShell } from "@/components/sections/pdf-editor/PdfEditorShell";
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") suffix.set(key, value);
+  }
+  const query = suffix.toString();
 
-export const metadata: Metadata = {
-  title: "PDF Editor",
-};
-
-export default function PdfEditorPage() {
-  return (
-    <Suspense fallback={null}>
-      <PdfEditorShell />
-    </Suspense>
-  );
+  redirect(`/pdf-composer${query ? `?${query}` : ""}`);
 }

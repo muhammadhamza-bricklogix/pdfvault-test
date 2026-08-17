@@ -10,7 +10,7 @@ const TOOLS = [
   "Shapes",
   "Eraser",
   "Whiteout",
-  "Signature",
+  "Sign",
   "Image",
   "Watermark",
   "Background",
@@ -27,10 +27,9 @@ test.describe("PDF editor — tool activation", () => {
 
       page.on("pageerror", (e) => errors.push(e.message));
 
-      // HeroUI ToggleButtonGroup with selectionMode="single" renders as a
-      // radiogroup — each tool is a radio, not a button.
+      // New editor chrome renders tools as icon buttons with aria-labels.
       await page
-        .getByRole("radio", { name: new RegExp(`^${tool}$`, "i") })
+        .getByRole("button", { name: new RegExp(`^${tool}$`, "i") })
         .first()
         .click();
 

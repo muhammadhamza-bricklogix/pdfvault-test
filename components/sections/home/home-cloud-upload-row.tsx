@@ -17,7 +17,20 @@ function DeviceIcon({ className }: { className?: string }) {
   return <HugeiconsIcon className={className} icon={Upload01Icon} size={28} />;
 }
 
-const OPTIONS = [
+/**
+ * Wider type for the OPTIONS list so commenting an entry out doesn't narrow
+ * `id` to the literal of the remaining entry and break the `id === "gdrive"`
+ * comparisons below.
+ */
+type OptionId = "gdrive" | "device";
+type CloudOption = {
+  brandClassName: string;
+  Glyph: ((props: { className?: string }) => React.ReactElement) | null;
+  id: OptionId;
+  label: string;
+};
+
+const OPTIONS: readonly CloudOption[] = [
   {
     brandClassName: "",
     Glyph: null,
@@ -30,7 +43,7 @@ const OPTIONS = [
     id: "device",
     label: "Upload from Device",
   },
-] as const;
+];
 
 type HomeCloudUploadRowProps = {
   cloudImportAllowed: boolean;
@@ -129,7 +142,7 @@ export function HomeCloudUploadRow({
         {OPTIONS.map(({ brandClassName, Glyph, id, label }) => (
           <Button
             key={id}
-            className="h-auto flex-1 flex-col justify-center gap-3 rounded-[1.1rem] border border-default-300 bg-white/90 py-5 shadow-sm backdrop-blur-sm transition-colors hover:border-[color-mix(in_oklab,var(--color-accent)_50%,var(--foreground))] hover:bg-[var(--color-background)] dark:border-default-600 dark:bg-default-50/15 sm:flex-row sm:justify-start sm:gap-3.5 sm:px-6 sm:py-5"
+            className="h-auto w-full flex-col justify-center gap-3 rounded-[1.1rem] border border-default-300 bg-white/90 py-5 shadow-sm backdrop-blur-sm transition-colors hover:border-[color-mix(in_oklab,var(--color-accent)_50%,var(--foreground))] hover:bg-[var(--color-background)] dark:border-default-600 dark:bg-default-50/15 sm:w-auto sm:flex-1 sm:flex-row sm:justify-start sm:gap-3.5 sm:px-6 sm:py-5"
             isDisabled={(isBusy && id !== activeProvider) || cloudUploadPending}
             variant="secondary"
             onPress={() => void onCloudPress(id)}

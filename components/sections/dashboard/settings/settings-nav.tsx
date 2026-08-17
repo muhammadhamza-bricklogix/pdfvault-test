@@ -1,144 +1,84 @@
 "use client";
 
-import {
-  AlertCircleIcon,
-  Globe02Icon,
-  Setting07Icon,
-  UserCircleIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 type SettingsSection = {
-  description: string;
   href: string;
-  icon: typeof Setting07Icon;
   id: string;
   label: string;
-  tone?: "danger";
 };
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
-    description: "Profile and basic info",
     href: ROUTES.APP.SETTINGS_GENERAL,
-    icon: Setting07Icon,
     id: "general",
     label: "General",
   },
   {
-    description: "Email, password, sessions",
     href: ROUTES.APP.SETTINGS_ACCOUNT,
-    icon: UserCircleIcon,
     id: "account",
     label: "Account",
   },
   {
-    description: "Language, timezone, formats",
     href: ROUTES.APP.SETTINGS_LANGUAGE,
-    icon: Globe02Icon,
     id: "language",
     label: "Language & Region",
   },
   {
-    description: "Delete account",
+    href: ROUTES.APP.SETTINGS_BILLING,
+    id: "billing",
+    label: "Billing",
+  },
+  {
     href: ROUTES.APP.SETTINGS_DANGER,
-    icon: AlertCircleIcon,
     id: "danger",
-    label: "Danger zone",
-    tone: "danger",
+    label: "Danger Zone",
   },
 ];
 
-const resolveActiveId = (pathname: string) => {
-  const match = SETTINGS_SECTIONS.find((s) => pathname.startsWith(s.href));
+interface SettingsNavProps {
+  /**
+   * Retained for API compatibility with the previous vertical/horizontal
+   * variants — the new design uses a single segmented pill regardless of
+   * viewport, so both values render the same control.
+   */
+  orientation?: "vertical" | "horizontal";
+}
 
-  return match?.id ?? "general";
-};
-
-type SettingsNavProps = {
-  orientation: "horizontal" | "vertical";
-};
-
-export function SettingsNav({ orientation }: SettingsNavProps) {
+/**
+ * Segmented pill from the Settings frames (Frame 2043684300 / -1).
+ * Active tab = white capsule with a subtle border sitting inside a
+ * `--pv-nav-active` (#F3F3F5) track. Inactive tabs are muted body text.
+ * Scrolls horizontally on narrow viewports so all four tabs stay reachable.
+ */
+export function SettingsNav(_props: SettingsNavProps) {
   const pathname = usePathname() ?? "";
-  const router = useRouter();
-  const selected = resolveActiveId(pathname);
-
-  if (orientation === "horizontal") {
-    return (
-      <nav
-        aria-label="Settings sections"
-        className="flex min-w-max items-center gap-1 py-2"
-      >
-        {SETTINGS_SECTIONS.map((section) => {
-          const isActive = selected === section.id;
-          const isDanger = section.tone === "danger";
-
-          return (
-            <button
-              key={section.id}
-              aria-current={isActive ? "page" : undefined}
-              className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? isDanger
-                    ? "bg-default-100 text-danger"
-                    : "bg-default-100 text-[var(--color-foreground)]"
-                  : isDanger
-                    ? "text-danger hover:bg-default-100"
-                    : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
-              }`}
-              type="button"
-              onClick={() => router.push(section.href)}
-            >
-              {section.label}
-            </button>
-          );
-        })}
-      </nav>
-    );
-  }
 
   return (
-    <nav aria-label="Settings sections" className="flex flex-col gap-1">
-      {SETTINGS_SECTIONS.map((section) => {
-        const isActive = selected === section.id;
-        const isDanger = section.tone === "danger";
+    <nav aria-label="Settings sections" className="overflow-x-auto">
+      <div className="inline-flex gap-1 rounded-full bg-[var(--pv-nav-active)] p-1">
+        {SETTINGS_SECTIONS.map((section) => {
+          const active = pathname.startsWith(section.href);
 
-        return (
-          <button
-            key={section.id}
-            aria-current={isActive ? "page" : undefined}
-            className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-              isActive
-                ? isDanger
-                  ? "bg-default-100 text-danger"
-                  : "bg-default-100 text-[var(--color-foreground)]"
-                : isDanger
-                  ? "text-danger hover:bg-default-100"
-                  : "text-default-500 hover:bg-default-100 hover:text-[var(--color-foreground)]"
-            }`}
-            type="button"
-            onClick={() => router.push(section.href)}
-          >
-            <HugeiconsIcon
-              className="mt-0.5 shrink-0"
-              icon={section.icon}
-              size={17}
-            />
-            <span className="min-w-0 flex flex-col gap-0.5">
-              <span className="truncate text-sm font-semibold">
-                {section.label}
-              </span>
-              <span className="text-xs leading-4 text-default-500">
-                {section.description}
-              </span>
-            </span>
-          </button>
-        );
-      })}
+          return (
+            <Link
+              key={section.id}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex h-9 items-center whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] ${
+                active
+                  ? "bg-[var(--pv-surface)] text-[var(--pv-text-strong)] shadow-[0_1px_2px_rgba(23,23,23,0.08)]"
+                  : "text-[var(--pv-text-body)] hover:text-[var(--pv-text-strong)]"
+              }`}
+              href={section.href}
+            >
+              {section.label}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

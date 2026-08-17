@@ -12,6 +12,13 @@ export type Document = {
   version: number;
   /** Presigned S3 URL — valid for ~15 minutes. */
   url: string;
+  /**
+   * Serialized PDF-editor overlay state from the last save (watermark/bg
+   * config + per-page Fabric JSON). Null for fresh documents and for any
+   * doc saved before the editorState column existed. Frontend treats null
+   * as "no rehydration available — fall back to re-extracting text".
+   */
+  editorState?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -31,6 +38,13 @@ export type UploadDocumentInput = {
   fileName?: string;
   /** Tracking id used to subscribe to the upload-progress SSE stream. */
   trackingId?: string;
+  /**
+   * Serialized editor overlay state — sent as a multipart form field and
+   * persisted on the Document so a refreshed session can rehydrate the
+   * Fabric scene exactly. Frontend keeps this <800 KB; the backend rejects
+   * >1 MiB with a 400.
+   */
+  editorState?: string;
 };
 
 export type CloudProvider = "gdrive" | "onedrive";

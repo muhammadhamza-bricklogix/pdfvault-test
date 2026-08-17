@@ -7,14 +7,14 @@ import type {
 
 import { useMutation } from "@tanstack/react-query";
 
+import { PAYWALL_CANCELLED_ERR_NAME } from "@/lib/client/hooks/billing/paywall-bus";
 import { conversionService } from "@/lib/shared/api/services/conversion.service";
-import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
- * One-shot file conversion. Opens a loading toast, replaces it with a
- * success or error toast, and (on success) triggers a browser download for
- * the returned blob.
+ * One-shot file conversion. Opens a loading toast and replaces it with a
+ * success or error toast on settle. The resulting blob is returned to the
+ * caller — the UI decides when (and whether) to trigger the browser download.
  */
 export function useConvertFileMutation() {
   return useMutation<ConvertFileResult, Error, ConvertFileInput, string>({
@@ -26,14 +26,19 @@ export function useConvertFileMutation() {
       }),
     onSuccess: (result, _input, loadingKey) => {
       if (loadingKey) toast.close(loadingKey);
-      triggerBlobDownload(result.blob, result.fileName);
       toast.success({
         title: "Conversion complete",
-        description: `Downloaded ${result.fileName}`,
+        description: `Ready to download — ${result.fileName}`,
       });
     },
     onError: (error, _input, loadingKey) => {
       if (loadingKey) toast.close(loadingKey);
+      // Suppress the failure toast when the user cancelled the paywall
+      // mid-request — the axios interceptor throws PaywallCancelledError
+      // and the caller already knows to bail out silently.
+      if ((error as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       toast.error({
         title: "Conversion failed",
         description: extractMessage(error),

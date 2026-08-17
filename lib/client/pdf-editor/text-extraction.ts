@@ -1,6 +1,8 @@
 import type { PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
+import { loadPdfJs } from "./load-pdfjs";
+
 export type FontData = {
   bold: boolean;
   bytes: Uint8Array;
@@ -72,22 +74,88 @@ function detectWeightAndStyle(realFontName: string): {
  *      web-safe family based on the textContent style hint.
  */
 function resolveFontFamily(fontName: string, styleFontFamily: string): string {
-  // Check if pdf.js registered this font in document.fonts
-  let found = false;
+  const webSafeFallback =
+    styleFontFamily === "monospace"
+      ? "Courier New"
+      : styleFontFamily === "serif"
+        ? "Times New Roman"
+        : "Helvetica";
 
-  document.fonts.forEach((face) => {
-    if (face.family === fontName || face.family === `"${fontName}"`) {
-      found = true;
-    }
+  if (typeof document === "undefined" || !document.fonts) {
+    return webSafeFallback;
+  }
+
+  // Always prefer the pdf.js-managed loadedName at extract time.
+  // `use-edit-text-mode.ts` calls `waitForFontFamily` BEFORE placing the
+  // IText, so by render time the font is guaranteed loaded (or the
+  // wait timed out and we accept a visual fallback rather than a blank
+  // glyph). Falling back here would lock the IText to web-safe even
+  // when the pdf.js font subsequently loads — the "fonts change when
+  // I click Edit Text" bug.
+  if (fontName) return fontName;
+
+  return webSafeFallback;
+}
+
+/**
+ * Wait for a specific font family to reach `loaded` status in
+ * `document.fonts`. Returns true on success, false on timeout.
+ *
+ * pdf.js registers FontFaces as it streams page content, so a font
+ * referenced by a text block may still be in `unloaded` / `loading`
+ * state when `useEditTextMode` first runs. Drawing IText against an
+ * unloaded face yields blank glyphs on iOS Safari and Helvetica-fallback
+ * on every other browser — both produce the visual jump users complain
+ * about when entering Edit Text mode.
+ *
+ * Implementation notes:
+ *   • Exact-match against `face.family` and the quoted variant pdf.js
+ *     sometimes uses internally.
+ *   • Re-checks on every `loadingdone` event so we don't poll.
+ *   • 2-second default timeout — pdf.js fonts almost always resolve
+ *     well under 500ms in practice. Past that the user is better off
+ *     seeing fallback than a stalled editor.
+ */
+export async function waitForFontFamily(
+  family: string,
+  timeoutMs = 2000,
+): Promise<boolean> {
+  if (typeof document === "undefined" || !document.fonts) return false;
+
+  const fonts = document.fonts;
+  const isLoaded = (): boolean => {
+    let ok = false;
+
+    fonts.forEach((face) => {
+      if (
+        face.status === "loaded" &&
+        (face.family === family || face.family === `"${family}"`)
+      ) {
+        ok = true;
+      }
+    });
+
+    return ok;
+  };
+
+  if (isLoaded()) return true;
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (val: boolean): void => {
+      if (settled) return;
+      settled = true;
+      fonts.removeEventListener?.("loadingdone", check);
+      clearTimeout(timer);
+      resolve(val);
+    };
+    const check = (): void => {
+      if (isLoaded()) finish(true);
+    };
+    const timer = setTimeout(() => finish(isLoaded()), timeoutMs);
+
+    fonts.addEventListener?.("loadingdone", check);
   });
-
-  if (found) return fontName;
-
-  // Fallback: use the generic family hint from textContent.styles
-  if (styleFontFamily === "monospace") return "Courier New";
-  if (styleFontFamily === "serif") return "Times New Roman";
-
-  return "Helvetica";
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
@@ -107,16 +175,26 @@ function rgbToHex(r: number, g: number, b: number): string {
 async function extractSequentialTextColors(
   page: PDFPageProxy,
 ): Promise<string[]> {
-  const { OPS } = await import("pdfjs-dist");
+  // loadPdfJs installs Safari polyfills before pdf.js evaluates.
+  const { OPS } = await loadPdfJs();
   const opList = await page.getOperatorList();
 
   let currentFillColor = "#000000";
   const gsStack: string[] = [];
   const colors: string[] = [];
 
-  for (let i = 0; i < opList.fnArray.length; i++) {
-    const op = opList.fnArray[i];
-    const args = opList.argsArray[i];
+  const fnArray = opList?.fnArray;
+  const argsArray = opList?.argsArray;
+
+  if (!fnArray || !argsArray) return colors;
+
+  for (let i = 0; i < fnArray.length; i++) {
+    const op = fnArray[i];
+    // pdf.js v5 can emit null/undefined argsArray entries for ops it considers
+    // arg-less (and occasionally for compressed ops). Accessing `args[0]` on
+    // null throws TypeError and aborts the whole extraction. Coerce to an
+    // empty array so the typeof guards below short-circuit cleanly.
+    const args = argsArray[i] ?? [];
 
     if (op === OPS.save) {
       gsStack.push(currentFillColor);
@@ -196,15 +274,48 @@ export async function extractTextBlocks(
     rawRotation === 90 || rawRotation === 180 || rawRotation === 270
       ? rawRotation
       : 0;
-  const [textContent, colors] = await Promise.all([
-    page.getTextContent(),
-    extractSequentialTextColors(page),
-  ]);
+  // Run text + color extraction independently so a failure in the color
+  // walker (e.g. unexpected operator-list shape on mobile pdf.js builds)
+  // doesn't take down the whole text layer. Without colors we fall back to
+  // black/mode-color, which is far better than zero editable text.
+  //
+  // Wrap `getTextContent` in its own try so the rethrown error tells us
+  // which pdf.js API tripped — important for browsers where polyfill
+  // coverage is incomplete and the raw stack is opaque.
+  let textContent;
+
+  try {
+    textContent = await page.getTextContent();
+  } catch (err) {
+    const original = err instanceof Error ? err.message : String(err ?? "");
+    const wrapped = new Error(`getTextContent failed: ${original}`);
+
+    if (err instanceof Error && err.stack) {
+      wrapped.stack = err.stack;
+    }
+    throw wrapped;
+  }
+  let colors: string[] = [];
+
+  try {
+    colors = await extractSequentialTextColors(page);
+  } catch {
+    colors = [];
+  }
+
+  // Defensive: pdf.js types say items/styles are always present, but a
+  // partially-initialized page proxy or a worker-side glitch can leave them
+  // undefined. Coerce so the indexers below never throw TypeError.
+  const items = Array.isArray(textContent?.items) ? textContent.items : [];
+  const styles =
+    textContent?.styles && typeof textContent.styles === "object"
+      ? textContent.styles
+      : ({} as Record<string, { fontFamily?: string }>);
 
   // Map showText-op colors → text items. We try 1:1 by item index when the
   // counts line up; otherwise we fall back to the document-wide mode color
   // (handles uniformly-colored docs) and finally to black.
-  const sameLength = colors.length === textContent.items.length;
+  const sameLength = colors.length === items.length;
   const uniqueColors = new Set(colors);
   const fallbackColor = uniqueColors.size === 1 ? colors[0]! : "#000000";
 
@@ -222,12 +333,12 @@ export async function extractTextBlocks(
     { realName: string; style: "italic" | "normal"; weight: "bold" | "normal" }
   >();
 
-  for (const item of textContent.items) {
-    if (!("fontName" in item)) continue;
+  for (const item of items) {
+    if (!item || !("fontName" in item)) continue;
 
     const { fontName } = item as TextItem;
 
-    if (fontInfoMap.has(fontName)) continue;
+    if (!fontName || fontInfoMap.has(fontName)) continue;
 
     try {
       if (page.commonObjs.has(fontName)) {
@@ -252,15 +363,19 @@ export async function extractTextBlocks(
     }
   }
 
-  for (let itemIndex = 0; itemIndex < textContent.items.length; itemIndex++) {
-    const item = textContent.items[itemIndex];
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    const item = items[itemIndex];
 
-    if (!("str" in item)) continue;
+    if (!item || !("str" in item)) continue;
 
     const textItem = item as TextItem;
     const { str, transform, fontName } = textItem;
 
-    if (!str.trim()) continue;
+    if (typeof str !== "string" || !str.trim()) continue;
+    // pdf.js usually emits a 6-element affine matrix here, but a malformed
+    // page or a marked-content artifact can leave `transform` null/short.
+    // Reading `transform[4]` on null throws TypeError and kills the page.
+    if (!Array.isArray(transform) || transform.length < 6) continue;
 
     // Font size is the magnitude of the text matrix's d-axis (its y vector),
     // i.e. `sqrt(c² + d²)`. For upright text d == fontSize and c == 0 so this
@@ -288,14 +403,9 @@ export async function extractTextBlocks(
       weight: "normal" as const,
     };
 
-    const styleFontFamily =
-      textContent.styles[fontName]?.fontFamily ?? "sans-serif";
+    const styleFontFamily = styles[fontName]?.fontFamily ?? "sans-serif";
 
     const resolvedFamily = resolveFontFamily(fontName, styleFontFamily);
-
-    console.log(
-      `[TextExtract] "${str.slice(0, 40)}" | font=${fontName} resolved=${resolvedFamily} real=${fontInfo.realName} w=${fontInfo.weight} s=${fontInfo.style} | transform=[${transform.map((v: number) => v.toFixed(2)).join(",")}] | pdfX=${(transform[4] as number).toFixed(2)} pdfY=${(transform[5] as number).toFixed(2)} | vpX=${vpX.toFixed(2)} vpY=${vpY.toFixed(2)} | fontSize=${fontSize.toFixed(2)} | textItem.width=${textItem.width.toFixed(2)} vpWidth=${vpWidth.toFixed(2)} vpHeight=${vpHeight.toFixed(2)} | finalX=${Math.round(vpX)} finalY=${Math.round(y)} | viewport.scale=${viewport.scale}`,
-    );
 
     blocks.push({
       color: colorForItem(itemIndex),
@@ -337,29 +447,17 @@ export function extractFontData(
   // project's TS `target: "es5"` (otherwise TS2802 trips on Set iteration).
   Array.from(fontNames).forEach((fontName) => {
     try {
-      if (!page.commonObjs.has(fontName)) {
-        console.warn(`[FontExtract] commonObjs missing: ${fontName}`);
-
-        return;
-      }
+      if (!page.commonObjs.has(fontName)) return;
 
       // fontExtraProperties must be true in getDocument() options,
       // otherwise pdf.js clears font data after loading into document.fonts.
       const fontObj = page.commonObjs.get(fontName) as Record<string, unknown>;
 
-      if (!fontObj) {
-        console.warn(`[FontExtract] fontObj is null: ${fontName}`);
-
-        return;
-      }
+      if (!fontObj) return;
 
       const data = (fontObj as any).data as Uint8Array | undefined;
 
-      if (!data || data.byteLength === 0) {
-        console.warn(`[FontExtract] No binary data for: ${fontName}`);
-
-        return;
-      }
+      if (!data || data.byteLength === 0) return;
 
       result.push({
         bold: ((fontObj as any).bold as boolean) ?? false,
@@ -367,8 +465,9 @@ export function extractFontData(
         italic: ((fontObj as any).italic as boolean) ?? false,
         loadedName: fontName,
       });
-    } catch (err) {
-      console.error(`[FontExtract] Error reading font ${fontName}:`, err);
+    } catch {
+      // Silently skip fonts we can't read — they fall back to StandardFonts
+      // during export. Logging per-page on every load was noisy.
     }
   });
 

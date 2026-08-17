@@ -6,10 +6,17 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { FileUpload } from "@/components/ui/file-upload";
+import {
+  UPLOAD_ACCEPT_MIME,
+  uploadAsPdf,
+} from "@/lib/client/file-conversion/upload-to-pdf";
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { useUploadCloudDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { HomeCloudUploadRow } from "./home-cloud-upload-row";
@@ -23,6 +30,17 @@ export function HomeHero() {
   const uploadCloudMutation = useUploadCloudDocumentMutation();
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  // Holds the cloud upload waiting on a duplicate-name decision from the
+  // user. Same UX as the device upload's `useUploadWithDuplicateCheck`:
+  // we surface the existing filename in a modal and let the user pick
+  // overwrite (re-uploads targeting `existingDocumentId`) or ignore
+  // (drops the upload). Cleared when the modal closes either way.
+  const [pendingCloudDuplicate, setPendingCloudDuplicate] = useState<{
+    existingDocumentId: string;
+    filename: string;
+    selection: CloudSelectedFile;
+    safeName: string;
+  } | null>(null);
 
   const requireSignInForCloud = useCallback(() => {
     toast.info({
@@ -34,23 +52,42 @@ export function HomeHero() {
     );
   }, [router]);
 
-  const handleFileSelect = (file: File) => {
-    setCloudSelection(null);
-    setCurrentDocument(null);
-    setFile(file);
-    router.push(ROUTES.TOOLS.PDF_EDITOR);
+  const handleFileSelect = async (file: File) => {
+    const isAlreadyPdf = file.type === "application/pdf";
+    const loadingKey = isAlreadyPdf
+      ? null
+      : toast.loading({
+          description: `Preparing ${file.name} for the editor.`,
+          title: "Converting to PDF",
+        });
+
+    try {
+      const pdfFile = await uploadAsPdf(file);
+
+      setCloudSelection(null);
+      setCurrentDocument(null);
+      setFile(pdfFile);
+      router.push(ROUTES.TOOLS.PDF_EDITOR);
+    } catch (err) {
+      toast.error({
+        description: err instanceof Error ? err.message : undefined,
+        title: "Couldn't open file",
+      });
+    } finally {
+      if (loadingKey) toast.close(loadingKey);
+    }
   };
 
-  const handleCloudUpload = async (selection: CloudSelectedFile) => {
-    if (!isSignedIn) {
-      requireSignInForCloud();
-      throw new Error("SIGN_IN_REQUIRED");
-    }
-
+  const finalizeCloudUpload = async (
+    selection: CloudSelectedFile,
+    safeName: string,
+    documentId?: string,
+  ) => {
     const uploaded = await uploadCloudMutation.mutateAsync({
       accessToken: selection.accessToken,
+      documentId,
       fileId: selection.id,
-      fileName: selection.name,
+      fileName: safeName,
       mimeType: selection.mimeType,
       provider: selection.provider,
     });
@@ -60,6 +97,71 @@ export function HomeHero() {
     setCloudSelection(selection);
     toast.info({ title: "Opening imported document..." });
     router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${uploaded.id}`);
+  };
+
+  const handleCloudUpload = async (selection: CloudSelectedFile) => {
+    if (!isSignedIn) {
+      requireSignInForCloud();
+      throw new Error("SIGN_IN_REQUIRED");
+    }
+
+    // The Google Picker filters by mime type, so the file IS a PDF — but the
+    // Drive filename often has no `.pdf` extension. The backend derives the
+    // type from the filename extension, so an extension-less name routes
+    // through the conversion path and 400s. Force `.pdf` here.
+    const isPdfMime = selection.mimeType === "application/pdf";
+    const safeName =
+      isPdfMime && !/\.pdf$/i.test(selection.name)
+        ? `${selection.name}.pdf`
+        : selection.name;
+
+    // Duplicate-name guard — same UX as the device upload path
+    // (`useUploadWithDuplicateCheck`). Cloud uploads were skipping this
+    // check entirely (QA report 2026-06-18: "while uploading the file
+    // from google drive it failed to check the duplicate file name").
+    // On match: stash the pending upload, surface the modal, and let
+    // the user pick overwrite vs ignore. If the lookup itself fails
+    // (network / auth), fall through to the upload so a transient
+    // error doesn't block the user.
+    try {
+      const existing = await findDuplicateByFilename(safeName);
+
+      if (existing) {
+        setPendingCloudDuplicate({
+          existingDocumentId: existing.id,
+          filename: existing.filename,
+          selection,
+          safeName,
+        });
+
+        return;
+      }
+    } catch (err) {
+      logger.error("Cloud duplicate-name check failed", err);
+    }
+
+    await finalizeCloudUpload(selection, safeName);
+  };
+
+  const handleCloudDuplicateOverwrite = () => {
+    if (!pendingCloudDuplicate) return;
+    const pending = pendingCloudDuplicate;
+
+    setPendingCloudDuplicate(null);
+    void finalizeCloudUpload(
+      pending.selection,
+      pending.safeName,
+      pending.existingDocumentId,
+    ).catch((err: unknown) => {
+      toast.error({
+        title: "Cloud upload failed",
+        description: err instanceof Error ? err.message : undefined,
+      });
+    });
+  };
+
+  const handleCloudDuplicateIgnore = () => {
+    setPendingCloudDuplicate(null);
   };
 
   const cloudImportAllowed = isLoaded && Boolean(isSignedIn);
@@ -80,7 +182,7 @@ export function HomeHero() {
         <div className="w-full max-w-5xl rounded-[2rem] border border-dashed border-[color-mix(in_oklab,var(--color-accent)_35%,transparent)] bg-[var(--color-background)]/75 p-5 backdrop-blur-sm dark:border-[color-mix(in_oklab,var(--color-accent)_25%,transparent)] sm:p-6">
           <FileUpload
             marketingGrouped
-            accept={["application/pdf"]}
+            accept={UPLOAD_ACCEPT_MIME}
             acceptLabel="PDF"
             appearance="marketing"
             heading="Drop your file here"
@@ -109,6 +211,11 @@ export function HomeHero() {
 
         <HomeStats />
       </div>
+      <DuplicateUploadModal
+        filename={pendingCloudDuplicate?.filename ?? null}
+        onIgnore={handleCloudDuplicateIgnore}
+        onOverwrite={handleCloudDuplicateOverwrite}
+      />
     </section>
   );
 }

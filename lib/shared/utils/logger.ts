@@ -1,16 +1,44 @@
+import * as Sentry from "@sentry/nextjs";
+
 type LogInput = unknown[];
 type LogLevel = "debug" | "error" | "info" | "warn";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
+
+// In production, suppress info logs unless NEXT_PUBLIC_LOG_LEVEL=verbose.
+// Only warn + error ship to any remote sink (e.g. Sentry).
+const isVerbose =
+  isDevelopment || process.env.NEXT_PUBLIC_LOG_LEVEL === "verbose";
 
 const writeLog = (level: LogLevel, ...args: LogInput) => {
   if (level === "debug" && !isDevelopment) {
     return;
   }
 
+  if (level === "info" && !isVerbose) {
+    return;
+  }
+
   const method = globalThis.console[level] ?? globalThis.console.log;
 
   method(...args);
+
+  // Forward errors and warnings to Sentry in production.
+  if (
+    process.env.NODE_ENV === "production" &&
+    (level === "error" || level === "warn")
+  ) {
+    const [first, ...rest] = args;
+
+    if (first instanceof Error) {
+      Sentry.captureException(first, { extra: { context: rest } });
+    } else {
+      Sentry.captureMessage(String(first), {
+        level: level === "error" ? "error" : "warning",
+        extra: { context: rest },
+      });
+    }
+  }
 };
 
 export const logger = {

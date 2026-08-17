@@ -25,11 +25,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Button,
   ColorArea,
-  ColorPicker,
   ColorSlider,
   Label,
   Modal,
   NumberField,
+  Popover,
   Tooltip,
 } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -51,10 +51,6 @@ type ToolbarItem = {
   id: string;
   label: string;
 };
-
-type MovePromptState = {
-  position: "after" | "before";
-} | null;
 
 const LEFT_TOOLS: ToolbarItem[] = [
   { icon: Add01Icon, id: "new-page", label: "New Page" },
@@ -79,25 +75,32 @@ const RIGHT_TOOLS: ToolbarItem[] = [
   { icon: SearchAddIcon, id: "zoom-in", label: "Zoom In" },
 ];
 
+const TOOLBAR_BUTTON_CLASSES =
+  "flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors";
+
+function toolbarButtonStateClasses(disabled: boolean) {
+  return disabled
+    ? "cursor-not-allowed text-default-300"
+    : "cursor-pointer text-default-600 hover:bg-default-100";
+}
+
+type ManagePagesToolbarButtonProps = {
+  disabled?: boolean;
+  icon: ToolbarItem["icon"];
+  label: string;
+  onPress?: () => void;
+};
+
 function ManagePagesToolbarButton({
   disabled = false,
   icon,
   label,
   onPress,
-}: {
-  disabled?: boolean;
-  icon: ToolbarItem["icon"];
-  label: string;
-  onPress?: () => void;
-}) {
+}: ManagePagesToolbarButtonProps) {
   return (
     <Tooltip delay={300}>
       <button
-        className={`flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
-          disabled
-            ? "cursor-not-allowed text-default-300"
-            : "text-default-600 hover:bg-default-100"
-        }`}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
         disabled={disabled}
         type="button"
         onClick={onPress}
@@ -112,6 +115,162 @@ function ManagePagesToolbarButton({
   );
 }
 
+/**
+ * Background-color picker for selected pages.
+ *
+ * Why this wraps `ColorPicker` instead of using its `onChange` directly:
+ * the underlying draft reducer pushes a new history entry on EVERY
+ * `applyChange` call, and `ColorPicker`'s `onChange` fires per
+ * drag-tick of the hue slider / SB area. Wiring the draft directly
+ * means hundreds of history entries per pick and "Undo" rolling back
+ * one micro-step at a time instead of one user action.
+ *
+ * Fix: hold the in-flight color in LOCAL state while the popover is
+ * open. Only call `onApply` once when the user presses Apply — that's
+ * the single history-pushing event the Undo button can roll back.
+ * Cancel discards the local state without ever touching the draft.
+ * (QA report 2026-06-16.)
+ */
+type BackgroundColorPickerControlProps = {
+  isDisabled: boolean;
+  /** Hex string the user committed. Called once per Apply press. */
+  onApply: (color: string) => void;
+  icon: ToolbarItem["icon"];
+  label: string;
+};
+
+function BackgroundColorPickerControl({
+  isDisabled,
+  onApply,
+  icon,
+  label,
+}: BackgroundColorPickerControlProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  // Initial pick — neutral mid-grey. The user can drag immediately;
+  // local state means the draft isn't touched until Apply.
+  const [draftColor, setDraftColor] = useState<string>("#808080");
+
+  // Reset draft on every (re)open so a previously cancelled session
+  // doesn't leak forward.
+  const handleOpenChange = (open: boolean): void => {
+    setIsOpen(open);
+    if (open) setDraftColor("#808080");
+  };
+
+  const handleApply = (): void => {
+    onApply(draftColor);
+    setIsOpen(false);
+  };
+
+  // Warn when the picked colour is very dark. The export pipeline blends
+  // page content on top of the colour with `BlendMode.Multiply`, so
+  // near-black backgrounds wipe every glyph and vector to black on
+  // export (QA feedback 2026-07-29 item 84). We render an inline warning
+  // rather than block, since a small user set of pages (title pages,
+  // spacer sheets) legitimately want a dark bg.
+  const isVeryDark = (() => {
+    const hex = draftColor.replace(/^#/, "");
+
+    if (hex.length !== 6) return false;
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    // Rec. 709 relative luminance.
+    const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+    return l < 0.15;
+  })();
+
+  // Switched away from `ColorPicker` + `ColorPicker.Popover` because
+  // RAC's `ColorPicker` doesn't expose top-level `isOpen` and the
+  // `Trigger` couldn't drive the controlled popover state (clicks
+  // didn't open the menu — QA-reported 2026-06-16). The regular
+  // `<Popover>` follows the controlled pattern used in
+  // `identity-popover.tsx` and gives us full open-state control plus
+  // Apply / Cancel.
+  // When disabled, render the button-styled visual without the
+  // Popover so taps don't open an empty colour picker against
+  // nothing-selected pages.
+  if (isDisabled) {
+    return (
+      <span
+        aria-disabled
+        aria-label={label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(true)}`}
+        role="button"
+      >
+        <HugeiconsIcon icon={icon} size={18} />
+        <span className="whitespace-nowrap leading-tight">{label}</span>
+      </span>
+    );
+  }
+
+  return (
+    <Popover isOpen={isOpen} onOpenChange={handleOpenChange}>
+      <Popover.Trigger
+        aria-label={label}
+        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(false)}`}
+      >
+        <HugeiconsIcon icon={icon} size={18} />
+        <span className="whitespace-nowrap leading-tight">{label}</span>
+      </Popover.Trigger>
+      <Popover.Content offset={8} placement="bottom">
+        <Popover.Dialog className="!min-w-[260px] !p-3">
+          <div className="flex flex-col gap-3">
+            <ColorArea
+              aria-label={label}
+              className="max-w-full"
+              colorSpace="hsb"
+              value={draftColor}
+              xChannel="saturation"
+              yChannel="brightness"
+              onChange={(color) => setDraftColor(color.toString("hex"))}
+            >
+              <ColorArea.Thumb />
+            </ColorArea>
+            <ColorSlider
+              channel="hue"
+              className="gap-1 px-1"
+              colorSpace="hsb"
+              value={draftColor}
+              onChange={(color) => setDraftColor(color.toString("hex"))}
+            >
+              <ColorSlider.Track>
+                <ColorSlider.Thumb />
+              </ColorSlider.Track>
+            </ColorSlider>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <span
+                aria-hidden
+                className="h-6 w-12 rounded border border-default-300"
+                style={{ backgroundColor: draftColor }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => setIsOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onPress={handleApply}>
+                  Apply
+                </Button>
+              </div>
+            </div>
+            {isVeryDark && (
+              <p className="text-[11px] leading-tight text-amber-700">
+                Very dark colour — page text and vectors may be hard to read
+                after apply. Consider a mid tone instead.
+              </p>
+            )}
+          </div>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
+  );
+}
+
 export function ManagePagesModal({
   isOpen,
   onClose,
@@ -122,7 +281,7 @@ export function ManagePagesModal({
 
   const [gridZoom, setGridZoom] = useState(0.32);
   const [isResizeOpen, setIsResizeOpen] = useState(false);
-  const [movePrompt, setMovePrompt] = useState<MovePromptState>(null);
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [moveTargetPage, setMoveTargetPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +301,24 @@ export function ManagePagesModal({
   const canDelete = hasSelection && pageTotal - draft.selectedCount >= 1;
   const canZoomOut = gridZoom > 0.2;
   const canZoomIn = gridZoom < 0.5;
+
+  // Position of the selected block, used to disable the single-step move
+  // buttons once the block has reached the first / last slot.
+  const selectedIdSet = new Set(draft.selectedIds);
+  const firstSelectedIndex = draft.pages.findIndex((p) =>
+    selectedIdSet.has(p.id),
+  );
+  let lastSelectedIndex = -1;
+
+  for (let i = draft.pages.length - 1; i >= 0; i -= 1) {
+    if (selectedIdSet.has(draft.pages[i].id)) {
+      lastSelectedIndex = i;
+      break;
+    }
+  }
+  const canMoveBefore = hasSelection && firstSelectedIndex > 0;
+  const canMoveAfter =
+    hasSelection && lastSelectedIndex >= 0 && lastSelectedIndex < pageTotal - 1;
 
   const handleToolPress = useCallback(
     (toolId: string) => {
@@ -164,13 +341,18 @@ export function ManagePagesModal({
         case "resize":
           setIsResizeOpen(true);
           break;
+        case "move":
+          // Default the prompt to the selected page's current position.
+          setMoveTargetPage(
+            firstSelectedIndex >= 0 ? firstSelectedIndex + 1 : 1,
+          );
+          setIsMoveOpen(true);
+          break;
         case "move-before":
-          setMoveTargetPage(1);
-          setMovePrompt({ position: "before" });
+          draft.moveSelectedByStep(-1);
           break;
         case "move-after":
-          setMoveTargetPage(pageTotal);
-          setMovePrompt({ position: "after" });
+          draft.moveSelectedByStep(1);
           break;
         case "import":
           importInputRef.current?.click();
@@ -197,7 +379,7 @@ export function ManagePagesModal({
           break;
       }
     },
-    [draft, pageTotal],
+    [draft, firstSelectedIndex],
   );
 
   const isToolDisabled = (toolId: string) => {
@@ -211,11 +393,13 @@ export function ManagePagesModal({
       case "resize":
       case "rotate-left":
       case "rotate-right":
-      case "move-before":
-      case "move-after":
         return !hasSelection;
       case "move":
-        return true;
+        return !hasSelection;
+      case "move-before":
+        return !canMoveBefore;
+      case "move-after":
+        return !canMoveAfter;
       case "import":
         return false;
       case "undo":
@@ -246,10 +430,9 @@ export function ManagePagesModal({
   };
 
   const handleConfirmMove = () => {
-    if (!movePrompt) return;
-
-    draft.moveSelected(moveTargetPage, movePrompt.position);
-    setMovePrompt(null);
+    // "before" semantics with targetPage = N lands the selected page at page N.
+    draft.moveSelected(moveTargetPage, "before");
+    setIsMoveOpen(false);
   };
 
   const handleSave = async () => {
@@ -287,49 +470,22 @@ export function ManagePagesModal({
           <Modal.Dialog className="flex !h-full !max-h-full !w-full !max-w-none flex-col overflow-hidden p-0 sm:!max-w-none">
             <Modal.CloseTrigger />
 
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default-200 bg-[var(--color-background)] px-3 py-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default-200 bg-[var(--color-background)] px-3 py-2 pr-12">
               <div className="flex flex-wrap items-center gap-0.5">
                 {LEFT_TOOLS.map((tool) => {
                   const disabled = isToolDisabled(tool.id);
 
                   if (tool.id === "background-color") {
                     return (
-                      <ColorPicker
+                      <BackgroundColorPickerControl
                         key={tool.id}
-                        onChange={(color) =>
-                          draft.setSelectedBackgroundColor(
-                            color.toString("hex"),
-                          )
+                        icon={tool.icon}
+                        isDisabled={disabled}
+                        label={tool.label}
+                        onApply={(color) =>
+                          draft.setSelectedBackgroundColor(color)
                         }
-                      >
-                        <ColorPicker.Trigger isDisabled={disabled}>
-                          <ManagePagesToolbarButton
-                            disabled={disabled}
-                            icon={tool.icon}
-                            label={tool.label}
-                          />
-                        </ColorPicker.Trigger>
-                        <ColorPicker.Popover>
-                          <ColorArea
-                            aria-label="Page background color"
-                            className="max-w-full"
-                            colorSpace="hsb"
-                            xChannel="saturation"
-                            yChannel="brightness"
-                          >
-                            <ColorArea.Thumb />
-                          </ColorArea>
-                          <ColorSlider
-                            channel="hue"
-                            className="gap-1 px-1"
-                            colorSpace="hsb"
-                          >
-                            <ColorSlider.Track>
-                              <ColorSlider.Thumb />
-                            </ColorSlider.Track>
-                          </ColorSlider>
-                        </ColorPicker.Popover>
-                      </ColorPicker>
+                      />
                     );
                   }
 
@@ -376,7 +532,7 @@ export function ManagePagesModal({
               )}
             </Modal.Body>
 
-            <div className="flex shrink-0 items-center justify-between border-t border-default-200 bg-[var(--color-background)] px-4 py-3">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-default-200 bg-[var(--color-background)] px-4 py-3">
               <Button size="sm" variant="tertiary" onPress={onClose}>
                 Cancel
               </Button>
@@ -395,18 +551,15 @@ export function ManagePagesModal({
       </Modal.Backdrop>
 
       <Modal.Backdrop
-        isOpen={movePrompt !== null}
+        isOpen={isMoveOpen}
         onOpenChange={(open) => {
-          if (!open) setMovePrompt(null);
+          if (!open) setIsMoveOpen(false);
         }}
       >
         <Modal.Container className="max-w-sm">
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>
-                Move {movePrompt?.position === "before" ? "before" : "after"}{" "}
-                page
-              </Modal.Heading>
+              <Modal.Heading>Move to page</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="gap-4">
               <div className="flex flex-col gap-2">
@@ -431,7 +584,7 @@ export function ManagePagesModal({
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="tertiary" onPress={() => setMovePrompt(null)}>
+              <Button variant="tertiary" onPress={() => setIsMoveOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" onPress={handleConfirmMove}>

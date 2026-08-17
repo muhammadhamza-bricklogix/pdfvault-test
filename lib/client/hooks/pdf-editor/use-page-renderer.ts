@@ -5,9 +5,40 @@ import type { RefObject } from "react";
 
 import { useEffect, useState } from "react";
 
+import { logger } from "@/lib/shared/utils/logger";
+
 // pdf.js OPS constants for text rendering operations (31–49)
 const TEXT_OPS_MIN = 31;
 const TEXT_OPS_MAX = 49;
+
+// PRD §7.1 — cache the parsed text-op index set per page proxy. Without
+// this, every zoom change re-fetches page.getOperatorList() (the render
+// effect depends on `zoom`, so it re-runs), which is 5–30ms on large
+// pages. The WeakMap dies with the page proxy so a Manage-Pages rebuild
+// or file swap naturally invalidates the cache.
+const textIndexCache = new WeakMap<PDFPageProxy, Set<number>>();
+
+function getTextOpIndices(
+  page: PDFPageProxy,
+  opList: { fnArray: ReadonlyArray<number> },
+): Set<number> {
+  const cached = textIndexCache.get(page);
+
+  if (cached) return cached;
+
+  const indices = new Set<number>();
+
+  for (let i = 0; i < opList.fnArray.length; i++) {
+    const op = opList.fnArray[i];
+
+    if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
+      indices.add(i);
+    }
+  }
+  textIndexCache.set(page, indices);
+
+  return indices;
+}
 
 type UsePageRendererParams = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -54,18 +85,17 @@ export function usePageRenderer({
         let operationsFilter: ((i: number) => boolean) | undefined;
 
         if (suppressText) {
-          const opList = await page.getOperatorList();
+          const cachedIndices = textIndexCache.get(page);
+          let textIndices: Set<number>;
 
-          if (cancelled) return;
+          if (cachedIndices) {
+            textIndices = cachedIndices;
+          } else {
+            const opList = await page.getOperatorList();
 
-          const textIndices = new Set<number>();
+            if (cancelled) return;
 
-          for (let i = 0; i < opList.fnArray.length; i++) {
-            const op = opList.fnArray[i];
-
-            if (op >= TEXT_OPS_MIN && op <= TEXT_OPS_MAX) {
-              textIndices.add(i);
-            }
+            textIndices = getTextOpIndices(page, opList);
           }
           operationsFilter = (i: number) => !textIndices.has(i);
         }
@@ -80,6 +110,12 @@ export function usePageRenderer({
         await renderTask.promise;
 
         if (!cancelled) {
+          logger.info("[PDFedits] render: page", {
+            page: page.pageNumber,
+            cssWidth,
+            cssHeight,
+            suppressText,
+          });
           setRenderedSize((prev) => {
             if (prev && prev.width === cssWidth && prev.height === cssHeight) {
               return prev;
@@ -88,8 +124,16 @@ export function usePageRenderer({
             return { height: cssHeight, width: cssWidth };
           });
         }
-      } catch {
+      } catch (err) {
         // render was cancelled — expected on re-renders
+        const name = (err as { name?: string })?.name;
+
+        if (name !== "RenderingCancelledException") {
+          logger.warn("[PDFedits] render: failed", {
+            page: page.pageNumber,
+            err,
+          });
+        }
       }
     };
 
@@ -101,5 +145,12 @@ export function usePageRenderer({
     };
   }, [canvasRef, page, zoom, suppressText, transparent]);
 
-  return { renderedSize };
+  // Derive `renderedSize` from `page` presence so downstream consumers see
+  // the "no page ready" state as soon as pdf.js is torn down (file swap for
+  // version restore / Manage Pages save). Without this, `renderedSize`
+  // retains the previous file's dimensions, `useFabricCanvas`'s
+  // `hasRenderedSize` stays true, and Fabric never unmounts — the OLD
+  // file's overlays keep painting over the NEW PDF page until refresh
+  // (QA report 2026-07-23: "restore doesn't update until refresh").
+  return { renderedSize: page ? renderedSize : null };
 }

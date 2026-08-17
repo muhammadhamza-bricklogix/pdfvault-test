@@ -1,0 +1,451 @@
+/*
+ * Prose scope for policy pages. Section headings pick up Figma weight
+ * (semibold black), body text picks up the muted landing token, and lists
+ * inherit paragraph rhythm so any legacy `LegalSectionCard` / raw markup
+ * content component renders consistently without editing each one.
+ */
+.pv-policy-prose {
+  color: var(--pv-text-secondary);
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+  /* Neutralize legacy legal-* accents inside policy prose so inline
+     `text-[var(--legal-burgundy)]` / callout backgrounds from the old
+     LegalSectionCard system render as plain near-black on the new UI. */
+  --legal-burgundy: #121212;
+  --legal-text-body: var(--pv-text-secondary);
+  --legal-text-muted: var(--pv-text-tertiary);
+  --legal-border-subtle: var(--pv-border-subtle);
+  --legal-pink-header: transparent;
+  --legal-pink-active: var(--pv-gray-2);
+  --legal-pink-callout: var(--pv-gray-1);
+  --legal-callout-green-bg: var(--pv-gray-1);
+  --legal-callout-green-border: var(--pv-border-subtle);
+  --legal-callout-green-text: var(--pv-text-secondary);
+}
+.pv-policy-prose section {
+  scroll-margin-top: 7rem;
+}
+.pv-policy-prose section + section {
+  margin-top: 40px;
+}
+.pv-policy-prose > * + * {
+  margin-top: 20px;
+}
+.pv-policy-prose section > * + * {
+  margin-top: 16px;
+}
+.pv-policy-prose h2,
+.pv-policy-prose h3 {
+  color: #121212;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 40px;
+  margin-bottom: 12px;
+}
+.pv-policy-prose h2 {
+  font-size: 22px;
+  line-height: 1.35;
+}
+.pv-policy-prose h3 {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.pv-policy-prose p {
+  color: var(--pv-text-secondary);
+}
+.pv-policy-prose ul,
+.pv-policy-prose ol {
+  padding-left: 20px;
+}
+.pv-policy-prose ul {
+  list-style: disc;
+}
+.pv-policy-prose ol {
+  list-style: decimal;
+}
+.pv-policy-prose li {
+  margin-top: 8px;
+  color: var(--pv-text-secondary);
+}
+.pv-policy-prose a {
+  color: var(--pv-brand-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pv-policy-prose strong {
+  color: #121212;
+  font-weight: 600;
+}
+
+@keyframes pv-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pv-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pv-fade-up {
+  animation: pv-fade-up 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.pv-fade-in {
+  animation: pv-fade-in 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-fade-up,
+  .pv-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/**
+ * Scoped design tokens for the PDFVault landing-page reproduction.
+ * Values are taken directly from the official "PDF Vault Project Styleguide".
+ * Everything is namespaced under `.pdfvault-landing` so these values never
+ * leak into the rest of the app (which uses the PDFedits HeroUI theme).
+ */
+.pdfvault-landing {
+  /* Brand */
+  --pv-brand-200: #ff9c98; /* disabled */
+  --pv-brand-primary: #f12c23; /* default */
+  --pv-brand-700: #ba1109; /* hover */
+  --pv-brand-900: #530000; /* focused */
+
+  /* Grays */
+  --pv-gray-1: #f5f5f5;
+  --pv-gray-2: #f2f4f5;
+  --pv-gray-3: #e9ecef;
+  --pv-gray-4: #dee2e6;
+  --pv-gray-5: #ced4da;
+  --pv-gray-6: #acb5bd;
+  --pv-gray-7: #858e96;
+  --pv-gray-8: #494f56;
+  --pv-gray-9: #343a40;
+  --pv-gray-10: #212529;
+
+  /* State */
+  --pv-success: #38c977;
+  --pv-info: #35b0fc;
+  --pv-warning: #fac22b;
+  --pv-error: #ff3819;
+
+  /* Semantic aliases */
+  --pv-text-primary: var(--pv-gray-10);
+  --pv-text-secondary: var(--pv-gray-7);
+  --pv-text-tertiary: var(--pv-gray-6);
+  --pv-header-bg: var(--pv-gray-1);
+  --pv-section-gray: var(--pv-gray-1);
+  --pv-card-border: var(--pv-gray-3);
+  --pv-border-subtle: var(--pv-gray-4);
+  /* The footer in the design is a deeper oxblood than Brand-900 (#530000) —
+     sampled from the reference art at #400000. */
+  --pv-footer-bg: #400000;
+
+  /* Layout */
+  --pv-content-max: 1248px;
+  --pv-gutter: 96px;
+  --pv-measure: 720px;
+
+  /* Radii */
+  --pv-radius-card: 16px;
+  --pv-radius-lg: 22px;
+
+  /* Typography — Geist scale (size / line-height / letter-spacing) */
+  --pv-font: var(--font-geist-sans), "Inter", Arial, sans-serif;
+
+  color: var(--pv-text-primary);
+  font-family: var(--pv-font);
+}
+
+/* Type scale helpers from the styleguide */
+.pdfvault-landing .pv-display {
+  font-size: clamp(32px, 6vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  font-weight: 700;
+}
+@media (min-width: 640px) {
+  .pdfvault-landing .pv-display {
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+}
+.pdfvault-landing .pv-h1 {
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.pdfvault-landing .pv-h2 {
+  font-size: clamp(26px, 3vw, 32px);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.pdfvault-landing .pv-h3 {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+/* Reusable centered content container */
+.pdfvault-landing .pv-container {
+  width: 100%;
+  max-width: var(--pv-content-max);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 6vw, var(--pv-gutter));
+}
+
+/* Buttons — styleguide states */
+.pdfvault-landing .pv-btn-primary {
+  background: var(--pv-brand-primary);
+  color: #fff;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+.pdfvault-landing .pv-btn-primary:hover {
+  background: var(--pv-brand-700);
+}
+.pdfvault-landing .pv-btn-primary:focus-visible {
+  background: var(--pv-brand-900);
+  outline: 2px solid var(--pv-brand-900);
+  outline-offset: 2px;
+}
+.pdfvault-landing .pv-btn-primary:disabled {
+  background: var(--pv-brand-200);
+  cursor: not-allowed;
+}
+
+.pdfvault-landing .pv-btn-secondary {
+  background: #fff;
+  color: var(--pv-text-primary);
+  border: 1px solid var(--pv-border-subtle);
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+.pdfvault-landing .pv-btn-secondary:hover {
+  background: var(--pv-gray-2);
+}
+.pdfvault-landing .pv-btn-secondary:focus-visible {
+  outline: 2px solid var(--pv-brand-900);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Dark mode — flip semantic tokens + override the many hardcoded near-black
+ * text colors that ship across landing components. `next-themes` sets
+ * `data-theme="dark"` on <html> (see globals.css `@custom-variant dark`), so
+ * this selector matches every landing page when the toggle is on.
+ *
+ * Why the attribute-substring rules: a swathe of components hardcode
+ * `text-[#121212]` / `text-[#111315]` / `text-[#1a1c21]` / `text-black`
+ * instead of consuming `--pv-text-primary`. Rewriting each component was
+ * too large a diff; catching them via `[class*="text-[#…]"]` lifts every
+ * black label to white without touching JSX. Same idea for the muted
+ * grays and background whites used on drop-zone cards / modals.
+ * ────────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] .pdfvault-landing {
+  --pv-brand-primary: #ff5c52;
+  --pv-brand-700: #ff4238;
+  --pv-brand-900: #ff8079;
+
+  --pv-gray-1: #16181c;
+  --pv-gray-2: #1c1f24;
+  --pv-gray-3: #262a30;
+  --pv-gray-4: #2f3339;
+  --pv-gray-5: #4a4f56;
+  --pv-gray-6: #7c848e;
+  --pv-gray-7: #b7bcc4;
+  --pv-gray-8: #d4d8dd;
+  --pv-gray-9: #e9ecef;
+  --pv-gray-10: #f5f5f5;
+
+  --pv-text-primary: #f5f5f5;
+  --pv-text-secondary: #b7bcc4;
+  --pv-text-tertiary: #7c848e;
+  --pv-header-bg: #0f1113;
+  --pv-section-gray: #16181c;
+  --pv-card-border: #2a2d31;
+  --pv-border-subtle: #2a2d31;
+
+  background: #0b0c0e;
+  color: var(--pv-text-primary);
+}
+
+/* The landing group layout applies `bg-white` as a Tailwind utility on
+   `.pdfvault-landing`. Override that in dark mode. */
+[data-theme="dark"] .pdfvault-landing.bg-white {
+  background-color: #0b0c0e;
+}
+
+/* Hardcoded near-black text → white. Also fixes SVG icons that use
+   `currentColor` for stroke/fill and pick up the parent text color.
+   Note: NOT scoped under `.pdfvault-landing` because HeroUI Modal
+   renders its content via a Portal attached to <body>, outside the
+   landing wrapper. Keeping it global-under-dark catches those cases
+   too. Dashboard uses its own `--pv-text-*` tokens (not raw hex
+   literals) so this rule doesn't collide there. */
+[data-theme="dark"] .text-black,
+[data-theme="dark"] [class*="text-[#121212]"],
+[data-theme="dark"] [class*="text-[#111315]"],
+[data-theme="dark"] [class*="text-[#1a1c21]"],
+[data-theme="dark"] [class*="text-[#111"],
+[data-theme="dark"] [class*="text-[#000"],
+[data-theme="dark"] [class*="text-black/"] {
+  color: #f5f5f5;
+}
+
+/* Hardcoded muted grays → soft light gray. Global-under-dark for the
+   same portaled-modal reason as above. */
+[data-theme="dark"] [class*="text-[#818285]"],
+[data-theme="dark"] [class*="text-[#8A8A8A]"],
+[data-theme="dark"] [class*="text-[#8a8a8a]"],
+[data-theme="dark"] [class*="text-[#666"],
+[data-theme="dark"] [class*="text-[#6f6f6f]"],
+[data-theme="dark"] [class*="text-[#5f5f5f]"],
+[data-theme="dark"] [class*="text-[#4c4c4c]"],
+[data-theme="dark"] [class*="text-[#B4B4B4]"],
+[data-theme="dark"] [class*="text-[#999999]"],
+[data-theme="dark"] [class*="text-[#9a9a9a]"],
+[data-theme="dark"] [class*="text-[#9d9d9d]"],
+[data-theme="dark"] [class*="text-[#c4c4c4]"] {
+  color: #b7bcc4;
+}
+
+/* White surfaces (drop-zone card, modal panels, header when scrolled)
+   → dark surface. Global-under-dark so portaled Modal.Dialog content
+   flips too (same reason as the text overrides above). */
+[data-theme="dark"] .pdfvault-landing [class*="bg-white"],
+[data-theme="dark"] .pdfvault-landing [class*="bg-[#fff"],
+[data-theme="dark"] [role="dialog"][class*="bg-white"],
+[data-theme="dark"] [role="dialog"] [class*="bg-white"] {
+  background-color: #16181c;
+}
+
+/* Soft-gray fills used for chips / uploads / tool tiles → slightly darker
+   than the surface so the layered UI still reads on dark. */
+[data-theme="dark"] [class*="bg-[#f5f5f5]"],
+[data-theme="dark"] [class*="bg-[#F5F5F5]"],
+[data-theme="dark"] [class*="bg-[#ececec]"],
+[data-theme="dark"] [class*="bg-[#e5e5e5]"] {
+  background-color: #1c1f24;
+}
+
+/* Divider lines that were near-white → dark border color. */
+[data-theme="dark"] [class*="bg-[#E5E5E5]"],
+[data-theme="dark"] [class*="bg-[#e1ebed]"] {
+  background-color: #2a2d31;
+}
+
+/* Dashed drop-zone border stroke is drawn as an inline SVG rect with a
+   `stroke` attribute set to `#CCCCCC` when idle. Force a lighter tone
+   in dark mode via a broad attribute selector on the SVG rect. */
+[data-theme="dark"] .pdfvault-landing rect[stroke="#CCCCCC"] {
+  stroke: #3a3e45;
+}
+
+/* `pv-btn-secondary` hardcodes `background: #fff` in its own class rule,
+   which the attribute-substring `bg-white` override can't touch. In dark
+   mode that leaves white text on a white pill — invisible until the
+   hover state reveals the darker fill. Explicit override here flips the
+   button's own background + hover state to dark surfaces. Applies to
+   "Login" and "All Tools" in the header, "Remove file" in the drop
+   zone, and any other pv-btn-secondary consumer. */
+[data-theme="dark"] .pdfvault-landing .pv-btn-secondary {
+  background: #1c1f24;
+  color: var(--pv-text-primary);
+  border-color: var(--pv-border-subtle);
+}
+[data-theme="dark"] .pdfvault-landing .pv-btn-secondary:hover {
+  background: #262a30;
+}
+
+/* OAuth pill (Google button on /sign-in and /sign-up) hardcodes
+   `hover:bg-[#fafbfb]` which the substring rule below catches, but the
+   base bg-white and the near-black text also need mapping. Handled by
+   the earlier text/bg overrides; this rule pins the hover fill so it
+   doesn't flash near-white on pointer-in. */
+[data-theme="dark"] [class*="bg-[#fafbfb]"],
+[data-theme="dark"] [class*="hover:bg-[#fafbfb]"]:hover {
+  background-color: #262a30 !important;
+}
+
+/* Theme-toggle chip — the HeroUI ghost button was invisible in dark mode
+   because it inherits the header's transparent-ish bg and the icon color
+   only pops on hover. Wrap it in a rounded chip that gives the button a
+   dark surface + light icon regardless of what the navbar bg resolves
+   to, so it stays visible on both scrolled (white/85) and unscrolled
+   (--pv-header-bg) header states. */
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip {
+  border-radius: 9999px;
+  background: #1f2229;
+  padding: 2px;
+  box-shadow: 0 0 0 1px #2f3339;
+}
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip button {
+  background: transparent !important;
+  color: #f5f5f5 !important;
+}
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip button:hover {
+  background: #2a2d34 !important;
+}
+[data-theme="dark"] .pdfvault-landing .pv-theme-chip svg {
+  color: #f5f5f5;
+}
+
+/* Testimonial marquee — two rows drifting in opposite directions.
+   Each track renders the cards twice, so translating by -50% loops
+   seamlessly (cards own their trailing gap via margin, not flex gap). */
+@keyframes pv-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes pv-marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.pdfvault-landing .pv-marquee {
+  display: flex;
+  width: max-content;
+}
+.pdfvault-landing .pv-marquee-left {
+  animation: pv-marquee-left 64s linear infinite;
+}
+.pdfvault-landing .pv-marquee-right {
+  animation: pv-marquee-right 64s linear infinite;
+}
+.pdfvault-landing .pv-marquee-row:hover .pv-marquee {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdfvault-landing .pv-marquee-left,
+  .pdfvault-landing .pv-marquee-right {
+    animation: none;
+  }
+}

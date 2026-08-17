@@ -7,11 +7,14 @@ import {
   ArrowUp01Icon,
   Layout03Icon,
   NoteIcon,
+  RedoIcon,
+  UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import { useState } from "react";
 
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { ToolsContent } from "./EditorTopBar";
@@ -25,9 +28,25 @@ type BottomDockProps = {
 };
 
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
+  const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
+  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+
+  const history = historyByPage.get(currentPage) ?? [];
+  const idx = historyIndexByPage.get(currentPage) ?? -1;
+  const canUndo = idx > 0;
+  const canRedo = idx < history.length - 1;
+
+  const handleOpenManagePages = async () => {
+    const ok = await saveBeforeAction(
+      "Saving your edits before opening Manage Pages.",
+    );
+
+    if (ok) setIsManagePagesOpen(true);
+  };
 
   return (
     <div
@@ -42,8 +61,37 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
       />
 
       <div className="flex items-center gap-2 px-2 py-2">
+        <Tooltip delay={300}>
+          <Button
+            aria-label="Undo"
+            isDisabled={!canUndo}
+            size="sm"
+            variant="tertiary"
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
+          >
+            <HugeiconsIcon icon={UndoIcon} size={16} />
+          </Button>
+          <Tooltip.Content>
+            <p>Undo</p>
+          </Tooltip.Content>
+        </Tooltip>
+        <Tooltip delay={300}>
+          <Button
+            aria-label="Redo"
+            isDisabled={!canRedo}
+            size="sm"
+            variant="tertiary"
+            onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+          >
+            <HugeiconsIcon icon={RedoIcon} size={16} />
+          </Button>
+          <Tooltip.Content>
+            <p>Redo</p>
+          </Tooltip.Content>
+        </Tooltip>
+
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ToolsContent showLabels={false} toolIconSize={20} />
+          E <ToolsContent showLabels toolIconSize={18} />
         </div>
 
         {pageCount > 0 && (
@@ -52,7 +100,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
               aria-label="Manage pages"
               size="sm"
               variant="tertiary"
-              onPress={() => setIsManagePagesOpen(true)}
+              onPress={() => void handleOpenManagePages()}
             >
               <HugeiconsIcon icon={Layout03Icon} size={16} />
             </Button>

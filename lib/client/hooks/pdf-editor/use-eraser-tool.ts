@@ -1,6 +1,6 @@
 "use client";
 
-import type { Canvas, TPointerEventInfo } from "fabric";
+import type { Canvas, FabricObject, TPointerEventInfo } from "fabric";
 
 import { useEffect } from "react";
 
@@ -18,25 +18,58 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
   useEffect(() => {
     if (!fabricCanvas || activeTool !== "eraser") return;
 
-    // Disable object selection — clicks should delete, not select.
+    // Disable object selection — clicks should delete, not select. Enable
+    // hit-testing so single-object taps still populate `opt.target` even
+    // though the rubber-band is off (QA report 2026-07-23: "eraser doesn't
+    // work on web or mobile" — root cause was `selection = false` alone
+    // sometimes leaves `opt.target` undefined in Fabric v7, so we also
+    // fall back to `findTarget(e)` in the handler below).
     // eslint-disable-next-line react-hooks/immutability -- Fabric canvas API mutates by design.
     fabricCanvas.selection = false;
 
-    const onMouseDown = (opt: TPointerEventInfo) => {
-      const target = opt.target;
+    fabricCanvas.skipTargetFind = false;
+
+    const resolveTarget = (
+      opt: TPointerEventInfo,
+    ): FabricObject | undefined => {
+      if (opt.target) return opt.target;
+
+      // Fallback for Fabric v7 code paths where mouse:down's opt.target
+      // isn't populated (typically with `selection = false`). Ask Fabric
+      // directly what's under the pointer.
+      const e = opt.e as Event | undefined;
+
+      if (!e) return undefined;
+
+      const findTarget = (
+        fabricCanvas as unknown as {
+          findTarget?: (e: Event) => FabricObject | undefined;
+        }
+      ).findTarget;
+
+      return findTarget?.call(fabricCanvas, e) ?? undefined;
+    };
+
+    const erase = (opt: TPointerEventInfo) => {
+      const target = resolveTarget(opt);
 
       if (!target) return;
 
       fabricCanvas.remove(target);
       fabricCanvas.discardActiveObject();
       pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
-      fabricCanvas.renderAll();
+      fabricCanvas.requestRenderAll();
     };
 
-    fabricCanvas.on("mouse:down", onMouseDown);
+    // `mouse:up` fires on tap-release, matching the user's mental model
+    // for "click to erase" better than mouse:down (a mouse:down handler
+    // sometimes fired before Fabric finished target detection on iOS
+    // Safari touchstart, so the wrong object — or no object — was
+    // removed).
+    fabricCanvas.on("mouse:up", erase);
 
     return () => {
-      fabricCanvas.off("mouse:down", onMouseDown);
+      fabricCanvas.off("mouse:up", erase);
       // Restore selection so the rubber-band works again in the select tool.
 
       fabricCanvas.selection = true;

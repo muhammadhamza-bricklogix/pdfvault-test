@@ -6,12 +6,34 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
+
+type SaveBeforeActionDetail = {
+  force?: boolean;
+  onComplete: (result: {
+    ok: boolean;
+    reason?:
+      | "error"
+      | "no-changes"
+      | "no-file"
+      | "not-signed-in"
+      | "not-loaded";
+  }) => void;
+};
 
 /**
  * Listens for `editor:save` (dispatched by the Save button) and uploads the
  * flattened PDF to the user's library.
+ *
+ * Also listens for `editor:save-before-action`, used by flows that need to
+ * persist the live canvas state before doing something destructive to the
+ * editor (e.g. Hamburger → Create New). The event detail carries a callback
+ * that fires once the save completes (or fails) so the dispatcher can decide
+ * whether to proceed. This routes through here because `fabricCanvas` lives in
+ * `EditorLayout` — modals mounted at shell-level otherwise see `null` and
+ * silently upload stale `fabricJsonByPage` from the store.
  */
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
@@ -35,12 +57,26 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     });
 
     try {
+      // Force the upload on explicit user click — bypasses the
+      // `hasUnsavedChanges` short-circuit so the current editor state
+      // is GUARANTEED to land as a fresh version on the backend, even
+      // if some edit path (page numbers / annotations / Manage Pages /
+      // restore-from-version) didn't flip the dirty flag. Auto-saves
+      // and navigation saves keep the short-circuit (force omitted).
+      // QA report 2026-06-16: "even the most recent changes are not
+      // saved in the version."
       const result = await persistEditorDocument({
         fabricCanvas: fabricRef.current,
+        force: true,
       });
 
       if (!result.ok) {
-        if (result.reason === "no-file") {
+        if (result.reason === "no-changes") {
+          toast.info({
+            title: "Already saved",
+            description: "No changes since your last save.",
+          });
+        } else if (result.reason === "no-file") {
           toast.error({
             title: "Nothing to save",
             description: "Open a PDF before saving.",
@@ -67,6 +103,22 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       }
 
       const id = result.document.id;
+
+      // Commit the just-uploaded merged bytes as the new editor
+      // baseline. Without this the local `store.file` stays as the
+      // original upload, `fabricJsonByPage` keeps accumulating, and
+      // every subsequent Save uploads bytes built from stale source +
+      // duplicated overlays → cloud versions look functionally
+      // identical to each other (the bug reported 2026-06-16). The
+      // save-before-action path (Share / Manage Pages / Create New)
+      // was already doing this; the regular Save button was missing.
+      //
+      // `remappedState` is present iff the user had drag-dropped pages in
+      // the sidebar — it swaps the source-page-keyed editor state for the
+      // new display-slot-keyed state that matches the just-saved bytes.
+      usePdfEditorStore
+        .getState()
+        .applyPostSaveReset(result.savedFile, result.remappedState);
 
       if (searchParams.get("id") !== id) {
         const params = new URLSearchParams(searchParams.toString());
@@ -96,4 +148,83 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       window.removeEventListener("editor:save", onSave);
     };
   }, [handleSave]);
+
+  useEffect(() => {
+    const onSaveBeforeAction = async (event: Event) => {
+      const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
+      const onComplete = detail?.onComplete;
+
+      if (!onComplete) return;
+
+      const result = await persistEditorDocument({
+        fabricCanvas: fabricRef.current,
+        force: detail?.force,
+      });
+
+      if (result.ok) {
+        // Commit the saved bytes as the new editor baseline. Without this,
+        // downstream readers (Manage Pages thumbnails, exports) still see the
+        // pre-edit source PDF until the next full reload — the visible bug
+        // the user reported on Manage Pages.
+        const targetFile = result.savedFile;
+
+        usePdfEditorStore
+          .getState()
+          .applyPostSaveReset(targetFile, result.remappedState);
+
+        // Wait for `usePdfLoader` to finish reloading pdf.js against the new
+        // bytes before resolving. Otherwise the caller (e.g. Manage Pages)
+        // opens while `pdfDocument` is still null and renders an empty state
+        // for a frame.
+        await new Promise<void>((resolve) => {
+          const isReady = () => {
+            const s = usePdfEditorStore.getState();
+
+            return s.file === targetFile && s.pdfDocument != null;
+          };
+
+          if (isReady()) {
+            resolve();
+
+            return;
+          }
+
+          const unsub = usePdfEditorStore.subscribe(() => {
+            if (isReady()) {
+              unsub();
+              resolve();
+            }
+          });
+        });
+
+        onComplete({ ok: true });
+
+        return;
+      }
+
+      // `no-changes` is a benign short-circuit (dirty flag was already clean
+      // by the time the save ran). Treat as success — nothing to commit and
+      // nothing to lose by proceeding. Every other failure reason is
+      // forwarded so the caller can decide whether to toast, prompt sign-in,
+      // etc. — specifically, `not-signed-in` must route through the
+      // sign-in prompt modal per the auth chain (CLAUDE.md items 4, 5, 17)
+      // instead of surfacing as a generic "Could not save" error.
+      onComplete({
+        ok: result.reason === "no-changes",
+        reason: result.reason,
+      });
+    };
+
+    window.addEventListener(
+      "editor:save-before-action",
+      onSaveBeforeAction as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "editor:save-before-action",
+        onSaveBeforeAction as EventListener,
+      );
+    };
+  }, []);
 }

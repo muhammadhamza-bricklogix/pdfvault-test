@@ -19,31 +19,31 @@ type FaqEntry = {
 const ABOUT_FAQ: FaqEntry[] = [
   {
     answer:
-      "PDFedits is an online workspace to view, edit, annotate, merge, compress, and convert PDFs in your browser — without installing desktop software.",
+      "pdfvault.ai is an online workspace to view, edit, annotate, merge, compress, and convert PDFs in your browser — without installing desktop software.",
     id: "about-1",
-    question: "What is PDFedits?",
+    question: "What is pdfvault.ai?",
   },
   {
     answer:
-      "No. Open pdfedits.io in a modern browser, upload a file, and start working. We keep tightening editor tools over time, but there’s nothing to install for the web app itself.",
+      "No. Open pdfvault.ai in a modern browser, upload a file, and start working. We keep tightening editor tools over time, but there’s nothing to install for the web app itself.",
     id: "about-2",
-    question: "Do I need to download or install anything to use PDFedits?",
+    question: "Do I need to download or install anything to use pdfvault.ai?",
   },
   {
     answer:
       "We treat your files seriously. Sessions run over HTTPS; documents you open locally stay in your browser until you choose to save or upload. Always sign out on shared devices.",
     id: "about-3",
-    question: "Is PDFedits safe to use?",
+    question: "Is pdfvault.ai safe to use?",
   },
   {
     answer:
       "Yes. You can combine PDFs and organize pages from the editor — merge multiple files into one document and reorder thumbnails before exporting.",
     id: "about-4",
-    question: "Can I merge PDF files with PDFedits?",
+    question: "Can I merge PDF files with pdfvault.ai?",
   },
   {
     answer:
-      "When Word and other Office conversions are fully wired, you’ll upload from the home or tool flows and download a PDF. Today, the PDF editor accepts PDFs directly; check our conversion tools for formats we support today.",
+      "When Word and other Office conversions are fully wired, you’ll upload from the home or tool flows and download a PDF. Today, the PDF Composer accepts PDFs directly; check our conversion tools for formats we support today.",
     id: "about-5",
     question: "Can I convert a Word document into a PDF?",
   },
@@ -66,7 +66,7 @@ const BILLING_FAQ: FaqEntry[] = [
     answer:
       "The product is under active development. Many flows are free during early access; when we introduce paid tiers, we’ll list plans clearly before any charge.",
     id: "bill-1",
-    question: "Is PDFedits free?",
+    question: "Is pdfvault.ai free?",
   },
   {
     answer:
@@ -111,12 +111,12 @@ const SECURITY_FAQ: FaqEntry[] = [
     answer:
       "Cookies help auth, preferences, and analytics. You control non-essential cookies via our cookie notice and Cookie Policy.",
     id: "sec-4",
-    question: "What cookies does PDFedits use?",
+    question: "What cookies does pdfvault.ai use?",
   },
 ];
 
 const TAB_CONFIG = [
-  { id: "about", items: ABOUT_FAQ, label: "About PDFedits" },
+  { id: "about", items: ABOUT_FAQ, label: "About pdfvault.ai" },
   {
     id: "billing",
     items: BILLING_FAQ,
@@ -187,7 +187,7 @@ export function HomeFaq() {
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-base text-default-600 sm:text-lg dark:text-default-400">
           Got questions? Here are the answers to the most common ones about
-          PDFedits.
+          pdfvault.ai.
         </p>
       </div>
 
@@ -205,7 +205,7 @@ export function HomeFaq() {
               {TAB_CONFIG.map((t) => (
                 <Tabs.Tab
                   key={t.id}
-                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--color-accent)] data-[selected=true]:text-white data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--color-accent)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--color-accent)] dark:data-[hovered=true]:bg-default-50/10"
+                  className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-foreground)] outline-none transition-colors data-[selected=true]:bg-[var(--pv-brand-red,#f12c23)] data-[selected=true]:text-white data-[focus-visible=true]:ring-2 data-[focus-visible=true]:ring-[var(--pv-brand-red,#f12c23)] data-[hovered=true]:bg-default-100 data-[selected=true]:data-[hovered=true]:bg-[var(--pv-brand-red,#f12c23)] dark:data-[hovered=true]:bg-default-50/10"
                   id={t.id}
                 >
                   {t.label}

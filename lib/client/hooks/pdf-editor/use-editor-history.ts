@@ -1,11 +1,12 @@
 "use client";
 
-import type { Canvas } from "fabric";
+import type { Canvas, FabricObject } from "fabric";
 import type { RefObject } from "react";
 
 import { useCallback, useEffect, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 
 type UseEditorHistoryParams = {
   fabricCanvas: Canvas | null;
@@ -20,6 +21,7 @@ export function useEditorHistory({
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const undoStore = usePdfEditorStore((s) => s.undo);
   const redoStore = usePdfEditorStore((s) => s.redo);
   const setIsRestoringHistory = usePdfEditorStore(
@@ -59,16 +61,76 @@ export function useEditorHistory({
       forceRender((n) => n + 1);
     };
 
+    // Dirty-tracking sibling of `snapshot`. Lives separately so we can skip
+    // dirty marks for the IText overlays that `use-edit-text-mode` adds during
+    // initial text extraction (those carry `editorType: "editModeText"` and
+    // are NOT a user edit). `object:modified`, `object:removed`, and
+    // `text:changed` always reflect user intent, so they pass through.
+    const markDirtyOnAdd = (e: { target: FabricObject }) => {
+      const state = usePdfEditorStore.getState();
+
+      if (state.isCreatingShape || state.isRestoringHistory) return;
+      const editorType = (e?.target as FabricObject & { editorType?: string })
+        ?.editorType;
+
+      if (editorType === "editModeText") return;
+      markDocumentDirty();
+    };
+
+    const markDirtyOnEdit = () => {
+      const state = usePdfEditorStore.getState();
+
+      if (state.isCreatingShape || state.isRestoringHistory) return;
+      markDocumentDirty();
+    };
+
+    // Clears the `pristine` flag on auto-extracted source-text IText
+    // when the user actually modifies it. Source-text IText starts
+    // with `pristine: true` (see `use-edit-text-mode.ts`). The merge
+    // pipeline uses this to decide whether the page is unchanged
+    // (copy source PDF byte-for-byte, preserve selectable text) or
+    // whether the user has typed/moved/resized one of those text
+    // runs (Case 3 rasterize so the edit makes it into the saved
+    // bytes — without this, the user's typing is silently dropped on
+    // save). QA-reported 2026-06-16.
+    const dirtySourceText = (e: { target?: FabricObject }) => {
+      const target = e.target as
+        | (FabricObject & { editorType?: string; pristine?: boolean })
+        | undefined;
+
+      if (!target || target.editorType !== "editModeText") return;
+      if (target.pristine === false) return;
+
+      (target as { pristine?: boolean }).pristine = false;
+
+      logger.debug("[PDFedits] pristine: editModeText → false", {
+        page: currentPage,
+        text: (target as { text?: string }).text?.slice(0, 30),
+      });
+    };
+
     fc.on("object:added", snapshot);
     fc.on("object:modified", snapshot);
     fc.on("object:removed", snapshot);
+    fc.on("object:added", markDirtyOnAdd);
+    fc.on("object:modified", markDirtyOnEdit);
+    fc.on("object:removed", markDirtyOnEdit);
+    fc.on("text:changed", markDirtyOnEdit);
+    fc.on("object:modified", dirtySourceText);
+    fc.on("text:changed", dirtySourceText);
 
     return () => {
       fc.off("object:added", snapshot);
       fc.off("object:modified", snapshot);
       fc.off("object:removed", snapshot);
+      fc.off("object:added", markDirtyOnAdd);
+      fc.off("object:modified", markDirtyOnEdit);
+      fc.off("object:removed", markDirtyOnEdit);
+      fc.off("text:changed", markDirtyOnEdit);
+      fc.off("object:modified", dirtySourceText);
+      fc.off("text:changed", dirtySourceText);
     };
-  }, [fabricCanvas, currentPage, pushHistory]);
+  }, [fabricCanvas, currentPage, markDocumentDirty, pushHistory]);
 
   const idx = historyIndexByPage.get(currentPage) ?? -1;
   const history = historyByPage.get(currentPage) ?? [];

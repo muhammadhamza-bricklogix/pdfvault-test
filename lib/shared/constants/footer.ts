@@ -29,7 +29,7 @@ export const FOOTER_PRODUCT_SUBSECTIONS: FooterProductSubsection[] = [
     links: [
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Edit PDF" },
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Sign PDF" },
-      { href: ROUTES.TOOLS.PDF_EDITOR, label: "Split PDF" },
+      { href: ROUTES.TOOLS.SPLIT_PDF, label: "Split PDF" },
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Add image to PDF" },
       { href: ROUTES.TOOLS.PDF_EDITOR, label: "Delete pages" },
     ],
@@ -89,18 +89,17 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   },
 ];
 
-export const FOOTER_COMPANY_ENTITY = "Active Leadgen LLC";
+export const FOOTER_COMPANY_ENTITY = "FLUTTWINGS INVESTMENTS LIMITED";
 
-export const FOOTER_COMPANY_ADDRESS_PLACEHOLDER =
-  "Registered business address will be published before launch.";
+export const FOOTER_COMPANY_ADDRESS_PLACEHOLDER = "Nicosia, Cyprus";
 
-export const FOOTER_BRAND_NAME = "PDFedits";
+export const FOOTER_BRAND_NAME = "pdfvault.ai";
 
-export const FOOTER_PUBLIC_DOMAIN = "pdfedits.io";
+export const FOOTER_PUBLIC_DOMAIN = "pdfvault.ai";
 
 /** Single primary copyright line for the marketing footer (no inline policy links). */
 export function formatFooterCopyrightLine(year: number): string {
-  return `© ${year}. Active Leadgen, LLC, UAE. All rights reserved.`;
+  return `© ${year}. FLUTTWINGS INVESTMENTS LIMITED. All rights reserved.`;
 }
 
 export const FOOTER_LEGAL_STRIP_LINKS: FooterNavLink[] = [

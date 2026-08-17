@@ -30,8 +30,8 @@ export function SignInSection() {
       alternateHref={ROUTES.AUTH.SIGN_UP}
       alternateLabel="Create one"
       alternateText="Need an account?"
-      description="Use your email address and password to get into PDFedits. If Clerk asks for an extra check, we keep that verification inside this route."
-      title="Sign in to your PDFedits workspace"
+      description="Use your email address and password to get into pdfvault.ai. If Clerk asks for an extra check, we keep that verification inside this route."
+      title="Sign in to your pdfvault.ai workspace"
     >
       {verificationMode ? (
         <Form onSubmit={handleVerificationSubmit}>

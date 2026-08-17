@@ -1,0 +1,190 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - link "Go to home" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img "PDFedits.io" [ref=e6]
+        - navigation "Primary" [ref=e7]:
+          - link "My PDFs" [ref=e8] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e10]
+            - generic [ref=e12]: My PDFs
+          - link "Tools" [ref=e13] [cursor=pointer]:
+            - /url: /#pdf-tools
+            - img [ref=e15]
+            - generic [ref=e18]: Tools
+      - button "Account menu" [ref=e20] [cursor=pointer]:
+        - img [ref=e21]
+    - main [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - heading "My PDFs" [level=1] [ref=e29]
+            - paragraph [ref=e30]: Open, rename, download, or delete your saved PDFs.
+          - button "Upload PDF" [ref=e31] [cursor=pointer]:
+            - img
+            - generic [ref=e32]: Upload PDF
+        - generic [ref=e33]:
+          - link "Convert PDF PDF → Word, Excel, image, and more." [ref=e34] [cursor=pointer]:
+            - /url: /#pdf-tools
+            - img [ref=e36]
+            - generic [ref=e39]:
+              - paragraph [ref=e40]: Convert PDF
+              - paragraph [ref=e41]: PDF → Word, Excel, image, and more.
+          - link "Word to PDF Word, Excel, PPT, and images to PDF." [ref=e42] [cursor=pointer]:
+            - /url: /tools/docx-to-pdf
+            - img [ref=e44]
+            - generic [ref=e47]:
+              - paragraph [ref=e48]: Word to PDF
+              - paragraph [ref=e49]: Word, Excel, PPT, and images to PDF.
+          - link "Edit PDF Edit text, draw, highlight, and annotate." [ref=e50] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e52]
+            - generic [ref=e55]:
+              - paragraph [ref=e56]: Edit PDF
+              - paragraph [ref=e57]: Edit text, draw, highlight, and annotate.
+          - link "Sign & Watermark Sign and watermark with vector strokes." [ref=e58] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e60]
+            - generic [ref=e63]:
+              - paragraph [ref=e64]: Sign & Watermark
+              - paragraph [ref=e65]: Sign and watermark with vector strokes.
+          - link "Organize Pages Reorder, rotate, split, and merge pages." [ref=e66] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e68]
+            - generic [ref=e70]:
+              - paragraph [ref=e71]: Organize Pages
+              - paragraph [ref=e72]: Reorder, rotate, split, and merge pages.
+          - link "Protect PDF Add or remove password protection." [ref=e73] [cursor=pointer]:
+            - /url: /pdf-editor
+            - img [ref=e75]
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Protect PDF
+              - paragraph [ref=e81]: Add or remove password protection.
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e85]: Showing 0 of 0
+            - generic [ref=e86]:
+              - generic [ref=e87]: Updated
+              - generic [ref=e88]:
+                - textbox "Updated from" [ref=e90]
+                - generic [ref=e91]: to
+                - textbox "Updated to" [ref=e93]
+          - generic [ref=e96]:
+            - generic [ref=e102]:
+              - generic:
+                - img
+              - textbox "Search by name..." [ref=e103]
+            - table [ref=e111]:
+              - rowgroup [ref=e112]:
+                - row "Toggle select all Name Sort by Name descending Size Sort by Size descending Updated Sort by Updated descending Actions" [ref=e113]:
+                  - columnheader "Toggle select all" [ref=e114]:
+                    - generic [ref=e121]:
+                      - checkbox "Toggle select all" [disabled]
+                      - img
+                  - columnheader [ref=e122]
+                  - columnheader "Name Sort by Name descending" [ref=e123]:
+                    - generic [ref=e125] [cursor=pointer]:
+                      - generic "Name" [ref=e126]
+                      - button "Sort by Name descending" [ref=e128]:
+                        - img [ref=e129]
+                  - columnheader "Size Sort by Size descending" [ref=e132]:
+                    - generic [ref=e134] [cursor=pointer]:
+                      - generic "Size" [ref=e135]
+                      - button "Sort by Size descending" [ref=e137]:
+                        - img [ref=e138]
+                  - columnheader "Updated Sort by Updated descending" [ref=e141]:
+                    - generic [ref=e143] [cursor=pointer]:
+                      - generic "Updated" [ref=e144]
+                      - button "Sort by Updated descending" [ref=e146]:
+                        - img [ref=e147]
+                  - columnheader "Actions" [ref=e150]:
+                    - generic "Actions" [ref=e153]
+              - rowgroup [ref=e154]:
+                - row "Jan 1, 1970" [ref=e155]:
+                  - cell [ref=e156]
+                  - cell [ref=e158]
+                  - cell [ref=e160]
+                  - cell [ref=e162]
+                  - cell "Jan 1, 1970" [ref=e164]
+                  - cell [ref=e165]
+                - row "Jan 1, 1970" [ref=e167]:
+                  - cell [ref=e168]
+                  - cell [ref=e170]
+                  - cell [ref=e172]
+                  - cell [ref=e174]
+                  - cell "Jan 1, 1970" [ref=e176]
+                  - cell [ref=e177]
+                - row "Jan 1, 1970" [ref=e179]:
+                  - cell [ref=e180]
+                  - cell [ref=e182]
+                  - cell [ref=e184]
+                  - cell [ref=e186]
+                  - cell "Jan 1, 1970" [ref=e188]
+                  - cell [ref=e189]
+                - row "Jan 1, 1970" [ref=e191]:
+                  - cell [ref=e192]
+                  - cell [ref=e194]
+                  - cell [ref=e196]
+                  - cell [ref=e198]
+                  - cell "Jan 1, 1970" [ref=e200]
+                  - cell [ref=e201]
+                - row "Jan 1, 1970" [ref=e203]:
+                  - cell [ref=e204]
+                  - cell [ref=e206]
+                  - cell [ref=e208]
+                  - cell [ref=e210]
+                  - cell "Jan 1, 1970" [ref=e212]
+                  - cell [ref=e213]
+                - row "Jan 1, 1970" [ref=e215]:
+                  - cell [ref=e216]
+                  - cell [ref=e218]
+                  - cell [ref=e220]
+                  - cell [ref=e222]
+                  - cell "Jan 1, 1970" [ref=e224]
+                  - cell [ref=e225]
+                - row "Jan 1, 1970" [ref=e227]:
+                  - cell [ref=e228]
+                  - cell [ref=e230]
+                  - cell [ref=e232]
+                  - cell [ref=e234]
+                  - cell "Jan 1, 1970" [ref=e236]
+                  - cell [ref=e237]
+                - row "Jan 1, 1970" [ref=e239]:
+                  - cell [ref=e240]
+                  - cell [ref=e242]
+                  - cell [ref=e244]
+                  - cell [ref=e246]
+                  - cell "Jan 1, 1970" [ref=e248]
+                  - cell [ref=e249]
+                - row "Jan 1, 1970" [ref=e251]:
+                  - cell [ref=e252]
+                  - cell [ref=e254]
+                  - cell [ref=e256]
+                  - cell [ref=e258]
+                  - cell "Jan 1, 1970" [ref=e260]
+                  - cell [ref=e261]
+                - row "Jan 1, 1970" [ref=e263]:
+                  - cell [ref=e264]
+                  - cell [ref=e266]
+                  - cell [ref=e268]
+                  - cell [ref=e270]
+                  - cell "Jan 1, 1970" [ref=e272]
+                  - cell [ref=e273]
+              - rowgroup
+            - generic [ref=e278]:
+              - generic [ref=e279]:
+                - generic [ref=e280]: Rows per page
+                - combobox [ref=e281]:
+                  - generic [ref=e282]:
+                    - searchbox "Rows per page" [ref=e283] [cursor=pointer]: "10"
+                    - generic:
+                      - img
+              - generic [ref=e284]: 1-10 of 10
+              - generic [ref=e285]:
+                - button "Go to previous page" [disabled]:
+                  - img
+                - button "Go to next page" [disabled]:
+                  - img
+  - alert [ref=e286]

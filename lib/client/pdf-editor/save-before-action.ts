@@ -1,0 +1,79 @@
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { usePdfEditorStore } from "@/lib/client/stores";
+import { toast } from "@/lib/shared/utils/toast";
+
+type SaveBeforeActionReason =
+  | "error"
+  | "no-changes"
+  | "no-file"
+  | "not-signed-in"
+  | "not-loaded";
+
+/**
+ * Persists the live editor state before running a destructive action (Create
+ * New, Manage Pages, etc.). Routes through the `editor:save-before-action`
+ * window event so the save runs inside `useSaveEditor`, which holds the live
+ * Fabric canvas ref — calling `persistEditorDocument` from a shell-level modal
+ * directly would pass `null` and silently upload stale `fabricJsonByPage`.
+ *
+ * Returns `true` when the action should proceed:
+ *   - no unsaved changes  → nothing to do, resolve true immediately
+ *   - save succeeded      → resolve true, action proceeds
+ *   - save failed         → resolve false, caller shows error (except for
+ *     `not-signed-in`, where we route through the sign-in prompt modal instead
+ *     — same pattern as export / paywall / upload per CLAUDE.md items 4, 5, 17.
+ *     Without this, a signed-out user who drops a PDF and clicks Manage Pages
+ *     gets a dead-end "Could not save" toast with no path forward).
+ *
+ * Shows a loading toast while the save is in flight.
+ */
+export async function saveBeforeAction(
+  description = "Saving your edits…",
+  force = false,
+): Promise<boolean> {
+  if (!force && !usePdfEditorStore.getState().hasUnsavedChanges) return true;
+
+  const loadingKey = toast.loading({
+    title: "Saving…",
+    description,
+  });
+
+  try {
+    const { ok, reason } = await new Promise<{
+      ok: boolean;
+      reason?: SaveBeforeActionReason;
+    }>((resolve) => {
+      window.dispatchEvent(
+        new CustomEvent("editor:save-before-action", {
+          detail: { force, onComplete: resolve },
+        }),
+      );
+    });
+
+    if (!ok) {
+      if (reason === "not-signed-in") {
+        const returnTo =
+          typeof window === "undefined"
+            ? "/"
+            : `${window.location.pathname}${window.location.search}`;
+
+        dispatchSignInPrompt({
+          title: "Sign in to continue",
+          description:
+            "Save your edits and open Manage Pages. We'll bring you right back to your document.",
+          confirmLabel: "Sign in & continue",
+          redirectUrl: returnTo,
+        });
+      } else {
+        toast.error({
+          title: "Could not save",
+          description: "We couldn't save your edits. Please try again.",
+        });
+      }
+    }
+
+    return ok;
+  } finally {
+    toast.close(loadingKey);
+  }
+}

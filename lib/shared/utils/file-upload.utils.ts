@@ -1,6 +1,15 @@
 import type { ValidationResult } from "@/lib/shared/types/file-upload.types";
 
-const DEFAULT_MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+/**
+ * Upload size ceiling shared by every PDF-upload surface (dashboard
+ * "Upload PDF" button, editor drop-zone, cloud picker, etc.). The cap
+ * is enforced client-side so the user gets immediate feedback instead
+ * of waiting for the multi-minute upload of a 500 MB PDF to fail at
+ * the backend.
+ */
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB
+
+const DEFAULT_MAX_SIZE = MAX_UPLOAD_BYTES;
 
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

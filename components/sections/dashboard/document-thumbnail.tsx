@@ -6,6 +6,7 @@ import { File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
 
 const cache = new Map<string, string>();
@@ -33,7 +34,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
 
     (async () => {
       try {
-        const pdfjs = await import("pdfjs-dist");
+        const pdfjs = await loadPdfJs();
 
         if (!pdfjs.GlobalWorkerOptions.workerSrc) {
           pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
@@ -73,7 +74,7 @@ export function DocumentThumbnail({ document: doc }: Props) {
 
   if (src) {
     return (
-      <div className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-default-200 bg-white">
+      <div className="flex h-12 w-9 items-center justify-center overflow-hidden rounded border border-default-200 bg-[var(--pv-surface)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt="" className="h-full w-full object-cover" src={src} />
       </div>

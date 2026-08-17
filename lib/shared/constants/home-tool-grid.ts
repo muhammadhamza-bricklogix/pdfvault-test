@@ -36,8 +36,6 @@ export const HOME_TOOL_GRID_SUBTITLE =
 
 export const HOME_TOOL_GRID_BADGE_SUFFIX = "PDF Tools";
 
-const PDF_TOOLS_HUB = `${ROUTES.PUBLIC.HOME}#pdf-tools`;
-
 /** Icons allowed on home tool cards (pool for variety + typing). */
 const HOME_TOOL_ICON_POOL = [
   TextFontIcon,
@@ -168,7 +166,7 @@ const HOME_TOOL_GRID_PRIMARY_CARDS: HomeToolCard[] = [
   {
     description:
       "Pull out the pages you need or split a long file into lighter parts.",
-    href: ROUTES.TOOLS.PDF_EDITOR,
+    href: ROUTES.TOOLS.SPLIT_PDF,
     icon: Scissor01Icon,
     title: "Split & Extract Pages",
   },
@@ -232,12 +230,12 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
     icon: PaintBucketIcon,
     title: "PNG to PDF",
   },
-  {
-    description: "Browse every import path and conversion preset in one hub.",
-    href: PDF_TOOLS_HUB,
-    icon: Add01Icon,
-    title: "View all",
-  },
+  // {
+  //   description: "Browse every import path and conversion preset in one hub.",
+  //   href: PDF_TOOLS_HUB,
+  //   icon: Add01Icon,
+  //   title: "View all",
+  // },
 ];
 
 // Tax forms — only the W-9 ships today. Other forms (W-4, 1099-NEC, W-7)

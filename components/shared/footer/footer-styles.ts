@@ -2,7 +2,7 @@ export const footerShellClass =
   "border-t border-default-200/80 bg-transparent dark:border-default-100/20";
 
 export const footerInnerContainerClass =
-  "mx-auto max-w-[min(100%,104rem)] px-6 pb-4 pt-14 sm:px-10 sm:pb-5 sm:pt-16";
+  "px-6 pb-4 pt-14 sm:px-10 sm:pb-5 sm:pt-16";
 
 export const footerAsideColumnTitleClass =
   "flex flex-col gap-2 text-lg font-bold tracking-tight text-[var(--color-accent)]";

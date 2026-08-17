@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+/*
+ * Route Tailwind v4's `dark:*` variant to whatever `next-themes` sets on
+ * the <html> element. Our ThemeProvider is configured with
+ * `attribute: "data-theme"` so the html gets `data-theme="dark"` when
+ * dark mode is active. Without this custom-variant, `dark:` classes are
+ * dead — that's why the theme toggle previously only affected the
+ * settings pane (which had its own scoped styles) and nothing else.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   /* BRAND RED (#DF3A38) */
   --accent: oklch(62.3% 0.203 26.5);
@@ -25,6 +35,83 @@
   --legal-callout-green-text: #065f46;
   --legal-cta-deep: #7f1d1d;
   --legal-border-subtle: #e7e5e4;
+
+  /* Google Fonts loaded at runtime via <link> in layout.tsx */
+  --font-legal-serif: 'Playfair Display', Georgia, serif;
+  --font-dancing-script: 'Dancing Script', cursive;
+}
+
+/*
+ * PDFVault dashboard tokens — sampled from the Figma export at
+ * `public/Dashboard/dashboard.css` (Geist for headings, Inter for body).
+ * Scoped under `.pv-dashboard` so the values never leak into HeroUI theme
+ * usage elsewhere in the app.
+ */
+.pv-dashboard {
+  /* Brand + semantic file colors */
+  --pv-brand-red: #f12c23;
+  --pv-brand-red-logo: #eb231b;
+  --pv-brand-red-hover: #d8241c;
+  --pv-file-pdf: #fb3748;
+  --pv-file-doc: #335cff;
+  --pv-file-ppt: #fa7319;
+  --pv-file-xls: #1fc16b;
+  --pv-verified: #46bffb;
+  --pv-online: #1fc16b;
+
+  /* Neutrals */
+  --pv-canvas: #f8f8fa;
+  --pv-surface: #ffffff;
+  --pv-nav-active: #f3f3f5;
+  --pv-tile: #f7f7f7;
+  --pv-fill-subtle: #f7f7f9;
+  --pv-hairline: #ebebeb;
+  --pv-hairline-strong: #e1e4ea;
+  --pv-text-strong: #171717;
+  --pv-text-body: #5c5c5c;
+  --pv-text-muted: #a4a4a4;
+
+  /* Typography — Geist for display/headings, Inter for body/UI */
+  --pv-font-display: var(--font-geist-sans), "Geist", "Inter", system-ui,
+    sans-serif;
+  --pv-font-body: "Inter", var(--font-geist-sans), system-ui, sans-serif;
+
+  color: var(--pv-text-strong);
+  font-family: var(--pv-font-body);
+  background-color: var(--pv-canvas);
+}
+.pv-dashboard .pv-heading {
+  font-family: var(--pv-font-display);
+  letter-spacing: -0.01em;
+}
+.pv-dashboard .pv-kbd {
+  border: 1px solid var(--pv-hairline);
+  background: var(--pv-surface);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pv-text-body);
+}
+
+/*
+ * Dark-mode token overrides for the dashboard shell. The base tokens above
+ * are light-only; without these the theme picker's "Dark" option flips
+ * `data-theme` on <html> but the dashboard visuals stay unchanged.
+ * Values sampled from a neutral graphite palette that keeps the same
+ * relative contrast as the light tokens.
+ */
+[data-theme="dark"] .pv-dashboard {
+  --pv-canvas: #0b0b0c;
+  --pv-surface: #141416;
+  --pv-nav-active: #1c1c1f;
+  --pv-tile: #1a1a1c;
+  --pv-fill-subtle: #18181a;
+  --pv-hairline: #28282a;
+  --pv-hairline-strong: #3a3a3d;
+  --pv-text-strong: #f5f5f5;
+  --pv-text-body: #c0c0c0;
+  --pv-text-muted: #7a7a7a;
 }
 html,
 body {
@@ -36,4 +123,163 @@ body {
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+}
+/* ----- Product tour (driver.js) -------------------------------------
+ * PDFVault-themed overlay. Rounded card, brand-red primary button,
+ * ghost secondary. Overrides land under `.pv-tour-popover` so the
+ * defaults are contained to our custom class.
+ */
+.driver-popover.pv-tour-popover {
+  background: var(--pv-surface, #ffffff);
+  color: var(--pv-text-strong, #171717);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 24px 60px -20px rgba(23, 23, 23, 0.35),
+    0 8px 24px -14px rgba(23, 23, 23, 0.28);
+  border: 1px solid var(--pv-hairline, #ebebeb);
+  font-family: var(--pv-font-body, "Inter", system-ui, sans-serif);
+  max-width: 340px;
+}
+.driver-popover.pv-tour-popover .driver-popover-title {
+  font-family: var(--pv-font-display, "Geist", "Inter", system-ui, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--pv-text-strong, #171717);
+  padding: 0;
+  margin: 0 0 6px;
+}
+.driver-popover.pv-tour-popover .driver-popover-description {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pv-text-body, #5c5c5c);
+  padding: 0;
+  margin: 0 0 12px;
+}
+.driver-popover.pv-tour-popover .driver-popover-close-btn {
+  color: var(--pv-text-muted, #a4a4a4);
+  transition: color 120ms ease;
+  top: 10px;
+  right: 12px;
+  font-size: 20px;
+  line-height: 1;
+}
+.driver-popover.pv-tour-popover .driver-popover-close-btn:hover {
+  color: var(--pv-text-strong, #171717);
+}
+.driver-popover.pv-tour-popover .driver-popover-footer {
+  margin-top: 4px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.driver-popover.pv-tour-popover .pv-tour-skip-btn {
+  margin-right: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #f12c23;
+  background: transparent;
+  border: 1.5px solid #f12c23;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.driver-popover.pv-tour-popover .pv-tour-skip-btn:hover {
+  color: #c9221a;
+  background: #fff1f0;
+  border-color: #c9221a;
+}
+.driver-popover.pv-tour-popover .driver-popover-progress-text {
+  font-size: 11px;
+  color: var(--pv-text-muted, #a4a4a4);
+}
+.driver-popover.pv-tour-popover .driver-popover-navigation-btns {
+  display: inline-flex;
+  gap: 8px;
+}
+.driver-popover.pv-tour-popover .driver-popover-prev-btn,
+.driver-popover.pv-tour-popover .driver-popover-next-btn {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+  border: 1px solid transparent;
+  text-shadow: none;
+}
+.driver-popover.pv-tour-popover .driver-popover-prev-btn {
+  background: transparent;
+  color: var(--pv-text-body, #5c5c5c);
+  border-color: var(--pv-hairline-strong, #e1e4ea);
+}
+.driver-popover.pv-tour-popover .driver-popover-prev-btn:hover {
+  background: var(--pv-nav-active, #f3f3f5);
+  color: var(--pv-text-strong, #171717);
+}
+.driver-popover.pv-tour-popover .driver-popover-next-btn {
+  background: var(--pv-brand-red, #f12c23);
+  color: #ffffff;
+  box-shadow: 0 6px 14px -8px rgba(241, 44, 35, 0.55);
+}
+.driver-popover.pv-tour-popover .driver-popover-next-btn:hover {
+  background: var(--pv-brand-red-hover, #d8241c);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow {
+  border: 8px solid transparent;
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-top {
+  border-top-color: var(--pv-surface, #ffffff);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--pv-surface, #ffffff);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-left {
+  border-left-color: var(--pv-surface, #ffffff);
+}
+.driver-popover.pv-tour-popover .driver-popover-arrow-side-right {
+  border-right-color: var(--pv-surface, #ffffff);
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover {
+  background: #1a1a1c;
+  color: #f5f5f5;
+  border-color: #28282a;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-title {
+  color: #f5f5f5;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-description {
+  color: #c0c0c0;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-top {
+  border-top-color: #1a1a1c;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: #1a1a1c;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-left {
+  border-left-color: #1a1a1c;
+}
+[data-theme="dark"] .driver-popover.pv-tour-popover .driver-popover-arrow-side-right {
+  border-right-color: #1a1a1c;
+}
+
+/* Weglot's SDK sometimes injects a floating language-switcher widget in
+ * the bottom-right corner regardless of the `switchers: []` init option.
+ * We render our own switcher in the header / navbar, so hide every
+ * variant of the built-in one. Kept broad on purpose — Weglot has
+ * shipped a handful of different class names over the years. */
+.country-selector,
+.wg-drop,
+.weglot-container,
+#weglot-listbox,
+[class*="weglot-inline"],
+[class*="wg-flags"] {
+  display: none !important;
 }

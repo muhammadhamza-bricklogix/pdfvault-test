@@ -59,7 +59,7 @@ for spec in "${TESTS[@]}"; do
     -F "file=@${input}" -F "type=${type}" \
     "$BACKEND/conversion" 2>&1) || true
 
-  if [ "$http_code" = "200" ] && [ -s "$out_file" ]; then
+  if [[ "$http_code" =~ ^2[0-9][0-9]$ ]] && [ -s "$out_file" ]; then
     bytes=$(stat -f%z "$out_file" 2>/dev/null || stat -c%s "$out_file")
     head_bytes=$(head -c 8 "$out_file" | xxd -p)
     green "  ✓ $type → $out_file ($bytes bytes, magic: $head_bytes)"
