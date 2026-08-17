@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import {
   FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
@@ -187,12 +188,12 @@ export function LandingFooter() {
               <ul className="mt-6 flex flex-col items-start gap-[18px]">
                 {column.links.map((link) => (
                   <li key={link.label}>
-                    <a
+                    <Link
                       className={`inline-block text-[14px] text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING}`}
                       href={link.href}
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

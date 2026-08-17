@@ -127,6 +127,7 @@ export function useDocumentsQuery(options?: UseDocumentsQueryOptions) {
 
       return page < totalPages ? page + 1 : undefined;
     },
+    staleTime: 60_000,
     enabled: options?.enabled,
   });
 }

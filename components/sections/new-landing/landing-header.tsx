@@ -3,6 +3,7 @@
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { Modal } from "@heroui/react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -90,7 +91,7 @@ export function LandingHeader() {
         >
           {/* Left: logo + primary nav */}
           <div className="flex items-center gap-7">
-            <a
+            <Link
               aria-label="PDFVault home"
               className="flex shrink-0 items-center"
               href={ROUTES.PUBLIC.HOME}
@@ -103,7 +104,7 @@ export function LandingHeader() {
                 src="/landing/logo-with-text.png"
                 width={184}
               />
-            </a>
+            </Link>
 
             <nav
               aria-label="Primary"
@@ -135,13 +136,13 @@ export function LandingHeader() {
                 </svg>
               </button>
               {PRIMARY_LINKS.map((link) => (
-                <a
+                <Link
                   key={link.label}
                   className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
                   href={link.href}
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </nav>
           </div>
@@ -158,12 +159,12 @@ export function LandingHeader() {
             {showAuthButtons ? (
               isSignedIn ? (
                 <>
-                  <a
+                  <Link
                     className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
                     href={ROUTES.APP.DASHBOARD}
                   >
                     Dashboard
-                  </a>
+                  </Link>
                   <button
                     className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
                     type="button"
@@ -174,13 +175,13 @@ export function LandingHeader() {
                 </>
               ) : (
                 <>
-                  <a
+                  <Link
                     className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
                     href={ROUTES.AUTH.SIGN_IN}
                   >
                     Login
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     // Top-bar CTA hides while the mobile drawer is open —
                     // the drawer renders its own "Get started" and the pair
                     // felt duplicated. Desktop (lg+) always shows it.
@@ -190,7 +191,7 @@ export function LandingHeader() {
                     href={ROUTES.AUTH.SIGN_UP}
                   >
                     Get started
-                  </a>
+                  </Link>
                 </>
               )
             ) : null}
@@ -233,13 +234,13 @@ export function LandingHeader() {
               </li>
               {PRIMARY_LINKS.map((link) => (
                 <li key={link.label}>
-                  <a
+                  <Link
                     className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
               <li className="mt-1 flex items-center gap-3 px-2 py-1">
@@ -252,13 +253,13 @@ export function LandingHeader() {
                 {showAuthButtons ? (
                   isSignedIn ? (
                     <>
-                      <a
+                      <Link
                         className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
                         href={ROUTES.APP.DASHBOARD}
                         onClick={() => setMobileOpen(false)}
                       >
                         Dashboard
-                      </a>
+                      </Link>
                       <button
                         className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
                         type="button"
@@ -272,20 +273,20 @@ export function LandingHeader() {
                     </>
                   ) : (
                     <>
-                      <a
+                      <Link
                         className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
                         href={ROUTES.AUTH.SIGN_IN}
                         onClick={() => setMobileOpen(false)}
                       >
                         Login
-                      </a>
-                      <a
+                      </Link>
+                      <Link
                         className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
                         href={ROUTES.AUTH.SIGN_UP}
                         onClick={() => setMobileOpen(false)}
                       >
                         Get started
-                      </a>
+                      </Link>
                     </>
                   )
                 ) : null}

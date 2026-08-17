@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
@@ -126,6 +127,7 @@ export default function RootLayout({
         `}
       </Script>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
+        <NextTopLoader color="#DF3A38" showSpinner={false} />
         <WeglotLoader />
         <ClerkProvider
           signInFallbackRedirectUrl="/dashboard"
