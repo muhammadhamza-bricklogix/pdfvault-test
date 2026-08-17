@@ -60,9 +60,15 @@ const CREAM_CARD = "#fef5f1";
 // Apple Pay `type` is "subscribe" instead of "plain" so the button
 // renders "Subscribe with " — matches the paywall's actual
 // intent (recurring plan checkout) and reads as a call-to-action
-// rather than a bare logo tile. Google Pay's SDK doesn't take an
-// equivalent type param; it stays a black wallet chip.
-const GOOGLE_PAY_BUTTON_PARAMS = { enabled: true, color: "black" } as const;
+// rather than a bare logo tile. Google Pay uses the equivalent
+// `subscribe` type so the button reads "Subscribe with G Pay"
+// (Google Pay brand guidelines: use CreateButton's `buttonType`
+// that matches merchant intent — https://developers.google.com/pay/api/web/guides/brand-guidelines#payment-buttons).
+const GOOGLE_PAY_BUTTON_PARAMS = {
+  enabled: true,
+  color: "black",
+  type: "subscribe",
+} as const;
 const APPLE_PAY_BUTTON_PARAMS = {
   enabled: true,
   integrationType: "js",
@@ -734,16 +740,21 @@ function PayStep({
               silently swaps for a real button after a click. Also gets the
               SDK load happening as soon as Continue is pressed, so the
               wallet buttons are ready when the user reaches them. */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {/* Apple Pay — SDK injects here; hidden until mounted */}
             <div
               ref={applePayContainerRef}
               className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
             />
-            {/* Google Pay — SDK injects here; hidden until mounted */}
+            {/* Google Pay — SDK injects here; hidden until mounted.
+                No shape / height overrides — Google's brand guidelines
+                require the CreateButton API's native pill radius and
+                its own height range (40–60px). The `w-full` passthrough
+                lets Solidgate's SDK size the button to the container
+                width via `buttonSizeMode: "fill"`. */}
             <div
               ref={googlePayContainerRef}
-              className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
             />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
                 remounts — declined intents are terminal on Solidgate's side
