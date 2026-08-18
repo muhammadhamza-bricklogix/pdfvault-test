@@ -288,7 +288,7 @@ export function EditorInfoBar() {
         them un-tappable. Splitting nav onto its own centered row gives both
         groups full reach without sacrificing the desktop layout.
       */}
-      <div className="flex flex-col gap-1 px-2 py-1 sm:h-10 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-0 lg:px-3">
+      <div className="flex flex-col gap-1 px-2 py-1 sm:min-h-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1 sm:py-1 lg:px-3">
         {/* Action row: left actions + right save/theme. Doubles as the only
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
@@ -318,7 +318,9 @@ export function EditorInfoBar() {
                 isDisabled={!canUndo}
                 size="sm"
                 variant="tertiary"
-                onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:undo"))
+                }
               >
                 <HugeiconsIcon icon={UndoIcon} size={16} />
               </Button>
@@ -327,7 +329,9 @@ export function EditorInfoBar() {
                 isDisabled={!canRedo}
                 size="sm"
                 variant="tertiary"
-                onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:redo"))
+                }
               >
                 <HugeiconsIcon icon={RedoIcon} size={16} />
               </Button>
@@ -654,7 +658,7 @@ export function EditorToolBar() {
   };
 
   return (
-    <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
+    <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2 px-3 py-2">
       <HistoryActions />
       <Separator className="!h-6" orientation="vertical" />
       <ToolsContent />

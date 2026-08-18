@@ -26,7 +26,11 @@ const TABS: Tab[] = [
   { id: "edit", label: "PDF Composer", icon: "/landing/editor.svg" },
   { id: "convert-to", label: "Convert to PDF", icon: "/landing/convert.svg" },
   { id: "compress", label: "Compress PDF", icon: "/landing/split.svg" },
-  { id: "convert-from", label: "Convert from PDF", icon: "/landing/convert.svg" },
+  {
+    id: "convert-from",
+    label: "Convert from PDF",
+    icon: "/landing/convert.svg",
+  },
   { id: "others", label: "Others", icon: "/landing/signature.svg" },
 ];
 
@@ -425,9 +429,11 @@ export function LandingTools() {
                 >
                   <span className="flex items-center gap-1.5">
                     <Image
-                      alt=""
                       aria-hidden
-                      className={selected ? "brightness-0 invert" : "opacity-60"}
+                      alt=""
+                      className={
+                        selected ? "brightness-0 invert" : "opacity-60"
+                      }
                       height={16}
                       src={tab.icon}
                       width={16}

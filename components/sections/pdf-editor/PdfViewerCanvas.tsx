@@ -12,6 +12,7 @@ import { useEraserTool } from "@/lib/client/hooks/pdf-editor/use-eraser-tool";
 import { useFabricCanvas } from "@/lib/client/hooks/pdf-editor/use-fabric-canvas";
 import { useHighlightTool } from "@/lib/client/hooks/pdf-editor/use-highlight-tool";
 import { useImageTool } from "@/lib/client/hooks/pdf-editor/use-image-tool";
+import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { usePageRenderer } from "@/lib/client/hooks/pdf-editor/use-page-renderer";
 import { useShapeTool } from "@/lib/client/hooks/pdf-editor/use-shape-tool";
 import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-tool";
@@ -49,11 +50,16 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const isPageExtracted = usePdfEditorStore((s) =>
     s.extractedPages.has(s.getSourcePageIndex(s.currentPage)),
   );
+  const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
+  const isMobile = useIsMobile();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerScrollRef = useRef<HTMLDivElement>(null);
+  // Guards against double-navigation when the scroll handler fires again before
+  // the page change + scroll-reset have taken effect.
+  const mobilePageNavRef = useRef(false);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const file = usePdfEditorStore((s) => s.file);
   const fittedFileRef = useRef<File | null>(null);
@@ -535,6 +541,43 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       el.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
+
+  // Reset scroll to top on every page change so arriving on a new page always
+  // starts at the top. Also clears the navigation guard so the scroll handler
+  // is ready for the next bottom-reach.
+  useEffect(() => {
+    if (!isMobile) return;
+    viewerScrollRef.current?.scrollTo({ top: 0 });
+    mobilePageNavRef.current = false;
+  }, [isMobile, currentPage]);
+
+  // Auto-advance to the next page when the user scrolls to the bottom of the
+  // current page on mobile. Guards against double-fire with mobilePageNavRef.
+  useEffect(() => {
+    if (!isMobile || pageCount <= 1) return;
+    const el = viewerScrollRef.current;
+
+    if (!el) return;
+
+    const onScroll = () => {
+      if (mobilePageNavRef.current) return;
+      // Only trigger after the user has scrolled meaningfully — avoids
+      // firing when a short page fits fully inside the viewport (scrollTop
+      // stays 0 and no real scroll gesture has occurred).
+      if (el.scrollTop < 20) return;
+      const state = usePdfEditorStore.getState();
+
+      if (state.currentPage >= state.pageCount) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+        mobilePageNavRef.current = true;
+        setCurrentPage(state.currentPage + 1);
+      }
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [isMobile, pageCount, setCurrentPage]);
 
   return (
     <div

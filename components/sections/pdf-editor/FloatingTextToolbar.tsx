@@ -125,7 +125,6 @@ export function FloatingTextToolbar({
     }
     // DEFAULT_STYLE is a stable constant defined above — intentionally omitted
     // from deps to avoid re-triggering on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditTextMode]);
 
   useEffect(() => {
@@ -281,196 +280,201 @@ export function FloatingTextToolbar({
         <HugeiconsIcon icon={Cancel01Icon} size={16} />
       </button>
       {/* On mobile: horizontal scrollable row; on desktop: vertical column */}
-      <div className={isMobile ? "flex items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "flex flex-col gap-4"}>
-
-      {/* Font family */}
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
-          Font
-        </span>
-        <Select
-          aria-label="Font family"
-          className="w-full"
-          selectedKey={style.fontFamily}
-          onSelectionChange={(key) => applyStyle({ fontFamily: String(key) })}
-        >
-          <Select.Trigger>
-            <Select.Value />
-            <Select.Indicator />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox>
-              {FONT_FAMILIES.map((f) => (
-                <ListBox.Item key={f} id={f} textValue={f}>
-                  {f}
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
-      </div>
-
-      {/* Font size */}
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
-          Size
-        </span>
-        <Select
-          aria-label="Font size"
-          className="w-full"
-          selectedKey={selectedSizeKey}
-          onSelectionChange={(key) => {
-            const next = Number(key);
-
-            if (!Number.isFinite(next) || next <= 0) return;
-            applyStyle({ fontSize: next });
-          }}
-        >
-          <Select.Trigger>
-            <Select.Value />
-            <Select.Indicator />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox>
-              {sizeItems.map((s) => {
-                const key = String(s);
-
-                return (
-                  <ListBox.Item key={key} id={key} textValue={key}>
-                    {s}
+      <div
+        className={
+          isMobile
+            ? "flex items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            : "flex flex-col gap-4"
+        }
+      >
+        {/* Font family */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+            Font
+          </span>
+          <Select
+            aria-label="Font family"
+            className="w-full"
+            selectedKey={style.fontFamily}
+            onSelectionChange={(key) => applyStyle({ fontFamily: String(key) })}
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                {FONT_FAMILIES.map((f) => (
+                  <ListBox.Item key={f} id={f} textValue={f}>
+                    {f}
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                );
-              })}
-            </ListBox>
-          </Select.Popover>
-        </Select>
-      </div>
-
-      {/* Bold + Italic */}
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
-          Style
-        </span>
-        <ToggleButtonGroup
-          aria-label="Text style"
-          selectedKeys={textStyleKeys}
-          selectionMode="multiple"
-          size="sm"
-          onSelectionChange={(keys) => {
-            const set = keys as Set<string>;
-
-            applyStyle({
-              isBold: set.has("bold"),
-              isItalic: set.has("italic"),
-            });
-          }}
-        >
-          <ToggleButton isIconOnly aria-label="Bold" id="bold">
-            <HugeiconsIcon icon={TextBoldIcon} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Italic" id="italic">
-            <HugeiconsIcon icon={TextItalicIcon} size={16} />
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </div>
-
-      {/* Alignment */}
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
-          Alignment
-        </span>
-        <ToggleButtonGroup
-          aria-label="Text alignment"
-          selectedKeys={new Set([style.textAlign])}
-          selectionMode="single"
-          size="sm"
-          onSelectionChange={(keys) => {
-            const set = keys as Set<string>;
-            const next = set.values().next().value;
-
-            if (next === "left" || next === "center" || next === "right") {
-              applyStyle({ textAlign: next });
-            }
-          }}
-        >
-          <ToggleButton isIconOnly aria-label="Align left" id="left">
-            <HugeiconsIcon icon={TextAlignLeftIcon} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Align center" id="center">
-            <HugeiconsIcon icon={TextAlignCenterIcon} size={16} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Align right" id="right">
-            <HugeiconsIcon icon={TextAlignRightIcon} size={16} />
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </div>
-
-      {/* Color palette + custom picker */}
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
-          Color
-        </span>
-        <div className="grid grid-cols-5 gap-1.5">
-          {COLOR_SWATCHES.map((hex) => {
-            const isActive = style.color.toLowerCase() === hex.toLowerCase();
-
-            return (
-              <button
-                key={hex}
-                aria-label={`Set color ${hex}`}
-                aria-pressed={isActive}
-                className={`h-7 w-7 cursor-pointer rounded-md border transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                  isActive
-                    ? "border-primary shadow-[0_0_0_2px_var(--heroui-primary-200)]"
-                    : "border-default-200"
-                }`}
-                style={{ backgroundColor: hex }}
-                type="button"
-                onClick={() => applyStyle({ color: hex })}
-              />
-            );
-          })}
-          <ColorPicker
-            value={style.color}
-            onChange={(color) => applyStyle({ color: color.toString("hex") })}
-          >
-            <ColorPicker.Trigger>
-              <button
-                aria-label="More colors"
-                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                style={{
-                  background:
-                    "conic-gradient(from 0deg, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #ef4444)",
-                }}
-                type="button"
-              />
-              <Label className="sr-only">More colors</Label>
-            </ColorPicker.Trigger>
-            <ColorPicker.Popover>
-              <ColorArea
-                aria-label="Color area"
-                className="max-w-full"
-                colorSpace="hsb"
-                xChannel="saturation"
-                yChannel="brightness"
-              >
-                <ColorArea.Thumb />
-              </ColorArea>
-              <ColorSlider
-                channel="hue"
-                className="gap-1 px-1"
-                colorSpace="hsb"
-              >
-                <ColorSlider.Track>
-                  <ColorSlider.Thumb />
-                </ColorSlider.Track>
-              </ColorSlider>
-            </ColorPicker.Popover>
-          </ColorPicker>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
         </div>
-      </div>
+
+        {/* Font size */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+            Size
+          </span>
+          <Select
+            aria-label="Font size"
+            className="w-full"
+            selectedKey={selectedSizeKey}
+            onSelectionChange={(key) => {
+              const next = Number(key);
+
+              if (!Number.isFinite(next) || next <= 0) return;
+              applyStyle({ fontSize: next });
+            }}
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                {sizeItems.map((s) => {
+                  const key = String(s);
+
+                  return (
+                    <ListBox.Item key={key} id={key} textValue={key}>
+                      {s}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  );
+                })}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </div>
+
+        {/* Bold + Italic */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+            Style
+          </span>
+          <ToggleButtonGroup
+            aria-label="Text style"
+            selectedKeys={textStyleKeys}
+            selectionMode="multiple"
+            size="sm"
+            onSelectionChange={(keys) => {
+              const set = keys as Set<string>;
+
+              applyStyle({
+                isBold: set.has("bold"),
+                isItalic: set.has("italic"),
+              });
+            }}
+          >
+            <ToggleButton isIconOnly aria-label="Bold" id="bold">
+              <HugeiconsIcon icon={TextBoldIcon} size={16} />
+            </ToggleButton>
+            <ToggleButton isIconOnly aria-label="Italic" id="italic">
+              <HugeiconsIcon icon={TextItalicIcon} size={16} />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </div>
+
+        {/* Alignment */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+            Alignment
+          </span>
+          <ToggleButtonGroup
+            aria-label="Text alignment"
+            selectedKeys={new Set([style.textAlign])}
+            selectionMode="single"
+            size="sm"
+            onSelectionChange={(keys) => {
+              const set = keys as Set<string>;
+              const next = set.values().next().value;
+
+              if (next === "left" || next === "center" || next === "right") {
+                applyStyle({ textAlign: next });
+              }
+            }}
+          >
+            <ToggleButton isIconOnly aria-label="Align left" id="left">
+              <HugeiconsIcon icon={TextAlignLeftIcon} size={16} />
+            </ToggleButton>
+            <ToggleButton isIconOnly aria-label="Align center" id="center">
+              <HugeiconsIcon icon={TextAlignCenterIcon} size={16} />
+            </ToggleButton>
+            <ToggleButton isIconOnly aria-label="Align right" id="right">
+              <HugeiconsIcon icon={TextAlignRightIcon} size={16} />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </div>
+
+        {/* Color palette + custom picker */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+            Color
+          </span>
+          <div className="grid grid-cols-5 gap-1.5">
+            {COLOR_SWATCHES.map((hex) => {
+              const isActive = style.color.toLowerCase() === hex.toLowerCase();
+
+              return (
+                <button
+                  key={hex}
+                  aria-label={`Set color ${hex}`}
+                  aria-pressed={isActive}
+                  className={`h-7 w-7 cursor-pointer rounded-md border transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                    isActive
+                      ? "border-primary shadow-[0_0_0_2px_var(--heroui-primary-200)]"
+                      : "border-default-200"
+                  }`}
+                  style={{ backgroundColor: hex }}
+                  type="button"
+                  onClick={() => applyStyle({ color: hex })}
+                />
+              );
+            })}
+            <ColorPicker
+              value={style.color}
+              onChange={(color) => applyStyle({ color: color.toString("hex") })}
+            >
+              <ColorPicker.Trigger>
+                <button
+                  aria-label="More colors"
+                  className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #ef4444)",
+                  }}
+                  type="button"
+                />
+                <Label className="sr-only">More colors</Label>
+              </ColorPicker.Trigger>
+              <ColorPicker.Popover>
+                <ColorArea
+                  aria-label="Color area"
+                  className="max-w-full"
+                  colorSpace="hsb"
+                  xChannel="saturation"
+                  yChannel="brightness"
+                >
+                  <ColorArea.Thumb />
+                </ColorArea>
+                <ColorSlider
+                  channel="hue"
+                  className="gap-1 px-1"
+                  colorSpace="hsb"
+                >
+                  <ColorSlider.Track>
+                    <ColorSlider.Thumb />
+                  </ColorSlider.Track>
+                </ColorSlider>
+              </ColorPicker.Popover>
+            </ColorPicker>
+          </div>
+        </div>
       </div>
     </aside>
   );

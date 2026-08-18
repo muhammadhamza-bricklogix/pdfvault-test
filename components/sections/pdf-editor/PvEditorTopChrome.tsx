@@ -292,7 +292,7 @@ function TopAppBar() {
   };
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
+    <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4 py-2">
       <Tooltip delay={300}>
         <button
           aria-label="Back to dashboard"

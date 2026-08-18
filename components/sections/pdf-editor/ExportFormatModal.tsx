@@ -134,7 +134,11 @@ function ExportFormatModalBody({
         {/* Editable file name — inline title style so users immediately
             see it's the output filename and can click to rename it. */}
         <div className="flex items-center gap-2 rounded-xl border border-default-200 bg-default-50 px-3 py-2.5">
-          <TextField className="min-w-0 flex-1" value={fileName} onChange={setFileName}>
+          <TextField
+            className="min-w-0 flex-1"
+            value={fileName}
+            onChange={setFileName}
+          >
             <Input
               aria-label="File name"
               className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
