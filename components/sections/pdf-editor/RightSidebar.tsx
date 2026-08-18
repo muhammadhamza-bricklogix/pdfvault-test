@@ -804,6 +804,11 @@ export function ShapePropertiesContent({
   );
 
   if (variant === "floating") {
+    // Only show the floating panel when a shape tool is active or a shape
+    // object is selected. Text/image selections have their own toolbars
+    // (FloatingTextToolbar, etc.) and must not trigger this panel.
+    if (!showShapePanel) return null;
+
     // Panel visibility is `activeTool === "shape" || hasSelectedShape`.
     // Just flipping `activeTool` back to "select" leaves the panel up
     // when a shape is still selected (X button appears to do nothing).

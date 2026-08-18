@@ -244,7 +244,7 @@ export function FloatingTextToolbar({
       className={
         isMobile
           ? "pointer-events-auto fixed inset-x-0 bottom-[72px] z-50 flex flex-col gap-3 border-t border-default-200 bg-white p-4 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)]"
-          : "pointer-events-auto fixed right-4 top-1/2 z-50 flex w-[228px] -translate-y-1/2 flex-col gap-4 rounded-2xl border border-default-200 bg-white p-4 shadow-[0_8px_24px_rgba(16,24,40,0.08)]"
+          : "pointer-events-auto fixed right-4 top-1/2 z-50 flex w-[188px] -translate-y-1/2 flex-col gap-4 rounded-2xl border border-default-200 bg-white p-4 shadow-[0_8px_24px_rgba(16,24,40,0.08)]"
       }
       role="region"
     >
