@@ -55,10 +55,10 @@ const CLOUD_PROVIDERS: CloudProvider[] = [
   // { label: "Upload from one drive", id: "onedrive" },
 ];
 
-const TRUST_ITEMS = [
-  "Secure document storage",
-  "Edit in your browser",
-  "Personal file library",
+const TRUST_ITEMS: { label: string; Icon: () => React.ReactElement }[] = [
+  { label: "Secure document storage", Icon: SecureStorageIcon },
+  { label: "Edit in your browser", Icon: EditInBrowserIcon },
+  { label: "Personal file library", Icon: FileLibraryIcon },
 ];
 
 function formatSize(bytes: number): string {
@@ -90,7 +90,7 @@ function stashPendingCloudUpload(payload: object): void {
   }
 }
 
-function CheckCircleIcon() {
+function TrustIconWrapper({ children }: { children: React.ReactNode }) {
   return (
     <svg
       aria-hidden
@@ -100,21 +100,74 @@ function CheckCircleIcon() {
       viewBox="0 0 20 20"
       width="20"
     >
-      <circle
-        cx="10"
-        cy="10"
-        r="8.25"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
+      {children}
+    </svg>
+  );
+}
+
+// Shield with checkmark — "Secure document storage".
+function SecureStorageIcon() {
+  return (
+    <TrustIconWrapper>
       <path
-        d="M6.5 10.2l2.3 2.3 4.7-4.9"
+        d="M10 2.25 4 4v5.6c0 3.6 2.7 6.4 6 7.9 3.3-1.5 6-4.3 6-7.9V4l-6-1.75Z"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="1.4"
       />
-    </svg>
+      <path
+        d="M7.4 10.2l2.1 2.1 3.5-3.7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </TrustIconWrapper>
+  );
+}
+
+// Document with pencil — "Edit in your browser".
+function EditInBrowserIcon() {
+  return (
+    <TrustIconWrapper>
+      <path
+        d="M12.5 2.5H5.25A1.25 1.25 0 0 0 4 3.75v12.5A1.25 1.25 0 0 0 5.25 17.5h9.5A1.25 1.25 0 0 0 16 16.25V9.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="m14.6 2.9 2.5 2.5-5.4 5.4H9.2v-2.5z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </TrustIconWrapper>
+  );
+}
+
+// Stacked folders — "Personal file library".
+function FileLibraryIcon() {
+  return (
+    <TrustIconWrapper>
+      <path
+        d="M2.75 7.25v8.25c0 .55.45 1 1 1h11.5c.55 0 1-.45 1-1V8.5c0-.55-.45-1-1-1H9.5l-1.5-1.5H3.75c-.55 0-1 .45-1 1Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M5.5 7.25v-2c0-.55.45-1 1-1H10l1.5 1.5h5.75c.55 0 1 .45 1 1v.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </TrustIconWrapper>
   );
 }
 
@@ -783,7 +836,7 @@ export function UploadWorkspace({
                 </div>
 
                 <button
-                  className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
+                  className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -809,6 +862,23 @@ export function UploadWorkspace({
             </p>
           </div>
         </div>
+
+        {/* Trust strip — mirrors the `full` variant so `/` matches the
+            spec ("Secure document storage" / "Edit in your browser" /
+            "Personal file library" under the drop zone). Each item has
+            its own icon so the strip reads as three distinct value
+            props rather than a repeated checkmark. */}
+        <ul className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
+          {TRUST_ITEMS.map(({ label, Icon }) => (
+            <li
+              key={label}
+              className="flex items-center gap-2 text-[15px] font-medium text-[var(--pv-text-primary)]"
+            >
+              <Icon />
+              {label}
+            </li>
+          ))}
+        </ul>
       </div>
     );
   }
@@ -898,7 +968,7 @@ export function UploadWorkspace({
                   {acceptedExtensions.map((e) => e.toUpperCase()).join(", ")}
                 </p>
                 <button
-                  className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] text-[16px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
+                  className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -957,13 +1027,13 @@ export function UploadWorkspace({
 
       {/* Trust strip */}
       <ul className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
-        {TRUST_ITEMS.map((item) => (
+        {TRUST_ITEMS.map(({ label, Icon }) => (
           <li
-            key={item}
+            key={label}
             className="flex items-center gap-2 text-[15px] text-[var(--pv-text-primary)]"
           >
-            <CheckCircleIcon />
-            {item}
+            <Icon />
+            {label}
           </li>
         ))}
       </ul>

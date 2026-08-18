@@ -48,11 +48,12 @@ export default function SSOCallbackPage() {
     void (async () => {
       try {
         await handleRedirectCallback({
-          // ForceRedirect URLs only fire on CLEAN completion. The
-          // transferable + missing-requirements branches don't reach
-          // these — we handle them manually below.
-          signInForceRedirectUrl: ROUTES.APP.DASHBOARD,
-          signUpForceRedirectUrl: ROUTES.APP.DASHBOARD,
+          // Fallback fires only when Clerk has no stored redirectUrl
+          // (e.g. a plain sign-up from the homepage). When the user
+          // arrived here via the editor download flow, signUp.sso()
+          // stored the editor URL as redirectUrl — using Force here
+          // would override it and always send the user to the dashboard
+          // instead of back to their open document.
           signInFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
           signUpFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
         });

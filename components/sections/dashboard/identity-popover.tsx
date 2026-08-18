@@ -17,6 +17,8 @@ import { useState } from "react";
 
 import { ThemeSegmented } from "@/components/ui/theme/theme-segmented";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
+import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -41,6 +43,7 @@ export function IdentityPopover({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const entitled = useIsEntitled();
+  const { data: subscription } = useSubscriptionQuery();
 
   const fullName = user?.fullName ?? "User";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -67,8 +70,15 @@ export function IdentityPopover({
       onNavigate?.();
     } else if (k === "unlock") {
       setIsOpen(false);
-      router.push(ROUTES.APP.SETTINGS_BILLING);
-      onNavigate?.();
+      // Never subscribed → show the paywall so they can sign up for the first time.
+      // Has subscription history (cancelled, paused, past-due) → send to billing
+      // settings to renew / update their card.
+      if (!subscription || subscription.status === "NONE") {
+        void requestPaywall(undefined, { hidePreview: true });
+      } else {
+        router.push(ROUTES.APP.SETTINGS_BILLING);
+        onNavigate?.();
+      }
     } else if (k === "terms") {
       setIsOpen(false);
       router.push(ROUTES.LEGAL.TERMS);

@@ -4,7 +4,9 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
+  ArrowDown01Icon,
   ArrowLeft01Icon,
+  ArrowUp01Icon,
   BackgroundIcon,
   Cursor01Icon,
   DashboardSpeed01Icon,
@@ -13,6 +15,7 @@ import {
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
+  NoteIcon,
   PaintBrush01Icon,
   PaintBucketIcon,
   PencilEdit01Icon,
@@ -40,12 +43,13 @@ import {
   Tooltip,
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -71,11 +75,27 @@ export function EditorInfoBar() {
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
+  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
+  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+
+  const mobileHistory = historyByPage.get(currentPage) ?? [];
+  const mobileHistoryIdx = historyIndexByPage.get(currentPage) ?? -1;
+  const canUndo = mobileHistoryIdx > 0;
+  const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
 
   const router = useRouter();
   const renameDoc = useRenameDocumentMutation();
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+
+  useEffect(() => {
+    const toggle = () => setIsThumbsOpen((prev) => !prev);
+
+    window.addEventListener("editor:toggle-thumbs", toggle);
+
+    return () => window.removeEventListener("editor:toggle-thumbs", toggle);
+  }, []);
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
@@ -136,11 +156,28 @@ export function EditorInfoBar() {
       : "Save";
   const onSaveClick = () => {
     if (!isSignedIn) {
+      // Persist the file + any per-page Fabric edits to IDB before the
+      // full-page sign-in redirect so the hydrator can restore the exact
+      // state the user was in after they authenticate.
+      if (file) {
+        const { fabricJsonByPage, extractedPages } =
+          usePdfEditorStore.getState();
+
+        void savePendingEditorFile(
+          file,
+          fabricJsonByPage,
+          extractedPages,
+        ).catch(() => undefined);
+      }
+
       dispatchSignInPrompt({
         title: "Sign in to save",
         description:
-          "Saving stores this PDF in your library so you can come back to it. Cancel to keep editing here without an account.",
+          "Create an account and we'll bring you right back to save your document where you left off.",
         confirmLabel: "Sign in & continue",
+        // Explicit clean return URL so the hydrator's ?fresh=1 / ?tool=
+        // guards don't accidentally wipe the IDB file we just saved.
+        redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
       });
 
       return;
@@ -256,22 +293,46 @@ export function EditorInfoBar() {
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
-            {/* PRD §7.2 — back arrow returns to dashboard (or landing if
-                no session yet). Present on mobile + web layouts. */}
-            <Tooltip delay={300}>
+            {/* Back + Hamburger — desktop only */}
+            <div className="hidden sm:flex sm:items-center sm:gap-1">
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Back to dashboard"
+                  size="sm"
+                  variant="tertiary"
+                  onPress={handleBack}
+                >
+                  <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Back to dashboard</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <HamburgerMenu />
+            </div>
+
+            {/* Undo + Redo — mobile only */}
+            <div className="flex items-center gap-1 sm:hidden">
               <Button
-                aria-label="Back to dashboard"
+                aria-label="Undo"
+                isDisabled={!canUndo}
                 size="sm"
                 variant="tertiary"
-                onPress={handleBack}
+                onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+                <HugeiconsIcon icon={UndoIcon} size={16} />
               </Button>
-              <Tooltip.Content>
-                <p>Back to dashboard</p>
-              </Tooltip.Content>
-            </Tooltip>
-            <HamburgerMenu />
+              <Button
+                aria-label="Redo"
+                isDisabled={!canRedo}
+                size="sm"
+                variant="tertiary"
+                onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+              >
+                <HugeiconsIcon icon={RedoIcon} size={16} />
+              </Button>
+            </div>
+
             <Tooltip delay={300}>
               <Button
                 aria-label="Browse all tools"
@@ -430,13 +491,26 @@ export function EditorInfoBar() {
           </div>
         </div>
 
-        {/* Mobile-only navigation row: page + zoom side by side, centered. */}
-        <div className="flex items-center justify-center gap-3 sm:hidden">
-          {pageNav}
-          <Separator className="!h-4 self-center" orientation="vertical" />
-          {zoomNav}
-          <SaveStatusChip compact />
-        </div>
+        {/* Second row: pages thumbnail toggle — mobile only */}
+        {pageCount > 1 && (
+          <div className="flex items-center justify-center border-t border-default-100 pt-1 sm:hidden">
+            <Button
+              aria-expanded={isThumbsOpen}
+              aria-label={isThumbsOpen ? "Hide pages" : "Show pages"}
+              size="sm"
+              variant={isThumbsOpen ? "secondary" : "tertiary"}
+              onPress={() =>
+                window.dispatchEvent(new CustomEvent("editor:toggle-thumbs"))
+              }
+            >
+              <HugeiconsIcon icon={NoteIcon} size={16} />
+              <HugeiconsIcon
+                icon={isThumbsOpen ? ArrowDown01Icon : ArrowUp01Icon}
+                size={14}
+              />
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );
@@ -450,7 +524,7 @@ const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
-  { icon: TextFontIcon, id: "text", label: "Text" },
+  { icon: TextFontIcon, id: "text", label: "Add Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },

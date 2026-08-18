@@ -3,30 +3,30 @@
 import type { Canvas, IText } from "fabric";
 
 import {
-  Delete02Icon,
+  Cancel01Icon,
+  TextAlignCenterIcon,
+  TextAlignLeftIcon,
+  TextAlignRightIcon,
   TextBoldIcon,
   TextItalicIcon,
-  TextUnderlineIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Button,
   ColorArea,
   ColorPicker,
   ColorSlider,
-  ColorSwatch,
   Label,
   ListBox,
   Select,
-  Separator,
   ToggleButton,
   ToggleButtonGroup,
-  Toolbar,
-  Tooltip,
 } from "@heroui/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-const TOOLBAR_GAP = 12;
+import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { usePdfEditorStore } from "@/lib/client/stores";
+
+type TextAlign = "left" | "center" | "right";
 
 type TextStyle = {
   color: string;
@@ -34,7 +34,7 @@ type TextStyle = {
   fontSize: number;
   isBold: boolean;
   isItalic: boolean;
-  isUnderline: boolean;
+  textAlign: TextAlign;
 };
 
 type FloatingTextToolbarProps = {
@@ -48,7 +48,38 @@ const FONT_FAMILIES = [
   "Courier New",
   "Georgia",
   "Verdana",
+  "Arial",
+  "Trebuchet MS",
 ];
+
+// Standard font-size presets. Extracted text can have arbitrary sizes
+// (e.g. 11.3, 13.7) — the current value is spliced into the list if
+// missing so the Select shows the true current size.
+const FONT_SIZE_PRESETS = [
+  8, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72, 96,
+];
+
+// 10-swatch palette + free-form ColorPicker for anything else. Grid is
+// 5 across × 2 tall — matches the visual weight of the other rows in
+// the panel and keeps the panel narrow.
+const COLOR_SWATCHES: readonly string[] = [
+  "#000000",
+  "#FFFFFF",
+  "#EF4444",
+  "#F59E0B",
+  "#10B981",
+  "#3B82F6",
+  "#8B5CF6",
+  "#EC4899",
+  "#6B7280",
+  "#7C2D12",
+] as const;
+
+function normaliseTextAlign(value: string | undefined): TextAlign {
+  if (value === "center" || value === "right") return value;
+
+  return "left";
+}
 
 function getTextStyle(obj: IText): TextStyle {
   return {
@@ -57,32 +88,45 @@ function getTextStyle(obj: IText): TextStyle {
     fontSize: obj.fontSize ?? 16,
     isBold: obj.fontWeight === "bold",
     isItalic: obj.fontStyle === "italic",
-    isUnderline: !!obj.underline,
+    textAlign: normaliseTextAlign(obj.textAlign),
   };
 }
 
 export function FloatingTextToolbar({
-  canvasContainerRef,
   fabricCanvas,
 }: FloatingTextToolbarProps) {
-  const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ left: 0, top: 0 });
-  const [anchor, setAnchor] = useState({
-    boundBottom: 0,
-    boundTop: 0,
-    left: 0,
-  });
-  const toolbarRef = useRef<HTMLDivElement | null>(null);
-  const [style, setStyle] = useState<TextStyle>({
+  const isMobile = useIsMobile();
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
+
+  const DEFAULT_STYLE: TextStyle = {
     color: "#000000",
     fontFamily: "Helvetica",
     fontSize: 16,
     isBold: false,
     isItalic: false,
-    isUnderline: false,
-  });
+    textAlign: "left",
+  };
 
+  const [style, setStyle] = useState<TextStyle>(DEFAULT_STYLE);
   const activeObjRef = useRef<IText | null>(null);
+
+  // Show when editText tool is active OR when a text object is selected.
+  const isEditTextMode = activeTool === "editText";
+  const [hasTextSelection, setHasTextSelection] = useState(false);
+  const visible = isEditTextMode || hasTextSelection;
+
+  // Reset to defaults when leaving editText mode so the panel starts
+  // fresh next time the tool is activated.
+  useEffect(() => {
+    if (!isEditTextMode) {
+      setHasTextSelection(false);
+      setStyle(DEFAULT_STYLE);
+      activeObjRef.current = null;
+    }
+    // DEFAULT_STYLE is a stable constant defined above — intentionally omitted
+    // from deps to avoid re-triggering on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditTextMode]);
 
   useEffect(() => {
     if (!fabricCanvas) return;
@@ -90,8 +134,15 @@ export function FloatingTextToolbar({
     const showToolbar = () => {
       const obj = fabricCanvas.getActiveObject();
 
-      if (!obj || obj.type !== "i-text") {
-        setVisible(false);
+      // Fabric's Textbox reports type "textbox"; IText reports "i-text";
+      // extracted source text (created by useEditTextMode) is Textbox.
+      // Match both so the panel opens for annotations, signatures, page
+      // numbers, and extracted text.
+      const isTextTarget =
+        !!obj && (obj.type === "i-text" || obj.type === "textbox");
+
+      if (!isTextTarget) {
+        setHasTextSelection(false);
         activeObjRef.current = null;
 
         return;
@@ -101,60 +152,24 @@ export function FloatingTextToolbar({
 
       activeObjRef.current = textObj;
       setStyle(getTextStyle(textObj));
-
-      // Position above the object's bounding rect
-      const bound = textObj.getBoundingRect();
-      const container = canvasContainerRef.current;
-      const containerRect = container?.getBoundingClientRect();
-      const canvasRect = fabricCanvas
-        .getElement()
-        .parentElement?.getBoundingClientRect();
-
-      const offsetX = canvasRect
-        ? canvasRect.left - (containerRect?.left ?? 0)
-        : 0;
-      const offsetY = canvasRect
-        ? canvasRect.top - (containerRect?.top ?? 0)
-        : 0;
-
-      setAnchor({
-        boundBottom: offsetY + bound.top + bound.height,
-        boundTop: offsetY + bound.top,
-        left: offsetX + bound.left,
-      });
-      setVisible(true);
+      setHasTextSelection(true);
     };
 
     const hideToolbar = () => {
-      setVisible(false);
+      setHasTextSelection(false);
       activeObjRef.current = null;
     };
 
     fabricCanvas.on("selection:created", showToolbar);
     fabricCanvas.on("selection:updated", showToolbar);
     fabricCanvas.on("selection:cleared", hideToolbar);
-    fabricCanvas.on("object:moving", showToolbar);
 
     return () => {
       fabricCanvas.off("selection:created", showToolbar);
       fabricCanvas.off("selection:updated", showToolbar);
       fabricCanvas.off("selection:cleared", hideToolbar);
-      fabricCanvas.off("object:moving", showToolbar);
     };
-  }, [canvasContainerRef, fabricCanvas]);
-
-  useLayoutEffect(() => {
-    if (!visible) return;
-    const el = toolbarRef.current;
-
-    if (!el) return;
-
-    const height = el.offsetHeight || 36;
-    const aboveTop = anchor.boundTop - height - TOOLBAR_GAP;
-    const top = aboveTop >= 0 ? aboveTop : anchor.boundBottom + TOOLBAR_GAP;
-
-    setPosition({ left: anchor.left, top });
-  }, [anchor, visible]);
+  }, [fabricCanvas]);
 
   const applyStyle = (patch: Partial<TextStyle>) => {
     const obj = activeObjRef.current;
@@ -171,7 +186,7 @@ export function FloatingTextToolbar({
       fontSize: next.fontSize,
       fontStyle: next.isItalic ? "italic" : "normal",
       fontWeight: next.isBold ? "bold" : "normal",
-      underline: next.isUnderline,
+      textAlign: next.textAlign,
     };
 
     // IText supports per-character styles which silently override
@@ -192,7 +207,13 @@ export function FloatingTextToolbar({
       typeof iText.setSelectionStyles === "function";
 
     if (hasRangeSelection) {
-      iText.setSelectionStyles!(fabricPatch);
+      // Per-character props (fill / fontFamily / fontSize / fontStyle /
+      // fontWeight) only. textAlign is a paragraph-level prop, so apply
+      // it on the object regardless.
+      const { textAlign: _textAlign, ...perChar } = fabricPatch;
+
+      iText.setSelectionStyles!(perChar);
+      obj.set({ textAlign: next.textAlign });
     } else {
       obj.set(fabricPatch);
 
@@ -215,27 +236,63 @@ export function FloatingTextToolbar({
     fabricCanvas.renderAll();
   };
 
+  const close = () => {
+    usePdfEditorStore.getState().setActiveTool("select");
+    if (fabricCanvas) {
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.requestRenderAll();
+    }
+  };
+
   if (!visible) return null;
 
   const textStyleKeys = new Set<string>();
 
   if (style.isBold) textStyleKeys.add("bold");
   if (style.isItalic) textStyleKeys.add("italic");
-  if (style.isUnderline) textStyleKeys.add("underline");
+
+  // Font-size preset list, with the current value spliced in front when
+  // it isn't a preset (pdf.js often extracts sizes like 11.3 or 13.7).
+  const currentSize = Math.round(style.fontSize * 10) / 10;
+  const sizeItems = FONT_SIZE_PRESETS.some(
+    (s) => Math.round(s * 10) === Math.round(currentSize * 10),
+  )
+    ? FONT_SIZE_PRESETS
+    : [currentSize, ...FONT_SIZE_PRESETS];
+  const selectedSizeKey = String(currentSize);
 
   return (
-    <div
-      ref={toolbarRef}
-      className="pointer-events-auto absolute z-50"
-      style={{ left: position.left, top: Math.max(0, position.top) }}
+    <aside
+      aria-label="Text formatting"
+      className={
+        isMobile
+          ? "pointer-events-auto fixed inset-x-0 bottom-[72px] z-50 flex flex-col gap-3 border-t border-default-200 bg-white p-4 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)]"
+          : "pointer-events-auto fixed right-4 top-1/2 z-50 flex w-[188px] -translate-y-1/2 flex-col gap-4 rounded-2xl border border-default-200 bg-white p-4 shadow-[0_8px_24px_rgba(16,24,40,0.08)]"
+      }
+      role="region"
     >
-      <Toolbar isAttached aria-label="Text formatting" className="py-0.5">
-        {/* Font family */}
+      {/* Close button */}
+      <button
+        aria-label="Close text formatting"
+        className="absolute right-3 top-3 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-default-400 transition-colors hover:bg-default-100 hover:text-default-700"
+        type="button"
+        onClick={close}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} size={16} />
+      </button>
+      {/* On mobile: horizontal scrollable row; on desktop: vertical column */}
+      <div className={isMobile ? "flex items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "flex flex-col gap-4"}>
+
+      {/* Font family */}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+          Font
+        </span>
         <Select
           aria-label="Font family"
-          className="w-32"
+          className="w-full"
           selectedKey={style.fontFamily}
-          onSelectionChange={(key) => applyStyle({ fontFamily: key as string })}
+          onSelectionChange={(key) => applyStyle({ fontFamily: String(key) })}
         >
           <Select.Trigger>
             <Select.Value />
@@ -252,110 +309,169 @@ export function FloatingTextToolbar({
             </ListBox>
           </Select.Popover>
         </Select>
+      </div>
 
-        <Separator />
-
-        {/* Font size */}
-        <input
+      {/* Font size */}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+          Size
+        </span>
+        <Select
           aria-label="Font size"
-          className="h-7 w-12 rounded border border-default-200 bg-transparent px-1.5 text-xs"
-          max={200}
-          min={6}
-          type="number"
-          value={style.fontSize}
-          onChange={(e) => applyStyle({ fontSize: Number(e.target.value) })}
-        />
+          className="w-full"
+          selectedKey={selectedSizeKey}
+          onSelectionChange={(key) => {
+            const next = Number(key);
 
-        <Separator />
+            if (!Number.isFinite(next) || next <= 0) return;
+            applyStyle({ fontSize: next });
+          }}
+        >
+          <Select.Trigger>
+            <Select.Value />
+            <Select.Indicator />
+          </Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              {sizeItems.map((s) => {
+                const key = String(s);
 
-        {/* Bold / Italic / Underline */}
+                return (
+                  <ListBox.Item key={key} id={key} textValue={key}>
+                    {s}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                );
+              })}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+      </div>
+
+      {/* Bold + Italic */}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+          Style
+        </span>
         <ToggleButtonGroup
+          aria-label="Text style"
           selectedKeys={textStyleKeys}
           selectionMode="multiple"
           size="sm"
           onSelectionChange={(keys) => {
+            const set = keys as Set<string>;
+
             applyStyle({
-              isBold: (keys as Set<string>).has("bold"),
-              isItalic: (keys as Set<string>).has("italic"),
-              isUnderline: (keys as Set<string>).has("underline"),
+              isBold: set.has("bold"),
+              isItalic: set.has("italic"),
             });
           }}
         >
           <ToggleButton isIconOnly aria-label="Bold" id="bold">
-            <HugeiconsIcon icon={TextBoldIcon} size={14} />
+            <HugeiconsIcon icon={TextBoldIcon} size={16} />
           </ToggleButton>
           <ToggleButton isIconOnly aria-label="Italic" id="italic">
-            <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={TextItalicIcon} size={14} />
-          </ToggleButton>
-          <ToggleButton isIconOnly aria-label="Underline" id="underline">
-            <ToggleButtonGroup.Separator />
-            <HugeiconsIcon icon={TextUnderlineIcon} size={14} />
+            <HugeiconsIcon icon={TextItalicIcon} size={16} />
           </ToggleButton>
         </ToggleButtonGroup>
+      </div>
 
-        <Separator />
+      {/* Alignment */}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+          Alignment
+        </span>
+        <ToggleButtonGroup
+          aria-label="Text alignment"
+          selectedKeys={new Set([style.textAlign])}
+          selectionMode="single"
+          size="sm"
+          onSelectionChange={(keys) => {
+            const set = keys as Set<string>;
+            const next = set.values().next().value;
 
-        {/* Text color */}
-        <ColorPicker
-          value={style.color}
-          onChange={(color) => applyStyle({ color: color.toString("hex") })}
+            if (next === "left" || next === "center" || next === "right") {
+              applyStyle({ textAlign: next });
+            }
+          }}
         >
-          <ColorPicker.Trigger>
-            <ColorSwatch size="sm" />
-            <Label className="sr-only">Text color</Label>
-          </ColorPicker.Trigger>
-          <ColorPicker.Popover>
-            <ColorArea
-              aria-label="Color area"
-              className="max-w-full"
-              colorSpace="hsb"
-              xChannel="saturation"
-              yChannel="brightness"
-            >
-              <ColorArea.Thumb />
-            </ColorArea>
-            <ColorSlider channel="hue" className="gap-1 px-1" colorSpace="hsb">
-              <ColorSlider.Track>
-                <ColorSlider.Thumb />
-              </ColorSlider.Track>
-            </ColorSlider>
-          </ColorPicker.Popover>
-        </ColorPicker>
+          <ToggleButton isIconOnly aria-label="Align left" id="left">
+            <HugeiconsIcon icon={TextAlignLeftIcon} size={16} />
+          </ToggleButton>
+          <ToggleButton isIconOnly aria-label="Align center" id="center">
+            <HugeiconsIcon icon={TextAlignCenterIcon} size={16} />
+          </ToggleButton>
+          <ToggleButton isIconOnly aria-label="Align right" id="right">
+            <HugeiconsIcon icon={TextAlignRightIcon} size={16} />
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </div>
 
-        <Separator />
+      {/* Color palette + custom picker */}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
+          Color
+        </span>
+        <div className="grid grid-cols-5 gap-1.5">
+          {COLOR_SWATCHES.map((hex) => {
+            const isActive = style.color.toLowerCase() === hex.toLowerCase();
 
-        {/* Delete the currently-selected IText (annotation, signature
-            stamp, user-added text, page number, etc.). Keyboard
-            Delete/Backspace also works via PdfViewerCanvas, but a
-            visible button is required on mobile where there is no
-            keyboard and on desktop for discoverability. Pressing this
-            removes the object, clears the active selection so the
-            toolbar hides itself, and re-renders the canvas. */}
-        <Tooltip>
-          <Button
-            isIconOnly
-            aria-label="Delete"
-            className="text-danger"
-            size="sm"
-            variant="ghost"
-            onPress={() => {
-              const fc = fabricCanvas;
-              const obj = activeObjRef.current;
-
-              if (!fc || !obj) return;
-              fc.remove(obj);
-              fc.discardActiveObject();
-              fc.requestRenderAll();
-            }}
+            return (
+              <button
+                key={hex}
+                aria-label={`Set color ${hex}`}
+                aria-pressed={isActive}
+                className={`h-7 w-7 cursor-pointer rounded-md border transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  isActive
+                    ? "border-primary shadow-[0_0_0_2px_var(--heroui-primary-200)]"
+                    : "border-default-200"
+                }`}
+                style={{ backgroundColor: hex }}
+                type="button"
+                onClick={() => applyStyle({ color: hex })}
+              />
+            );
+          })}
+          <ColorPicker
+            value={style.color}
+            onChange={(color) => applyStyle({ color: color.toString("hex") })}
           >
-            <HugeiconsIcon icon={Delete02Icon} size={14} />
-          </Button>
-          <Tooltip.Content>
-            <p>Delete</p>
-          </Tooltip.Content>
-        </Tooltip>
-      </Toolbar>
-    </div>
+            <ColorPicker.Trigger>
+              <button
+                aria-label="More colors"
+                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                style={{
+                  background:
+                    "conic-gradient(from 0deg, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #ef4444)",
+                }}
+                type="button"
+              />
+              <Label className="sr-only">More colors</Label>
+            </ColorPicker.Trigger>
+            <ColorPicker.Popover>
+              <ColorArea
+                aria-label="Color area"
+                className="max-w-full"
+                colorSpace="hsb"
+                xChannel="saturation"
+                yChannel="brightness"
+              >
+                <ColorArea.Thumb />
+              </ColorArea>
+              <ColorSlider
+                channel="hue"
+                className="gap-1 px-1"
+                colorSpace="hsb"
+              >
+                <ColorSlider.Track>
+                  <ColorSlider.Thumb />
+                </ColorSlider.Track>
+              </ColorSlider>
+            </ColorPicker.Popover>
+          </ColorPicker>
+        </div>
+      </div>
+      </div>
+    </aside>
   );
 }

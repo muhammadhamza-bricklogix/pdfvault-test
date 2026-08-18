@@ -22,6 +22,8 @@ import { useEffect, useState } from "react";
 
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
+import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
@@ -204,6 +206,16 @@ function SidebarBody({
   onNavigate?: () => void;
 }) {
   const entitled = useIsEntitled();
+  const { data: subscription } = useSubscriptionQuery();
+
+  const handleUnlockClick = () => {
+    onNavigate?.();
+    if (!subscription || subscription.status === "NONE") {
+      void requestPaywall(undefined, { hidePreview: true });
+    } else {
+      window.location.assign(ROUTES.APP.SETTINGS_BILLING);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -239,10 +251,10 @@ function SidebarBody({
         </div>
         {entitled ? null : (
           <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
-            <Link
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
-              href={ROUTES.APP.SETTINGS_BILLING}
-              onClick={onNavigate}
+            <button
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
+              type="button"
+              onClick={handleUnlockClick}
             >
               <HugeiconsIcon
                 className="shrink-0 text-[var(--pv-brand-red)]"
@@ -251,7 +263,7 @@ function SidebarBody({
                 strokeWidth={1.5}
               />
               <span>Unlock access</span>
-            </Link>
+            </button>
           </div>
         )}
         <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
