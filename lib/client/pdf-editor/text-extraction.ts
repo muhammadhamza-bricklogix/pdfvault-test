@@ -244,6 +244,35 @@ async function extractSequentialTextColors(
 
         currentFillColor = rgbToHex(r, gr, b);
       }
+    } else if (op === OPS.setFillColor || op === OPS.setFillColorN) {
+      // Generic colorspace fills (`sc` / `scn`). pdf.js emits these for any
+      // colorspace other than DeviceRGB/DeviceGray/DeviceCMYK — e.g.
+      // ICC-based, CalRGB, DeviceN, Pattern. Args are 1–4 numeric components
+      // (plus an optional pattern name for `scn`). We don't have the active
+      // colorspace here, so infer from the leading numeric arg count.
+      const nums: number[] = [];
+
+      for (const a of args) {
+        if (typeof a === "number") nums.push(a);
+        else break;
+      }
+      if (nums.length === 1) {
+        const g = nums[0]!;
+
+        currentFillColor = rgbToHex(g, g, g);
+      } else if (nums.length === 3) {
+        currentFillColor = rgbToHex(nums[0]!, nums[1]!, nums[2]!);
+      } else if (nums.length === 4) {
+        const c = nums[0]!;
+        const m = nums[1]!;
+        const y = nums[2]!;
+        const k = nums[3]!;
+        const r = (1 - c) * (1 - k);
+        const gr = (1 - m) * (1 - k);
+        const b = (1 - y) * (1 - k);
+
+        currentFillColor = rgbToHex(r, gr, b);
+      }
     } else if (
       op === OPS.showText ||
       op === OPS.showSpacedText ||

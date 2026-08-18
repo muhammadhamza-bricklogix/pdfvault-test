@@ -579,6 +579,102 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => el.removeEventListener("scroll", onScroll);
   }, [isMobile, pageCount, setCurrentPage]);
 
+  // Mobile swipe gestures for page navigation:
+  //   • Swipe LEFT  → next page
+  //   • Swipe RIGHT → previous page
+  //   • Pull DOWN at the very top → previous page
+  //   • Pull UP at the very bottom → next page (supplements the scroll handler
+  //     for pages that fit inside the viewport with no overflow)
+  //
+  // Skipped when a drawing tool is active (those gestures belong to Fabric).
+  // Skipped for horizontal swipes when the page has real horizontal overflow
+  // (user is panning a zoomed-in page, not swiping between pages).
+  useEffect(() => {
+    if (!isMobile || pageCount <= 1) return;
+    const el = viewerScrollRef.current;
+
+    if (!el) return;
+
+    // Drawing tools own the touch surface — don't hijack those gestures.
+    const DRAW_TOOL_SET = new Set([
+      "draw",
+      "eraser",
+      "highlight",
+      "redact",
+      "shape",
+      "whiteout",
+    ]);
+
+    let startX = 0;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startScrollTop = el.scrollTop;
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.changedTouches.length !== 1) return;
+      if (mobilePageNavRef.current) return;
+
+      const state = usePdfEditorStore.getState();
+
+      if (DRAW_TOOL_SET.has(state.activeTool)) return;
+
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      // ── Horizontal swipe (swipe left = next, swipe right = prev) ──────
+      // Only when horizontal movement dominates AND the page is not
+      // overflowing horizontally (otherwise the user is panning a zoomed page).
+      const hasHorizontalOverflow = el.scrollWidth > el.clientWidth + 10;
+
+      if (absDx > absDy && absDx > 50 && !hasHorizontalOverflow) {
+        if (dx < 0 && state.currentPage < state.pageCount) {
+          mobilePageNavRef.current = true;
+          setCurrentPage(state.currentPage + 1);
+        } else if (dx > 0 && state.currentPage > 1) {
+          mobilePageNavRef.current = true;
+          setCurrentPage(state.currentPage - 1);
+        }
+
+        return;
+      }
+
+      // ── Vertical pull at boundary ─────────────────────────────────────
+      // Only when vertical dominates and the swipe is large enough.
+      if (absDy > absDx && absDy > 60) {
+        const atTop = startScrollTop === 0;
+        const atBottom =
+          startScrollTop + el.clientHeight >= el.scrollHeight - 20;
+
+        // Pull DOWN at the top → previous page
+        if (dy > 0 && atTop && state.currentPage > 1) {
+          mobilePageNavRef.current = true;
+          setCurrentPage(state.currentPage - 1);
+        }
+        // Pull UP at the bottom → next page
+        if (dy < 0 && atBottom && state.currentPage < state.pageCount) {
+          mobilePageNavRef.current = true;
+          setCurrentPage(state.currentPage + 1);
+        }
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isMobile, pageCount, setCurrentPage]);
+
   return (
     <div
       ref={viewerScrollRef}
