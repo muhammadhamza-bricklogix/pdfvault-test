@@ -1,0 +1,202 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "PDFVault home" [ref=e7] [cursor=pointer]:
+            - /url: /
+            - img "PDFVault" [ref=e8]
+          - navigation "Primary" [ref=e9]:
+            - button "All Tools" [ref=e10]
+            - link "Edit" [ref=e13] [cursor=pointer]:
+              - /url: /pdf-composer
+            - link "Convert" [ref=e14] [cursor=pointer]:
+              - /url: /convert/pdf-to-word
+            - link "Compress" [ref=e15] [cursor=pointer]:
+              - /url: /pdf-composer?fresh=1&tool=compress
+        - button "Select language" [disabled] [ref=e19]: EN
+    - main [ref=e25]:
+      - region [ref=e26]:
+        - generic [ref=e27]:
+          - heading "Edit, sign, or convert any PDF in seconds" [level=1] [ref=e28]
+          - paragraph [ref=e29]: Sign, edit, protect and much more. Keep important documents in one secure workspace without losing track of files that matter.
+        - generic [ref=e31]:
+          - button "Upload a file. Drop a file here, or activate to browse." [ref=e33] [cursor=pointer]:
+            - button "Choose File" [ref=e34]
+            - generic [ref=e35]:
+              - heading "Drag & drop file to edit" [level=2] [ref=e36]
+              - generic [ref=e37]: OR
+              - button "Upload to Edit" [ref=e41]
+              - paragraph [ref=e42]: Size upto 100 MB
+            - paragraph [ref=e43]
+          - list [ref=e44]:
+            - listitem [ref=e45]: Secure document storage
+            - listitem [ref=e49]: Edit in your browser
+            - listitem [ref=e53]: Personal file library
+      - region "Get started in three simple steps" [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - heading "Get started in three simple steps" [level=2] [ref=e60]
+            - paragraph [ref=e61]: From upload to a securely saved document, PDFVault makes it easy to handle every PDF in one place.
+          - list [ref=e62]:
+            - listitem [ref=e63]:
+              - heading "Bring in your document" [level=3] [ref=e64]
+              - paragraph [ref=e65]: Upload from your device.
+            - listitem [ref=e66]:
+              - heading "Make it yours" [level=3] [ref=e67]
+              - paragraph [ref=e68]: Edit, convert, compress, protect, organize, or sign your document with the tools you need.
+            - listitem [ref=e69]:
+              - heading "Save it to your vault" [level=3] [ref=e70]
+              - paragraph [ref=e71]: Keep the latest version in your personal document library, ready whenever you need it again.
+      - region [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - heading "Every tool you need to work with PDFs in one place" [level=2] [ref=e75]
+            - paragraph [ref=e77]: Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.
+          - tablist "Tool categories" [ref=e79]:
+            - tab "PDF Composer" [selected] [ref=e80] [cursor=pointer]
+            - tab "Convert to PDF" [ref=e81] [cursor=pointer]
+            - tab "Compress PDF" [ref=e82] [cursor=pointer]
+            - tab "Convert from PDF" [ref=e83] [cursor=pointer]
+            - tab "Others" [ref=e84] [cursor=pointer]
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - link "Edit Revise text and objects inline with our full in-browser PDF composer." [ref=e87] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1
+                - heading "Edit" [level=3] [ref=e89]
+                - paragraph [ref=e90]: Revise text and objects inline with our full in-browser PDF composer.
+            - listitem [ref=e94]:
+              - link "Sign Add your signature with vector strokes." [ref=e95] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=watermark
+                - heading "Sign" [level=3] [ref=e97]
+                - paragraph [ref=e98]: Add your signature with vector strokes.
+            - listitem [ref=e102]:
+              - link "Organize Pages Reorder, insert, and rotate thumbnails until the flow is right." [ref=e103] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=manage
+                - heading "Organize Pages" [level=3] [ref=e105]
+                - paragraph [ref=e106]: Reorder, insert, and rotate thumbnails until the flow is right.
+            - listitem [ref=e110]:
+              - link "Split & Extract Pages Pull out the pages you need or split a long file into lighter ones." [ref=e111] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=split
+                - heading "Split & Extract Pages" [level=3] [ref=e113]
+                - paragraph [ref=e114]: Pull out the pages you need or split a long file into lighter ones.
+            - listitem [ref=e118]:
+              - link "Password Protect Lock your PDF with a password so only intended readers get in." [ref=e119] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=password
+                - heading "Password Protect" [level=3] [ref=e121]
+                - paragraph [ref=e122]: Lock your PDF with a password so only intended readers get in.
+            - listitem [ref=e126]:
+              - link "Unlock PDF Remove encryption when you have the right credentials." [ref=e127] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=unlock
+                - heading "Unlock PDF" [level=3] [ref=e129]
+                - paragraph [ref=e130]: Remove encryption when you have the right credentials.
+            - listitem [ref=e134]:
+              - link "Rotate Pages Fix upside-down scans or mixed-orientation bundles in seconds." [ref=e135] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=manage
+                - heading "Rotate Pages" [level=3] [ref=e137]
+                - paragraph [ref=e138]: Fix upside-down scans or mixed-orientation bundles in seconds.
+            - listitem [ref=e142]:
+              - link "Delete Pages Drop extras, blanks, or outdated sections without re-exporting." [ref=e143] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=manage
+                - heading "Delete Pages" [level=3] [ref=e145]
+                - paragraph [ref=e146]: Drop extras, blanks, or outdated sections without re-exporting.
+      - generic [ref=e153]:
+        - heading "Edit and manage PDF documents with ease" [level=2] [ref=e154]
+        - link "Create your free vault" [ref=e155] [cursor=pointer]:
+          - /url: /sign-up
+      - region [ref=e158]:
+        - generic [ref=e159]:
+          - heading "Frequently Asked Questions" [level=2] [ref=e161]
+          - tablist "FAQ categories" [ref=e162]:
+            - tab "Getting Started" [selected] [ref=e163]
+            - tab "Pricing & Billing" [ref=e164]
+            - tab "Cancellations & Refunds" [ref=e165]
+            - tab "Privacy & Security" [ref=e166]
+            - tab "Tools & Features" [ref=e167]
+          - tabpanel "Getting Started" [ref=e168]:
+            - list [ref=e169]:
+              - listitem [ref=e170]:
+                - button "What is PDFVault?" [ref=e171]
+                - region "What is PDFVault?":
+                  - generic: PDFVault is an all-in-one website for everyday document work — converting, editing, signing, compressing, merging, splitting, and more. Core tools are free to use, with no account required.
+              - listitem [ref=e176]:
+                - button "Do I need an account to use PDFVault?" [ref=e177]
+                - region "Do I need an account to use PDFVault?":
+                  - generic: No. Core tools are available without an account. Creating an account lets you save files to your vault and access premium features like downloading edited or converted files.
+              - listitem [ref=e182]:
+                - button "What file types does PDFVault support?" [ref=e183]
+                - region "What file types does PDFVault support?":
+                  - generic: PDFVault works with PDF files as well as common formats like Word, Excel, PowerPoint, and images (JPG, PNG), which can be converted to and from PDF.
+          - generic [ref=e188]:
+            - heading "Still have questions?" [level=3] [ref=e189]
+            - paragraph [ref=e190]:
+              - text: Reach out any time at
+              - link "support@pdfvault.ai" [ref=e191] [cursor=pointer]:
+                - /url: mailto:support@pdfvault.ai
+              - text: or visit our
+              - link "Contact Us" [ref=e192] [cursor=pointer]:
+                - /url: /contact
+              - text: page.
+    - contentinfo [ref=e193]:
+      - generic [ref=e194]:
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - img "PDFVault" [ref=e197]
+            - paragraph [ref=e198]: A smarter, more secure place for your PDFs.
+            - link "support@pdfvault.ai" [ref=e200] [cursor=pointer]:
+              - /url: mailto:support@pdfvault.ai
+          - navigation "TOOLS" [ref=e203]:
+            - heading "TOOLS" [level=2] [ref=e204]
+            - list [ref=e205]:
+              - listitem [ref=e206]:
+                - link "Edit & SIgn" [ref=e207] [cursor=pointer]:
+                  - /url: /pdf-composer
+              - listitem [ref=e208]:
+                - link "Compress" [ref=e209] [cursor=pointer]:
+                  - /url: /pdf-composer?fresh=1&tool=compress
+              - listitem [ref=e210]:
+                - link "Convert" [ref=e211] [cursor=pointer]:
+                  - /url: /convert/pdf-to-word
+          - navigation "COMPANY" [ref=e212]:
+            - heading "COMPANY" [level=2] [ref=e213]
+            - list [ref=e214]:
+              - listitem [ref=e215]:
+                - link "About Us" [ref=e216] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e217]:
+                - link "Contact Us" [ref=e218] [cursor=pointer]:
+                  - /url: /contact
+          - navigation "LEGAL" [ref=e219]:
+            - heading "LEGAL" [level=2] [ref=e220]
+            - list [ref=e221]:
+              - listitem [ref=e222]:
+                - link "Privacy Policy" [ref=e223] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e224]:
+                - link "Terms & Conditions" [ref=e225] [cursor=pointer]:
+                  - /url: /terms-and-conditions
+              - listitem [ref=e226]:
+                - link "Subscription Terms" [ref=e227] [cursor=pointer]:
+                  - /url: /subscription-terms
+              - listitem [ref=e228]:
+                - link "Refund Policy" [ref=e229] [cursor=pointer]:
+                  - /url: /refund
+              - listitem [ref=e230]:
+                - link "Cookie Policy" [ref=e231] [cursor=pointer]:
+                  - /url: /cookies
+              - listitem [ref=e232]:
+                - link "Do Not Sell" [ref=e233] [cursor=pointer]:
+                  - /url: /do-not-sell
+          - navigation "ACCOUNT" [ref=e234]:
+            - heading "ACCOUNT" [level=2] [ref=e235]
+            - list [ref=e236]:
+              - listitem [ref=e237]:
+                - link "Login" [ref=e238] [cursor=pointer]:
+                  - /url: /sign-in
+              - listitem [ref=e239]:
+                - link "Register" [ref=e240] [cursor=pointer]:
+                  - /url: /sign-up
+        - generic [ref=e242]:
+          - paragraph [ref=e243]: © 2026, PDFVault All rights reserved.
+          - paragraph [ref=e244]: FLUTTWINGS INVESTMENTS LIMITED, Nicosia, Cyprus
+  - button "Open Next.js Dev Tools" [ref=e250] [cursor=pointer]

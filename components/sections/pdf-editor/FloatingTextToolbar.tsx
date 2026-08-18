@@ -24,6 +24,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { usePdfEditorStore } from "@/lib/client/stores";
 
 type TextAlign = "left" | "center" | "right";
 
@@ -95,17 +96,37 @@ export function FloatingTextToolbar({
   fabricCanvas,
 }: FloatingTextToolbarProps) {
   const isMobile = useIsMobile();
-  const [visible, setVisible] = useState(false);
-  const [style, setStyle] = useState<TextStyle>({
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
+
+  const DEFAULT_STYLE: TextStyle = {
     color: "#000000",
     fontFamily: "Helvetica",
     fontSize: 16,
     isBold: false,
     isItalic: false,
     textAlign: "left",
-  });
+  };
 
+  const [style, setStyle] = useState<TextStyle>(DEFAULT_STYLE);
   const activeObjRef = useRef<IText | null>(null);
+
+  // Show when editText tool is active OR when a text object is selected.
+  const isEditTextMode = activeTool === "editText";
+  const [hasTextSelection, setHasTextSelection] = useState(false);
+  const visible = isEditTextMode || hasTextSelection;
+
+  // Reset to defaults when leaving editText mode so the panel starts
+  // fresh next time the tool is activated.
+  useEffect(() => {
+    if (!isEditTextMode) {
+      setHasTextSelection(false);
+      setStyle(DEFAULT_STYLE);
+      activeObjRef.current = null;
+    }
+    // DEFAULT_STYLE is a stable constant defined above — intentionally omitted
+    // from deps to avoid re-triggering on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditTextMode]);
 
   useEffect(() => {
     if (!fabricCanvas) return;
@@ -121,7 +142,7 @@ export function FloatingTextToolbar({
         !!obj && (obj.type === "i-text" || obj.type === "textbox");
 
       if (!isTextTarget) {
-        setVisible(false);
+        setHasTextSelection(false);
         activeObjRef.current = null;
 
         return;
@@ -131,11 +152,11 @@ export function FloatingTextToolbar({
 
       activeObjRef.current = textObj;
       setStyle(getTextStyle(textObj));
-      setVisible(true);
+      setHasTextSelection(true);
     };
 
     const hideToolbar = () => {
-      setVisible(false);
+      setHasTextSelection(false);
       activeObjRef.current = null;
     };
 
@@ -216,9 +237,11 @@ export function FloatingTextToolbar({
   };
 
   const close = () => {
-    if (!fabricCanvas) return;
-    fabricCanvas.discardActiveObject();
-    fabricCanvas.requestRenderAll();
+    usePdfEditorStore.getState().setActiveTool("select");
+    if (fabricCanvas) {
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.requestRenderAll();
+    }
   };
 
   if (!visible) return null;
