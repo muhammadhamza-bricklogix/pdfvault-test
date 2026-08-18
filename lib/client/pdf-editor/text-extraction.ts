@@ -429,29 +429,34 @@ export async function extractTextBlocks(
       .map((it) => (it && "str" in it ? (it as TextItem).str : "")),
   });
 
-  // Safety net for the "dark PDF turns black on Edit Text" regression
-  // (2026-08-18). If we have a heterogeneously-colored doc AND the color→item
-  // mapping isn't 1:1, we'd silently paint every block black — invisible on a
-  // dark background. Refuse extraction so `useEditTextMode`'s catch reverts
-  // activeTool to "select" + toasts, and pdf.js keeps painting readable text.
-  if (!sameLength && uniqueColors.size > 1) {
-    logger.warn(
-      "[PDFedits] text: refusing extraction (color mapping unreliable)",
-      {
-        itemsCount: items.length,
-        colorsCount: colors.length,
-        uniqueColors: Array.from(uniqueColors),
-      },
-    );
-    throw new Error(
-      "Text editing not available for this document (color mapping unreliable). " +
-        `${items.length} text items but ${colors.length} colors captured; ` +
-        `${uniqueColors.size} unique colors.`,
-    );
+  // pdf.js typically splits text items on font/style changes within a single
+  // showText op, so items.length > colors.length is common. Both streams are
+  // in document order, so a proportional index mapping keeps colors mostly
+  // aligned. Boundary items may pick up the wrong color for a few glyphs, but
+  // the majority of the page renders correctly. (2026-08-18: the previous
+  // "refuse extraction" branch left dark PDFs uneditable — replaced with this
+  // fallback so colored text stays approximately colored instead of black.)
+  const useProportional = !sameLength && colors.length > 0;
+
+  if (useProportional) {
+    logger.warn("[PDFedits] text: proportional color mapping", {
+      itemsCount: items.length,
+      colorsCount: colors.length,
+      uniqueColors: Array.from(uniqueColors),
+    });
   }
 
   const colorForItem = (itemIndex: number): string => {
     if (sameLength) return colors[itemIndex] ?? fallbackColor;
+
+    if (useProportional && items.length > 0) {
+      const mappedIdx = Math.min(
+        colors.length - 1,
+        Math.floor((itemIndex * colors.length) / items.length),
+      );
+
+      return colors[mappedIdx] ?? fallbackColor;
+    }
 
     return fallbackColor;
   };

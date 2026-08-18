@@ -173,6 +173,55 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => onFabricCanvasReady?.(null);
   }, [fabricCanvas, onFabricCanvasReady]);
 
+  // Live thumbnail sync — after any Fabric edit on the current page, composite
+  // the PDF canvas + Fabric canvas into a JPEG data URL and push it to the
+  // store so the thumbnail sidebar reflects the change immediately.
+  // Debounced to 500 ms so rapid keystrokes don't flood canvas.toDataURL calls.
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const capture = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const pdfCanvas = canvasRef.current;
+        const fabricLower = fabricCanvas.lowerCanvasEl as
+          | HTMLCanvasElement
+          | undefined;
+
+        if (!pdfCanvas || !fabricLower) return;
+
+        const tmp = document.createElement("canvas");
+
+        tmp.width = pdfCanvas.width;
+        tmp.height = pdfCanvas.height;
+        const ctx = tmp.getContext("2d");
+
+        if (!ctx) return;
+        ctx.drawImage(pdfCanvas, 0, 0);
+        ctx.drawImage(fabricLower, 0, 0);
+        const dataUrl = tmp.toDataURL("image/jpeg", 0.7);
+        const page = usePdfEditorStore.getState().currentPage;
+
+        usePdfEditorStore.getState().setThumbnailSnapshot(page, dataUrl);
+      }, 500);
+    };
+
+    fabricCanvas.on("object:modified", capture);
+    fabricCanvas.on("object:added", capture);
+    fabricCanvas.on("object:removed", capture);
+    fabricCanvas.on("text:changed", capture);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      fabricCanvas.off("object:modified", capture);
+      fabricCanvas.off("object:added", capture);
+      fabricCanvas.off("object:removed", capture);
+      fabricCanvas.off("text:changed", capture);
+    };
+  }, [fabricCanvas]);
+
   useTestHarness(fabricCanvas);
 
   useDrawTool({ fabricCanvas });

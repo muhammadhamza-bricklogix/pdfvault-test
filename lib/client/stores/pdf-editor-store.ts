@@ -167,6 +167,9 @@ type PdfEditorStore = {
   shapeFill: string;
   shapeStroke: string;
   shapeStrokeWidth: number;
+  /** Composite (PDF + Fabric) snapshots keyed by display-page number. Updated
+   *  live as the user edits so the thumbnail sidebar reflects text changes. */
+  thumbnailSnapshots: Map<number, string>;
   watermarkConfig: WatermarkConfig;
   backgroundImageConfig: BackgroundImageConfig;
   zoom: number;
@@ -243,6 +246,8 @@ type PdfEditorStore = {
   setWatermarkConfig: (config: Partial<WatermarkConfig>) => void;
   setBackgroundImageConfig: (config: Partial<BackgroundImageConfig>) => void;
   setZoom: (zoom: number) => void;
+  setThumbnailSnapshot: (displayPage: number, dataUrl: string) => void;
+  clearThumbnailSnapshots: () => void;
   undo: (page: number) => string | undefined;
 };
 
@@ -284,6 +289,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   shapeFill: "transparent",
   shapeStroke: "#000000",
   shapeStrokeWidth: 2,
+  thumbnailSnapshots: new Map(),
   watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
   backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
   zoom: 1.0,
@@ -383,6 +389,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       shapeFill: "transparent",
       shapeStroke: "#000000",
       shapeStrokeWidth: 2,
+      thumbnailSnapshots: new Map(),
       watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
       backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
       zoom: 1.0,
@@ -572,6 +579,9 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       pdfSourceUrl: null,
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
+      // Snapshots are keyed by display page; after save the baked PDF is the
+      // source of truth, so re-render thumbnails from the new bytes.
+      thumbnailSnapshots: new Map(),
     })),
 
   clearPendingCloudSaveAfterReload: () =>
@@ -678,6 +688,17 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       };
     }),
   setZoom: (zoom) => set({ zoom }),
+
+  setThumbnailSnapshot: (displayPage, dataUrl) =>
+    set((state) => {
+      const next = new Map(state.thumbnailSnapshots);
+
+      next.set(displayPage, dataUrl);
+
+      return { thumbnailSnapshots: next };
+    }),
+
+  clearThumbnailSnapshots: () => set({ thumbnailSnapshots: new Map() }),
 
   undo: (displayPage) => {
     const state = get();

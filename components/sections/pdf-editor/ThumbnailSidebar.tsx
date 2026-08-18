@@ -70,6 +70,9 @@ function Thumbnail({
   onToggleSelect,
 }: ThumbnailProps) {
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const snapshot = usePdfEditorStore((s) =>
+    s.thumbnailSnapshots.get(displayPageNumber),
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
@@ -242,6 +245,13 @@ function Thumbnail({
           >
             Blank page
           </span>
+        ) : snapshot ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- data URL, not optimizable */
+          <img
+            alt={`Page ${displayPageNumber} preview`}
+            className="max-h-full max-w-full object-contain"
+            src={snapshot}
+          />
         ) : (
           <canvas
             ref={canvasRef}
