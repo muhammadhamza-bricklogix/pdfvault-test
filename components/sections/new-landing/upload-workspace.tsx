@@ -836,7 +836,7 @@ export function UploadWorkspace({
                 </div>
 
                 <button
-                  className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
+                  className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -968,7 +968,7 @@ export function UploadWorkspace({
                   {acceptedExtensions.map((e) => e.toUpperCase()).join(", ")}
                 </p>
                 <button
-                  className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#de472e] text-[16px] font-semibold text-white transition-colors hover:bg-[#c73f28] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#de472e]"
+                  className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();

@@ -13,6 +13,7 @@ import {
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
+  NoteIcon,
   PaintBrush01Icon,
   PaintBucketIcon,
   PencilEdit01Icon,
@@ -71,6 +72,13 @@ export function EditorInfoBar() {
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
+  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
+  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+
+  const mobileHistory = historyByPage.get(currentPage) ?? [];
+  const mobileHistoryIdx = historyIndexByPage.get(currentPage) ?? -1;
+  const canUndo = mobileHistoryIdx > 0;
+  const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
 
   const router = useRouter();
   const renameDoc = useRenameDocumentMutation();
@@ -256,22 +264,46 @@ export function EditorInfoBar() {
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
-            {/* PRD §7.2 — back arrow returns to dashboard (or landing if
-                no session yet). Present on mobile + web layouts. */}
-            <Tooltip delay={300}>
+            {/* Back + Hamburger — desktop only */}
+            <div className="hidden sm:flex sm:items-center sm:gap-1">
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Back to dashboard"
+                  size="sm"
+                  variant="tertiary"
+                  onPress={handleBack}
+                >
+                  <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Back to dashboard</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <HamburgerMenu />
+            </div>
+
+            {/* Undo + Redo — mobile only */}
+            <div className="flex items-center gap-1 sm:hidden">
               <Button
-                aria-label="Back to dashboard"
+                aria-label="Undo"
+                isDisabled={!canUndo}
                 size="sm"
                 variant="tertiary"
-                onPress={handleBack}
+                onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+                <HugeiconsIcon icon={UndoIcon} size={16} />
               </Button>
-              <Tooltip.Content>
-                <p>Back to dashboard</p>
-              </Tooltip.Content>
-            </Tooltip>
-            <HamburgerMenu />
+              <Button
+                aria-label="Redo"
+                isDisabled={!canRedo}
+                size="sm"
+                variant="tertiary"
+                onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+              >
+                <HugeiconsIcon icon={RedoIcon} size={16} />
+              </Button>
+            </div>
+
             <Tooltip delay={300}>
               <Button
                 aria-label="Browse all tools"
@@ -332,6 +364,21 @@ export function EditorInfoBar() {
               className="!h-4 hidden self-center sm:block"
               orientation="vertical"
             />
+
+            {/* Pages thumbnail toggle — mobile only */}
+            {pageCount > 1 && (
+              <Button
+                aria-label="Toggle page thumbnails"
+                className="sm:hidden"
+                size="sm"
+                variant="tertiary"
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:toggle-thumbs"))
+                }
+              >
+                <HugeiconsIcon icon={NoteIcon} size={16} />
+              </Button>
+            )}
 
             {/* Save stays as a discrete icon — the PRD only reshapes the
                 right-most export controls, and Save is a distinct action
@@ -430,13 +477,6 @@ export function EditorInfoBar() {
           </div>
         </div>
 
-        {/* Mobile-only navigation row: page + zoom side by side, centered. */}
-        <div className="flex items-center justify-center gap-3 sm:hidden">
-          {pageNav}
-          <Separator className="!h-4 self-center" orientation="vertical" />
-          {zoomNav}
-          <SaveStatusChip compact />
-        </div>
       </div>
     </>
   );

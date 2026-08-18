@@ -20,7 +20,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -57,6 +57,14 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const setIsPasswordModalOpen = usePdfEditorStore((s) => s.setIsPasswordModalOpen);
   const setIsPageNumbersModalOpen = usePdfEditorStore((s) => s.setIsPageNumbersModalOpen);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+
+  useEffect(() => {
+    const toggle = () => setIsThumbsOpen((prev) => !prev);
+
+    window.addEventListener("editor:toggle-thumbs", toggle);
+
+    return () => window.removeEventListener("editor:toggle-thumbs", toggle);
+  }, []);
 
   const handleAction = (id: string) => {
     switch (id) {

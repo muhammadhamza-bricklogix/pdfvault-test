@@ -12,7 +12,7 @@ const convert = (slug: string) => `/convert/${slug}` as const;
 
 type TabId = "edit" | "convert-to" | "compress" | "convert-from" | "others";
 
-type Tab = { id: TabId; label: string };
+type Tab = { id: TabId; label: string; icon: string };
 
 type Tool = {
   icon: string;
@@ -23,11 +23,11 @@ type Tool = {
 };
 
 const TABS: Tab[] = [
-  { id: "edit", label: "PDF Composer" },
-  { id: "convert-to", label: "Convert to PDF" },
-  { id: "compress", label: "Compress PDF" },
-  { id: "convert-from", label: "Convert from PDF" },
-  { id: "others", label: "Others" },
+  { id: "edit", label: "PDF Composer", icon: "/landing/editor.svg" },
+  { id: "convert-to", label: "Convert to PDF", icon: "/landing/convert.svg" },
+  { id: "compress", label: "Compress PDF", icon: "/landing/split.svg" },
+  { id: "convert-from", label: "Convert from PDF", icon: "/landing/convert.svg" },
+  { id: "others", label: "Others", icon: "/landing/signature.svg" },
 ];
 
 // Catalog of every landing-page tool. Each tool declares the tabs it belongs
@@ -54,7 +54,7 @@ const TOOLS: Tool[] = [
     tabs: ["edit"],
   },
   {
-    icon: "/landing/signature.svg",
+    icon: "/landing/editor.svg",
     title: "Watermark",
     description: "Stamp a watermark with vector strokes.",
     href: TOOL_ROUTE.watermark,
@@ -423,7 +423,17 @@ export function LandingTools() {
                   onClick={() => setActiveTab(tab.id)}
                   onKeyDown={(event) => onTabKeyDown(event, index)}
                 >
-                  {tab.label}
+                  <span className="flex items-center gap-1.5">
+                    <Image
+                      alt=""
+                      aria-hidden
+                      className={selected ? "brightness-0 invert" : "opacity-60"}
+                      height={16}
+                      src={tab.icon}
+                      width={16}
+                    />
+                    {tab.label}
+                  </span>
                 </button>
               );
             })}
