@@ -137,7 +137,7 @@ export function LandingTestimonials() {
         <SectionHeading
           title={
             <span id="testimonials-heading">
-              See what people are saying about pdfvault.
+              See what people are saying about PDFVault.
             </span>
           }
         />
