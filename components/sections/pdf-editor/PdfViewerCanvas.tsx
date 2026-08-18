@@ -3,7 +3,7 @@
 import type { FabricObject, Textbox, TPointerEventInfo } from "fabric";
 import type { PDFPageProxy } from "pdfjs-dist";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
 import { useEditTextMode } from "@/lib/client/hooks/pdf-editor/use-edit-text-mode";
@@ -60,6 +60,23 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // Guards against double-navigation when the scroll handler fires again before
   // the page change + scroll-reset have taken effect.
   const mobilePageNavRef = useRef(false);
+  const [fading, setFading] = useState(false);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fade out → change page → fade in. Used by all scroll/swipe handlers so
+  // the transition is visible rather than an instant flash.
+  const navigatePage = useCallback(
+    (targetPage: number) => {
+      mobilePageNavRef.current = true;
+      setFading(true);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = setTimeout(() => {
+        setCurrentPage(targetPage);
+      }, 180);
+    },
+    [setCurrentPage],
+  );
+
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const file = usePdfEditorStore((s) => s.file);
   const fittedFileRef = useRef<File | null>(null);
@@ -597,16 +614,21 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   useEffect(() => {
     viewerScrollRef.current?.scrollTo({ top: 0 });
     mobilePageNavRef.current = false;
+    // Let the new page render for one frame before fading back in.
+    const t = setTimeout(() => setFading(false), 50);
+
+    return () => clearTimeout(t);
   }, [currentPage]);
 
-  // Auto-advance to the next page when the user scrolls to the bottom of the
-  // current page. Guards against double-fire with mobilePageNavRef.
+  // Auto-advance / auto-retreat when the user scrolls to the edge of the
+  // current page. Also handles mouse-wheel overscroll at the top for going back.
   useEffect(() => {
     if (pageCount <= 1) return;
     const el = viewerScrollRef.current;
 
     if (!el) return;
 
+    // Scroll reaches the bottom → next page.
     const onScroll = () => {
       if (mobilePageNavRef.current) return;
       if (el.scrollTop < 20) return;
@@ -614,15 +636,29 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       if (state.currentPage >= state.pageCount) return;
       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-        mobilePageNavRef.current = true;
-        setCurrentPage(state.currentPage + 1);
+        navigatePage(state.currentPage + 1);
+      }
+    };
+
+    // Wheel (trackpad/mouse) overscroll at the very top → previous page.
+    const onWheelNav = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return; // zoom handled elsewhere
+      if (mobilePageNavRef.current) return;
+      const state = usePdfEditorStore.getState();
+
+      if (e.deltaY < 0 && el.scrollTop === 0 && state.currentPage > 1) {
+        navigatePage(state.currentPage - 1);
       }
     };
 
     el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("wheel", onWheelNav, { passive: true });
 
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [pageCount, setCurrentPage]);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("wheel", onWheelNav);
+    };
+  }, [pageCount, navigatePage]);
 
   // Mobile swipe / pull gestures for page navigation.
   // Registered on document (not viewerScrollRef) because Fabric registers its
@@ -682,11 +718,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       if (absDx > absDy && absDx > 50 && !hasHorizontalOverflow) {
         if (dx < 0 && state.currentPage < state.pageCount) {
-          mobilePageNavRef.current = true;
-          setCurrentPage(state.currentPage + 1);
+          navigatePage(state.currentPage + 1);
         } else if (dx > 0 && state.currentPage > 1) {
-          mobilePageNavRef.current = true;
-          setCurrentPage(state.currentPage - 1);
+          navigatePage(state.currentPage - 1);
         }
 
         return;
@@ -699,13 +733,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           startScrollTop + el.clientHeight >= el.scrollHeight - 20;
 
         if (dy > 0 && atTop && state.currentPage > 1) {
-          mobilePageNavRef.current = true;
-          setCurrentPage(state.currentPage - 1);
+          navigatePage(state.currentPage - 1);
         }
 
         if (dy < 0 && atBottom && state.currentPage < state.pageCount) {
-          mobilePageNavRef.current = true;
-          setCurrentPage(state.currentPage + 1);
+          navigatePage(state.currentPage + 1);
         }
       }
     };
@@ -717,7 +749,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [isMobile, pageCount, setCurrentPage]);
+  }, [isMobile, pageCount, navigatePage]);
 
   return (
     <div
@@ -731,7 +763,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         iOS Safari otherwise pins the centred child and 1-finger swipes
         feel frozen.
       */}
-      <div className="mx-auto w-fit">
+      <div
+        className="mx-auto w-fit"
+        style={{ opacity: fading ? 0 : 1, transition: "opacity 180ms ease" }}
+      >
         <div className="shadow-lg">
           <div ref={containerRef} className="relative bg-white">
             {bgShouldShow && backgroundImageConfig.imageData && (
