@@ -23,6 +23,12 @@ const LandingBanner = dynamic(() =>
   ),
 );
 
+const LandingTestimonials = dynamic(() =>
+  import("@/components/sections/new-landing/landing-testimonials").then(
+    (m) => m.LandingTestimonials,
+  ),
+);
+
 const LandingFAQ = dynamic(() =>
   import("@/components/sections/new-landing/landing-faq").then(
     (m) => m.LandingFAQ,
@@ -48,7 +54,7 @@ export default function NewLandingPage() {
         <LandingSteps />
         <LandingTools />
         <LandingBanner />
-        {/* <LandingTestimonials /> */}
+        <LandingTestimonials />
         <LandingFAQ />
       </main>
       <LandingFooter />
