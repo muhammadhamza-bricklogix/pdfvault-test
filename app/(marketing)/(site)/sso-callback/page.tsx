@@ -54,7 +54,7 @@ export default function SSOCallbackPage() {
           // stored the editor URL as redirectUrl — using Force here
           // would override it and always send the user to the dashboard
           // instead of back to their open document.
-/          signInFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
+          signInFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
           signUpFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
         });
 
