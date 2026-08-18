@@ -47,6 +47,7 @@ import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
+import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -144,11 +145,28 @@ export function EditorInfoBar() {
       : "Save";
   const onSaveClick = () => {
     if (!isSignedIn) {
+      // Persist the file + any per-page Fabric edits to IDB before the
+      // full-page sign-in redirect so the hydrator can restore the exact
+      // state the user was in after they authenticate.
+      if (file) {
+        const { fabricJsonByPage, extractedPages } =
+          usePdfEditorStore.getState();
+
+        void savePendingEditorFile(
+          file,
+          fabricJsonByPage,
+          extractedPages,
+        ).catch(() => undefined);
+      }
+
       dispatchSignInPrompt({
         title: "Sign in to save",
         description:
-          "Saving stores this PDF in your library so you can come back to it. Cancel to keep editing here without an account.",
+          "Create an account and we'll bring you right back to save your document where you left off.",
         confirmLabel: "Sign in & continue",
+        // Explicit clean return URL so the hydrator's ?fresh=1 / ?tool=
+        // guards don't accidentally wipe the IDB file we just saved.
+        redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
       });
 
       return;
