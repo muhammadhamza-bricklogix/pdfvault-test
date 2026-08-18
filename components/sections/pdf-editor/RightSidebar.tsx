@@ -706,27 +706,29 @@ export function ShapePropertiesContent({
         <>
           <div className={dividerClass} />
 
-          <div className={sectionWrapperClass}>
-            <Section title="Opacity">
-              <Slider
-                aria-label="Opacity"
-                className={isHorizontal ? "w-40 p-1" : "p-1"}
-                maxValue={100}
-                minValue={0}
-                value={selectedProps.opacity}
-                onChange={(value) =>
-                  applyToSelectedObject({ opacity: value as number })
-                }
-              >
-                <Label className="text-xs text-default-500">Value</Label>
-                <Slider.Output className="text-xs text-default-500" />
-                <Slider.Track>
-                  <Slider.Fill />
-                  <Slider.Thumb />
-                </Slider.Track>
-              </Slider>
-            </Section>
-          </div>
+          {variant !== "strip" && (
+            <div className={sectionWrapperClass}>
+              <Section title="Opacity">
+                <Slider
+                  aria-label="Opacity"
+                  className={isHorizontal ? "w-40 p-1" : "p-1"}
+                  maxValue={100}
+                  minValue={0}
+                  value={selectedProps.opacity}
+                  onChange={(value) =>
+                    applyToSelectedObject({ opacity: value as number })
+                  }
+                >
+                  <Label className="text-xs text-default-500">Value</Label>
+                  <Slider.Output className="text-xs text-default-500" />
+                  <Slider.Track>
+                    <Slider.Fill />
+                    <Slider.Thumb />
+                  </Slider.Track>
+                </Slider>
+              </Section>
+            </div>
+          )}
 
           <div className={sectionWrapperClass}>
             <Section title="Position">
@@ -833,6 +835,11 @@ export function ShapePropertiesContent({
   }
 
   if (variant === "strip") {
+    // Only show the strip for actual shape objects. Text, images, and other
+    // canvas objects have their own toolbars (FloatingTextToolbar etc.) and
+    // don't need the horizontal strip cluttering the mobile dock.
+    if (!showShapePanel) return null;
+
     return (
       <>
         <div className="border-b border-default-200/70 bg-default-50/70 px-3 py-2">

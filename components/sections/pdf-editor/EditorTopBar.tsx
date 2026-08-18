@@ -450,7 +450,7 @@ const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
-  { icon: TextFontIcon, id: "text", label: "Text" },
+  { icon: TextFontIcon, id: "text", label: "Add Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },

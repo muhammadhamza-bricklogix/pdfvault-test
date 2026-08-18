@@ -5,9 +5,17 @@ import type { Canvas as FabricCanvas } from "fabric";
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
+  Comment01Icon,
+  Copy01Icon,
+  FileExportIcon,
+  FileMinusIcon,
+  Layers01Icon,
   Layout03Icon,
+  LockedIcon,
   NoteIcon,
   RedoIcon,
+  SplitIcon,
+  TextNumberSignIcon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -27,13 +35,57 @@ type BottomDockProps = {
   onReorderPages?: (fromDisplay: number, toDisplay: number) => void;
 };
 
+const ACTION_TOOLS = [
+  { id: "compress", label: "Compress", icon: FileMinusIcon },
+  { id: "secure", label: "Secure", icon: LockedIcon },
+  { id: "merge", label: "Merge", icon: Copy01Icon },
+  { id: "split", label: "Split", icon: SplitIcon },
+  { id: "flatten", label: "Flatten", icon: Layers01Icon },
+  { id: "extract", label: "Extract", icon: FileExportIcon },
+  { id: "page-numbers", label: "Page No.", icon: TextNumberSignIcon },
+  { id: "annotate", label: "Annotation", icon: Comment01Icon },
+] as const;
+
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
+  const file = usePdfEditorStore((s) => s.file);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
+  const setIsCompressModalOpen = usePdfEditorStore((s) => s.setIsCompressModalOpen);
+  const setIsPasswordModalOpen = usePdfEditorStore((s) => s.setIsPasswordModalOpen);
+  const setIsPageNumbersModalOpen = usePdfEditorStore((s) => s.setIsPageNumbersModalOpen);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+
+  const handleAction = (id: string) => {
+    switch (id) {
+      case "compress":
+        setIsCompressModalOpen(true);
+        break;
+      case "secure":
+        setIsPasswordModalOpen(true);
+        break;
+      case "page-numbers":
+        setIsPageNumbersModalOpen(true);
+        break;
+      case "merge":
+        window.dispatchEvent(new CustomEvent("editor:open-merge"));
+        break;
+      case "split":
+        window.dispatchEvent(new CustomEvent("editor:open-split"));
+        break;
+      case "flatten":
+        window.dispatchEvent(new CustomEvent("editor:open-flatten"));
+        break;
+      case "extract":
+        window.dispatchEvent(new CustomEvent("editor:extract-images"));
+        break;
+      case "annotate":
+        window.dispatchEvent(new CustomEvent("editor:open-annotations"));
+        break;
+    }
+  };
 
   const history = historyByPage.get(currentPage) ?? [];
   const idx = historyIndexByPage.get(currentPage) ?? -1;
@@ -91,18 +143,33 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
         </Tooltip>
 
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          E <ToolsContent showLabels toolIconSize={18} />
+          <ToolsContent showLabels toolIconSize={18} />
+          {ACTION_TOOLS.map((tool) => (
+            <button
+              key={tool.id}
+              aria-label={tool.label}
+              className="flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-md px-2.5 py-1.5 text-default-600 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!file}
+              type="button"
+              onClick={() => handleAction(tool.id)}
+            >
+              <HugeiconsIcon icon={tool.icon} size={18} />
+              <span className="text-[10px] leading-tight">{tool.label}</span>
+            </button>
+          ))}
         </div>
 
         {pageCount > 0 && (
           <Tooltip delay={300}>
             <Button
               aria-label="Manage pages"
+              className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
               size="sm"
               variant="tertiary"
               onPress={() => void handleOpenManagePages()}
             >
-              <HugeiconsIcon icon={Layout03Icon} size={16} />
+              <HugeiconsIcon icon={Layout03Icon} size={18} />
+              <span className="text-[10px] leading-tight">Manage</span>
             </Button>
             <Tooltip.Content>
               <p>Manage pages</p>
