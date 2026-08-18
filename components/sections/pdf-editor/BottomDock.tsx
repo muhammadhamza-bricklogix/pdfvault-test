@@ -3,8 +3,6 @@
 import type { Canvas as FabricCanvas } from "fabric";
 
 import {
-  ArrowDown01Icon,
-  ArrowUp01Icon,
   Comment01Icon,
   Copy01Icon,
   FileExportIcon,
@@ -12,11 +10,8 @@ import {
   Layers01Icon,
   Layout03Icon,
   LockedIcon,
-  NoteIcon,
-  RedoIcon,
   SplitIcon,
   TextNumberSignIcon,
-  UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
@@ -47,9 +42,6 @@ const ACTION_TOOLS = [
 ] as const;
 
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const file = usePdfEditorStore((s) => s.file);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
@@ -95,11 +87,6 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
     }
   };
 
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
-
   const handleOpenManagePages = async () => {
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
@@ -121,34 +108,23 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
       />
 
       <div className="flex items-center gap-2 px-2 py-2">
-        <Tooltip delay={300}>
-          <Button
-            aria-label="Undo"
-            isDisabled={!canUndo}
-            size="sm"
-            variant="tertiary"
-            onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
-          >
-            <HugeiconsIcon icon={UndoIcon} size={16} />
-          </Button>
-          <Tooltip.Content>
-            <p>Undo</p>
-          </Tooltip.Content>
-        </Tooltip>
-        <Tooltip delay={300}>
-          <Button
-            aria-label="Redo"
-            isDisabled={!canRedo}
-            size="sm"
-            variant="tertiary"
-            onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
-          >
-            <HugeiconsIcon icon={RedoIcon} size={16} />
-          </Button>
-          <Tooltip.Content>
-            <p>Redo</p>
-          </Tooltip.Content>
-        </Tooltip>
+        {pageCount > 0 && (
+          <Tooltip delay={300}>
+            <Button
+              aria-label="Manage pages"
+              className="h-auto shrink-0 flex-col gap-0.5 px-2.5 py-1.5"
+              size="sm"
+              variant="tertiary"
+              onPress={() => void handleOpenManagePages()}
+            >
+              <HugeiconsIcon icon={Layout03Icon} size={18} />
+              <span className="text-[10px] leading-tight">Manage</span>
+            </Button>
+            <Tooltip.Content>
+              <p>Manage pages</p>
+            </Tooltip.Content>
+          </Tooltip>
+        )}
 
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ToolsContent showLabels toolIconSize={18} />
@@ -166,45 +142,6 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
             </button>
           ))}
         </div>
-
-        {pageCount > 0 && (
-          <Tooltip delay={300}>
-            <Button
-              aria-label="Manage pages"
-              className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
-              size="sm"
-              variant="tertiary"
-              onPress={() => void handleOpenManagePages()}
-            >
-              <HugeiconsIcon icon={Layout03Icon} size={18} />
-              <span className="text-[10px] leading-tight">Manage</span>
-            </Button>
-            <Tooltip.Content>
-              <p>Manage pages</p>
-            </Tooltip.Content>
-          </Tooltip>
-        )}
-
-        {pageCount > 1 && (
-          <Tooltip delay={300}>
-            <Button
-              aria-expanded={isThumbsOpen}
-              aria-label={isThumbsOpen ? "Hide pages" : "Show pages"}
-              size="sm"
-              variant={isThumbsOpen ? "secondary" : "tertiary"}
-              onPress={() => setIsThumbsOpen((prev) => !prev)}
-            >
-              <HugeiconsIcon icon={NoteIcon} size={16} />
-              <HugeiconsIcon
-                icon={isThumbsOpen ? ArrowDown01Icon : ArrowUp01Icon}
-                size={14}
-              />
-            </Button>
-            <Tooltip.Content>
-              <p>{isThumbsOpen ? "Hide pages" : "Show pages"}</p>
-            </Tooltip.Content>
-          </Tooltip>
-        )}
       </div>
 
       {isThumbsOpen && pageCount > 1 && (

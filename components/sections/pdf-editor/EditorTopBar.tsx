@@ -4,7 +4,9 @@ import type { Key } from "@heroui/react";
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
 
 import {
+  ArrowDown01Icon,
   ArrowLeft01Icon,
+  ArrowUp01Icon,
   BackgroundIcon,
   Cursor01Icon,
   DashboardSpeed01Icon,
@@ -41,7 +43,7 @@ import {
   Tooltip,
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
@@ -85,6 +87,15 @@ export function EditorInfoBar() {
   const renameDoc = useRenameDocumentMutation();
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+
+  useEffect(() => {
+    const toggle = () => setIsThumbsOpen((prev) => !prev);
+
+    window.addEventListener("editor:toggle-thumbs", toggle);
+
+    return () => window.removeEventListener("editor:toggle-thumbs", toggle);
+  }, []);
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
@@ -383,21 +394,6 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* Pages thumbnail toggle — mobile only */}
-            {pageCount > 1 && (
-              <Button
-                aria-label="Toggle page thumbnails"
-                className="sm:hidden"
-                size="sm"
-                variant="tertiary"
-                onPress={() =>
-                  window.dispatchEvent(new CustomEvent("editor:toggle-thumbs"))
-                }
-              >
-                <HugeiconsIcon icon={NoteIcon} size={16} />
-              </Button>
-            )}
-
             {/* Save stays as a discrete icon — the PRD only reshapes the
                 right-most export controls, and Save is a distinct action
                 (cloud persist) from the download/checkout trio below. */}
@@ -495,6 +491,26 @@ export function EditorInfoBar() {
           </div>
         </div>
 
+        {/* Second row: pages thumbnail toggle — mobile only */}
+        {pageCount > 1 && (
+          <div className="flex items-center justify-center border-t border-default-100 pt-1 sm:hidden">
+            <Button
+              aria-expanded={isThumbsOpen}
+              aria-label={isThumbsOpen ? "Hide pages" : "Show pages"}
+              size="sm"
+              variant={isThumbsOpen ? "secondary" : "tertiary"}
+              onPress={() =>
+                window.dispatchEvent(new CustomEvent("editor:toggle-thumbs"))
+              }
+            >
+              <HugeiconsIcon icon={NoteIcon} size={16} />
+              <HugeiconsIcon
+                icon={isThumbsOpen ? ArrowDown01Icon : ArrowUp01Icon}
+                size={14}
+              />
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );
