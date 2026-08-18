@@ -561,9 +561,6 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     const onScroll = () => {
       if (mobilePageNavRef.current) return;
-      // Only trigger after the user has scrolled meaningfully — avoids
-      // firing when a short page fits fully inside the viewport (scrollTop
-      // stays 0 and no real scroll gesture has occurred).
       if (el.scrollTop < 20) return;
       const state = usePdfEditorStore.getState();
 
@@ -579,23 +576,26 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => el.removeEventListener("scroll", onScroll);
   }, [isMobile, pageCount, setCurrentPage]);
 
-  // Mobile swipe gestures for page navigation:
+  // Mobile swipe / pull gestures for page navigation.
+  // Registered on document (not viewerScrollRef) because Fabric registers its
+  // own touchend listener on document — touch events from the canvas element
+  // would not reliably bubble to the inner scroll container by the time Fabric
+  // finishes processing them.
+  //
   //   • Swipe LEFT  → next page
   //   • Swipe RIGHT → previous page
   //   • Pull DOWN at the very top → previous page
-  //   • Pull UP at the very bottom → next page (supplements the scroll handler
-  //     for pages that fit inside the viewport with no overflow)
+  //   • Pull UP at the very bottom → next page
   //
   // Skipped when a drawing tool is active (those gestures belong to Fabric).
   // Skipped for horizontal swipes when the page has real horizontal overflow
-  // (user is panning a zoomed-in page, not swiping between pages).
+  // (user is panning a zoomed-in page, not flipping pages).
   useEffect(() => {
     if (!isMobile || pageCount <= 1) return;
     const el = viewerScrollRef.current;
 
     if (!el) return;
 
-    // Drawing tools own the touch surface — don't hijack those gestures.
     const DRAW_TOOL_SET = new Set([
       "draw",
       "eraser",
@@ -630,8 +630,6 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const absDy = Math.abs(dy);
 
       // ── Horizontal swipe (swipe left = next, swipe right = prev) ──────
-      // Only when horizontal movement dominates AND the page is not
-      // overflowing horizontally (otherwise the user is panning a zoomed page).
       const hasHorizontalOverflow = el.scrollWidth > el.clientWidth + 10;
 
       if (absDx > absDy && absDx > 50 && !hasHorizontalOverflow) {
@@ -647,18 +645,16 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       }
 
       // ── Vertical pull at boundary ─────────────────────────────────────
-      // Only when vertical dominates and the swipe is large enough.
       if (absDy > absDx && absDy > 60) {
         const atTop = startScrollTop === 0;
         const atBottom =
           startScrollTop + el.clientHeight >= el.scrollHeight - 20;
 
-        // Pull DOWN at the top → previous page
         if (dy > 0 && atTop && state.currentPage > 1) {
           mobilePageNavRef.current = true;
           setCurrentPage(state.currentPage - 1);
         }
-        // Pull UP at the bottom → next page
+
         if (dy < 0 && atBottom && state.currentPage < state.pageCount) {
           mobilePageNavRef.current = true;
           setCurrentPage(state.currentPage + 1);
@@ -666,12 +662,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       }
     };
 
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
     };
   }, [isMobile, pageCount, setCurrentPage]);
 
