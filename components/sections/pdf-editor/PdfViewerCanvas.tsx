@@ -62,17 +62,23 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   const mobilePageNavRef = useRef(false);
   const [fading, setFading] = useState(false);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks whether the last navigation was forward (1) or backward (-1) so the
+  // scroll-reset effect can land at the top vs bottom of the incoming page.
+  const navDirectionRef = useRef<1 | -1>(1);
 
-  // Fade out → change page → fade in. Used by all scroll/swipe handlers so
-  // the transition is visible rather than an instant flash.
+  // Fade out → change page → fade in. direction=1 (forward) resets scroll to
+  // top; direction=-1 (backward) lands at the bottom of the previous page so
+  // the motion feels continuous rather than a jarring jump-to-top.
   const navigatePage = useCallback(
-    (targetPage: number) => {
+    (targetPage: number, direction: 1 | -1 = 1) => {
+      navDirectionRef.current = direction;
       mobilePageNavRef.current = true;
       setFading(true);
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      // 200 ms fade-out before the canvas content swaps.
       fadeTimerRef.current = setTimeout(() => {
         setCurrentPage(targetPage);
-      }, 180);
+      }, 200);
     },
     [setCurrentPage],
   );
@@ -612,42 +618,79 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // starts at the top. Also clears the navigation guard so the scroll handler
   // is ready for the next bottom-reach.
   useEffect(() => {
-    viewerScrollRef.current?.scrollTo({ top: 0 });
+    const el = viewerScrollRef.current;
+
+    if (el) {
+      if (navDirectionRef.current === -1) {
+        // Backward navigation → land at the bottom so the gesture feels like
+        // the user scrolled back up into the previous page.
+        el.scrollTop = 999999; // browser clamps to actual scrollHeight
+      } else {
+        el.scrollTop = 0;
+      }
+    }
+
     mobilePageNavRef.current = false;
-    // Let the new page render for one frame before fading back in.
+    // 50 ms lets the new page content render before fading in (slow reveal).
     const t = setTimeout(() => setFading(false), 50);
 
     return () => clearTimeout(t);
   }, [currentPage]);
 
   // Auto-advance / auto-retreat when the user scrolls to the edge of the
-  // current page. Also handles mouse-wheel overscroll at the top for going back.
+  // current page. A 400 ms dwell at the bottom is required before flipping so
+  // a quick scroll-past doesn't instantly jump pages (Google-Docs feel).
+  // Wheel overscroll at the top handles the "scroll up into previous page" case.
   useEffect(() => {
     if (pageCount <= 1) return;
     const el = viewerScrollRef.current;
 
     if (!el) return;
 
-    // Scroll reaches the bottom → next page.
+    let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearDwell = () => {
+      if (dwellTimer) {
+        clearTimeout(dwellTimer);
+        dwellTimer = null;
+      }
+    };
+
     const onScroll = () => {
       if (mobilePageNavRef.current) return;
-      if (el.scrollTop < 20) return;
-      const state = usePdfEditorStore.getState();
+      // Ignore when page content fits entirely in the viewport (scrollTop stays 0).
+      if (el.scrollTop < 20) { clearDwell(); return; }
 
-      if (state.currentPage >= state.pageCount) return;
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-        navigatePage(state.currentPage + 1);
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+
+      if (atBottom) {
+        if (!dwellTimer) {
+          // Wait 400 ms at the bottom before committing to next page — gives
+          // the user time to stop scrolling intentionally.
+          dwellTimer = setTimeout(() => {
+            dwellTimer = null;
+            const s = usePdfEditorStore.getState();
+
+            if (!mobilePageNavRef.current && s.currentPage < s.pageCount) {
+              navigatePage(s.currentPage + 1, 1);
+            }
+          }, 400);
+        }
+      } else {
+        // User scrolled back up — cancel the pending page flip.
+        clearDwell();
       }
     };
 
     // Wheel (trackpad/mouse) overscroll at the very top → previous page.
+    // No dwell needed — intentional upward overscroll is unambiguous.
     const onWheelNav = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) return; // zoom handled elsewhere
       if (mobilePageNavRef.current) return;
       const state = usePdfEditorStore.getState();
 
       if (e.deltaY < 0 && el.scrollTop === 0 && state.currentPage > 1) {
-        navigatePage(state.currentPage - 1);
+        navigatePage(state.currentPage - 1, -1);
       }
     };
 
@@ -655,6 +698,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     el.addEventListener("wheel", onWheelNav, { passive: true });
 
     return () => {
+      clearDwell();
       el.removeEventListener("scroll", onScroll);
       el.removeEventListener("wheel", onWheelNav);
     };
@@ -718,9 +762,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       if (absDx > absDy && absDx > 50 && !hasHorizontalOverflow) {
         if (dx < 0 && state.currentPage < state.pageCount) {
-          navigatePage(state.currentPage + 1);
+          navigatePage(state.currentPage + 1, 1);
         } else if (dx > 0 && state.currentPage > 1) {
-          navigatePage(state.currentPage - 1);
+          navigatePage(state.currentPage - 1, -1);
         }
 
         return;
@@ -733,11 +777,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           startScrollTop + el.clientHeight >= el.scrollHeight - 20;
 
         if (dy > 0 && atTop && state.currentPage > 1) {
-          navigatePage(state.currentPage - 1);
+          navigatePage(state.currentPage - 1, -1);
         }
 
         if (dy < 0 && atBottom && state.currentPage < state.pageCount) {
-          navigatePage(state.currentPage + 1);
+          navigatePage(state.currentPage + 1, 1);
         }
       }
     };
@@ -765,7 +809,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       */}
       <div
         className="mx-auto w-fit"
-        style={{ opacity: fading ? 0 : 1, transition: "opacity 180ms ease" }}
+        style={{
+          opacity: fading ? 0 : 1,
+          // Fast fade-out hides old content quickly; slow fade-in gives the new
+          // page a gentle reveal that feels like a Google Docs page transition.
+          transition: fading ? "opacity 200ms ease-out" : "opacity 350ms ease-in",
+        }}
       >
         <div className="shadow-lg">
           <div ref={containerRef} className="relative bg-white">
