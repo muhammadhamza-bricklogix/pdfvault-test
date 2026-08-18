@@ -595,15 +595,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // starts at the top. Also clears the navigation guard so the scroll handler
   // is ready for the next bottom-reach.
   useEffect(() => {
-    if (!isMobile) return;
     viewerScrollRef.current?.scrollTo({ top: 0 });
     mobilePageNavRef.current = false;
-  }, [isMobile, currentPage]);
+  }, [currentPage]);
 
   // Auto-advance to the next page when the user scrolls to the bottom of the
-  // current page on mobile. Guards against double-fire with mobilePageNavRef.
+  // current page. Guards against double-fire with mobilePageNavRef.
   useEffect(() => {
-    if (!isMobile || pageCount <= 1) return;
+    if (pageCount <= 1) return;
     const el = viewerScrollRef.current;
 
     if (!el) return;
@@ -623,7 +622,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     el.addEventListener("scroll", onScroll, { passive: true });
 
     return () => el.removeEventListener("scroll", onScroll);
-  }, [isMobile, pageCount, setCurrentPage]);
+  }, [pageCount, setCurrentPage]);
 
   // Mobile swipe / pull gestures for page navigation.
   // Registered on document (not viewerScrollRef) because Fabric registers its

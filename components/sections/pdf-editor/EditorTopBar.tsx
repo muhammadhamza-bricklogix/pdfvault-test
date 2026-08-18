@@ -189,7 +189,14 @@ export function EditorInfoBar() {
   // landing page if the app itself hasn't authenticated them yet, so a
   // signed-out visitor exploring the editor isn't bounced through a
   // sign-in dead-end just for pressing Back).
+  //
+  // Clear the store BEFORE navigating so re-entry via any path — bare
+  // `/pdf-editor`, tool tile, a landing-page drop that creates a new doc —
+  // doesn't render the previous PDF while the new load is in flight.
+  // Reported 2026-08-18: "open PDF, edit, go back, open another PDF still
+  // shows the previous PDF".
   const handleBack = () => {
+    usePdfEditorStore.getState().clearFile();
     router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
   };
 

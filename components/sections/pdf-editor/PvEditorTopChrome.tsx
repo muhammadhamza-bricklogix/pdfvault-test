@@ -239,7 +239,12 @@ function TopAppBar() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const displayName = fileName.replace(/\.pdf$/i, "");
 
+  // Clear the store BEFORE navigating so re-entry via any path — bare
+  // `/pdf-editor`, tool tile, or a landing-page drop that creates a new
+  // doc — doesn't render the previous PDF while the new load is in flight.
+  // Reported 2026-08-18.
   const handleBack = () => {
+    usePdfEditorStore.getState().clearFile();
     router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
   };
 
