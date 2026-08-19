@@ -100,8 +100,11 @@ const TOOL_CARDS: readonly ToolCardEntry[] = [
   },
 ];
 
+// `h-full` on the card + `h-full` on each grid `<li>` makes every card
+// stretch to the tallest sibling in its row — so a 1-line description and
+// a 2-line description read as equal-height tiles. QA 2026-08-20.
 const TOOL_CARD_CLASSNAME =
-  "group flex w-full flex-col gap-4 rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2";
+  "group flex h-full w-full flex-col gap-4 rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2";
 
 function ToolCardContent({ tool }: { tool: ToolCardEntry }) {
   return (
@@ -122,7 +125,10 @@ function ToolCardContent({ tool }: { tool: ToolCardEntry }) {
       </div>
       <span
         aria-hidden
-        className="mt-1 inline-flex text-[var(--pv-text-strong)] transition-transform group-hover:translate-x-0.5"
+        // `mt-auto` pins the arrow to the card bottom, so the row of
+        // arrows lines up across siblings even when descriptions differ
+        // in length. Pairs with `h-full` on the card / `<li>`.
+        className="mt-auto inline-flex text-[var(--pv-text-strong)] transition-transform group-hover:translate-x-0.5"
       >
         <HugeiconsIcon icon={ArrowRight02Icon} size={18} />
       </span>
@@ -169,7 +175,7 @@ export function PvToolsGrid() {
       <section aria-label="PDF tools">
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {TOOL_CARDS.map((tool) => (
-            <li key={tool.title}>
+            <li key={tool.title} className="h-full">
               <ToolCard
                 tool={tool}
                 onOpenPicker={(slug, label) => setPicker({ slug, label })}
