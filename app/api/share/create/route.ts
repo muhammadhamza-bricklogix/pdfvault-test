@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 
 import { bytesStore } from "@/lib/server/share/bytes-store";
+import { getCanonicalOrigin } from "@/lib/server/share/canonical-origin";
 import { hashPassword, passwordStore } from "@/lib/server/share/password";
 import { newJti, signToken } from "@/lib/server/share/sign-token";
 
@@ -122,9 +123,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     name: displayName,
   });
 
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    `${req.nextUrl.protocol}//${req.headers.get("host") ?? req.nextUrl.host}`;
+  // Build the URL from the actual request host — the bytes-store lives in
+  // memory on THIS instance, so a share URL must point back at the same
+  // origin that just accepted the upload. `NEXT_PUBLIC_APP_URL` used to be
+  // first here but leaks across envs (staging shares ended up on the prod
+  // domain, which had no bytes → 500 for the recipient).
+  const origin = getCanonicalOrigin(req.headers, req.nextUrl.origin);
   const url = `${origin}/share/${encodeURIComponent(token)}`;
 
   return Response.json(

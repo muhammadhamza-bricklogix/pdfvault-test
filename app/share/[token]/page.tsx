@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+
+import { resolveShare } from "@/lib/server/share/resolve-share";
+import {
+  mintViewCookie,
+  VIEW_COOKIE_NAME,
+  viewCookieOptions,
+} from "@/lib/server/share/view-cookie";
 
 import { PasswordGate } from "./PasswordGate";
 import { ViewerClient } from "./ViewerClient";
@@ -19,39 +25,24 @@ export const metadata: Metadata = {
   },
 };
 
-type ResolveOk = {
-  ok: true;
-  name: string;
-  expiresAt: number;
-  requiresPassword: boolean;
-};
-type ResolveErr = {
-  ok: false;
-  reason: "not-found" | "expired" | "revoked" | "malformed" | "bad-signature";
-};
-type ResolveResponse = ResolveOk | ResolveErr;
+type ResolveErrReason =
+  | "not-found"
+  | "expired"
+  | "revoked"
+  | "malformed"
+  | "bad-signature";
 
-async function resolveServerSide(
-  token: string,
-  cookieHeader: string,
-  origin: string,
-): Promise<ResolveResponse | null> {
-  // Internal fetch to our own route handler. We forward the cookie
-  // header so the response can set/refresh the view cookie on this
-  // request when the share is password-less.
-  const res = await fetch(
-    `${origin}/api/share/resolve?t=${encodeURIComponent(token)}`,
-    {
-      headers: { Cookie: cookieHeader },
-      cache: "no-store",
-    },
-  );
-
-  if (res.status === 404) return { ok: false, reason: "not-found" } as const;
-  try {
-    return (await res.json()) as ResolveResponse;
-  } catch {
-    return null;
+function reasonToMessage(reason: ResolveErrReason): string {
+  switch (reason) {
+    case "not-found":
+      return "This share link doesn't exist or its content is no longer available.";
+    case "expired":
+      return "This share link has expired.";
+    case "revoked":
+      return "This share link has been revoked by the owner.";
+    case "malformed":
+    case "bad-signature":
+      return "This share link isn't valid.";
   }
 }
 
@@ -63,16 +54,14 @@ export default async function SharePage({
   const { token: rawToken } = await params;
   const token = decodeURIComponent(rawToken);
 
-  const hdrs = await headers();
-  const host = hdrs.get("host") ?? "localhost:3000";
-  const proto = hdrs.get("x-forwarded-proto") ?? "http";
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `${proto}://${host}`;
-  const cookieHeader = hdrs.get("cookie") ?? "";
+  // Resolve directly in-process. Previously this component fetched
+  // `/api/share/resolve` over HTTP, which required the server to know
+  // its own public origin — a footgun in multi-env setups (a share
+  // created on `staging.pdfvault.ai` returned a `www.pdfvault.ai` URL
+  // via NEXT_PUBLIC_APP_URL, and the fetch then failed on the wrong
+  // instance, rendering a 500 black screen for the recipient).
+  const result = await resolveShare(token);
 
-  const result = await resolveServerSide(token, cookieHeader, origin);
-
-  if (!result) notFound();
   if (!result.ok) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
@@ -80,6 +69,15 @@ export default async function SharePage({
         <p className="text-default-600">{reasonToMessage(result.reason)}</p>
       </main>
     );
+  }
+
+  // Mirror the route handler's cookie mint so the viewer can pull bytes
+  // without an extra round-trip on password-less shares.
+  if (!result.requiresPassword) {
+    const cookie = await mintViewCookie(result.jti);
+    const cookieStore = await cookies();
+
+    cookieStore.set(VIEW_COOKIE_NAME, cookie, viewCookieOptions(token));
   }
 
   if (result.requiresPassword) {
@@ -99,18 +97,4 @@ export default async function SharePage({
       token={token}
     />
   );
-}
-
-function reasonToMessage(reason: ResolveErr["reason"]): string {
-  switch (reason) {
-    case "not-found":
-      return "This share link doesn't exist or its content is no longer available.";
-    case "expired":
-      return "This share link has expired.";
-    case "revoked":
-      return "This share link has been revoked by the owner.";
-    case "malformed":
-    case "bad-signature":
-      return "This share link isn't valid.";
-  }
 }

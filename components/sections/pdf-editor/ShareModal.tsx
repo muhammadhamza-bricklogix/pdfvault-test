@@ -1,6 +1,8 @@
 "use client";
 
 import { Button, Input, Label, Modal, Switch, TextField } from "@heroui/react";
+import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
@@ -207,15 +209,36 @@ export function ShareModal({
             {generated && (
               <div className="space-y-3">
                 <Label>Share link</Label>
-                <TextField value={generated.url}>
-                  <Input
-                    readOnly
-                    aria-label="Generated share link"
-                    onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
-                      e.target.select()
+                <div className="relative">
+                  <TextField value={generated.url}>
+                    <Input
+                      readOnly
+                      aria-label="Generated share link"
+                      // Right padding keeps the URL text from sliding under
+                      // the inline copy button on narrow modals.
+                      className="pr-10"
+                      onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
+                        e.target.select()
+                      }
+                    />
+                  </TextField>
+                  <button
+                    aria-label={
+                      copyState === "copied" ? "Link copied" : "Copy share link"
                     }
-                  />
-                </TextField>
+                    aria-live="polite"
+                    className="absolute inset-y-0 right-0 z-10 flex items-center justify-center px-3 text-default-400 transition-colors hover:text-default-700 focus-visible:text-default-700 focus-visible:outline-none"
+                    tabIndex={0}
+                    type="button"
+                    onClick={() => void onCopy()}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <HugeiconsIcon
+                      icon={copyState === "copied" ? Tick02Icon : Copy01Icon}
+                      size={16}
+                    />
+                  </button>
+                </div>
                 <p className="text-xs text-default-500">
                   Expires {new Date(generated.expiresAt).toLocaleString()}.
                 </p>

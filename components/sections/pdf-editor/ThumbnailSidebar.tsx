@@ -160,7 +160,38 @@ function Thumbnail({
     sourcePageNumber,
   ]);
 
-  usePageRenderer({ canvasRef, page, zoom: thumbnailZoom });
+  // Grid layout (Manage Pages modal) uses an aspect-ratio'd frame so the
+  // thumbnail is shaped like the actual page. Sidebar/strip layouts keep
+  // their previous behaviour (canvas dictates height) so the sidebar visuals
+  // don't shrink.
+  const useAspectFit = layout === "grid";
+
+  usePageRenderer({
+    canvasRef,
+    fitContainer: useAspectFit,
+    page,
+    zoom: thumbnailZoom,
+  });
+
+  // Real page aspect ratio (width / height), honouring `/Rotate` metadata.
+  // Falls back to portrait `8.5 / 11` for blank drafts and while pdf.js is
+  // still loading the page.
+  const aspectRatio =
+    page && page.view
+      ? (() => {
+          const [x0, y0, x1, y1] = page.view;
+          const w = Math.abs(x1 - x0);
+          const h = Math.abs(y1 - y0);
+
+          if (!w || !h) return undefined;
+          const rot = (page.rotate ?? 0) % 360;
+          const sideways = rot === 90 || rot === 270;
+
+          return sideways ? `${h} / ${w}` : `${w} / ${h}`;
+        })()
+      : draftPage?.kind === "blank"
+        ? "8.5 / 11"
+        : undefined;
 
   const highlighted = isSelected || isActive;
 
@@ -172,10 +203,21 @@ function Thumbnail({
         : "flex w-full flex-col items-center gap-1 rounded-lg p-2 text-left transition-colors";
   const frameClass =
     layout === "grid"
-      ? "flex min-h-44 w-full items-center justify-center overflow-hidden rounded border border-default-200 bg-white shadow-sm"
+      ? "flex w-full items-center justify-center overflow-hidden rounded border border-default-200 bg-white shadow-sm"
       : layout === "horizontal"
         ? "flex h-20 w-full items-center justify-center overflow-hidden rounded border border-default-200 bg-white shadow-sm"
         : "flex min-h-28 w-full items-center justify-center overflow-hidden rounded border border-default-200 bg-white shadow-sm";
+  const frameStyle: React.CSSProperties = {
+    ...(rotation ? { transform: `rotate(${rotation}deg)` } : {}),
+    ...(draftPage?.backgroundColor
+      ? { backgroundColor: draftPage.backgroundColor }
+      : {}),
+    ...(useAspectFit
+      ? aspectRatio
+        ? { aspectRatio }
+        : { minHeight: "11rem" }
+      : {}),
+  };
 
   return (
     <div
@@ -227,15 +269,7 @@ function Thumbnail({
           ⋮⋮
         </span>
       ) : null}
-      <div
-        className={frameClass}
-        style={{
-          ...(rotation ? { transform: `rotate(${rotation}deg)` } : {}),
-          ...(draftPage?.backgroundColor
-            ? { backgroundColor: draftPage.backgroundColor }
-            : {}),
-        }}
-      >
+      <div className={frameClass} style={frameStyle}>
         {isBlank ? (
           <span
             className="text-[10px]"
@@ -255,11 +289,22 @@ function Thumbnail({
         ) : (
           <canvas
             ref={canvasRef}
-            style={
-              draftPage?.backgroundColor
+            // For grid layout, `usePageRenderer` skips setting canvas CSS
+            // dims (fitContainer=true) so the aspect-ratio'd frame controls
+            // display size — the bitmap stays at full pdf.js resolution.
+            style={{
+              ...(useAspectFit
+                ? {
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    width: "100%",
+                    height: "100%",
+                  }
+                : {}),
+              ...(draftPage?.backgroundColor
                 ? { mixBlendMode: "multiply" }
-                : undefined
-            }
+                : {}),
+            }}
           />
         )}
       </div>
