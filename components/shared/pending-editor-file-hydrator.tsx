@@ -552,6 +552,33 @@ export function PendingEditorFileHydrator() {
           }),
         );
       }
+
+      // Strip the one-shot auto-launch params from the URL so a browser
+      // refresh doesn't re-fire the action. Without this, a user who
+      // landed on `/pdf-editor?id=X&export=docx` and hit F5 mid-edit
+      // would be dragged through the download flow again. `?id=` is kept
+      // so the document loader can still hydrate on refresh.
+      // Reported 2026-08-19 (QA: "refresh triggers unwanted download").
+      const cleaned = new URLSearchParams(searchParams.toString());
+      let mutated = false;
+
+      if (cleaned.has("tool")) {
+        cleaned.delete("tool");
+        mutated = true;
+      }
+      if (cleaned.has("export")) {
+        cleaned.delete("export");
+        mutated = true;
+      }
+      if (cleaned.has("fresh")) {
+        cleaned.delete("fresh");
+        mutated = true;
+      }
+      if (mutated) {
+        const q = cleaned.toString();
+
+        router.replace(q ? `${pathname}?${q}` : pathname);
+      }
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
@@ -559,6 +586,9 @@ export function PendingEditorFileHydrator() {
     authLoaded,
     currentFile,
     exportFormat,
+    pathname,
+    router,
+    searchParams,
     setActiveTool,
     setIsCompressModalOpen,
     setIsManagePagesOpen,
