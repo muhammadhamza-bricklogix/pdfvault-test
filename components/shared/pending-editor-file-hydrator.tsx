@@ -14,6 +14,7 @@ import {
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -137,7 +138,9 @@ export function PendingEditorFileHydrator() {
     // returns) so users who click "PDF Composer" itself still land on
     // the editor.
     if (tool && !docId && isSignedIn) {
-      logger.event("hydrator.signed_in_redirect_to_picker", "info", { tool });
+      logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
+        tool,
+      });
       const returnTo = `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
 
       window.location.assign(returnTo);
@@ -146,7 +149,9 @@ export function PendingEditorFileHydrator() {
     }
 
     if (tool && AUTH_GATED_TOOLS.has(tool) && !isSignedIn) {
-      logger.event("hydrator.auth_gated_redirect_to_signin", "info", { tool });
+      logger.event(EVENTS.HYDRATOR_AUTH_GATED_REDIRECT_TO_SIGNIN, "info", {
+        tool,
+      });
       // Preserve the tool slug in the return URL so we land back in the
       // same launch flow after sign-in.
       const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
@@ -245,7 +250,7 @@ export function PendingEditorFileHydrator() {
         const hasAutoLaunch = Boolean(tool || exportFormat);
 
         if (isSignedIn && hasAutoLaunch && !docId) {
-          logger.event("hydrator.post_signin_restore", "info", {
+          logger.event(EVENTS.HYDRATOR_POST_SIGNIN_RESTORE, "info", {
             tool,
             exportFormat,
             hasFabricEdits: (pendingFabricState?.size ?? 0) > 0,
@@ -320,7 +325,7 @@ export function PendingEditorFileHydrator() {
 
             next.set("id", document.id);
             router.replace(`${pathname}?${next.toString()}`);
-            logger.event("hydrator.post_signin_restore_ok", "info", {
+            logger.event(EVENTS.HYDRATOR_POST_SIGNIN_RESTORE_OK, "info", {
               documentId: document.id,
             });
           } catch (saveErr) {
@@ -419,7 +424,7 @@ export function PendingEditorFileHydrator() {
 
         setCurrentDocument({ id: document.id, name: document.filename });
         queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
-        logger.event("hydrator.background_autosave_ok", "info", {
+        logger.event(EVENTS.HYDRATOR_BACKGROUND_AUTOSAVE_OK, "info", {
           documentId: document.id,
         });
         toast.success({
@@ -493,7 +498,7 @@ export function PendingEditorFileHydrator() {
     if (!authLoaded) return;
 
     launchedRef.current = true;
-    logger.event("hydrator.auto_launch", "info", { tool, exportFormat });
+    logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", { tool, exportFormat });
 
     // Small delay so the editor's own file-load pipeline (Fabric mount +
     // pdf.js hydrate) settles before we open a modal on top of it. The

@@ -18,6 +18,7 @@ import {
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -192,12 +193,12 @@ export function PaywallModal({
 
     setSelectedPlan("monthly");
 
-    logger.event("checkout.intent_start", "info", { plan: "monthly" });
+    logger.event(EVENTS.CHECKOUT_INTENT_START, "info", { plan: "monthly" });
     createIntent.mutate(
       { disclaimerVersion: DISCLAIMER_VERSION },
       {
         onSuccess: (intent) => {
-          logger.event("checkout.intent_ok", "info");
+          logger.event(EVENTS.CHECKOUT_INTENT_OK, "info");
           setIntent(intent);
         },
         onError: (err) => {
@@ -234,7 +235,7 @@ export function PaywallModal({
     // backend confirms `entitled === true`.
     const subscriptionId = message?.order?.subscription_id;
 
-    logger.event("checkout.iframe_success", "info", {
+    logger.event(EVENTS.CHECKOUT_IFRAME_SUCCESS, "info", {
       hasSubscriptionId: Boolean(subscriptionId),
     });
 
@@ -254,7 +255,7 @@ export function PaywallModal({
       });
 
       if (!fresh?.entitled) {
-        logger.event("checkout.entitlement_mismatch", "warning", {
+        logger.event(EVENTS.CHECKOUT_ENTITLEMENT_MISMATCH, "warning", {
           subscriptionId,
         });
         setError(
@@ -277,7 +278,7 @@ export function PaywallModal({
 
       setEntitledSnapshot(true);
 
-      logger.event("checkout.entitlement_confirmed", "info");
+      logger.event(EVENTS.CHECKOUT_ENTITLEMENT_CONFIRMED, "info");
       toast.success({
         title: "Payment received",
         description: "Your access is unlocked.",
@@ -294,7 +295,7 @@ export function PaywallModal({
   };
 
   const handleIframeFail = () => {
-    logger.event("checkout.iframe_declined", "warning");
+    logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning");
     setPayFailed(true);
     toast.error({
       title: "Payment declined",
@@ -303,7 +304,7 @@ export function PaywallModal({
   };
 
   const handleRetry = () => {
-    logger.event("checkout.retry_start", "info");
+    logger.event(EVENTS.CHECKOUT_RETRY_START, "info");
     // Fresh CheckoutIntent for the retry — Solidgate marks the previous
     // paymentIntent terminal after a decline, so re-mounting the iframe
     // against the same intent just re-renders the "Payment declined"
@@ -318,7 +319,7 @@ export function PaywallModal({
           setIntent(fresh);
           setRetryKey((k) => k + 1);
           setRetryLoading(false);
-          logger.event("checkout.retry_intent_ok", "info");
+          logger.event(EVENTS.CHECKOUT_RETRY_INTENT_OK, "info");
         },
         onError: (err) => {
           logger.captureError(err, "checkout.retry_intent");

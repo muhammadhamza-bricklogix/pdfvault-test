@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { scrubUrl } from "@/lib/shared/utils/scrub-url";
+
 /**
  * Client-side Sentry init for Next.js 16 App Router. Replaces the legacy
  * `sentry.client.config.ts` file. Loaded automatically by Next.js before
@@ -93,21 +95,15 @@ Sentry.init({
       delete headers.cookie;
     }
 
-    const scrubQuery = (value: string) =>
-      value.replace(
-        /([?&](?:token|id|export|tool|redirect_url|__clerk[^=]*)=)[^&#]+/gi,
-        "$1[Filtered]",
-      );
-
     if (event.request?.url) {
-      event.request.url = scrubQuery(event.request.url);
+      event.request.url = scrubUrl(event.request.url);
     }
 
     if (
       typeof event.request?.query_string === "string" &&
       event.request.query_string
     ) {
-      event.request.query_string = scrubQuery(event.request.query_string);
+      event.request.query_string = scrubUrl(event.request.query_string);
     }
 
     return event;

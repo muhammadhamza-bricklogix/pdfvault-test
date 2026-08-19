@@ -23,54 +23,47 @@ function stringifyKey(key: readonly unknown[]): string {
   }
 }
 
+function mutationKeyLabel(key: readonly unknown[] | undefined): string {
+  if (!key) return "anonymous";
+
+  return stringifyKey(key);
+}
+
 /**
- * Global TanStack Query observers → Sentry:
- *   - queryCache.onError:      breadcrumb + captured error tagged with query key
- *   - queryCache.onSuccess:    breadcrumb with query key (info-level)
- *   - mutationCache.onError:   captured error tagged with mutation key + variables shape
- *   - mutationCache.onSuccess: breadcrumb with mutation key
- *   - mutationCache.onMutate:  breadcrumb "started"
+ * Global TanStack Query observers → Sentry. Success paths reuse the
+ * `queryHash` string TanStack already precomputes; error paths pay the
+ * `JSON.stringify` cost so the failing key is visible in the report.
  */
 function createInstrumentedClient(): QueryClient {
   return new QueryClient({
     ...queryClientConfig,
     queryCache: new QueryCache({
       onError: (error, query) => {
-        const key = stringifyKey(query.queryKey);
-
         logger.captureError(error, "query", {
-          queryKey: key,
+          queryKey: stringifyKey(query.queryKey),
           queryHash: query.queryHash,
         });
       },
       onSuccess: (_data, query) => {
         logger.breadcrumb("query", "query.success", {
-          queryKey: stringifyKey(query.queryKey),
+          queryHash: query.queryHash,
         });
       },
     }),
     mutationCache: new MutationCache({
       onMutate: (_variables, mutation) => {
         logger.breadcrumb("mutation", "mutation.start", {
-          mutationKey: mutation.options.mutationKey
-            ? stringifyKey(mutation.options.mutationKey)
-            : "anonymous",
+          mutationKey: mutationKeyLabel(mutation.options.mutationKey),
         });
       },
       onError: (error, _variables, _context, mutation) => {
-        const key = mutation.options.mutationKey
-          ? stringifyKey(mutation.options.mutationKey)
-          : "anonymous";
-
         logger.captureError(error, "mutation", {
-          mutationKey: key,
+          mutationKey: mutationKeyLabel(mutation.options.mutationKey),
         });
       },
       onSuccess: (_data, _variables, _context, mutation) => {
         logger.breadcrumb("mutation", "mutation.success", {
-          mutationKey: mutation.options.mutationKey
-            ? stringifyKey(mutation.options.mutationKey)
-            : "anonymous",
+          mutationKey: mutationKeyLabel(mutation.options.mutationKey),
         });
       },
     }),

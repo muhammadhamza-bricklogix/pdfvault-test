@@ -8,6 +8,7 @@ import { useId, useMemo, useState } from "react";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignInSchema } from "@/lib/shared/schemas/auth/sign-in.schema";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
@@ -146,7 +147,7 @@ export function LoginCard() {
   // commit and lands on middleware that reads the user as signed-out,
   // bouncing them to /sign-up. window.location.assign is required.
   const finalizeAndRedirect = async () => {
-    logger.event("signin.finalize_start", "info", {
+    logger.event(EVENTS.SIGNIN_FINALIZE_START, "info", {
       redirectPath: afterSignInPath,
     });
     const { error: finalizeError } = await signIn.finalize({
@@ -166,7 +167,7 @@ export function LoginCard() {
 
   const onGoogle = async () => {
     if (!signIn) return;
-    logger.event("signin.oauth_start", "info", { provider: "google" });
+    logger.event(EVENTS.SIGNIN_OAUTH_START, "info", { provider: "google" });
     setErrors({});
     setNotice(null);
     setOauthLoading(true);
@@ -304,7 +305,7 @@ export function LoginCard() {
       }
 
       if (signIn.status === "complete") {
-        logger.event("signin.credentials_complete", "info");
+        logger.event(EVENTS.SIGNIN_CREDENTIALS_COMPLETE, "info");
         await finalizeAndRedirect();
 
         return;
@@ -312,7 +313,7 @@ export function LoginCard() {
 
       // Invariant #16 — 2FA-enabled accounts must not silently loop back.
       if (signIn.status === "needs_second_factor") {
-        logger.event("signin.needs_2fa", "info");
+        logger.event(EVENTS.SIGNIN_NEEDS_2FA, "info");
         const ok = await prepSecondFactor();
 
         setSubmitting(false);
@@ -383,7 +384,7 @@ export function LoginCard() {
       }
 
       if (signIn.status === "complete") {
-        logger.event("signin.2fa_complete", "info", {
+        logger.event(EVENTS.SIGNIN_2FA_COMPLETE, "info", {
           strategy: secondFactorStrategy,
         });
         await finalizeAndRedirect();

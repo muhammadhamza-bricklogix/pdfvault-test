@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { scrubUrl } from "@/lib/shared/utils/scrub-url";
+
 Sentry.init({
   dsn: process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN,
 
@@ -39,10 +41,7 @@ Sentry.init({
     }
 
     if (event.request?.url) {
-      event.request.url = event.request.url.replace(
-        /([?&](?:token|id|export|tool|redirect_url|__clerk[^=]*)=)[^&#]+/gi,
-        "$1[Filtered]",
-      );
+      event.request.url = scrubUrl(event.request.url);
     }
 
     return event;

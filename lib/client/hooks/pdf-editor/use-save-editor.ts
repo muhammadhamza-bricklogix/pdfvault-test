@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -58,7 +59,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     });
 
     try {
-      logger.event("save.start", "info", { source: "button" });
+      logger.event(EVENTS.SAVE_START, "info", { source: "button" });
       // Force the upload on explicit user click — bypasses the
       // `hasUnsavedChanges` short-circuit so the current editor state
       // is GUARANTEED to land as a fresh version on the backend, even
@@ -79,7 +80,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       );
 
       if (!result.ok) {
-        logger.event("save.blocked", "warning", { reason: result.reason });
+        logger.event(EVENTS.SAVE_BLOCKED, "warning", { reason: result.reason });
         if (result.reason === "no-changes") {
           toast.info({
             title: "Already saved",
@@ -136,7 +137,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
       }
 
-      logger.event("save.ok", "info", { documentId: id });
+      logger.event(EVENTS.SAVE_OK, "info", { documentId: id });
       toast.success({
         title: "Saved",
         description: "Your PDF was saved to your library.",
@@ -172,7 +173,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
 
       if (!onComplete) return;
 
-      logger.event("save.before_action_start", "info", {
+      logger.event(EVENTS.SAVE_BEFORE_ACTION_START, "info", {
         force: Boolean(detail?.force),
       });
       const result = await logger.span(
@@ -222,7 +223,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           });
         });
 
-        logger.event("save.before_action_ok", "info", {
+        logger.event(EVENTS.SAVE_BEFORE_ACTION_OK, "info", {
           documentId: result.document.id,
         });
         onComplete({ ok: true });
@@ -230,7 +231,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
-      logger.event("save.before_action_blocked", "warning", {
+      logger.event(EVENTS.SAVE_BEFORE_ACTION_BLOCKED, "warning", {
         reason: result.reason,
       });
       // `no-changes` is a benign short-circuit (dirty flag was already clean

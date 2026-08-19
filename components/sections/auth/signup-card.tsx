@@ -8,6 +8,7 @@ import { useId, useMemo, useState } from "react";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
@@ -199,7 +200,7 @@ export function SignupCard() {
 
       setStep("verify");
       setCode("");
-      logger.event("signup.code_sent", "info");
+      logger.event(EVENTS.SIGNUP_CODE_SENT, "info");
     } catch (err) {
       logger.captureError(err, "signup.credentials");
       setErrors({
@@ -245,7 +246,7 @@ export function SignupCard() {
       }
 
       if (signUp.status === "complete") {
-        logger.event("signup.verify_complete", "info", {
+        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
           redirectPath: afterSignUpPath,
         });
         const { error: finalizeError } = await signUp.finalize({

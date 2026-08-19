@@ -4,6 +4,7 @@ import { Button, Modal } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 export type SignInPromptDetail = {
@@ -28,7 +29,7 @@ export type SignInPromptDetail = {
  */
 export function dispatchSignInPrompt(detail: SignInPromptDetail) {
   if (typeof window === "undefined") return;
-  logger.event("signin_prompt.dispatched", "info", {
+  logger.event(EVENTS.SIGNIN_PROMPT_DISPATCHED, "info", {
     destination: detail.destination ?? "sign-in",
     hasRedirect: Boolean(detail.redirectUrl),
   });
@@ -61,7 +62,7 @@ export function SignInPromptModal() {
   }, []);
 
   const close = useCallback(() => {
-    logger.event("signin_prompt.cancelled", "info");
+    logger.event(EVENTS.SIGNIN_PROMPT_CANCELLED, "info");
     setDetail(null);
   }, []);
 
@@ -75,7 +76,7 @@ export function SignInPromptModal() {
         ? ROUTES.AUTH.SIGN_UP
         : ROUTES.AUTH.SIGN_IN;
 
-    logger.event("signin_prompt.confirmed", "info", {
+    logger.event(EVENTS.SIGNIN_PROMPT_CONFIRMED, "info", {
       destination: detail?.destination ?? "sign-in",
     });
     window.location.assign(

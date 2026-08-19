@@ -29,6 +29,7 @@ import {
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -414,7 +415,7 @@ export function UploadWorkspace({
       // auto-resume effect below reads IDB when the user returns
       // signed-in.
       if (requiresAuth && authLoaded && !isSignedIn) {
-        logger.event("upload.signin_required_on_convert", "info", {
+        logger.event(EVENTS.UPLOAD_SIGNIN_REQUIRED, "info", {
           pathname,
           filename: picked.name,
         });
@@ -486,7 +487,7 @@ export function UploadWorkspace({
         logger.breadcrumb("upload", "entitlement.checked", { entitled });
 
         if (!entitled) {
-          logger.event("upload.paywall_shown", "info", {
+          logger.event(EVENTS.UPLOAD_PAYWALL_SHOWN, "info", {
             sourceExt: getExtension(picked.name),
           });
           const objectUrl = URL.createObjectURL(earlyConvertedPdf);
@@ -500,11 +501,11 @@ export function UploadWorkspace({
             });
 
             if (outcome !== "success") {
-              logger.event("upload.paywall_cancelled", "info");
+              logger.event(EVENTS.UPLOAD_PAYWALL_CANCELLED, "info");
 
               return;
             }
-            logger.event("upload.paywall_success", "info");
+            logger.event(EVENTS.UPLOAD_PAYWALL_SUCCESS, "info");
           } catch (err) {
             if (
               (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
@@ -556,7 +557,7 @@ export function UploadWorkspace({
           }
 
           if (existingDocId) {
-            logger.event("upload.duplicate_detected", "info", {
+            logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
               filename: pdfFile.name,
               documentId: existingDocId,
             });
@@ -585,7 +586,7 @@ export function UploadWorkspace({
               );
 
               savedDoc = { id: document.id, name: document.filename };
-              logger.event("upload.save_before_open_ok", "info", {
+              logger.event(EVENTS.UPLOAD_SAVE_BEFORE_OPEN_OK, "info", {
                 documentId: document.id,
                 size: pdfFile.size,
               });
@@ -618,7 +619,7 @@ export function UploadWorkspace({
         // this point on `/convert/*` routes now (the sign-in gate at
         // the top of the function short-circuits both directions); on
         // `/` they hit the editor with the in-memory file.
-        logger.event("upload.open_editor", "info", {
+        logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
           documentId: savedDoc?.id ?? null,
           tool,
           exportFormat,

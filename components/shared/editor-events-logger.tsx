@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
@@ -15,21 +15,23 @@ import { logger } from "@/lib/shared/utils/logger";
  *
  * Living in one place beats sprinkling `logger.breadcrumb` calls across
  * every tool hook and keeps the load-bearing hook files under
- * `.claude/LOCKED_PATHS` untouched. If a specific tool starts producing
- * errors, add per-tool spans then; until then this covers the story of
- * "what was the user doing when it broke".
+ * `.claude/LOCKED_PATHS` untouched.
+ *
+ * Refs live at module scope so a route re-mount doesn't re-emit
+ * already-recorded state (each field only crosses the wire once per
+ * real change, not once per component mount).
  */
+let lastTool: string | null = null;
+let lastFileSig: null | string = null;
+let lastDocId: null | string = null;
+
 export function EditorEventsLogger(): null {
-  const lastToolRef = useRef<string | null>(null);
-  const lastFileRef = useRef<string | null>(null);
-  const lastDocIdRef = useRef<null | string>(null);
-
   useEffect(() => {
-    const emit = (state: ReturnType<typeof usePdfEditorStore.getState>) => {
-      if (state.activeTool !== lastToolRef.current) {
-        const previous = lastToolRef.current;
+    return usePdfEditorStore.subscribe((state) => {
+      if (state.activeTool !== lastTool) {
+        const previous = lastTool;
 
-        lastToolRef.current = state.activeTool;
+        lastTool = state.activeTool;
         if (previous !== null) {
           logger.breadcrumb("editor", "tool.change", {
             from: previous,
@@ -42,8 +44,8 @@ export function EditorEventsLogger(): null {
         ? `${state.file.name}|${state.file.size}`
         : null;
 
-      if (fileSig !== lastFileRef.current) {
-        lastFileRef.current = fileSig;
+      if (fileSig !== lastFileSig) {
+        lastFileSig = fileSig;
         if (fileSig) {
           logger.breadcrumb("editor", "file.loaded", {
             filename: state.file?.name,
@@ -55,24 +57,16 @@ export function EditorEventsLogger(): null {
         }
       }
 
-      if (state.currentDocumentId !== lastDocIdRef.current) {
-        lastDocIdRef.current = state.currentDocumentId ?? null;
+      const docId = state.currentDocumentId ?? null;
+
+      if (docId !== lastDocId) {
+        lastDocId = docId;
         logger.setContext(
           "editor.document",
-          state.currentDocumentId
-            ? {
-                id: state.currentDocumentId,
-                name: state.currentDocumentName ?? null,
-              }
-            : null,
+          docId ? { id: docId, name: state.currentDocumentName ?? null } : null,
         );
       }
-    };
-
-    // Emit for initial state so events after mount already have context.
-    emit(usePdfEditorStore.getState());
-
-    return usePdfEditorStore.subscribe(emit);
+    });
   }, []);
 
   return null;

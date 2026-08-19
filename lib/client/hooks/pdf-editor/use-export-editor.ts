@@ -19,6 +19,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -208,7 +209,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         logger.warn("[PDFedits] EXPORT-DIAG: entry log failed", diagErr);
       }
 
-      logger.event("export.start", "info", {
+      logger.event(EVENTS.EXPORT_START, "info", {
         format,
         signedIn,
         authReady,
@@ -217,7 +218,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       });
 
       if (!sourceFile) {
-        logger.event("export.no_file", "warning", { format });
+        logger.event(EVENTS.EXPORT_NO_FILE, "warning", { format });
         toast.error({
           title: "Nothing to export",
           description: "Open a PDF before exporting.",
@@ -259,7 +260,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         // to the same editor with `?export=<fmt>` set, so the export
         // re-fires automatically.
         if (!signedIn) {
-          logger.event("export.signin_required", "info", { format });
+          logger.event(EVENTS.EXPORT_SIGNIN_REQUIRED, "info", { format });
           try {
             // Flush the live canvas for the current page into the store so
             // the serialized fabric state includes the user's latest edits
@@ -329,7 +330,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           });
 
           if (!entitled) {
-            logger.event("export.paywall_shown", "info", { format });
+            logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
             const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
               type: "application/pdf",
             });
@@ -344,11 +345,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               });
 
               if (outcome !== "success") {
-                logger.event("export.paywall_cancelled", "info", { format });
+                logger.event(EVENTS.EXPORT_PAYWALL_CANCELLED, "info", {
+                  format,
+                });
 
                 return;
               }
-              logger.event("export.paywall_success", "info", { format });
+              logger.event(EVENTS.EXPORT_PAYWALL_SUCCESS, "info", { format });
             } finally {
               URL.revokeObjectURL(objectUrl);
             }
@@ -381,7 +384,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             : buildPdfExportFilename(sourceFile.name);
 
           downloadBytes(bytes, outName);
-          logger.event("export.success", "info", {
+          logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
             bytes: bytes.byteLength,
           });
@@ -409,7 +412,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         );
 
         if (!entitled) {
-          logger.event("export.paywall_shown", "info", { format });
+          logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
           const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
             type: "application/pdf",
           });
@@ -424,11 +427,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             });
 
             if (outcome !== "success") {
-              logger.event("export.paywall_cancelled", "info", { format });
+              logger.event(EVENTS.EXPORT_PAYWALL_CANCELLED, "info", { format });
 
               return;
             }
-            logger.event("export.paywall_success", "info", { format });
+            logger.event(EVENTS.EXPORT_PAYWALL_SUCCESS, "info", { format });
           } finally {
             URL.revokeObjectURL(objectUrl);
           }
@@ -450,7 +453,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           );
         } catch (err) {
           if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
-            logger.event("export.convert_cancelled", "info", { format });
+            logger.event(EVENTS.EXPORT_CONVERT_CANCELLED, "info", { format });
 
             return;
           }
@@ -471,7 +474,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               : result.fileName;
 
           triggerBlobDownload(result.blob, outName);
-          logger.event("export.success", "info", {
+          logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
             filename: result.fileName,
           });
@@ -482,7 +485,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         // Any pre-mutation exception (buildEditedPdfBytes, file
         // preparation) still surfaces to the user.
         if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
-          logger.event("export.paywall_cancelled", "info", { format });
+          logger.event(EVENTS.EXPORT_PAYWALL_CANCELLED, "info", { format });
 
           return;
         }

@@ -70,10 +70,11 @@ const breadcrumb = (
 };
 
 /**
- * Structured event capture — a named success/failure milestone worth
- * counting or querying in the Sentry dashboard. Use for outcomes like
- * "checkout.completed", "upload.duplicate_detected", "paywall.dismissed".
- * Errors go through `logger.error` / `captureError` instead.
+ * Structured event — a named success/failure milestone. Info-level
+ * events land as breadcrumbs (cheap, attached to the next captured
+ * event as trace context). Only warning/error/fatal levels are
+ * escalated to `captureMessage` so we don't burn the Sentry quota on
+ * routine flow milestones (paywall opened, save ok, upload success).
  */
 const event = (
   name: string,
@@ -84,13 +85,30 @@ const event = (
     globalThis.console.info(`[event] ${name}`, data ?? "");
   }
 
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+
+  const shouldCapture =
+    level === "warning" || level === "error" || level === "fatal";
+
+  if (shouldCapture) {
     Sentry.captureMessage(name, {
       level,
       extra: data,
       tags: { event_name: name },
     });
+
+    return;
   }
+
+  Sentry.addBreadcrumb({
+    category: "event",
+    message: name,
+    data,
+    level,
+    timestamp: Date.now() / 1000,
+  });
 };
 
 /**

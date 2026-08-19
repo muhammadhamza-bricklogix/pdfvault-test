@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { isEntitledSnapshot } from "./entitlement-cache";
@@ -57,7 +58,7 @@ export function usePaywall() {
 
         return;
       }
-      logger.event("paywall.opened", "info", { source: "guard" });
+      logger.event(EVENTS.PAYWALL_OPENED, "info", { source: "guard" });
       setPending(() => action);
       setIsOpen(true);
     },
@@ -65,7 +66,7 @@ export function usePaywall() {
   );
 
   const close = useCallback(() => {
-    logger.event("paywall.cancelled", "info", {
+    logger.event(EVENTS.PAYWALL_CANCELLED, "info", {
       hasBusResolver: Boolean(busResolverRef.current),
       hasPendingAction: Boolean(pending),
     });
@@ -83,7 +84,7 @@ export function usePaywall() {
   }, [pending]);
 
   const onPaymentSuccess = useCallback(async () => {
-    logger.event("paywall.payment_success", "info", {
+    logger.event(EVENTS.PAYWALL_PAYMENT_SUCCESS, "info", {
       hasPendingAction: Boolean(pending),
       hasBusResolver: Boolean(busResolverRef.current),
     });
@@ -101,11 +102,11 @@ export function usePaywall() {
     if (pending) {
       try {
         await pending();
-        logger.event("paywall.pending_action_ok", "info");
-      } catch (err) {
-        logger.captureError(err, "paywall.pending_action");
-        throw err;
+        logger.event(EVENTS.PAYWALL_PENDING_ACTION_OK, "info");
       } finally {
+        // The pending action (e.g. useExportEditor.handleExport) owns
+        // its own error capture and user-facing toast — re-capturing
+        // here would double-fire the same error in Sentry.
         setPending(null);
       }
     }
@@ -131,7 +132,7 @@ export function usePaywall() {
             return;
           }
           if (authLoaded && !isSignedIn) {
-            logger.event("paywall.bus_signin_prompt", "info");
+            logger.event(EVENTS.PAYWALL_BUS_SIGNIN_PROMPT, "info");
             const returnTo =
               typeof window === "undefined"
                 ? "/"
@@ -148,7 +149,7 @@ export function usePaywall() {
 
             return;
           }
-          logger.event("paywall.opened", "info", {
+          logger.event(EVENTS.PAYWALL_OPENED, "info", {
             source: "bus",
             hasPreview: Boolean(incomingPreview),
             hidePreview: options?.hidePreview ?? false,

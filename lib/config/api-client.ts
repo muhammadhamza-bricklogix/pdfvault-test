@@ -17,6 +17,7 @@ import {
 } from "@/lib/client/hooks/billing/paywall-bus";
 import { toApiError } from "@/lib/shared/utils/api-error";
 import { logger } from "@/lib/shared/utils/logger";
+import { scrubUrl } from "@/lib/shared/utils/scrub-url";
 import { toast } from "@/lib/shared/utils/toast";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -63,17 +64,6 @@ type RetriableConfig = InternalAxiosRequestConfig & {
   _skipPaywallGate?: boolean;
   _sentryStart?: number;
 };
-
-function scrubUrl(url: string | undefined): string {
-  if (!url) {
-    return "";
-  }
-
-  return url.replace(
-    /([?&](?:token|id|export|tool|redirect_url|__clerk[^=]*)=)[^&#]+/gi,
-    "$1[Filtered]",
-  );
-}
 
 function isGatedRequest(config: InternalAxiosRequestConfig): boolean {
   const url = config.url ?? "";

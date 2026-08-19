@@ -15,6 +15,7 @@ import {
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -216,7 +217,7 @@ export function useEditorDocumentLoader() {
     // for Clerk to finish loading before deciding so we don't bounce
     // signed-in users on first paint.
     if (authLoaded && !isSignedIn) {
-      logger.event("document_loader.signin_required", "info", { id });
+      logger.event(EVENTS.DOCUMENT_LOADER_SIGNIN_REQUIRED, "info", { id });
       const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
 
       router.replace(
@@ -308,7 +309,7 @@ export function useEditorDocumentLoader() {
         setCurrentDocument({ id: loaded.id, name: loaded.name });
         usePdfEditorStore.setState({ hasUnsavedChanges: false });
         lastHydratedDocumentId.current = id;
-        logger.event("document_loader.load_ok", "info", {
+        logger.event(EVENTS.DOCUMENT_LOADER_LOAD_OK, "info", {
           id,
           bytes: loaded.file.size,
           hasEditorState: Boolean(loaded.editorState),
@@ -325,7 +326,9 @@ export function useEditorDocumentLoader() {
         const isAuthError = /\b401\b|unauthori[sz]ed/i.test(message);
 
         if (isAuthError) {
-          logger.event("document_loader.auth_error_bounce", "warning", { id });
+          logger.event(EVENTS.DOCUMENT_LOADER_AUTH_ERROR_BOUNCE, "warning", {
+            id,
+          });
           const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
 
           router.replace(
@@ -352,7 +355,7 @@ export function useEditorDocumentLoader() {
         const stateNow = usePdfEditorStore.getState();
 
         if (stateNow.file) {
-          logger.event("document_loader.load_fail_stay_local", "warning", {
+          logger.event(EVENTS.DOCUMENT_LOADER_LOAD_FAIL_STAY_LOCAL, "warning", {
             id,
           });
           toast.error({
@@ -364,9 +367,13 @@ export function useEditorDocumentLoader() {
           return;
         }
 
-        logger.event("document_loader.load_fail_bounce_dashboard", "warning", {
-          id,
-        });
+        logger.event(
+          EVENTS.DOCUMENT_LOADER_LOAD_FAIL_BOUNCE_DASHBOARD,
+          "warning",
+          {
+            id,
+          },
+        );
         toast.error({
           title: "Couldn't open document",
           description: message,
