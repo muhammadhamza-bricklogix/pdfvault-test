@@ -469,13 +469,20 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  const fullAccessPrice = "$0.99";
-  const annualPrice = "$25";
-  const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  // Annual plan advertises $300/year total. Display is hardcoded
-  // because Solidgate returns the monthly-equivalent ($25) on
-  // `amountTodayMinor` for the annual product.
-  const todayDisplay = selectedPlan === "annual" ? "$300" : today;
+  // Everything below is driven by the intent + alternatePlans the
+  // backend just quoted. Never bake USD strings — the same modal
+  // renders EUR / PKR / INR / etc. once local pricing kicks in.
+  const monthly = pickPlan(intent, "TRIAL_MONTHLY");
+  const annual = pickPlan(intent, "ANNUAL");
+  const fullAccessPrice = formatMinor(monthly.amountTodayMinor, monthly.currency);
+  const annualPrice = formatMinor(
+    Math.round(annual.amountRenewMinor / 12),
+    annual.currency,
+  );
+  const todayDisplay =
+    selectedPlan === "annual"
+      ? formatMinor(annual.amountTodayMinor, annual.currency)
+      : formatMinor(monthly.amountTodayMinor, monthly.currency);
 
   const continueDisabled = continueLoading;
 
@@ -711,12 +718,14 @@ function PayStep({
   selectedPlan: PlanId;
   preview: PaywallPreview | null;
 }) {
-  const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  // Annual plan advertises $300/year total (billed once). Display is
-  // hardcoded because Solidgate returns the monthly-equivalent ($25)
-  // on `amountTodayMinor` for the annual product.
-  const todayDisplay = selectedPlan === "annual" ? "$300" : today;
-  const renewDisplay = selectedPlan === "annual" ? "$300" : "$25";
+  const todayDisplay = formatMinor(intent.amountTodayMinor, intent.currency);
+  const renewDisplay = formatMinor(intent.amountRenewMinor, intent.currency);
+  const renewMonthlyEquivalent = formatMinor(
+    selectedPlan === "annual"
+      ? Math.round(intent.amountRenewMinor / 12)
+      : intent.amountRenewMinor,
+    intent.currency,
+  );
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
@@ -839,7 +848,7 @@ function PayStep({
             By continuing you agree to be charged{" "}
             {selectedPlan === "annual"
               ? `${todayDisplay} every 365 days`
-              : `${todayDisplay} today for a 7-day trial, then $25.00 per month`}{" "}
+              : `${todayDisplay} today for a 7-day trial, then ${renewDisplay} per month`}{" "}
             unless cancelled. See our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
@@ -1396,6 +1405,38 @@ function formatMinor(minor: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(minor / 100);
+}
+
+/**
+ * Pull pricing for a given plan kind out of the checkout-intent
+ * response. The current plan's numbers live at the top level of the
+ * intent; the others are in `alternatePlans`. Falls back to the
+ * top-level intent when the requested kind isn't present in either
+ * place (belt-and-braces so the modal never renders "undefined").
+ */
+function pickPlan(
+  intent: CheckoutIntent,
+  planKind: string,
+): {
+  amountTodayMinor: number;
+  amountRenewMinor: number;
+  currency: string;
+} {
+  const alt = intent.alternatePlans?.find((row) => row.planKind === planKind);
+
+  if (alt) {
+    return {
+      amountTodayMinor: alt.amountTodayMinor,
+      amountRenewMinor: alt.amountRenewMinor,
+      currency: alt.currency,
+    };
+  }
+
+  return {
+    amountTodayMinor: intent.amountTodayMinor,
+    amountRenewMinor: intent.amountRenewMinor,
+    currency: intent.currency,
+  };
 }
 
 // Long label like "Jul 24, 2026" for the success card.
