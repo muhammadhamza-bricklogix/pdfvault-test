@@ -25,6 +25,11 @@ export function PasswordModal() {
   const isOpen = usePdfEditorStore((s) => s.isPasswordModalOpen);
   const setIsOpen = usePdfEditorStore((s) => s.setIsPasswordModalOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const documentPassword = usePdfEditorStore((s) => s.documentPassword);
+  const documentPasswordFileKey = usePdfEditorStore(
+    (s) => s.documentPasswordFileKey,
+  );
+  const setDocumentPassword = usePdfEditorStore((s) => s.setDocumentPassword);
   const { isSignedIn } = useAuth();
 
   const [mode, setMode] = useState<Mode>("protect");
@@ -100,6 +105,11 @@ export function PasswordModal() {
       });
 
       triggerBlobDownload(result.blob, result.fileName);
+      // Remember the password we just set on this document so the Remove
+      // flow (which runs on the still-unencrypted in-memory file) can
+      // validate against it. The store scopes this to the current file
+      // identity — opening a different file drops it automatically.
+      setDocumentPassword(userPassword);
       handleClose();
     } catch {
       // mutation already toasts the error
@@ -110,36 +120,62 @@ export function PasswordModal() {
     if (!file) return;
     setUnprotectError(null);
 
-    // Validate the supplied password against the actual PDF encryption
-    // BEFORE hitting the backend. Without this, anyone holding an encrypted
-    // PDF could submit any string and have the server strip the password —
-    // a security hole because it never confirms the caller knows the
-    // current password. Verification uses pdf.js locally so no bytes leave
-    // the browser until we've confirmed the password is correct.
+    // Password validation strategy:
+    //
+    //   1. If the user just protected THIS file in this session, we've
+    //      stashed the password in the store (see handleProtect). The
+    //      in-memory file is still the unencrypted original — pdf.js
+    //      would report "not-encrypted" and refuse to validate. So
+    //      compare against the remembered password directly. This is
+    //      the flow the QA bug was about: protect a PDF, come back,
+    //      type the wrong password, expect "Incorrect password" (not
+    //      "This PDF isn't password-protected").
+    //
+    //   2. Otherwise the file may have arrived already encrypted (uploaded
+    //      / restored / handed in from another tool). Fall back to
+    //      pdf.js verification, which detects real encryption and can
+    //      distinguish "wrong password" from "not encrypted".
+    //
+    // Either way, nothing leaves the browser until the password is
+    // proven correct — a wrong guess never reaches the backend.
+    const currentFileKey = `${file.name}:${file.size}:${file.lastModified}`;
+    const hasRememberedPassword =
+      documentPassword != null && documentPasswordFileKey === currentFileKey;
+
     setIsVerifyingPassword(true);
     try {
-      const verdict = await verifyPdfPassword(file, unprotectPassword);
+      if (hasRememberedPassword) {
+        if (unprotectPassword !== documentPassword) {
+          setUnprotectError(
+            "Incorrect password. Enter the password currently set on this PDF.",
+          );
 
-      if (verdict.status === "not-encrypted") {
-        setUnprotectError(
-          "This PDF is not password-protected — there's nothing to remove.",
-        );
+          return;
+        }
+      } else {
+        const verdict = await verifyPdfPassword(file, unprotectPassword);
 
-        return;
-      }
-      if (verdict.status === "incorrect-password") {
-        setUnprotectError(
-          "Incorrect password. Enter the password currently set on this PDF.",
-        );
+        if (verdict.status === "not-encrypted") {
+          setUnprotectError(
+            "This PDF is not password-protected — there's nothing to remove.",
+          );
 
-        return;
-      }
-      if (verdict.status === "load-failed") {
-        setUnprotectError(
-          "Couldn't read this PDF to verify the password. It may be corrupt.",
-        );
+          return;
+        }
+        if (verdict.status === "incorrect-password") {
+          setUnprotectError(
+            "Incorrect password. Enter the password currently set on this PDF.",
+          );
 
-        return;
+          return;
+        }
+        if (verdict.status === "load-failed") {
+          setUnprotectError(
+            "Couldn't read this PDF to verify the password. It may be corrupt.",
+          );
+
+          return;
+        }
       }
     } catch (err) {
       logger.warn("password verification threw", err);
@@ -158,6 +194,9 @@ export function PasswordModal() {
       });
 
       triggerBlobDownload(result.blob, result.fileName);
+      // Protection is gone — forget the remembered password so a
+      // second Remove attempt correctly falls back to pdf.js checks.
+      setDocumentPassword(null);
       handleClose();
     } catch {
       // mutation already toasts the error

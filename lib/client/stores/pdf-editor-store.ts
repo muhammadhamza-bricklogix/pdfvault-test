@@ -34,6 +34,16 @@ function resolveSourcePage(displayPage: number, pageOrder: number[]): number {
 
   return pageOrder[displayPage - 1] ?? displayPage;
 }
+
+/**
+ * Stable identity for a File. Used to check whether a follow-up `setFile`
+ * lands the same document (keep remembered password) or a different one
+ * (drop it). Two Files pointing at the same bytes on disk always agree
+ * on name+size+lastModified.
+ */
+function fileIdentityKey(file: File): string {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
 export type WatermarkPosition = "bottom" | "center" | "tiled" | "top";
 
 export type WatermarkConfig = {
@@ -129,6 +139,24 @@ type PdfEditorStore = {
   /** Fabric JSON keyed by source PDF page number (stable across reorder). */
   fabricJsonByPage: Map<number, string>;
   file: File | null;
+  /**
+   * Password the user just set on `file` via the Protect flow.
+   *
+   * The editor never mutates the in-memory file when the user protects —
+   * we hand pdf-tools an encrypted copy for download and keep the
+   * unencrypted original in memory. That means the subsequent "Remove
+   * password" click can't validate the current password against pdf.js
+   * (the loaded file is unencrypted). We remember the password we just
+   * set so a mismatch on the Remove step produces "Incorrect password"
+   * instead of "This PDF isn't password-protected".
+   *
+   * Scoped to `documentPasswordFileKey` so opening a different file
+   * transparently invalidates the remembered password. Session-only —
+   * the field is cleared on `clearFile`, `applyPostSaveReset`, and any
+   * `setFile` that lands a genuinely different file identity.
+   */
+  documentPassword: string | null;
+  documentPasswordFileKey: string | null;
   /**
    * Presigned S3 URL for the currently open cloud document. When set,
    * `usePdfLoader` passes this URL directly to pdf.js (range requests) instead
@@ -256,6 +284,12 @@ type PdfEditorStore = {
   ) => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
+  /**
+   * Remember (or forget) the password set on the current file. Pass
+   * `null` to clear. See `documentPassword` field docs for why this
+   * lives client-side and is scoped to `documentPasswordFileKey`.
+   */
+  setDocumentPassword: (password: string | null) => void;
   setPdfSourceUrl: (url: string | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
@@ -293,6 +327,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
+  documentPassword: null,
+  documentPasswordFileKey: null,
   pdfSourceUrl: null,
   hasUnsavedChanges: false,
   pendingCloudSaveAfterReload: false,
@@ -396,6 +432,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       editorMode: "editText",
       fabricJsonByPage: new Map(),
       file: null,
+      documentPassword: null,
+      documentPasswordFileKey: null,
       pdfSourceUrl: null,
       hasUnsavedChanges: false,
       pendingCloudSaveAfterReload: false,
@@ -611,6 +649,11 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       // so usePdfLoader doesn't re-trigger range requests against an expired
       // presigned URL.
       pdfSourceUrl: null,
+      // Post-save produces a new File identity — the remembered protect
+      // password no longer maps to these bytes. Force a re-verify on next
+      // Remove-password attempt.
+      documentPassword: null,
+      documentPasswordFileKey: null,
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
       // Snapshots are keyed by display page; after save the baked PDF is the
@@ -649,7 +692,28 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       pendingCloudSaveAfterReload: true,
     }),
 
-  setFile: (file) => set({ file }),
+  setFile: (file) =>
+    set((state) => {
+      const nextKey = file ? fileIdentityKey(file) : null;
+
+      // Drop the remembered password if the file we're loading isn't the
+      // one we set it for. This prevents a stale password from carrying
+      // over when the user opens a different document.
+      if (nextKey !== state.documentPasswordFileKey) {
+        return { file, documentPassword: null, documentPasswordFileKey: null };
+      }
+
+      return { file };
+    }),
+  setDocumentPassword: (password) =>
+    set((state) => {
+      if (!password) {
+        return { documentPassword: null, documentPasswordFileKey: null };
+      }
+      const key = state.file ? fileIdentityKey(state.file) : null;
+
+      return { documentPassword: password, documentPasswordFileKey: key };
+    }),
   setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
