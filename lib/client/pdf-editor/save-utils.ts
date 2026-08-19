@@ -227,9 +227,51 @@ export function flushLiveFabricPage(
     types: summary,
   });
 
-  usePdfEditorStore
-    .getState()
-    .saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));
+  // Guard against wiping stored edits when the live canvas is empty because
+  // it's mid-remount (fresh Canvas created, async `loadFromJSON` hasn't
+  // resolved yet). This race fires in the Save-before-Export flow:
+  // `applyPostSaveReset` swaps the file → pdf.js reloads → Fabric re-mounts
+  // → `editor:export` dispatches immediately after → flush serializes an
+  // empty canvas and clobbers `fabricJsonByPage[source]` with `{objects:[]}`
+  // → merge draws nothing on the page and every edit disappears from the
+  // export. Tools now persist their own edits synchronously (see
+  // `use-eraser-tool.ts`, `use-image-tool.ts`, `use-shape-tool.ts`,
+  // `use-annotations-editor.ts`, `SignatureModal.tsx`, `use-draw-tool.ts`,
+  // `use-highlight-tool.ts`), so the stored map is the source of truth
+  // whenever the live canvas is unexpectedly empty.
+  const store = usePdfEditorStore.getState();
+
+  if (liveObjects.length === 0) {
+    const source = store.getSourcePageIndex(displayPage);
+    const existing = store.fabricJsonByPage.get(source);
+
+    if (existing) {
+      let existingObjectCount = 0;
+
+      try {
+        const parsed = JSON.parse(existing) as { objects?: unknown[] };
+
+        existingObjectCount = parsed.objects?.length ?? 0;
+      } catch {
+        existingObjectCount = 0;
+      }
+
+      if (existingObjectCount > 0) {
+        logger.warn(
+          "[PDFedits] flush: skipping empty-canvas overwrite of non-empty store entry",
+          {
+            displayPage,
+            sourcePage: source,
+            existingObjectCount,
+          },
+        );
+
+        return;
+      }
+    }
+  }
+
+  store.saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));
 }
 
 type BuildEditedPdfInput = {

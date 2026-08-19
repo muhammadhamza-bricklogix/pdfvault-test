@@ -474,7 +474,10 @@ function PlanStep({
   // renders EUR / PKR / INR / etc. once local pricing kicks in.
   const monthly = pickPlan(intent, "TRIAL_MONTHLY");
   const annual = pickPlan(intent, "ANNUAL");
-  const fullAccessPrice = formatMinor(monthly.amountTodayMinor, monthly.currency);
+  const fullAccessPrice = formatMinor(
+    monthly.amountTodayMinor,
+    monthly.currency,
+  );
   const annualPrice = formatMinor(
     Math.round(annual.amountRenewMinor / 12),
     annual.currency,
@@ -619,8 +622,8 @@ function PlanStep({
             You are enrolling in a monthly subscription to pdfvault.ai.
             You&apos;ll be charged {fullAccessPrice} today for a 7-day trial,
             then {formatMinor(monthly.amountRenewMinor, monthly.currency)} per
-            month until you cancel. Payments will be charged from the card
-            you specified below. To cancel, visit your{" "}
+            month until you cancel. Payments will be charged from the card you
+            specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"

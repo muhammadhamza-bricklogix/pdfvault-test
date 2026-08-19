@@ -4,6 +4,7 @@ import type { Canvas, FabricObject, TPointerEventInfo } from "fabric";
 
 import { useEffect } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 type UseEraserToolParams = {
@@ -13,7 +14,9 @@ type UseEraserToolParams = {
 export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
 
   useEffect(() => {
     if (!fabricCanvas || activeTool !== "eraser") return;
@@ -58,6 +61,11 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
       fabricCanvas.remove(target);
       fabricCanvas.discardActiveObject();
       pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+      // Persist the deletion into the store immediately so the save/export
+      // pipeline sees it even if `flushLiveFabricPage` at export time hits
+      // a mid-remount live canvas and can't reliably capture state.
+      saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+      markDocumentDirty();
       fabricCanvas.requestRenderAll();
     };
 
@@ -74,5 +82,12 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
 
       fabricCanvas.selection = true;
     };
-  }, [activeTool, currentPage, fabricCanvas, pushHistory]);
+  }, [
+    activeTool,
+    currentPage,
+    fabricCanvas,
+    markDocumentDirty,
+    pushHistory,
+    saveFabricJson,
+  ]);
 }

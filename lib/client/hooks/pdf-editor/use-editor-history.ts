@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 
 import { useCallback, useEffect, useState } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -22,6 +23,7 @@ export function useEditorHistory({
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
   const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
   const undoStore = usePdfEditorStore((s) => s.undo);
   const redoStore = usePdfEditorStore((s) => s.redo);
   const setIsRestoringHistory = usePdfEditorStore(
@@ -150,12 +152,22 @@ export function useEditorHistory({
     try {
       await fc.loadFromJSON(JSON.parse(snapshot));
       fc.renderAll();
+      // Sync the store's fabricJsonByPage to the restored state so save/
+      // export sees the undone content, not the pre-undo snapshot.
+      saveFabricJson(currentPage, serializeFabricCanvas(fc));
     } finally {
       setIsRestoringHistory(false);
     }
 
     forceRender((n) => n + 1);
-  }, [canUndo, currentPage, fabricRef, undoStore, setIsRestoringHistory]);
+  }, [
+    canUndo,
+    currentPage,
+    fabricRef,
+    saveFabricJson,
+    undoStore,
+    setIsRestoringHistory,
+  ]);
 
   const redo = useCallback(async () => {
     const fc = fabricRef.current;
@@ -170,12 +182,20 @@ export function useEditorHistory({
     try {
       await fc.loadFromJSON(JSON.parse(snapshot));
       fc.renderAll();
+      saveFabricJson(currentPage, serializeFabricCanvas(fc));
     } finally {
       setIsRestoringHistory(false);
     }
 
     forceRender((n) => n + 1);
-  }, [canRedo, currentPage, fabricRef, redoStore, setIsRestoringHistory]);
+  }, [
+    canRedo,
+    currentPage,
+    fabricRef,
+    redoStore,
+    saveFabricJson,
+    setIsRestoringHistory,
+  ]);
 
   return { canRedo, canUndo, redo, undo };
 }

@@ -13,6 +13,7 @@ import type {
 
 import { useEffect, useRef } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 type UseShapeToolParams = {
@@ -33,6 +34,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
   const shapeFill = usePdfEditorStore((s) => s.shapeFill);
   const shapeStroke = usePdfEditorStore((s) => s.shapeStroke);
   const shapeStrokeWidth = usePdfEditorStore((s) => s.shapeStrokeWidth);
@@ -308,6 +310,11 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
         markDocumentDirty();
       }
 
+      // Persist synchronously so save/export can't miss the shape if the
+      // flush at export time hits a stale/empty live canvas (matches the
+      // 2026-07-23 draw/signature persistence pattern).
+      saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+
       fabricCanvas.renderAll();
       setActiveTool("select");
     };
@@ -338,6 +345,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
     fabricCanvas,
     markDocumentDirty,
     pushHistory,
+    saveFabricJson,
     shapeFill,
     shapeStroke,
     shapeStrokeWidth,

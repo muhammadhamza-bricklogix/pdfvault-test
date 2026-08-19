@@ -4,6 +4,7 @@ import type { Canvas as FabricCanvas, IText } from "fabric";
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -201,7 +202,16 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
       // picks the new annotation up. `pushHistory` is triggered by
       // the canvas `object:added` listener registered in
       // `useEditorHistory` — we don't double-fire it here.
-      usePdfEditorStore.getState().markDocumentDirty();
+      const store = usePdfEditorStore.getState();
+
+      store.markDocumentDirty();
+      // Persist synchronously so save/export can't miss it if the flush at
+      // export time hits a stale/empty live canvas (matches the 2026-07-23
+      // draw/signature persistence pattern).
+      store.saveFabricJson(
+        store.currentPage,
+        serializeFabricCanvas(liveCanvas),
+      );
 
       toast.success({
         title: `${def.label} added`,

@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import { verifyPdfPassword } from "@/lib/client/pdf-editor/verify-pdf-password";
 import {
   useDecryptFileMutation,
   useEncryptFileMutation,
@@ -32,6 +33,8 @@ export function PasswordModal() {
   const [unprotectPassword, setUnprotectPassword] = useState("");
   const [keyLength, setKeyLength] = useState<EncryptKeyLength>("256");
   const [mismatchError, setMismatchError] = useState(false);
+  const [unprotectError, setUnprotectError] = useState<string | null>(null);
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   // Reveal toggles — one per password field. Each reveals only its own
   // input; protect mode keeps the Confirm field independently masked so the
   // user can verify the strong password without exposing both fields at once.
@@ -41,7 +44,7 @@ export function PasswordModal() {
 
   const encrypt = useEncryptFileMutation();
   const decrypt = useDecryptFileMutation();
-  const isBusy = encrypt.isPending || decrypt.isPending;
+  const isBusy = encrypt.isPending || decrypt.isPending || isVerifyingPassword;
 
   const handleClose = () => {
     if (isBusy) return;
@@ -49,6 +52,7 @@ export function PasswordModal() {
     setConfirmPassword("");
     setUnprotectPassword("");
     setMismatchError(false);
+    setUnprotectError(null);
     setIsOpen(false);
   };
 
@@ -104,6 +108,48 @@ export function PasswordModal() {
 
   const handleUnprotect = async () => {
     if (!file) return;
+    setUnprotectError(null);
+
+    // Validate the supplied password against the actual PDF encryption
+    // BEFORE hitting the backend. Without this, anyone holding an encrypted
+    // PDF could submit any string and have the server strip the password —
+    // a security hole because it never confirms the caller knows the
+    // current password. Verification uses pdf.js locally so no bytes leave
+    // the browser until we've confirmed the password is correct.
+    setIsVerifyingPassword(true);
+    try {
+      const verdict = await verifyPdfPassword(file, unprotectPassword);
+
+      if (verdict.status === "not-encrypted") {
+        setUnprotectError(
+          "This PDF is not password-protected — there's nothing to remove.",
+        );
+
+        return;
+      }
+      if (verdict.status === "incorrect-password") {
+        setUnprotectError(
+          "Incorrect password. Enter the password currently set on this PDF.",
+        );
+
+        return;
+      }
+      if (verdict.status === "load-failed") {
+        setUnprotectError(
+          "Couldn't read this PDF to verify the password. It may be corrupt.",
+        );
+
+        return;
+      }
+    } catch (err) {
+      logger.warn("password verification threw", err);
+      setUnprotectError("Couldn't verify the password. Please try again.");
+
+      return;
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+
     if (!(await guardSignedIn("unprotect"))) return;
     try {
       const result = await decrypt.mutateAsync({
@@ -144,7 +190,10 @@ export function PasswordModal() {
                 aria-pressed={mode === "protect"}
                 size="sm"
                 variant={mode === "protect" ? "secondary" : "ghost"}
-                onPress={() => setMode("protect")}
+                onPress={() => {
+                  setMode("protect");
+                  setUnprotectError(null);
+                }}
               >
                 Add password
               </Button>
@@ -152,7 +201,10 @@ export function PasswordModal() {
                 aria-pressed={mode === "unprotect"}
                 size="sm"
                 variant={mode === "unprotect" ? "secondary" : "ghost"}
-                onPress={() => setMode("unprotect")}
+                onPress={() => {
+                  setMode("unprotect");
+                  setMismatchError(false);
+                }}
               >
                 Remove password
               </Button>
@@ -242,16 +294,28 @@ export function PasswordModal() {
                 <div className="relative">
                   <input
                     autoComplete="current-password"
-                    className="w-full rounded-md border border-default-200 px-3 py-2 pr-10 text-sm"
+                    className={`w-full rounded-md border px-3 py-2 pr-10 text-sm ${
+                      unprotectError ? "border-red-500" : "border-default-200"
+                    }`}
                     type={revealUnprotectPassword ? "text" : "password"}
                     value={unprotectPassword}
-                    onChange={(e) => setUnprotectPassword(e.target.value)}
+                    onChange={(e) => {
+                      setUnprotectPassword(e.target.value);
+                      setUnprotectError(null);
+                    }}
                   />
                   <PasswordRevealToggle
                     revealed={revealUnprotectPassword}
                     onToggle={() => setRevealUnprotectPassword((v) => !v)}
                   />
                 </div>
+                {unprotectError && (
+                  <p className="mt-1 text-xs text-red-500">{unprotectError}</p>
+                )}
+                <p className="mt-1 text-[11px] text-default-400">
+                  The password you set on the PDF is required to remove
+                  protection.
+                </p>
               </div>
             )}
           </Modal.Body>
@@ -274,11 +338,13 @@ export function PasswordModal() {
                   : void handleUnprotect()
               }
             >
-              {isBusy
-                ? "Working…"
-                : mode === "protect"
-                  ? "Protect & download"
-                  : "Unprotect & download"}
+              {isVerifyingPassword
+                ? "Verifying password…"
+                : isBusy
+                  ? "Working…"
+                  : mode === "protect"
+                    ? "Protect & download"
+                    : "Unprotect & download"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

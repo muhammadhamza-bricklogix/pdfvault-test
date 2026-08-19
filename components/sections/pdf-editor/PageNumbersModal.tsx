@@ -27,6 +27,78 @@ const FORMATS: { id: PageNumberFormat; label: string; sample: string }[] = [
   { id: "n-slash-N", label: "Number / Number", sample: "1/10" },
 ];
 
+/**
+ * Numeric input that lets the user freely edit the text (clear the field,
+ * type intermediate values below the min) and only commits + clamps on blur.
+ * Previous inline `Math.max(min, Number(e.target.value) || fallback)` calls
+ * clamped on every keystroke, so backspacing "12" briefly hit "1" and
+ * snapped to `min`, and clearing the field snapped back to the fallback.
+ */
+function NumberField({
+  className,
+  fallback,
+  max,
+  min,
+  onCommit,
+  value,
+}: {
+  className?: string;
+  fallback: number;
+  max?: number;
+  min: number;
+  onCommit: (n: number) => void;
+  value: number;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  // Reset draft during render when the committed value changes from outside
+  // (e.g. an ancestor set a new default). React's documented "adjusting state
+  // during render" pattern — cheaper than a useEffect sync and avoids the
+  // react-hooks/set-state-in-effect lint rule.
+  const [lastValue, setLastValue] = useState(value);
+
+  if (value !== lastValue) {
+    setLastValue(value);
+    setDraft(String(value));
+  }
+
+  const commit = () => {
+    if (draft.trim() === "") {
+      onCommit(fallback);
+      setDraft(String(fallback));
+
+      return;
+    }
+    const parsed = Number(draft);
+    const safe = Number.isFinite(parsed) ? parsed : fallback;
+    const clamped = Math.max(
+      min,
+      max !== undefined ? Math.min(max, safe) : safe,
+    );
+
+    onCommit(clamped);
+    setDraft(String(clamped));
+  };
+
+  return (
+    <input
+      className={className}
+      inputMode="numeric"
+      max={max}
+      min={min}
+      type="number"
+      value={draft}
+      onBlur={commit}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
+}
+
 function hexToRgb01(hex: string): { b: number; g: number; r: number } {
   const c = hex.replace("#", "");
   const r = parseInt(c.substring(0, 2), 16) / 255;
@@ -179,30 +251,26 @@ function PageNumbersModalContent() {
                 <Label className="mb-1 block text-xs text-default-500">
                   Font size
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={12}
                   max={72}
                   min={6}
-                  type="number"
                   value={fontSize}
-                  onChange={(e) =>
-                    setFontSize(Math.max(6, Number(e.target.value) || 12))
-                  }
+                  onCommit={setFontSize}
                 />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
                   Margin (pt)
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={0}
                   max={144}
                   min={0}
-                  type="number"
                   value={margin}
-                  onChange={(e) =>
-                    setMargin(Math.max(0, Number(e.target.value) || 0))
-                  }
+                  onCommit={setMargin}
                 />
               </div>
               <div>
@@ -220,44 +288,38 @@ function PageNumbersModalContent() {
                 <Label className="mb-1 block text-xs text-default-500">
                   Start at
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={1}
                   min={1}
-                  type="number"
                   value={startNumber}
-                  onChange={(e) =>
-                    setStartNumber(Math.max(1, Number(e.target.value) || 1))
-                  }
+                  onCommit={setStartNumber}
                 />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
                   First page
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={1}
                   max={pageCount}
                   min={1}
-                  type="number"
                   value={startPage}
-                  onChange={(e) =>
-                    setStartPage(Math.max(1, Number(e.target.value) || 1))
-                  }
+                  onCommit={setStartPage}
                 />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
                   Last page
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={pageCount || 1}
                   max={pageCount}
                   min={1}
-                  type="number"
                   value={endPage}
-                  onChange={(e) =>
-                    setEndPage(Math.max(1, Number(e.target.value) || pageCount))
-                  }
+                  onCommit={setEndPage}
                 />
               </div>
             </div>
