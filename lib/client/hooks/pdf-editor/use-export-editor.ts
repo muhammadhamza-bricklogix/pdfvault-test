@@ -148,10 +148,21 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     ) => {
       if (isExportingRef.current) return;
 
+      // Read `file` and `currentPage` directly from the Zustand store rather
+      // than the React-ref cache. When export is triggered right after a
+      // save-before-action (Download modal flow), `applyPostSaveReset` has
+      // already swapped `store.file` to the newly saved bytes, but the
+      // `useEffect` that mirrors props into `stateRef` may not have run yet.
+      // Reading `stateRef.current.file` in that window returns the OLD file
+      // while `pdfDocument` is already the NEW one — the merge produces an
+      // inconsistent PDF that the backend rejects with a validation error on
+      // the first attempt. The second click succeeds only because React has
+      // re-committed by then. See QA report 2026-08-19.
+      const storeSnapshot = usePdfEditorStore.getState();
+      const page = storeSnapshot.currentPage;
+      const sourceFile = storeSnapshot.file;
       const {
-        currentPage: page,
         fabricCanvas: liveCanvas,
-        file: sourceFile,
         authLoaded: authReady,
         clerkIsSignedIn: signedIn,
       } = stateRef.current;
