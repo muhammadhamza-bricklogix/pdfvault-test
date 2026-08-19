@@ -13,6 +13,23 @@ type NavigateAfterSaveDetail = {
   url: string;
 };
 
+// Module-level flag flipped by callers (e.g. ReloadConfirmModal) that
+// intentionally trigger a full-page reload / navigation. The beforeunload
+// handler below checks this so the browser's native "Leave site?" dialog
+// doesn't appear on top of our own custom confirm — otherwise the user
+// sees two prompts for the same action.
+let suppressNextUnloadPrompt = false;
+
+export function suppressNextUnload() {
+  suppressNextUnloadPrompt = true;
+  // Auto-clear after a short window in case the reload never happens (e.g.
+  // the caller decided to cancel after all). Keeps the flag from silently
+  // swallowing a genuine reload later in the session.
+  window.setTimeout(() => {
+    suppressNextUnloadPrompt = false;
+  }, 5000);
+}
+
 /**
  * Saves the current document before in-app navigation (e.g. My PDFs).
  */
@@ -142,11 +159,18 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
   // Browser reload / tab-close guard. Chrome, Safari, Firefox strip any
   // custom text from `beforeunload` since ~2016 (anti-phishing), so we can
   // only trigger the browser's own generic "Leave site? Changes you made
-  // may not be saved." dialog — a truly custom React modal isn't possible
-  // for a genuine reload. The `pagehide` handler above still runs a
-  // best-effort background save if the user confirms "Leave".
+  // may not be saved." dialog for reloads initiated from the browser's own
+  // chrome (address bar reload button, Cmd+Shift+R hard reload). Keyboard
+  // reloads (F5 / Cmd+R / Ctrl+R) are intercepted below with a custom
+  // modal. The `pagehide` handler above still runs a best-effort
+  // background save if the user confirms "Leave".
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (suppressNextUnloadPrompt) {
+        suppressNextUnloadPrompt = false;
+
+        return;
+      }
       if (!usePdfEditorStore.getState().hasUnsavedChanges) return;
       if (isNavigatingRef.current) return;
 
@@ -160,6 +184,33 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, []);
+
+  // Keyboard reload interception. Cmd+R (macOS), Ctrl+R (Windows/Linux),
+  // and F5 all reach us as a `keydown` event before the browser's own
+  // reload handler runs — `preventDefault` cancels the reload and we
+  // open our own confirm modal via `editor:show-reload-prompt`. The
+  // browser's reload BUTTON (in the address bar) does NOT fire keydown
+  // and cannot be intercepted; those still get the native dialog above.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isReloadCombo =
+        e.key === "F5" ||
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r");
+
+      if (!isReloadCombo) return;
+      if (!usePdfEditorStore.getState().hasUnsavedChanges) return;
+      if (isNavigatingRef.current) return;
+
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("editor:show-reload-prompt"));
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
     };
   }, []);
 }

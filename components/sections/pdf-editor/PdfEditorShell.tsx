@@ -76,6 +76,10 @@ const PageNumbersModal = dynamic(
   () => import("./PageNumbersModal").then((m) => m.PageNumbersModal),
   { ssr: false, loading: () => null },
 );
+const ReloadConfirmModal = dynamic(
+  () => import("./ReloadConfirmModal").then((m) => m.ReloadConfirmModal),
+  { ssr: false, loading: () => null },
+);
 const PasswordModal = dynamic(
   () => import("./PasswordModal").then((m) => m.PasswordModal),
   { ssr: false, loading: () => null },
@@ -511,6 +515,7 @@ export function PdfEditorShell() {
       <PasswordModal />
       <PageNumbersModal />
       <FormFieldsModal />
+      <ReloadConfirmModal />
     </div>
   );
 }
