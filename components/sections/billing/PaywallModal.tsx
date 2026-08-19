@@ -666,8 +666,7 @@ function PlanStep({
         )}
 
         <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-          Charged in USD. Amount in local currency is an estimate and may
-          differ. See our{" "}
+          Charged in {intent.currency}. See our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
             href="/terms-and-conditions"
@@ -887,7 +886,9 @@ function PayStep({
               </p>
             </div>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual" ? "$25 / month" : todayDisplay}
+              {selectedPlan === "annual"
+                ? `${formatMinor(Math.round(intent.amountRenewMinor / 12), intent.currency)} / month`
+                : todayDisplay}
             </p>
           </div>
           <p className="mt-0.5 text-[12px] text-[#6c6c6c]">
