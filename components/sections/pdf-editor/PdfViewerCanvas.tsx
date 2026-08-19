@@ -19,6 +19,7 @@ import { useSignatureTool } from "@/lib/client/hooks/pdf-editor/use-signature-to
 import { useTestHarness } from "@/lib/client/hooks/pdf-editor/use-test-harness";
 import { useWatermarkTool } from "@/lib/client/hooks/pdf-editor/use-watermark-tool";
 import { setLastPointer } from "@/lib/client/pdf-editor/last-pointer";
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -379,9 +380,20 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       // every accidental click on the text tool leaves a phantom IText in the
       // canvas JSON and inflates history snapshots.
       const onEditingExited = () => {
+        const store = usePdfEditorStore.getState();
+
         if (!textObj.text || textObj.text.trim() === "") {
           fc.remove(textObj);
           fc.renderAll();
+        } else {
+          // Persist synchronously — matches the 2026-07-23 draw/signature
+          // pattern. Without this, the Textbox lives only on the live
+          // canvas until the next Save flushes it. If Save flushes at a
+          // moment the canvas is empty (mid-remount race) OR the user
+          // exports before Save flushes, the typed text vanishes from
+          // the exported file.
+          store.saveFabricJson(store.currentPage, serializeFabricCanvas(fc));
+          store.markDocumentDirty();
         }
         textObj.off("editing:exited", onEditingExited);
       };

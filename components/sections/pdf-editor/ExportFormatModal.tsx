@@ -101,10 +101,16 @@ function ExportFormatModalBody({
   const handleDownload = async () => {
     setIsSaving(true);
 
+    // `force: true` so `persistEditorDocument` bypasses the
+    // `!hasUnsavedChanges` short-circuit. Otherwise a Save immediately
+    // before Download makes this a no-op and any live-canvas edits that
+    // never flipped `hasUnsavedChanges` (some tool paths, undo/redo,
+    // extracted-text typing) never reach the saved bytes — the exported
+    // file then looks unedited even though the editor shows the edits.
     await new Promise<void>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { force: false, onComplete: () => resolve() },
+          detail: { force: true, onComplete: () => resolve() },
         }),
       );
     });

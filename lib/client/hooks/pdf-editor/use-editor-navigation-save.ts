@@ -138,4 +138,28 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       window.removeEventListener("pagehide", onPageHide);
     };
   }, [file, isSignedIn]);
+
+  // Browser reload / tab-close guard. Chrome, Safari, Firefox strip any
+  // custom text from `beforeunload` since ~2016 (anti-phishing), so we can
+  // only trigger the browser's own generic "Leave site? Changes you made
+  // may not be saved." dialog — a truly custom React modal isn't possible
+  // for a genuine reload. The `pagehide` handler above still runs a
+  // best-effort background save if the user confirms "Leave".
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!usePdfEditorStore.getState().hasUnsavedChanges) return;
+      if (isNavigatingRef.current) return;
+
+      e.preventDefault();
+      // Legacy Chrome/Safari require assigning `returnValue` to trigger
+      // the dialog; the string itself is ignored.
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, []);
 }

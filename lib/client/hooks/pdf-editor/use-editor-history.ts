@@ -60,6 +60,12 @@ export function useEditorHistory({
       const json = JSON.stringify(fc.toJSON());
 
       pushHistory(currentPage, json);
+      // Persist the canvas to `fabricJsonByPage` alongside history so any
+      // object mutation (modify, remove, or add via a tool that didn't
+      // call `saveFabricJson` itself) survives Save/Export even if the
+      // pre-merge flush hits a stale/empty live canvas. Complements the
+      // per-tool synchronous persistence added 2026-08-19.
+      saveFabricJson(currentPage, serializeFabricCanvas(fc));
       forceRender((n) => n + 1);
     };
 
@@ -132,7 +138,13 @@ export function useEditorHistory({
       fc.off("object:modified", dirtySourceText);
       fc.off("text:changed", dirtySourceText);
     };
-  }, [fabricCanvas, currentPage, markDocumentDirty, pushHistory]);
+  }, [
+    fabricCanvas,
+    currentPage,
+    markDocumentDirty,
+    pushHistory,
+    saveFabricJson,
+  ]);
 
   const idx = historyIndexByPage.get(currentPage) ?? -1;
   const history = historyByPage.get(currentPage) ?? [];
