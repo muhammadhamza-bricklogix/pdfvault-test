@@ -1,4 +1,8 @@
+import { join } from "node:path";
+
 import bcrypt from "bcryptjs";
+
+import { shareFs } from "./fs-store-base";
 
 /**
  * Password hashing for optional share-link passwords.
@@ -9,7 +13,7 @@ import bcrypt from "bcryptjs";
  *   • OWASP-acceptable for this use case (low-value asset, not bank
  *     credentials). Cost factor 12 covers current attack hardware.
  *
- * Hashes live in a server-side map keyed by the token's `jti` — NEVER
+ * Hashes live in a server-side store keyed by the token's `jti` — NEVER
  * inside the token itself. Putting a hash in the URL would hand an
  * offline-crackable artifact to anyone with the link.
  */
@@ -30,9 +34,13 @@ export async function verifyPassword(
 /**
  * Per-`jti` password storage.
  *
- * In-memory `Map` is fine for local dev + single-instance staging. For
- * production / multi-instance, swap the implementation for a Redis-backed
- * (Upstash) or DB-backed one — interface stays the same.
+ * Filesystem-backed: `<SHARE_DATA_DIR>/pw/<jti>.json` = `{ hash, exp }`.
+ * Was previously in-memory; server restarts wiped passwords along with
+ * everything else, forcing recipients through the "expired" screen even
+ * when they had the right password.
+ *
+ * Multi-instance production still needs a shared store — point
+ * `SHARE_DATA_DIR` at a mounted volume or swap the implementation.
  */
 export interface PasswordStore {
   set(jti: string, hash: string, expiresAt: number): Promise<void>;
@@ -40,19 +48,29 @@ export interface PasswordStore {
   delete(jti: string): Promise<void>;
 }
 
-class InMemoryPasswordStore implements PasswordStore {
-  private readonly store = new Map<string, { hash: string; exp: number }>();
+type Entry = { exp: number; hash: string };
+
+class FsPasswordStore implements PasswordStore {
+  private async pathFor(jti: string): Promise<string> {
+    const dir = await shareFs.ensureDir("pw");
+
+    return join(dir, `${jti}.json`);
+  }
 
   async set(jti: string, hash: string, expiresAt: number): Promise<void> {
-    this.store.set(jti, { hash, exp: expiresAt });
+    await shareFs.writeJsonAtomic(await this.pathFor(jti), {
+      exp: expiresAt,
+      hash,
+    } satisfies Entry);
   }
 
   async get(jti: string): Promise<string | undefined> {
-    const entry = this.store.get(jti);
+    const path = await this.pathFor(jti);
+    const entry = await shareFs.readJson<Entry>(path);
 
     if (!entry) return undefined;
     if (Date.now() >= entry.exp) {
-      this.store.delete(jti);
+      await shareFs.safeUnlink(path);
 
       return undefined;
     }
@@ -61,12 +79,8 @@ class InMemoryPasswordStore implements PasswordStore {
   }
 
   async delete(jti: string): Promise<void> {
-    this.store.delete(jti);
+    await shareFs.safeUnlink(await this.pathFor(jti));
   }
 }
 
-/**
- * Module-level singleton. Resets on every server restart — fine for
- * MVP demo. Production needs a persistent backend (see interface).
- */
-export const passwordStore: PasswordStore = new InMemoryPasswordStore();
+export const passwordStore: PasswordStore = new FsPasswordStore();
