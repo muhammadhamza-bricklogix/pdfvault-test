@@ -556,14 +556,16 @@ function ToolToolbar() {
   );
 
   return (
-    // Scroll container uses the `mx-auto w-fit` pattern (not
-    // `justify-center`) so an overflowing pill row can be panned all
-    // the way to both edges. `justify-center` on an overflow-auto
-    // container traps the user at the centre and clips the leftmost
-    // tools — same iOS Safari trap documented for `PdfViewerCanvas.tsx`
-    // (2026-06-10 (e) in the skill log).
+    // Desktop-only toolbar (mobile uses `BottomDock`), so the iOS Safari
+    // `mx-auto w-fit` pattern from `PdfViewerCanvas.tsx` doesn't apply.
+    // Flex-wrap lets the pill row reflow into multiple rows when the
+    // viewport narrows or the user zooms the browser in — without wrap
+    // the row overflows horizontally with `overflow-x-auto` and the
+    // rightmost tools become hidden behind the sidebar edge.
+    // `overflow-x-auto` stays as a safety net for a single pill group
+    // that on its own exceeds the container width.
     <div className="shrink-0 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
-      <div className="mx-auto flex w-fit items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         {groups.map((group, i) => (
           <PillGroup key={i} dataTour={group.dataTour}>
             {group.entries.map((tool) => {

@@ -128,6 +128,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // Re-fit triggers only on file CHANGE (`fittedFileRef` guard) so the
   // user's subsequent manual zoom adjustments are preserved across page
   // navigation, tool switches, etc.
+  //
+  // MAX_ZOOM caps at natural page size (1.0). Above 1.0 the browser is
+  // effectively rendering the PDF larger than its intrinsic size, and
+  // when browser CSS zoom is < 100% the container's CSS width can
+  // compute a fit ratio above the toolbar's zoom-in ceiling — locking
+  // the user at max zoom with no headroom to zoom in further. Capping
+  // at natural size keeps `+` always operable and mirrors Adobe /
+  // macOS Preview defaults (fit-to-width never enlarges past 100%).
   useEffect(() => {
     if (!effectivePage || !file || !viewerScrollRef.current) return;
     if (fittedFileRef.current === file) return;
@@ -143,7 +151,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     // against the scroll-area edge.
     const fitZoom = (available / baseViewport.width) * 0.95;
     const MIN_ZOOM = 0.5;
-    const MAX_ZOOM = 2;
+    const MAX_ZOOM = 1;
     const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitZoom));
 
     usePdfEditorStore.getState().setZoom(clamped);
@@ -649,73 +657,81 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => clearTimeout(t);
   }, [currentPage]);
 
-  // Auto-advance / auto-retreat when the user scrolls to the edge of the
-  // current page. A 400 ms dwell at the bottom is required before flipping so
-  // a quick scroll-past doesn't instantly jump pages (Google-Docs feel).
-  // Wheel overscroll at the top handles the "scroll up into previous page" case.
+  // Page navigation via wheel OVERSCROLL. The previous "reach the bottom →
+  // flip" behaviour force-scrolled users away from the bottom of the page
+  // even when they only wanted to READ content near the bottom edge (QA
+  // report 2026-08-20). The overscroll model matches Kindle / Apple Books /
+  // Google Docs: sitting at the boundary does nothing; the page only flips
+  // when the user actively pushes past it with continued wheel input.
+  //
+  //   • Wheel DOWN while at the bottom → accumulate deltaY; after ~140 px
+  //     of overscroll in a continuous gesture, advance one page.
+  //   • Wheel UP while at the top → same accumulator, retreat one page.
+  //   • Scrolling in the middle of the page resets the accumulator so
+  //     overscroll must be a continuous intent, not stitched across pauses.
+  //
+  // Mobile page navigation stays on the swipe / pull-at-boundary gestures
+  // in the effect below — native touch scroll simply stops at the edge,
+  // giving readers all the dwell time they want.
   useEffect(() => {
     if (pageCount <= 1) return;
     const el = viewerScrollRef.current;
 
     if (!el) return;
 
-    let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+    const OVERSCROLL_THRESHOLD = 140; // px of push-past-edge before flipping
+    const RESET_MS = 700; // clears accumulator if the user pauses
+    let overscroll = 0;
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const clearDwell = () => {
-      if (dwellTimer) {
-        clearTimeout(dwellTimer);
-        dwellTimer = null;
+    const scheduleReset = () => {
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        overscroll = 0;
+        resetTimer = null;
+      }, RESET_MS);
+    };
+
+    const clearAccumulator = () => {
+      overscroll = 0;
+      if (resetTimer) {
+        clearTimeout(resetTimer);
+        resetTimer = null;
       }
     };
 
-    const onScroll = () => {
-      if (mobilePageNavRef.current) return;
-      // Ignore when page content fits entirely in the viewport (scrollTop stays 0).
-      if (el.scrollTop < 20) {
-        clearDwell();
-
-        return;
-      }
-
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
-
-      if (atBottom) {
-        if (!dwellTimer) {
-          // Wait 400 ms at the bottom before committing to next page — gives
-          // the user time to stop scrolling intentionally.
-          dwellTimer = setTimeout(() => {
-            dwellTimer = null;
-            const s = usePdfEditorStore.getState();
-
-            if (!mobilePageNavRef.current && s.currentPage < s.pageCount) {
-              navigatePage(s.currentPage + 1, 1);
-            }
-          }, 400);
-        }
-      } else {
-        // User scrolled back up — cancel the pending page flip.
-        clearDwell();
-      }
-    };
-
-    // Wheel (trackpad/mouse) overscroll at the very top → previous page.
-    // No dwell needed — intentional upward overscroll is unambiguous.
     const onWheelNav = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) return; // zoom handled elsewhere
       if (mobilePageNavRef.current) return;
       const state = usePdfEditorStore.getState();
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+      const atTop = el.scrollTop <= 0;
 
-      if (e.deltaY < 0 && el.scrollTop === 0 && state.currentPage > 1) {
-        navigatePage(state.currentPage - 1, -1);
+      if (e.deltaY > 0 && atBottom && state.currentPage < state.pageCount) {
+        overscroll += e.deltaY;
+        scheduleReset();
+        if (overscroll >= OVERSCROLL_THRESHOLD) {
+          clearAccumulator();
+          navigatePage(state.currentPage + 1, 1);
+        }
+      } else if (e.deltaY < 0 && atTop && state.currentPage > 1) {
+        overscroll += Math.abs(e.deltaY);
+        scheduleReset();
+        if (overscroll >= OVERSCROLL_THRESHOLD) {
+          clearAccumulator();
+          navigatePage(state.currentPage - 1, -1);
+        }
+      } else {
+        // Scrolling within the page — reset so accumulated overscroll
+        // must be a continuous gesture, not stitched across pauses.
+        clearAccumulator();
       }
     };
 
-    el.addEventListener("scroll", onScroll, { passive: true });
     el.addEventListener("wheel", onWheelNav, { passive: true });
 
     return () => {
-      clearDwell();
-      el.removeEventListener("scroll", onScroll);
+      clearAccumulator();
       el.removeEventListener("wheel", onWheelNav);
     };
   }, [pageCount, navigatePage]);
