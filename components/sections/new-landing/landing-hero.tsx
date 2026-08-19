@@ -9,7 +9,7 @@ export function LandingHero() {
       {/* HeroBackground grid removed per user request — plain white
           background under the hero copy. */}
 
-      <div className="pv-container relative z-10 flex flex-col items-center pt-10 text-center sm:pt-[8vh]">
+      <div className="pv-container relative z-10 flex flex-col items-center pt-16 text-center sm:pt-[8vh]">
         <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
           Edit, sign, or convert any PDF in seconds
         </h1>
