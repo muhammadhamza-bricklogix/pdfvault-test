@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionDetail = {
@@ -57,6 +58,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     });
 
     try {
+      logger.event("save.start", "info", { source: "button" });
       // Force the upload on explicit user click — bypasses the
       // `hasUnsavedChanges` short-circuit so the current editor state
       // is GUARANTEED to land as a fresh version on the backend, even
@@ -65,12 +67,19 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       // and navigation saves keep the short-circuit (force omitted).
       // QA report 2026-06-16: "even the most recent changes are not
       // saved in the version."
-      const result = await persistEditorDocument({
-        fabricCanvas: fabricRef.current,
-        force: true,
-      });
+      const result = await logger.span(
+        "save.persist",
+        "editor.save",
+        () =>
+          persistEditorDocument({
+            fabricCanvas: fabricRef.current,
+            force: true,
+          }),
+        { source: "button" },
+      );
 
       if (!result.ok) {
+        logger.event("save.blocked", "warning", { reason: result.reason });
         if (result.reason === "no-changes") {
           toast.info({
             title: "Already saved",
@@ -127,9 +136,16 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
       }
 
+      logger.event("save.ok", "info", { documentId: id });
       toast.success({
         title: "Saved",
         description: "Your PDF was saved to your library.",
+      });
+    } catch (err) {
+      logger.captureError(err, "save.button");
+      toast.error({
+        title: "Save failed",
+        description: "We couldn't save your edits. Please try again.",
       });
     } finally {
       toast.close(loadingKey);
@@ -156,10 +172,19 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
 
       if (!onComplete) return;
 
-      const result = await persistEditorDocument({
-        fabricCanvas: fabricRef.current,
-        force: detail?.force,
+      logger.event("save.before_action_start", "info", {
+        force: Boolean(detail?.force),
       });
+      const result = await logger.span(
+        "save.persist_before_action",
+        "editor.save",
+        () =>
+          persistEditorDocument({
+            fabricCanvas: fabricRef.current,
+            force: detail?.force,
+          }),
+        { source: "before_action" },
+      );
 
       if (result.ok) {
         // Commit the saved bytes as the new editor baseline. Without this,
@@ -197,11 +222,17 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           });
         });
 
+        logger.event("save.before_action_ok", "info", {
+          documentId: result.document.id,
+        });
         onComplete({ ok: true });
 
         return;
       }
 
+      logger.event("save.before_action_blocked", "warning", {
+        reason: result.reason,
+      });
       // `no-changes` is a benign short-circuit (dirty flag was already clean
       // by the time the save ran). Treat as success — nothing to commit and
       // nothing to lose by proceeding. Every other failure reason is

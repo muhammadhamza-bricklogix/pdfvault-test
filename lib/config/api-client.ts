@@ -16,6 +16,7 @@ import {
   requestPaywall,
 } from "@/lib/client/hooks/billing/paywall-bus";
 import { toApiError } from "@/lib/shared/utils/api-error";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -60,7 +61,19 @@ type RetriableConfig = InternalAxiosRequestConfig & {
    * before the paywall opens (convert-first UX pattern).
    */
   _skipPaywallGate?: boolean;
+  _sentryStart?: number;
 };
+
+function scrubUrl(url: string | undefined): string {
+  if (!url) {
+    return "";
+  }
+
+  return url.replace(
+    /([?&](?:token|id|export|tool|redirect_url|__clerk[^=]*)=)[^&#]+/gi,
+    "$1[Filtered]",
+  );
+}
 
 function isGatedRequest(config: InternalAxiosRequestConfig): boolean {
   const url = config.url ?? "";
@@ -87,6 +100,14 @@ apiClient.interceptors.request.use(async (config) => {
     (config as RetriableConfig)._hadToken = true;
   }
 
+  (config as RetriableConfig)._sentryStart = Date.now();
+
+  logger.breadcrumb("http", "request.start", {
+    method: config.method?.toUpperCase() ?? "GET",
+    url: scrubUrl(config.url),
+    hasAuth: Boolean(token),
+  });
+
   // Pre-flight paywall check for gated endpoints. If the cached
   // entitlement snapshot says the user is NOT entitled, fire the
   // paywall right here so we skip a wasted round-trip that we already
@@ -110,6 +131,18 @@ apiClient.interceptors.request.use(async (config) => {
 
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    const original = response.config as RetriableConfig;
+    const durationMs = original._sentryStart
+      ? Date.now() - original._sentryStart
+      : undefined;
+
+    logger.breadcrumb("http", "request.success", {
+      method: original.method?.toUpperCase() ?? "GET",
+      url: scrubUrl(original.url),
+      status: response.status,
+      durationMs,
+    });
+
     // Unwrap the standard `{ success, message, data }` envelope so callers can
     // type `apiClient.get<Document>(...)` and read `response.data` directly.
     const body = response.data;
@@ -128,6 +161,22 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const status = error.response?.status;
     const original = error.config as RetriableConfig | undefined;
+    const durationMs = original?._sentryStart
+      ? Date.now() - original._sentryStart
+      : undefined;
+
+    logger.breadcrumb(
+      "http",
+      "request.error",
+      {
+        method: original?.method?.toUpperCase() ?? "GET",
+        url: scrubUrl(original?.url),
+        status: status ?? "network",
+        durationMs,
+        code: error.code,
+      },
+      status && status >= 500 ? "error" : "warning",
+    );
 
     if (status === 401 && original && !original._retry) {
       original._retry = true;
@@ -198,6 +247,20 @@ apiClient.interceptors.response.use(
       return Promise.reject(new PaywallCancelledError());
     }
 
-    return Promise.reject(toApiError(error));
+    // 5xx and network failures are worth capturing as errors. 4xx (except
+    // 401/402/429 already handled above) get through as breadcrumbs only —
+    // they're usually caller-recoverable (validation, not-found).
+    const apiError = toApiError(error);
+
+    if (!status || status >= 500) {
+      logger.captureError(apiError, "http", {
+        method: original?.method?.toUpperCase() ?? "GET",
+        url: scrubUrl(original?.url),
+        status: status ?? "network",
+        durationMs,
+      });
+    }
+
+    return Promise.reject(apiError);
   },
 );

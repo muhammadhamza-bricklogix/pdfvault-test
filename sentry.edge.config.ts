@@ -5,7 +5,32 @@ Sentry.init({
 
   enabled: process.env.NODE_ENV === "production",
 
-  tracesSampleRate: 0.1,
+  environment: process.env.APP_ENV ?? process.env.NODE_ENV,
+  release: process.env.NEXT_PUBLIC_APP_VERSION,
+
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 1.0,
 
   debug: false,
+
+  beforeSend(event) {
+    const headers = event.request?.headers as
+      | Record<string, string>
+      | undefined;
+
+    if (headers) {
+      delete headers.Authorization;
+      delete headers.authorization;
+      delete headers.Cookie;
+      delete headers.cookie;
+    }
+
+    if (event.request?.url) {
+      event.request.url = event.request.url.replace(
+        /([?&](?:token|id|export|tool|redirect_url|__clerk[^=]*)=)[^&#]+/gi,
+        "$1[Filtered]",
+      );
+    }
+
+    return event;
+  },
 });

@@ -208,7 +208,16 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         logger.warn("[PDFedits] EXPORT-DIAG: entry log failed", diagErr);
       }
 
+      logger.event("export.start", "info", {
+        format,
+        signedIn,
+        authReady,
+        hasFile: Boolean(sourceFile),
+        pageCount: storeSnapshot.fabricJsonByPage.size,
+      });
+
       if (!sourceFile) {
+        logger.event("export.no_file", "warning", { format });
         toast.error({
           title: "Nothing to export",
           description: "Open a PDF before exporting.",
@@ -225,6 +234,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       // recursing into handleExport) keeps the closure lint rule happy and
       // still routes through the listener once auth is ready.
       if (!authReady) {
+        logger.breadcrumb("export", "auth.deferred", { format });
         isExportingRef.current = false;
         window.setTimeout(() => {
           window.dispatchEvent(
@@ -249,6 +259,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         // to the same editor with `?export=<fmt>` set, so the export
         // re-fires automatically.
         if (!signedIn) {
+          logger.event("export.signin_required", "info", { format });
           try {
             // Flush the live canvas for the current page into the store so
             // the serialized fabric state includes the user's latest edits
@@ -267,8 +278,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               fabricJsonByPage,
               extractedPages,
             );
+            logger.breadcrumb("export", "pending_file.saved", {
+              format,
+              hasFabricEdits: fabricJsonByPage.size > 0,
+            });
           } catch (err) {
-            logger.warn("pending editor file save failed", err);
+            logger.captureError(err, "export.pending_file", { format });
           }
 
           const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
@@ -308,7 +323,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         if (format === "pdf") {
           const entitled = await ensureFreshEntitlement();
 
+          logger.breadcrumb("export", "entitlement.checked", {
+            format,
+            entitled,
+          });
+
           if (!entitled) {
+            logger.event("export.paywall_shown", "info", { format });
             const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
               type: "application/pdf",
             });
@@ -322,7 +343,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
                 targetExt: "pdf",
               });
 
-              if (outcome !== "success") return;
+              if (outcome !== "success") {
+                logger.event("export.paywall_cancelled", "info", { format });
+
+                return;
+              }
+              logger.event("export.paywall_success", "info", { format });
             } finally {
               URL.revokeObjectURL(objectUrl);
             }
@@ -355,6 +381,10 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             : buildPdfExportFilename(sourceFile.name);
 
           downloadBytes(bytes, outName);
+          logger.event("export.success", "info", {
+            format,
+            bytes: bytes.byteLength,
+          });
           toast.success({
             title: "Exported",
             description: "Your edited PDF has been downloaded.",
@@ -379,6 +409,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         );
 
         if (!entitled) {
+          logger.event("export.paywall_shown", "info", { format });
           const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
             type: "application/pdf",
           });
@@ -392,7 +423,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               targetExt: format,
             });
 
-            if (outcome !== "success") return;
+            if (outcome !== "success") {
+              logger.event("export.paywall_cancelled", "info", { format });
+
+              return;
+            }
+            logger.event("export.paywall_success", "info", { format });
           } finally {
             URL.revokeObjectURL(objectUrl);
           }
@@ -402,15 +438,23 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
 
         try {
-          result = await convertRef.current.mutateAsync({
-            file: pdfFile,
-            type: conversionType,
-          });
+          result = await logger.span(
+            `convert.${conversionType}`,
+            "export.convert",
+            () =>
+              convertRef.current.mutateAsync({
+                file: pdfFile,
+                type: conversionType,
+              }),
+            { format, bytes: bytes.byteLength },
+          );
         } catch (err) {
           if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+            logger.event("export.convert_cancelled", "info", { format });
+
             return;
           }
-          logger.error("Failed to export PDF", err);
+          logger.captureError(err, "export.convert", { format });
           toast.error({
             title: "Export failed",
             description: "We couldn't export your edits. Please try again.",
@@ -427,16 +471,22 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               : result.fileName;
 
           triggerBlobDownload(result.blob, outName);
+          logger.event("export.success", "info", {
+            format,
+            filename: result.fileName,
+          });
         } catch (err) {
-          logger.error("blob download failed after successful conversion", err);
+          logger.captureError(err, "export.download", { format });
         }
       } catch (err) {
         // Any pre-mutation exception (buildEditedPdfBytes, file
         // preparation) still surfaces to the user.
         if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+          logger.event("export.paywall_cancelled", "info", { format });
+
           return;
         }
-        logger.error("Failed to export PDF", err);
+        logger.captureError(err, "export.build", { format });
         toast.error({
           title: "Export failed",
           description: "We couldn't export your edits. Please try again.",

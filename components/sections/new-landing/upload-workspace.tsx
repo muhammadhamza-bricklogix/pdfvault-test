@@ -399,6 +399,10 @@ export function UploadWorkspace({
       // a fast drop on a slow network slips past both gates and
       // silently starts a backend conversion for a signed-out visitor.
       if (requiresAuth && !authLoaded) {
+        logger.breadcrumb("upload", "drop.deferred_pre_auth", {
+          filename: picked.name,
+          size: picked.size,
+        });
         pendingDropRef.current = picked;
 
         return;
@@ -410,10 +414,14 @@ export function UploadWorkspace({
       // auto-resume effect below reads IDB when the user returns
       // signed-in.
       if (requiresAuth && authLoaded && !isSignedIn) {
+        logger.event("upload.signin_required_on_convert", "info", {
+          pathname,
+          filename: picked.name,
+        });
         try {
           await savePendingEditorFile(picked);
         } catch (idbErr) {
-          logger.warn("pending editor file save failed", idbErr);
+          logger.captureError(idbErr, "upload.pending_file_save");
         }
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
@@ -447,8 +455,17 @@ export function UploadWorkspace({
           });
 
           try {
-            earlyConvertedPdf = await uploadAsPdf(picked);
+            earlyConvertedPdf = await logger.span(
+              "upload.convert_to_pdf",
+              "upload.convert",
+              () => uploadAsPdf(picked),
+              { size: picked.size, ext: getExtension(picked.name) },
+            );
           } catch (convErr) {
+            logger.captureError(convErr, "upload.early_convert", {
+              filename: picked.name,
+              size: picked.size,
+            });
             toast.close(convKey);
             toast.error({
               title: "Conversion failed",
@@ -466,7 +483,12 @@ export function UploadWorkspace({
 
         const entitled = await ensureFreshEntitlement();
 
+        logger.breadcrumb("upload", "entitlement.checked", { entitled });
+
         if (!entitled) {
+          logger.event("upload.paywall_shown", "info", {
+            sourceExt: getExtension(picked.name),
+          });
           const objectUrl = URL.createObjectURL(earlyConvertedPdf);
 
           try {
@@ -478,8 +500,11 @@ export function UploadWorkspace({
             });
 
             if (outcome !== "success") {
+              logger.event("upload.paywall_cancelled", "info");
+
               return;
             }
+            logger.event("upload.paywall_success", "info");
           } catch (err) {
             if (
               (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
@@ -531,6 +556,10 @@ export function UploadWorkspace({
           }
 
           if (existingDocId) {
+            logger.event("upload.duplicate_detected", "info", {
+              filename: pdfFile.name,
+              documentId: existingDocId,
+            });
             toast.info({
               title: "File already in My PDFs",
               description: `Opening the existing copy of "${pdfFile.name}".`,
@@ -545,17 +574,30 @@ export function UploadWorkspace({
             });
 
             try {
-              const document = await documentsService.uploadDocument({
-                file: pdfFile,
-              });
+              const document = await logger.span(
+                "upload.save_before_open",
+                "upload.save",
+                () =>
+                  documentsService.uploadDocument({
+                    file: pdfFile,
+                  }),
+                { size: pdfFile.size },
+              );
 
               savedDoc = { id: document.id, name: document.filename };
+              logger.event("upload.save_before_open_ok", "info", {
+                documentId: document.id,
+                size: pdfFile.size,
+              });
               toast.success({
                 title: "Saved to My PDFs",
                 description: document.filename,
               });
             } catch (saveErr) {
-              logger.warn("save-before-open failed", saveErr);
+              logger.captureError(saveErr, "upload.save_before_open", {
+                filename: pdfFile.name,
+                size: pdfFile.size,
+              });
               toast.error({
                 title: "Couldn't save to My PDFs",
                 description:
@@ -576,9 +618,16 @@ export function UploadWorkspace({
         // this point on `/convert/*` routes now (the sign-in gate at
         // the top of the function short-circuits both directions); on
         // `/` they hit the editor with the in-memory file.
+        logger.event("upload.open_editor", "info", {
+          documentId: savedDoc?.id ?? null,
+          tool,
+          exportFormat,
+        });
         router.push(buildComposerHref(savedDoc?.id ?? null));
       } catch (err) {
-        logger.error("Landing upload → open failed", err);
+        logger.captureError(err, "upload.open_editor", {
+          filename: picked.name,
+        });
         toast.error({
           title: "Couldn't open file",
           description: err instanceof Error ? err.message : undefined,
@@ -649,7 +698,7 @@ export function UploadWorkspace({
         setFile(pendingFile);
         void openFileInEditor(pendingFile);
       } catch (err) {
-        logger.warn("convert-page auto-resume failed", err);
+        logger.captureError(err, "upload.convert_auto_resume");
       }
     })();
   }, [

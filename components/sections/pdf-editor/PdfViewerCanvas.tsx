@@ -659,7 +659,11 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     const onScroll = () => {
       if (mobilePageNavRef.current) return;
       // Ignore when page content fits entirely in the viewport (scrollTop stays 0).
-      if (el.scrollTop < 20) { clearDwell(); return; }
+      if (el.scrollTop < 20) {
+        clearDwell();
+
+        return;
+      }
 
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
 
@@ -813,7 +817,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           opacity: fading ? 0 : 1,
           // Fast fade-out hides old content quickly; slow fade-in gives the new
           // page a gentle reveal that feels like a Google Docs page transition.
-          transition: fading ? "opacity 200ms ease-out" : "opacity 350ms ease-in",
+          transition: fading
+            ? "opacity 200ms ease-out"
+            : "opacity 350ms ease-in",
         }}
       >
         <div className="shadow-lg">

@@ -192,12 +192,16 @@ export function PaywallModal({
 
     setSelectedPlan("monthly");
 
+    logger.event("checkout.intent_start", "info", { plan: "monthly" });
     createIntent.mutate(
       { disclaimerVersion: DISCLAIMER_VERSION },
       {
-        onSuccess: setIntent,
+        onSuccess: (intent) => {
+          logger.event("checkout.intent_ok", "info");
+          setIntent(intent);
+        },
         onError: (err) => {
-          logger.error("checkout intent failed", err);
+          logger.captureError(err, "checkout.intent");
           setError(
             err instanceof Error
               ? err.message
@@ -230,6 +234,10 @@ export function PaywallModal({
     // backend confirms `entitled === true`.
     const subscriptionId = message?.order?.subscription_id;
 
+    logger.event("checkout.iframe_success", "info", {
+      hasSubscriptionId: Boolean(subscriptionId),
+    });
+
     try {
       await syncSubscription.mutateAsync(
         subscriptionId ? { subscriptionId } : {},
@@ -246,10 +254,9 @@ export function PaywallModal({
       });
 
       if (!fresh?.entitled) {
-        logger.warn?.(
-          "Solidgate onSuccess fired but backend still reports entitled=false",
-          fresh,
-        );
+        logger.event("checkout.entitlement_mismatch", "warning", {
+          subscriptionId,
+        });
         setError(
           "Payment couldn't be confirmed. If your card was charged, please refresh in a minute or email payments@pdfvault.ai.",
         );
@@ -270,13 +277,16 @@ export function PaywallModal({
 
       setEntitledSnapshot(true);
 
+      logger.event("checkout.entitlement_confirmed", "info");
       toast.success({
         title: "Payment received",
         description: "Your access is unlocked.",
       });
       setStep("success");
     } catch (err) {
-      logger.error("subscription sync after payment failed", err);
+      logger.captureError(err, "checkout.subscription_sync", {
+        subscriptionId,
+      });
       setError(
         "We received your payment attempt but couldn't verify it. Please refresh in a minute or email payments@pdfvault.ai.",
       );
@@ -284,6 +294,7 @@ export function PaywallModal({
   };
 
   const handleIframeFail = () => {
+    logger.event("checkout.iframe_declined", "warning");
     setPayFailed(true);
     toast.error({
       title: "Payment declined",
@@ -292,6 +303,7 @@ export function PaywallModal({
   };
 
   const handleRetry = () => {
+    logger.event("checkout.retry_start", "info");
     // Fresh CheckoutIntent for the retry — Solidgate marks the previous
     // paymentIntent terminal after a decline, so re-mounting the iframe
     // against the same intent just re-renders the "Payment declined"
@@ -306,9 +318,10 @@ export function PaywallModal({
           setIntent(fresh);
           setRetryKey((k) => k + 1);
           setRetryLoading(false);
+          logger.event("checkout.retry_intent_ok", "info");
         },
         onError: (err) => {
-          logger.error("checkout intent retry failed", err);
+          logger.captureError(err, "checkout.retry_intent");
           setRetryLoading(false);
           setPayFailed(true);
           toast.error({
@@ -355,7 +368,7 @@ export function PaywallModal({
           setContinueLoading(false);
         },
         onError: (err) => {
-          logger.error("annual checkout intent failed", err);
+          logger.captureError(err, "checkout.annual_intent");
           setContinueLoading(false);
           toast.error({
             title: "Couldn't start annual checkout",
@@ -773,7 +786,7 @@ function PayStep({
                 }}
                 width="100%"
                 onError={(error) => {
-                  logger.error("[paywall] Solidgate iframe error", error);
+                  logger.captureError(error, "checkout.iframe_error");
                 }}
                 onFail={onFail}
                 onMounted={() => {

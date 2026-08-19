@@ -216,6 +216,7 @@ export function useEditorDocumentLoader() {
     // for Clerk to finish loading before deciding so we don't bounce
     // signed-in users on first paint.
     if (authLoaded && !isSignedIn) {
+      logger.event("document_loader.signin_required", "info", { id });
       const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
 
       router.replace(
@@ -277,6 +278,8 @@ export function useEditorDocumentLoader() {
         });
     }
 
+    logger.breadcrumb("document_loader", "load.start", { id, isOnline });
+
     // Phase 2 (slow, seconds for large PDFs): download the full bytes for the
     // save/export pipeline, write to IDB for offline use, then seed the store.
     loadDocument(id, userId)
@@ -305,6 +308,11 @@ export function useEditorDocumentLoader() {
         setCurrentDocument({ id: loaded.id, name: loaded.name });
         usePdfEditorStore.setState({ hasUnsavedChanges: false });
         lastHydratedDocumentId.current = id;
+        logger.event("document_loader.load_ok", "info", {
+          id,
+          bytes: loaded.file.size,
+          hasEditorState: Boolean(loaded.editorState),
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -317,6 +325,7 @@ export function useEditorDocumentLoader() {
         const isAuthError = /\b401\b|unauthori[sz]ed/i.test(message);
 
         if (isAuthError) {
+          logger.event("document_loader.auth_error_bounce", "warning", { id });
           const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
 
           router.replace(
@@ -339,10 +348,13 @@ export function useEditorDocumentLoader() {
         // has a working local session; bouncing to Dashboard mid-flow
         // dumps them out of the editor after sign-in for no reason
         // (reported 2026-07-18 on the export-after-sign-in flow).
-        logger.error("Failed to load document for editor", err);
+        logger.captureError(err, "document_loader.load", { id });
         const stateNow = usePdfEditorStore.getState();
 
         if (stateNow.file) {
+          logger.event("document_loader.load_fail_stay_local", "warning", {
+            id,
+          });
           toast.error({
             title: "Couldn't open saved document",
             description:
@@ -352,6 +364,9 @@ export function useEditorDocumentLoader() {
           return;
         }
 
+        logger.event("document_loader.load_fail_bounce_dashboard", "warning", {
+          id,
+        });
         toast.error({
           title: "Couldn't open document",
           description: message,

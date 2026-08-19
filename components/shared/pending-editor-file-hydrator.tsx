@@ -110,6 +110,11 @@ export function PendingEditorFileHydrator() {
     resetRef.current = true;
 
     if ((tool || exportFormat || isFreshEntry) && !docId) {
+      logger.breadcrumb("hydrator", "reset.tool_tile", {
+        tool,
+        exportFormat,
+        isFreshEntry,
+      });
       clearFile();
     }
   }, [clearFile, docId, exportFormat, isFreshEntry, tool]);
@@ -132,6 +137,7 @@ export function PendingEditorFileHydrator() {
     // returns) so users who click "PDF Composer" itself still land on
     // the editor.
     if (tool && !docId && isSignedIn) {
+      logger.event("hydrator.signed_in_redirect_to_picker", "info", { tool });
       const returnTo = `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
 
       window.location.assign(returnTo);
@@ -140,6 +146,7 @@ export function PendingEditorFileHydrator() {
     }
 
     if (tool && AUTH_GATED_TOOLS.has(tool) && !isSignedIn) {
+      logger.event("hydrator.auth_gated_redirect_to_signin", "info", { tool });
       // Preserve the tool slug in the return URL so we land back in the
       // same launch flow after sign-in.
       const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
@@ -238,6 +245,11 @@ export function PendingEditorFileHydrator() {
         const hasAutoLaunch = Boolean(tool || exportFormat);
 
         if (isSignedIn && hasAutoLaunch && !docId) {
+          logger.event("hydrator.post_signin_restore", "info", {
+            tool,
+            exportFormat,
+            hasFabricEdits: (pendingFabricState?.size ?? 0) > 0,
+          });
           // Post-sign-in restore path — save-first-then-navigate.
           // Flip isRestoringSession so PdfEditorShell renders the
           // <EditorLoadingShell /> skeleton (not the empty drop-zone)
@@ -308,8 +320,14 @@ export function PendingEditorFileHydrator() {
 
             next.set("id", document.id);
             router.replace(`${pathname}?${next.toString()}`);
+            logger.event("hydrator.post_signin_restore_ok", "info", {
+              documentId: document.id,
+            });
           } catch (saveErr) {
-            logger.warn("post-signin save-first failed", saveErr);
+            logger.captureError(saveErr, "hydrator.post_signin_restore", {
+              tool,
+              exportFormat,
+            });
             uploadToasts.fail(trackingId, saveErr);
             toast.error({
               title: "Couldn't save automatically",
@@ -349,8 +367,9 @@ export function PendingEditorFileHydrator() {
           usePdfEditorStore.setState({ extractedPages: pendingExtractedPages });
         }
         await clearPendingEditorFile();
+        logger.breadcrumb("hydrator", "rehydrate.normal_ok");
       } catch (err) {
-        logger.warn("pending editor file hydrate failed", err);
+        logger.captureError(err, "hydrator.rehydrate");
       } finally {
         // Clear the restoring flag no matter which path we took
         // (fresh-entry cleanup, empty-IDB, non-PDF skip, currentFile
@@ -400,6 +419,9 @@ export function PendingEditorFileHydrator() {
 
         setCurrentDocument({ id: document.id, name: document.filename });
         queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+        logger.event("hydrator.background_autosave_ok", "info", {
+          documentId: document.id,
+        });
         toast.success({
           title: "Saved to My PDFs",
           description: document.filename,
@@ -435,11 +457,13 @@ export function PendingEditorFileHydrator() {
         }
       } catch (err) {
         // Expected for signed-out visitors (401). Silent for that case,
-        // logged for anything else.
+        // captured for anything else.
         const status = (err as { response?: { status?: number } })?.response
           ?.status;
 
-        if (status !== 401) logger.warn("editor auto-save failed", err);
+        if (status !== 401) {
+          logger.captureError(err, "hydrator.background_autosave", { status });
+        }
         autoSavedRef.current = false; // allow retry on next file load
       }
     })();
@@ -469,6 +493,7 @@ export function PendingEditorFileHydrator() {
     if (!authLoaded) return;
 
     launchedRef.current = true;
+    logger.event("hydrator.auto_launch", "info", { tool, exportFormat });
 
     // Small delay so the editor's own file-load pipeline (Fabric mount +
     // pdf.js hydrate) settles before we open a modal on top of it. The

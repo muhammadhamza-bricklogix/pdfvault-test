@@ -146,6 +146,9 @@ export function LoginCard() {
   // commit and lands on middleware that reads the user as signed-out,
   // bouncing them to /sign-up. window.location.assign is required.
   const finalizeAndRedirect = async () => {
+    logger.event("signin.finalize_start", "info", {
+      redirectPath: afterSignInPath,
+    });
     const { error: finalizeError } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
         window.location.assign(decorateUrl(afterSignInPath));
@@ -153,6 +156,7 @@ export function LoginCard() {
     });
 
     if (finalizeError) {
+      logger.captureError(finalizeError, "signin.finalize");
       setErrors({
         form: readClerkError(finalizeError, "Couldn't finish signing you in."),
       });
@@ -162,6 +166,7 @@ export function LoginCard() {
 
   const onGoogle = async () => {
     if (!signIn) return;
+    logger.event("signin.oauth_start", "info", { provider: "google" });
     setErrors({});
     setNotice(null);
     setOauthLoading(true);
@@ -173,7 +178,7 @@ export function LoginCard() {
         redirectUrl: afterSignInPath,
       });
     } catch (err) {
-      logger.error("Google sign-in failed", err);
+      logger.captureError(err, "signin.oauth_google");
       setErrors({ form: "Something went wrong with Google sign-in." });
       setOauthLoading(false);
     }
@@ -299,6 +304,7 @@ export function LoginCard() {
       }
 
       if (signIn.status === "complete") {
+        logger.event("signin.credentials_complete", "info");
         await finalizeAndRedirect();
 
         return;
@@ -306,6 +312,7 @@ export function LoginCard() {
 
       // Invariant #16 — 2FA-enabled accounts must not silently loop back.
       if (signIn.status === "needs_second_factor") {
+        logger.event("signin.needs_2fa", "info");
         const ok = await prepSecondFactor();
 
         setSubmitting(false);
@@ -320,7 +327,7 @@ export function LoginCard() {
       setErrors({ form: "Sign-in didn't finish. Please try again." });
       setSubmitting(false);
     } catch (err) {
-      logger.error("Sign-in credentials step failed", err);
+      logger.captureError(err, "signin.credentials");
       setErrors({
         form: readClerkError(err, "Couldn't sign you in. Please try again."),
       });
@@ -376,6 +383,9 @@ export function LoginCard() {
       }
 
       if (signIn.status === "complete") {
+        logger.event("signin.2fa_complete", "info", {
+          strategy: secondFactorStrategy,
+        });
         await finalizeAndRedirect();
 
         return;
@@ -384,7 +394,9 @@ export function LoginCard() {
       setErrors({ code: "Verification didn't finish. Try again." });
       setSubmitting(false);
     } catch (err) {
-      logger.error("Verification failed", err);
+      logger.captureError(err, "signin.2fa_verify", {
+        strategy: secondFactorStrategy,
+      });
       setErrors({
         code: readClerkError(err, "That code didn't work. Try again."),
       });
