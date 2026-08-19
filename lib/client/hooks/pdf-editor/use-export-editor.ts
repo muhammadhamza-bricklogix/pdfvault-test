@@ -167,6 +167,47 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         clerkIsSignedIn: signedIn,
       } = stateRef.current;
 
+      // EXPORT-DIAG: snapshot the state at export entry so we can see, from
+      // console logs alone, which drop-candidate lost the user's edits.
+      // Correlates with `buildEditedPdfBytes` and `mergeFabricEditsIntoPdf`
+      // logs downstream.
+      try {
+        const preFlushObjectCount = liveCanvas
+          ? liveCanvas.getObjects().length
+          : null;
+        const preFlushTypes = liveCanvas
+          ? liveCanvas.getObjects().map((o) => ({
+              type: (o as { type?: string }).type,
+              editorType: (o as { editorType?: string }).editorType,
+            }))
+          : null;
+        const jsonMap = storeSnapshot.fabricJsonByPage;
+        const jsonSummary: Record<number, number> = {};
+
+        jsonMap.forEach((json, pageNum) => {
+          try {
+            const parsed = JSON.parse(json) as { objects?: unknown[] };
+
+            jsonSummary[pageNum] = parsed.objects?.length ?? 0;
+          } catch {
+            jsonSummary[pageNum] = -1;
+          }
+        });
+        logger.info("[PDFedits] EXPORT-DIAG: handleExport entry", {
+          format,
+          currentPage: page,
+          fileName: sourceFile?.name ?? null,
+          liveCanvasPresent: !!liveCanvas,
+          liveCanvasObjectCount: preFlushObjectCount,
+          liveCanvasTypes: preFlushTypes,
+          storeFabricJsonPages: Array.from(jsonMap.keys()),
+          storeFabricJsonObjectCountByPage: jsonSummary,
+          hasUnsavedChanges: storeSnapshot.hasUnsavedChanges,
+        });
+      } catch (diagErr) {
+        logger.warn("[PDFedits] EXPORT-DIAG: entry log failed", diagErr);
+      }
+
       if (!sourceFile) {
         toast.error({
           title: "Nothing to export",

@@ -289,6 +289,17 @@ export async function buildEditedPdfBytes({
   file,
   bakeOverlays = false,
 }: BuildEditedPdfInput): Promise<BuildEditedPdfResult> {
+  // EXPORT-DIAG: what did buildEditedPdfBytes actually receive from the caller?
+  logger.info("[PDFedits] EXPORT-DIAG: buildEditedPdfBytes entry", {
+    currentPage,
+    bakeOverlays,
+    fileName: file?.name ?? null,
+    fabricCanvasPresent: !!fabricCanvas,
+    fabricCanvasObjectCount: fabricCanvas
+      ? fabricCanvas.getObjects().length
+      : null,
+  });
+
   if (fabricCanvas) {
     flushLiveFabricPage(currentPage, fabricCanvas);
   }
@@ -304,6 +315,37 @@ export async function buildEditedPdfBytes({
     pdfDocument,
     watermarkConfig,
   } = usePdfEditorStore.getState();
+
+  // EXPORT-DIAG: post-flush snapshot — did the flush actually land in the store?
+  try {
+    const postFlushSummary: Record<number, { count: number; types: string[] }> =
+      {};
+
+    fabricJsonByPage.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as {
+          objects?: { type?: string; editorType?: string }[];
+        };
+        const objs = parsed.objects ?? [];
+
+        postFlushSummary[pageNum] = {
+          count: objs.length,
+          types: objs.map(
+            (o) => `${o.type ?? "?"}${o.editorType ? `:${o.editorType}` : ""}`,
+          ),
+        };
+      } catch {
+        postFlushSummary[pageNum] = { count: -1, types: [] };
+      }
+    });
+    logger.info("[PDFedits] EXPORT-DIAG: post-flush fabricJsonByPage", {
+      pages: Array.from(fabricJsonByPage.keys()),
+      pageOrderLength: pageOrder.length,
+      summary: postFlushSummary,
+    });
+  } catch (diagErr) {
+    logger.warn("[PDFedits] EXPORT-DIAG: post-flush log failed", diagErr);
+  }
 
   if (!pdfDocument) {
     throw new Error("PDF document not loaded");

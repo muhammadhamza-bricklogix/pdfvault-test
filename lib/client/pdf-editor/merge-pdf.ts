@@ -483,9 +483,26 @@ async function processPageObjects(
   fontCache: FontCache,
 ): Promise<void> {
   let rasterBatch: number[] = [];
+  // EXPORT-DIAG: accumulators for per-page breakdown of what actually gets
+  // drawn vs. rastered vs. failed (silently or with an exception).
+  const diag = {
+    vectorDrawn: 0,
+    vectorFallbackToRaster: 0,
+    vectorThrew: 0,
+    rasterQueued: 0,
+    byType: {} as Record<string, number>,
+    errors: [] as { type: string; editorType?: string; message: string }[],
+  };
 
   for (let i = 0; i < objects.length; i++) {
     const obj = objects[i];
+    const typeKey = `${(obj.type as string | undefined) ?? "?"}${
+      (obj as { editorType?: string }).editorType
+        ? `:${(obj as { editorType?: string }).editorType}`
+        : ""
+    }`;
+
+    diag.byType[typeKey] = (diag.byType[typeKey] ?? 0) + 1;
 
     if (isVectorizable(obj)) {
       // Flush any accumulated raster objects first (preserves z-order)
@@ -494,16 +511,36 @@ async function processPageObjects(
         rasterBatch = [];
       }
 
-      const drawn = await drawVectorObject(obj, page, ctx, fontCache);
+      let drawn = false;
+
+      try {
+        drawn = await drawVectorObject(obj, page, ctx, fontCache);
+      } catch (err) {
+        diag.vectorThrew += 1;
+        diag.errors.push({
+          type: (obj.type as string) ?? "?",
+          editorType: (obj as { editorType?: string }).editorType,
+          message: err instanceof Error ? err.message : String(err),
+        });
+        logger.warn("[PDFedits] EXPORT-DIAG: vector drawer threw", {
+          type: obj.type,
+          editorType: (obj as { editorType?: string }).editorType,
+          err,
+        });
+      }
 
       // If the vector drawer couldn't handle it (e.g. unknown group children),
       // fall back to raster for this specific object
       if (!drawn) {
         rasterBatch.push(i);
+        diag.vectorFallbackToRaster += 1;
+      } else {
+        diag.vectorDrawn += 1;
       }
     } else {
       // Rasterizable object (image, or unknown type)
       rasterBatch.push(i);
+      diag.rasterQueued += 1;
     }
   }
 
@@ -511,6 +548,11 @@ async function processPageObjects(
   if (rasterBatch.length) {
     await flushRasterBatch(rasterBatch, parsed, page, pdfDoc);
   }
+
+  logger.info("[PDFedits] EXPORT-DIAG: processPageObjects done", {
+    totalObjects: objects.length,
+    ...diag,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -545,6 +587,56 @@ export async function mergeFabricEditsIntoPdf({
   const sourcePdf = await PdfDoc.load(sourceBytes, { ignoreEncryption: true });
   const totalPages = sourcePdf.getPageCount();
 
+  // EXPORT-DIAG: what did the merge actually receive? Correlates with the
+  // per-page draw logs below so we can see, for a page that "lost" edits,
+  // whether the input JSON already had them dropped or whether they were
+  // present at merge start but got filtered out by hasGenuineEdits / the
+  // vector/raster batching in processPageObjects.
+  try {
+    const inputSummary: Record<
+      number,
+      { count: number; types: string[]; modifiedEditModeText: number }
+    > = {};
+
+    fabricJsonByPage.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as {
+          objects?: {
+            type?: string;
+            editorType?: string;
+            pristine?: boolean;
+          }[];
+        };
+        const objs = parsed.objects ?? [];
+
+        inputSummary[pageNum] = {
+          count: objs.length,
+          types: objs.map(
+            (o) => `${o.type ?? "?"}${o.editorType ? `:${o.editorType}` : ""}`,
+          ),
+          modifiedEditModeText: objs.filter(
+            (o) => o.editorType === "editModeText" && o.pristine !== true,
+          ).length,
+        };
+      } catch {
+        inputSummary[pageNum] = {
+          count: -1,
+          types: [],
+          modifiedEditModeText: 0,
+        };
+      }
+    });
+    logger.info("[PDFedits] EXPORT-DIAG: mergeFabricEditsIntoPdf entry", {
+      totalPages,
+      pagesWithFabricJson: Array.from(fabricJsonByPage.keys()),
+      inputSummary,
+      watermarkEnabled: !!watermarkConfig?.enabled,
+      backgroundImageEnabled: !!backgroundImageConfig?.enabled,
+    });
+  } catch (diagErr) {
+    logger.warn("[PDFedits] EXPORT-DIAG: merge entry log failed", diagErr);
+  }
+
   // Create a fresh output document
   const outputPdf = await PdfDoc.create();
   const fontCache = new FontCache(outputPdf, fontDataMap);
@@ -576,6 +668,24 @@ export async function mergeFabricEditsIntoPdf({
     // on reload (no rasterisation). See skill log 2026-06-17 (a).
     const hasEdits = fabricJsonByPage.has(pageNum);
     const hasGenuineEdits = hasEdits;
+
+    // EXPORT-DIAG: per-page routing decision. If hasEdits=false when the user
+    // KNOWS they made edits on this page, the drop happened upstream (flush
+    // or serialize). If hasEdits=true but the exported PDF is missing them,
+    // the drop happened in processPageObjects / vector drawers.
+    logger.info("[PDFedits] EXPORT-DIAG: merge page routing", {
+      pageNum,
+      hasEdits,
+      hasGenuineEdits,
+      willNeedWatermark:
+        wm != null &&
+        shouldWatermarkPage(
+          pageNum,
+          totalPages,
+          wm.pageScope,
+          wm.customPageRange,
+        ),
+    });
 
     const needsWatermark =
       wm != null &&
