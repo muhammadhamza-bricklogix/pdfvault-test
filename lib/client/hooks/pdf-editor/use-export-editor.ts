@@ -117,6 +117,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
+  const pdfDocDeferredAttemptsRef = useRef(0);
   const stateRef = useRef({
     currentPage,
     fabricCanvas,
@@ -247,6 +248,47 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
         return;
       }
+
+      // Same defer-and-retry shape for pdf.js: the hydrator's post-signin
+      // auto-launch and the `/convert/*` → editor navigation both fire
+      // `editor:export` a fixed ~400ms after the file lands, but
+      // `usePdfLoader` can take longer on large PDFs or slow networks.
+      // `buildEditedPdfBytes` throws "PDF document not loaded" if the
+      // store's `pdfDocument` is still null. Cap at ~10 s so a genuinely
+      // failed load (corrupt / password-protected PDF) surfaces a
+      // user-facing error instead of retrying forever.
+      if (!storeSnapshot.pdfDocument) {
+        const attempts = (pdfDocDeferredAttemptsRef.current += 1);
+
+        if (attempts > 40) {
+          pdfDocDeferredAttemptsRef.current = 0;
+          logger.warn("[PDFedits] export: pdf document never loaded", {
+            format,
+          });
+          toast.error({
+            title: "PDF still loading",
+            description:
+              "Wait for the document to finish loading, then try again.",
+          });
+
+          return;
+        }
+        logger.breadcrumb("export", "pdf_document.deferred", {
+          format,
+          attempts,
+        });
+        isExportingRef.current = false;
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("editor:export", {
+              detail: { filename: customFilename, format },
+            }),
+          );
+        }, 250);
+
+        return;
+      }
+      pdfDocDeferredAttemptsRef.current = 0;
 
       isExportingRef.current = true;
 
