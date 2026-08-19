@@ -124,13 +124,23 @@ function PageNumbersModalContent() {
   const setIsOpen = usePdfEditorStore((s) => s.setIsPageNumbersModalOpen);
   const file = usePdfEditorStore((s) => s.file);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
+  // Seed local state from the store so reopening the modal restores the
+  // user's last-applied settings. Reading once at mount (no selector on the
+  // full object) so live store updates from elsewhere don't clobber
+  // in-progress edits — Apply is the only path that writes back.
+  const savedConfig = usePdfEditorStore.getState().pageNumbersConfig;
+  const setPageNumbersConfig = usePdfEditorStore((s) => s.setPageNumbersConfig);
 
-  const [position, setPosition] = useState<PageNumberPosition>("bottom-center");
-  const [format, setFormat] = useState<PageNumberFormat>("page-n-of-N");
-  const [fontSize, setFontSize] = useState(12);
-  const [margin, setMargin] = useState(24);
-  const [colorHex, setColorHex] = useState("#000000");
-  const [startNumber, setStartNumber] = useState(1);
+  const [position, setPosition] = useState<PageNumberPosition>(
+    savedConfig.position,
+  );
+  const [format, setFormat] = useState<PageNumberFormat>(savedConfig.format);
+  const [fontSize, setFontSize] = useState(savedConfig.fontSize);
+  const [margin, setMargin] = useState(savedConfig.margin);
+  const [colorHex, setColorHex] = useState(savedConfig.colorHex);
+  const [startNumber, setStartNumber] = useState(savedConfig.startNumber);
+  // Page range is intentionally NOT persisted — it depends on the current
+  // file's pageCount, which changes per document.
   const [startPage, setStartPage] = useState(1);
   const [endPage, setEndPage] = useState(pageCount || 1);
 
@@ -142,6 +152,18 @@ function PageNumbersModalContent() {
     const total = pageCount || 1;
     const safeStart = Math.max(1, Math.min(total, startPage));
     const safeEnd = Math.max(safeStart, Math.min(total, endPage));
+    const safeStartNumber = Math.max(1, startNumber);
+
+    // Persist so the next reopen restores the user's choices instead of
+    // snapping back to the built-in defaults (font size 12, etc.).
+    setPageNumbersConfig({
+      colorHex,
+      fontSize,
+      format,
+      margin,
+      position,
+      startNumber: safeStartNumber,
+    });
 
     window.dispatchEvent(
       new CustomEvent("editor:add-page-numbers", {
@@ -153,7 +175,7 @@ function PageNumbersModalContent() {
             format,
             margin,
             position,
-            startNumber: Math.max(1, startNumber),
+            startNumber: safeStartNumber,
             startPage: safeStart,
           },
         },

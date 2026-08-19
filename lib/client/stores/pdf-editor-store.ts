@@ -1,5 +1,9 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { FontData } from "@/lib/client/pdf-editor/text-extraction";
+import type {
+  PageNumberFormat,
+  PageNumberPosition,
+} from "@/lib/client/pdf-editor/add-page-numbers";
 
 import { create } from "zustand";
 
@@ -88,6 +92,32 @@ const DEFAULT_BACKGROUND_IMAGE_CONFIG: BackgroundImageConfig = {
   pageScope: "all",
 };
 
+/**
+ * User-tweakable defaults for the "Add page numbers" modal. Held in the
+ * store so reopening the modal restores the last-applied settings —
+ * otherwise the modal's `useState(12)` initializers reset every open
+ * (mounted only when `isPageNumbersModalOpen`, so remount = reset).
+ * `startPage`/`endPage` are intentionally NOT stored because they depend
+ * on `pageCount`, which changes per file.
+ */
+export type PageNumbersConfig = {
+  colorHex: string;
+  fontSize: number;
+  format: PageNumberFormat;
+  margin: number;
+  position: PageNumberPosition;
+  startNumber: number;
+};
+
+const DEFAULT_PAGE_NUMBERS_CONFIG: PageNumbersConfig = {
+  colorHex: "#000000",
+  fontSize: 12,
+  format: "page-n-of-N",
+  margin: 24,
+  position: "bottom-center",
+  startNumber: 1,
+};
+
 type PdfEditorStore = {
   activeShapeType: ShapeType;
   activeTool: ActiveTool;
@@ -172,6 +202,7 @@ type PdfEditorStore = {
   thumbnailSnapshots: Map<number, string>;
   watermarkConfig: WatermarkConfig;
   backgroundImageConfig: BackgroundImageConfig;
+  pageNumbersConfig: PageNumbersConfig;
   zoom: number;
 
   addBlankPage: () => Promise<void>;
@@ -245,6 +276,7 @@ type PdfEditorStore = {
   setShapeStrokeWidth: (width: number) => void;
   setWatermarkConfig: (config: Partial<WatermarkConfig>) => void;
   setBackgroundImageConfig: (config: Partial<BackgroundImageConfig>) => void;
+  setPageNumbersConfig: (config: Partial<PageNumbersConfig>) => void;
   setZoom: (zoom: number) => void;
   setThumbnailSnapshot: (displayPage: number, dataUrl: string) => void;
   clearThumbnailSnapshots: () => void;
@@ -292,6 +324,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   thumbnailSnapshots: new Map(),
   watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
   backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
+  pageNumbersConfig: { ...DEFAULT_PAGE_NUMBERS_CONFIG },
   zoom: 1.0,
 
   addBlankPage: async () => {
@@ -392,6 +425,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       thumbnailSnapshots: new Map(),
       watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
       backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
+      pageNumbersConfig: { ...DEFAULT_PAGE_NUMBERS_CONFIG },
       zoom: 1.0,
     }),
 
@@ -687,6 +721,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
         ...(touchesSignature ? { hasUnsavedChanges: true } : {}),
       };
     }),
+  setPageNumbersConfig: (config) =>
+    set((state) => ({
+      pageNumbersConfig: { ...state.pageNumbersConfig, ...config },
+    })),
   setZoom: (zoom) => set({ zoom }),
 
   setThumbnailSnapshot: (displayPage, dataUrl) =>
