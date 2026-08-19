@@ -101,16 +101,30 @@ function ExportFormatModalBody({
   const handleDownload = async () => {
     setIsSaving(true);
 
-    // `force: true` so `persistEditorDocument` bypasses the
-    // `!hasUnsavedChanges` short-circuit. Otherwise a Save immediately
-    // before Download makes this a no-op and any live-canvas edits that
-    // never flipped `hasUnsavedChanges` (some tool paths, undo/redo,
-    // extracted-text typing) never reach the saved bytes — the exported
-    // file then looks unedited even though the editor shows the edits.
+    // Two-step: cloud save FIRST (uploads current edits to the user's
+    // library so nothing is lost), then export (bakes the same edits into
+    // the downloaded file). `skipReset: true` is critical — it tells the
+    // save handler NOT to swap `store.file` to the freshly uploaded bytes.
+    //
+    // WHY: `applyPostSaveReset` swaps the file, which triggers a pdf.js
+    // reload + Fabric canvas remount. The subsequent `editor:export`
+    // would then run its merge against the ALREADY-BAKED `savedFile`
+    // while the live Fabric canvas still holds the pre-reset objects
+    // (pristine=false editModeText, all shape/path/image overlays). The
+    // export flush would overwrite the pristined store entry, and merge
+    // would re-whitewash text (drift artefacts on the modified position)
+    // AND re-draw every shape/path/image on top of savedFile's already-
+    // baked copy — QA report 2026-08-19 "edited changes gone, some appear
+    // at the very bottom" on any download format.
+    //
+    // With `skipReset: true` the local editor keeps operating on the
+    // ORIGINAL file, so `editor:export` runs a single clean merge:
+    // original file + all overlays (live-canvas + store) → baked bytes →
+    // download. No double-bake, no race with pdf.js reload.
     await new Promise<void>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { force: true, onComplete: () => resolve() },
+          detail: { force: true, skipReset: true, onComplete: () => resolve() },
         }),
       );
     });

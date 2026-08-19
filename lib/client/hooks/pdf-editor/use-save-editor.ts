@@ -14,6 +14,15 @@ import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionDetail = {
   force?: boolean;
+  // When true, upload the current edits to the user's library but do NOT
+  // call `applyPostSaveReset` — leave `store.file` on the ORIGINAL bytes.
+  // Used by the Download flow (`ExportFormatModal`) so the subsequent
+  // `editor:export` runs a single clean merge against the original file +
+  // live overlays, instead of racing pdf.js reload + Fabric remount against
+  // an already-baked `savedFile`. See ExportFormatModal comment + QA
+  // report 2026-08-19 ("edited changes gone, some appear at the very
+  // bottom" on any download format).
+  skipReset?: boolean;
   onComplete: (result: {
     ok: boolean;
     reason?:
@@ -188,6 +197,22 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       );
 
       if (result.ok) {
+        if (detail?.skipReset) {
+          // Download flow: cloud save succeeded, but the caller is about to
+          // fire `editor:export` immediately. Skipping the reset keeps
+          // `store.file` on the ORIGINAL bytes so the export merge runs
+          // against a stable source + live-canvas overlays. If we swapped to
+          // `savedFile` here, pdf.js would reload and Fabric would remount
+          // mid-flight, racing the export's `buildEditedPdfBytes` against a
+          // moving `store.file` — producing double-baked / dropped edits.
+          logger.event(EVENTS.SAVE_BEFORE_ACTION_OK, "info", {
+            documentId: result.document.id,
+          });
+          onComplete({ ok: true });
+
+          return;
+        }
+
         // Commit the saved bytes as the new editor baseline. Without this,
         // downstream readers (Manage Pages thumbnails, exports) still see the
         // pre-edit source PDF until the next full reload — the visible bug

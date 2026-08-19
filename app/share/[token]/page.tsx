@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
 
-import { cookies } from "next/headers";
-
 import { resolveShare } from "@/lib/server/share/resolve-share";
-import {
-  mintViewCookie,
-  VIEW_COOKIE_NAME,
-  viewCookieOptions,
-} from "@/lib/server/share/view-cookie";
 
 import { PasswordGate } from "./PasswordGate";
 import { ViewerClient } from "./ViewerClient";
@@ -71,15 +64,15 @@ export default async function SharePage({
     );
   }
 
-  // Mirror the route handler's cookie mint so the viewer can pull bytes
-  // without an extra round-trip on password-less shares.
-  if (!result.requiresPassword) {
-    const cookie = await mintViewCookie(result.jti);
-    const cookieStore = await cookies();
-
-    cookieStore.set(VIEW_COOKIE_NAME, cookie, viewCookieOptions(token));
-  }
-
+  // NOTE: don't try to mint the `share_view` cookie here. Set-Cookie
+  // headers written from a Server Component don't propagate reliably in
+  // Next.js production builds — the previous `cookies().set()` call
+  // either silently no-op'd or threw a 500 depending on runtime. The
+  // `ViewerClient` (below) pre-flights `/api/share/resolve` from the
+  // browser, which mints the cookie via a real Set-Cookie response
+  // header that the user agent actually stores. `PasswordGate` handles
+  // the equivalent for password-protected shares via
+  // `/api/share/verify-password`.
   if (result.requiresPassword) {
     return (
       <PasswordGate
