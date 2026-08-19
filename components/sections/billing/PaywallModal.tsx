@@ -617,8 +617,9 @@ function PlanStep({
         {selectedPlan === "monthly" ? (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in a monthly subscription to pdfvault.ai.
-            You&apos;ll be charged {today} today for a 7-day trial, then $25.00
-            per month until you cancel. Payments will be charged from the card
+            You&apos;ll be charged {fullAccessPrice} today for a 7-day trial,
+            then {formatMinor(monthly.amountRenewMinor, monthly.currency)} per
+            month until you cancel. Payments will be charged from the card
             you specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
