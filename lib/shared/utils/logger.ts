@@ -12,18 +12,50 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 const isVerbose =
   isDevelopment || process.env.NEXT_PUBLIC_LOG_LEVEL === "verbose";
 
+// PDF-editor diagnostic prefix. Every `logger.info(...)` / `logger.warn(...)`
+// call whose first arg starts with this string is force-printed to the
+// browser console via `console.log` / `console.warn` regardless of
+// environment or `NEXT_PUBLIC_LOG_LEVEL`. Rationale: users debugging the
+// export / conversion pipeline in staging (NODE_ENV=production) need to
+// SEE the boundary logs immediately without flipping a Sentry filter or
+// setting an env var and redeploying.
+const FORCE_CONSOLE_PREFIX = "[PDFedits]";
+
+const shouldForceToConsole = (args: LogInput): boolean => {
+  const first = args[0];
+
+  return typeof first === "string" && first.startsWith(FORCE_CONSOLE_PREFIX);
+};
+
 const writeLog = (level: LogLevel, ...args: LogInput) => {
+  const forcePDFedits =
+    (level === "info" || level === "warn") && shouldForceToConsole(args);
+
+  // PDFedits diagnostics — force to the browser console at all times so
+  // they show up in production/staging DevTools without any filter.
+  if (forcePDFedits) {
+    const forcedMethod =
+      level === "warn" ? globalThis.console.warn : globalThis.console.log;
+
+    forcedMethod(...args);
+  }
+
   if (level === "debug" && !isDevelopment) {
     return;
   }
 
   if (level === "info" && !isVerbose) {
+    // Already emitted above via force-console if it was a PDFedits log,
+    // so we can safely stop here.
     return;
   }
 
   const method = globalThis.console[level] ?? globalThis.console.log;
 
-  method(...args);
+  // Avoid double-printing when we already force-emitted this line above.
+  if (!forcePDFedits) {
+    method(...args);
+  }
 
   // Forward errors and warnings to Sentry in production.
   if (
@@ -138,16 +170,45 @@ const captureError = (
  * the Performance tab under the given `op` — use short, greppable
  * values like "export.pdf", "upload.file", "checkout.intent".
  *
- * Sentry's browser tracing can throw `AbortError: Transition was skipped`
- * when a React transition supersedes another mid-span (TanStack Query
- * mutations trigger transitions on state updates, so a user clicking
- * Convert → DOCX while another async op is in flight can trip this).
- * That abort was killing the actual conversion mutation before its HTTP
- * request even fired — the user saw "Uncaught AbortError" and the
- * backend logged zero `/conversion` calls. Guard by running `fn()`
- * directly if Sentry's span setup throws, so the app path always
- * completes even when tracing is unhappy.
+ * Sentry's browser tracing + Clerk's session-resume + the browser's
+ * View Transitions API can all throw transition-related errors
+ * inside `Sentry.startSpan` when a React transition supersedes another
+ * mid-span (TanStack Query mutations trigger transitions on state
+ * updates, so a user clicking Convert → DOCX while another async op
+ * is in flight can trip this). The known thrown shapes:
+ *   - AbortError: "Transition was skipped"        (Sentry own throw)
+ *   - InvalidStateError: "Transition was aborted because of invalid state"
+ *     (browser View Transitions / Clerk transitions)
+ *
+ * Any of these thrown from `startSpan` was killing the actual mutation
+ * before its HTTP request even fired — the user saw the raw error and
+ * the backend logged zero requests. Guard by running `fn()` directly
+ * whenever the throw looks like a transition-plumbing issue rather
+ * than a real failure from the wrapped work, so the user-facing path
+ * always completes even when tracing / router transitions are unhappy.
+ * This is safe because if `fn()` itself throws for a real reason, the
+ * inner promise rejection would be raised BY `fn()` (not by
+ * `Sentry.startSpan`'s setup) — see the try{}/catch{} boundary.
  */
+const isTransitionPlumbingError = (err: unknown): boolean => {
+  if (!(err instanceof Error)) return false;
+  const name = err.name;
+  const message = err.message;
+
+  if (name === "AbortError" && /transition was skipped/i.test(message)) {
+    return true;
+  }
+
+  if (
+    name === "InvalidStateError" &&
+    /transition was aborted|invalid state/i.test(message)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 const span = async <T>(
   name: string,
   op: string,
@@ -160,14 +221,9 @@ const span = async <T>(
       async () => await fn(),
     );
   } catch (err: unknown) {
-    const isSentryTransitionAbort =
-      err instanceof Error &&
-      err.name === "AbortError" &&
-      /transition was skipped/i.test(err.message);
-
-    if (!isSentryTransitionAbort) throw err;
-    // Sentry's tracing bailed but the wrapped work must still run and
-    // its result / error must reach the caller.
+    if (!isTransitionPlumbingError(err)) throw err;
+    // Sentry / router transition bailed. Run the wrapped work directly
+    // so its result / error reaches the caller.
     return await fn();
   }
 };

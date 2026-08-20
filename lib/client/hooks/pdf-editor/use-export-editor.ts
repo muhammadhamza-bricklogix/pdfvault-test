@@ -195,7 +195,8 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             jsonSummary[pageNum] = -1;
           }
         });
-        logger.info("[PDFedits] EXPORT-DIAG: handleExport entry", {
+        // eslint-disable-next-line no-console
+        console.log("[PDFedits] EXPORT-DIAG: handleExport entry", {
           format,
           currentPage: page,
           fileName: sourceFile?.name ?? null,
@@ -453,6 +454,55 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           { type: "application/pdf" },
         );
 
+        // DEBUG mode: also download the intermediate BAKED PDF that the
+        // browser is about to POST to CloudConvert. Lets you open BOTH
+        // files locally and compare:
+        //   - `*.pre-convert.pdf` — what the browser produced (edits baked)
+        //   - `*.docx` (or whatever format) — what CloudConvert returned
+        //
+        // Isolate the culprit:
+        //   - Baked PDF looks wrong → client-side bake is the bug
+        //   - Baked PDF is correct but DOCX drops edits → CloudConvert / its
+        //     PDF→Office engine is the bug (tunable in
+        //     `cloudconvert.strategy.ts` CONVERT_TASK_OPTIONS)
+        //   - Both wrong → likely both, start with the client
+        //
+        // Trigger: append `?debug_export=1` to the editor URL, or set
+        // `localStorage.pdfeditsDebugExport = "1"` in DevTools. No prod
+        // build check — the flag is intentional developer opt-in, always
+        // available in staging/prod for support debugging without a
+        // redeploy. Zero footprint when the flag is off.
+        try {
+          const search =
+            typeof window !== "undefined" ? window.location.search : "";
+          const params = new URLSearchParams(search);
+          const debugExport =
+            params.get("debug_export") === "1" ||
+            (typeof window !== "undefined" &&
+              window.localStorage?.getItem("pdfeditsDebugExport") === "1");
+
+          if (debugExport) {
+            const preConvertName = `${baseName}.pre-convert.pdf`;
+
+            // eslint-disable-next-line no-console
+            console.log(
+              "[PDFedits] EXPORT-DIAG: DEBUG downloading pre-convert PDF",
+              {
+                preConvertName,
+                bytesLength: bytes.byteLength,
+                targetFormat: format,
+              },
+            );
+            downloadBytes(bytes, preConvertName);
+          }
+        } catch (debugErr) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[PDFedits] EXPORT-DIAG: pre-convert debug download failed",
+            debugErr,
+          );
+        }
+
         if (!entitled) {
           logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
           const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
@@ -530,7 +580,8 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             .map((b) => b.toString(16).padStart(2, "0"))
             .join("");
 
-          logger.info("[PDFedits] EXPORT-DIAG: cloudconvert upload", {
+          // eslint-disable-next-line no-console
+          console.log("[PDFedits] EXPORT-DIAG: cloudconvert upload", {
             format,
             conversionType,
             pdfFileName: pdfFile.name,
