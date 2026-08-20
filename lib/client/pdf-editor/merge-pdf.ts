@@ -83,8 +83,26 @@ const VECTOR_TYPES = new Set([
 ]);
 // "image" (signature stamps, uploaded PNGs) still goes through raster
 // (PNG at multiplier:3) — pdf-lib can't stroke raw image data as vectors.
-// "path" is vectorizable via drawPath → drawSvgPath (2026-07-23 fix). The
-// raster fallback exists for anything drawVectorObject returns false on.
+//
+// **"path" is INTENTIONALLY routed through raster** (highlight tool,
+// draw tool — both use PencilBrush, both emit Fabric Path objects).
+// Reason: Fabric v6 PencilBrush uses a coordinate model that's fragile
+// to translate manually into pdf-lib's `drawSvgPath` — obj.left/top are
+// bbox CENTER (not top-left), `pathOffset` isn't in the JSON, and
+// scale/origin/movement all interact. Multiple attempts to compute the
+// right pdfX/pdfY from `left`, `pathOffset`, `originalMinX`, and scaled
+// bbox dims each produced a different subtle misplacement bug
+// (QA report 2026-08-20 a-d).
+//
+// Routing paths through the raster batch uses Fabric's OWN renderer
+// via `renderFabricSubsetToPng` → the offscreen canvas is created at
+// EXACT PDF page dimensions and Fabric draws every object at its
+// natural canvas position. Then the resulting PNG is embedded at
+// (0, 0) covering the whole page — pixel-perfect alignment with what
+// the user drew in the editor because we're literally using Fabric's
+// rendering pipeline. The underlying page's text stream (from
+// copyPages) stays selectable / extractable, so PDF → DOCX conversion
+// via CloudConvert still recovers all source text.
 
 function isVectorizable(obj: FabricObj): boolean {
   // Annotation glyphs contain arbitrary Unicode. pdf-lib's `drawText` uses
@@ -95,6 +113,14 @@ function isVectorizable(obj: FabricObj): boolean {
   const editorType = (obj as { editorType?: string }).editorType;
 
   if (editorType === "annotation") {
+    return false;
+  }
+
+  const type = (obj.type as string).toLowerCase();
+
+  // PencilBrush freehand paths (highlight + draw tools) — always raster.
+  // See comment block above `isVectorizable` for the full rationale.
+  if (type === "path") {
     return false;
   }
 
@@ -109,7 +135,7 @@ function isVectorizable(obj: FabricObj): boolean {
     return true;
   }
 
-  return VECTOR_TYPES.has((obj.type as string).toLowerCase());
+  return VECTOR_TYPES.has(type);
 }
 
 /**
