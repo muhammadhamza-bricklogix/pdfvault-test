@@ -300,11 +300,18 @@ export function HamburgerMenu() {
         // Bake current edits into the cloud-saved PDF FIRST. Without
         // this the share modal would upload `store.file`, which is the
         // original upload — recipients would see the un-edited PDF.
-        // `saveBeforeAction` short-circuits when there are no unsaved
-        // changes, so this is free if the user already saved.
+        //
+        // `force: true` mirrors the Save-button flow (`useSaveEditor`,
+        // 2026-06-19 skill log). Several edit paths (page-numbers,
+        // annotations, restore-from-version) don't flip
+        // `hasUnsavedChanges`, so the default `saveBeforeAction`
+        // short-circuit would skip the upload and the share would ship
+        // the pre-edit bytes. Forcing the save guarantees the recipient
+        // sees the latest state at share-generation time.
         void (async () => {
           const ok = await saveBeforeAction(
             "Saving your edits before generating a share link.",
+            true,
           );
 
           if (ok) setIsShareOpen(true);
