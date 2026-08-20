@@ -137,14 +137,39 @@ const captureError = (
  * Wrap an async operation in a Sentry trace span. The span appears in
  * the Performance tab under the given `op` — use short, greppable
  * values like "export.pdf", "upload.file", "checkout.intent".
+ *
+ * Sentry's browser tracing can throw `AbortError: Transition was skipped`
+ * when a React transition supersedes another mid-span (TanStack Query
+ * mutations trigger transitions on state updates, so a user clicking
+ * Convert → DOCX while another async op is in flight can trip this).
+ * That abort was killing the actual conversion mutation before its HTTP
+ * request even fired — the user saw "Uncaught AbortError" and the
+ * backend logged zero `/conversion` calls. Guard by running `fn()`
+ * directly if Sentry's span setup throws, so the app path always
+ * completes even when tracing is unhappy.
  */
-const span = <T>(
+const span = async <T>(
   name: string,
   op: string,
   fn: () => Promise<T> | T,
   attributes?: Record<string, boolean | number | string>,
 ): Promise<T> => {
-  return Sentry.startSpan({ name, op, attributes }, async () => await fn());
+  try {
+    return await Sentry.startSpan(
+      { name, op, attributes },
+      async () => await fn(),
+    );
+  } catch (err: unknown) {
+    const isSentryTransitionAbort =
+      err instanceof Error &&
+      err.name === "AbortError" &&
+      /transition was skipped/i.test(err.message);
+
+    if (!isSentryTransitionAbort) throw err;
+    // Sentry's tracing bailed but the wrapped work must still run and
+    // its result / error must reach the caller.
+    return await fn();
+  }
 };
 
 /**
