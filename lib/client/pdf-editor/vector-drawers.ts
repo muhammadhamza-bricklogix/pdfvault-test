@@ -600,38 +600,62 @@ export function drawPath(
   const scaleY = (obj.scaleY as number) ?? 1;
   const opacity = (obj.opacity as number) ?? 1;
 
-  const { left, top } = resolveTopLeft(obj);
-
-  // Fabric v6 Path coordinate model:
-  //   - `obj.path` holds path commands with coords already NORMALIZED to
-  //     the local bbox space (0..width, 0..height in Fabric Y-down).
-  //   - `obj.left` / `obj.top` = bbox top-left in canvas base coords.
-  //   - `obj.pathOffset` = bbox centre in local coords, used ONLY by
-  //     Fabric's on-canvas renderer to translate before drawing so the
-  //     path stays centred on the object origin. It does NOT belong in
-  //     the export math because we position the SVG by the bbox top-left
-  //     directly and the local path coords already start at 0.
+  // Fabric v6 Path coordinate model (verified against runtime log
+  // 2026-08-20 for a PencilBrush highlight):
+  //   - `obj.path` holds path commands with coords in RAW CANVAS
+  //     SPACE, i.e. the absolute pointer positions when the user
+  //     drew each point. NOT normalised to bbox-local (0..width).
+  //   - `obj.left`, `obj.top` = bbox top-left in canvas base coords
+  //     (metadata for hit-testing / selection).
+  //   - `obj.width`, `obj.height` = bbox size.
+  //   - `obj.pathOffset` = { x: bbox.left + width/2, y: bbox.top + height/2 }
+  //     — the CENTRE of the ORIGINAL bbox in the raw path coord space.
+  //     Fabric uses this to compute a render translation of
+  //     `(centerX - pathOffset.x, centerY - pathOffset.y)`. For a
+  //     freshly-drawn path that has NEVER been moved,
+  //     `left == pathOffset.x - width/2` so the translation is zero
+  //     and the path renders at its raw canvas coords. For a moved
+  //     path, `left` changes but `pathOffset` stays, and the
+  //     translation encodes the movement delta.
   //
-  // The previous implementation added `+ pathOffset * scale` to both
-  // pdfX and pdfY. On a mid-page freehand highlight (e.g. left=200,
-  // top=400, pathOffset≈(width/2, height/2)) that pushed pdfY toward
-  // `pdfHeight`, rendering the path at the very TOP of the exported
-  // PDF instead of where the user drew — QA report 2026-08-20. The
-  // highlight tool (`use-highlight-tool.ts`) switched from Rect →
-  // PencilBrush in commit 2acec7d, which was when this bug surfaced.
+  // Two earlier attempts got this wrong:
+  //   1. Original code added `+ pathOffset * scale` to both pdfX and
+  //      pdfY on top of `left/top` — pushed pdfY toward `pdfHeight`,
+  //      putting the path at the top of the page (QA 2026-08-20 a).
+  //   2. Intermediate "just use left/top" fix ignored that the SVG
+  //      path data ALSO contains those coords, so the path landed at
+  //      2× the intended X — hundreds of pixels off the right edge
+  //      (QA 2026-08-20 b — the "downloaded PDF looks unedited"
+  //      symptom for freehand highlights).
+  //
+  // Correct model: SVG path data (after `transformPathCoords` scales
+  // + Y-flips) is in PDF-native absolute coords. Drawing at position
+  // (delta.x, pdfHeight - delta.y) makes SVG (0,0) land at the PDF
+  // origin (bottom-left) shifted by any movement delta. For an
+  // unmoved path (`delta === 0`), that's (0, pdfHeight): SVG point
+  // (443, -129) then renders at PDF (443, pdfHeight - 129), i.e.
+  // canvas Y=129 from top ✓.
+  const width = (obj.width as number) || 0;
+  const height = (obj.height as number) || 0;
+  const pathOffsetX = (obj.pathOffset?.x as number) || 0;
+  const pathOffsetY = (obj.pathOffset?.y as number) || 0;
+  const objLeft = (obj.left as number) || 0;
+  const objTop = (obj.top as number) || 0;
+
+  // Movement delta from the original bbox top-left (encoded in
+  // `pathOffset ± width/2, height/2`) to the current `left/top`.
+  // Zero for a freshly-drawn path that hasn't been dragged.
+  const deltaX = objLeft - (pathOffsetX - width / 2);
+  const deltaY = objTop - (pathOffsetY - height / 2);
+
   const totalScaleX = scaleX * ctx.scaleX;
   const totalScaleY = scaleY * ctx.scaleY;
 
-  // Y-flip on the SVG path stays: pdf-lib's `drawSvgPath` treats SVG
-  // coords as PDF-native (Y increases upward). Fabric path is Y-down,
-  // so negate Y here to convert. Positioned at the bbox top-left in
-  // PDF space, the Y-flipped path naturally extends DOWNWARD (PDF Y
-  // decreases) from that anchor — matching the on-screen orientation.
   const transformed = transformPathCoords(pathArray, totalScaleX, -totalScaleY);
   const svgPath = fabricPathToSvgString(transformed);
 
-  const pdfX = toPdfX(left, ctx);
-  const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY);
+  const pdfX = toPdfDim(deltaX, ctx.scaleX);
+  const pdfY = ctx.pdfHeight - toPdfDim(deltaY, ctx.scaleY);
 
   const strokeColor = hexToPdfColor(obj.stroke as string);
   const fillColor = hexToPdfColor(obj.fill as string);
@@ -652,8 +676,14 @@ export function drawPath(
     // eslint-disable-next-line no-console
     console.log("[PDFedits] EXPORT-DIAG: drawPath →", {
       editorType: (obj as { editorType?: string }).editorType,
-      inLeft: left,
-      inTop: top,
+      objLeft,
+      objTop,
+      pathOffsetX,
+      pathOffsetY,
+      width,
+      height,
+      deltaX,
+      deltaY,
       objScaleX: scaleX,
       objScaleY: scaleY,
       totalScaleX,
