@@ -15,7 +15,6 @@ import {
   EraserIcon,
   FileExportIcon,
   FileMinusIcon,
-  FloppyDiskIcon,
   HighlighterIcon,
   Image01Icon,
   Layers01Icon,
@@ -44,13 +43,11 @@ import { useMemo, useRef, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
@@ -299,44 +296,6 @@ function TopAppBar() {
     );
   };
 
-  // Save handler mirrors `EditorInfoBar.onSaveClick` (mobile). Signed-in
-  // users dispatch `editor:save` — `useSaveEditor` builds the current
-  // edited bytes and uploads to the user's My PDFs library, with a
-  // loading toast → success/error toast lifecycle. Signed-out users get
-  // their file + per-page Fabric edits stashed in IDB and are prompted
-  // into the sign-in flow so the pending-editor-file-hydrator can
-  // finish the save after they authenticate. Duplicate clicks while a
-  // save is in flight are short-circuited inside `useSaveEditor` via
-  // `isSavingRef`.
-  const saveTooltip = !file
-    ? "Open a PDF to save"
-    : !isSignedIn
-      ? "Sign in to save to your library"
-      : "Save to My PDFs";
-  const onSaveClick = () => {
-    if (!file) return;
-
-    if (!isSignedIn) {
-      const { fabricJsonByPage, extractedPages } = usePdfEditorStore.getState();
-
-      void savePendingEditorFile(file, fabricJsonByPage, extractedPages).catch(
-        () => undefined,
-      );
-
-      dispatchSignInPrompt({
-        title: "Sign in to save",
-        description:
-          "Create an account and we'll bring you right back to save your document where you left off.",
-        confirmLabel: "Sign in & continue",
-        redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
-      });
-
-      return;
-    }
-
-    window.dispatchEvent(new CustomEvent("editor:save"));
-  };
-
   return (
     <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4 py-2">
       <Tooltip delay={300}>
@@ -449,29 +408,6 @@ function TopAppBar() {
         </button>
         <Tooltip.Content>
           <p>Search in PDF</p>
-        </Tooltip.Content>
-      </Tooltip>
-
-      {/* Save — persists the current document (bytes + per-page Fabric
-          edits) to My PDFs so the user can return and resume editing
-          later. Same handler shape as `EditorInfoBar` (mobile): signed-
-          out users get an IDB stash + sign-in modal so their work isn't
-          lost. Duplicate clicks while a save is in flight are short-
-          circuited inside `useSaveEditor` via `isSavingRef`. `SaveStatusChip`
-          (rendered to the left) reflects the persist state. */}
-      <Tooltip delay={300}>
-        <button
-          aria-label={saveTooltip}
-          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
-          disabled={!file}
-          type="button"
-          onClick={onSaveClick}
-        >
-          <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
-          <span className="hidden sm:inline">Save</span>
-        </button>
-        <Tooltip.Content>
-          <p>{saveTooltip}</p>
         </Tooltip.Content>
       </Tooltip>
 
