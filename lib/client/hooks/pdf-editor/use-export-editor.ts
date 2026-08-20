@@ -480,6 +480,43 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         }
 
         // Entitled (or just paid) — convert and download.
+        //
+        // EXPORT-DIAG: log the exact bytes about to leave the browser for
+        // CloudConvert. `pdfFile.size` MUST equal `bytes.byteLength` AND
+        // MUST differ from `sourceFile.size` on any edit — matching sizes
+        // means we're uploading the un-edited source and the bake dropped.
+        // `storeFabricJsonSummary` shows which pages contributed overlays
+        // to that bake so a missing page is obvious from the log alone.
+        try {
+          const storeState = usePdfEditorStore.getState();
+          const summary: Record<number, number> = {};
+
+          storeState.fabricJsonByPage.forEach((json, pageNum) => {
+            try {
+              const parsed = JSON.parse(json) as { objects?: unknown[] };
+
+              summary[pageNum] = parsed.objects?.length ?? 0;
+            } catch {
+              summary[pageNum] = -1;
+            }
+          });
+          logger.info("[PDFedits] EXPORT-DIAG: cloudconvert upload", {
+            format,
+            conversionType,
+            pdfFileName: pdfFile.name,
+            pdfFileSize: pdfFile.size,
+            bakedBytesLength: bytes.byteLength,
+            sourceFileSize: sourceFile.size,
+            bakedDiffersFromSource: bytes.byteLength !== sourceFile.size,
+            storeFabricJsonSummary: summary,
+          });
+        } catch (diagErr) {
+          logger.warn(
+            "[PDFedits] EXPORT-DIAG: cloudconvert upload log failed",
+            diagErr,
+          );
+        }
+
         let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
 
         try {
