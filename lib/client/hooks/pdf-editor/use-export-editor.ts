@@ -500,6 +500,36 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               summary[pageNum] = -1;
             }
           });
+
+          // SHA-256 of the exact bytes about to leave the browser. This hash
+          // is what the backend controller and CloudConvert-upload logs will
+          // print next. Three identical hashes = bytes travelled untouched
+          // from browser → Nest → CloudConvert; the input to CloudConvert
+          // matches the flattened PDF the bake produced. Any mismatch
+          // pinpoints which hop mutated the bytes.
+          let bytesSha256 = "unavailable";
+
+          try {
+            if (globalThis.crypto?.subtle) {
+              const hashBuf = await globalThis.crypto.subtle.digest(
+                "SHA-256",
+                bytes.buffer as ArrayBuffer,
+              );
+
+              bytesSha256 = Array.from(new Uint8Array(hashBuf))
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join("");
+            }
+          } catch {
+            /* leave "unavailable" */
+          }
+          const first8 = Array.from(bytes.subarray(0, 8))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          const last8 = Array.from(bytes.subarray(-8))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+
           logger.info("[PDFedits] EXPORT-DIAG: cloudconvert upload", {
             format,
             conversionType,
@@ -507,6 +537,9 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             pdfFileSize: pdfFile.size,
             bakedBytesLength: bytes.byteLength,
             sourceFileSize: sourceFile.size,
+            bytesSha256,
+            bytesFirst8Hex: first8,
+            bytesLast8Hex: last8,
             bakedDiffersFromSource: bytes.byteLength !== sourceFile.size,
             storeFabricJsonSummary: summary,
           });
