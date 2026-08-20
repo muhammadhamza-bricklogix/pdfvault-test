@@ -640,6 +640,41 @@ export function drawPath(
     (ctx.scaleX + ctx.scaleY) / 2,
   );
 
+  // EXPORT-DIAG: exhaustive dump of what actually reaches pdf-lib for this
+  // Path. If the exported PDF "loses" the highlight, one of these will
+  // reveal why: pdfY≈pdfHeight (drawn at top), opacity≈0, stroke missing,
+  // borderWidth≈0, or svgPath truncated. Truncate the svgPath preview so
+  // the log stays readable for long freehand strokes.
+  try {
+    const svgPreview =
+      svgPath.length > 200 ? `${svgPath.slice(0, 200)}…(${svgPath.length}ch)` : svgPath;
+
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits] EXPORT-DIAG: drawPath →", {
+      editorType: (obj as { editorType?: string }).editorType,
+      inLeft: left,
+      inTop: top,
+      objScaleX: scaleX,
+      objScaleY: scaleY,
+      totalScaleX,
+      totalScaleY,
+      pdfHeight: ctx.pdfHeight,
+      pdfX,
+      pdfY,
+      strokeRaw: obj.stroke,
+      strokeParsed: strokeColor,
+      fillRaw: obj.fill,
+      fillParsed: fillColor,
+      opacity,
+      strokeWidthRaw: obj.strokeWidth,
+      borderWidth,
+      pathCmdCount: pathArray.length,
+      svgPreview,
+    });
+  } catch {
+    /* diagnostic-only, never block the actual draw */
+  }
+
   page.drawSvgPath(svgPath, {
     borderColor: strokeColor ?? rgb(0, 0, 0),
     borderLineCap: LineCapStyle.Round,

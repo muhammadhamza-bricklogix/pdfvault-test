@@ -426,6 +426,53 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             ? ensureExtension(userBase, "pdf")
             : buildPdfExportFilename(sourceFile.name);
 
+          // DEBUG mode: also drop a raw copy of the ORIGINAL source PDF so
+          // you have both files locally and can open them side-by-side to
+          // verify the bake actually added/moved content. Combined with
+          // `pre-convert.pdf` (non-PDF exports) this gives full evidence
+          // of every byte the client generates.
+          try {
+            const search =
+              typeof window !== "undefined" ? window.location.search : "";
+            const dbgParams = new URLSearchParams(search);
+            const debugExport =
+              dbgParams.get("debug_export") === "1" ||
+              (typeof window !== "undefined" &&
+                window.localStorage?.getItem("pdfeditsDebugExport") === "1");
+
+            if (debugExport) {
+              const originalBytes = new Uint8Array(
+                await sourceFile.arrayBuffer(),
+              );
+
+              // eslint-disable-next-line no-console
+              console.log(
+                "[PDFedits] EXPORT-DIAG: DEBUG downloading ORIGINAL source PDF (compare against baked)",
+                {
+                  originalName: `${sourceFile.name.replace(/\.pdf$/i, "")}.ORIGINAL.pdf`,
+                  originalLen: originalBytes.byteLength,
+                  bakedLen: bytes.byteLength,
+                  bytesDelta: bytes.byteLength - originalBytes.byteLength,
+                },
+              );
+              downloadBytes(
+                originalBytes,
+                `${sourceFile.name.replace(/\.pdf$/i, "")}.ORIGINAL.pdf`,
+              );
+            }
+          } catch (debugErr) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[PDFedits] EXPORT-DIAG: original source debug download failed",
+              debugErr,
+            );
+          }
+
+          // eslint-disable-next-line no-console
+          console.log("[PDFedits] EXPORT-DIAG: PDF download triggered", {
+            outName,
+            bytesLen: bytes.byteLength,
+          });
           downloadBytes(bytes, outName);
           logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
