@@ -86,9 +86,34 @@ function fetchDocumentMeta(id: string): Promise<Document> {
 
   if (existing) return existing;
 
-  const promise = documentsService.getDocument(id).finally(() => {
-    inflightMeta.delete(id);
-  });
+  // Post-upload race guard: right after `POST /documents/upload` returns
+  // 201 with a fresh id, the URL updates to `?id=<newId>` and this
+  // fetcher fires immediately. On staging/prod behind Railway (and any
+  // deployment with Postgres replica lag or async cache invalidation),
+  // the `GET /documents/{id}` occasionally races the write commit and
+  // returns 404 for a brief window (~500-1500ms). Without a retry the
+  // user gets bounced to /dashboard on every upload — the exact symptom
+  // reported 2026-08-20.
+  //
+  // Retry ONCE after 1500ms on 404 only. 401 / 500 / network errors
+  // pass through unchanged so real failures still surface fast. A real
+  // "document doesn't exist" 404 stays 404 (retry fails too), so the
+  // dashboard bounce still fires for genuinely bad ids — just not for
+  // freshly-created ones.
+  const promise = documentsService
+    .getDocument(id)
+    .catch(async (err: unknown) => {
+      const status = (err as { statusCode?: number })?.statusCode;
+
+      if (status !== 404) throw err;
+      logger.warn("[PDFedits] document meta 404 — retrying once", { id });
+      await new Promise((r) => setTimeout(r, 1500));
+
+      return documentsService.getDocument(id);
+    })
+    .finally(() => {
+      inflightMeta.delete(id);
+    });
 
   inflightMeta.set(id, promise);
 
