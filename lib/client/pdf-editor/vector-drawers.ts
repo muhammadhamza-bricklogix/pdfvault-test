@@ -607,46 +607,73 @@ export function drawPath(
   //     drew each point. NOT normalised to bbox-local (0..width).
   //   - `obj.left`, `obj.top` = bbox top-left in canvas base coords
   //     (metadata for hit-testing / selection).
-  //   - `obj.width`, `obj.height` = bbox size.
-  //   - `obj.pathOffset` = { x: bbox.left + width/2, y: bbox.top + height/2 }
-  //     — the CENTRE of the ORIGINAL bbox in the raw path coord space.
-  //     Fabric uses this to compute a render translation of
-  //     `(centerX - pathOffset.x, centerY - pathOffset.y)`. For a
-  //     freshly-drawn path that has NEVER been moved,
-  //     `left == pathOffset.x - width/2` so the translation is zero
-  //     and the path renders at its raw canvas coords. For a moved
-  //     path, `left` changes but `pathOffset` stays, and the
-  //     translation encodes the movement delta.
+  //   - `obj.width`, `obj.height` = bbox size (also metadata).
+  //   - `obj.pathOffset` = { x: minX + width/2, y: minY + height/2 }
+  //     of the raw path coord bbox. Used by Fabric's on-canvas
+  //     renderer for centering — BUT Fabric v6's `toJSON()` does NOT
+  //     serialize `pathOffset` (it's a computed property recomputed
+  //     on `loadFromJSON`). Reading `obj.pathOffset` from a
+  //     JSON.parse'd snapshot yields `undefined` → any fallback to
+  //     0 poisons the delta calculation.
   //
-  // Two earlier attempts got this wrong:
-  //   1. Original code added `+ pathOffset * scale` to both pdfX and
-  //      pdfY on top of `left/top` — pushed pdfY toward `pdfHeight`,
-  //      putting the path at the top of the page (QA 2026-08-20 a).
-  //   2. Intermediate "just use left/top" fix ignored that the SVG
-  //      path data ALSO contains those coords, so the path landed at
-  //      2× the intended X — hundreds of pixels off the right edge
-  //      (QA 2026-08-20 b — the "downloaded PDF looks unedited"
-  //      symptom for freehand highlights).
+  // Three earlier attempts got this wrong:
+  //   1. `+ pathOffset * scale` on both pdfX and pdfY (QA 2026-08-20 a) —
+  //      pushed pdfY toward pdfHeight, path at top of page.
+  //   2. Position by `left/top` while SVG path also holds those coords —
+  //      double offset, path landed off the right edge (QA 2026-08-20 b).
+  //   3. Delta via `left - (pathOffset - width/2)` — broken when
+  //      `pathOffset` is missing from JSON, delta = left + width/2,
+  //      path shifted by ~1/2 canvas width toward center (QA 2026-08-20 c,
+  //      the visible symptom in image 19).
   //
-  // Correct model: SVG path data (after `transformPathCoords` scales
-  // + Y-flips) is in PDF-native absolute coords. Drawing at position
-  // (delta.x, pdfHeight - delta.y) makes SVG (0,0) land at the PDF
-  // origin (bottom-left) shifted by any movement delta. For an
-  // unmoved path (`delta === 0`), that's (0, pdfHeight): SVG point
-  // (443, -129) then renders at PDF (443, pdfHeight - 129), i.e.
-  // canvas Y=129 from top ✓.
-  const width = (obj.width as number) || 0;
-  const height = (obj.height as number) || 0;
-  const pathOffsetX = (obj.pathOffset?.x as number) || 0;
-  const pathOffsetY = (obj.pathOffset?.y as number) || 0;
+  // Correct model: compute the ORIGINAL bbox top-left DIRECTLY from
+  // the serialized path data (walking every M/L/C/Q coord to find
+  // minX/minY). This is guaranteed to be present in JSON. Then
+  // `delta = current left/top - original bbox top-left`. Zero for a
+  // freshly-drawn path that hasn't been dragged; non-zero encodes
+  // the movement.
+  //
+  // Draw the SVG at `(delta.x, pdfHeight - delta.y)` so SVG (0,0)
+  // lands at the PDF origin shifted by movement. Point (443, -129)
+  // then renders at PDF (443 + delta.x, pdfHeight - 129 - delta.y) —
+  // i.e. canvas Y=129 from top for an unmoved path ✓.
   const objLeft = (obj.left as number) || 0;
   const objTop = (obj.top as number) || 0;
 
-  // Movement delta from the original bbox top-left (encoded in
-  // `pathOffset ± width/2, height/2`) to the current `left/top`.
-  // Zero for a freshly-drawn path that hasn't been dragged.
-  const deltaX = objLeft - (pathOffsetX - width / 2);
-  const deltaY = objTop - (pathOffsetY - height / 2);
+  // Walk the raw path data to find its actual bbox (in the path
+  // coord space, before any translation). This is what `left/top`
+  // would equal for a freshly-drawn path that hasn't been moved.
+  let originalMinX = Number.POSITIVE_INFINITY;
+  let originalMinY = Number.POSITIVE_INFINITY;
+
+  for (const cmd of pathArray) {
+    if (typeof cmd[0] !== "string") continue;
+    const letter = cmd[0];
+
+    if (letter === "Z" || letter === "z") continue;
+
+    // Coord pairs after the command letter. All Fabric-emitted
+    // commands use absolute uppercase — (M, L, T = 1 pt; Q, S = 2 pts;
+    // C = 3 pts; A = 5 num + 2 flags but we walk pairs anyway which
+    // is safe because arc "coords" other than the final x,y are radii
+    // / angles / flags that don't skew a min bbox — Fabric doesn't
+    // emit A from PencilBrush anyway).
+    for (let i = 1; i < cmd.length; i += 2) {
+      const x = cmd[i];
+      const y = cmd[i + 1];
+
+      if (typeof x === "number" && x < originalMinX) originalMinX = x;
+      if (typeof y === "number" && y < originalMinY) originalMinY = y;
+    }
+  }
+
+  // If the path had no numeric coords (empty / malformed), fall back
+  // to treating it as if bbox originates at obj.left/top → delta = 0.
+  if (!Number.isFinite(originalMinX)) originalMinX = objLeft;
+  if (!Number.isFinite(originalMinY)) originalMinY = objTop;
+
+  const deltaX = objLeft - originalMinX;
+  const deltaY = objTop - originalMinY;
 
   const totalScaleX = scaleX * ctx.scaleX;
   const totalScaleY = scaleY * ctx.scaleY;
@@ -678,10 +705,8 @@ export function drawPath(
       editorType: (obj as { editorType?: string }).editorType,
       objLeft,
       objTop,
-      pathOffsetX,
-      pathOffsetY,
-      width,
-      height,
+      originalMinX,
+      originalMinY,
       deltaX,
       deltaY,
       objScaleX: scaleX,
