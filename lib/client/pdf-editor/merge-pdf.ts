@@ -888,6 +888,50 @@ export async function mergeFabricEditsIntoPdf({
           sideways ? pdfWidth : pdfHeight,
         );
 
+        // EXPORT-DIAG: coordinate context + per-object spatial summary.
+        // Diagnoses the "edits pinned to the top of the exported page" bug
+        // where Fabric coords don't map to the right PDF Y. If `scaleY`
+        // is much smaller than 1 (parsed.height >> pdfHeight), every
+        // object's fabricY collapses to near pdfHeight → top of PDF.
+        // If a specific object shows fabricTop=0 despite the user
+        // placing it lower, the drop happened at serialize / loadFromJSON.
+        try {
+          const spatial = objects.slice(0, 20).map((o) => ({
+            type: (o as { type?: string }).type ?? "?",
+            editorType: (o as { editorType?: string }).editorType,
+            left: (o as { left?: number }).left,
+            top: (o as { top?: number }).top,
+            w:
+              ((o as { width?: number }).width ?? 0) *
+              ((o as { scaleX?: number }).scaleX ?? 1),
+            h:
+              ((o as { height?: number }).height ?? 0) *
+              ((o as { scaleY?: number }).scaleY ?? 1),
+            originX: (o as { originX?: string }).originX,
+            originY: (o as { originY?: string }).originY,
+          }));
+
+          logger.info("[PDFedits] EXPORT-DIAG: page coord ctx", {
+            pageNum,
+            srcRot,
+            sideways,
+            parsedWidth: parsed.width,
+            parsedHeight: parsed.height,
+            pdfWidth,
+            pdfHeight,
+            ctxScaleX: ctx.scaleX,
+            ctxScaleY: ctx.scaleY,
+            ctxScaleMatchesUnity: Math.abs(ctx.scaleY - 1) < 0.02,
+            objectCount: objects.length,
+            spatialSample: spatial,
+          });
+        } catch (diagErr) {
+          logger.warn(
+            "[PDFedits] EXPORT-DIAG: coord ctx log failed",
+            diagErr,
+          );
+        }
+
         // Whiteout pre-pass — paints opaque white rectangles over the
         // source-text bboxes for every modified editModeText so the new
         // text drawn by `processPageObjects` replaces the original word
