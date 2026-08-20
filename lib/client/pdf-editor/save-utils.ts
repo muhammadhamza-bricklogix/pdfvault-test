@@ -469,5 +469,52 @@ export async function buildEditedPdfBytes({
     watermarkConfig: wmShouldBake ? watermarkConfig : null,
   });
 
+  // BAKE-INVARIANT CHECK: if the store thinks there are Fabric edits for any
+  // page but the merged bytes are byte-identical to the source, the bake
+  // silently dropped every overlay — the exported/uploaded PDF will be the
+  // untouched original. This is the exact "I am still getting the un-edited
+  // pdf" symptom the user has been reporting. Loud WARN so the failure is
+  // impossible to miss in the console, with enough detail to identify which
+  // page(s) had edits that vanished.
+  try {
+    const sourceLen = mergeSourceBytes.byteLength;
+    const bytesLen = bytes.byteLength;
+    const nonEmptyEditPages: number[] = [];
+
+    mergeJsonForBake.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as { objects?: unknown[] };
+
+        if ((parsed.objects?.length ?? 0) > 0) nonEmptyEditPages.push(pageNum);
+      } catch {
+        /* ignore parse errors — separate diag surfaces them */
+      }
+    });
+
+    if (bytesLen === sourceLen && nonEmptyEditPages.length > 0) {
+      logger.warn(
+        "[PDFedits] BAKE-INVARIANT VIOLATED: merged bytes identical to source despite non-empty fabric edits",
+        {
+          sourceLen,
+          bytesLen,
+          nonEmptyEditPages,
+          totalFabricPages: mergeJsonForBake.size,
+          bakeOverlays,
+          hadRemap: !!remappedState,
+        },
+      );
+    } else {
+      logger.info("[PDFedits] EXPORT-DIAG: bake-invariant ok", {
+        sourceLen,
+        bytesLen,
+        bytesDelta: bytesLen - sourceLen,
+        bytesIdenticalToSource: bytesLen === sourceLen,
+        nonEmptyEditPages,
+      });
+    }
+  } catch (diagErr) {
+    logger.warn("[PDFedits] EXPORT-DIAG: bake-invariant check failed", diagErr);
+  }
+
   return { bytes, remappedState };
 }
