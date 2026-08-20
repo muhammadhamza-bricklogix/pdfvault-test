@@ -239,7 +239,12 @@ function TopAppBar() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const displayName = fileName.replace(/\.pdf$/i, "");
 
+  // Clear the store BEFORE navigating so re-entry via any path — bare
+  // `/pdf-editor`, tool tile, or a landing-page drop that creates a new
+  // doc — doesn't render the previous PDF while the new load is in flight.
+  // Reported 2026-08-18.
   const handleBack = () => {
+    usePdfEditorStore.getState().clearFile();
     router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
   };
 
@@ -292,7 +297,7 @@ function TopAppBar() {
   };
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
+    <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4 py-2">
       <Tooltip delay={300}>
         <button
           aria-label="Back to dashboard"
@@ -551,14 +556,16 @@ function ToolToolbar() {
   );
 
   return (
-    // Scroll container uses the `mx-auto w-fit` pattern (not
-    // `justify-center`) so an overflowing pill row can be panned all
-    // the way to both edges. `justify-center` on an overflow-auto
-    // container traps the user at the centre and clips the leftmost
-    // tools — same iOS Safari trap documented for `PdfViewerCanvas.tsx`
-    // (2026-06-10 (e) in the skill log).
+    // Desktop-only toolbar (mobile uses `BottomDock`), so the iOS Safari
+    // `mx-auto w-fit` pattern from `PdfViewerCanvas.tsx` doesn't apply.
+    // Flex-wrap lets the pill row reflow into multiple rows when the
+    // viewport narrows or the user zooms the browser in — without wrap
+    // the row overflows horizontally with `overflow-x-auto` and the
+    // rightmost tools become hidden behind the sidebar edge.
+    // `overflow-x-auto` stays as a safety net for a single pill group
+    // that on its own exceeds the container width.
     <div className="shrink-0 overflow-x-auto bg-[var(--pv-canvas,#f5f5f7)] px-3 py-3">
-      <div className="mx-auto flex w-fit items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         {groups.map((group, i) => (
           <PillGroup key={i} dataTour={group.dataTour}>
             {group.entries.map((tool) => {

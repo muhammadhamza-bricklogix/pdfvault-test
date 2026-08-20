@@ -18,6 +18,7 @@ import {
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -60,9 +61,15 @@ const CREAM_CARD = "#fef5f1";
 // Apple Pay `type` is "subscribe" instead of "plain" so the button
 // renders "Subscribe with " — matches the paywall's actual
 // intent (recurring plan checkout) and reads as a call-to-action
-// rather than a bare logo tile. Google Pay's SDK doesn't take an
-// equivalent type param; it stays a black wallet chip.
-const GOOGLE_PAY_BUTTON_PARAMS = { enabled: true, color: "black" } as const;
+// rather than a bare logo tile. Google Pay uses the equivalent
+// `subscribe` type so the button reads "Subscribe with G Pay"
+// (Google Pay brand guidelines: use CreateButton's `buttonType`
+// that matches merchant intent — https://developers.google.com/pay/api/web/guides/brand-guidelines#payment-buttons).
+const GOOGLE_PAY_BUTTON_PARAMS = {
+  enabled: true,
+  color: "black",
+  type: "subscribe",
+} as const;
 const APPLE_PAY_BUTTON_PARAMS = {
   enabled: true,
   integrationType: "js",
@@ -186,12 +193,16 @@ export function PaywallModal({
 
     setSelectedPlan("monthly");
 
+    logger.event(EVENTS.CHECKOUT_INTENT_START, "info", { plan: "monthly" });
     createIntent.mutate(
       { disclaimerVersion: DISCLAIMER_VERSION },
       {
-        onSuccess: setIntent,
+        onSuccess: (intent) => {
+          logger.event(EVENTS.CHECKOUT_INTENT_OK, "info");
+          setIntent(intent);
+        },
         onError: (err) => {
-          logger.error("checkout intent failed", err);
+          logger.captureError(err, "checkout.intent");
           setError(
             err instanceof Error
               ? err.message
@@ -224,6 +235,10 @@ export function PaywallModal({
     // backend confirms `entitled === true`.
     const subscriptionId = message?.order?.subscription_id;
 
+    logger.event(EVENTS.CHECKOUT_IFRAME_SUCCESS, "info", {
+      hasSubscriptionId: Boolean(subscriptionId),
+    });
+
     try {
       await syncSubscription.mutateAsync(
         subscriptionId ? { subscriptionId } : {},
@@ -240,10 +255,9 @@ export function PaywallModal({
       });
 
       if (!fresh?.entitled) {
-        logger.warn?.(
-          "Solidgate onSuccess fired but backend still reports entitled=false",
-          fresh,
-        );
+        logger.event(EVENTS.CHECKOUT_ENTITLEMENT_MISMATCH, "warning", {
+          subscriptionId,
+        });
         setError(
           "Payment couldn't be confirmed. If your card was charged, please refresh in a minute or email payments@pdfvault.ai.",
         );
@@ -264,13 +278,16 @@ export function PaywallModal({
 
       setEntitledSnapshot(true);
 
+      logger.event(EVENTS.CHECKOUT_ENTITLEMENT_CONFIRMED, "info");
       toast.success({
         title: "Payment received",
         description: "Your access is unlocked.",
       });
       setStep("success");
     } catch (err) {
-      logger.error("subscription sync after payment failed", err);
+      logger.captureError(err, "checkout.subscription_sync", {
+        subscriptionId,
+      });
       setError(
         "We received your payment attempt but couldn't verify it. Please refresh in a minute or email payments@pdfvault.ai.",
       );
@@ -278,6 +295,7 @@ export function PaywallModal({
   };
 
   const handleIframeFail = () => {
+    logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning");
     setPayFailed(true);
     toast.error({
       title: "Payment declined",
@@ -286,6 +304,7 @@ export function PaywallModal({
   };
 
   const handleRetry = () => {
+    logger.event(EVENTS.CHECKOUT_RETRY_START, "info");
     // Fresh CheckoutIntent for the retry — Solidgate marks the previous
     // paymentIntent terminal after a decline, so re-mounting the iframe
     // against the same intent just re-renders the "Payment declined"
@@ -300,9 +319,10 @@ export function PaywallModal({
           setIntent(fresh);
           setRetryKey((k) => k + 1);
           setRetryLoading(false);
+          logger.event(EVENTS.CHECKOUT_RETRY_INTENT_OK, "info");
         },
         onError: (err) => {
-          logger.error("checkout intent retry failed", err);
+          logger.captureError(err, "checkout.retry_intent");
           setRetryLoading(false);
           setPayFailed(true);
           toast.error({
@@ -349,7 +369,7 @@ export function PaywallModal({
           setContinueLoading(false);
         },
         onError: (err) => {
-          logger.error("annual checkout intent failed", err);
+          logger.captureError(err, "checkout.annual_intent");
           setContinueLoading(false);
           toast.error({
             title: "Couldn't start annual checkout",
@@ -449,13 +469,23 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  const fullAccessPrice = "$0.99";
-  const annualPrice = "$25";
-  const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  // Annual plan advertises $300/year total. Display is hardcoded
-  // because Solidgate returns the monthly-equivalent ($25) on
-  // `amountTodayMinor` for the annual product.
-  const todayDisplay = selectedPlan === "annual" ? "$300" : today;
+  // Everything below is driven by the intent + alternatePlans the
+  // backend just quoted. Never bake USD strings — the same modal
+  // renders EUR / PKR / INR / etc. once local pricing kicks in.
+  const monthly = pickPlan(intent, "TRIAL_MONTHLY");
+  const annual = pickPlan(intent, "ANNUAL");
+  const fullAccessPrice = formatMinor(
+    monthly.amountTodayMinor,
+    monthly.currency,
+  );
+  const annualPrice = formatMinor(
+    Math.round(annual.amountRenewMinor / 12),
+    annual.currency,
+  );
+  const todayDisplay =
+    selectedPlan === "annual"
+      ? formatMinor(annual.amountTodayMinor, annual.currency)
+      : formatMinor(monthly.amountTodayMinor, monthly.currency);
 
   const continueDisabled = continueLoading;
 
@@ -590,9 +620,10 @@ function PlanStep({
         {selectedPlan === "monthly" ? (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in a monthly subscription to pdfvault.ai.
-            You&apos;ll be charged {today} today for a 7-day trial, then $25.00
-            per month until you cancel. Payments will be charged from the card
-            you specified below. To cancel, visit your{" "}
+            You&apos;ll be charged {fullAccessPrice} today for a 7-day trial,
+            then {formatMinor(monthly.amountRenewMinor, monthly.currency)} per
+            month until you cancel. Payments will be charged from the card you
+            specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"
@@ -646,8 +677,7 @@ function PlanStep({
         )}
 
         <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
-          Charged in USD. Amount in local currency is an estimate and may
-          differ. See our{" "}
+          Charged in {intent.currency}. See our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
             href="/terms-and-conditions"
@@ -692,12 +722,14 @@ function PayStep({
   selectedPlan: PlanId;
   preview: PaywallPreview | null;
 }) {
-  const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  // Annual plan advertises $300/year total (billed once). Display is
-  // hardcoded because Solidgate returns the monthly-equivalent ($25)
-  // on `amountTodayMinor` for the annual product.
-  const todayDisplay = selectedPlan === "annual" ? "$300" : today;
-  const renewDisplay = selectedPlan === "annual" ? "$300" : "$25";
+  const todayDisplay = formatMinor(intent.amountTodayMinor, intent.currency);
+  const renewDisplay = formatMinor(intent.amountRenewMinor, intent.currency);
+  const renewMonthlyEquivalent = formatMinor(
+    selectedPlan === "annual"
+      ? Math.round(intent.amountRenewMinor / 12)
+      : intent.amountRenewMinor,
+    intent.currency,
+  );
 
   // Solidgate renders Apple Pay + Google Pay into detached container
   // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
@@ -734,16 +766,21 @@ function PayStep({
               silently swaps for a real button after a click. Also gets the
               SDK load happening as soon as Continue is pressed, so the
               wallet buttons are ready when the user reaches them. */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {/* Apple Pay — SDK injects here; hidden until mounted */}
             <div
               ref={applePayContainerRef}
               className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
             />
-            {/* Google Pay — SDK injects here; hidden until mounted */}
+            {/* Google Pay — SDK injects here; hidden until mounted.
+                No shape / height overrides — Google's brand guidelines
+                require the CreateButton API's native pill radius and
+                its own height range (40–60px). The `w-full` passthrough
+                lets Solidgate's SDK size the button to the container
+                width via `buttonSizeMode: "fill"`. */}
             <div
               ref={googlePayContainerRef}
-              className="empty:hidden overflow-hidden rounded-xl [&>*]:!min-h-[42px] [&>*]:!w-full [&_iframe]:!min-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
             />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
                 remounts — declined intents are terminal on Solidgate's side
@@ -762,7 +799,7 @@ function PayStep({
                 }}
                 width="100%"
                 onError={(error) => {
-                  logger.error("[paywall] Solidgate iframe error", error);
+                  logger.captureError(error, "checkout.iframe_error");
                 }}
                 onFail={onFail}
                 onMounted={() => {
@@ -815,7 +852,7 @@ function PayStep({
             By continuing you agree to be charged{" "}
             {selectedPlan === "annual"
               ? `${todayDisplay} every 365 days`
-              : `${todayDisplay} today for a 7-day trial, then $25.00 per month`}{" "}
+              : `${todayDisplay} today for a 7-day trial, then ${renewDisplay} per month`}{" "}
             unless cancelled. See our{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
@@ -862,7 +899,9 @@ function PayStep({
               </p>
             </div>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual" ? "$25 / month" : todayDisplay}
+              {selectedPlan === "annual"
+                ? `${formatMinor(Math.round(intent.amountRenewMinor / 12), intent.currency)} / month`
+                : todayDisplay}
             </p>
           </div>
           <p className="mt-0.5 text-[12px] text-[#6c6c6c]">
@@ -1370,6 +1409,38 @@ function formatMinor(minor: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(minor / 100);
+}
+
+/**
+ * Pull pricing for a given plan kind out of the checkout-intent
+ * response. The current plan's numbers live at the top level of the
+ * intent; the others are in `alternatePlans`. Falls back to the
+ * top-level intent when the requested kind isn't present in either
+ * place (belt-and-braces so the modal never renders "undefined").
+ */
+function pickPlan(
+  intent: CheckoutIntent,
+  planKind: string,
+): {
+  amountTodayMinor: number;
+  amountRenewMinor: number;
+  currency: string;
+} {
+  const alt = intent.alternatePlans?.find((row) => row.planKind === planKind);
+
+  if (alt) {
+    return {
+      amountTodayMinor: alt.amountTodayMinor,
+      amountRenewMinor: alt.amountRenewMinor,
+      currency: alt.currency,
+    };
+  }
+
+  return {
+    amountTodayMinor: intent.amountTodayMinor,
+    amountRenewMinor: intent.amountRenewMinor,
+    currency: intent.currency,
+  };
 }
 
 // Long label like "Jul 24, 2026" for the success card.

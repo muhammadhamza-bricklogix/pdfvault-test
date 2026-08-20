@@ -7,11 +7,11 @@ import { useId, useMemo, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
@@ -68,7 +68,6 @@ type FieldErrors = {
   email?: string;
   password?: string;
   code?: string;
-  terms?: string;
 };
 
 const INPUT_CLASS =
@@ -87,7 +86,6 @@ export function SignupCard() {
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
   const [code, setCode] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -97,7 +95,7 @@ export function SignupCard() {
   const emailId = useId();
   const passwordId = useId();
   const codeId = useId();
-  const termsId = useId();
+  const passwordHelperId = useId();
   const statusId = useId();
 
   const afterSignUpPath = useMemo(
@@ -108,14 +106,17 @@ export function SignupCard() {
 
   // Live validity — disables Create Account until every field passes
   // the same rules the submit handler runs. Prevents users from
-  // clicking through and hitting a wall of red inline errors.
-  const credentialsValid = useMemo(() => {
-    if (!EMAIL_RE.test(email.trim())) return false;
-    if (!password) return false;
-    if (!agreedToTerms) return false;
-
-    return true;
-  }, [email, password, agreedToTerms]);
+  // clicking through and hitting a wall of red inline errors. Uses
+  // authSignUpSchema so the button state and the on-submit branch
+  // agree exactly (min 8, one letter, one digit).
+  const credentialsValid = useMemo(
+    () =>
+      authSignUpSchema.safeParse({
+        emailAddress: email.trim(),
+        password,
+      }).success,
+    [email, password],
+  );
 
   const onGoogle = async () => {
     if (!signUp) return;
@@ -130,7 +131,7 @@ export function SignupCard() {
         redirectUrl: afterSignUpPath,
       });
     } catch (err) {
-      logger.error("Google sign-up failed", err);
+      logger.captureError(err, "signup.oauth_google");
       setNotice("Something went wrong with Google sign-up.");
       setOauthLoading(false);
     }
@@ -142,20 +143,26 @@ export function SignupCard() {
     event.preventDefault();
     if (!signUp) return;
 
-    const nextErrors: FieldErrors = {};
     const trimmedEmail = email.trim();
+    const parsed = authSignUpSchema.safeParse({
+      emailAddress: trimmedEmail,
+      password,
+    });
 
-    if (!EMAIL_RE.test(trimmedEmail)) {
-      nextErrors.email = "Please enter a valid email address.";
-    }
-    if (!agreedToTerms) {
-      nextErrors.terms =
-        "You must agree to the Terms & Conditions to create an account.";
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+
+      setNotice(null);
+      setErrors({
+        email: flat.emailAddress?.[0],
+        password: flat.password?.[0],
+      });
+
+      return;
     }
 
     setNotice(null);
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    setErrors({});
 
     setSubmitting(true);
     try {
@@ -193,8 +200,9 @@ export function SignupCard() {
 
       setStep("verify");
       setCode("");
+      logger.event(EVENTS.SIGNUP_CODE_SENT, "info");
     } catch (err) {
-      logger.error("Sign-up submission failed", err);
+      logger.captureError(err, "signup.credentials");
       setErrors({
         password: readClerkError(
           err,
@@ -238,6 +246,9 @@ export function SignupCard() {
       }
 
       if (signUp.status === "complete") {
+        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
+          redirectPath: afterSignUpPath,
+        });
         const { error: finalizeError } = await signUp.finalize({
           navigate: ({ decorateUrl }) => {
             // Full-page navigation so the freshly-set Clerk session cookie
@@ -249,6 +260,7 @@ export function SignupCard() {
         });
 
         if (finalizeError) {
+          logger.captureError(finalizeError, "signup.finalize");
           setErrors({
             code: readClerkError(
               finalizeError,
@@ -264,7 +276,7 @@ export function SignupCard() {
         "One more step is needed to finish creating your account. Please check your email.",
       );
     } catch (err) {
-      logger.error("Verification failed", err);
+      logger.captureError(err, "signup.verify");
       setErrors({
         code: readClerkError(
           err,
@@ -290,7 +302,7 @@ export function SignupCard() {
       }
       setNotice("A fresh code is on the way.");
     } catch (err) {
-      logger.error("Resend failed", err);
+      logger.captureError(err, "signup.resend");
       setNotice(readClerkError(err, "Couldn't resend the code."));
     }
   };
@@ -304,7 +316,7 @@ export function SignupCard() {
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
         id={headingId}
       >
-        {step === "credentials" ? "Create a Free Account" : "Verify your email"}
+        {step === "credentials" ? "Create a FREE Account" : "Verify your email"}
       </h1>
       <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
         {step === "credentials"
@@ -371,6 +383,9 @@ export function SignupCard() {
               <div className="relative mt-2">
                 <input
                   required
+                  aria-describedby={
+                    errors.password ? undefined : passwordHelperId
+                  }
                   aria-invalid={errors.password ? true : undefined}
                   autoComplete="new-password"
                   className={`${INPUT_CLASS} mt-0 pr-11`}
@@ -390,56 +405,18 @@ export function SignupCard() {
                 <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
                   {errors.password}
                 </p>
-              ) : null}
-            </div>
-
-            <div className="mt-4">
-              <label
-                className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-5 text-[#5f5f5f]"
-                htmlFor={termsId}
-              >
-                <input
-                  aria-describedby={
-                    errors.terms ? `${termsId}-error` : undefined
-                  }
-                  aria-invalid={errors.terms ? true : undefined}
-                  checked={agreedToTerms}
-                  className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[#f12c23]"
-                  id={termsId}
-                  name="agreedToTerms"
-                  type="checkbox"
-                  onChange={(event) => {
-                    setAgreedToTerms(event.target.checked);
-                    if (event.target.checked && errors.terms) {
-                      setErrors((prev) => ({ ...prev, terms: undefined }));
-                    }
-                  }}
-                />
-                <span>
-                  I agree to the{" "}
-                  <Link
-                    className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
-                    href={ROUTES.LEGAL.TERMS}
-                    target="_blank"
-                  >
-                    Terms &amp; Conditions
-                  </Link>
-                  .
-                </span>
-              </label>
-              {errors.terms ? (
+              ) : (
                 <p
-                  className="mt-1.5 text-[13px] text-[#f12c23]"
-                  id={`${termsId}-error`}
-                  role="alert"
+                  className="mt-2 text-[13px] text-[#7a7a7a]"
+                  id={passwordHelperId}
                 >
-                  {errors.terms}
+                  Password must contain at least 8 characters
                 </p>
-              ) : null}
+              )}
             </div>
 
             <button
-              className="mt-4 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+              className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
               disabled={submitting || !credentialsValid}
               type="submit"
             >
@@ -513,6 +490,33 @@ export function SignupCard() {
           Sign In
         </Link>
       </p>
+
+      {/* Terms & Privacy — passive statement replaces the previous
+          opt-in checkbox. Standard pattern for consumer sign-ups; the
+          act of creating an account is the acceptance. Only rendered
+          on the credentials step so it doesn't compete with the
+          verification-code CTA. */}
+      {step === "credentials" ? (
+        <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
+          By proceeding, you confirm that you have read and agreed to the{" "}
+          <Link
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+            href={ROUTES.LEGAL.TERMS}
+            target="_blank"
+          >
+            Terms of Use
+          </Link>{" "}
+          and{" "}
+          <Link
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+            href={ROUTES.LEGAL.PRIVACY}
+            target="_blank"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      ) : null}
     </section>
   );
 }

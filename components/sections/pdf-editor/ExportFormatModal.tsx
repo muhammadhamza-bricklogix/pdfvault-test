@@ -5,6 +5,7 @@ import type { ExportFormat } from "@/lib/client/hooks/pdf-editor/use-export-edit
 import {
   Doc01Icon,
   FileImageIcon,
+  PencilEdit01Icon,
   Pdf01Icon,
   Tick01Icon,
 } from "@hugeicons/core-free-icons";
@@ -100,10 +101,30 @@ function ExportFormatModalBody({
   const handleDownload = async () => {
     setIsSaving(true);
 
+    // Two-step: cloud save FIRST (uploads current edits to the user's
+    // library so nothing is lost), then export (bakes the same edits into
+    // the downloaded file). `skipReset: true` is critical — it tells the
+    // save handler NOT to swap `store.file` to the freshly uploaded bytes.
+    //
+    // WHY: `applyPostSaveReset` swaps the file, which triggers a pdf.js
+    // reload + Fabric canvas remount. The subsequent `editor:export`
+    // would then run its merge against the ALREADY-BAKED `savedFile`
+    // while the live Fabric canvas still holds the pre-reset objects
+    // (pristine=false editModeText, all shape/path/image overlays). The
+    // export flush would overwrite the pristined store entry, and merge
+    // would re-whitewash text (drift artefacts on the modified position)
+    // AND re-draw every shape/path/image on top of savedFile's already-
+    // baked copy — QA report 2026-08-19 "edited changes gone, some appear
+    // at the very bottom" on any download format.
+    //
+    // With `skipReset: true` the local editor keeps operating on the
+    // ORIGINAL file, so `editor:export` runs a single clean merge:
+    // original file + all overlays (live-canvas + store) → baked bytes →
+    // download. No double-bake, no race with pdf.js reload.
     await new Promise<void>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { force: false, onComplete: () => resolve() },
+          detail: { force: true, skipReset: true, onComplete: () => resolve() },
         }),
       );
     });
@@ -130,6 +151,28 @@ function ExportFormatModalBody({
       </Modal.Header>
 
       <Modal.Body className="space-y-5">
+        {/* Editable file name — inline title style so users immediately
+            see it's the output filename and can click to rename it. */}
+        <div className="flex items-center gap-2 rounded-xl border border-default-200 bg-default-50 px-3 py-2.5">
+          <TextField
+            className="min-w-0 flex-1"
+            value={fileName}
+            onChange={setFileName}
+          >
+            <Input
+              aria-label="File name"
+              className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
+              id="export-file-name"
+              placeholder="document"
+            />
+          </TextField>
+          <HugeiconsIcon
+            className="shrink-0 text-default-400"
+            icon={PencilEdit01Icon}
+            size={15}
+          />
+        </div>
+
         {/* Format tiles — 3-column grid of visual cards */}
         <div
           aria-label="Export format"
@@ -167,25 +210,14 @@ function ExportFormatModalBody({
             );
           })}
         </div>
-
-        <div className="space-y-1.5">
-          <label
-            className="text-sm font-medium text-[var(--color-foreground)]"
-            htmlFor="export-file-name"
-          >
-            File name
-          </label>
-          <TextField value={fileName} onChange={setFileName}>
-            <Input id="export-file-name" placeholder="document" />
-          </TextField>
-        </div>
       </Modal.Body>
 
-      <Modal.Footer>
-        <Button slot="close" variant="secondary">
-          Cancel
-        </Button>
-        <Button isDisabled={!file || isSaving} onPress={handleDownload}>
+      <Modal.Footer className="justify-center">
+        <Button
+          className="w-[90%]"
+          isDisabled={!file || isSaving}
+          onPress={handleDownload}
+        >
           {!isSaving && (
             <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
           )}

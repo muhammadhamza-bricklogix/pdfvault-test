@@ -1,29 +1,40 @@
+import { join } from "node:path";
+
+import { shareFs } from "./fs-store-base";
+
 /**
  * Token revocation deny-list.
  *
- * Tokens are stateless (HMAC-signed) so we can't "invalidate" them by
- * deleting a DB row — the signature still verifies. Instead the owner
- * adds the `jti` to a deny-list and every resolve checks it.
+ * Filesystem-backed: `<SHARE_DATA_DIR>/denylist/<jti>.json` = `{ exp }`.
+ * Per-jti files (not a single bag file) so concurrent revokes never race
+ * a shared bag write. Was previously in-memory — server restarts silently
+ * "un-revoked" tokens, which is worse than the "expired" bug because
+ * revocations are a user's explicit "make this stop working" signal.
  *
- * In-memory `Map` for MVP. Production: swap for a Redis/KV-backed impl.
- * Check on every resolve after HMAC verify (cheap) and before any
- * bytes lookup.
+ * Multi-instance production still needs a shared store — point
+ * `SHARE_DATA_DIR` at a mounted volume all replicas can see.
  */
-
 export interface DenyList {
   has(jti: string): Promise<boolean>;
   revoke(jti: string, expiresAt: number): Promise<void>;
 }
 
-class InMemoryDenyList implements DenyList {
-  private readonly entries = new Map<string, number>();
+type Entry = { exp: number };
+
+class FsDenyList implements DenyList {
+  private async pathFor(jti: string): Promise<string> {
+    const dir = await shareFs.ensureDir("denylist");
+
+    return join(dir, `${jti}.json`);
+  }
 
   async has(jti: string): Promise<boolean> {
-    const exp = this.entries.get(jti);
+    const path = await this.pathFor(jti);
+    const entry = await shareFs.readJson<Entry>(path);
 
-    if (exp === undefined) return false;
-    if (Date.now() >= exp) {
-      this.entries.delete(jti);
+    if (!entry) return false;
+    if (Date.now() >= entry.exp) {
+      await shareFs.safeUnlink(path);
 
       return false;
     }
@@ -32,8 +43,10 @@ class InMemoryDenyList implements DenyList {
   }
 
   async revoke(jti: string, expiresAt: number): Promise<void> {
-    this.entries.set(jti, expiresAt);
+    await shareFs.writeJsonAtomic(await this.pathFor(jti), {
+      exp: expiresAt,
+    } satisfies Entry);
   }
 }
 
-export const denyList: DenyList = new InMemoryDenyList();
+export const denyList: DenyList = new FsDenyList();

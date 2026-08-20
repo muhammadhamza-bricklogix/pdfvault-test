@@ -14,6 +14,7 @@ import {
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -110,6 +111,11 @@ export function PendingEditorFileHydrator() {
     resetRef.current = true;
 
     if ((tool || exportFormat || isFreshEntry) && !docId) {
+      logger.breadcrumb("hydrator", "reset.tool_tile", {
+        tool,
+        exportFormat,
+        isFreshEntry,
+      });
       clearFile();
     }
   }, [clearFile, docId, exportFormat, isFreshEntry, tool]);
@@ -132,6 +138,9 @@ export function PendingEditorFileHydrator() {
     // returns) so users who click "PDF Composer" itself still land on
     // the editor.
     if (tool && !docId && isSignedIn) {
+      logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
+        tool,
+      });
       const returnTo = `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
 
       window.location.assign(returnTo);
@@ -140,6 +149,9 @@ export function PendingEditorFileHydrator() {
     }
 
     if (tool && AUTH_GATED_TOOLS.has(tool) && !isSignedIn) {
+      logger.event(EVENTS.HYDRATOR_AUTH_GATED_REDIRECT_TO_SIGNIN, "info", {
+        tool,
+      });
       // Preserve the tool slug in the return URL so we land back in the
       // same launch flow after sign-in.
       const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
@@ -238,6 +250,11 @@ export function PendingEditorFileHydrator() {
         const hasAutoLaunch = Boolean(tool || exportFormat);
 
         if (isSignedIn && hasAutoLaunch && !docId) {
+          logger.event(EVENTS.HYDRATOR_POST_SIGNIN_RESTORE, "info", {
+            tool,
+            exportFormat,
+            hasFabricEdits: (pendingFabricState?.size ?? 0) > 0,
+          });
           // Post-sign-in restore path — save-first-then-navigate.
           // Flip isRestoringSession so PdfEditorShell renders the
           // <EditorLoadingShell /> skeleton (not the empty drop-zone)
@@ -308,8 +325,14 @@ export function PendingEditorFileHydrator() {
 
             next.set("id", document.id);
             router.replace(`${pathname}?${next.toString()}`);
+            logger.event(EVENTS.HYDRATOR_POST_SIGNIN_RESTORE_OK, "info", {
+              documentId: document.id,
+            });
           } catch (saveErr) {
-            logger.warn("post-signin save-first failed", saveErr);
+            logger.captureError(saveErr, "hydrator.post_signin_restore", {
+              tool,
+              exportFormat,
+            });
             uploadToasts.fail(trackingId, saveErr);
             toast.error({
               title: "Couldn't save automatically",
@@ -349,8 +372,9 @@ export function PendingEditorFileHydrator() {
           usePdfEditorStore.setState({ extractedPages: pendingExtractedPages });
         }
         await clearPendingEditorFile();
+        logger.breadcrumb("hydrator", "rehydrate.normal_ok");
       } catch (err) {
-        logger.warn("pending editor file hydrate failed", err);
+        logger.captureError(err, "hydrator.rehydrate");
       } finally {
         // Clear the restoring flag no matter which path we took
         // (fresh-entry cleanup, empty-IDB, non-PDF skip, currentFile
@@ -400,6 +424,9 @@ export function PendingEditorFileHydrator() {
 
         setCurrentDocument({ id: document.id, name: document.filename });
         queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+        logger.event(EVENTS.HYDRATOR_BACKGROUND_AUTOSAVE_OK, "info", {
+          documentId: document.id,
+        });
         toast.success({
           title: "Saved to My PDFs",
           description: document.filename,
@@ -435,11 +462,13 @@ export function PendingEditorFileHydrator() {
         }
       } catch (err) {
         // Expected for signed-out visitors (401). Silent for that case,
-        // logged for anything else.
+        // captured for anything else.
         const status = (err as { response?: { status?: number } })?.response
           ?.status;
 
-        if (status !== 401) logger.warn("editor auto-save failed", err);
+        if (status !== 401) {
+          logger.captureError(err, "hydrator.background_autosave", { status });
+        }
         autoSavedRef.current = false; // allow retry on next file load
       }
     })();
@@ -469,6 +498,7 @@ export function PendingEditorFileHydrator() {
     if (!authLoaded) return;
 
     launchedRef.current = true;
+    logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", { tool, exportFormat });
 
     // Small delay so the editor's own file-load pipeline (Fabric mount +
     // pdf.js hydrate) settles before we open a modal on top of it. The
@@ -522,6 +552,33 @@ export function PendingEditorFileHydrator() {
           }),
         );
       }
+
+      // Strip the one-shot auto-launch params from the URL so a browser
+      // refresh doesn't re-fire the action. Without this, a user who
+      // landed on `/pdf-editor?id=X&export=docx` and hit F5 mid-edit
+      // would be dragged through the download flow again. `?id=` is kept
+      // so the document loader can still hydrate on refresh.
+      // Reported 2026-08-19 (QA: "refresh triggers unwanted download").
+      const cleaned = new URLSearchParams(searchParams.toString());
+      let mutated = false;
+
+      if (cleaned.has("tool")) {
+        cleaned.delete("tool");
+        mutated = true;
+      }
+      if (cleaned.has("export")) {
+        cleaned.delete("export");
+        mutated = true;
+      }
+      if (cleaned.has("fresh")) {
+        cleaned.delete("fresh");
+        mutated = true;
+      }
+      if (mutated) {
+        const q = cleaned.toString();
+
+        router.replace(q ? `${pathname}?${q}` : pathname);
+      }
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
@@ -529,6 +586,9 @@ export function PendingEditorFileHydrator() {
     authLoaded,
     currentFile,
     exportFormat,
+    pathname,
+    router,
+    searchParams,
     setActiveTool,
     setIsCompressModalOpen,
     setIsManagePagesOpen,

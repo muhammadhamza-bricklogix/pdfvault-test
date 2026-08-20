@@ -19,6 +19,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -116,6 +117,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
+  const pdfDocDeferredAttemptsRef = useRef(0);
   const stateRef = useRef({
     currentPage,
     fabricCanvas,
@@ -148,15 +150,77 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     ) => {
       if (isExportingRef.current) return;
 
+      // Read `file` and `currentPage` directly from the Zustand store rather
+      // than the React-ref cache. When export is triggered right after a
+      // save-before-action (Download modal flow), `applyPostSaveReset` has
+      // already swapped `store.file` to the newly saved bytes, but the
+      // `useEffect` that mirrors props into `stateRef` may not have run yet.
+      // Reading `stateRef.current.file` in that window returns the OLD file
+      // while `pdfDocument` is already the NEW one — the merge produces an
+      // inconsistent PDF that the backend rejects with a validation error on
+      // the first attempt. The second click succeeds only because React has
+      // re-committed by then. See QA report 2026-08-19.
+      const storeSnapshot = usePdfEditorStore.getState();
+      const page = storeSnapshot.currentPage;
+      const sourceFile = storeSnapshot.file;
       const {
-        currentPage: page,
         fabricCanvas: liveCanvas,
-        file: sourceFile,
         authLoaded: authReady,
         clerkIsSignedIn: signedIn,
       } = stateRef.current;
 
+      // EXPORT-DIAG: snapshot the state at export entry so we can see, from
+      // console logs alone, which drop-candidate lost the user's edits.
+      // Correlates with `buildEditedPdfBytes` and `mergeFabricEditsIntoPdf`
+      // logs downstream.
+      try {
+        const preFlushObjectCount = liveCanvas
+          ? liveCanvas.getObjects().length
+          : null;
+        const preFlushTypes = liveCanvas
+          ? liveCanvas.getObjects().map((o) => ({
+              type: (o as { type?: string }).type,
+              editorType: (o as { editorType?: string }).editorType,
+            }))
+          : null;
+        const jsonMap = storeSnapshot.fabricJsonByPage;
+        const jsonSummary: Record<number, number> = {};
+
+        jsonMap.forEach((json, pageNum) => {
+          try {
+            const parsed = JSON.parse(json) as { objects?: unknown[] };
+
+            jsonSummary[pageNum] = parsed.objects?.length ?? 0;
+          } catch {
+            jsonSummary[pageNum] = -1;
+          }
+        });
+        // eslint-disable-next-line no-console
+        console.log("[PDFedits] EXPORT-DIAG: handleExport entry", {
+          format,
+          currentPage: page,
+          fileName: sourceFile?.name ?? null,
+          liveCanvasPresent: !!liveCanvas,
+          liveCanvasObjectCount: preFlushObjectCount,
+          liveCanvasTypes: preFlushTypes,
+          storeFabricJsonPages: Array.from(jsonMap.keys()),
+          storeFabricJsonObjectCountByPage: jsonSummary,
+          hasUnsavedChanges: storeSnapshot.hasUnsavedChanges,
+        });
+      } catch (diagErr) {
+        logger.warn("[PDFedits] EXPORT-DIAG: entry log failed", diagErr);
+      }
+
+      logger.event(EVENTS.EXPORT_START, "info", {
+        format,
+        signedIn,
+        authReady,
+        hasFile: Boolean(sourceFile),
+        pageCount: storeSnapshot.fabricJsonByPage.size,
+      });
+
       if (!sourceFile) {
+        logger.event(EVENTS.EXPORT_NO_FILE, "warning", { format });
         toast.error({
           title: "Nothing to export",
           description: "Open a PDF before exporting.",
@@ -173,6 +237,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       // recursing into handleExport) keeps the closure lint rule happy and
       // still routes through the listener once auth is ready.
       if (!authReady) {
+        logger.breadcrumb("export", "auth.deferred", { format });
         isExportingRef.current = false;
         window.setTimeout(() => {
           window.dispatchEvent(
@@ -184,6 +249,47 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
         return;
       }
+
+      // Same defer-and-retry shape for pdf.js: the hydrator's post-signin
+      // auto-launch and the `/convert/*` → editor navigation both fire
+      // `editor:export` a fixed ~400ms after the file lands, but
+      // `usePdfLoader` can take longer on large PDFs or slow networks.
+      // `buildEditedPdfBytes` throws "PDF document not loaded" if the
+      // store's `pdfDocument` is still null. Cap at ~10 s so a genuinely
+      // failed load (corrupt / password-protected PDF) surfaces a
+      // user-facing error instead of retrying forever.
+      if (!storeSnapshot.pdfDocument) {
+        const attempts = (pdfDocDeferredAttemptsRef.current += 1);
+
+        if (attempts > 40) {
+          pdfDocDeferredAttemptsRef.current = 0;
+          logger.warn("[PDFedits] export: pdf document never loaded", {
+            format,
+          });
+          toast.error({
+            title: "PDF still loading",
+            description:
+              "Wait for the document to finish loading, then try again.",
+          });
+
+          return;
+        }
+        logger.breadcrumb("export", "pdf_document.deferred", {
+          format,
+          attempts,
+        });
+        isExportingRef.current = false;
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("editor:export", {
+              detail: { filename: customFilename, format },
+            }),
+          );
+        }, 250);
+
+        return;
+      }
+      pdfDocDeferredAttemptsRef.current = 0;
 
       isExportingRef.current = true;
 
@@ -197,6 +303,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         // to the same editor with `?export=<fmt>` set, so the export
         // re-fires automatically.
         if (!signedIn) {
+          logger.event(EVENTS.EXPORT_SIGNIN_REQUIRED, "info", { format });
           try {
             // Flush the live canvas for the current page into the store so
             // the serialized fabric state includes the user's latest edits
@@ -215,8 +322,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               fabricJsonByPage,
               extractedPages,
             );
+            logger.breadcrumb("export", "pending_file.saved", {
+              format,
+              hasFabricEdits: fabricJsonByPage.size > 0,
+            });
           } catch (err) {
-            logger.warn("pending editor file save failed", err);
+            logger.captureError(err, "export.pending_file", { format });
           }
 
           const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
@@ -256,7 +367,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         if (format === "pdf") {
           const entitled = await ensureFreshEntitlement();
 
+          logger.breadcrumb("export", "entitlement.checked", {
+            format,
+            entitled,
+          });
+
           if (!entitled) {
+            logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
             const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
               type: "application/pdf",
             });
@@ -270,7 +387,14 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
                 targetExt: "pdf",
               });
 
-              if (outcome !== "success") return;
+              if (outcome !== "success") {
+                logger.event(EVENTS.EXPORT_PAYWALL_CANCELLED, "info", {
+                  format,
+                });
+
+                return;
+              }
+              logger.event(EVENTS.EXPORT_PAYWALL_SUCCESS, "info", { format });
             } finally {
               URL.revokeObjectURL(objectUrl);
             }
@@ -302,7 +426,58 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             ? ensureExtension(userBase, "pdf")
             : buildPdfExportFilename(sourceFile.name);
 
+          // DEBUG mode: also drop a raw copy of the ORIGINAL source PDF so
+          // you have both files locally and can open them side-by-side to
+          // verify the bake actually added/moved content. Combined with
+          // `pre-convert.pdf` (non-PDF exports) this gives full evidence
+          // of every byte the client generates.
+          try {
+            const search =
+              typeof window !== "undefined" ? window.location.search : "";
+            const dbgParams = new URLSearchParams(search);
+            const debugExport =
+              dbgParams.get("debug_export") === "1" ||
+              (typeof window !== "undefined" &&
+                window.localStorage?.getItem("pdfeditsDebugExport") === "1");
+
+            if (debugExport) {
+              const originalBytes = new Uint8Array(
+                await sourceFile.arrayBuffer(),
+              );
+
+              // eslint-disable-next-line no-console
+              console.log(
+                "[PDFedits] EXPORT-DIAG: DEBUG downloading ORIGINAL source PDF (compare against baked)",
+                {
+                  originalName: `${sourceFile.name.replace(/\.pdf$/i, "")}.ORIGINAL.pdf`,
+                  originalLen: originalBytes.byteLength,
+                  bakedLen: bytes.byteLength,
+                  bytesDelta: bytes.byteLength - originalBytes.byteLength,
+                },
+              );
+              downloadBytes(
+                originalBytes,
+                `${sourceFile.name.replace(/\.pdf$/i, "")}.ORIGINAL.pdf`,
+              );
+            }
+          } catch (debugErr) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[PDFedits] EXPORT-DIAG: original source debug download failed",
+              debugErr,
+            );
+          }
+
+          // eslint-disable-next-line no-console
+          console.log("[PDFedits] EXPORT-DIAG: PDF download triggered", {
+            outName,
+            bytesLen: bytes.byteLength,
+          });
           downloadBytes(bytes, outName);
+          logger.event(EVENTS.EXPORT_SUCCESS, "info", {
+            format,
+            bytes: bytes.byteLength,
+          });
           toast.success({
             title: "Exported",
             description: "Your edited PDF has been downloaded.",
@@ -326,7 +501,57 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           { type: "application/pdf" },
         );
 
+        // DEBUG mode: also download the intermediate BAKED PDF that the
+        // browser is about to POST to CloudConvert. Lets you open BOTH
+        // files locally and compare:
+        //   - `*.pre-convert.pdf` — what the browser produced (edits baked)
+        //   - `*.docx` (or whatever format) — what CloudConvert returned
+        //
+        // Isolate the culprit:
+        //   - Baked PDF looks wrong → client-side bake is the bug
+        //   - Baked PDF is correct but DOCX drops edits → CloudConvert / its
+        //     PDF→Office engine is the bug (tunable in
+        //     `cloudconvert.strategy.ts` CONVERT_TASK_OPTIONS)
+        //   - Both wrong → likely both, start with the client
+        //
+        // Trigger: append `?debug_export=1` to the editor URL, or set
+        // `localStorage.pdfeditsDebugExport = "1"` in DevTools. No prod
+        // build check — the flag is intentional developer opt-in, always
+        // available in staging/prod for support debugging without a
+        // redeploy. Zero footprint when the flag is off.
+        try {
+          const search =
+            typeof window !== "undefined" ? window.location.search : "";
+          const params = new URLSearchParams(search);
+          const debugExport =
+            params.get("debug_export") === "1" ||
+            (typeof window !== "undefined" &&
+              window.localStorage?.getItem("pdfeditsDebugExport") === "1");
+
+          if (debugExport) {
+            const preConvertName = `${baseName}.pre-convert.pdf`;
+
+            // eslint-disable-next-line no-console
+            console.log(
+              "[PDFedits] EXPORT-DIAG: DEBUG downloading pre-convert PDF",
+              {
+                preConvertName,
+                bytesLength: bytes.byteLength,
+                targetFormat: format,
+              },
+            );
+            downloadBytes(bytes, preConvertName);
+          }
+        } catch (debugErr) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[PDFedits] EXPORT-DIAG: pre-convert debug download failed",
+            debugErr,
+          );
+        }
+
         if (!entitled) {
+          logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
           const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
             type: "application/pdf",
           });
@@ -340,25 +565,109 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               targetExt: format,
             });
 
-            if (outcome !== "success") return;
+            if (outcome !== "success") {
+              logger.event(EVENTS.EXPORT_PAYWALL_CANCELLED, "info", { format });
+
+              return;
+            }
+            logger.event(EVENTS.EXPORT_PAYWALL_SUCCESS, "info", { format });
           } finally {
             URL.revokeObjectURL(objectUrl);
           }
         }
 
         // Entitled (or just paid) — convert and download.
+        //
+        // EXPORT-DIAG: log the exact bytes about to leave the browser for
+        // CloudConvert. `pdfFile.size` MUST equal `bytes.byteLength` AND
+        // MUST differ from `sourceFile.size` on any edit — matching sizes
+        // means we're uploading the un-edited source and the bake dropped.
+        // `storeFabricJsonSummary` shows which pages contributed overlays
+        // to that bake so a missing page is obvious from the log alone.
+        try {
+          const storeState = usePdfEditorStore.getState();
+          const summary: Record<number, number> = {};
+
+          storeState.fabricJsonByPage.forEach((json, pageNum) => {
+            try {
+              const parsed = JSON.parse(json) as { objects?: unknown[] };
+
+              summary[pageNum] = parsed.objects?.length ?? 0;
+            } catch {
+              summary[pageNum] = -1;
+            }
+          });
+
+          // SHA-256 of the exact bytes about to leave the browser. This hash
+          // is what the backend controller and CloudConvert-upload logs will
+          // print next. Three identical hashes = bytes travelled untouched
+          // from browser → Nest → CloudConvert; the input to CloudConvert
+          // matches the flattened PDF the bake produced. Any mismatch
+          // pinpoints which hop mutated the bytes.
+          let bytesSha256 = "unavailable";
+
+          try {
+            if (globalThis.crypto?.subtle) {
+              const hashBuf = await globalThis.crypto.subtle.digest(
+                "SHA-256",
+                bytes.buffer as ArrayBuffer,
+              );
+
+              bytesSha256 = Array.from(new Uint8Array(hashBuf))
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join("");
+            }
+          } catch {
+            /* leave "unavailable" */
+          }
+          const first8 = Array.from(bytes.subarray(0, 8))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          const last8 = Array.from(bytes.subarray(-8))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+
+          // eslint-disable-next-line no-console
+          console.log("[PDFedits] EXPORT-DIAG: cloudconvert upload", {
+            format,
+            conversionType,
+            pdfFileName: pdfFile.name,
+            pdfFileSize: pdfFile.size,
+            bakedBytesLength: bytes.byteLength,
+            sourceFileSize: sourceFile.size,
+            bytesSha256,
+            bytesFirst8Hex: first8,
+            bytesLast8Hex: last8,
+            bakedDiffersFromSource: bytes.byteLength !== sourceFile.size,
+            storeFabricJsonSummary: summary,
+          });
+        } catch (diagErr) {
+          logger.warn(
+            "[PDFedits] EXPORT-DIAG: cloudconvert upload log failed",
+            diagErr,
+          );
+        }
+
         let result: Awaited<ReturnType<typeof convertRef.current.mutateAsync>>;
 
         try {
-          result = await convertRef.current.mutateAsync({
-            file: pdfFile,
-            type: conversionType,
-          });
+          result = await logger.span(
+            `convert.${conversionType}`,
+            "export.convert",
+            () =>
+              convertRef.current.mutateAsync({
+                file: pdfFile,
+                type: conversionType,
+              }),
+            { format, bytes: bytes.byteLength },
+          );
         } catch (err) {
           if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+            logger.event(EVENTS.EXPORT_CONVERT_CANCELLED, "info", { format });
+
             return;
           }
-          logger.error("Failed to export PDF", err);
+          logger.captureError(err, "export.convert", { format });
           toast.error({
             title: "Export failed",
             description: "We couldn't export your edits. Please try again.",
@@ -375,16 +684,22 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               : result.fileName;
 
           triggerBlobDownload(result.blob, outName);
+          logger.event(EVENTS.EXPORT_SUCCESS, "info", {
+            format,
+            filename: result.fileName,
+          });
         } catch (err) {
-          logger.error("blob download failed after successful conversion", err);
+          logger.captureError(err, "export.download", { format });
         }
       } catch (err) {
         // Any pre-mutation exception (buildEditedPdfBytes, file
         // preparation) still surfaces to the user.
         if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+          logger.event(EVENTS.EXPORT_PAYWALL_CANCELLED, "info", { format });
+
           return;
         }
-        logger.error("Failed to export PDF", err);
+        logger.captureError(err, "export.build", { format });
         toast.error({
           title: "Export failed",
           description: "We couldn't export your edits. Please try again.",

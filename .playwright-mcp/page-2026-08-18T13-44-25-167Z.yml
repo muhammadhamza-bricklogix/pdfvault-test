@@ -1,0 +1,15 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "PDFVault home" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - img "PDFVault" [ref=e6]
+  - generic [ref=e8]:
+    - button "File upload dropzone" [ref=e10] [cursor=pointer]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: +
+        - paragraph [ref=e14]: Drop your file here
+        - paragraph [ref=e15]: Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first.
+        - generic [ref=e16]: PDF, Word, Excel, PowerPoint, Image · Up to 100.0 MB
+    - paragraph [ref=e17]:
+      - text: or
+      - button "create a blank PDF" [ref=e18]

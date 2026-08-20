@@ -27,6 +27,78 @@ const FORMATS: { id: PageNumberFormat; label: string; sample: string }[] = [
   { id: "n-slash-N", label: "Number / Number", sample: "1/10" },
 ];
 
+/**
+ * Numeric input that lets the user freely edit the text (clear the field,
+ * type intermediate values below the min) and only commits + clamps on blur.
+ * Previous inline `Math.max(min, Number(e.target.value) || fallback)` calls
+ * clamped on every keystroke, so backspacing "12" briefly hit "1" and
+ * snapped to `min`, and clearing the field snapped back to the fallback.
+ */
+function NumberField({
+  className,
+  fallback,
+  max,
+  min,
+  onCommit,
+  value,
+}: {
+  className?: string;
+  fallback: number;
+  max?: number;
+  min: number;
+  onCommit: (n: number) => void;
+  value: number;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  // Reset draft during render when the committed value changes from outside
+  // (e.g. an ancestor set a new default). React's documented "adjusting state
+  // during render" pattern — cheaper than a useEffect sync and avoids the
+  // react-hooks/set-state-in-effect lint rule.
+  const [lastValue, setLastValue] = useState(value);
+
+  if (value !== lastValue) {
+    setLastValue(value);
+    setDraft(String(value));
+  }
+
+  const commit = () => {
+    if (draft.trim() === "") {
+      onCommit(fallback);
+      setDraft(String(fallback));
+
+      return;
+    }
+    const parsed = Number(draft);
+    const safe = Number.isFinite(parsed) ? parsed : fallback;
+    const clamped = Math.max(
+      min,
+      max !== undefined ? Math.min(max, safe) : safe,
+    );
+
+    onCommit(clamped);
+    setDraft(String(clamped));
+  };
+
+  return (
+    <input
+      className={className}
+      inputMode="numeric"
+      max={max}
+      min={min}
+      type="number"
+      value={draft}
+      onBlur={commit}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
+}
+
 function hexToRgb01(hex: string): { b: number; g: number; r: number } {
   const c = hex.replace("#", "");
   const r = parseInt(c.substring(0, 2), 16) / 255;
@@ -52,13 +124,23 @@ function PageNumbersModalContent() {
   const setIsOpen = usePdfEditorStore((s) => s.setIsPageNumbersModalOpen);
   const file = usePdfEditorStore((s) => s.file);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
+  // Seed local state from the store so reopening the modal restores the
+  // user's last-applied settings. Reading once at mount (no selector on the
+  // full object) so live store updates from elsewhere don't clobber
+  // in-progress edits — Apply is the only path that writes back.
+  const savedConfig = usePdfEditorStore.getState().pageNumbersConfig;
+  const setPageNumbersConfig = usePdfEditorStore((s) => s.setPageNumbersConfig);
 
-  const [position, setPosition] = useState<PageNumberPosition>("bottom-center");
-  const [format, setFormat] = useState<PageNumberFormat>("page-n-of-N");
-  const [fontSize, setFontSize] = useState(12);
-  const [margin, setMargin] = useState(24);
-  const [colorHex, setColorHex] = useState("#000000");
-  const [startNumber, setStartNumber] = useState(1);
+  const [position, setPosition] = useState<PageNumberPosition>(
+    savedConfig.position,
+  );
+  const [format, setFormat] = useState<PageNumberFormat>(savedConfig.format);
+  const [fontSize, setFontSize] = useState(savedConfig.fontSize);
+  const [margin, setMargin] = useState(savedConfig.margin);
+  const [colorHex, setColorHex] = useState(savedConfig.colorHex);
+  const [startNumber, setStartNumber] = useState(savedConfig.startNumber);
+  // Page range is intentionally NOT persisted — it depends on the current
+  // file's pageCount, which changes per document.
   const [startPage, setStartPage] = useState(1);
   const [endPage, setEndPage] = useState(pageCount || 1);
 
@@ -70,6 +152,18 @@ function PageNumbersModalContent() {
     const total = pageCount || 1;
     const safeStart = Math.max(1, Math.min(total, startPage));
     const safeEnd = Math.max(safeStart, Math.min(total, endPage));
+    const safeStartNumber = Math.max(1, startNumber);
+
+    // Persist so the next reopen restores the user's choices instead of
+    // snapping back to the built-in defaults (font size 12, etc.).
+    setPageNumbersConfig({
+      colorHex,
+      fontSize,
+      format,
+      margin,
+      position,
+      startNumber: safeStartNumber,
+    });
 
     window.dispatchEvent(
       new CustomEvent("editor:add-page-numbers", {
@@ -81,7 +175,7 @@ function PageNumbersModalContent() {
             format,
             margin,
             position,
-            startNumber: Math.max(1, startNumber),
+            startNumber: safeStartNumber,
             startPage: safeStart,
           },
         },
@@ -179,30 +273,26 @@ function PageNumbersModalContent() {
                 <Label className="mb-1 block text-xs text-default-500">
                   Font size
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={12}
                   max={72}
                   min={6}
-                  type="number"
                   value={fontSize}
-                  onChange={(e) =>
-                    setFontSize(Math.max(6, Number(e.target.value) || 12))
-                  }
+                  onCommit={setFontSize}
                 />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
                   Margin (pt)
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={0}
                   max={144}
                   min={0}
-                  type="number"
                   value={margin}
-                  onChange={(e) =>
-                    setMargin(Math.max(0, Number(e.target.value) || 0))
-                  }
+                  onCommit={setMargin}
                 />
               </div>
               <div>
@@ -220,44 +310,38 @@ function PageNumbersModalContent() {
                 <Label className="mb-1 block text-xs text-default-500">
                   Start at
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={1}
                   min={1}
-                  type="number"
                   value={startNumber}
-                  onChange={(e) =>
-                    setStartNumber(Math.max(1, Number(e.target.value) || 1))
-                  }
+                  onCommit={setStartNumber}
                 />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
                   First page
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={1}
                   max={pageCount}
                   min={1}
-                  type="number"
                   value={startPage}
-                  onChange={(e) =>
-                    setStartPage(Math.max(1, Number(e.target.value) || 1))
-                  }
+                  onCommit={setStartPage}
                 />
               </div>
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
                   Last page
                 </Label>
-                <input
+                <NumberField
                   className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                  fallback={pageCount || 1}
                   max={pageCount}
                   min={1}
-                  type="number"
                   value={endPage}
-                  onChange={(e) =>
-                    setEndPage(Math.max(1, Number(e.target.value) || pageCount))
-                  }
+                  onCommit={setEndPage}
                 />
               </div>
             </div>

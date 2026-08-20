@@ -8,10 +8,21 @@ import { useCallback, useEffect, useRef } from "react";
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionDetail = {
   force?: boolean;
+  // When true, upload the current edits to the user's library but do NOT
+  // call `applyPostSaveReset` — leave `store.file` on the ORIGINAL bytes.
+  // Used by the Download flow (`ExportFormatModal`) so the subsequent
+  // `editor:export` runs a single clean merge against the original file +
+  // live overlays, instead of racing pdf.js reload + Fabric remount against
+  // an already-baked `savedFile`. See ExportFormatModal comment + QA
+  // report 2026-08-19 ("edited changes gone, some appear at the very
+  // bottom" on any download format).
+  skipReset?: boolean;
   onComplete: (result: {
     ok: boolean;
     reason?:
@@ -57,6 +68,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
     });
 
     try {
+      logger.event(EVENTS.SAVE_START, "info", { source: "button" });
       // Force the upload on explicit user click — bypasses the
       // `hasUnsavedChanges` short-circuit so the current editor state
       // is GUARANTEED to land as a fresh version on the backend, even
@@ -65,12 +77,19 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       // and navigation saves keep the short-circuit (force omitted).
       // QA report 2026-06-16: "even the most recent changes are not
       // saved in the version."
-      const result = await persistEditorDocument({
-        fabricCanvas: fabricRef.current,
-        force: true,
-      });
+      const result = await logger.span(
+        "save.persist",
+        "editor.save",
+        () =>
+          persistEditorDocument({
+            fabricCanvas: fabricRef.current,
+            force: true,
+          }),
+        { source: "button" },
+      );
 
       if (!result.ok) {
+        logger.event(EVENTS.SAVE_BLOCKED, "warning", { reason: result.reason });
         if (result.reason === "no-changes") {
           toast.info({
             title: "Already saved",
@@ -127,9 +146,16 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);
       }
 
+      logger.event(EVENTS.SAVE_OK, "info", { documentId: id });
       toast.success({
         title: "Saved",
         description: "Your PDF was saved to your library.",
+      });
+    } catch (err) {
+      logger.captureError(err, "save.button");
+      toast.error({
+        title: "Save failed",
+        description: "We couldn't save your edits. Please try again.",
       });
     } finally {
       toast.close(loadingKey);
@@ -156,12 +182,37 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
 
       if (!onComplete) return;
 
-      const result = await persistEditorDocument({
-        fabricCanvas: fabricRef.current,
-        force: detail?.force,
+      logger.event(EVENTS.SAVE_BEFORE_ACTION_START, "info", {
+        force: Boolean(detail?.force),
       });
+      const result = await logger.span(
+        "save.persist_before_action",
+        "editor.save",
+        () =>
+          persistEditorDocument({
+            fabricCanvas: fabricRef.current,
+            force: detail?.force,
+          }),
+        { source: "before_action" },
+      );
 
       if (result.ok) {
+        if (detail?.skipReset) {
+          // Download flow: cloud save succeeded, but the caller is about to
+          // fire `editor:export` immediately. Skipping the reset keeps
+          // `store.file` on the ORIGINAL bytes so the export merge runs
+          // against a stable source + live-canvas overlays. If we swapped to
+          // `savedFile` here, pdf.js would reload and Fabric would remount
+          // mid-flight, racing the export's `buildEditedPdfBytes` against a
+          // moving `store.file` — producing double-baked / dropped edits.
+          logger.event(EVENTS.SAVE_BEFORE_ACTION_OK, "info", {
+            documentId: result.document.id,
+          });
+          onComplete({ ok: true });
+
+          return;
+        }
+
         // Commit the saved bytes as the new editor baseline. Without this,
         // downstream readers (Manage Pages thumbnails, exports) still see the
         // pre-edit source PDF until the next full reload — the visible bug
@@ -197,11 +248,17 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           });
         });
 
+        logger.event(EVENTS.SAVE_BEFORE_ACTION_OK, "info", {
+          documentId: result.document.id,
+        });
         onComplete({ ok: true });
 
         return;
       }
 
+      logger.event(EVENTS.SAVE_BEFORE_ACTION_BLOCKED, "warning", {
+        reason: result.reason,
+      });
       // `no-changes` is a benign short-circuit (dirty flag was already clean
       // by the time the save ran). Treat as success — nothing to commit and
       // nothing to lose by proceeding. Every other failure reason is

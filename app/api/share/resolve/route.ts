@@ -1,8 +1,6 @@
 import type { NextRequest } from "next/server";
 
-import { denyList } from "@/lib/server/share/deny-list";
-import { bytesStore } from "@/lib/server/share/bytes-store";
-import { verifyToken } from "@/lib/server/share/sign-token";
+import { resolveShare } from "@/lib/server/share/resolve-share";
 import {
   mintViewCookie,
   viewCookieAttributes,
@@ -26,53 +24,28 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest): Promise<Response> {
   const token = req.nextUrl.searchParams.get("t");
+  const result = await resolveShare(token);
 
-  if (!token) {
-    return Response.json({ ok: false, reason: "malformed" } as const, {
-      status: 400,
-      headers: { "Cache-Control": "no-store" },
-    });
-  }
+  if (!result.ok) {
+    const status =
+      result.reason === "not-found"
+        ? 404
+        : result.reason === "expired" || result.reason === "revoked"
+          ? 410
+          : 400;
 
-  const verify = await verifyToken(token);
-
-  if (!verify.ok) {
-    const status = verify.reason === "expired" ? 410 : 400;
-
-    return Response.json({ ok: false, reason: verify.reason } as const, {
+    return Response.json({ ok: false, reason: result.reason } as const, {
       status,
       headers: { "Cache-Control": "no-store" },
     });
   }
 
-  const { claims } = verify;
-
-  if (await denyList.has(claims.jti)) {
-    return Response.json({ ok: false, reason: "revoked" } as const, {
-      status: 410,
-      headers: { "Cache-Control": "no-store" },
-    });
-  }
-
-  // Check bytes are still present — in the in-memory MVP impl, a
-  // server restart wipes them and we want the viewer to show
-  // "not-found" rather than 500ing later.
-  const present = await bytesStore.get(claims.jti);
-
-  if (!present) {
-    return Response.json({ ok: false, reason: "not-found" } as const, {
-      status: 404,
-      headers: { "Cache-Control": "no-store" },
-    });
-  }
-
-  const requiresPassword = claims.pw === 1;
   const headers: Record<string, string> = { "Cache-Control": "no-store" };
 
   // Password-less shares: mint the view cookie now so the viewer can
   // pull bytes without an extra round-trip.
-  if (!requiresPassword) {
-    const cookie = await mintViewCookie(claims.jti);
+  if (!result.requiresPassword && token) {
+    const cookie = await mintViewCookie(result.jti);
 
     headers["Set-Cookie"] =
       `${VIEW_COOKIE_NAME}=${cookie}; ${viewCookieAttributes(token)}`;
@@ -81,9 +54,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   return Response.json(
     {
       ok: true,
-      name: claims.name ?? "Shared PDF",
-      expiresAt: claims.exp,
-      requiresPassword,
+      name: result.name,
+      expiresAt: result.expiresAt,
+      requiresPassword: result.requiresPassword,
     } as const,
     { status: 200, headers },
   );

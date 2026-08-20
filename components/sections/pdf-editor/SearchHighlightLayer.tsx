@@ -7,6 +7,25 @@ type Props = {
   zoom: number;
 };
 
+// Lazy-initialised offscreen canvas for measuring text proportions.
+// Module-level singleton — safe in "use client" because this module only
+// ever loads in the browser. Created on first use, reused across renders.
+let _measureCtx: CanvasRenderingContext2D | null = null;
+
+function getMeasureCtx(): CanvasRenderingContext2D | null {
+  if (_measureCtx !== null) return _measureCtx;
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  if (ctx) {
+    ctx.font = "16px sans-serif";
+    _measureCtx = ctx;
+  }
+
+  return _measureCtx;
+}
+
 /**
  * Renders translucent highlight rects over text matches on the current page.
  * Positioned absolutely inside the `containerRef` div in PdfViewerCanvas
@@ -20,8 +39,10 @@ type Props = {
  *     cssLeft = tx * zoom
  *     cssTop  = (pageHeight − ty − itemHeight) * zoom
  *
- * Character-level x-offsets within a single item are approximated
- * proportionally (uniform glyph-width assumption).
+ * Character-level x-offsets within a single item use canvas measureText
+ * (sans-serif proxy) for variable-width font accuracy instead of the naive
+ * uniform char-count assumption. Falls back to char-count when document
+ * is unavailable (SSR path, though this is a client-only component).
  */
 export function SearchHighlightLayer({ currentPage, zoom }: Props) {
   const { isOpen, query, matches, currentMatchIndex, textIndex } =
@@ -38,6 +59,7 @@ export function SearchHighlightLayer({ currentPage, zoom }: Props) {
   if (pageMatches.length === 0) return null;
 
   const { items, pageHeight } = pageData;
+  const ctx = getMeasureCtx();
 
   return (
     <div
@@ -62,13 +84,32 @@ export function SearchHighlightLayer({ currentPage, zoom }: Props) {
           const fullWidth = item.width * zoom;
           const cssHeight = Math.max(item.height * zoom, 8);
 
-          // Proportional x-offset for partial item matches.
-          const totalChars = item.str.length || 1;
-          const preX = fullWidth * (span.charStart / totalChars);
-          const spanW = Math.max(
-            fullWidth * ((span.charEnd - span.charStart) / totalChars),
-            4,
-          );
+          // Use canvas measureText (sans-serif proxy) to compute proportional
+          // widths for variable-width fonts instead of the naive char-count
+          // ratio. This fixes highlight overflow when unmatched chars are wider
+          // than matched chars (e.g. "CAT" in "CAT5" where "5" occupies more
+          // advance width than its 1/4 char-count share). Falls back to uniform
+          // char-count when the context is unavailable.
+          const str = item.str;
+          let preRatio = span.charStart / (str.length || 1);
+          let spanRatio = (span.charEnd - span.charStart) / (str.length || 1);
+
+          if (ctx && str.length > 1) {
+            const totalW = ctx.measureText(str).width;
+
+            if (totalW > 0) {
+              preRatio =
+                span.charStart > 0
+                  ? ctx.measureText(str.slice(0, span.charStart)).width / totalW
+                  : 0;
+              spanRatio =
+                ctx.measureText(str.slice(span.charStart, span.charEnd)).width /
+                totalW;
+            }
+          }
+
+          const preX = fullWidth * preRatio;
+          const spanW = Math.max(fullWidth * spanRatio, 4);
 
           return (
             <div

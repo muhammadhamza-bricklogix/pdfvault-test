@@ -1,0 +1,261 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "PDFVault home" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img "PDFVault" [ref=e8]
+        - button "Toggle navigation menu" [ref=e10]
+    - main [ref=e13]:
+      - region [ref=e14]:
+        - generic [ref=e15]:
+          - heading "Edit, sign, or convert any PDF in seconds" [level=1] [ref=e16]
+          - paragraph [ref=e17]: Sign, edit, protect and much more. Keep important documents in one secure workspace without losing track of files that matter.
+        - generic [ref=e19]:
+          - button "Upload a file. Drop a file here, or activate to browse." [ref=e21] [cursor=pointer]:
+            - button "Choose File" [ref=e22]
+            - generic [ref=e23]:
+              - heading "Drag & drop file to edit" [level=2] [ref=e24]
+              - generic [ref=e25]: OR
+              - button "Upload to Edit" [ref=e29]
+              - paragraph [ref=e30]: Size upto 100 MB
+            - paragraph [ref=e31]
+          - list [ref=e32]:
+            - listitem [ref=e33]: Secure document storage
+            - listitem [ref=e37]: Edit in your browser
+            - listitem [ref=e41]: Personal file library
+      - region "Get started in three simple steps" [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - heading "Get started in three simple steps" [level=2] [ref=e48]
+            - paragraph [ref=e49]: From upload to a securely saved document, PDFVault makes it easy to handle every PDF in one place.
+          - list [ref=e50]:
+            - listitem [ref=e51]:
+              - heading "Bring in your document" [level=3] [ref=e52]
+              - paragraph [ref=e53]: Upload from your device.
+            - listitem [ref=e54]:
+              - heading "Make it yours" [level=3] [ref=e55]
+              - paragraph [ref=e56]: Edit, convert, compress, protect, organize, or sign your document with the tools you need.
+            - listitem [ref=e57]:
+              - heading "Save it to your vault" [level=3] [ref=e58]
+              - paragraph [ref=e59]: Keep the latest version in your personal document library, ready whenever you need it again.
+      - region [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - heading "Every tool you need to work with PDFs in one place" [level=2] [ref=e63]
+            - paragraph [ref=e65]: Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.
+          - tablist "Tool categories" [ref=e67]:
+            - tab "PDF Composer" [selected] [ref=e68] [cursor=pointer]
+            - tab "Convert to PDF" [ref=e71] [cursor=pointer]
+            - tab "Compress PDF" [ref=e74] [cursor=pointer]
+            - tab "Convert from PDF" [ref=e77] [cursor=pointer]
+            - tab "Others" [ref=e80] [cursor=pointer]
+          - list [ref=e83]:
+            - listitem [ref=e84]:
+              - link "Edit Revise text and objects inline with our full in-browser PDF composer." [ref=e85] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1
+                - heading "Edit" [level=3] [ref=e87]
+                - paragraph [ref=e88]: Revise text and objects inline with our full in-browser PDF composer.
+            - listitem [ref=e92]:
+              - link "Sign Add your signature with vector strokes." [ref=e93] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=watermark
+                - heading "Sign" [level=3] [ref=e95]
+                - paragraph [ref=e96]: Add your signature with vector strokes.
+            - listitem [ref=e100]:
+              - link "Organize Pages Reorder, insert, and rotate thumbnails until the flow is right." [ref=e101] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=manage
+                - heading "Organize Pages" [level=3] [ref=e103]
+                - paragraph [ref=e104]: Reorder, insert, and rotate thumbnails until the flow is right.
+            - listitem [ref=e108]:
+              - link "Split & Extract Pages Pull out the pages you need or split a long file into lighter ones." [ref=e109] [cursor=pointer]:
+                - /url: /pdf-composer?fresh=1&tool=split
+                - heading "Split & Extract Pages" [level=3] [ref=e111]
+                - paragraph [ref=e112]: Pull out the pages you need or split a long file into lighter ones.
+          - button "View more (+4)" [ref=e117]:
+            - text: View more
+            - generic [ref=e118]: (+4)
+      - generic [ref=e122]:
+        - heading "Edit and manage PDF documents with ease" [level=2] [ref=e123]
+        - link "Create your free vault" [ref=e124] [cursor=pointer]:
+          - /url: /sign-up
+      - region "See what people are saying about pdfvault." [ref=e127]:
+        - heading "See what people are saying about pdfvault." [level=2] [ref=e130]
+        - generic [ref=e131]:
+          - generic [ref=e133]:
+            - article [ref=e134]:
+              - generic [ref=e136]:
+                - paragraph [ref=e137]: Sarah Chen
+                - paragraph [ref=e138]: "@sarahchen"
+              - paragraph [ref=e139]: Just integrated @Pdfvault into my workflow and it's a game changer for document management! 🚀
+            - article [ref=e140]:
+              - generic [ref=e142]:
+                - paragraph [ref=e143]: Alex Reyes
+                - paragraph [ref=e144]: "@alexreyes"
+              - paragraph [ref=e145]: Can't believe I was managing my PDFs without @Pdfvault before. It's a must-have tool! 📚
+            - article [ref=e146]:
+              - generic [ref=e148]:
+                - paragraph [ref=e149]: Jasmine Patel
+                - paragraph [ref=e150]: "@jasminepatel"
+              - paragraph [ref=e151]: Shoutout to @Pdfvault for making collaborative document editing a breeze. Highly recommend! 💻✨
+            - article [ref=e152]:
+              - generic [ref=e154]:
+                - paragraph [ref=e155]: Ethan Brooks
+                - paragraph [ref=e156]: "@ethanbrooks"
+              - paragraph [ref=e157]: Merging and signing contracts used to take ages. With @Pdfvault it's a couple of clicks. ✍️
+            - article [ref=e158]:
+              - generic [ref=e160]:
+                - paragraph [ref=e161]: Sarah Chen
+                - paragraph [ref=e162]: "@sarahchen"
+              - paragraph [ref=e163]: Just integrated @Pdfvault into my workflow and it's a game changer for document management! 🚀
+            - article [ref=e164]:
+              - generic [ref=e166]:
+                - paragraph [ref=e167]: Alex Reyes
+                - paragraph [ref=e168]: "@alexreyes"
+              - paragraph [ref=e169]: Can't believe I was managing my PDFs without @Pdfvault before. It's a must-have tool! 📚
+            - article [ref=e170]:
+              - generic [ref=e172]:
+                - paragraph [ref=e173]: Jasmine Patel
+                - paragraph [ref=e174]: "@jasminepatel"
+              - paragraph [ref=e175]: Shoutout to @Pdfvault for making collaborative document editing a breeze. Highly recommend! 💻✨
+            - article [ref=e176]:
+              - generic [ref=e178]:
+                - paragraph [ref=e179]: Ethan Brooks
+                - paragraph [ref=e180]: "@ethanbrooks"
+              - paragraph [ref=e181]: Merging and signing contracts used to take ages. With @Pdfvault it's a couple of clicks. ✍️
+          - generic [ref=e183]:
+            - article [ref=e184]:
+              - generic [ref=e186]:
+                - paragraph [ref=e187]: Morgan Linton
+                - paragraph [ref=e188]: "@morganlinton"
+              - paragraph [ref=e189]: If you're coding with AI, and haven't discovered @Pdfvault yet, prepare to have your mind blown 🤯
+            - article [ref=e190]:
+              - generic [ref=e192]:
+                - paragraph [ref=e193]: Jessica Tran
+                - paragraph [ref=e194]: "@jessicatran"
+              - paragraph [ref=e195]: Pdfvault has transformed my workflow. Editing PDFs has never been so seamless! 🚀
+            - article [ref=e196]:
+              - generic [ref=e198]:
+                - paragraph [ref=e199]: David Kim
+                - paragraph [ref=e200]: "@davidkim"
+              - paragraph [ref=e201]: The features are intuitive, and the interface is sleek. Pdfvault is a game changer! 💼
+            - article [ref=e202]:
+              - generic [ref=e204]:
+                - paragraph [ref=e205]: Samantha Lee
+                - paragraph [ref=e206]: "@samanthalee"
+              - paragraph [ref=e207]: I can't believe how easy it is to collaborate on documents with Pdfvault. It's a must-have tool! 🙌
+            - article [ref=e208]:
+              - generic [ref=e210]:
+                - paragraph [ref=e211]: Morgan Linton
+                - paragraph [ref=e212]: "@morganlinton"
+              - paragraph [ref=e213]: If you're coding with AI, and haven't discovered @Pdfvault yet, prepare to have your mind blown 🤯
+            - article [ref=e214]:
+              - generic [ref=e216]:
+                - paragraph [ref=e217]: Jessica Tran
+                - paragraph [ref=e218]: "@jessicatran"
+              - paragraph [ref=e219]: Pdfvault has transformed my workflow. Editing PDFs has never been so seamless! 🚀
+            - article [ref=e220]:
+              - generic [ref=e222]:
+                - paragraph [ref=e223]: David Kim
+                - paragraph [ref=e224]: "@davidkim"
+              - paragraph [ref=e225]: The features are intuitive, and the interface is sleek. Pdfvault is a game changer! 💼
+            - article [ref=e226]:
+              - generic [ref=e228]:
+                - paragraph [ref=e229]: Samantha Lee
+                - paragraph [ref=e230]: "@samanthalee"
+              - paragraph [ref=e231]: I can't believe how easy it is to collaborate on documents with Pdfvault. It's a must-have tool! 🙌
+      - region [ref=e232]:
+        - generic [ref=e233]:
+          - heading "Frequently Asked Questions" [level=2] [ref=e235]
+          - tablist "FAQ categories" [ref=e236]:
+            - tab "Getting Started" [selected] [ref=e237]
+            - tab "Pricing & Billing" [ref=e238]
+            - tab "Cancellations & Refunds" [ref=e239]
+            - tab "Privacy & Security" [ref=e240]
+            - tab "Tools & Features" [ref=e241]
+          - tabpanel "Getting Started" [ref=e242]:
+            - list [ref=e243]:
+              - listitem [ref=e244]:
+                - button "What is PDFVault?" [ref=e245]
+                - region "What is PDFVault?":
+                  - generic: PDFVault is an all-in-one website for everyday document work — converting, editing, signing, compressing, merging, splitting, and more. Core tools are free to use, with no account required.
+              - listitem [ref=e250]:
+                - button "Do I need an account to use PDFVault?" [ref=e251]
+                - region "Do I need an account to use PDFVault?":
+                  - generic: No. Core tools are available without an account. Creating an account lets you save files to your vault and access premium features like downloading edited or converted files.
+              - listitem [ref=e256]:
+                - button "What file types does PDFVault support?" [ref=e257]
+                - region "What file types does PDFVault support?":
+                  - generic: PDFVault works with PDF files as well as common formats like Word, Excel, PowerPoint, and images (JPG, PNG), which can be converted to and from PDF.
+          - generic [ref=e262]:
+            - heading "Still have questions?" [level=3] [ref=e263]
+            - paragraph [ref=e264]:
+              - text: Reach out any time at
+              - link "support@pdfvault.ai" [ref=e265] [cursor=pointer]:
+                - /url: mailto:support@pdfvault.ai
+              - text: or visit our
+              - link "Contact Us" [ref=e266] [cursor=pointer]:
+                - /url: /contact
+              - text: page.
+    - contentinfo [ref=e267]:
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - generic [ref=e270]:
+            - img "PDFVault" [ref=e271]
+            - paragraph [ref=e272]: A smarter, more secure place for your PDFs.
+            - link "support@pdfvault.ai" [ref=e274] [cursor=pointer]:
+              - /url: mailto:support@pdfvault.ai
+          - navigation "TOOLS" [ref=e277]:
+            - heading "TOOLS" [level=2] [ref=e278]
+            - list [ref=e279]:
+              - listitem [ref=e280]:
+                - link "Edit & SIgn" [ref=e281] [cursor=pointer]:
+                  - /url: /pdf-composer
+              - listitem [ref=e282]:
+                - link "Compress" [ref=e283] [cursor=pointer]:
+                  - /url: /pdf-composer?fresh=1&tool=compress
+              - listitem [ref=e284]:
+                - link "Convert" [ref=e285] [cursor=pointer]:
+                  - /url: /convert/pdf-to-word
+          - navigation "COMPANY" [ref=e286]:
+            - heading "COMPANY" [level=2] [ref=e287]
+            - list [ref=e288]:
+              - listitem [ref=e289]:
+                - link "About Us" [ref=e290] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e291]:
+                - link "Contact Us" [ref=e292] [cursor=pointer]:
+                  - /url: /contact
+          - navigation "LEGAL" [ref=e293]:
+            - heading "LEGAL" [level=2] [ref=e294]
+            - list [ref=e295]:
+              - listitem [ref=e296]:
+                - link "Privacy Policy" [ref=e297] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e298]:
+                - link "Terms & Conditions" [ref=e299] [cursor=pointer]:
+                  - /url: /terms-and-conditions
+              - listitem [ref=e300]:
+                - link "Subscription Terms" [ref=e301] [cursor=pointer]:
+                  - /url: /subscription-terms
+              - listitem [ref=e302]:
+                - link "Refund Policy" [ref=e303] [cursor=pointer]:
+                  - /url: /refund
+              - listitem [ref=e304]:
+                - link "Cookie Policy" [ref=e305] [cursor=pointer]:
+                  - /url: /cookies
+              - listitem [ref=e306]:
+                - link "Do Not Sell" [ref=e307] [cursor=pointer]:
+                  - /url: /do-not-sell
+          - navigation "ACCOUNT" [ref=e308]:
+            - heading "ACCOUNT" [level=2] [ref=e309]
+            - list [ref=e310]:
+              - listitem [ref=e311]:
+                - link "Login" [ref=e312] [cursor=pointer]:
+                  - /url: /sign-in
+              - listitem [ref=e313]:
+                - link "Register" [ref=e314] [cursor=pointer]:
+                  - /url: /sign-up
+        - generic [ref=e316]:
+          - paragraph [ref=e317]: © 2026, PDFVault All rights reserved.
+          - paragraph [ref=e318]: FLUTTWINGS INVESTMENTS LIMITED, Nicosia, Cyprus
+  - button "Open Next.js Dev Tools" [ref=e324] [cursor=pointer]

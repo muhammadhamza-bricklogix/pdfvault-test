@@ -40,7 +40,7 @@ const TOOLS: Tool[] = [
   // ─── Edit & Sign ────────────────────────────────────────────────────────
   {
     icon: "/landing/editor.svg",
-    title: "Edit & Sign",
+    title: "Edit",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
     href: TOOL_ROUTE.editor,
@@ -48,10 +48,17 @@ const TOOLS: Tool[] = [
   },
   {
     icon: "/landing/signature.svg",
-    title: "Sign & Watermark",
-    description: "Sign and watermark with vector strokes.",
+    title: "Sign",
+    description: "Add your signature with vector strokes.",
     href: TOOL_ROUTE.watermark,
-    tabs: ["edit", "others"],
+    tabs: ["edit"],
+  },
+  {
+    icon: "/landing/editor.svg",
+    title: "Watermark",
+    description: "Stamp a watermark with vector strokes.",
+    href: TOOL_ROUTE.watermark,
+    tabs: ["others"],
   },
   {
     icon: "/landing/organize.svg",

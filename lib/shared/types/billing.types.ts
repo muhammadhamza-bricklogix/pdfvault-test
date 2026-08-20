@@ -41,6 +41,13 @@ export interface CheckoutIntentRequest {
   disclaimerVersion: string;
 }
 
+export interface AlternatePlanPricing {
+  planKind: string;
+  amountTodayMinor: number;
+  amountRenewMinor: number;
+  currency: string;
+}
+
 export interface CheckoutIntent {
   merchant: string;
   paymentIntent: string;
@@ -50,6 +57,13 @@ export interface CheckoutIntent {
   amountRenewMinor: number;
   renewalDate: string;
   currency: string;
+  /**
+   * Pricing for every other selectable plan (annual / downsells) in
+   * the same currency the user was quoted for the current plan. Lets
+   * the paywall render every plan card without a second checkout-intent
+   * round-trip.
+   */
+  alternatePlans?: AlternatePlanPricing[];
 }
 
 export interface Invoice {

@@ -131,3 +131,24 @@ export function viewCookieAttributes(token: string): string {
 
   return `Path=${path}; HttpOnly${secure}; SameSite=Lax; Max-Age=${maxAge}`;
 }
+
+/**
+ * Structured cookie options for the Next.js `cookies()` API. Same
+ * attributes as `viewCookieAttributes()` but in the shape that
+ * `cookieStore.set()` expects.
+ */
+export function viewCookieOptions(token: string): {
+  path: string;
+  httpOnly: true;
+  secure: boolean;
+  sameSite: "lax";
+  maxAge: number;
+} {
+  return {
+    path: `/api/share/bytes/${encodeURIComponent(token)}`,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: Math.floor(VIEW_TTL_MS / 1000),
+  };
+}

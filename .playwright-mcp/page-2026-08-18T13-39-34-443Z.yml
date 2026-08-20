@@ -1,0 +1,69 @@
+- generic [active]:
+  - generic [ref=e323] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e324]
+    - generic [ref=e328]:
+      - button "Open issues overlay" [ref=e329]:
+        - generic [ref=e330]:
+          - generic [ref=e331]: "4"
+          - generic [ref=e332]: "5"
+        - generic [ref=e333]:
+          - text: Issue
+          - generic [ref=e334]: s
+      - button "Collapse issues badge" [ref=e335]
+  - alert [ref=e338]: PDF Composer | pdfvault.ai
+  - generic [ref=e340]:
+    - generic [ref=e341]:
+      - generic [ref=e342]:
+        - generic [ref=e343]:
+          - generic [ref=e344]:
+            - button "Undo" [disabled]
+            - button "Redo" [disabled]
+          - button "Browse all tools" [ref=e345] [cursor=pointer]
+        - generic [ref=e346]:
+          - button "Save" [ref=e347] [cursor=pointer]
+          - button "Search" [ref=e348] [cursor=pointer]
+          - button "Print" [ref=e349] [cursor=pointer]
+          - button "Download" [ref=e350] [cursor=pointer]
+          - button "Share" [ref=e351] [cursor=pointer]
+          - button "Done" [ref=e352] [cursor=pointer]
+      - button "Show pages" [ref=e354] [cursor=pointer]
+    - generic [ref=e355]:
+      - generic:
+        - search:
+          - textbox:
+            - /placeholder: Search in PDF…
+          - generic:
+            - button [disabled]
+            - button [disabled]
+          - button
+      - generic [ref=e359]:
+        - img "PDF page 1 of 3" [ref=e360]
+        - application "PDF editing canvas, page 1 of 3" [ref=e361]
+    - toolbar "Editor dock" [ref=e362]:
+      - generic [ref=e363]:
+        - button "Manage pages" [ref=e364] [cursor=pointer]:
+          - generic [ref=e365]: Manage
+        - generic [ref=e366]:
+          - group "Drawing tools" [ref=e367]:
+            - radiogroup [ref=e368]:
+              - radio "Select" [checked] [ref=e369] [cursor=pointer]
+              - radio "Edit Text" [ref=e371] [cursor=pointer]
+              - radio "Signature" [ref=e373] [cursor=pointer]
+              - radio "Add Text" [ref=e375] [cursor=pointer]
+              - radio "Draw" [ref=e377] [cursor=pointer]
+              - radio "Highlight" [ref=e379] [cursor=pointer]
+              - radio "Shapes" [ref=e381] [cursor=pointer]
+              - radio "Eraser" [ref=e383] [cursor=pointer]
+              - radio "Whiteout" [ref=e385] [cursor=pointer]
+              - radio "Redact" [ref=e387] [cursor=pointer]
+              - radio "Image" [ref=e389] [cursor=pointer]
+              - radio "Watermark" [ref=e391] [cursor=pointer]
+              - radio "Background" [ref=e393] [cursor=pointer]
+          - button "Compress" [ref=e395]
+          - button "Secure" [ref=e399]
+          - button "Merge" [ref=e404]
+          - button "Split" [ref=e409]
+          - button "Flatten" [ref=e414]
+          - button "Extract" [ref=e420]
+          - button "Page No." [ref=e425]
+          - button "Annotation" [ref=e430]
