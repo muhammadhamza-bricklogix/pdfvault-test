@@ -926,10 +926,7 @@ export async function mergeFabricEditsIntoPdf({
             spatialSample: spatial,
           });
         } catch (diagErr) {
-          logger.warn(
-            "[PDFedits] EXPORT-DIAG: coord ctx log failed",
-            diagErr,
-          );
+          logger.warn("[PDFedits] EXPORT-DIAG: coord ctx log failed", diagErr);
         }
 
         // Whiteout pre-pass — paints opaque white rectangles over the

@@ -602,28 +602,36 @@ export function drawPath(
 
   const { left, top } = resolveTopLeft(obj);
 
-  // Fabric Path stores path coords relative to the path's own bounding box.
-  // pathOffset is the center of the path in its local coordinate system.
-  const pathOffsetX = (obj.pathOffset?.x as number) || 0;
-  const pathOffsetY = (obj.pathOffset?.y as number) || 0;
-
-  // Transform path coords: scale by object's scale and canvas-to-PDF scale,
-  // then Y-flip for PDF coordinate system.
+  // Fabric v6 Path coordinate model:
+  //   - `obj.path` holds path commands with coords already NORMALIZED to
+  //     the local bbox space (0..width, 0..height in Fabric Y-down).
+  //   - `obj.left` / `obj.top` = bbox top-left in canvas base coords.
+  //   - `obj.pathOffset` = bbox centre in local coords, used ONLY by
+  //     Fabric's on-canvas renderer to translate before drawing so the
+  //     path stays centred on the object origin. It does NOT belong in
+  //     the export math because we position the SVG by the bbox top-left
+  //     directly and the local path coords already start at 0.
+  //
+  // The previous implementation added `+ pathOffset * scale` to both
+  // pdfX and pdfY. On a mid-page freehand highlight (e.g. left=200,
+  // top=400, pathOffset≈(width/2, height/2)) that pushed pdfY toward
+  // `pdfHeight`, rendering the path at the very TOP of the exported
+  // PDF instead of where the user drew — QA report 2026-08-20. The
+  // highlight tool (`use-highlight-tool.ts`) switched from Rect →
+  // PencilBrush in commit 2acec7d, which was when this bug surfaced.
   const totalScaleX = scaleX * ctx.scaleX;
   const totalScaleY = scaleY * ctx.scaleY;
 
+  // Y-flip on the SVG path stays: pdf-lib's `drawSvgPath` treats SVG
+  // coords as PDF-native (Y increases upward). Fabric path is Y-down,
+  // so negate Y here to convert. Positioned at the bbox top-left in
+  // PDF space, the Y-flipped path naturally extends DOWNWARD (PDF Y
+  // decreases) from that anchor — matching the on-screen orientation.
   const transformed = transformPathCoords(pathArray, totalScaleX, -totalScaleY);
   const svgPath = fabricPathToSvgString(transformed);
 
-  // Position: the path's origin in PDF space.
-  // left/top is the bounding box top-left in Fabric (after origin resolution).
-  // pathOffset is the center of the path data — we need to translate so that
-  // the transformed path lands at the correct position.
-  const pdfX = toPdfX(left, ctx) + toPdfDim(pathOffsetX * scaleX, ctx.scaleX);
-  const pdfY =
-    ctx.pdfHeight -
-    toPdfDim(top, ctx.scaleY) -
-    toPdfDim(pathOffsetY * scaleY, ctx.scaleY);
+  const pdfX = toPdfX(left, ctx);
+  const pdfY = ctx.pdfHeight - toPdfDim(top, ctx.scaleY);
 
   const strokeColor = hexToPdfColor(obj.stroke as string);
   const fillColor = hexToPdfColor(obj.fill as string);
