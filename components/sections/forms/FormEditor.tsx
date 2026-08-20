@@ -100,22 +100,28 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
     [],
   );
 
-  // Bootstrap once. We never re-fetch a session by id and we don't persist
-  // intermediate values — values exist only in the browser until finalize.
+  // Bootstrap the session. Ref only flips true AFTER a successful hydrate
+  // so a failed bootstrap (backend 401 on the public /w-9 URL, cold-start
+  // network flake, worker not yet deployed, etc.) can be retried. Without
+  // the post-success gate, the ref latched at the top of the effect and
+  // the app got stuck at "Starting session…" forever — every downstream
+  // action (Signature, Done) then failed with "No session yet".
   const bootstrappedRef = useRef(false);
+  const inFlightRef = useRef(false);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
 
   useEffect(() => {
     if (bootstrappedRef.current) return;
-    bootstrappedRef.current = true;
+    if (inFlightRef.current) return;
 
-    let cancelled = false;
+    inFlightRef.current = true;
 
     async function bootstrap() {
       try {
         const session = await start.mutateAsync({ formId });
 
-        if (cancelled) return;
         hydrate(session);
+        bootstrappedRef.current = true;
       } catch (err) {
         toast.error({
           title: "Couldn't start the form",
@@ -124,15 +130,22 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
               ? err.message
               : "Please try again in a moment.",
         });
+      } finally {
+        inFlightRef.current = false;
       }
     }
 
     bootstrap();
+    // `bootstrapAttempt` is incremented by the Retry button to re-run this
+    // effect after a failure; the guards above dedupe the StrictMode
+    // double-fire so retries can't stack concurrent /start requests.
+  }, [formId, bootstrapAttempt]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [formId]);
+  const retryBootstrap = useCallback(() => {
+    if (inFlightRef.current) return;
+    bootstrappedRef.current = false;
+    setBootstrapAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => () => reset(), [reset]);
 
@@ -174,13 +187,39 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <p className="hidden text-xs text-default-500 md:block">
-            {sessionId
-              ? `Session ${sessionId.slice(0, 8)}…`
-              : "Starting session…"}
-          </p>
+          {/* Session status. Error state exposes a Retry button so a
+              failed bootstrap (backend down, cold-start 401, network flake)
+              isn't a dead end — otherwise every downstream action fails
+              silently with "session not started yet". */}
+          {sessionId ? (
+            <p className="hidden text-xs text-default-500 md:block">
+              Session {sessionId.slice(0, 8)}…
+            </p>
+          ) : start.isError ? (
+            <div className="hidden items-center gap-2 md:flex">
+              <p className="text-xs text-red-600">
+                Couldn&apos;t start session.
+              </p>
+              <Button
+                isDisabled={start.isPending}
+                size="sm"
+                variant="tertiary"
+                onPress={retryBootstrap}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <p className="hidden text-xs text-default-500 md:block">
+              Starting session…
+            </p>
+          )}
           <Button
             aria-label="Add signature"
+            // Disable while there's no session — otherwise the modal opens,
+            // the user draws / types / uploads, then Apply throws "No
+            // session yet". Better to prevent the dead-end up front.
+            isDisabled={!sessionId}
             size="sm"
             variant={signatureKey ? "secondary" : "tertiary"}
             onPress={() => setSignatureOpen(true)}
