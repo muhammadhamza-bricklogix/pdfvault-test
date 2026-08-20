@@ -142,13 +142,19 @@ export function ShareModal({
                     {EXPIRY_PRESETS.map((p) => {
                       const checked = expiry === p.id;
 
+                      // `ring-inset` keeps the selection ring inside the
+                      // button's border-box. Without it, the 2px outer
+                      // ring on the leftmost pill bleeds past the flex
+                      // container's left edge and gets clipped by
+                      // `Modal.Body`'s overflow, so "24 hours" looks
+                      // half-cut when selected.
                       return (
                         <button
                           key={p.id}
                           aria-pressed={checked}
                           className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                             checked
-                              ? "border-accent bg-accent/5 ring-2 ring-accent"
+                              ? "border-accent bg-accent/5 ring-2 ring-inset ring-accent"
                               : "border-default-200 hover:bg-default-50"
                           }`}
                           type="button"
