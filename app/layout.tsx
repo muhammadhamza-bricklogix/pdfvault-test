@@ -119,6 +119,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Trustpilot AFS invitation register key. Public — safe to bake into
+  // the client bundle (it ships to every visitor anyway, so it's not a
+  // secret). Hardcoded fallback ensures the loader fires in every
+  // environment even without explicit env config; setting
+  // NEXT_PUBLIC_TRUSTPILOT_INVITE_ID overrides for key rotation without
+  // a code change. Dev is still skipped by the NODE_ENV guard so local
+  // work doesn't spam Trustpilot's crawler with test hits.
+  const TRUSTPILOT_INVITE_ID_DEFAULT = "8RKmNv4GASChIZiA";
+  const trustpilotInviteId =
+    process.env.NODE_ENV === "development"
+      ? process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID
+      : (process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID ??
+        TRUSTPILOT_INVITE_ID_DEFAULT);
+
   return (
     <html
       suppressHydrationWarning
@@ -147,6 +161,16 @@ export default function RootLayout({
         rel="preconnect"
       />
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
+      {trustpilotInviteId ? (
+        <>
+          <link
+            crossOrigin="anonymous"
+            href="https://invitejs.trustpilot.com"
+            rel="preconnect"
+          />
+          <link href="https://invitejs.trustpilot.com" rel="dns-prefetch" />
+        </>
+      ) : null}
 
       <Script id="weglot-lang-pref" strategy="beforeInteractive">
         {`
@@ -158,6 +182,25 @@ export default function RootLayout({
           }
         `}
       </Script>
+      {/*
+        Trustpilot Automatic Feedback Service loader. Exposes a global
+        `tp('createInvitation', {...})` API so any flow that finishes a
+        review-worthy action (post-signup, first paid conversion, etc.)
+        can trigger an invitation email through Trustpilot. Deferred to
+        `afterInteractive` — invitations fire on user actions, never
+        during first paint. Skipped entirely when the env var is unset
+        so unconfigured environments don't hit the CDN.
+      */}
+      {trustpilotInviteId ? (
+        <Script id="trustpilot-invite" strategy="afterInteractive">
+          {`
+            (function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};
+              a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];
+              f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');
+            tp('register', '${trustpilotInviteId}');
+          `}
+        </Script>
+      ) : null}
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <NextTopLoader color="#DF3A38" showSpinner={false} />
         <WeglotLoader />

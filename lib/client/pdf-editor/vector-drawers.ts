@@ -707,7 +707,9 @@ export function drawPath(
   // the log stays readable for long freehand strokes.
   try {
     const svgPreview =
-      svgPath.length > 200 ? `${svgPath.slice(0, 200)}…(${svgPath.length}ch)` : svgPath;
+      svgPath.length > 200
+        ? `${svgPath.slice(0, 200)}…(${svgPath.length}ch)`
+        : svgPath;
 
     // eslint-disable-next-line no-console
     console.log("[PDFedits] EXPORT-DIAG: drawPath →", {

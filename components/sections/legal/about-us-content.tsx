@@ -88,8 +88,8 @@ export function AboutUsContent() {
       <section>
         <p className="text-[15px] leading-relaxed text-[var(--pv-text-body)]">
           PDFVault is the all-in-one workspace for everyday document work —
-          built by <strong>Content Clicks LLC</strong> to take the friction out
-          of editing, converting, and protecting your files.
+          built by <strong>Fluttwings</strong> to take the friction out of
+          editing, converting, and protecting your files.
         </p>
         <p className="mt-4 text-[15px] leading-relaxed text-[var(--pv-text-body)]">
           Documents shouldn&apos;t be complicated. PDFVault brings the tools
