@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
-import { useStartFormSessionMutation } from "@/lib/client/query/mutations/forms.mutation";
+import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
@@ -14,52 +14,35 @@ type W9EditorBootstrapProps = {
 
 /**
  * Preloads the blank IRS W-9 template into the shared pdf-composer
- * store so the standard `<PdfEditorShell />` can be reused for the
- * W-9 route. This lets the W-9 page inherit every tool + thumbnail
- * sidebar + top toolbar + save/download flow from pdf-composer, no
- * duplication of the editor UI.
+ * store so `<PdfEditorShell />` can be reused for the W-9 route, and
+ * bootstraps the form-editor session (`POST /form-templates/w-9/start`)
+ * so form-fill overlays needing `sessionId` (SignatureField, FinalizeModal)
+ * can operate.
  *
- * ALSO bootstraps a form-editor session (`POST /form-templates/w-9/start`)
- * so the form-fill overlays (SignatureField, FinalizeModal) that need a
- * `sessionId` in `useFormEditorStore` can operate — otherwise clicking
- * the signature field hits "No session yet — try again in a second".
- * Session bootstrap runs in parallel with the template fetch; it's not
- * gated on the PDF being loaded because the two are independent.
+ * Effect guards:
+ *   - Empty deps `[]` — the effect must run exactly once per mount.
+ *     Never include `useMutation` result objects here; TanStack Query
+ *     returns a fresh object identity on every render, which would
+ *     re-fire the effect and POST /start in an infinite loop until the
+ *     backend rate-limiter kicks in with 429s (the exact bug reported
+ *     2026-08-21). Same reason we call `formsService.startFormSession`
+ *     directly instead of going through `useStartFormSessionMutation`.
+ *   - `hasBootstrappedRef` — module-level dedupe for the StrictMode
+ *     dev double-invoke. We do NOT reset it in cleanup; a genuine
+ *     unmount + remount still creates a new component instance with a
+ *     fresh ref, so refetch behaviour is unchanged.
+ *   - `cancelled` — swallows results from a still-in-flight fetch
+ *     when the component has unmounted before the network completed.
  *
- * Order of operations:
- *
- *   1. Mount → `usePdfEditorStore.clearFile()` so no leftover PDF from
- *      a prior pdf-composer visit briefly flashes before the W-9
- *      loads.
- *   2. In parallel: fetch the W-9 template blob + POST the
- *      form-editor session bootstrap.
- *   3. Wrap the template bytes in a `File` object and call
- *      `setFile()`. The shell's `usePdfLoader` picks it up and parses
- *      via pdf.js.
- *   4. `hydrateFromSession(session)` writes the session id + schema
- *      into `useFormEditorStore` so `SignatureModal.handleApply()` can
- *      upload the signature blob to the backend.
- *
- * On unmount we clear both stores so the next `/pdf-composer` visit
- * starts on the drop-zone (not on the W-9) and the next `/w-9-form`
- * visit fetches a fresh session.
+ * On unmount both stores are cleared so `/pdf-composer` doesn't
+ * inherit the W-9 file and a subsequent `/w-9-form` visit fetches a
+ * fresh session.
  */
 export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   const setFile = usePdfEditorStore((s) => s.setFile);
-  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const currentFile = usePdfEditorStore((s) => s.file);
 
-  const hydrateFormSession = useFormEditorStore((s) => s.hydrateFromSession);
-  const resetFormSession = useFormEditorStore((s) => s.reset);
-
-  const startFormSession = useStartFormSessionMutation();
-
-  // StrictMode double-invokes effects in dev; the guard refs stop us
-  // from firing the fetch + session POST twice. `hasBootstrappedRef`
-  // stays `true` for the whole mount lifecycle; we only reset it in
-  // the cleanup so a genuine unmount → remount cycle refetches.
   const hasBootstrappedRef = useRef(false);
-
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,7 +53,7 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
     // Wipe any leftover file first so the drop-zone / previous PDF
     // doesn't flash before ours loads.
-    clearFile();
+    usePdfEditorStore.getState().clearFile();
 
     // Parallel bootstrap: template fetch + form session. Neither
     // depends on the other so we don't want them serialized.
@@ -97,14 +80,16 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     });
 
     const sessionPromise = (async () => {
-      const session = await startFormSession.mutateAsync({ formId: "w-9" });
+      // Direct service call — bypasses `useStartFormSessionMutation`
+      // because that hook's return object changes identity on every
+      // render and would destabilize the effect deps if referenced.
+      const session = await formsService.startFormSession({ formId: "w-9" });
 
       if (cancelled) return;
-      hydrateFormSession(session);
+      useFormEditorStore.getState().hydrateFromSession(session);
     })().catch((err: unknown) => {
       // Session failure is non-fatal — the pdf-composer editor still
       // works; only the SignatureField overlay + finalize flow degrade.
-      // Log for observability so we can spot backend cold-starts.
       logger.captureError(err, "w9.session_bootstrap");
     });
 
@@ -112,20 +97,13 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
     return () => {
       cancelled = true;
-      hasBootstrappedRef.current = false;
       // Clear both stores on unmount so `/pdf-composer` doesn't inherit
       // the W-9 file and a subsequent `/w-9-form` visit gets a fresh
       // session (avoids replaying a stale sessionId on a new mount).
-      clearFile();
-      resetFormSession();
+      usePdfEditorStore.getState().clearFile();
+      useFormEditorStore.getState().reset();
     };
-  }, [
-    clearFile,
-    hydrateFormSession,
-    resetFormSession,
-    setFile,
-    startFormSession,
-  ]);
+  }, [setFile]);
 
   if (error) {
     return (
@@ -144,12 +122,12 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   }
 
   // Only gate on the FILE being loaded. `pdfDocument` is produced by
-  // `usePdfLoader` which lives inside `<PdfEditorShell />` — gating
-  // this wrapper on `pdfDocument` would create a chicken-and-egg
-  // deadlock (shell never mounts → loader never runs → pdfDocument
-  // stays null → this gate never opens). Once `file` lands, the shell
-  // renders its own internal loading state until pdf.js finishes
-  // parsing, so the transition is still smooth.
+  // `usePdfLoader` inside `<PdfEditorShell />` — gating this wrapper
+  // on `pdfDocument` would create a chicken-and-egg deadlock (shell
+  // never mounts → loader never runs → pdfDocument stays null → this
+  // gate never opens). Once `file` lands, the shell renders its own
+  // internal loading state until pdf.js finishes parsing, so the
+  // transition is still smooth.
   if (!currentFile) {
     return <EditorLoadingShell />;
   }
