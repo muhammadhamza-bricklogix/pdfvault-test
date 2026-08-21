@@ -2,7 +2,7 @@
 
 import type { FieldProps } from "./types";
 
-import { Label, Radio, RadioGroup } from "@heroui/react";
+import { Label } from "@heroui/react";
 
 import { useFormEditorStore } from "@/lib/client/stores";
 
@@ -74,23 +74,55 @@ export function RadioGroupField({ field, mode, page }: FieldProps) {
     );
   }
 
+  // Sidebar: tick-box list (matches the PDF's checkbox visual). Semantics
+  // stay radio — only one can be selected at a time. Rendering as boxes
+  // instead of the default dot-in-circle so the on-screen affordance
+  // mirrors what the user sees on the printed form.
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      aria-label={field.label}
+      className="flex flex-col gap-2"
+      role="radiogroup"
+    >
       <Label className="text-xs font-medium text-default-700 dark:text-default-300">
         {field.label}
       </Label>
-      <RadioGroup
-        aria-label={field.label}
-        className="flex flex-col gap-1.5"
-        value={value}
-        onChange={handleChange}
-      >
-        {field.options?.map((opt) => (
-          <Radio key={opt.id} value={opt.id}>
-            <span className="text-sm">{opt.label}</span>
-          </Radio>
-        ))}
-      </RadioGroup>
+      <div className="flex flex-col gap-1">
+        {field.options?.map((opt) => {
+          const isChecked = value === opt.id;
+
+          return (
+            <button
+              key={opt.id}
+              aria-checked={isChecked}
+              className={`group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+                isChecked
+                  ? "bg-default-100 dark:bg-default-800"
+                  : "hover:bg-default-50 dark:hover:bg-default-900"
+              }`}
+              role="radio"
+              type="button"
+              onClick={() => handleChange(opt.id)}
+            >
+              <span
+                aria-hidden="true"
+                className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                  isChecked
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                    : "border-default-400 bg-white dark:bg-default-950"
+                }`}
+              >
+                {isChecked ? (
+                  <span className="text-[11px] font-bold leading-none">✓</span>
+                ) : null}
+              </span>
+              <span className="text-default-700 dark:text-default-300">
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

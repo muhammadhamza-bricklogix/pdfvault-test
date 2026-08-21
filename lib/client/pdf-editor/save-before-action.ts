@@ -31,6 +31,7 @@ type SaveBeforeActionReason =
 export async function saveBeforeAction(
   description = "Saving your edits…",
   force = false,
+  skipWait = false,
 ): Promise<boolean> {
   if (!force && !usePdfEditorStore.getState().hasUnsavedChanges) return true;
 
@@ -46,7 +47,7 @@ export async function saveBeforeAction(
     }>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { force, onComplete: resolve },
+          detail: { force, skipWait, onComplete: resolve },
         }),
       );
     });

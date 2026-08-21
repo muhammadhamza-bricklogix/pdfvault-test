@@ -317,9 +317,18 @@ export function HamburgerMenu() {
         // short-circuit would skip the upload and the share would ship
         // the pre-edit bytes. Forcing the save guarantees the recipient
         // sees the latest state at share-generation time.
+        //
+        // `skipWait: true` because the share modal only reads
+        // `store.file` (the fresh bytes are already committed by
+        // `applyPostSaveReset` inside the save handler) and never
+        // touches `pdfDocument`. Without this the modal waits for
+        // pdf.js to reload the newly-saved bytes and never opens when
+        // the reload is slow — the "Share only saves, modal never
+        // appears" bug reported 2026-08-21.
         void (async () => {
           const ok = await saveBeforeAction(
             "Saving your edits before generating a share link.",
+            true,
             true,
           );
 
