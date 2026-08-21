@@ -127,11 +127,14 @@ export default function RootLayout({
   // a code change. Dev is still skipped by the NODE_ENV guard so local
   // work doesn't spam Trustpilot's crawler with test hits.
   const TRUSTPILOT_INVITE_ID_DEFAULT = "8RKmNv4GASChIZiA";
+  const envInviteId = process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID?.trim();
+  // `||` (not `??`) so an empty-string env var also falls back to the
+  // hardcoded default — Railway config often stores unset keys as `""`
+  // rather than truly undefined, which silently disabled the loader.
   const trustpilotInviteId =
     process.env.NODE_ENV === "development"
-      ? process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID
-      : (process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID ??
-        TRUSTPILOT_INVITE_ID_DEFAULT);
+      ? envInviteId
+      : envInviteId || TRUSTPILOT_INVITE_ID_DEFAULT;
 
   return (
     <html
