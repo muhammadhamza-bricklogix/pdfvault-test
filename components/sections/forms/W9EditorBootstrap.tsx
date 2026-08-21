@@ -36,7 +36,6 @@ type W9EditorBootstrapProps = {
 export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const clearFile = usePdfEditorStore((s) => s.clearFile);
-  const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const currentFile = usePdfEditorStore((s) => s.file);
 
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +81,6 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     };
   }, [clearFile, setFile]);
 
-  // Show the standard editor loading shell until the file is loaded
-  // AND pdf.js has parsed it. The shell's own dropzone would
-  // otherwise render for one paint while we're mid-fetch.
   if (error) {
     return (
       <div className="flex h-full items-center justify-center bg-default-100 p-8">
@@ -101,7 +97,14 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     );
   }
 
-  if (!currentFile || !pdfDocument) {
+  // Only gate on the FILE being loaded. `pdfDocument` is produced by
+  // `usePdfLoader` which lives inside `<PdfEditorShell />` — gating
+  // this wrapper on `pdfDocument` would create a chicken-and-egg
+  // deadlock (shell never mounts → loader never runs → pdfDocument
+  // stays null → this gate never opens). Once `file` lands, the shell
+  // renders its own internal loading state until pdf.js finishes
+  // parsing, so the transition is still smooth.
+  if (!currentFile) {
     return <EditorLoadingShell />;
   }
 

@@ -292,13 +292,15 @@ export function W9LandingContent() {
       </section>
 
       {/* Content — sections match pdfguru's TOC (order + headings) */}
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 lg:grid-cols-[220px_1fr]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 lg:grid-cols-[280px_1fr]">
         {/* Sticky TOC (desktop only). Content sections use scroll-mt so
-            anchor links land below the sticky top-bar / header. */}
+            anchor links land below the sticky top-bar / header. Font
+            bumped to `text-base font-medium` per client feedback — the
+            default `text-sm` felt too muted next to the body copy. */}
         <aside className="hidden lg:block">
           <nav
             aria-label="On this page"
-            className="sticky top-24 flex flex-col gap-1 border-l border-default-200 pl-4 text-sm dark:border-default-700"
+            className="sticky top-24 flex flex-col gap-2 border-l border-default-200 pl-4 text-base dark:border-default-700"
           >
             {[
               ["What is a W-9 form?", "what-is-w9"],
@@ -316,7 +318,7 @@ export function W9LandingContent() {
             ].map(([label, id]) => (
               <Link
                 key={id}
-                className="rounded px-2 py-1 text-default-600 transition-colors hover:bg-default-100 hover:text-[var(--color-accent)] dark:text-default-400 dark:hover:bg-default-800"
+                className="rounded px-2 py-1.5 font-medium leading-6 text-default-700 transition-colors hover:bg-default-100 hover:text-[var(--color-accent)] dark:text-default-300 dark:hover:bg-default-800"
                 href={`#${id}`}
               >
                 {label}
