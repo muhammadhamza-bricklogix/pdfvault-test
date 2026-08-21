@@ -283,9 +283,16 @@ export function HamburgerMenu() {
         // latest snapshot and the "Current" preview include recent draw /
         // signature edits. We force the save even when the dirty flag is
         // not set, because some tool paths don't reliably flip it.
+        //
+        // `skipWait: true` because Version History opens against the saved
+        // document's history endpoint (server-side); it doesn't read the
+        // live `pdfDocument`. Without this the modal never opens when the
+        // pdf.js reload of the freshly-saved bytes is slow — same class
+        // of bug as the Share flow fixed 2026-08-21.
         void (async () => {
           const ok = await saveBeforeAction(
             "Saving your edits before opening version history.",
+            true,
             true,
           );
 
