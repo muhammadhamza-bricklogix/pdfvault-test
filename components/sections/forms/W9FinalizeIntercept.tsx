@@ -16,26 +16,58 @@ type SaveBeforeActionDetail = {
 };
 
 /**
+ * Client-schema field id → backend DTO field name.
+ *
+ * Our schema uses W-9 AcroForm-derived ids like `c1_1`; the finalize
+ * endpoint has an explicit DTO with human-readable field names. Fields
+ * NOT listed here are passed through under their original id (the
+ * backend accepts the pdfRef-style keys for the free-text fields).
+ *
+ * Discovered from the 422 response bodies:
+ *   - `c1_1`  → `classification`  (radio: federal tax classification)
+ *   - `signature_date` → `date`   (Part II signature date)
+ */
+const SCHEMA_ID_TO_BACKEND_FIELD: Record<string, string> = {
+  c1_1: "classification",
+  signature_date: "date",
+};
+
+/**
+ * Radio-option value mapping for the federal tax classification. Our
+ * schema uses hyphenated ids for consistency with the pdfRef strings;
+ * the backend DTO enum uses underscores.
+ */
+const CLASSIFICATION_VALUE_MAP: Record<string, string> = {
+  individual: "individual",
+  "c-corp": "c_corp",
+  "s-corp": "s_corp",
+  partnership: "partnership",
+  "trust-estate": "trust_estate",
+  llc: "llc",
+  other: "other",
+};
+
+/**
  * Normalize the form-fill values map into the shape the backend
- * `/form-sessions/:id/finalize` endpoint accepts. Two adjustments the
- * backend has flagged with 422 on the raw store payload:
+ * `/form-sessions/:id/finalize` endpoint accepts.
  *
- *   1. Date fields — the DateField component stores the display form
- *      `MM/DD/YYYY`; the backend validator expects ISO `YYYY-MM-DD`.
- *   2. Empty strings — a value of `""` for optional fields is treated
- *      as "provided but empty" and can trip length / format validators.
- *      Drop the key entirely so the backend sees the field as absent.
+ * Adjustments the backend has flagged with 422 on the raw store payload:
  *
- * Any field whose schema type isn't listed here is passed through
- * unchanged.
+ *   1. **Field renames** — see `SCHEMA_ID_TO_BACKEND_FIELD`. Backend DTO
+ *      names differ from our AcroForm-derived ids for a few fields.
+ *   2. **Value enum mapping** — `classification` values must be
+ *      underscored (`c_corp`, `s_corp`, `trust_estate`), not hyphenated.
+ *   3. **Date format** — backend expects `MM/DD/YYYY` (matches the
+ *      display form the DateField already stores). No conversion.
+ *   4. **SSN / EIN** — strip formatting hyphens (`657-67-8678` →
+ *      `657678678`) so `@Matches(/^\d{9}$/)` accepts it.
+ *   5. **Empty strings** — dropped so optional fields are treated as
+ *      absent rather than "provided but empty".
  */
 function normalizeValuesForFinalize(
   values: Record<string, string>,
 ): Record<string, string> {
   const fields = W9_SCHEMA.sections.flatMap((s) => s.fields);
-  const dateFieldIds = new Set(
-    fields.filter((f) => f.type === "date").map((f) => f.id),
-  );
   const digitsOnlyFieldIds = new Set(
     fields.filter((f) => f.type === "ssn" || f.type === "ein").map((f) => f.id),
   );
@@ -44,38 +76,33 @@ function normalizeValuesForFinalize(
   for (const [id, rawValue] of Object.entries(values)) {
     if (rawValue == null || rawValue === "") continue;
 
-    if (dateFieldIds.has(id)) {
-      const iso = displayDateToIso(rawValue);
+    // Skip empty checkbox — `"true"` is truthy, anything else means unchecked.
+    // We don't drop truthy checkbox values because the backend may want them.
 
-      out[id] = iso ?? rawValue;
-      continue;
-    }
+    let value = rawValue;
 
     // SSN / EIN — strip formatting hyphens. NestJS class-validator's
-    // @Matches(/^\d{9}$/) or @IsNumberString rejects hyphenated input;
-    // the display-only formatting belongs in the UI, not on the wire.
+    // @Matches(/^\d{9}$/) or @IsNumberString rejects hyphenated input.
     if (digitsOnlyFieldIds.has(id)) {
-      const digits = rawValue.replace(/\D/g, "");
-
-      if (!digits) continue;
-      out[id] = digits;
-      continue;
+      value = rawValue.replace(/\D/g, "");
+      if (!value) continue;
     }
 
-    out[id] = rawValue;
+    // Classification radio value mapping (hyphens → underscores).
+    if (id === "c1_1") {
+      value = CLASSIFICATION_VALUE_MAP[rawValue] ?? rawValue;
+    }
+
+    // Rename the key if the backend DTO uses a different name.
+    const outKey = SCHEMA_ID_TO_BACKEND_FIELD[id] ?? id;
+
+    out[outKey] = value;
   }
 
   return out;
 }
 
-/** `MM/DD/YYYY` → `YYYY-MM-DD`. Returns null if the input isn't in that shape. */
-function displayDateToIso(display: string): string | null {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(display);
-
-  if (!m) return null;
-
-  return `${m[3]}-${m[1]}-${m[2]}`;
-}
+type FieldError = { field: string; message: string };
 
 /**
  * Extract per-field validation messages from an error.
@@ -84,16 +111,18 @@ function displayDateToIso(display: string): string | null {
  * raw axios error stashed on `.cause`. So we walk:
  *   err (ApiError)  →  err.cause (AxiosError)  →  err.cause.response.data
  *
- * The backend envelope is `{ success:false, message, statusCode }` — no
- * per-field `errors` object. So `fields` will usually be undefined; the
- * one useful thing we surface from the body is the full response payload
- * itself so we can spot backend quirks (e.g. NestJS class-validator's
- * per-property `message` array under a different key name).
+ * The finalize backend returns:
+ *   { message: "Validation failed",
+ *     errors: [ { field: "classification", message: "…" }, … ] }
+ *
+ * We normalize into a flat `fields` map + a single-line `message` that
+ * concatenates every field error so the toast surfaces the actual
+ * problem instead of the generic ApiError fallback.
  */
 function extractApiFieldErrors(err: unknown): {
   message: string;
   statusCode?: number;
-  fields?: Record<string, unknown>;
+  fields?: FieldError[];
   raw?: unknown;
   requestPayload?: unknown;
 } {
@@ -118,21 +147,49 @@ function extractApiFieldErrors(err: unknown): {
   const data = axiosLike.response?.data as
     | {
         message?: string | string[];
-        errors?: Record<string, unknown>;
+        errors?: unknown;
         detail?: unknown;
         [k: string]: unknown;
       }
     | undefined;
 
-  const parsedMessage =
+  // The finalize backend returns `errors` as an array of {field, message}.
+  // Older / other endpoints may use `{ field: message }` — accept both.
+  let fields: FieldError[] | undefined;
+
+  if (Array.isArray(data?.errors)) {
+    fields = (data.errors as unknown[])
+      .filter(
+        (e): e is FieldError =>
+          typeof e === "object" &&
+          e !== null &&
+          typeof (e as FieldError).field === "string" &&
+          typeof (e as FieldError).message === "string",
+      )
+      .map((e) => ({ field: e.field, message: e.message }));
+  } else if (data?.errors && typeof data.errors === "object") {
+    fields = Object.entries(data.errors as Record<string, unknown>).map(
+      ([field, msg]) => ({
+        field,
+        message: Array.isArray(msg) ? msg.join("; ") : String(msg),
+      }),
+    );
+  }
+
+  const backendMessage =
     (Array.isArray(data?.message) ? data?.message.join("; ") : data?.message) ??
-    anyErr.message ??
-    axiosLike.message ??
+    "";
+  const fieldSummary = fields?.length
+    ? fields.map((f) => `${f.field}: ${f.message}`).join(" · ")
+    : "";
+  const parsedMessage =
+    [backendMessage, fieldSummary].filter(Boolean).join(" — ") ||
+    anyErr.message ||
+    axiosLike.message ||
     "Unknown error";
 
   // Axios stashes the request payload string on `config.data`. Parse it
-  // so we can log the EXACT bytes the server received (not our local
-  // pre-serialization copy).
+  // so we can log the EXACT bytes the server received.
   const rawRequest = axiosLike.response?.config?.data ?? axiosLike.config?.data;
   let requestPayload: unknown = rawRequest;
 
@@ -147,7 +204,7 @@ function extractApiFieldErrors(err: unknown): {
   return {
     message: parsedMessage,
     statusCode: anyErr.statusCode ?? axiosLike.response?.status,
-    fields: data?.errors as Record<string, unknown> | undefined,
+    fields,
     raw: data,
     requestPayload,
   };
