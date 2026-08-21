@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
+import {
+  clearPendingW9Values,
+  readPendingW9Values,
+} from "@/lib/client/forms/pending-w9-values";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -87,6 +91,18 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
       if (cancelled) return;
       useFormEditorStore.getState().hydrateFromSession(session);
+
+      // Restore any values the user typed BEFORE a sign-in redirect
+      // (W9FinalizeIntercept persists them to sessionStorage when it
+      // dispatches the sign-in prompt so a paywalled download doesn't
+      // lose the whole form). Signature is intentionally not restored
+      // — the fresh session's S3 namespace rejects the previous key.
+      const pending = readPendingW9Values();
+
+      if (pending) {
+        useFormEditorStore.getState().setValues(pending);
+        clearPendingW9Values();
+      }
     })().catch((err: unknown) => {
       // Session failure is non-fatal — the pdf-composer editor still
       // works; only the SignatureField overlay + finalize flow degrade.

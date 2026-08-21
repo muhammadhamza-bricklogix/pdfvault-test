@@ -1,10 +1,16 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
 import { W9_SCHEMA } from "@/lib/client/forms/w9-schema";
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore } from "@/lib/client/stores";
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -276,12 +282,25 @@ function triggerDownload(downloadUrl: string) {
 }
 
 export function W9FinalizeIntercept() {
-  // Dedup key + last successful downloadUrl. The finalize endpoint on the
-  // backend rejects a second POST for the same session (400 "Invalid
-  // request."), so calling it once per Download click was producing an
-  // error the second time even when the payload was identical. Cache the
-  // response and reuse it whenever the user clicks Download again without
-  // changing any values or the signature.
+  // Clerk auth state — read at render, mirrored into refs so the
+  // stopImmediatePropagation event handler (registered ONCE via
+  // useLayoutEffect with empty deps) sees the latest value without
+  // re-registering. The `editor:export` listener must remain the same
+  // function identity for capture-phase precedence over pdf-composer's
+  // useExportEditor listener.
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const isSignedInRef = useRef(!!isSignedIn);
+  const authLoadedRef = useRef(authLoaded);
+
+  useEffect(() => {
+    isSignedInRef.current = !!isSignedIn;
+    authLoadedRef.current = authLoaded;
+  }, [isSignedIn, authLoaded]);
+
+  // Dedup key + last successful downloadUrl. Even though the backend is
+  // now idempotent for FINALIZED sessions, the frontend cache saves a
+  // round-trip when the user clicks Download twice with unchanged
+  // values / signature.
   const lastFinalizeRef = useRef<{ key: string; downloadUrl: string } | null>(
     null,
   );
@@ -299,6 +318,39 @@ export function W9FinalizeIntercept() {
           title: "Session not ready",
           description:
             "Give it a moment while we start your W-9 session, then try Download again.",
+        });
+
+        return;
+      }
+
+      // Auth gate — W-9 download is a paid feature; must be signed in
+      // before we can bill/entitle. Wait for Clerk to hydrate so we
+      // don't misfire before the session is known (matches item #1 of
+      // the auth chain — reading auth state directly, not via the
+      // pdf-editor store which lags a tick).
+      if (!authLoadedRef.current) {
+        toast.error({
+          title: "Just a sec",
+          description: "Signing you in — try Download again in a moment.",
+        });
+
+        return;
+      }
+
+      if (!isSignedInRef.current) {
+        // Persist the typed values so the user doesn't lose them
+        // through the sign-in redirect. W9EditorBootstrap re-hydrates
+        // them on the post-signin mount. Signature is re-drawn because
+        // the new session's S3 namespace won't accept the old key.
+        savePendingW9Values(values);
+
+        dispatchSignInPrompt({
+          title: "Sign in to download",
+          description:
+            "Sign in and we'll bring you back to finish your W-9 with your entries preserved.",
+          confirmLabel: "Sign in & continue",
+          destination: "sign-in",
+          redirectUrl: ROUTES.FORMS.W9,
         });
 
         return;
@@ -357,6 +409,28 @@ export function W9FinalizeIntercept() {
 
       void (async () => {
         try {
+          // Entitlement gate — W-9 download is a paid feature. Runs
+          // BEFORE the finalize network call so a non-entitled user
+          // never triggers the backend stamp job. The loading toast
+          // is intentionally left up under the paywall modal so the
+          // user sees state resume without an extra flicker after
+          // purchase.
+          const entitled = await ensureFreshEntitlement();
+
+          if (!entitled) {
+            const outcome = await requestPaywall({
+              filename: "w-9.pdf",
+              sourceExt: "pdf",
+              targetExt: "pdf",
+            });
+
+            if (outcome !== "success") {
+              // User cancelled or paywall errored — bail silently.
+              // The paywall UI surfaces its own error state.
+              return;
+            }
+          }
+
           const { downloadUrl } = await formsService.finalizeFormSession({
             sessionId,
             values: normalizedValues,
