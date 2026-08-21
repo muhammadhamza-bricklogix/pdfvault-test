@@ -16,20 +16,28 @@ type SaveBeforeActionDetail = {
 };
 
 /**
- * Client-schema field id → backend DTO field name.
+ * Client-schema field id → backend DTO field name(s).
  *
  * Our schema uses W-9 AcroForm-derived ids like `c1_1`; the finalize
  * endpoint has an explicit DTO with human-readable field names. Fields
  * NOT listed here are passed through under their original id (the
  * backend accepts the pdfRef-style keys for the free-text fields).
  *
- * Discovered from the 422 response bodies:
- *   - `c1_1`  → `classification`  (radio: federal tax classification)
- *   - `signature_date` → `date`   (Part II signature date)
+ * Discovered by iterating on 422 responses + observing the stamped PDF:
+ *   - `c1_1` → `classification` (radio: federal tax classification).
+ *     Validator accepts, stamper uses this name.
+ *   - `signature_date` → BOTH `date` AND `signature_date`. Backend
+ *     validator explicitly requires a `date` field (422 without it),
+ *     but the PDF stamper still keys off `signature_date` — the date
+ *     box was blank in the downloaded PDF when we sent only `date`.
+ *     Duplicating the value under both keys satisfies both sides; the
+ *     backend ignores unknown fields so there's no regression risk.
+ *     Delete the `signature_date` alias once the backend stamper is
+ *     updated to key off `date`.
  */
-const SCHEMA_ID_TO_BACKEND_FIELD: Record<string, string> = {
-  c1_1: "classification",
-  signature_date: "date",
+const SCHEMA_ID_TO_BACKEND_FIELDS: Record<string, readonly string[]> = {
+  c1_1: ["classification"],
+  signature_date: ["date", "signature_date"],
 };
 
 /**
@@ -93,10 +101,15 @@ function normalizeValuesForFinalize(
       value = CLASSIFICATION_VALUE_MAP[rawValue] ?? rawValue;
     }
 
-    // Rename the key if the backend DTO uses a different name.
-    const outKey = SCHEMA_ID_TO_BACKEND_FIELD[id] ?? id;
+    // Rename the key if the backend DTO uses a different name. Some
+    // schema ids map to MULTIPLE backend keys (e.g. `signature_date`
+    // needs to be sent under both `date` and `signature_date`) — write
+    // the value under every listed alias.
+    const aliases = SCHEMA_ID_TO_BACKEND_FIELDS[id] ?? [id];
 
-    out[outKey] = value;
+    for (const outKey of aliases) {
+      out[outKey] = value;
+    }
   }
 
   return out;
