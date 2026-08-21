@@ -522,7 +522,14 @@ export function PendingEditorFileHydrator() {
             setIsCompressModalOpen(true);
             break;
           case "password":
+            usePdfEditorStore.getState().setPasswordModalVariant("both");
+            setIsPasswordModalOpen(true);
+            break;
           case "unlock":
+            // Dedicated Unlock PDF flow — hide the Add password tab so
+            // the modal reads as a single-purpose remove-password
+            // screen. Variant resets to "both" on close.
+            usePdfEditorStore.getState().setPasswordModalVariant("unlock-only");
             setIsPasswordModalOpen(true);
             break;
           case "manage":

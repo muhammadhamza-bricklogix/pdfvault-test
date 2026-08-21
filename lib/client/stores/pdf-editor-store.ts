@@ -191,6 +191,15 @@ type PdfEditorStore = {
   isCompressModalOpen: boolean;
   isFindReplaceOpen: boolean;
   isPasswordModalOpen: boolean;
+  /**
+   * Controls whether the shared PasswordModal shows both tabs
+   * ("Add password" + "Remove password") or only the unlock flow. The
+   * dashboard / landing "Unlock PDF" tile sets this to "unlock-only" so
+   * the encrypt tab is hidden and the modal reads as a dedicated
+   * remove-password screen. Reset to "both" on close so the top-bar
+   * Password button (used from inside the editor) always shows both.
+   */
+  passwordModalVariant: "both" | "unlock-only";
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
   isFormFieldsModalOpen: boolean;
@@ -296,6 +305,7 @@ type PdfEditorStore = {
   setIsFormFieldsModalOpen: (value: boolean) => void;
   setIsPageNumbersModalOpen: (value: boolean) => void;
   setIsPasswordModalOpen: (value: boolean) => void;
+  setPasswordModalVariant: (variant: "both" | "unlock-only") => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -343,6 +353,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isFormFieldsModalOpen: false,
   isPageNumbersModalOpen: false,
   isPasswordModalOpen: false,
+  passwordModalVariant: "both" as "both" | "unlock-only",
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
   isManagePagesOpen: false,
@@ -447,6 +458,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isFormFieldsModalOpen: false,
       isPageNumbersModalOpen: false,
       isPasswordModalOpen: false,
+      passwordModalVariant: "both",
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
       isManagePagesOpen: false,
@@ -719,7 +731,17 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
   setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),
-  setIsPasswordModalOpen: (value) => set({ isPasswordModalOpen: value }),
+  setIsPasswordModalOpen: (value) =>
+    set(
+      value
+        ? { isPasswordModalOpen: true }
+        : // Reset variant on close so the next open (from the top-bar
+          // Password button inside the editor) defaults back to the
+          // full both-tabs modal, not the unlock-only variant left
+          // over from a dashboard "Unlock PDF" tile click.
+          { isPasswordModalOpen: false, passwordModalVariant: "both" },
+    ),
+  setPasswordModalVariant: (variant) => set({ passwordModalVariant: variant }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value

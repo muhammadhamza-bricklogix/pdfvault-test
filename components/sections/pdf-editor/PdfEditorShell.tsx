@@ -143,12 +143,14 @@ function UploadScreen() {
     <div className="flex flex-1 flex-col">
       <UploadScreenHeader />
       <div className="flex flex-1 items-center justify-center p-8">
-        <div className="w-full max-w-2xl space-y-4">
+        <div className="w-full max-w-5xl space-y-4">
           <FileUpload
             accept={UPLOAD_ACCEPT_MIME}
             acceptLabel="PDF, Word, Excel, PowerPoint, Image"
+            appearance="marketing"
             description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
             heading="Drop your file here"
+            marketingFootnote="PDF, Word, Excel, PowerPoint, Image · Up to 100 MB"
             onFileSelect={handleSelect}
           />
           <p className="text-center text-sm text-default-400">

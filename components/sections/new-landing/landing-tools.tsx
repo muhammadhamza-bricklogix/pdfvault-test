@@ -382,7 +382,7 @@ export function LandingTools() {
   return (
     <section
       aria-labelledby="tools-heading"
-      className="bg-[var(--pv-section-gray)] py-20 sm:py-24"
+      className="bg-[var(--pv-section-gray)] pt-8 pb-20 sm:pt-10 sm:pb-24"
     >
       <div className="pv-container">
         <SectionHeading

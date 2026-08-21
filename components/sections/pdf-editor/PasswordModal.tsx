@@ -18,13 +18,16 @@ import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-fi
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
+import { toast } from "@/lib/shared/utils/toast";
 
 type Mode = "protect" | "unprotect";
 
 export function PasswordModal() {
   const isOpen = usePdfEditorStore((s) => s.isPasswordModalOpen);
   const setIsOpen = usePdfEditorStore((s) => s.setIsPasswordModalOpen);
+  const variant = usePdfEditorStore((s) => s.passwordModalVariant);
   const file = usePdfEditorStore((s) => s.file);
+  const setFile = usePdfEditorStore((s) => s.setFile);
   const documentPassword = usePdfEditorStore((s) => s.documentPassword);
   const documentPasswordFileKey = usePdfEditorStore(
     (s) => s.documentPasswordFileKey,
@@ -32,7 +35,14 @@ export function PasswordModal() {
   const setDocumentPassword = usePdfEditorStore((s) => s.setDocumentPassword);
   const { isSignedIn } = useAuth();
 
+  const isUnlockOnly = variant === "unlock-only";
+  // `mode` is only meaningful when the tab bar is visible (variant=both).
+  // In unlock-only we derive it from variant so a prior "protect" tab
+  // selection from an earlier both-variant open doesn't leak in. The
+  // tab-toggle buttons that call `setMode` are hidden in unlock-only,
+  // so this stays consistent without a setState-in-effect.
   const [mode, setMode] = useState<Mode>("protect");
+  const effectiveMode: Mode = isUnlockOnly ? "unprotect" : mode;
   const [userPassword, setUserPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [unprotectPassword, setUnprotectPassword] = useState("");
@@ -194,10 +204,26 @@ export function PasswordModal() {
         password: unprotectPassword,
       });
 
-      triggerBlobDownload(result.blob, result.fileName);
+      // Load the unlocked bytes back into the editor so the user can
+      // keep working (edit / sign / re-export). Preserves the original
+      // filename so re-saves and downloads read naturally. The store's
+      // setFile chain triggers `usePdfLoader` → pdf.js re-parses the
+      // decrypted bytes → editor re-renders without the password
+      // prompt. Download remains one click away via the editor's own
+      // Download / Export button (secondary action per product spec).
+      const unlockedFile = new File([result.blob], result.fileName, {
+        type: "application/pdf",
+      });
+
+      setFile(unlockedFile);
       // Protection is gone — forget the remembered password so a
       // second Remove attempt correctly falls back to pdf.js checks.
       setDocumentPassword(null);
+      toast.success({
+        title: "PDF unlocked",
+        description:
+          "You can keep editing here, or use Download to save the unlocked copy.",
+      });
       handleClose();
     } catch {
       // mutation already toasts the error
@@ -215,42 +241,48 @@ export function PasswordModal() {
         <Modal.Dialog className="!w-[92vw] !max-w-[480px]">
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Heading>Password protect</Modal.Heading>
+            <Modal.Heading>
+              {isUnlockOnly ? "Unlock PDF" : "Password protect"}
+            </Modal.Heading>
           </Modal.Header>
 
           <Modal.Body className="space-y-5">
             <p className="text-xs text-default-500">
               {file
                 ? `Working file — ${file.name}`
-                : "Open a PDF before protecting/unprotecting."}
+                : isUnlockOnly
+                  ? "Open a PDF before removing its password."
+                  : "Open a PDF before protecting/unprotecting."}
             </p>
 
-            <div className="flex gap-2">
-              <Button
-                aria-pressed={mode === "protect"}
-                size="sm"
-                variant={mode === "protect" ? "secondary" : "ghost"}
-                onPress={() => {
-                  setMode("protect");
-                  setUnprotectError(null);
-                }}
-              >
-                Add password
-              </Button>
-              <Button
-                aria-pressed={mode === "unprotect"}
-                size="sm"
-                variant={mode === "unprotect" ? "secondary" : "ghost"}
-                onPress={() => {
-                  setMode("unprotect");
-                  setMismatchError(false);
-                }}
-              >
-                Remove password
-              </Button>
-            </div>
+            {isUnlockOnly ? null : (
+              <div className="flex gap-2">
+                <Button
+                  aria-pressed={mode === "protect"}
+                  size="sm"
+                  variant={mode === "protect" ? "secondary" : "ghost"}
+                  onPress={() => {
+                    setMode("protect");
+                    setUnprotectError(null);
+                  }}
+                >
+                  Add password
+                </Button>
+                <Button
+                  aria-pressed={mode === "unprotect"}
+                  size="sm"
+                  variant={mode === "unprotect" ? "secondary" : "ghost"}
+                  onPress={() => {
+                    setMode("unprotect");
+                    setMismatchError(false);
+                  }}
+                >
+                  Remove password
+                </Button>
+              </div>
+            )}
 
-            {mode === "protect" ? (
+            {effectiveMode === "protect" ? (
               <div className="space-y-3">
                 <div>
                   <Label className="mb-1 block text-xs text-default-500">
@@ -368,12 +400,12 @@ export function PasswordModal() {
               isDisabled={
                 !file ||
                 isBusy ||
-                (mode === "protect"
+                (effectiveMode === "protect"
                   ? userPassword.length === 0 || confirmPassword.length === 0
                   : unprotectPassword.length === 0)
               }
               onPress={() =>
-                mode === "protect"
+                effectiveMode === "protect"
                   ? void handleProtect()
                   : void handleUnprotect()
               }
@@ -382,9 +414,11 @@ export function PasswordModal() {
                 ? "Verifying password…"
                 : isBusy
                   ? "Working…"
-                  : mode === "protect"
+                  : effectiveMode === "protect"
                     ? "Protect & download"
-                    : "Unprotect & download"}
+                    : isUnlockOnly
+                      ? "Unlock PDF"
+                      : "Unlock & keep editing"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

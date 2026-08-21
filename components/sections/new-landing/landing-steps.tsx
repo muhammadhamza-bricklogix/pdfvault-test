@@ -30,7 +30,7 @@ export function LandingSteps() {
   return (
     <section
       aria-labelledby="steps-heading"
-      className="bg-[var(--pv-section-gray)] py-24 sm:py-28"
+      className="bg-[var(--pv-section-gray)] pt-24 pb-10 sm:pt-28 sm:pb-12"
     >
       <div className="pv-container">
         <SectionHeading
