@@ -35,13 +35,23 @@ export function ShareModal(): React.ReactElement {
   const isOpen = usePdfEditorStore((s) => s.isShareModalOpen);
   const setIsOpen = usePdfEditorStore((s) => s.setIsShareModalOpen);
   const pathname = usePathname();
-  // The /w-9-form route stamps values via the backend finalize endpoint
+  // The W-9 editor stamps values via the backend finalize endpoint
   // (see `W9FinalizeIntercept`), NOT via the standard editor save
   // pipeline. `store.file` on that route is always the blank IRS
   // template, so sharing it directly would ship the recipient a blank
   // form. Detect the route and, on generate, run finalize first + swap
   // the file for the stamped bytes before uploading to /api/share.
-  const isW9Route = pathname?.startsWith(ROUTES.FORMS.W9) ?? false;
+  //
+  // Match all four W-9 URLs — the short marketing URL (`/w-9-form`)
+  // is where most users land, but `/forms/w-9`, `/forms/w-9/edit` and
+  // `/w9-form` all mount the same editor with the same
+  // `useFormEditorStore` session, so Share from any of them needs
+  // finalize.
+  const isW9Route =
+    pathname === ROUTES.FORMS.W9_SHORT ||
+    pathname === ROUTES.FORMS.W9_FORM ||
+    pathname === ROUTES.FORMS.W9 ||
+    (pathname?.startsWith(ROUTES.FORMS.W9_EDIT) ?? false);
   const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
