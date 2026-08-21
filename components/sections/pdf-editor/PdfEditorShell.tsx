@@ -85,6 +85,13 @@ const PasswordModal = dynamic(
   () => import("./PasswordModal").then((m) => m.PasswordModal),
   { ssr: false, loading: () => null },
 );
+// Mounted at shell level (not inside HamburgerMenu) so the modal survives
+// the EditorLayout unmount that fires during the post-save pdf.js reload
+// — see comment in ShareModal.tsx for the full trace.
+const ShareModal = dynamic(
+  () => import("./ShareModal").then((m) => m.ShareModal),
+  { ssr: false, loading: () => null },
+);
 const PerformancePanel = dynamic(
   () => import("./PerformancePanel").then((m) => m.PerformancePanel),
   { ssr: false, loading: () => null },
@@ -517,6 +524,7 @@ export function PdfEditorShell() {
       />
       <CompressModal />
       <PasswordModal />
+      <ShareModal />
       <PageNumbersModal />
       <FormFieldsModal />
       <ReloadConfirmModal />

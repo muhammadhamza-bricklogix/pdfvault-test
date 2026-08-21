@@ -44,7 +44,6 @@ import {
 
 import { AnnotationsModal } from "./AnnotationsModal";
 import { MergePdfModal } from "./MergePdfModal";
-import { ShareModal } from "./ShareModal";
 import { SplitPdfModal, type SplitPdfModalSource } from "./SplitPdfModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 
@@ -75,7 +74,10 @@ export function HamburgerMenu() {
   );
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isShareOpen, setIsShareOpen] = useState(false);
+  // ShareModal lives at shell-level (see comment there); open state is in
+  // the store so it survives the EditorLayout unmount that happens during
+  // the post-save pdf.js reload.
+  const setIsShareModalOpen = usePdfEditorStore((s) => s.setIsShareModalOpen);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const [isAnnotationsOpen, setIsAnnotationsOpen] = useState(false);
   const [isSplitOpen, setIsSplitOpen] = useState(false);
@@ -339,7 +341,7 @@ export function HamburgerMenu() {
             true,
           );
 
-          if (ok) setIsShareOpen(true);
+          if (ok) setIsShareModalOpen(true);
         })();
         break;
       }
@@ -482,11 +484,6 @@ export function HamburgerMenu() {
         filename={duplicate?.filename ?? null}
         onIgnore={duplicate?.onIgnore ?? (() => undefined)}
         onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
-      />
-      <ShareModal
-        file={file}
-        isOpen={isShareOpen}
-        onClose={() => setIsShareOpen(false)}
       />
       <VersionHistoryModal
         documentId={currentDocumentId}

@@ -7,13 +7,8 @@ import { useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { createShare } from "@/lib/client/api/shares";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { toast } from "@/lib/shared/utils/toast";
-
-type ShareModalProps = {
-  file: File | null;
-  isOpen: boolean;
-  onClose: () => void;
-};
 
 type ExpiryPreset = "1d" | "7d" | "30d";
 
@@ -23,11 +18,18 @@ const EXPIRY_PRESETS: { id: ExpiryPreset; label: string; ms: number }[] = [
   { id: "30d", label: "30 days", ms: 30 * 24 * 60 * 60 * 1000 },
 ];
 
-export function ShareModal({
-  file,
-  isOpen,
-  onClose,
-}: ShareModalProps): React.ReactElement {
+// Mounted at shell level (not inside HamburgerMenu) so that the modal
+// state survives the EditorLayout remount that fires during the
+// post-save pdf.js reload. Previously the local `useState(false)` in
+// HamburgerMenu was wiped when `applyPostSaveReset` swapped `store.file`
+// → `usePdfLoader` cleared `pdfDocument` → EditorLayout returned
+// `<EditorLoadingShell />` → HamburgerMenu unmounted → `setIsShareOpen(true)`
+// hit a stale instance. Store-backed open state fixes that.
+export function ShareModal(): React.ReactElement {
+  const file = usePdfEditorStore((s) => s.file);
+  const isOpen = usePdfEditorStore((s) => s.isShareModalOpen);
+  const setIsOpen = usePdfEditorStore((s) => s.setIsShareModalOpen);
+  const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
   const [password, setPassword] = useState("");

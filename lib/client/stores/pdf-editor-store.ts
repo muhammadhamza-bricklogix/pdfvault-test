@@ -190,6 +190,7 @@ type PdfEditorStore = {
   lastBakedBackgroundImageSignature: string | null;
   isCompressModalOpen: boolean;
   isFindReplaceOpen: boolean;
+  isShareModalOpen: boolean;
   isPasswordModalOpen: boolean;
   /**
    * Controls whether the shared PasswordModal shows both tabs
@@ -306,6 +307,7 @@ type PdfEditorStore = {
   setIsPageNumbersModalOpen: (value: boolean) => void;
   setIsPasswordModalOpen: (value: boolean) => void;
   setPasswordModalVariant: (variant: "both" | "unlock-only") => void;
+  setIsShareModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -352,6 +354,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isFindReplaceOpen: false,
   isFormFieldsModalOpen: false,
   isPageNumbersModalOpen: false,
+  isShareModalOpen: false,
   isPasswordModalOpen: false,
   passwordModalVariant: "both" as "both" | "unlock-only",
   isCreatePdfModalOpen: false,
@@ -457,6 +460,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isFindReplaceOpen: false,
       isFormFieldsModalOpen: false,
       isPageNumbersModalOpen: false,
+      isShareModalOpen: false,
       isPasswordModalOpen: false,
       passwordModalVariant: "both",
       isCreatePdfModalOpen: false,
@@ -742,6 +746,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
           { isPasswordModalOpen: false, passwordModalVariant: "both" },
     ),
   setPasswordModalVariant: (variant) => set({ passwordModalVariant: variant }),
+  setIsShareModalOpen: (value) => set({ isShareModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value
