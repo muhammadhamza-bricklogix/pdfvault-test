@@ -60,7 +60,7 @@ export function DateField({ field, mode, page }: FieldProps) {
       <input
         aria-invalid={Boolean(error)}
         aria-label={field.label}
-        className={`pointer-events-auto absolute rounded-[2px] border border-transparent bg-white/0 px-1 text-[12px] caret-[var(--color-accent)] outline-none focus:border-[var(--color-accent)] focus:bg-yellow-100/30 aria-[invalid=true]:border-danger-500 ${
+        className={`pointer-events-auto absolute rounded-[2px] border border-yellow-500/40 bg-yellow-100/50 px-1 text-[12px] caret-[var(--color-accent)] outline-none transition-colors hover:bg-yellow-100/70 focus:border-[var(--color-accent)] focus:bg-yellow-100/80 aria-[invalid=true]:border-danger-500 ${
           hasValue ? "text-black" : "text-transparent"
         }`}
         style={{

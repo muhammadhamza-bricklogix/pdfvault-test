@@ -5,7 +5,11 @@ import type { RenderedPageInfo } from "./FormCanvas";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Modal } from "@heroui/react";
-import { SignatureIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  SignatureIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { validateW9 } from "@/lib/client/forms/validate-w9";
@@ -54,6 +58,11 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
   const [signatureOpen, setSignatureOpen] = useState(false);
   // Done → FinalizeModal (previously lived in FormFooter).
   const [finalizeOpen, setFinalizeOpen] = useState(false);
+  // Sidebar collapse toggle. Default open on desktop so accessibility /
+  // section grouping stays discoverable; user collapses it when they want
+  // the whole form full-width for inline editing (matches pdfguru's
+  // form-first flow, but preserves the sidebar as an opt-in helper).
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleDone = useCallback(() => {
     const state = useFormEditorStore.getState();
@@ -215,6 +224,22 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
             </p>
           )}
           <Button
+            aria-expanded={sidebarOpen}
+            aria-label={sidebarOpen ? "Hide field list" : "Show field list"}
+            className="hidden md:inline-flex"
+            size="sm"
+            variant="tertiary"
+            onPress={() => setSidebarOpen((v) => !v)}
+          >
+            <HugeiconsIcon
+              icon={sidebarOpen ? ArrowRight01Icon : ArrowLeft01Icon}
+              size={16}
+            />
+            <span className="hidden lg:inline">
+              {sidebarOpen ? "Hide fields" : "Show fields"}
+            </span>
+          </Button>
+          <Button
             aria-label="Add signature"
             // Disable while there's no session — otherwise the modal opens,
             // the user draws / types / uploads, then Apply throws "No
@@ -244,7 +269,11 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
       <FinalizeModal isOpen={finalizeOpen} onOpenChange={setFinalizeOpen} />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="hidden min-h-0 flex-1 items-start justify-center overflow-auto bg-default-100 p-6 md:flex md:basis-3/5">
+        <div
+          className={`hidden min-h-0 flex-1 items-start justify-center overflow-auto bg-default-100 p-6 md:flex ${
+            sidebarOpen ? "md:basis-3/5" : "md:basis-full"
+          }`}
+        >
           <FormCanvas
             pdfUrl={pdfUrl}
             renderOverlay={renderOverlay}
@@ -253,9 +282,11 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
           />
         </div>
 
-        <div className="flex min-h-0 flex-1 md:basis-2/5">
-          <FormSidebar sections={schema.sections} />
-        </div>
+        {sidebarOpen ? (
+          <div className="flex min-h-0 flex-1 md:basis-2/5">
+            <FormSidebar sections={schema.sections} />
+          </div>
+        ) : null}
       </div>
 
       <div className="sticky bottom-2 z-10 flex justify-center px-4 pb-2 md:hidden">

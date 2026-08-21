@@ -44,11 +44,11 @@ export const ROUTES = {
     W9: "/forms/w-9",
     W9_FORM: "/w9-form",
     W9_EDIT: "/forms/w-9/edit",
-    // Short marketing URL for the W-9 editor (per stakeholder brief:
-    // https://pdfvault.ai/w-9). Renders the same `FormEditor` as
-    // W9_EDIT — keep both routes serving the same component so
-    // bookmarks from either path continue to work.
-    W9_SHORT: "/w-9",
+    // Short marketing URL for the W-9 editor. Matches the competitor
+    // slug pattern (pdfguru.com/forms/w-9-form) so users searching for
+    // "w-9 form" land here. Old `/w-9` requests 308-redirect to this
+    // path via next.config.mjs so pre-rename bookmarks still resolve.
+    W9_SHORT: "/w-9-form",
     W4: "/forms/w-4",
     NEC_1099: "/forms/1099-nec",
     W7: "/forms/w-7",

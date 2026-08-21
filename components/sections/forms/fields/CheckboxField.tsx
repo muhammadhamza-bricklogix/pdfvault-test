@@ -27,7 +27,11 @@ export function CheckboxField({ field, mode, page }: FieldProps) {
       <button
         aria-checked={isChecked}
         aria-label={field.label}
-        className="pointer-events-auto absolute flex items-center justify-center border border-transparent bg-white/0 outline-none focus:border-[var(--color-accent)]"
+        className={`pointer-events-auto absolute flex items-center justify-center rounded-[2px] border transition-colors outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--color-accent)_30%,transparent)] ${
+          isChecked
+            ? "border-[var(--color-accent)]/60 bg-yellow-100/80 hover:bg-yellow-100/90"
+            : "border-yellow-500/40 bg-yellow-100/50 hover:bg-yellow-100/70"
+        }`}
         role="checkbox"
         style={{
           height: css.height,

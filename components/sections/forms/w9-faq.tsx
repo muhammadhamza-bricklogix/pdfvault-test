@@ -4,7 +4,7 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Accordion } from "@heroui/react";
 
-type FaqEntry = {
+export type FaqEntry = {
   id: string;
   question: string;
   answer: string;

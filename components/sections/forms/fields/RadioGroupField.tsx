@@ -49,8 +49,10 @@ export function RadioGroupField({ field, mode, page }: FieldProps) {
               key={opt.id}
               aria-checked={isChecked}
               aria-label={opt.label}
-              className={`pointer-events-auto absolute flex items-center justify-center border border-transparent outline-none transition-colors hover:bg-yellow-100/40 focus:border-[var(--color-accent)] ${
-                isChecked ? "bg-yellow-100/40" : "bg-transparent"
+              className={`pointer-events-auto absolute flex items-center justify-center rounded-[2px] border outline-none transition-colors focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--color-accent)_30%,transparent)] ${
+                isChecked
+                  ? "border-[var(--color-accent)]/60 bg-yellow-100/80 hover:bg-yellow-100/90"
+                  : "border-yellow-500/40 bg-yellow-100/50 hover:bg-yellow-100/70"
               }`}
               role="radio"
               style={{

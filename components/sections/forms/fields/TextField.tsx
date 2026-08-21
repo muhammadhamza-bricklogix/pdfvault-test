@@ -28,7 +28,7 @@ export function TextField({ field, mode, page }: FieldProps) {
         aria-invalid={Boolean(error)}
         aria-label={field.label}
         autoComplete="off"
-        className="pointer-events-auto absolute rounded-[2px] border border-transparent bg-white/0 px-1 text-[12px] leading-none text-black caret-[var(--color-accent)] outline-none transition-shadow focus:border-[var(--color-accent)] focus:bg-yellow-100/30 focus:shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-accent)_30%,transparent)] aria-[invalid=true]:border-danger-500"
+        className="pointer-events-auto absolute rounded-[2px] border border-yellow-500/40 bg-yellow-100/50 px-1 text-[12px] leading-none text-black caret-[var(--color-accent)] outline-none transition-colors hover:bg-yellow-100/70 focus:border-[var(--color-accent)] focus:bg-yellow-100/80 focus:shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-accent)_30%,transparent)] aria-[invalid=true]:border-danger-500"
         id={`field-input-${field.id}`}
         maxLength={field.maxLength}
         style={{

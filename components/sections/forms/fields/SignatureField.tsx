@@ -46,7 +46,7 @@ export function SignatureField({ field, mode, page }: FieldProps) {
             className={`pointer-events-auto absolute flex items-center justify-center rounded-[2px] border-2 border-dashed text-[11px] font-medium outline-none transition-colors ${
               signatureKey
                 ? "border-success-400/40 bg-success-50/40 text-success-700"
-                : "border-[var(--color-accent)]/60 bg-[color-mix(in_oklab,var(--color-accent)_8%,transparent)] text-[var(--color-accent)] hover:bg-[color-mix(in_oklab,var(--color-accent)_15%,transparent)]"
+                : "border-yellow-500/60 bg-yellow-100/60 text-[var(--color-accent)] hover:bg-yellow-100/80"
             } ${error ? "ring-2 ring-danger-500" : ""}`}
             style={{
               height: css.height,

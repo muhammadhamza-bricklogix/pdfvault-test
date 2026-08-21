@@ -136,7 +136,7 @@ export function SsnField({ field, mode, page }: FieldProps) {
               aria-invalid={Boolean(error)}
               aria-label={`SSN digit ${overall + 1}`}
               autoComplete="off"
-              className="pointer-events-auto absolute rounded-[1px] border border-transparent bg-white/0 p-0 text-center text-black caret-[var(--color-accent)] outline-none focus:border-[var(--color-accent)] focus:bg-yellow-100/30 aria-[invalid=true]:border-danger-500"
+              className="pointer-events-auto absolute rounded-[1px] border border-yellow-500/40 bg-yellow-100/50 p-0 text-center text-black caret-[var(--color-accent)] outline-none transition-colors hover:bg-yellow-100/70 focus:border-[var(--color-accent)] focus:bg-yellow-100/80 aria-[invalid=true]:border-danger-500"
               id={`ssn-box-${overall}`}
               inputMode="numeric"
               maxLength={1}
