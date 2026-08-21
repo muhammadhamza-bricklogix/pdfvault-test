@@ -259,9 +259,11 @@ export const W9_SCHEMA: FormSchema = {
           required: true,
           pdfRef: "topmostSubform[0].Page1[0].signature[0]",
           // The W-9 has no AcroForm widget for the signature line; coords
-          // estimated from the IRS Rev March 2024 template — signature
-          // occupies the wider "Sign Here" box on the left of Part II.
-          rect: { page: 1, x: 195, y: 195, w: 220, h: 24 },
+          // measured from the IRS Rev March 2024 template. Signature box
+          // hugs the "Signature of U.S. person" label on the left and
+          // ends at the vertical separator before the printed "Date"
+          // label so the sig ink can't spill into it. Width 175pt.
+          rect: { page: 1, x: 178, y: 195, w: 175, h: 24 },
         },
         {
           id: "signature_date",
@@ -269,9 +271,11 @@ export const W9_SCHEMA: FormSchema = {
           type: "date",
           required: true,
           pdfRef: "topmostSubform[0].Page1[0].signature_date[0]",
-          // Date occupies the narrower box to the right of the signature
-          // on the same baseline.
-          rect: { page: 1, x: 430, y: 195, w: 140, h: 24 },
+          // Date input begins immediately after the printed "Date" label
+          // and fills the remaining printed date line to the right
+          // margin — previously started 20pt too far right so the
+          // input didn't sit on the actual date line.
+          rect: { page: 1, x: 405, y: 195, w: 160, h: 24 },
         },
       ],
     },
