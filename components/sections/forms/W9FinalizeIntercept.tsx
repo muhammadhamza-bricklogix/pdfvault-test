@@ -3,8 +3,8 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
 import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
-import { W9_SCHEMA } from "@/lib/client/forms/w9-schema";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { formsService } from "@/lib/shared/api/services/forms.service";
@@ -41,85 +41,10 @@ type SaveBeforeActionDetail = {
  *     Delete the `signature_date` alias once the backend stamper is
  *     updated to key off `date`.
  */
-const SCHEMA_ID_TO_BACKEND_FIELDS: Record<string, readonly string[]> = {
-  c1_1: ["classification"],
-  signature_date: ["date", "signature_date"],
-};
-
-/**
- * Radio-option value mapping for the federal tax classification. Our
- * schema uses hyphenated ids for consistency with the pdfRef strings;
- * the backend DTO enum uses underscores.
- */
-const CLASSIFICATION_VALUE_MAP: Record<string, string> = {
-  individual: "individual",
-  "c-corp": "c_corp",
-  "s-corp": "s_corp",
-  partnership: "partnership",
-  "trust-estate": "trust_estate",
-  llc: "llc",
-  other: "other",
-};
-
-/**
- * Normalize the form-fill values map into the shape the backend
- * `/form-sessions/:id/finalize` endpoint accepts.
- *
- * Adjustments the backend has flagged with 422 on the raw store payload:
- *
- *   1. **Field renames** — see `SCHEMA_ID_TO_BACKEND_FIELD`. Backend DTO
- *      names differ from our AcroForm-derived ids for a few fields.
- *   2. **Value enum mapping** — `classification` values must be
- *      underscored (`c_corp`, `s_corp`, `trust_estate`), not hyphenated.
- *   3. **Date format** — backend expects `MM/DD/YYYY` (matches the
- *      display form the DateField already stores). No conversion.
- *   4. **SSN / EIN** — strip formatting hyphens (`657-67-8678` →
- *      `657678678`) so `@Matches(/^\d{9}$/)` accepts it.
- *   5. **Empty strings** — dropped so optional fields are treated as
- *      absent rather than "provided but empty".
- */
-function normalizeValuesForFinalize(
-  values: Record<string, string>,
-): Record<string, string> {
-  const fields = W9_SCHEMA.sections.flatMap((s) => s.fields);
-  const digitsOnlyFieldIds = new Set(
-    fields.filter((f) => f.type === "ssn" || f.type === "ein").map((f) => f.id),
-  );
-  const out: Record<string, string> = {};
-
-  for (const [id, rawValue] of Object.entries(values)) {
-    if (rawValue == null || rawValue === "") continue;
-
-    // Skip empty checkbox — `"true"` is truthy, anything else means unchecked.
-    // We don't drop truthy checkbox values because the backend may want them.
-
-    let value = rawValue;
-
-    // SSN / EIN — strip formatting hyphens. NestJS class-validator's
-    // @Matches(/^\d{9}$/) or @IsNumberString rejects hyphenated input.
-    if (digitsOnlyFieldIds.has(id)) {
-      value = rawValue.replace(/\D/g, "");
-      if (!value) continue;
-    }
-
-    // Classification radio value mapping (hyphens → underscores).
-    if (id === "c1_1") {
-      value = CLASSIFICATION_VALUE_MAP[rawValue] ?? rawValue;
-    }
-
-    // Rename the key if the backend DTO uses a different name. Some
-    // schema ids map to MULTIPLE backend keys (e.g. `signature_date`
-    // needs to be sent under both `date` and `signature_date`) — write
-    // the value under every listed alias.
-    const aliases = SCHEMA_ID_TO_BACKEND_FIELDS[id] ?? [id];
-
-    for (const outKey of aliases) {
-      out[outKey] = value;
-    }
-  }
-
-  return out;
-}
+// Normalization moved to `@/lib/client/forms/normalize-w9-values` so
+// `ShareModal` on the /w-9-form route can reuse it (Share must go
+// through finalize too, otherwise the shared link ships the blank
+// template instead of the user's stamped values).
 
 type FieldError = { field: string; message: string };
 
@@ -356,7 +281,7 @@ export function W9FinalizeIntercept() {
         return;
       }
 
-      const normalizedValues = normalizeValuesForFinalize(values);
+      const normalizedValues = normalizeW9ValuesForFinalize(values);
       // Key covers everything the backend stamps into the PDF. Any change
       // to a value, the signature, or the session invalidates the cache
       // and forces a fresh finalize call.

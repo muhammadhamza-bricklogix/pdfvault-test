@@ -3,11 +3,16 @@
 import { Button, Input, Label, Modal, Switch, TextField } from "@heroui/react";
 import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { createShare } from "@/lib/client/api/shares";
-import { usePdfEditorStore } from "@/lib/client/stores";
+import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
+import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
+import { formsService } from "@/lib/shared/api/services/forms.service";
+import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 type ExpiryPreset = "1d" | "7d" | "30d";
@@ -29,6 +34,14 @@ export function ShareModal(): React.ReactElement {
   const file = usePdfEditorStore((s) => s.file);
   const isOpen = usePdfEditorStore((s) => s.isShareModalOpen);
   const setIsOpen = usePdfEditorStore((s) => s.setIsShareModalOpen);
+  const pathname = usePathname();
+  // The /w-9-form route stamps values via the backend finalize endpoint
+  // (see `W9FinalizeIntercept`), NOT via the standard editor save
+  // pipeline. `store.file` on that route is always the blank IRS
+  // template, so sharing it directly would ship the recipient a blank
+  // form. Detect the route and, on generate, run finalize first + swap
+  // the file for the stamped bytes before uploading to /api/share.
+  const isW9Route = pathname?.startsWith(ROUTES.FORMS.W9) ?? false;
   const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
@@ -78,11 +91,68 @@ export function ShareModal(): React.ReactElement {
     const expiresAt = Date.now() + ms;
 
     setSubmitting(true);
+
+    // W-9 flow: stamp the form values via the backend finalize
+    // endpoint, fetch the stamped bytes, and share THOSE — otherwise
+    // the recipient sees the blank IRS template. The standard editor
+    // save pipeline doesn't run here because form values live in
+    // `useFormEditorStore` (backend stamps them at finalize time), not
+    // in `fabricJsonByPage`.
+    let fileToShare = file;
+    let shareName = file.name;
+
+    if (isW9Route) {
+      const formState = useFormEditorStore.getState();
+      const { sessionId, values, signatureKey } = formState;
+
+      if (!sessionId) {
+        setSubmitting(false);
+        toast.error({
+          title: "W-9 session not ready",
+          description:
+            "Give it a moment while we start your W-9 session, then try Share again.",
+        });
+
+        return;
+      }
+
+      try {
+        const { downloadUrl } = await formsService.finalizeFormSession({
+          sessionId,
+          values: normalizeW9ValuesForFinalize(values),
+          signatureKey,
+        });
+        const res = await fetch(downloadUrl, { cache: "no-store" });
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch stamped W-9 (HTTP ${res.status})`);
+        }
+        const stampedBytes = await res.arrayBuffer();
+
+        fileToShare = new File([stampedBytes], "w-9.pdf", {
+          type: "application/pdf",
+        });
+        shareName = "w-9.pdf";
+      } catch (err) {
+        logger.captureError(err, "w9.share.finalize");
+        setSubmitting(false);
+        toast.error({
+          title: "Couldn't prepare your W-9 for sharing",
+          description:
+            err instanceof Error
+              ? err.message
+              : "Please try again in a moment.",
+        });
+
+        return;
+      }
+    }
+
     const result = await createShare({
-      file,
+      file: fileToShare,
       expiresAt,
       password: withPassword ? password : undefined,
-      name: file.name,
+      name: shareName,
     });
 
     setSubmitting(false);
