@@ -189,17 +189,21 @@ export function ShareModal(): React.ReactElement {
                     </Switch.Content>
                   </Switch>
                   {withPassword && (
-                    <div className="relative">
+                    <div className="relative w-full">
                       <TextField
+                        className="w-full"
                         value={password}
                         onChange={(v) => setPassword(v)}
                       >
                         <Input
                           aria-label="Share password"
-                          // Right padding leaves room for the absolutely
-                          // positioned reveal toggle so the caret never
-                          // sits under the eye icon.
-                          className="pr-10"
+                          // `w-full` on both TextField + Input keeps the
+                          // field inside the modal — HeroUI's default
+                          // Input width grows past the modal edge on some
+                          // Chrome widths. `pr-10` leaves room for the
+                          // absolutely-positioned reveal toggle so the
+                          // caret never sits under the eye icon.
+                          className="w-full pr-10"
                           placeholder="Password (4–128 chars)"
                           type={revealPassword ? "text" : "password"}
                         />
@@ -217,14 +221,16 @@ export function ShareModal(): React.ReactElement {
             {generated && (
               <div className="space-y-3">
                 <Label>Share link</Label>
-                <div className="relative">
-                  <TextField value={generated.url}>
+                <div className="relative w-full">
+                  <TextField className="w-full" value={generated.url}>
                     <Input
                       readOnly
                       aria-label="Generated share link"
-                      // Right padding keeps the URL text from sliding under
+                      // `w-full` matches the password field fix so the
+                      // URL input can't overflow the modal on Chrome.
+                      // `pr-10` keeps the URL text from sliding under
                       // the inline copy button on narrow modals.
-                      className="pr-10"
+                      className="w-full pr-10"
                       onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
                         e.target.select()
                       }
