@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 
+import { W9_SCHEMA } from "@/lib/client/forms/w9-schema";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
@@ -13,6 +14,87 @@ const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
 type SaveBeforeActionDetail = {
   onComplete?: (result: { ok: boolean }) => void;
 };
+
+/**
+ * Normalize the form-fill values map into the shape the backend
+ * `/form-sessions/:id/finalize` endpoint accepts. Two adjustments the
+ * backend has flagged with 422 on the raw store payload:
+ *
+ *   1. Date fields — the DateField component stores the display form
+ *      `MM/DD/YYYY`; the backend validator expects ISO `YYYY-MM-DD`.
+ *   2. Empty strings — a value of `""` for optional fields is treated
+ *      as "provided but empty" and can trip length / format validators.
+ *      Drop the key entirely so the backend sees the field as absent.
+ *
+ * Any field whose schema type isn't listed here is passed through
+ * unchanged.
+ */
+function normalizeValuesForFinalize(
+  values: Record<string, string>,
+): Record<string, string> {
+  const fields = W9_SCHEMA.sections.flatMap((s) => s.fields);
+  const dateFieldIds = new Set(
+    fields.filter((f) => f.type === "date").map((f) => f.id),
+  );
+  const out: Record<string, string> = {};
+
+  for (const [id, rawValue] of Object.entries(values)) {
+    if (rawValue == null || rawValue === "") continue;
+
+    if (dateFieldIds.has(id)) {
+      const iso = displayDateToIso(rawValue);
+
+      out[id] = iso ?? rawValue;
+      continue;
+    }
+
+    out[id] = rawValue;
+  }
+
+  return out;
+}
+
+/** `MM/DD/YYYY` → `YYYY-MM-DD`. Returns null if the input isn't in that shape. */
+function displayDateToIso(display: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(display);
+
+  if (!m) return null;
+
+  return `${m[3]}-${m[1]}-${m[2]}`;
+}
+
+/** Extract per-field validation messages from an axios error response body. */
+function extractApiFieldErrors(err: unknown): {
+  message: string;
+  fields?: Record<string, unknown>;
+  raw?: unknown;
+} {
+  const anyErr = err as {
+    message?: string;
+    response?: {
+      status?: number;
+      data?: unknown;
+    };
+  };
+  const data = anyErr.response?.data as
+    | {
+        message?: string | string[];
+        errors?: Record<string, unknown>;
+        detail?: unknown;
+        [k: string]: unknown;
+      }
+    | undefined;
+  const message =
+    (Array.isArray(data?.message) ? data?.message.join("; ") : data?.message) ??
+    anyErr.message ??
+    "Unknown error";
+
+  return {
+    message,
+    fields: data?.errors,
+    raw: data,
+  };
+}
 
 /**
  * Intercepts pdf-composer's `editor:export` event on the W-9 route so
@@ -73,11 +155,38 @@ export function W9FinalizeIntercept() {
         description: "Stamping your values onto the template…",
       });
 
+      const normalizedValues = normalizeValuesForFinalize(values);
+
+      // Loud pre-request log so we can eyeball the exact payload the
+      // backend receives without needing to attach devtools mid-flow.
+      // Group keeps the console tidy when the user clicks Download
+      // multiple times.
+      // eslint-disable-next-line no-console
+      console.groupCollapsed(
+        `[w9.finalize] POST /form-sessions/${sessionId}/finalize`,
+      );
+      // eslint-disable-next-line no-console
+      console.log("sessionId:", sessionId);
+      // eslint-disable-next-line no-console
+      console.log("signatureKey:", signatureKey);
+      // eslint-disable-next-line no-console
+      console.log(
+        "raw values (from useFormEditorStore):",
+        JSON.parse(JSON.stringify(values)),
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        "normalized values (dates → ISO, empty strings dropped):",
+        normalizedValues,
+      );
+      // eslint-disable-next-line no-console
+      console.groupEnd();
+
       void (async () => {
         try {
           const { downloadUrl } = await formsService.finalizeFormSession({
             sessionId,
-            values,
+            values: normalizedValues,
             signatureKey,
           });
 
@@ -100,13 +209,45 @@ export function W9FinalizeIntercept() {
             description: "Your filled PDF has downloaded.",
           });
         } catch (err) {
-          logger.captureError(err, "w9.finalize");
+          const parsed = extractApiFieldErrors(err);
+
+          // Loud error log so we can spot which field the backend rejected.
+          // The generic ApiError message ("Some fields are invalid") hides
+          // the useful per-field detail that the server response body
+          // actually carries — dump both so the fix is obvious in a
+          // single console glance.
+          // eslint-disable-next-line no-console
+          console.groupCollapsed(
+            "[w9.finalize] ✗ backend rejected (422 / other)",
+          );
+          // eslint-disable-next-line no-console
+          console.error("message:", parsed.message);
+          if (parsed.fields) {
+            // eslint-disable-next-line no-console
+            console.error("field errors:", parsed.fields);
+          }
+          if (parsed.raw) {
+            // eslint-disable-next-line no-console
+            console.error("raw response body:", parsed.raw);
+          }
+          // eslint-disable-next-line no-console
+          console.error("payload sent:", {
+            sessionId,
+            signatureKey,
+            values: normalizedValues,
+          });
+          // eslint-disable-next-line no-console
+          console.error("original error:", err);
+          // eslint-disable-next-line no-console
+          console.groupEnd();
+
+          logger.captureError(err, "w9.finalize", {
+            fieldErrors: parsed.fields,
+            responseBody: parsed.raw,
+          });
           toast.error({
             title: "Couldn't generate the W-9",
-            description:
-              err instanceof Error
-                ? err.message
-                : "Please try again in a moment.",
+            description: parsed.message,
           });
         } finally {
           toast.close(loadingKey);
