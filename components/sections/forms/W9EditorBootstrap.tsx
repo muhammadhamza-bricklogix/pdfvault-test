@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
-import { usePdfEditorStore } from "@/lib/client/stores";
+import { useStartFormSessionMutation } from "@/lib/client/query/mutations/forms.mutation";
+import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -18,68 +19,113 @@ type W9EditorBootstrapProps = {
  * sidebar + top toolbar + save/download flow from pdf-composer, no
  * duplication of the editor UI.
  *
+ * ALSO bootstraps a form-editor session (`POST /form-templates/w-9/start`)
+ * so the form-fill overlays (SignatureField, FinalizeModal) that need a
+ * `sessionId` in `useFormEditorStore` can operate — otherwise clicking
+ * the signature field hits "No session yet — try again in a second".
+ * Session bootstrap runs in parallel with the template fetch; it's not
+ * gated on the PDF being loaded because the two are independent.
+ *
  * Order of operations:
  *
  *   1. Mount → `usePdfEditorStore.clearFile()` so no leftover PDF from
  *      a prior pdf-composer visit briefly flashes before the W-9
  *      loads.
- *   2. Fetch the blank W-9 template (public asset, no auth).
- *   3. Wrap the bytes in a `File` object and call `setFile()`. The
- *      shell's `usePdfLoader` picks it up and parses via pdf.js.
- *   4. Wait for `pdfDocument` to be non-null before rendering the
- *      children — otherwise the shell shows the drop-zone for a beat
- *      while pdf.js hydrates.
+ *   2. In parallel: fetch the W-9 template blob + POST the
+ *      form-editor session bootstrap.
+ *   3. Wrap the template bytes in a `File` object and call
+ *      `setFile()`. The shell's `usePdfLoader` picks it up and parses
+ *      via pdf.js.
+ *   4. `hydrateFromSession(session)` writes the session id + schema
+ *      into `useFormEditorStore` so `SignatureModal.handleApply()` can
+ *      upload the signature blob to the backend.
  *
- * On unmount we clear the store again so the next `/pdf-composer`
- * visit starts on the drop-zone, not on the W-9.
+ * On unmount we clear both stores so the next `/pdf-composer` visit
+ * starts on the drop-zone (not on the W-9) and the next `/w-9-form`
+ * visit fetches a fresh session.
  */
 export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const currentFile = usePdfEditorStore((s) => s.file);
 
+  const hydrateFormSession = useFormEditorStore((s) => s.hydrateFromSession);
+  const resetFormSession = useFormEditorStore((s) => s.reset);
+
+  const startFormSession = useStartFormSessionMutation();
+
+  // StrictMode double-invokes effects in dev; the guard refs stop us
+  // from firing the fetch + session POST twice. `hasBootstrappedRef`
+  // stays `true` for the whole mount lifecycle; we only reset it in
+  // the cleanup so a genuine unmount → remount cycle refetches.
+  const hasBootstrappedRef = useRef(false);
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (hasBootstrappedRef.current) return;
+    hasBootstrappedRef.current = true;
+
     let cancelled = false;
 
     // Wipe any leftover file first so the drop-zone / previous PDF
     // doesn't flash before ours loads.
     clearFile();
 
-    void (async () => {
-      try {
-        const res = await fetch(ROUTES.STATIC.W9_BLANK_PDF, {
-          cache: "force-cache",
-        });
+    // Parallel bootstrap: template fetch + form session. Neither
+    // depends on the other so we don't want them serialized.
+    const templatePromise = (async () => {
+      const res = await fetch(ROUTES.STATIC.W9_BLANK_PDF, {
+        cache: "force-cache",
+      });
 
-        if (!res.ok) {
-          throw new Error(`Failed to load W-9 template (HTTP ${res.status})`);
-        }
-        const blob = await res.blob();
-
-        if (cancelled) return;
-        const file = new File([blob], "w-9.pdf", { type: "application/pdf" });
-
-        setFile(file);
-      } catch (err) {
-        if (cancelled) return;
-        logger.captureError(err, "w9.template_load");
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Couldn't load the W-9 template.",
-        );
+      if (!res.ok) {
+        throw new Error(`Failed to load W-9 template (HTTP ${res.status})`);
       }
-    })();
+      const blob = await res.blob();
+
+      if (cancelled) return;
+      const file = new File([blob], "w-9.pdf", { type: "application/pdf" });
+
+      setFile(file);
+    })().catch((err: unknown) => {
+      if (cancelled) return;
+      logger.captureError(err, "w9.template_load");
+      setError(
+        err instanceof Error ? err.message : "Couldn't load the W-9 template.",
+      );
+    });
+
+    const sessionPromise = (async () => {
+      const session = await startFormSession.mutateAsync({ formId: "w-9" });
+
+      if (cancelled) return;
+      hydrateFormSession(session);
+    })().catch((err: unknown) => {
+      // Session failure is non-fatal — the pdf-composer editor still
+      // works; only the SignatureField overlay + finalize flow degrade.
+      // Log for observability so we can spot backend cold-starts.
+      logger.captureError(err, "w9.session_bootstrap");
+    });
+
+    void Promise.all([templatePromise, sessionPromise]);
 
     return () => {
       cancelled = true;
-      // Clear on unmount so `/pdf-composer` and other editor routes
-      // don't inherit the W-9 as their initial file.
+      hasBootstrappedRef.current = false;
+      // Clear both stores on unmount so `/pdf-composer` doesn't inherit
+      // the W-9 file and a subsequent `/w-9-form` visit gets a fresh
+      // session (avoids replaying a stale sessionId on a new mount).
       clearFile();
+      resetFormSession();
     };
-  }, [clearFile, setFile]);
+  }, [
+    clearFile,
+    hydrateFormSession,
+    resetFormSession,
+    setFile,
+    startFormSession,
+  ]);
 
   if (error) {
     return (
