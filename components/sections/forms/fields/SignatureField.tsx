@@ -11,6 +11,15 @@ import { SignatureModal } from "../SignatureModal";
 
 import { pdfRectToCss } from "./types";
 
+// Signature layout — matches pdfguru's convention: the signature (or the
+// "Sign" button) sits at the START of the printed signature line with a
+// margin so it doesn't crash into the "Sign Here" label at the left edge
+// or the divider line at the right. 20% left margin was chosen to visually
+// clear the "Sign Here" label; the rendered signature/button then occupies
+// 80% of the field width so it stays comfortably within the underline.
+const SIGNATURE_LEFT_MARGIN_PCT = 0.2;
+const SIGNATURE_INNER_WIDTH_PCT = 1 - SIGNATURE_LEFT_MARGIN_PCT;
+
 export function SignatureField({ field, mode, page }: FieldProps) {
   const signatureKey = useFormEditorStore((s) => s.signatureKey);
   const signaturePreview = useFormEditorStore((s) => s.signaturePreview);
@@ -22,42 +31,68 @@ export function SignatureField({ field, mode, page }: FieldProps) {
     if (!page) return null;
 
     const css = pdfRectToCss(field.rect, page);
+    const innerLeft = css.left + css.width * SIGNATURE_LEFT_MARGIN_PCT;
+    const innerWidth = css.width * SIGNATURE_INNER_WIDTH_PCT;
 
     return (
       <>
+        {/* Yellow highlight rect — sits behind the button / signature so
+            the whole signature line reads as "editable" even though only
+            the inner 80% is the actual click target. Ignores clicks so
+            they fall through to the button below. */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute rounded-[2px] border transition-colors ${
+            signatureKey
+              ? "border-success-400/40 bg-success-50/40"
+              : "border-yellow-500/40 bg-yellow-100/40"
+          } ${error ? "ring-2 ring-danger-500" : ""}`}
+          style={{
+            height: css.height,
+            left: css.left,
+            top: css.top,
+            width: css.width,
+          }}
+        />
+
         {signaturePreview ? (
-          // eslint-disable-next-line @next/next/no-img-element -- data URL, not optimizable
-          <img
-            alt="Your signature"
-            className="pointer-events-auto absolute cursor-pointer object-contain"
-            src={signaturePreview}
-            style={{
-              height: css.height,
-              left: css.left,
-              top: css.top,
-              width: css.width,
-            }}
-            onClick={() => setIsOpen(true)}
-          />
-        ) : (
           <button
-            aria-invalid={Boolean(error)}
-            aria-label="Open signature panel"
-            className={`pointer-events-auto absolute flex items-center justify-center rounded-[2px] border-2 border-dashed text-[11px] font-medium outline-none transition-colors ${
-              signatureKey
-                ? "border-success-400/40 bg-success-50/40 text-success-700"
-                : "border-yellow-500/60 bg-yellow-100/60 text-[var(--color-accent)] hover:bg-yellow-100/80"
-            } ${error ? "ring-2 ring-danger-500" : ""}`}
+            aria-label="Edit signature"
+            className="pointer-events-auto absolute cursor-pointer bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             style={{
               height: css.height,
-              left: css.left,
+              left: innerLeft,
               top: css.top,
-              width: css.width,
+              width: innerWidth,
             }}
             type="button"
             onClick={() => setIsOpen(true)}
           >
-            {signatureKey ? "✓ Signed" : "Click to sign"}
+            {/* eslint-disable-next-line @next/next/no-img-element -- data URL, not optimizable */}
+            <img
+              alt="Your signature"
+              className="h-full w-full object-contain object-left"
+              draggable={false}
+              src={signaturePreview}
+            />
+          </button>
+        ) : (
+          <button
+            aria-invalid={Boolean(error)}
+            aria-label="Open signature panel"
+            className={`pointer-events-auto absolute inline-flex items-center justify-center gap-1 rounded-md border-2 border-dashed border-[var(--color-accent)]/70 bg-white/90 px-2 text-[11px] font-semibold text-[var(--color-accent)] shadow-sm outline-none transition-colors hover:bg-[var(--color-accent)]/10 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+              error ? "ring-2 ring-danger-500" : ""
+            }`}
+            style={{
+              height: css.height,
+              left: innerLeft,
+              top: css.top,
+              width: innerWidth,
+            }}
+            type="button"
+            onClick={() => setIsOpen(true)}
+          >
+            {signatureKey ? "✓ Signed — edit" : "Sign here"}
           </button>
         )}
 
