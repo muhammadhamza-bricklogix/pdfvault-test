@@ -1,6 +1,6 @@
 import { PdfEditorShell } from "@/components/sections/pdf-editor/PdfEditorShell";
 import { W9EditorBootstrap } from "@/components/sections/forms/W9EditorBootstrap";
-import { W9FabricSync } from "@/components/sections/forms/W9FabricSync";
+import { W9FinalizeIntercept } from "@/components/sections/forms/W9FinalizeIntercept";
 import { W9FormFieldsPortal } from "@/components/sections/forms/W9FormFieldsPortal";
 
 export const metadata = {
@@ -16,19 +16,26 @@ export const metadata = {
 // The editor UI is the same `<PdfEditorShell />` used by `/pdf-composer` so
 // the W-9 route inherits the full toolbox (Add Text / Highlight / Draw /
 // Sign / Image / Ellipse / Cross / Check / Annotations / Links / Manage
-// Pages / thumbnails / undo-redo / Download). `<W9EditorBootstrap />`
-// preloads the blank IRS W-9 template into the shared pdf-composer store
-// so the shell renders it as the initial file. `<W9FormFieldsPortal />`
-// layers the yellow tick-boxes / typed fields / signature drop-zone on top
-// of the pdf.js canvas so users see exactly where to fill; the overlay
-// yields pointer-events to the pdf-composer tools whenever the active
-// tool is anything other than `select`.
+// Pages / thumbnails / undo-redo / Download). Extras layered on top:
+//
+//   - `<W9EditorBootstrap />` preloads the blank IRS W-9 template into
+//     the shared pdf-composer store so the shell renders it as the initial
+//     file, and starts a form-editor session so signature upload works.
+//   - `<W9FormFieldsPortal />` layers the yellow tick-boxes / typed fields
+//     / signature drop-zone on top of the pdf.js canvas so users see
+//     exactly where to fill. Pointer-events yield to the pdf-composer
+//     tools whenever the active tool is anything other than `select`.
+//   - `<W9FinalizeIntercept />` hijacks the Download button on this route
+//     so it routes through the form-session finalize backend (server
+//     stamps values + signature onto the template) instead of pdf-composer's
+//     Fabric-merge export. Mounted BEFORE the shell so its listener
+//     registers first + can `stopImmediatePropagation` the export event.
 export default function W9FormPage() {
   return (
     <W9EditorBootstrap>
+      <W9FinalizeIntercept />
       <PdfEditorShell />
       <W9FormFieldsPortal />
-      <W9FabricSync />
     </W9EditorBootstrap>
   );
 }
