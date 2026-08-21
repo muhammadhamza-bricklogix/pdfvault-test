@@ -1,5 +1,6 @@
 import { PdfEditorShell } from "@/components/sections/pdf-editor/PdfEditorShell";
 import { W9EditorBootstrap } from "@/components/sections/forms/W9EditorBootstrap";
+import { W9FabricSync } from "@/components/sections/forms/W9FabricSync";
 import { W9FormFieldsPortal } from "@/components/sections/forms/W9FormFieldsPortal";
 
 export const metadata = {
@@ -27,6 +28,7 @@ export default function W9FormPage() {
     <W9EditorBootstrap>
       <PdfEditorShell />
       <W9FormFieldsPortal />
+      <W9FabricSync />
     </W9EditorBootstrap>
   );
 }
