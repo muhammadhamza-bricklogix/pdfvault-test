@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { W9_SCHEMA } from "@/lib/client/forms/w9-schema";
 import { formsService } from "@/lib/shared/api/services/forms.service";
@@ -258,7 +258,34 @@ function extractApiFieldErrors(err: unknown): {
  *   - If you need Fabric edits in the download too, we'd need a hybrid:
  *     server finalize + client Fabric merge. Not in this iteration.
  */
+/**
+ * Trigger a browser download from a URL the backend already handed us.
+ * Extracted so the cache-hit path (repeat Download click, same values)
+ * can reuse it without touching the finalize endpoint.
+ */
+function triggerDownload(downloadUrl: string) {
+  const link = document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = "w-9.pdf";
+  link.rel = "noopener";
+  link.target = "_blank";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export function W9FinalizeIntercept() {
+  // Dedup key + last successful downloadUrl. The finalize endpoint on the
+  // backend rejects a second POST for the same session (400 "Invalid
+  // request."), so calling it once per Download click was producing an
+  // error the second time even when the payload was identical. Cache the
+  // response and reuse it whenever the user clicks Download again without
+  // changing any values or the signature.
+  const lastFinalizeRef = useRef<{ key: string; downloadUrl: string } | null>(
+    null,
+  );
+
   useLayoutEffect(() => {
     const handler = (event: Event) => {
       // Prevent pdf-composer's `useExportEditor` from also running on
@@ -277,12 +304,31 @@ export function W9FinalizeIntercept() {
         return;
       }
 
+      const normalizedValues = normalizeValuesForFinalize(values);
+      // Key covers everything the backend stamps into the PDF. Any change
+      // to a value, the signature, or the session invalidates the cache
+      // and forces a fresh finalize call.
+      const cacheKey = `${sessionId}::${signatureKey ?? ""}::${JSON.stringify(
+        normalizedValues,
+      )}`;
+
+      if (lastFinalizeRef.current && lastFinalizeRef.current.key === cacheKey) {
+        // Second (or Nth) click with identical payload — reuse the URL
+        // the backend gave us the first time. Skip the network call so
+        // the backend's "already finalized" 400 never surfaces.
+        triggerDownload(lastFinalizeRef.current.downloadUrl);
+        toast.success({
+          title: "W-9 ready",
+          description: "Your filled PDF has downloaded.",
+        });
+
+        return;
+      }
+
       const loadingKey = toast.loading({
         title: "Preparing your W-9",
         description: "Stamping your values onto the template…",
       });
-
-      const normalizedValues = normalizeValuesForFinalize(values);
 
       // Loud pre-request log so we can eyeball the exact payload the
       // backend receives without needing to attach devtools mid-flow.
@@ -317,19 +363,15 @@ export function W9FinalizeIntercept() {
             signatureKey,
           });
 
-          // Trigger a browser download from the server-returned URL.
+          // Cache so repeat clicks with the same values reuse this URL
+          // instead of re-hitting the backend (which currently rejects a
+          // second finalize on the same session with a 400).
+          lastFinalizeRef.current = { key: cacheKey, downloadUrl };
+
           // `download` attribute suggests a filename; some CORS setups
           // ignore it and rely on Content-Disposition — either way the
           // user gets the PDF.
-          const link = document.createElement("a");
-
-          link.href = downloadUrl;
-          link.download = "w-9.pdf";
-          link.rel = "noopener";
-          link.target = "_blank";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          triggerDownload(downloadUrl);
 
           toast.success({
             title: "W-9 ready",
