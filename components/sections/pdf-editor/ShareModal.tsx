@@ -189,7 +189,7 @@ export function ShareModal(): React.ReactElement {
                     </Switch.Content>
                   </Switch>
                   {withPassword && (
-                    <div className="relative w-full">
+                    <div className="relative mb-3 w-full">
                       <TextField
                         className="w-full"
                         value={password}
