@@ -26,27 +26,6 @@ const FORMS: readonly FormEntry[] = [
     href: ROUTES.FORMS.W9,
     available: true,
   },
-  {
-    slug: "w-4",
-    title: "IRS Form W-4",
-    description: "Employee's Withholding Certificate.",
-    href: ROUTES.FORMS.W4,
-    available: false,
-  },
-  {
-    slug: "1099-nec",
-    title: "IRS Form 1099-NEC",
-    description: "Nonemployee Compensation.",
-    href: ROUTES.FORMS.NEC_1099,
-    available: false,
-  },
-  {
-    slug: "w-7",
-    title: "IRS Form W-7",
-    description: "Application for IRS Individual Taxpayer Identification.",
-    href: ROUTES.FORMS.W7,
-    available: false,
-  },
 ];
 
 interface FormsModalProps {
