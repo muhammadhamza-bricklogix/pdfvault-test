@@ -127,7 +127,7 @@ export function ShareModal(): React.ReactElement {
             <Modal.Heading>Share PDF</Modal.Heading>
           </Modal.Header>
 
-          <Modal.Body className="space-y-5">
+          <Modal.Body className="space-y-5 px-6">
             {!generated && (
               <>
                 <p className="text-xs text-default-500">
