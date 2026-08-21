@@ -17,7 +17,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
-import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -27,7 +26,6 @@ import {
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
-import { reloadEditorFromDocument } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -45,7 +43,6 @@ import {
 import { AnnotationsModal } from "./AnnotationsModal";
 import { MergePdfModal } from "./MergePdfModal";
 import { SplitPdfModal, type SplitPdfModalSource } from "./SplitPdfModal";
-import { VersionHistoryModal } from "./VersionHistoryModal";
 
 // Actions still triggered by PvEditorTopChrome that need modal state /
 // hidden-input machinery owned by this component. The top toolbar dispatches
@@ -60,7 +57,6 @@ const BRIDGE_EVENTS = {
 } as const;
 
 export function HamburgerMenu() {
-  const { userId } = useAuth();
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -78,7 +74,12 @@ export function HamburgerMenu() {
   // the store so it survives the EditorLayout unmount that happens during
   // the post-save pdf.js reload.
   const setIsShareModalOpen = usePdfEditorStore((s) => s.setIsShareModalOpen);
-  const [isVersionsOpen, setIsVersionsOpen] = useState(false);
+  // VersionHistory lives at shell-level (see VersionHistoryModalHost); open
+  // state is in the store so it survives the EditorLayout unmount triggered
+  // by the pre-open save's pdf.js reload — same class of bug as Share.
+  const setIsVersionHistoryModalOpen = usePdfEditorStore(
+    (s) => s.setIsVersionHistoryModalOpen,
+  );
   const [isAnnotationsOpen, setIsAnnotationsOpen] = useState(false);
   const [isSplitOpen, setIsSplitOpen] = useState(false);
   const [splitSource, setSplitSource] = useState<SplitPdfModalSource | null>(
@@ -298,7 +299,7 @@ export function HamburgerMenu() {
             true,
           );
 
-          if (ok) setIsVersionsOpen(true);
+          if (ok) setIsVersionHistoryModalOpen(true);
         })();
         break;
       }
@@ -484,33 +485,6 @@ export function HamburgerMenu() {
         filename={duplicate?.filename ?? null}
         onIgnore={duplicate?.onIgnore ?? (() => undefined)}
         onOverwrite={duplicate?.onOverwrite ?? (() => undefined)}
-      />
-      <VersionHistoryModal
-        documentId={currentDocumentId}
-        isOpen={isVersionsOpen}
-        onClose={() => setIsVersionsOpen(false)}
-        onRestored={(restored, restoredFileUrl) => {
-          // Fetch the restored bytes directly and swap them into the
-          // store. Relying on `clearFile()` to bounce the loader effect
-          // wasn't firing deterministically for every user (QA report
-          // 2026-07-23: "restore succeeds but I have to refresh").
-          // We use the immutable version-snapshot URL for the initial load
-          // because the root document URL can still point at the pre-restore
-          // bytes for a short window after the API returns.
-          void reloadEditorFromDocument(
-            restored,
-            userId,
-            restoredFileUrl,
-          ).catch((err) => {
-            toast.error({
-              title: "Couldn't reload restored version",
-              description:
-                err instanceof Error
-                  ? err.message
-                  : "Please refresh to see the restored version.",
-            });
-          });
-        }}
       />
       <AnnotationsModal
         isOpen={isAnnotationsOpen}

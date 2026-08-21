@@ -92,6 +92,14 @@ const ShareModal = dynamic(
   () => import("./ShareModal").then((m) => m.ShareModal),
   { ssr: false, loading: () => null },
 );
+// Same shell-level pattern as ShareModal — Version History runs a
+// `saveBeforeAction` before opening which triggers a pdf.js reload
+// that unmounts `HamburgerMenu`, wiping any local modal state.
+const VersionHistoryModalHost = dynamic(
+  () =>
+    import("./VersionHistoryModalHost").then((m) => m.VersionHistoryModalHost),
+  { ssr: false, loading: () => null },
+);
 const PerformancePanel = dynamic(
   () => import("./PerformancePanel").then((m) => m.PerformancePanel),
   { ssr: false, loading: () => null },
@@ -525,6 +533,7 @@ export function PdfEditorShell() {
       <CompressModal />
       <PasswordModal />
       <ShareModal />
+      <VersionHistoryModalHost />
       <PageNumbersModal />
       <FormFieldsModal />
       <ReloadConfirmModal />
