@@ -187,26 +187,23 @@ export default function RootLayout({
       </Script>
       {/*
         Trustpilot Automatic Feedback Service loader. Exposes a global
-        `tp('createInvitation', {...})` API so any flow that finishes a
-        review-worthy action (post-signup, first paid conversion, etc.)
-        can trigger an invitation email through Trustpilot. Also serves
-        as Trustpilot's own domain-verification probe.
+        `tp('createInvitation', {...})` API and serves as Trustpilot's
+        own domain-verification probe.
 
-        Rendered as a plain `<script>` (not `next/script`) so it appears
-        verbatim in the initial server-rendered HTML. Trustpilot's
-        verifier fetches the page over plain HTTP and does not execute
-        JavaScript, so the `tp('register', ...)` snippet MUST be present
-        in view-source. `next/script` with `strategy="afterInteractive"`
-        can inject client-side after hydration, which the verifier
-        misses — that's why domain verification was failing even after
-        the loader shipped.
+        MUST use `next/script` with `strategy="beforeInteractive"` — the
+        `beforeInteractive` strategy is the only one Next.js guarantees
+        to inline into `<head>` during SSR. Raw `<script>` at `<html>`
+        root gets hoisted to `<body>` by React, and Trustpilot's verifier
+        only scans `<head>` for the `tp('register', ...)` call, so any
+        `<body>`-placed variant fails domain verification even when the
+        snippet is present in view-source. `afterInteractive` also fails
+        because it can inject client-side after hydration, which a
+        non-JS crawler never sees.
       */}
       {trustpilotInviteId ? (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
-          }}
-        />
+        <Script id="trustpilot-invite" strategy="beforeInteractive">
+          {`(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`}
+        </Script>
       ) : null}
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <NextTopLoader color="#DF3A38" showSpinner={false} />
