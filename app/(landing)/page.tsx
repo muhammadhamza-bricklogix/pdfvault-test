@@ -7,9 +7,9 @@ import { LandingFreshStart } from "@/components/sections/new-landing/landing-fre
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
-// Async Server Component that fetches Trustpilot reviews. Imported
-// directly (not via next/dynamic) because next/dynamic in App Router is
-// for client components only — a server component streams naturally.
+// Trustpilot TrustBox widget host — plain Server Component that ships
+// the widget div + bootstrap script; Trustpilot's own CDN populates the
+// reviews client-side on load.
 import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 
 // Below-fold client components — split into separate JS chunks so the browser
