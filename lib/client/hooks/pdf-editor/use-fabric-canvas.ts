@@ -307,8 +307,22 @@ export function useFabricCanvas({
         (target as { isEditing?: boolean }).isEditing === true;
       const isSelectable =
         (target as { selectable?: boolean }).selectable !== false;
+      // Extracted source text (`editorType === "editModeText"`) blankets
+      // every line of every page once auto-extract has run. Calling
+      // `preventDefault()` on every touch that lands on a text run
+      // means iOS Safari can never fire the browser's 1-finger pan
+      // gesture when the user zooms in — every finger lands on TEXT
+      // (QA report iPhone 17: "one-finger swipe should be able to
+      // move the document around"). Text is tap-to-edit on mobile, not
+      // drag-to-move, so releasing the gesture back to the browser is
+      // safe here. Non-text overlays (annotations, shapes, images,
+      // signatures) still get the drag behaviour from 2026-06-17.
+      const editorType = (target as { editorType?: string }).editorType;
+      const isExtractedText = editorType === "editModeText";
 
-      if (isSelectable && !isITextEditing) e.preventDefault();
+      if (isSelectable && !isITextEditing && !isExtractedText) {
+        e.preventDefault();
+      }
     };
 
     upper.addEventListener("touchstart", onTouchStart, { passive: false });

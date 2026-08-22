@@ -4,6 +4,7 @@ import type { Canvas } from "fabric";
 
 import { useEffect, useRef } from "react";
 
+import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -17,7 +18,9 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export function useImageTool({ fabricCanvas }: UseImageToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
+  const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const pushHistory = usePdfEditorStore((s) => s.pushHistory);
+  const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -101,6 +104,12 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       fabricCanvas.renderAll();
 
       pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
+      // Persist the image into the store immediately so save/export can't
+      // miss it if `flushLiveFabricPage` at export time hits a stale/empty
+      // live canvas (matches the 2026-07-23 draw/signature persistence
+      // pattern that fixed the same symptom for those tools).
+      saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
+      markDocumentDirty();
 
       setActiveTool("select");
       input.value = "";
@@ -123,5 +132,13 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       input.removeEventListener("change", handleChange);
       window.removeEventListener("focus", handleCancel);
     };
-  }, [activeTool, fabricCanvas, currentPage, pushHistory, setActiveTool]);
+  }, [
+    activeTool,
+    fabricCanvas,
+    currentPage,
+    markDocumentDirty,
+    pushHistory,
+    saveFabricJson,
+    setActiveTool,
+  ]);
 }

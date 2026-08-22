@@ -1,0 +1,153 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>Your file is waiting on PDFVault</title>
+  <!--[if mso]>
+  <style type="text/css">
+    table, td, div, h1, p { font-family: Arial, sans-serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin:0; padding:0; background-color:#f4f5f7; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <!-- Preview text (hidden, shows in inbox list next to subject) -->
+  <div style="display:none; overflow:hidden; line-height:1px; opacity:0; max-height:0; max-width:0;">
+    Your edits are saved. Pick up right where you left off and finish {{event.file_name | default: event.fileName | default: "your file"}}.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f5f7;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- Outer card -->
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; width:100%; background-color:#ffffff; border-radius:12px; box-shadow:0 1px 3px rgba(15,23,42,0.06); overflow:hidden;">
+
+          <!-- Brand bar -->
+          <tr>
+            <td align="left" style="padding:24px 32px 8px 32px;">
+              <a href="https://pdfvault.ai" style="text-decoration:none; color:#0f172a;">
+                <span style="display:inline-block; width:28px; height:28px; background-color:#ef4444; border-radius:6px; vertical-align:middle; text-align:center; color:#ffffff; font-family:Arial, sans-serif; font-weight:700; font-size:16px; line-height:28px;">P</span>
+                <span style="display:inline-block; margin-left:10px; vertical-align:middle; font-family:Arial, sans-serif; font-weight:700; font-size:18px; color:#0f172a; letter-spacing:-0.01em;">PDFVault</span>
+              </a>
+            </td>
+          </tr>
+
+          <!-- Headline -->
+          <tr>
+            <td style="padding:16px 32px 8px 32px;">
+              <h1 style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:22px; line-height:30px; color:#0f172a; font-weight:700; letter-spacing:-0.01em;">
+                You left a file behind, {{event.first_name | default: event.firstName | default: "there"}}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body copy -->
+          <tr>
+            <td style="padding:8px 32px 0 32px;">
+              <p style="margin:0 0 16px 0; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#334155;">
+                It looks like you were editing a file on PDFVault but didn't finish. Your edits are saved — pick up right where you left off.
+              </p>
+            </td>
+          </tr>
+
+          <!-- File card -->
+          <tr>
+            <td style="padding:16px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <tr>
+                  <td style="padding:14px 16px;" valign="middle">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td width="36" valign="middle" style="padding-right:12px;">
+                          <span style="display:inline-block; width:36px; height:36px; background-color:#fee2e2; border-radius:6px; text-align:center; font-family:Arial, sans-serif; font-weight:700; font-size:12px; line-height:36px; color:#dc2626; letter-spacing:0.02em;">PDF</span>
+                        </td>
+                        <td valign="middle" style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:600; word-break:break-all;">
+                          {{event.file_name | default: event.fileName | default: "your document"}}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Primary CTA -->
+          <tr>
+            <td align="left" style="padding:24px 32px 8px 32px;">
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{event.resume_url | default: event.resumeUrl | default: 'https://pdfvault.ai'}}" style="height:48px; v-text-anchor:middle; width:220px;" arcsize="12%" strokecolor="#dc2626" fillcolor="#dc2626">
+                <w:anchorlock/>
+                <center style="color:#ffffff; font-family:Arial, sans-serif; font-size:15px; font-weight:700;">Continue editing →</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-- -->
+              <a href="{{event.resume_url | default: event.resumeUrl | default: 'https://pdfvault.ai'}}"
+                 style="display:inline-block; background-color:#dc2626; color:#ffffff; text-decoration:none; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:700; line-height:20px; padding:14px 24px; border-radius:8px; mso-padding-alt:0;">
+                Continue editing →
+              </a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+
+          <!-- Subtext / disclaimer -->
+          <tr>
+            <td style="padding:16px 32px 0 32px;">
+              <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:20px; color:#64748b;">
+                Downloading requires an active trial or subscription (from $0.99 for 7 days). If you already started one, this is included.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <div style="border-top:1px solid #e2e8f0; height:1px; line-height:1px; font-size:1px;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Sign-off -->
+          <tr>
+            <td style="padding:16px 32px 24px 32px;">
+              <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#334155;">
+                — The PDFVault Team
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Footer (outside card) -->
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; width:100%;">
+          <tr>
+            <td align="center" style="padding:20px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#94a3b8;">
+              <a href="https://pdfvault.ai/legal/subscription-terms" style="color:#64748b; text-decoration:underline;">Subscription Terms</a>
+              &nbsp;·&nbsp;
+              <a href="https://pdfvault.ai/legal/refund-policy" style="color:#64748b; text-decoration:underline;">Refund Policy</a>
+              &nbsp;·&nbsp;
+              <a href="https://pdfvault.ai/legal/privacy-policy" style="color:#64748b; text-decoration:underline;">Privacy</a>
+              &nbsp;·&nbsp;
+              <a href="https://pdfvault.ai/dashboard/settings/billing" style="color:#64748b; text-decoration:underline;">Manage subscription</a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:4px 32px 4px 32px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#94a3b8;">
+              © 2026 PDFVault.ai · All rights reserved.
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:4px 32px 0 32px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#94a3b8;">
+              <a href="{{unsubscribe_url}}" style="color:#94a3b8; text-decoration:underline;">Unsubscribe</a>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

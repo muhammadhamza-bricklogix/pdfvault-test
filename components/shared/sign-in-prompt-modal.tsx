@@ -4,6 +4,8 @@ import { Button, Modal } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
+import { logger } from "@/lib/shared/utils/logger";
 
 export type SignInPromptDetail = {
   title?: string;
@@ -27,6 +29,10 @@ export type SignInPromptDetail = {
  */
 export function dispatchSignInPrompt(detail: SignInPromptDetail) {
   if (typeof window === "undefined") return;
+  logger.event(EVENTS.SIGNIN_PROMPT_DISPATCHED, "info", {
+    destination: detail.destination ?? "sign-in",
+    hasRedirect: Boolean(detail.redirectUrl),
+  });
   window.dispatchEvent(new CustomEvent("app:sign-in-prompt", { detail }));
 }
 
@@ -55,7 +61,10 @@ export function SignInPromptModal() {
     return () => window.removeEventListener("app:sign-in-prompt", onPrompt);
   }, []);
 
-  const close = useCallback(() => setDetail(null), []);
+  const close = useCallback(() => {
+    logger.event(EVENTS.SIGNIN_PROMPT_CANCELLED, "info");
+    setDetail(null);
+  }, []);
 
   const confirm = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -67,6 +76,9 @@ export function SignInPromptModal() {
         ? ROUTES.AUTH.SIGN_UP
         : ROUTES.AUTH.SIGN_IN;
 
+    logger.event(EVENTS.SIGNIN_PROMPT_CONFIRMED, "info", {
+      destination: detail?.destination ?? "sign-in",
+    });
     window.location.assign(
       `${dest}?redirect_url=${encodeURIComponent(returnTo)}`,
     );

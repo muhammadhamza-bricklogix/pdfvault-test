@@ -8,6 +8,7 @@ import { useId, useMemo, useState } from "react";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
@@ -130,7 +131,7 @@ export function SignupCard() {
         redirectUrl: afterSignUpPath,
       });
     } catch (err) {
-      logger.error("Google sign-up failed", err);
+      logger.captureError(err, "signup.oauth_google");
       setNotice("Something went wrong with Google sign-up.");
       setOauthLoading(false);
     }
@@ -199,8 +200,9 @@ export function SignupCard() {
 
       setStep("verify");
       setCode("");
+      logger.event(EVENTS.SIGNUP_CODE_SENT, "info");
     } catch (err) {
-      logger.error("Sign-up submission failed", err);
+      logger.captureError(err, "signup.credentials");
       setErrors({
         password: readClerkError(
           err,
@@ -244,6 +246,9 @@ export function SignupCard() {
       }
 
       if (signUp.status === "complete") {
+        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
+          redirectPath: afterSignUpPath,
+        });
         const { error: finalizeError } = await signUp.finalize({
           navigate: ({ decorateUrl }) => {
             // Full-page navigation so the freshly-set Clerk session cookie
@@ -255,6 +260,7 @@ export function SignupCard() {
         });
 
         if (finalizeError) {
+          logger.captureError(finalizeError, "signup.finalize");
           setErrors({
             code: readClerkError(
               finalizeError,
@@ -270,7 +276,7 @@ export function SignupCard() {
         "One more step is needed to finish creating your account. Please check your email.",
       );
     } catch (err) {
-      logger.error("Verification failed", err);
+      logger.captureError(err, "signup.verify");
       setErrors({
         code: readClerkError(
           err,
@@ -296,7 +302,7 @@ export function SignupCard() {
       }
       setNotice("A fresh code is on the way.");
     } catch (err) {
-      logger.error("Resend failed", err);
+      logger.captureError(err, "signup.resend");
       setNotice(readClerkError(err, "Couldn't resend the code."));
     }
   };

@@ -1,5 +1,6 @@
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionReason =
@@ -30,6 +31,7 @@ type SaveBeforeActionReason =
 export async function saveBeforeAction(
   description = "Saving your edits…",
   force = false,
+  skipWait = false,
 ): Promise<boolean> {
   if (!force && !usePdfEditorStore.getState().hasUnsavedChanges) return true;
 
@@ -45,7 +47,7 @@ export async function saveBeforeAction(
     }>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { force, onComplete: resolve },
+          detail: { force, skipWait, onComplete: resolve },
         }),
       );
     });
@@ -56,6 +58,13 @@ export async function saveBeforeAction(
           typeof window === "undefined"
             ? "/"
             : `${window.location.pathname}${window.location.search}`;
+
+        // Snapshot file + fabric edits + extractedPages so the hydrator
+        // restores the full editor state on return. Without this the
+        // full-page Clerk redirect wipes overlays and Manage Pages / etc.
+        // reopens against the pre-edit source — the "first-time login
+        // drops my edits" bug for save-before-action callers.
+        await snapshotPendingEditorFile().catch(() => undefined);
 
         dispatchSignInPrompt({
           title: "Sign in to continue",

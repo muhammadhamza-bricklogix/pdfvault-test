@@ -49,7 +49,7 @@ import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -159,16 +159,7 @@ export function EditorInfoBar() {
       // Persist the file + any per-page Fabric edits to IDB before the
       // full-page sign-in redirect so the hydrator can restore the exact
       // state the user was in after they authenticate.
-      if (file) {
-        const { fabricJsonByPage, extractedPages } =
-          usePdfEditorStore.getState();
-
-        void savePendingEditorFile(
-          file,
-          fabricJsonByPage,
-          extractedPages,
-        ).catch(() => undefined);
-      }
+      void snapshotPendingEditorFile().catch(() => undefined);
 
       dispatchSignInPrompt({
         title: "Sign in to save",
@@ -189,7 +180,14 @@ export function EditorInfoBar() {
   // landing page if the app itself hasn't authenticated them yet, so a
   // signed-out visitor exploring the editor isn't bounced through a
   // sign-in dead-end just for pressing Back).
+  //
+  // Clear the store BEFORE navigating so re-entry via any path — bare
+  // `/pdf-editor`, tool tile, a landing-page drop that creates a new doc —
+  // doesn't render the previous PDF while the new load is in flight.
+  // Reported 2026-08-18: "open PDF, edit, go back, open another PDF still
+  // shows the previous PDF".
   const handleBack = () => {
+    usePdfEditorStore.getState().clearFile();
     router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
   };
 
@@ -288,7 +286,7 @@ export function EditorInfoBar() {
         them un-tappable. Splitting nav onto its own centered row gives both
         groups full reach without sacrificing the desktop layout.
       */}
-      <div className="flex flex-col gap-1 px-2 py-1 sm:h-10 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-0 lg:px-3">
+      <div className="flex flex-col gap-1 px-2 py-1 sm:min-h-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1 sm:py-1 lg:px-3">
         {/* Action row: left actions + right save/theme. Doubles as the only
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
@@ -318,7 +316,9 @@ export function EditorInfoBar() {
                 isDisabled={!canUndo}
                 size="sm"
                 variant="tertiary"
-                onPress={() => window.dispatchEvent(new CustomEvent("editor:undo"))}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:undo"))
+                }
               >
                 <HugeiconsIcon icon={UndoIcon} size={16} />
               </Button>
@@ -327,7 +327,9 @@ export function EditorInfoBar() {
                 isDisabled={!canRedo}
                 size="sm"
                 variant="tertiary"
-                onPress={() => window.dispatchEvent(new CustomEvent("editor:redo"))}
+                onPress={() =>
+                  window.dispatchEvent(new CustomEvent("editor:redo"))
+                }
               >
                 <HugeiconsIcon icon={RedoIcon} size={16} />
               </Button>
@@ -654,7 +656,7 @@ export function EditorToolBar() {
   };
 
   return (
-    <div className="flex h-14 shrink-0 items-center justify-center gap-3 px-3">
+    <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2 px-3 py-2">
       <HistoryActions />
       <Separator className="!h-6" orientation="vertical" />
       <ToolsContent />

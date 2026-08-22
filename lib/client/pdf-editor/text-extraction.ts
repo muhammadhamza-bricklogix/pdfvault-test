@@ -1,6 +1,8 @@
 import type { PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
+import { logger } from "@/lib/shared/utils/logger";
+
 import { loadPdfJs } from "./load-pdfjs";
 
 export type FontData = {
@@ -179,6 +181,25 @@ async function extractSequentialTextColors(
   const { OPS } = await loadPdfJs();
   const opList = await page.getOperatorList();
 
+  // Build a reverse lookup for OP name → id so unknown color-related ops can
+  // be logged with a human-readable name. Cached on the OPS object.
+  type OPSType = typeof OPS & { __reverse?: Record<number, string> };
+  const OPSExt = OPS as OPSType;
+
+  if (!OPSExt.__reverse) {
+    const rev: Record<number, string> = {};
+
+    for (const [name, id] of Object.entries(OPS)) {
+      if (typeof id === "number") rev[id] = name;
+    }
+    OPSExt.__reverse = rev;
+  }
+  const opName = (id: unknown): string => {
+    if (typeof id !== "number") return `<non-numeric:${typeof id}>`;
+
+    return OPSExt.__reverse?.[id] ?? `op#${id}`;
+  };
+
   let currentFillColor = "#000000";
   const gsStack: string[] = [];
   const colors: string[] = [];
@@ -187,6 +208,19 @@ async function extractSequentialTextColors(
   const argsArray = opList?.argsArray;
 
   if (!fnArray || !argsArray) return colors;
+
+  // Diagnostic counters. Logged once at the end so we can see which color ops
+  // the doc actually emits — if this shows 0 across all setFill* ops but
+  // there are showText ops with black defaults, the doc is using an op we
+  // haven't handled (e.g. setStrokeRGBColor on stroked text, or a colorspace
+  // op we're not intercepting). Reported 2026-08-18: colored text in dark
+  // PDFs turns black on Edit Text activation.
+  const opCounts: Record<string, number> = {};
+  const unknownColorOps: Record<
+    string,
+    { count: number; sampleArgs: unknown[] }
+  > = {};
+  const showTextSamples: { op: string; color: string; index: number }[] = [];
 
   for (let i = 0; i < fnArray.length; i++) {
     const op = fnArray[i];
@@ -201,6 +235,7 @@ async function extractSequentialTextColors(
     } else if (op === OPS.restore) {
       currentFillColor = gsStack.pop() ?? "#000000";
     } else if (op === OPS.setFillRGBColor) {
+      opCounts.setFillRGBColor = (opCounts.setFillRGBColor ?? 0) + 1;
       // pdf.js may pass either a pre-formatted "#rrggbb" string OR
       // three separate 0–1 floats.
       const a0 = args[0];
@@ -215,6 +250,7 @@ async function extractSequentialTextColors(
         currentFillColor = rgbToHex(a0, args[1] as number, args[2] as number);
       }
     } else if (op === OPS.setFillGray) {
+      opCounts.setFillGray = (opCounts.setFillGray ?? 0) + 1;
       const g = args[0];
 
       if (typeof g === "number") {
@@ -223,6 +259,7 @@ async function extractSequentialTextColors(
         currentFillColor = g;
       }
     } else if (op === OPS.setFillCMYKColor) {
+      opCounts.setFillCMYKColor = (opCounts.setFillCMYKColor ?? 0) + 1;
       const a0 = args[0];
 
       if (typeof a0 === "string" && a0.startsWith("#")) {
@@ -244,6 +281,36 @@ async function extractSequentialTextColors(
 
         currentFillColor = rgbToHex(r, gr, b);
       }
+    } else if (op === OPS.setFillColor || op === OPS.setFillColorN) {
+      opCounts[opName(op)] = (opCounts[opName(op)] ?? 0) + 1;
+      // Generic colorspace fills (`sc` / `scn`). pdf.js emits these for any
+      // colorspace other than DeviceRGB/DeviceGray/DeviceCMYK — e.g.
+      // ICC-based, CalRGB, DeviceN, Pattern. Args are 1–4 numeric components
+      // (plus an optional pattern name for `scn`). We don't have the active
+      // colorspace here, so infer from the leading numeric arg count.
+      const nums: number[] = [];
+
+      for (const a of args) {
+        if (typeof a === "number") nums.push(a);
+        else break;
+      }
+      if (nums.length === 1) {
+        const g = nums[0]!;
+
+        currentFillColor = rgbToHex(g, g, g);
+      } else if (nums.length === 3) {
+        currentFillColor = rgbToHex(nums[0]!, nums[1]!, nums[2]!);
+      } else if (nums.length === 4) {
+        const c = nums[0]!;
+        const m = nums[1]!;
+        const y = nums[2]!;
+        const k = nums[3]!;
+        const r = (1 - c) * (1 - k);
+        const gr = (1 - m) * (1 - k);
+        const b = (1 - y) * (1 - k);
+
+        currentFillColor = rgbToHex(r, gr, b);
+      }
     } else if (
       op === OPS.showText ||
       op === OPS.showSpacedText ||
@@ -251,8 +318,39 @@ async function extractSequentialTextColors(
       op === OPS.nextLineSetSpacingShowText
     ) {
       colors.push(currentFillColor);
+      if (showTextSamples.length < 20) {
+        showTextSamples.push({
+          color: currentFillColor,
+          index: colors.length - 1,
+          op: opName(op),
+        });
+      }
+    } else {
+      // Log any unknown op whose name contains "Fill", "Color", "Stroke",
+      // or "GState" — those are the categories that could carry a color and
+      // that we might be missing. Sampled once per name to keep noise down.
+      const name = opName(op);
+
+      if (/Fill|Color|Stroke|GState/i.test(name)) {
+        const bucket = unknownColorOps[name] ?? { count: 0, sampleArgs: [] };
+
+        bucket.count += 1;
+        if (bucket.sampleArgs.length === 0) {
+          bucket.sampleArgs = Array.isArray(args) ? args.slice(0, 6) : [args];
+        }
+        unknownColorOps[name] = bucket;
+      }
     }
   }
+
+  logger.info("[PDFedits] text: color-op walk", {
+    totalOps: fnArray.length,
+    colorsCollected: colors.length,
+    uniqueColors: Array.from(new Set(colors)),
+    knownOpCounts: opCounts,
+    unknownColorOps,
+    firstShowText: showTextSamples,
+  });
 
   return colors;
 }
@@ -319,8 +417,46 @@ export async function extractTextBlocks(
   const uniqueColors = new Set(colors);
   const fallbackColor = uniqueColors.size === 1 ? colors[0]! : "#000000";
 
+  logger.info("[PDFedits] text: extract color-mapping", {
+    itemsCount: items.length,
+    colorsCount: colors.length,
+    sameLength,
+    uniqueColorCount: uniqueColors.size,
+    fallbackColor,
+    firstColors: colors.slice(0, 20),
+    firstItemStrings: items
+      .slice(0, 20)
+      .map((it) => (it && "str" in it ? (it as TextItem).str : "")),
+  });
+
+  // pdf.js typically splits text items on font/style changes within a single
+  // showText op, so items.length > colors.length is common. Both streams are
+  // in document order, so a proportional index mapping keeps colors mostly
+  // aligned. Boundary items may pick up the wrong color for a few glyphs, but
+  // the majority of the page renders correctly. (2026-08-18: the previous
+  // "refuse extraction" branch left dark PDFs uneditable — replaced with this
+  // fallback so colored text stays approximately colored instead of black.)
+  const useProportional = !sameLength && colors.length > 0;
+
+  if (useProportional) {
+    logger.warn("[PDFedits] text: proportional color mapping", {
+      itemsCount: items.length,
+      colorsCount: colors.length,
+      uniqueColors: Array.from(uniqueColors),
+    });
+  }
+
   const colorForItem = (itemIndex: number): string => {
     if (sameLength) return colors[itemIndex] ?? fallbackColor;
+
+    if (useProportional && items.length > 0) {
+      const mappedIdx = Math.min(
+        colors.length - 1,
+        Math.floor((itemIndex * colors.length) / items.length),
+      );
+
+      return colors[mappedIdx] ?? fallbackColor;
+    }
 
     return fallbackColor;
   };

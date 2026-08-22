@@ -600,30 +600,98 @@ export function drawPath(
   const scaleY = (obj.scaleY as number) ?? 1;
   const opacity = (obj.opacity as number) ?? 1;
 
-  const { left, top } = resolveTopLeft(obj);
+  // Fabric v6 Path coordinate model (verified against runtime logs
+  // 2026-08-20 for PencilBrush highlights, all 3 paths):
+  //   - `obj.path` holds path commands with coords in RAW CANVAS
+  //     SPACE, i.e. the absolute pointer positions when the user
+  //     drew each point. NOT normalised to bbox-local (0..width).
+  //   - `obj.width`, `obj.height` = raw bbox size.
+  //   - `obj.scaleX/Y` = user-applied scale (1 by default).
+  //   - **`obj.left`, `obj.top` = CENTER of the bbox in canvas coords
+  //     (NOT the top-left)** — Fabric v6 Path uses center-origin
+  //     positioning internally, even though `originX/Y` may not
+  //     appear as `"center"` in the serialized JSON. Verified
+  //     empirically: for every fresh path,
+  //     `obj.left === bbox.minX + width/2` (± sub-pixel stroke pad).
+  //   - `obj.pathOffset` = the same bbox center in raw path coords.
+  //     Fabric v6's `toJSON()` does NOT serialize it — reading it
+  //     from a JSON.parse'd snapshot yields `undefined`.
+  //
+  // Four earlier attempts got this wrong:
+  //   1. `+ pathOffset * scale` on both pdfX and pdfY (QA 2026-08-20 a).
+  //   2. Position by `left/top` while SVG path also carried those
+  //      coords — double offset, off the right edge (QA 2026-08-20 b).
+  //   3. Delta via `left - (pathOffset - width/2)` — pathOffset missing
+  //      from JSON → delta = left + width/2 (QA 2026-08-20 c).
+  //   4. Walked path data for `originalMinX`, but computed
+  //      `delta = objLeft - originalMinX` treating objLeft as bbox
+  //      TOP-LEFT. That's `width/2` too far right — path drifted
+  //      toward center of page (QA 2026-08-20 d, visible in
+  //      screenshot 23: all three highlights collapsed to center-top).
+  //
+  // Correct model:
+  //   - Walk the path data to find `originalMinX/Y` (raw bbox top-left).
+  //   - Convert `obj.left/top` from center to top-left by subtracting
+  //     `scaledWidth/2` and `scaledHeight/2`.
+  //   - `delta = currentTopLeft - originalMinX/Y * scaleX/Y`.
+  //   - Draw SVG at `(delta.x * ctx.scaleX, pdfHeight - delta.y * ctx.scaleY)`.
+  //
+  // For a freshly-drawn unmoved unscaled path, delta ≈ 0 (up to
+  // sub-pixel stroke padding), so SVG lands at `(0, pdfHeight)`
+  // and its raw coords render at their original canvas positions
+  // in PDF space (Y-flipped inside `transformPathCoords`).
+  const objLeft = (obj.left as number) || 0;
+  const objTop = (obj.top as number) || 0;
+  const rawWidth = (obj.width as number) || 0;
+  const rawHeight = (obj.height as number) || 0;
+  const scaledWidth = rawWidth * scaleX;
+  const scaledHeight = rawHeight * scaleY;
 
-  // Fabric Path stores path coords relative to the path's own bounding box.
-  // pathOffset is the center of the path in its local coordinate system.
-  const pathOffsetX = (obj.pathOffset?.x as number) || 0;
-  const pathOffsetY = (obj.pathOffset?.y as number) || 0;
+  // Walk the raw path data to find its actual bbox top-left (in the
+  // path coord space, before any translation or scale).
+  let originalMinX = Number.POSITIVE_INFINITY;
+  let originalMinY = Number.POSITIVE_INFINITY;
 
-  // Transform path coords: scale by object's scale and canvas-to-PDF scale,
-  // then Y-flip for PDF coordinate system.
+  for (const cmd of pathArray) {
+    if (typeof cmd[0] !== "string") continue;
+    const letter = cmd[0];
+
+    if (letter === "Z" || letter === "z") continue;
+
+    // Coord pairs after the command letter. Fabric-emitted commands
+    // are all absolute uppercase — M/L/T = 1 pt; Q/S = 2 pts; C = 3 pts.
+    // Arc (A) mixes flags/radii into the arg list but PencilBrush
+    // doesn't emit A, so pair-walking is safe here.
+    for (let i = 1; i < cmd.length; i += 2) {
+      const x = cmd[i];
+      const y = cmd[i + 1];
+
+      if (typeof x === "number" && x < originalMinX) originalMinX = x;
+      if (typeof y === "number" && y < originalMinY) originalMinY = y;
+    }
+  }
+
+  if (!Number.isFinite(originalMinX)) originalMinX = 0;
+  if (!Number.isFinite(originalMinY)) originalMinY = 0;
+
+  // Convert obj.left/top (bbox CENTER in canvas coords) → bbox TOP-LEFT.
+  const bboxLeft = objLeft - scaledWidth / 2;
+  const bboxTop = objTop - scaledHeight / 2;
+
+  // Movement delta from the original bbox top-left (in raw path coords,
+  // scaled by obj scale) to the current bbox top-left. Zero for a
+  // freshly-drawn unmoved path (up to sub-pixel stroke padding).
+  const deltaX = bboxLeft - originalMinX * scaleX;
+  const deltaY = bboxTop - originalMinY * scaleY;
+
   const totalScaleX = scaleX * ctx.scaleX;
   const totalScaleY = scaleY * ctx.scaleY;
 
   const transformed = transformPathCoords(pathArray, totalScaleX, -totalScaleY);
   const svgPath = fabricPathToSvgString(transformed);
 
-  // Position: the path's origin in PDF space.
-  // left/top is the bounding box top-left in Fabric (after origin resolution).
-  // pathOffset is the center of the path data — we need to translate so that
-  // the transformed path lands at the correct position.
-  const pdfX = toPdfX(left, ctx) + toPdfDim(pathOffsetX * scaleX, ctx.scaleX);
-  const pdfY =
-    ctx.pdfHeight -
-    toPdfDim(top, ctx.scaleY) -
-    toPdfDim(pathOffsetY * scaleY, ctx.scaleY);
+  const pdfX = toPdfDim(deltaX, ctx.scaleX);
+  const pdfY = ctx.pdfHeight - toPdfDim(deltaY, ctx.scaleY);
 
   const strokeColor = hexToPdfColor(obj.stroke as string);
   const fillColor = hexToPdfColor(obj.fill as string);
@@ -631,6 +699,53 @@ export function drawPath(
     (obj.strokeWidth as number) || 1,
     (ctx.scaleX + ctx.scaleY) / 2,
   );
+
+  // EXPORT-DIAG: exhaustive dump of what actually reaches pdf-lib for this
+  // Path. If the exported PDF "loses" the highlight, one of these will
+  // reveal why: pdfY≈pdfHeight (drawn at top), opacity≈0, stroke missing,
+  // borderWidth≈0, or svgPath truncated. Truncate the svgPath preview so
+  // the log stays readable for long freehand strokes.
+  try {
+    const svgPreview =
+      svgPath.length > 200
+        ? `${svgPath.slice(0, 200)}…(${svgPath.length}ch)`
+        : svgPath;
+
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits] EXPORT-DIAG: drawPath →", {
+      editorType: (obj as { editorType?: string }).editorType,
+      objLeft,
+      objTop,
+      rawWidth,
+      rawHeight,
+      scaledWidth,
+      scaledHeight,
+      bboxLeft,
+      bboxTop,
+      originalMinX,
+      originalMinY,
+      deltaX,
+      deltaY,
+      objScaleX: scaleX,
+      objScaleY: scaleY,
+      totalScaleX,
+      totalScaleY,
+      pdfHeight: ctx.pdfHeight,
+      pdfX,
+      pdfY,
+      strokeRaw: obj.stroke,
+      strokeParsed: strokeColor,
+      fillRaw: obj.fill,
+      fillParsed: fillColor,
+      opacity,
+      strokeWidthRaw: obj.strokeWidth,
+      borderWidth,
+      pathCmdCount: pathArray.length,
+      svgPreview,
+    });
+  } catch {
+    /* diagnostic-only, never block the actual draw */
+  }
 
   page.drawSvgPath(svgPath, {
     borderColor: strokeColor ?? rgb(0, 0, 0),

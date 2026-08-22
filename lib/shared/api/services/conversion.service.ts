@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/config/api-client";
 import { CONVERSION } from "@/lib/shared/constants/endpoints";
 import { ApiError } from "@/lib/shared/utils/api-error";
 import { parseContentDispositionFilename } from "@/lib/shared/utils/download";
+import { logger } from "@/lib/shared/utils/logger";
 
 const FALLBACK_FILENAME = "converted-file";
 
@@ -30,6 +31,24 @@ async function _convert(
 
   if (bypassPaywallGate) cfg._skipPaywallGate = true;
 
+  // EXPORT-DIAG: request-side snapshot at the HTTP boundary. Shows
+  // exactly what leaves the browser for the conversion backend so we
+  // can correlate with server-side logs (or CloudConvert dashboard).
+  // If `fileSize` here is the SAME as the original upload's size on
+  // every conversion, the client bake dropped edits BEFORE this line
+  // — the fix is upstream in `buildEditedPdfBytes` / `mergeFabricEditsIntoPdf`,
+  // not in the backend.
+  const requestStart = Date.now();
+
+  logger.info("[PDFedits] EXPORT-DIAG: convert request", {
+    endpoint: CONVERSION.CONVERT,
+    conversionType: input.type,
+    fileName: input.file.name,
+    fileSize: input.file.size,
+    fileType: input.file.type,
+    bypassPaywallGate,
+  });
+
   try {
     const response = await apiClient.post<Blob>(
       CONVERSION.CONVERT,
@@ -42,8 +61,38 @@ async function _convert(
         response.headers["content-disposition"] as string | undefined,
       ) ?? deriveFallbackName(input);
 
+    // EXPORT-DIAG: response-side snapshot. `blobSize` is what the
+    // backend + CloudConvert produced. Compare against `fileSize` from
+    // the request log — a healthy conversion returns a blob that's
+    // roughly proportional to the input. `blobType` should match the
+    // requested output format (e.g. application/vnd.openxml…docx).
+    logger.info("[PDFedits] EXPORT-DIAG: convert response", {
+      endpoint: CONVERSION.CONVERT,
+      conversionType: input.type,
+      status: response.status,
+      durationMs: Date.now() - requestStart,
+      blobSize: response.data.size,
+      blobType: response.data.type,
+      returnedFileName: fileName,
+      contentDisposition: response.headers["content-disposition"],
+      contentType: response.headers["content-type"],
+    });
+
     return { blob: response.data, fileName };
   } catch (error) {
+    // EXPORT-DIAG: error-side snapshot so failed conversions surface
+    // the same level of detail as successful ones (status, duration,
+    // and the eventual inflated backend message).
+    const status = (error as { statusCode?: number })?.statusCode;
+
+    logger.warn("[PDFedits] EXPORT-DIAG: convert error", {
+      endpoint: CONVERSION.CONVERT,
+      conversionType: input.type,
+      status,
+      durationMs: Date.now() - requestStart,
+      message: (error as { message?: string })?.message,
+    });
+
     // With responseType: "blob", error bodies arrive as Blob instead of JSON.
     // Inflate the blob back to text so the user sees the backend's specific
     // message ("Invalid file extension...", "File size exceeds...") rather

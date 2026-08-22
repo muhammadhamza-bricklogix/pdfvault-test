@@ -5,10 +5,10 @@ import { LANDING_TOOL_CATEGORIES } from "@/lib/shared/constants/landing-tools";
 import { AllToolsIcon } from "./all-tools-icon";
 
 /**
- * The 4-column tool catalog from `Frame 2147239344.png`. Column widths and
- * gaps are set to match the Figma auto-layout (172px column, 94px column
- * gap, 43px between heading and rows, 27px between rows). Below `lg` the
- * grid collapses to 2 columns and then 1 to keep tap targets sensible.
+ * The 4-column tool catalog. Column widths and gaps match the Figma
+ * auto-layout (172px column, 94px column gap, 43px between heading and
+ * rows, 27px between rows). Below `lg` the grid collapses to 2 columns
+ * and then 1 to keep tap targets sensible.
  *
  * Rows are `<Link>`s so the whole 21px band is clickable, and the label
  * gets a subtle red hue + 2px x-shift on hover. Icons use `currentColor`

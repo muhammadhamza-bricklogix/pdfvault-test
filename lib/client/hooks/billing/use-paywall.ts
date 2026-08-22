@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
+import { logger } from "@/lib/shared/utils/logger";
 
 import { isEntitledSnapshot } from "./entitlement-cache";
 import { setPaywallHandler } from "./paywall-bus";
@@ -51,10 +53,12 @@ export function usePaywall() {
       if (isLoading) return;
 
       if (entitled) {
+        logger.breadcrumb("paywall", "guard.entitled_skip");
         await action();
 
         return;
       }
+      logger.event(EVENTS.PAYWALL_OPENED, "info", { source: "guard" });
       setPending(() => action);
       setIsOpen(true);
     },
@@ -62,6 +66,10 @@ export function usePaywall() {
   );
 
   const close = useCallback(() => {
+    logger.event(EVENTS.PAYWALL_CANCELLED, "info", {
+      hasBusResolver: Boolean(busResolverRef.current),
+      hasPendingAction: Boolean(pending),
+    });
     setIsOpen(false);
     setPending(null);
     setPreview(null);
@@ -73,9 +81,13 @@ export function usePaywall() {
       busResolverRef.current("cancelled");
       busResolverRef.current = null;
     }
-  }, []);
+  }, [pending]);
 
   const onPaymentSuccess = useCallback(async () => {
+    logger.event(EVENTS.PAYWALL_PAYMENT_SUCCESS, "info", {
+      hasPendingAction: Boolean(pending),
+      hasBusResolver: Boolean(busResolverRef.current),
+    });
     setIsOpen(false);
     setPreview(null);
     setHidePreview(false);
@@ -90,7 +102,11 @@ export function usePaywall() {
     if (pending) {
       try {
         await pending();
+        logger.event(EVENTS.PAYWALL_PENDING_ACTION_OK, "info");
       } finally {
+        // The pending action (e.g. useExportEditor.handleExport) owns
+        // its own error capture and user-facing toast — re-capturing
+        // here would double-fire the same error in Sentry.
         setPending(null);
       }
     }
@@ -110,11 +126,13 @@ export function usePaywall() {
       (incomingPreview?: PaywallPreview, options?: PaywallRequestOptions) =>
         new Promise<PaywallOutcome>((resolve) => {
           if (entitled) {
+            logger.breadcrumb("paywall", "bus.entitled_skip");
             resolve("success");
 
             return;
           }
           if (authLoaded && !isSignedIn) {
+            logger.event(EVENTS.PAYWALL_BUS_SIGNIN_PROMPT, "info");
             const returnTo =
               typeof window === "undefined"
                 ? "/"
@@ -131,6 +149,11 @@ export function usePaywall() {
 
             return;
           }
+          logger.event(EVENTS.PAYWALL_OPENED, "info", {
+            source: "bus",
+            hasPreview: Boolean(incomingPreview),
+            hidePreview: options?.hidePreview ?? false,
+          });
           busResolverRef.current = resolve;
           setPreview(incomingPreview ?? null);
           setHidePreview(options?.hidePreview ?? false);

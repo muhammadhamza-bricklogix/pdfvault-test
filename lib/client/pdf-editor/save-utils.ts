@@ -227,9 +227,51 @@ export function flushLiveFabricPage(
     types: summary,
   });
 
-  usePdfEditorStore
-    .getState()
-    .saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));
+  // Guard against wiping stored edits when the live canvas is empty because
+  // it's mid-remount (fresh Canvas created, async `loadFromJSON` hasn't
+  // resolved yet). This race fires in the Save-before-Export flow:
+  // `applyPostSaveReset` swaps the file → pdf.js reloads → Fabric re-mounts
+  // → `editor:export` dispatches immediately after → flush serializes an
+  // empty canvas and clobbers `fabricJsonByPage[source]` with `{objects:[]}`
+  // → merge draws nothing on the page and every edit disappears from the
+  // export. Tools now persist their own edits synchronously (see
+  // `use-eraser-tool.ts`, `use-image-tool.ts`, `use-shape-tool.ts`,
+  // `use-annotations-editor.ts`, `SignatureModal.tsx`, `use-draw-tool.ts`,
+  // `use-highlight-tool.ts`), so the stored map is the source of truth
+  // whenever the live canvas is unexpectedly empty.
+  const store = usePdfEditorStore.getState();
+
+  if (liveObjects.length === 0) {
+    const source = store.getSourcePageIndex(displayPage);
+    const existing = store.fabricJsonByPage.get(source);
+
+    if (existing) {
+      let existingObjectCount = 0;
+
+      try {
+        const parsed = JSON.parse(existing) as { objects?: unknown[] };
+
+        existingObjectCount = parsed.objects?.length ?? 0;
+      } catch {
+        existingObjectCount = 0;
+      }
+
+      if (existingObjectCount > 0) {
+        logger.warn(
+          "[PDFedits] flush: skipping empty-canvas overwrite of non-empty store entry",
+          {
+            displayPage,
+            sourcePage: source,
+            existingObjectCount,
+          },
+        );
+
+        return;
+      }
+    }
+  }
+
+  store.saveFabricJson(displayPage, serializeFabricCanvas(fabricCanvas));
 }
 
 type BuildEditedPdfInput = {
@@ -289,6 +331,17 @@ export async function buildEditedPdfBytes({
   file,
   bakeOverlays = false,
 }: BuildEditedPdfInput): Promise<BuildEditedPdfResult> {
+  // EXPORT-DIAG: what did buildEditedPdfBytes actually receive from the caller?
+  logger.info("[PDFedits] EXPORT-DIAG: buildEditedPdfBytes entry", {
+    currentPage,
+    bakeOverlays,
+    fileName: file?.name ?? null,
+    fabricCanvasPresent: !!fabricCanvas,
+    fabricCanvasObjectCount: fabricCanvas
+      ? fabricCanvas.getObjects().length
+      : null,
+  });
+
   if (fabricCanvas) {
     flushLiveFabricPage(currentPage, fabricCanvas);
   }
@@ -304,6 +357,37 @@ export async function buildEditedPdfBytes({
     pdfDocument,
     watermarkConfig,
   } = usePdfEditorStore.getState();
+
+  // EXPORT-DIAG: post-flush snapshot — did the flush actually land in the store?
+  try {
+    const postFlushSummary: Record<number, { count: number; types: string[] }> =
+      {};
+
+    fabricJsonByPage.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as {
+          objects?: { type?: string; editorType?: string }[];
+        };
+        const objs = parsed.objects ?? [];
+
+        postFlushSummary[pageNum] = {
+          count: objs.length,
+          types: objs.map(
+            (o) => `${o.type ?? "?"}${o.editorType ? `:${o.editorType}` : ""}`,
+          ),
+        };
+      } catch {
+        postFlushSummary[pageNum] = { count: -1, types: [] };
+      }
+    });
+    logger.info("[PDFedits] EXPORT-DIAG: post-flush fabricJsonByPage", {
+      pages: Array.from(fabricJsonByPage.keys()),
+      pageOrderLength: pageOrder.length,
+      summary: postFlushSummary,
+    });
+  } catch (diagErr) {
+    logger.warn("[PDFedits] EXPORT-DIAG: post-flush log failed", diagErr);
+  }
 
   if (!pdfDocument) {
     throw new Error("PDF document not loaded");
@@ -384,6 +468,53 @@ export async function buildEditedPdfBytes({
     sourceBytes: mergeSourceBytes,
     watermarkConfig: wmShouldBake ? watermarkConfig : null,
   });
+
+  // BAKE-INVARIANT CHECK: if the store thinks there are Fabric edits for any
+  // page but the merged bytes are byte-identical to the source, the bake
+  // silently dropped every overlay — the exported/uploaded PDF will be the
+  // untouched original. This is the exact "I am still getting the un-edited
+  // pdf" symptom the user has been reporting. Loud WARN so the failure is
+  // impossible to miss in the console, with enough detail to identify which
+  // page(s) had edits that vanished.
+  try {
+    const sourceLen = mergeSourceBytes.byteLength;
+    const bytesLen = bytes.byteLength;
+    const nonEmptyEditPages: number[] = [];
+
+    mergeJsonForBake.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as { objects?: unknown[] };
+
+        if ((parsed.objects?.length ?? 0) > 0) nonEmptyEditPages.push(pageNum);
+      } catch {
+        /* ignore parse errors — separate diag surfaces them */
+      }
+    });
+
+    if (bytesLen === sourceLen && nonEmptyEditPages.length > 0) {
+      logger.warn(
+        "[PDFedits] BAKE-INVARIANT VIOLATED: merged bytes identical to source despite non-empty fabric edits",
+        {
+          sourceLen,
+          bytesLen,
+          nonEmptyEditPages,
+          totalFabricPages: mergeJsonForBake.size,
+          bakeOverlays,
+          hadRemap: !!remappedState,
+        },
+      );
+    } else {
+      logger.info("[PDFedits] EXPORT-DIAG: bake-invariant ok", {
+        sourceLen,
+        bytesLen,
+        bytesDelta: bytesLen - sourceLen,
+        bytesIdenticalToSource: bytesLen === sourceLen,
+        nonEmptyEditPages,
+      });
+    }
+  } catch (diagErr) {
+    logger.warn("[PDFedits] EXPORT-DIAG: bake-invariant check failed", diagErr);
+  }
 
   return { bytes, remappedState };
 }

@@ -45,9 +45,15 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const file = usePdfEditorStore((s) => s.file);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
-  const setIsCompressModalOpen = usePdfEditorStore((s) => s.setIsCompressModalOpen);
-  const setIsPasswordModalOpen = usePdfEditorStore((s) => s.setIsPasswordModalOpen);
-  const setIsPageNumbersModalOpen = usePdfEditorStore((s) => s.setIsPageNumbersModalOpen);
+  const setIsCompressModalOpen = usePdfEditorStore(
+    (s) => s.setIsCompressModalOpen,
+  );
+  const setIsPasswordModalOpen = usePdfEditorStore(
+    (s) => s.setIsPasswordModalOpen,
+  );
+  const setIsPageNumbersModalOpen = usePdfEditorStore(
+    (s) => s.setIsPageNumbersModalOpen,
+  );
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
 
   useEffect(() => {

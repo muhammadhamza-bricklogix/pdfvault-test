@@ -31,6 +31,28 @@ const DRAWER_LINKS = [
 // SiteFooter can mirror the same list without a shared import cycle.
 const HIDE_ON_PATHNAMES = ["/sign-in", "/sign-up", "/forgot-password"];
 
+// Editor / tool routes where a signed-out user may have a pending file +
+// edits waiting in IndexedDB. Sign-in / Sign-up nav from these routes
+// must round-trip through the same URL via `?redirect_url=` so the
+// hydrator's post-signin restore path fires on return and the user's
+// work isn't lost on the dashboard.
+const AUTH_RETURN_ROUTES = [
+  "/pdf-composer",
+  "/pdf-editor",
+  "/w-9-form",
+  "/convert/",
+] as const;
+
+function withAuthRedirect(destination: string, pathname: string): string {
+  const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
+    pathname.startsWith(prefix),
+  );
+
+  if (!returnHere) return destination;
+
+  return `${destination}?redirect_url=${encodeURIComponent(pathname)}`;
+}
+
 export function SiteNavbar() {
   const router = useRouter();
   // `isLoaded` gates auth-conditional buttons so the server-rendered shell
@@ -138,7 +160,12 @@ export function SiteNavbar() {
                           className="w-full"
                           variant="ghost"
                           onPress={() =>
-                            navigateAndCloseDrawer(ROUTES.AUTH.SIGN_IN)
+                            navigateAndCloseDrawer(
+                              withAuthRedirect(
+                                ROUTES.AUTH.SIGN_IN,
+                                pathname ?? "",
+                              ),
+                            )
                           }
                         >
                           Sign in
@@ -146,7 +173,12 @@ export function SiteNavbar() {
                         <Button
                           className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
                           onPress={() =>
-                            navigateAndCloseDrawer(ROUTES.AUTH.SIGN_UP)
+                            navigateAndCloseDrawer(
+                              withAuthRedirect(
+                                ROUTES.AUTH.SIGN_UP,
+                                pathname ?? "",
+                              ),
+                            )
                           }
                         >
                           Sign up free
@@ -225,13 +257,17 @@ export function SiteNavbar() {
             <>
               <Link
                 className="hidden px-2 text-sm font-medium text-default-600 transition-colors hover:text-foreground sm:inline-flex dark:text-default-400"
-                href={ROUTES.AUTH.SIGN_IN}
+                href={withAuthRedirect(ROUTES.AUTH.SIGN_IN, pathname ?? "")}
               >
                 Sign in
               </Link>
               <Button
                 className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
-                onPress={() => router.push(ROUTES.AUTH.SIGN_UP)}
+                onPress={() =>
+                  router.push(
+                    withAuthRedirect(ROUTES.AUTH.SIGN_UP, pathname ?? ""),
+                  )
+                }
               >
                 Sign up free
               </Button>

@@ -48,6 +48,13 @@ type UsePageRendererParams = {
   /** When true, render against a transparent background. Default false. */
   transparent?: boolean;
   zoom: number;
+  /**
+   * When true, do NOT set `canvas.style.width/height` in CSS px. The caller
+   * (typically a thumbnail using an aspect-ratio'd frame) owns the display
+   * size via CSS so the canvas can be constrained to fit its container while
+   * the bitmap stays at full pdf.js resolution for retina sharpness.
+   */
+  fitContainer?: boolean;
 };
 
 type RenderedSize = { height: number; width: number } | null;
@@ -58,6 +65,7 @@ export function usePageRenderer({
   suppressText = false,
   transparent = false,
   zoom,
+  fitContainer = false,
 }: UsePageRendererParams) {
   const [renderedSize, setRenderedSize] = useState<RenderedSize>(null);
 
@@ -71,8 +79,10 @@ export function usePageRenderer({
 
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    canvas.style.width = `${viewport.width / dpr}px`;
-    canvas.style.height = `${viewport.height / dpr}px`;
+    if (!fitContainer) {
+      canvas.style.width = `${viewport.width / dpr}px`;
+      canvas.style.height = `${viewport.height / dpr}px`;
+    }
 
     const cssWidth = viewport.width / dpr;
     const cssHeight = viewport.height / dpr;
@@ -143,7 +153,7 @@ export function usePageRenderer({
       cancelled = true;
       renderTask?.cancel();
     };
-  }, [canvasRef, page, zoom, suppressText, transparent]);
+  }, [canvasRef, page, zoom, suppressText, transparent, fitContainer]);
 
   // Derive `renderedSize` from `page` presence so downstream consumers see
   // the "no page ready" state as soon as pdf.js is torn down (file swap for

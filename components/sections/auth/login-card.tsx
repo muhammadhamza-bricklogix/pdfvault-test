@@ -8,6 +8,7 @@ import { useId, useMemo, useState } from "react";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignInSchema } from "@/lib/shared/schemas/auth/sign-in.schema";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
@@ -146,6 +147,9 @@ export function LoginCard() {
   // commit and lands on middleware that reads the user as signed-out,
   // bouncing them to /sign-up. window.location.assign is required.
   const finalizeAndRedirect = async () => {
+    logger.event(EVENTS.SIGNIN_FINALIZE_START, "info", {
+      redirectPath: afterSignInPath,
+    });
     const { error: finalizeError } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
         window.location.assign(decorateUrl(afterSignInPath));
@@ -153,6 +157,7 @@ export function LoginCard() {
     });
 
     if (finalizeError) {
+      logger.captureError(finalizeError, "signin.finalize");
       setErrors({
         form: readClerkError(finalizeError, "Couldn't finish signing you in."),
       });
@@ -162,6 +167,7 @@ export function LoginCard() {
 
   const onGoogle = async () => {
     if (!signIn) return;
+    logger.event(EVENTS.SIGNIN_OAUTH_START, "info", { provider: "google" });
     setErrors({});
     setNotice(null);
     setOauthLoading(true);
@@ -173,7 +179,7 @@ export function LoginCard() {
         redirectUrl: afterSignInPath,
       });
     } catch (err) {
-      logger.error("Google sign-in failed", err);
+      logger.captureError(err, "signin.oauth_google");
       setErrors({ form: "Something went wrong with Google sign-in." });
       setOauthLoading(false);
     }
@@ -299,6 +305,7 @@ export function LoginCard() {
       }
 
       if (signIn.status === "complete") {
+        logger.event(EVENTS.SIGNIN_CREDENTIALS_COMPLETE, "info");
         await finalizeAndRedirect();
 
         return;
@@ -306,6 +313,7 @@ export function LoginCard() {
 
       // Invariant #16 — 2FA-enabled accounts must not silently loop back.
       if (signIn.status === "needs_second_factor") {
+        logger.event(EVENTS.SIGNIN_NEEDS_2FA, "info");
         const ok = await prepSecondFactor();
 
         setSubmitting(false);
@@ -320,7 +328,7 @@ export function LoginCard() {
       setErrors({ form: "Sign-in didn't finish. Please try again." });
       setSubmitting(false);
     } catch (err) {
-      logger.error("Sign-in credentials step failed", err);
+      logger.captureError(err, "signin.credentials");
       setErrors({
         form: readClerkError(err, "Couldn't sign you in. Please try again."),
       });
@@ -376,6 +384,9 @@ export function LoginCard() {
       }
 
       if (signIn.status === "complete") {
+        logger.event(EVENTS.SIGNIN_2FA_COMPLETE, "info", {
+          strategy: secondFactorStrategy,
+        });
         await finalizeAndRedirect();
 
         return;
@@ -384,7 +395,9 @@ export function LoginCard() {
       setErrors({ code: "Verification didn't finish. Try again." });
       setSubmitting(false);
     } catch (err) {
-      logger.error("Verification failed", err);
+      logger.captureError(err, "signin.2fa_verify", {
+        strategy: secondFactorStrategy,
+      });
       setErrors({
         code: readClerkError(err, "That code didn't work. Try again."),
       });

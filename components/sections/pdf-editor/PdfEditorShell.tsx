@@ -27,6 +27,7 @@ import { usePdfSearch } from "@/lib/client/hooks/pdf-editor/use-pdf-search";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
+import { useSignedOutAutoPersist } from "@/lib/client/hooks/pdf-editor/use-signed-out-auto-persist";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
@@ -76,8 +77,27 @@ const PageNumbersModal = dynamic(
   () => import("./PageNumbersModal").then((m) => m.PageNumbersModal),
   { ssr: false, loading: () => null },
 );
+const ReloadConfirmModal = dynamic(
+  () => import("./ReloadConfirmModal").then((m) => m.ReloadConfirmModal),
+  { ssr: false, loading: () => null },
+);
 const PasswordModal = dynamic(
   () => import("./PasswordModal").then((m) => m.PasswordModal),
+  { ssr: false, loading: () => null },
+);
+// Mounted at shell level (not inside HamburgerMenu) so the modal survives
+// the EditorLayout unmount that fires during the post-save pdf.js reload
+// — see comment in ShareModal.tsx for the full trace.
+const ShareModal = dynamic(
+  () => import("./ShareModal").then((m) => m.ShareModal),
+  { ssr: false, loading: () => null },
+);
+// Same shell-level pattern as ShareModal — Version History runs a
+// `saveBeforeAction` before opening which triggers a pdf.js reload
+// that unmounts `HamburgerMenu`, wiping any local modal state.
+const VersionHistoryModalHost = dynamic(
+  () =>
+    import("./VersionHistoryModalHost").then((m) => m.VersionHistoryModalHost),
   { ssr: false, loading: () => null },
 );
 const PerformancePanel = dynamic(
@@ -138,12 +158,14 @@ function UploadScreen() {
     <div className="flex flex-1 flex-col">
       <UploadScreenHeader />
       <div className="flex flex-1 items-center justify-center p-8">
-        <div className="w-full max-w-2xl space-y-4">
+        <div className="w-full max-w-5xl space-y-4">
           <FileUpload
             accept={UPLOAD_ACCEPT_MIME}
             acceptLabel="PDF, Word, Excel, PowerPoint, Image"
+            appearance="marketing"
             description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
             heading="Drop your file here"
+            marketingFootnote="PDF, Word, Excel, PowerPoint, Image · Up to 100 MB"
             onFileSelect={handleSelect}
           />
           <p className="text-center text-sm text-default-400">
@@ -189,6 +211,7 @@ function EditorLayout() {
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
   useAnnotationsEditor(fabricCanvas);
+  useSignedOutAutoPersist(fabricCanvas);
 
   const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
 
@@ -509,8 +532,11 @@ export function PdfEditorShell() {
       />
       <CompressModal />
       <PasswordModal />
+      <ShareModal />
+      <VersionHistoryModalHost />
       <PageNumbersModal />
       <FormFieldsModal />
+      <ReloadConfirmModal />
     </div>
   );
 }

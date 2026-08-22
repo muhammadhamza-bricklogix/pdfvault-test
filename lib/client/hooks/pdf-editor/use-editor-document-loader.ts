@@ -15,6 +15,7 @@ import {
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -85,9 +86,34 @@ function fetchDocumentMeta(id: string): Promise<Document> {
 
   if (existing) return existing;
 
-  const promise = documentsService.getDocument(id).finally(() => {
-    inflightMeta.delete(id);
-  });
+  // Post-upload race guard: right after `POST /documents/upload` returns
+  // 201 with a fresh id, the URL updates to `?id=<newId>` and this
+  // fetcher fires immediately. On staging/prod behind Railway (and any
+  // deployment with Postgres replica lag or async cache invalidation),
+  // the `GET /documents/{id}` occasionally races the write commit and
+  // returns 404 for a brief window (~500-1500ms). Without a retry the
+  // user gets bounced to /dashboard on every upload — the exact symptom
+  // reported 2026-08-20.
+  //
+  // Retry ONCE after 1500ms on 404 only. 401 / 500 / network errors
+  // pass through unchanged so real failures still surface fast. A real
+  // "document doesn't exist" 404 stays 404 (retry fails too), so the
+  // dashboard bounce still fires for genuinely bad ids — just not for
+  // freshly-created ones.
+  const promise = documentsService
+    .getDocument(id)
+    .catch(async (err: unknown) => {
+      const status = (err as { statusCode?: number })?.statusCode;
+
+      if (status !== 404) throw err;
+      logger.warn("[PDFedits] document meta 404 — retrying once", { id });
+      await new Promise((r) => setTimeout(r, 1500));
+
+      return documentsService.getDocument(id);
+    })
+    .finally(() => {
+      inflightMeta.delete(id);
+    });
 
   inflightMeta.set(id, promise);
 
@@ -216,6 +242,7 @@ export function useEditorDocumentLoader() {
     // for Clerk to finish loading before deciding so we don't bounce
     // signed-in users on first paint.
     if (authLoaded && !isSignedIn) {
+      logger.event(EVENTS.DOCUMENT_LOADER_SIGNIN_REQUIRED, "info", { id });
       const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
 
       router.replace(
@@ -277,6 +304,8 @@ export function useEditorDocumentLoader() {
         });
     }
 
+    logger.breadcrumb("document_loader", "load.start", { id, isOnline });
+
     // Phase 2 (slow, seconds for large PDFs): download the full bytes for the
     // save/export pipeline, write to IDB for offline use, then seed the store.
     loadDocument(id, userId)
@@ -305,6 +334,11 @@ export function useEditorDocumentLoader() {
         setCurrentDocument({ id: loaded.id, name: loaded.name });
         usePdfEditorStore.setState({ hasUnsavedChanges: false });
         lastHydratedDocumentId.current = id;
+        logger.event(EVENTS.DOCUMENT_LOADER_LOAD_OK, "info", {
+          id,
+          bytes: loaded.file.size,
+          hasEditorState: Boolean(loaded.editorState),
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -317,6 +351,9 @@ export function useEditorDocumentLoader() {
         const isAuthError = /\b401\b|unauthori[sz]ed/i.test(message);
 
         if (isAuthError) {
+          logger.event(EVENTS.DOCUMENT_LOADER_AUTH_ERROR_BOUNCE, "warning", {
+            id,
+          });
           const back = `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(id)}`;
 
           router.replace(
@@ -339,10 +376,13 @@ export function useEditorDocumentLoader() {
         // has a working local session; bouncing to Dashboard mid-flow
         // dumps them out of the editor after sign-in for no reason
         // (reported 2026-07-18 on the export-after-sign-in flow).
-        logger.error("Failed to load document for editor", err);
+        logger.captureError(err, "document_loader.load", { id });
         const stateNow = usePdfEditorStore.getState();
 
         if (stateNow.file) {
+          logger.event(EVENTS.DOCUMENT_LOADER_LOAD_FAIL_STAY_LOCAL, "warning", {
+            id,
+          });
           toast.error({
             title: "Couldn't open saved document",
             description:
@@ -352,6 +392,13 @@ export function useEditorDocumentLoader() {
           return;
         }
 
+        logger.event(
+          EVENTS.DOCUMENT_LOADER_LOAD_FAIL_BOUNCE_DASHBOARD,
+          "warning",
+          {
+            id,
+          },
+        );
         toast.error({
           title: "Couldn't open document",
           description: message,

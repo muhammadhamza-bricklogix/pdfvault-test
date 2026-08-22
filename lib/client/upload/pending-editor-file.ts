@@ -16,6 +16,11 @@
  * sign-in redirect and appear correctly on return.
  */
 
+import type { Canvas as FabricCanvas } from "fabric";
+
+import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
+import { usePdfEditorStore } from "@/lib/client/stores";
+
 const DB_NAME = "pdfvault_pending_editor";
 const STORE_NAME = "files";
 const DB_VERSION = 1;
@@ -142,4 +147,49 @@ export async function clearPendingEditorFile(): Promise<void> {
     tx.onabort = () => resolve();
   });
   db.close();
+}
+
+/**
+ * Snapshots the current PDF editor store to IndexedDB so a full-page
+ * sign-in redirect (or any other unload) can be resumed with the file,
+ * per-page Fabric overlay JSON, and extractedPages set intact.
+ *
+ * Every in-editor sign-in path funnels through this so callers can't
+ * accidentally save `file` without the edits — losing fabric overlays
+ * on return is the "first-time login drops my edits" bug.
+ *
+ * Optionally flushes the live Fabric canvas for the current page into
+ * the store before serializing so the snapshot includes any in-flight
+ * edits the store hasn't observed yet.
+ *
+ * No-ops (resolves false) when the store has no file loaded. Errors are
+ * swallowed — the caller has already committed to the redirect and the
+ * hydrator's normal rehydrate path is a viable fallback.
+ */
+export async function snapshotPendingEditorFile(
+  liveFabricCanvas?: FabricCanvas | null,
+): Promise<boolean> {
+  const state = usePdfEditorStore.getState();
+  const file = state.file;
+
+  if (!file) return false;
+
+  if (liveFabricCanvas) {
+    try {
+      flushLiveFabricPage(state.currentPage, liveFabricCanvas);
+    } catch {
+      // Flush failures shouldn't block the snapshot — the store's last
+      // observed JSON for the page is still saved below.
+    }
+  }
+
+  const { fabricJsonByPage, extractedPages } = usePdfEditorStore.getState();
+
+  try {
+    await savePendingEditorFile(file, fabricJsonByPage, extractedPages);
+
+    return true;
+  } catch {
+    return false;
+  }
 }

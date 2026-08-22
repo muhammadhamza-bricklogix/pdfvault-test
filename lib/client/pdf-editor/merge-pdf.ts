@@ -83,8 +83,26 @@ const VECTOR_TYPES = new Set([
 ]);
 // "image" (signature stamps, uploaded PNGs) still goes through raster
 // (PNG at multiplier:3) — pdf-lib can't stroke raw image data as vectors.
-// "path" is vectorizable via drawPath → drawSvgPath (2026-07-23 fix). The
-// raster fallback exists for anything drawVectorObject returns false on.
+//
+// **"path" is INTENTIONALLY routed through raster** (highlight tool,
+// draw tool — both use PencilBrush, both emit Fabric Path objects).
+// Reason: Fabric v6 PencilBrush uses a coordinate model that's fragile
+// to translate manually into pdf-lib's `drawSvgPath` — obj.left/top are
+// bbox CENTER (not top-left), `pathOffset` isn't in the JSON, and
+// scale/origin/movement all interact. Multiple attempts to compute the
+// right pdfX/pdfY from `left`, `pathOffset`, `originalMinX`, and scaled
+// bbox dims each produced a different subtle misplacement bug
+// (QA report 2026-08-20 a-d).
+//
+// Routing paths through the raster batch uses Fabric's OWN renderer
+// via `renderFabricSubsetToPng` → the offscreen canvas is created at
+// EXACT PDF page dimensions and Fabric draws every object at its
+// natural canvas position. Then the resulting PNG is embedded at
+// (0, 0) covering the whole page — pixel-perfect alignment with what
+// the user drew in the editor because we're literally using Fabric's
+// rendering pipeline. The underlying page's text stream (from
+// copyPages) stays selectable / extractable, so PDF → DOCX conversion
+// via CloudConvert still recovers all source text.
 
 function isVectorizable(obj: FabricObj): boolean {
   // Annotation glyphs contain arbitrary Unicode. pdf-lib's `drawText` uses
@@ -95,6 +113,14 @@ function isVectorizable(obj: FabricObj): boolean {
   const editorType = (obj as { editorType?: string }).editorType;
 
   if (editorType === "annotation") {
+    return false;
+  }
+
+  const type = (obj.type as string).toLowerCase();
+
+  // PencilBrush freehand paths (highlight + draw tools) — always raster.
+  // See comment block above `isVectorizable` for the full rationale.
+  if (type === "path") {
     return false;
   }
 
@@ -109,7 +135,7 @@ function isVectorizable(obj: FabricObj): boolean {
     return true;
   }
 
-  return VECTOR_TYPES.has((obj.type as string).toLowerCase());
+  return VECTOR_TYPES.has(type);
 }
 
 /**
@@ -483,9 +509,26 @@ async function processPageObjects(
   fontCache: FontCache,
 ): Promise<void> {
   let rasterBatch: number[] = [];
+  // EXPORT-DIAG: accumulators for per-page breakdown of what actually gets
+  // drawn vs. rastered vs. failed (silently or with an exception).
+  const diag = {
+    vectorDrawn: 0,
+    vectorFallbackToRaster: 0,
+    vectorThrew: 0,
+    rasterQueued: 0,
+    byType: {} as Record<string, number>,
+    errors: [] as { type: string; editorType?: string; message: string }[],
+  };
 
   for (let i = 0; i < objects.length; i++) {
     const obj = objects[i];
+    const typeKey = `${(obj.type as string | undefined) ?? "?"}${
+      (obj as { editorType?: string }).editorType
+        ? `:${(obj as { editorType?: string }).editorType}`
+        : ""
+    }`;
+
+    diag.byType[typeKey] = (diag.byType[typeKey] ?? 0) + 1;
 
     if (isVectorizable(obj)) {
       // Flush any accumulated raster objects first (preserves z-order)
@@ -494,16 +537,36 @@ async function processPageObjects(
         rasterBatch = [];
       }
 
-      const drawn = await drawVectorObject(obj, page, ctx, fontCache);
+      let drawn = false;
+
+      try {
+        drawn = await drawVectorObject(obj, page, ctx, fontCache);
+      } catch (err) {
+        diag.vectorThrew += 1;
+        diag.errors.push({
+          type: (obj.type as string) ?? "?",
+          editorType: (obj as { editorType?: string }).editorType,
+          message: err instanceof Error ? err.message : String(err),
+        });
+        logger.warn("[PDFedits] EXPORT-DIAG: vector drawer threw", {
+          type: obj.type,
+          editorType: (obj as { editorType?: string }).editorType,
+          err,
+        });
+      }
 
       // If the vector drawer couldn't handle it (e.g. unknown group children),
       // fall back to raster for this specific object
       if (!drawn) {
         rasterBatch.push(i);
+        diag.vectorFallbackToRaster += 1;
+      } else {
+        diag.vectorDrawn += 1;
       }
     } else {
       // Rasterizable object (image, or unknown type)
       rasterBatch.push(i);
+      diag.rasterQueued += 1;
     }
   }
 
@@ -511,6 +574,11 @@ async function processPageObjects(
   if (rasterBatch.length) {
     await flushRasterBatch(rasterBatch, parsed, page, pdfDoc);
   }
+
+  logger.info("[PDFedits] EXPORT-DIAG: processPageObjects done", {
+    totalObjects: objects.length,
+    ...diag,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -545,6 +613,56 @@ export async function mergeFabricEditsIntoPdf({
   const sourcePdf = await PdfDoc.load(sourceBytes, { ignoreEncryption: true });
   const totalPages = sourcePdf.getPageCount();
 
+  // EXPORT-DIAG: what did the merge actually receive? Correlates with the
+  // per-page draw logs below so we can see, for a page that "lost" edits,
+  // whether the input JSON already had them dropped or whether they were
+  // present at merge start but got filtered out by hasGenuineEdits / the
+  // vector/raster batching in processPageObjects.
+  try {
+    const inputSummary: Record<
+      number,
+      { count: number; types: string[]; modifiedEditModeText: number }
+    > = {};
+
+    fabricJsonByPage.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as {
+          objects?: {
+            type?: string;
+            editorType?: string;
+            pristine?: boolean;
+          }[];
+        };
+        const objs = parsed.objects ?? [];
+
+        inputSummary[pageNum] = {
+          count: objs.length,
+          types: objs.map(
+            (o) => `${o.type ?? "?"}${o.editorType ? `:${o.editorType}` : ""}`,
+          ),
+          modifiedEditModeText: objs.filter(
+            (o) => o.editorType === "editModeText" && o.pristine !== true,
+          ).length,
+        };
+      } catch {
+        inputSummary[pageNum] = {
+          count: -1,
+          types: [],
+          modifiedEditModeText: 0,
+        };
+      }
+    });
+    logger.info("[PDFedits] EXPORT-DIAG: mergeFabricEditsIntoPdf entry", {
+      totalPages,
+      pagesWithFabricJson: Array.from(fabricJsonByPage.keys()),
+      inputSummary,
+      watermarkEnabled: !!watermarkConfig?.enabled,
+      backgroundImageEnabled: !!backgroundImageConfig?.enabled,
+    });
+  } catch (diagErr) {
+    logger.warn("[PDFedits] EXPORT-DIAG: merge entry log failed", diagErr);
+  }
+
   // Create a fresh output document
   const outputPdf = await PdfDoc.create();
   const fontCache = new FontCache(outputPdf, fontDataMap);
@@ -576,6 +694,24 @@ export async function mergeFabricEditsIntoPdf({
     // on reload (no rasterisation). See skill log 2026-06-17 (a).
     const hasEdits = fabricJsonByPage.has(pageNum);
     const hasGenuineEdits = hasEdits;
+
+    // EXPORT-DIAG: per-page routing decision. If hasEdits=false when the user
+    // KNOWS they made edits on this page, the drop happened upstream (flush
+    // or serialize). If hasEdits=true but the exported PDF is missing them,
+    // the drop happened in processPageObjects / vector drawers.
+    logger.info("[PDFedits] EXPORT-DIAG: merge page routing", {
+      pageNum,
+      hasEdits,
+      hasGenuineEdits,
+      willNeedWatermark:
+        wm != null &&
+        shouldWatermarkPage(
+          pageNum,
+          totalPages,
+          wm.pageScope,
+          wm.customPageRange,
+        ),
+    });
 
     const needsWatermark =
       wm != null &&
@@ -777,6 +913,47 @@ export async function mergeFabricEditsIntoPdf({
           sideways ? pdfHeight : pdfWidth,
           sideways ? pdfWidth : pdfHeight,
         );
+
+        // EXPORT-DIAG: coordinate context + per-object spatial summary.
+        // Diagnoses the "edits pinned to the top of the exported page" bug
+        // where Fabric coords don't map to the right PDF Y. If `scaleY`
+        // is much smaller than 1 (parsed.height >> pdfHeight), every
+        // object's fabricY collapses to near pdfHeight → top of PDF.
+        // If a specific object shows fabricTop=0 despite the user
+        // placing it lower, the drop happened at serialize / loadFromJSON.
+        try {
+          const spatial = objects.slice(0, 20).map((o) => ({
+            type: (o as { type?: string }).type ?? "?",
+            editorType: (o as { editorType?: string }).editorType,
+            left: (o as { left?: number }).left,
+            top: (o as { top?: number }).top,
+            w:
+              ((o as { width?: number }).width ?? 0) *
+              ((o as { scaleX?: number }).scaleX ?? 1),
+            h:
+              ((o as { height?: number }).height ?? 0) *
+              ((o as { scaleY?: number }).scaleY ?? 1),
+            originX: (o as { originX?: string }).originX,
+            originY: (o as { originY?: string }).originY,
+          }));
+
+          logger.info("[PDFedits] EXPORT-DIAG: page coord ctx", {
+            pageNum,
+            srcRot,
+            sideways,
+            parsedWidth: parsed.width,
+            parsedHeight: parsed.height,
+            pdfWidth,
+            pdfHeight,
+            ctxScaleX: ctx.scaleX,
+            ctxScaleY: ctx.scaleY,
+            ctxScaleMatchesUnity: Math.abs(ctx.scaleY - 1) < 0.02,
+            objectCount: objects.length,
+            spatialSample: spatial,
+          });
+        } catch (diagErr) {
+          logger.warn("[PDFedits] EXPORT-DIAG: coord ctx log failed", diagErr);
+        }
 
         // Whiteout pre-pass — paints opaque white rectangles over the
         // source-text bboxes for every modified editModeText so the new

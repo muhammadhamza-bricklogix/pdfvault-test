@@ -7,6 +7,10 @@ import { LandingFreshStart } from "@/components/sections/new-landing/landing-fre
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
+// Async Server Component that fetches Trustpilot reviews. Imported
+// directly (not via next/dynamic) because next/dynamic in App Router is
+// for client components only — a server component streams naturally.
+import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 
 // Below-fold client components — split into separate JS chunks so the browser
 // can prioritise above-fold hydration first. SSR is kept on (default) so
@@ -20,12 +24,6 @@ const LandingTools = dynamic(() =>
 const LandingBanner = dynamic(() =>
   import("@/components/sections/new-landing/landing-banner").then(
     (m) => m.LandingBanner,
-  ),
-);
-
-const LandingTestimonials = dynamic(() =>
-  import("@/components/sections/new-landing/landing-testimonials").then(
-    (m) => m.LandingTestimonials,
   ),
 );
 

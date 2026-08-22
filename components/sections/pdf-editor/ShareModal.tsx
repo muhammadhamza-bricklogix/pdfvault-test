@@ -1,17 +1,19 @@
 "use client";
 
 import { Button, Input, Label, Modal, Switch, TextField } from "@heroui/react";
+import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { createShare } from "@/lib/client/api/shares";
+import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
+import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
+import { formsService } from "@/lib/shared/api/services/forms.service";
+import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
-
-type ShareModalProps = {
-  file: File | null;
-  isOpen: boolean;
-  onClose: () => void;
-};
 
 type ExpiryPreset = "1d" | "7d" | "30d";
 
@@ -21,11 +23,36 @@ const EXPIRY_PRESETS: { id: ExpiryPreset; label: string; ms: number }[] = [
   { id: "30d", label: "30 days", ms: 30 * 24 * 60 * 60 * 1000 },
 ];
 
-export function ShareModal({
-  file,
-  isOpen,
-  onClose,
-}: ShareModalProps): React.ReactElement {
+// Mounted at shell level (not inside HamburgerMenu) so that the modal
+// state survives the EditorLayout remount that fires during the
+// post-save pdf.js reload. Previously the local `useState(false)` in
+// HamburgerMenu was wiped when `applyPostSaveReset` swapped `store.file`
+// → `usePdfLoader` cleared `pdfDocument` → EditorLayout returned
+// `<EditorLoadingShell />` → HamburgerMenu unmounted → `setIsShareOpen(true)`
+// hit a stale instance. Store-backed open state fixes that.
+export function ShareModal(): React.ReactElement {
+  const file = usePdfEditorStore((s) => s.file);
+  const isOpen = usePdfEditorStore((s) => s.isShareModalOpen);
+  const setIsOpen = usePdfEditorStore((s) => s.setIsShareModalOpen);
+  const pathname = usePathname();
+  // The W-9 editor stamps values via the backend finalize endpoint
+  // (see `W9FinalizeIntercept`), NOT via the standard editor save
+  // pipeline. `store.file` on that route is always the blank IRS
+  // template, so sharing it directly would ship the recipient a blank
+  // form. Detect the route and, on generate, run finalize first + swap
+  // the file for the stamped bytes before uploading to /api/share.
+  //
+  // Match all four W-9 URLs — the short marketing URL (`/w-9-form`)
+  // is where most users land, but `/forms/w-9`, `/forms/w-9/edit` and
+  // `/w9-form` all mount the same editor with the same
+  // `useFormEditorStore` session, so Share from any of them needs
+  // finalize.
+  const isW9Route =
+    pathname === ROUTES.FORMS.W9_SHORT ||
+    pathname === ROUTES.FORMS.W9_FORM ||
+    pathname === ROUTES.FORMS.W9 ||
+    (pathname?.startsWith(ROUTES.FORMS.W9_EDIT) ?? false);
+  const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -74,11 +101,68 @@ export function ShareModal({
     const expiresAt = Date.now() + ms;
 
     setSubmitting(true);
+
+    // W-9 flow: stamp the form values via the backend finalize
+    // endpoint, fetch the stamped bytes, and share THOSE — otherwise
+    // the recipient sees the blank IRS template. The standard editor
+    // save pipeline doesn't run here because form values live in
+    // `useFormEditorStore` (backend stamps them at finalize time), not
+    // in `fabricJsonByPage`.
+    let fileToShare = file;
+    let shareName = file.name;
+
+    if (isW9Route) {
+      const formState = useFormEditorStore.getState();
+      const { sessionId, values, signatureKey } = formState;
+
+      if (!sessionId) {
+        setSubmitting(false);
+        toast.error({
+          title: "W-9 session not ready",
+          description:
+            "Give it a moment while we start your W-9 session, then try Share again.",
+        });
+
+        return;
+      }
+
+      try {
+        const { downloadUrl } = await formsService.finalizeFormSession({
+          sessionId,
+          values: normalizeW9ValuesForFinalize(values),
+          signatureKey,
+        });
+        const res = await fetch(downloadUrl, { cache: "no-store" });
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch stamped W-9 (HTTP ${res.status})`);
+        }
+        const stampedBytes = await res.arrayBuffer();
+
+        fileToShare = new File([stampedBytes], "w-9.pdf", {
+          type: "application/pdf",
+        });
+        shareName = "w-9.pdf";
+      } catch (err) {
+        logger.captureError(err, "w9.share.finalize");
+        setSubmitting(false);
+        toast.error({
+          title: "Couldn't prepare your W-9 for sharing",
+          description:
+            err instanceof Error
+              ? err.message
+              : "Please try again in a moment.",
+        });
+
+        return;
+      }
+    }
+
     const result = await createShare({
-      file,
+      file: fileToShare,
       expiresAt,
       password: withPassword ? password : undefined,
-      name: file.name,
+      name: shareName,
     });
 
     setSubmitting(false);
@@ -123,7 +207,7 @@ export function ShareModal({
             <Modal.Heading>Share PDF</Modal.Heading>
           </Modal.Header>
 
-          <Modal.Body className="space-y-5">
+          <Modal.Body className="space-y-5 px-6">
             {!generated && (
               <>
                 <p className="text-xs text-default-500">
@@ -140,13 +224,19 @@ export function ShareModal({
                     {EXPIRY_PRESETS.map((p) => {
                       const checked = expiry === p.id;
 
+                      // `ring-inset` keeps the selection ring inside the
+                      // button's border-box. Without it, the 2px outer
+                      // ring on the leftmost pill bleeds past the flex
+                      // container's left edge and gets clipped by
+                      // `Modal.Body`'s overflow, so "24 hours" looks
+                      // half-cut when selected.
                       return (
                         <button
                           key={p.id}
                           aria-pressed={checked}
                           className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                             checked
-                              ? "border-accent bg-accent/5 ring-2 ring-accent"
+                              ? "border-accent bg-accent/5 ring-2 ring-inset ring-accent"
                               : "border-default-200 hover:bg-default-50"
                           }`}
                           type="button"
@@ -179,17 +269,21 @@ export function ShareModal({
                     </Switch.Content>
                   </Switch>
                   {withPassword && (
-                    <div className="relative">
+                    <div className="relative mb-3 w-full">
                       <TextField
+                        className="w-full"
                         value={password}
                         onChange={(v) => setPassword(v)}
                       >
                         <Input
                           aria-label="Share password"
-                          // Right padding leaves room for the absolutely
-                          // positioned reveal toggle so the caret never
-                          // sits under the eye icon.
-                          className="pr-10"
+                          // `w-full` on both TextField + Input keeps the
+                          // field inside the modal — HeroUI's default
+                          // Input width grows past the modal edge on some
+                          // Chrome widths. `pr-10` leaves room for the
+                          // absolutely-positioned reveal toggle so the
+                          // caret never sits under the eye icon.
+                          className="w-full pr-10"
                           placeholder="Password (4–128 chars)"
                           type={revealPassword ? "text" : "password"}
                         />
@@ -207,15 +301,38 @@ export function ShareModal({
             {generated && (
               <div className="space-y-3">
                 <Label>Share link</Label>
-                <TextField value={generated.url}>
-                  <Input
-                    readOnly
-                    aria-label="Generated share link"
-                    onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
-                      e.target.select()
+                <div className="relative w-full">
+                  <TextField className="w-full" value={generated.url}>
+                    <Input
+                      readOnly
+                      aria-label="Generated share link"
+                      // `w-full` matches the password field fix so the
+                      // URL input can't overflow the modal on Chrome.
+                      // `pr-10` keeps the URL text from sliding under
+                      // the inline copy button on narrow modals.
+                      className="w-full pr-10"
+                      onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
+                        e.target.select()
+                      }
+                    />
+                  </TextField>
+                  <button
+                    aria-label={
+                      copyState === "copied" ? "Link copied" : "Copy share link"
                     }
-                  />
-                </TextField>
+                    aria-live="polite"
+                    className="absolute inset-y-0 right-0 z-10 flex items-center justify-center px-3 text-default-400 transition-colors hover:text-default-700 focus-visible:text-default-700 focus-visible:outline-none"
+                    tabIndex={0}
+                    type="button"
+                    onClick={() => void onCopy()}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <HugeiconsIcon
+                      icon={copyState === "copied" ? Tick02Icon : Copy01Icon}
+                      size={16}
+                    />
+                  </button>
+                </div>
                 <p className="text-xs text-default-500">
                   Expires {new Date(generated.expiresAt).toLocaleString()}.
                 </p>

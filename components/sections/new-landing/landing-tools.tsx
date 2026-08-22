@@ -12,7 +12,7 @@ const convert = (slug: string) => `/convert/${slug}` as const;
 
 type TabId = "edit" | "convert-to" | "compress" | "convert-from" | "others";
 
-type Tab = { id: TabId; label: string; icon: string };
+type Tab = { id: TabId; label: string };
 
 type Tool = {
   icon: string;
@@ -23,11 +23,11 @@ type Tool = {
 };
 
 const TABS: Tab[] = [
-  { id: "edit", label: "PDF Composer", icon: "/landing/editor.svg" },
-  { id: "convert-to", label: "Convert to PDF", icon: "/landing/convert.svg" },
-  { id: "compress", label: "Compress PDF", icon: "/landing/split.svg" },
-  { id: "convert-from", label: "Convert from PDF", icon: "/landing/convert.svg" },
-  { id: "others", label: "Others", icon: "/landing/signature.svg" },
+  { id: "edit", label: "PDF Composer" },
+  { id: "convert-to", label: "Convert to PDF" },
+  { id: "compress", label: "Compress PDF" },
+  { id: "convert-from", label: "Convert from PDF" },
+  { id: "others", label: "Others" },
 ];
 
 // Catalog of every landing-page tool. Each tool declares the tabs it belongs
@@ -382,7 +382,7 @@ export function LandingTools() {
   return (
     <section
       aria-labelledby="tools-heading"
-      className="bg-[var(--pv-section-gray)] py-20 sm:py-24"
+      className="bg-[var(--pv-section-gray)] pt-8 pb-20 sm:pt-10 sm:pb-24"
     >
       <div className="pv-container">
         <SectionHeading
@@ -423,17 +423,7 @@ export function LandingTools() {
                   onClick={() => setActiveTab(tab.id)}
                   onKeyDown={(event) => onTabKeyDown(event, index)}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Image
-                      alt=""
-                      aria-hidden
-                      className={selected ? "brightness-0 invert" : "opacity-60"}
-                      height={16}
-                      src={tab.icon}
-                      width={16}
-                    />
-                    {tab.label}
-                  </span>
+                  {tab.label}
                 </button>
               );
             })}

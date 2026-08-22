@@ -69,7 +69,18 @@ export async function createShare(
   if (res.ok) {
     const data = (await res.json()) as CreateShareResult;
 
-    return { ok: true, data };
+    // Override the server-computed URL with one built from the current
+    // browser origin. The server's `getCanonicalOrigin` relies on
+    // `x-forwarded-host` / `host` headers that some production proxies
+    // don't forward, which produced domain-less "/share/<token>" strings
+    // in the user's copied link. The browser origin is always correct
+    // because the user is literally on that origin right now.
+    const url =
+      typeof window !== "undefined" && window.location?.origin
+        ? `${window.location.origin}/share/${encodeURIComponent(data.token)}`
+        : data.url;
+
+    return { ok: true, data: { ...data, url } };
   }
 
   const body = (await res.json().catch(() => ({}))) as { error?: string };

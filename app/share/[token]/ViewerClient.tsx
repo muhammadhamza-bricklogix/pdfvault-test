@@ -25,23 +25,24 @@ type ViewerClientProps = {
 /**
  * Read-only PDF viewer for the public share page.
  *
- * - No Fabric overlay, no editing, no Save — strictly view-and-paginate.
+ * - No Fabric overlay, no editing, no Save — strictly view + scroll.
  * - Reuses `loadPdfJs()` so the Safari polyfills + legacy build path
  *   apply here too (the `ReadableStream[Symbol.asyncIterator]` fix is
  *   in there, so this viewer benefits from it automatically).
- * - Renders pages on demand into a single canvas (current page) plus a
- *   prev/next pager. Could be extended to render every page in a
- *   scroll view; kept lean for the MVP.
+ * - Renders EVERY page in a vertical scroll list — the previous
+ *   one-page-at-a-time pager had tiny prev/next arrows in the header
+ *   that recipients missed entirely, so they thought "only 1 page was
+ *   shared" even for multi-page PDFs (QA report). Scroll-list matches
+ *   Chrome / Safari / Adobe Reader's default and makes the full
+ *   document immediately discoverable.
  */
 export function ViewerClient({
   bytesUrl,
   name,
   token,
 }: ViewerClientProps): React.ReactElement {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const docRef = useRef<PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
   const [loadState, setLoadState] = useState<
     "loading" | "ready" | "error" | "forbidden"
   >("loading");
@@ -120,35 +121,6 @@ export function ViewerClient({
     };
   }, [bytesUrl, token]);
 
-  // Render the current page whenever it changes.
-  const renderPage = useCallback(async (): Promise<void> => {
-    const doc = docRef.current;
-    const canvas = canvasRef.current;
-
-    if (!doc || !canvas) return;
-    const page = await doc.getPage(currentPage);
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const baseVp = page.getViewport({ scale: 1 });
-    // Fit width to the canvas's surrounding container.
-    const containerWidth = canvas.parentElement?.clientWidth ?? baseVp.width;
-    const cssScale = Math.min(containerWidth / baseVp.width, 2);
-    const viewport = page.getViewport({ scale: cssScale * dpr });
-
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
-    canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
-    canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
-    const ctx = canvas.getContext("2d");
-
-    if (!ctx) return;
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-  }, [currentPage]);
-
-  useEffect(() => {
-    if (loadState !== "ready") return;
-    void renderPage();
-  }, [loadState, renderPage]);
-
   if (loadState === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center text-default-600">
@@ -184,37 +156,148 @@ export function ViewerClient({
         <h1 className="truncate text-sm font-medium" title={name}>
           {name}
         </h1>
-        <div className="flex items-center gap-2 text-sm">
-          <button
-            className="rounded px-2 py-1 text-default-600 disabled:opacity-40"
-            disabled={currentPage <= 1}
-            type="button"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          >
-            ←
-          </button>
-          <span className="tabular-nums">
-            {currentPage} / {pageCount}
-          </span>
-          <button
-            className="rounded px-2 py-1 text-default-600 disabled:opacity-40"
-            disabled={currentPage >= pageCount}
-            type="button"
-            onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
-          >
-            →
-          </button>
-        </div>
+        <span className="text-sm tabular-nums text-default-500">
+          {pageCount} {pageCount === 1 ? "page" : "pages"}
+        </span>
       </header>
-      <div className="mx-auto w-full max-w-3xl px-4 pt-4">
-        <div className="w-full overflow-x-auto shadow-lg">
-          <canvas
-            ref={canvasRef}
-            aria-label={`Page ${currentPage} of ${pageCount}`}
-            role="img"
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pt-4">
+        {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNum) => (
+          <SharePageCanvas
+            key={pageNum}
+            docRef={docRef}
+            pageCount={pageCount}
+            pageNum={pageNum}
           />
-        </div>
+        ))}
       </div>
     </main>
+  );
+}
+
+/**
+ * Renders a single PDF page into its own canvas. Extracted so React
+ * owns per-page mount / unmount and each page renders independently
+ * — a 200-page doc opens the first few visible pages fast instead of
+ * blocking on a serial render of everything.
+ *
+ * Uses IntersectionObserver so pages render lazily as they scroll into
+ * view. Pages outside the viewport stay as an empty box sized to the
+ * page's aspect ratio so the scrollbar reflects the true document
+ * length from the moment the doc loads — no reflow as pages fill in.
+ */
+function SharePageCanvas({
+  docRef,
+  pageNum,
+  pageCount,
+}: {
+  docRef: React.RefObject<PDFDocumentProxy | null>;
+  pageNum: number;
+  pageCount: number;
+}): React.ReactElement {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const renderedRef = useRef(false);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
+
+  // Read the page's aspect ratio up front so the placeholder can size
+  // itself to the real page dimensions — otherwise every page is a
+  // fixed-height box until it renders and the scrollbar jumps.
+  useEffect(() => {
+    const doc = docRef.current;
+
+    if (!doc) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const page = await doc.getPage(pageNum);
+        const vp = page.getViewport({ scale: 1 });
+
+        if (!cancelled) setAspectRatio(vp.width / vp.height);
+      } catch {
+        // Silent — the render effect will surface the real error.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [docRef, pageNum]);
+
+  const render = useCallback(async (): Promise<void> => {
+    if (renderedRef.current) return;
+    const doc = docRef.current;
+    const canvas = canvasRef.current;
+
+    if (!doc || !canvas) return;
+    renderedRef.current = true;
+
+    try {
+      const page = await doc.getPage(pageNum);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const baseVp = page.getViewport({ scale: 1 });
+      const containerWidth = canvas.parentElement?.clientWidth ?? baseVp.width;
+      const cssScale = Math.min(containerWidth / baseVp.width, 2);
+      const viewport = page.getViewport({ scale: cssScale * dpr });
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
+      canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) return;
+      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    } catch {
+      renderedRef.current = false; // allow retry on next intersection
+    }
+  }, [docRef, pageNum]);
+
+  // Lazy render on first intersection with the viewport. `rootMargin`
+  // pre-renders a page above and below the visible one so scrolling
+  // never lands on a blank canvas mid-flight.
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+
+    if (!wrapper) return;
+    if (typeof IntersectionObserver === "undefined") {
+      // No IO support (very old Safari) — render eagerly.
+      void render();
+
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            void render();
+            io.disconnect();
+            break;
+          }
+        }
+      },
+      { rootMargin: "800px 0px" },
+    );
+
+    io.observe(wrapper);
+
+    return () => io.disconnect();
+  }, [render]);
+
+  return (
+    <div
+      ref={wrapperRef}
+      aria-label={`Page ${pageNum} of ${pageCount}`}
+      className="w-full overflow-x-auto rounded bg-white shadow-md"
+      role="img"
+      style={
+        aspectRatio
+          ? { aspectRatio: `${aspectRatio}`, width: "100%" }
+          : undefined
+      }
+    >
+      <canvas ref={canvasRef} className="block h-auto w-full" />
+    </div>
   );
 }

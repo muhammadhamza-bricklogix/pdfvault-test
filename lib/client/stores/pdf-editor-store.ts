@@ -1,5 +1,9 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { FontData } from "@/lib/client/pdf-editor/text-extraction";
+import type {
+  PageNumberFormat,
+  PageNumberPosition,
+} from "@/lib/client/pdf-editor/add-page-numbers";
 
 import { create } from "zustand";
 
@@ -29,6 +33,16 @@ function resolveSourcePage(displayPage: number, pageOrder: number[]): number {
   if (!pageOrder.length) return displayPage;
 
   return pageOrder[displayPage - 1] ?? displayPage;
+}
+
+/**
+ * Stable identity for a File. Used to check whether a follow-up `setFile`
+ * lands the same document (keep remembered password) or a different one
+ * (drop it). Two Files pointing at the same bytes on disk always agree
+ * on name+size+lastModified.
+ */
+function fileIdentityKey(file: File): string {
+  return `${file.name}:${file.size}:${file.lastModified}`;
 }
 export type WatermarkPosition = "bottom" | "center" | "tiled" | "top";
 
@@ -88,6 +102,32 @@ const DEFAULT_BACKGROUND_IMAGE_CONFIG: BackgroundImageConfig = {
   pageScope: "all",
 };
 
+/**
+ * User-tweakable defaults for the "Add page numbers" modal. Held in the
+ * store so reopening the modal restores the last-applied settings —
+ * otherwise the modal's `useState(12)` initializers reset every open
+ * (mounted only when `isPageNumbersModalOpen`, so remount = reset).
+ * `startPage`/`endPage` are intentionally NOT stored because they depend
+ * on `pageCount`, which changes per file.
+ */
+export type PageNumbersConfig = {
+  colorHex: string;
+  fontSize: number;
+  format: PageNumberFormat;
+  margin: number;
+  position: PageNumberPosition;
+  startNumber: number;
+};
+
+const DEFAULT_PAGE_NUMBERS_CONFIG: PageNumbersConfig = {
+  colorHex: "#000000",
+  fontSize: 12,
+  format: "page-n-of-N",
+  margin: 24,
+  position: "bottom-center",
+  startNumber: 1,
+};
+
 type PdfEditorStore = {
   activeShapeType: ShapeType;
   activeTool: ActiveTool;
@@ -99,6 +139,24 @@ type PdfEditorStore = {
   /** Fabric JSON keyed by source PDF page number (stable across reorder). */
   fabricJsonByPage: Map<number, string>;
   file: File | null;
+  /**
+   * Password the user just set on `file` via the Protect flow.
+   *
+   * The editor never mutates the in-memory file when the user protects —
+   * we hand pdf-tools an encrypted copy for download and keep the
+   * unencrypted original in memory. That means the subsequent "Remove
+   * password" click can't validate the current password against pdf.js
+   * (the loaded file is unencrypted). We remember the password we just
+   * set so a mismatch on the Remove step produces "Incorrect password"
+   * instead of "This PDF isn't password-protected".
+   *
+   * Scoped to `documentPasswordFileKey` so opening a different file
+   * transparently invalidates the remembered password. Session-only —
+   * the field is cleared on `clearFile`, `applyPostSaveReset`, and any
+   * `setFile` that lands a genuinely different file identity.
+   */
+  documentPassword: string | null;
+  documentPasswordFileKey: string | null;
   /**
    * Presigned S3 URL for the currently open cloud document. When set,
    * `usePdfLoader` passes this URL directly to pdf.js (range requests) instead
@@ -132,7 +190,18 @@ type PdfEditorStore = {
   lastBakedBackgroundImageSignature: string | null;
   isCompressModalOpen: boolean;
   isFindReplaceOpen: boolean;
+  isShareModalOpen: boolean;
+  isVersionHistoryModalOpen: boolean;
   isPasswordModalOpen: boolean;
+  /**
+   * Controls whether the shared PasswordModal shows both tabs
+   * ("Add password" + "Remove password") or only the unlock flow. The
+   * dashboard / landing "Unlock PDF" tile sets this to "unlock-only" so
+   * the encrypt tab is hidden and the modal reads as a dedicated
+   * remove-password screen. Reset to "both" on close so the top-bar
+   * Password button (used from inside the editor) always shows both.
+   */
+  passwordModalVariant: "both" | "unlock-only";
   isCreatePdfModalOpen: boolean;
   isCreatingShape: boolean;
   isFormFieldsModalOpen: boolean;
@@ -167,8 +236,12 @@ type PdfEditorStore = {
   shapeFill: string;
   shapeStroke: string;
   shapeStrokeWidth: number;
+  /** Composite (PDF + Fabric) snapshots keyed by display-page number. Updated
+   *  live as the user edits so the thumbnail sidebar reflects text changes. */
+  thumbnailSnapshots: Map<number, string>;
   watermarkConfig: WatermarkConfig;
   backgroundImageConfig: BackgroundImageConfig;
+  pageNumbersConfig: PageNumbersConfig;
   zoom: number;
 
   addBlankPage: () => Promise<void>;
@@ -222,12 +295,21 @@ type PdfEditorStore = {
   ) => void;
   markDocumentDirty: () => void;
   setFile: (file: File | null) => void;
+  /**
+   * Remember (or forget) the password set on the current file. Pass
+   * `null` to clear. See `documentPassword` field docs for why this
+   * lives client-side and is scoped to `documentPasswordFileKey`.
+   */
+  setDocumentPassword: (password: string | null) => void;
   setPdfSourceUrl: (url: string | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
   setIsFormFieldsModalOpen: (value: boolean) => void;
   setIsPageNumbersModalOpen: (value: boolean) => void;
   setIsPasswordModalOpen: (value: boolean) => void;
+  setPasswordModalVariant: (variant: "both" | "unlock-only") => void;
+  setIsShareModalOpen: (value: boolean) => void;
+  setIsVersionHistoryModalOpen: (value: boolean) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -242,7 +324,10 @@ type PdfEditorStore = {
   setShapeStrokeWidth: (width: number) => void;
   setWatermarkConfig: (config: Partial<WatermarkConfig>) => void;
   setBackgroundImageConfig: (config: Partial<BackgroundImageConfig>) => void;
+  setPageNumbersConfig: (config: Partial<PageNumbersConfig>) => void;
   setZoom: (zoom: number) => void;
+  setThumbnailSnapshot: (displayPage: number, dataUrl: string) => void;
+  clearThumbnailSnapshots: () => void;
   undo: (page: number) => string | undefined;
 };
 
@@ -256,6 +341,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   highlightColor: "#FFEB3B",
   fabricJsonByPage: new Map(),
   file: null,
+  documentPassword: null,
+  documentPasswordFileKey: null,
   pdfSourceUrl: null,
   hasUnsavedChanges: false,
   pendingCloudSaveAfterReload: false,
@@ -269,7 +356,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isFindReplaceOpen: false,
   isFormFieldsModalOpen: false,
   isPageNumbersModalOpen: false,
+  isShareModalOpen: false,
+  isVersionHistoryModalOpen: false,
   isPasswordModalOpen: false,
+  passwordModalVariant: "both" as "both" | "unlock-only",
   isCreatePdfModalOpen: false,
   isCreatingShape: false,
   isManagePagesOpen: false,
@@ -284,8 +374,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   shapeFill: "transparent",
   shapeStroke: "#000000",
   shapeStrokeWidth: 2,
+  thumbnailSnapshots: new Map(),
   watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
   backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
+  pageNumbersConfig: { ...DEFAULT_PAGE_NUMBERS_CONFIG },
   zoom: 1.0,
 
   addBlankPage: async () => {
@@ -357,6 +449,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       editorMode: "editText",
       fabricJsonByPage: new Map(),
       file: null,
+      documentPassword: null,
+      documentPasswordFileKey: null,
       pdfSourceUrl: null,
       hasUnsavedChanges: false,
       pendingCloudSaveAfterReload: false,
@@ -369,7 +463,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isFindReplaceOpen: false,
       isFormFieldsModalOpen: false,
       isPageNumbersModalOpen: false,
+      isShareModalOpen: false,
+      isVersionHistoryModalOpen: false,
       isPasswordModalOpen: false,
+      passwordModalVariant: "both",
       isCreatePdfModalOpen: false,
       isCreatingShape: false,
       isManagePagesOpen: false,
@@ -383,8 +480,10 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       shapeFill: "transparent",
       shapeStroke: "#000000",
       shapeStrokeWidth: 2,
+      thumbnailSnapshots: new Map(),
       watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
       backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
+      pageNumbersConfig: { ...DEFAULT_PAGE_NUMBERS_CONFIG },
       zoom: 1.0,
     }),
 
@@ -570,8 +669,16 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       // so usePdfLoader doesn't re-trigger range requests against an expired
       // presigned URL.
       pdfSourceUrl: null,
+      // Post-save produces a new File identity — the remembered protect
+      // password no longer maps to these bytes. Force a re-verify on next
+      // Remove-password attempt.
+      documentPassword: null,
+      documentPasswordFileKey: null,
       lastBakedWatermarkSignature: null,
       lastBakedBackgroundImageSignature: null,
+      // Snapshots are keyed by display page; after save the baked PDF is the
+      // source of truth, so re-render thumbnails from the new bytes.
+      thumbnailSnapshots: new Map(),
     })),
 
   clearPendingCloudSaveAfterReload: () =>
@@ -605,13 +712,47 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       pendingCloudSaveAfterReload: true,
     }),
 
-  setFile: (file) => set({ file }),
+  setFile: (file) =>
+    set((state) => {
+      const nextKey = file ? fileIdentityKey(file) : null;
+
+      // Drop the remembered password if the file we're loading isn't the
+      // one we set it for. This prevents a stale password from carrying
+      // over when the user opens a different document.
+      if (nextKey !== state.documentPasswordFileKey) {
+        return { file, documentPassword: null, documentPasswordFileKey: null };
+      }
+
+      return { file };
+    }),
+  setDocumentPassword: (password) =>
+    set((state) => {
+      if (!password) {
+        return { documentPassword: null, documentPasswordFileKey: null };
+      }
+      const key = state.file ? fileIdentityKey(state.file) : null;
+
+      return { documentPassword: password, documentPasswordFileKey: key };
+    }),
   setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
   setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),
-  setIsPasswordModalOpen: (value) => set({ isPasswordModalOpen: value }),
+  setIsPasswordModalOpen: (value) =>
+    set(
+      value
+        ? { isPasswordModalOpen: true }
+        : // Reset variant on close so the next open (from the top-bar
+          // Password button inside the editor) defaults back to the
+          // full both-tabs modal, not the unlock-only variant left
+          // over from a dashboard "Unlock PDF" tile click.
+          { isPasswordModalOpen: false, passwordModalVariant: "both" },
+    ),
+  setPasswordModalVariant: (variant) => set({ passwordModalVariant: variant }),
+  setIsShareModalOpen: (value) => set({ isShareModalOpen: value }),
+  setIsVersionHistoryModalOpen: (value) =>
+    set({ isVersionHistoryModalOpen: value }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value
@@ -677,7 +818,22 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
         ...(touchesSignature ? { hasUnsavedChanges: true } : {}),
       };
     }),
+  setPageNumbersConfig: (config) =>
+    set((state) => ({
+      pageNumbersConfig: { ...state.pageNumbersConfig, ...config },
+    })),
   setZoom: (zoom) => set({ zoom }),
+
+  setThumbnailSnapshot: (displayPage, dataUrl) =>
+    set((state) => {
+      const next = new Map(state.thumbnailSnapshots);
+
+      next.set(displayPage, dataUrl);
+
+      return { thumbnailSnapshots: next };
+    }),
+
+  clearThumbnailSnapshots: () => set({ thumbnailSnapshots: new Map() }),
 
   undo: (displayPage) => {
     const state = get();

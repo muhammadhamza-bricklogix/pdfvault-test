@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { FormsModal } from "@/components/shared/forms-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
@@ -32,6 +33,7 @@ export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
+  const [formsModalOpen, setFormsModalOpen] = useState(false);
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -51,6 +53,7 @@ export function LandingHeader() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setToolsModalOpen(false);
 
+    setFormsModalOpen(false);
     setMobileOpen(false);
   }, [pathname]);
   // Signed-in state resolved via Clerk. Until `isLoaded` we render
@@ -72,6 +75,11 @@ export function LandingHeader() {
 
   const openToolsModal = () => {
     setToolsModalOpen(true);
+    setMobileOpen(false);
+  };
+
+  const openFormsModal = () => {
+    setFormsModalOpen(true);
     setMobileOpen(false);
   };
 
@@ -113,10 +121,29 @@ export function LandingHeader() {
               <button
                 aria-expanded={toolsModalOpen}
                 aria-haspopup="dialog"
-                className="pv-btn-secondary inline-flex items-center gap-1.5 px-4 py-1.5 text-[14px]"
+                // Active (modal open) → solid brand pill so the entry
+                // point reads as "selected", not "just another link".
+                // Inactive → outlined pill (pv-btn-secondary). QA 2026-08-19.
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[14px] font-medium transition-colors ${
+                  toolsModalOpen
+                    ? "bg-[var(--pv-brand-primary)] text-white shadow-sm ring-1 ring-[var(--pv-brand-primary)]"
+                    : "pv-btn-secondary"
+                }`}
                 type="button"
                 onClick={openToolsModal}
               >
+                <svg
+                  aria-hidden
+                  fill="none"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  width="14"
+                >
+                  <path
+                    d="M2 3.5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 7 3.5v2A1.5 1.5 0 0 1 5.5 7h-2A1.5 1.5 0 0 1 2 5.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 2h2A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-2A1.5 1.5 0 0 1 9 5.5v-2Zm-7 7A1.5 1.5 0 0 1 3.5 9h2A1.5 1.5 0 0 1 7 10.5v2A1.5 1.5 0 0 1 5.5 14h-2A1.5 1.5 0 0 1 2 12.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 9h2a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 9 12.5v-2Z"
+                    fill="currentColor"
+                  />
+                </svg>
                 All Tools
                 <svg
                   aria-hidden
@@ -144,6 +171,15 @@ export function LandingHeader() {
                   {link.label}
                 </Link>
               ))}
+              <button
+                aria-expanded={formsModalOpen}
+                aria-haspopup="dialog"
+                className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+                type="button"
+                onClick={openFormsModal}
+              >
+                Forms
+              </button>
             </nav>
           </div>
 
@@ -182,12 +218,10 @@ export function LandingHeader() {
                     Login
                   </Link>
                   <Link
-                    // Top-bar CTA hides while the mobile drawer is open —
-                    // the drawer renders its own "Get started" and the pair
-                    // felt duplicated. Desktop (lg+) always shows it.
-                    className={`pv-btn-primary px-5 py-1.5 text-[14px] ${
-                      mobileOpen ? "hidden lg:inline-flex" : "inline-flex"
-                    }`}
+                    // Desktop-only. On mobile the hamburger drawer owns the
+                    // "Get started" CTA, so we hide it in the top bar to
+                    // eliminate the duplicate QA flagged (2026-08-19).
+                    className="pv-btn-primary hidden px-5 py-1.5 text-[14px] lg:inline-flex"
                     href={ROUTES.AUTH.SIGN_UP}
                   >
                     Get started
@@ -225,11 +259,43 @@ export function LandingHeader() {
             <ul className="flex flex-col gap-1">
               <li>
                 <button
-                  className="block w-full rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  // Highlighted primary action: brand-tinted background,
+                  // grid icon, and a chevron so mobile users can spot the
+                  // "everything the app can do" entry point at a glance.
+                  // QA 2026-08-19 (low visibility).
+                  aria-expanded={toolsModalOpen}
+                  aria-haspopup="dialog"
+                  className="flex w-full items-center gap-2.5 rounded-xl border border-[var(--pv-brand-primary)]/40 bg-[var(--pv-brand-primary)]/10 px-3 py-3 text-left text-[15px] font-semibold text-[var(--pv-brand-primary)] transition-colors hover:bg-[var(--pv-brand-primary)]/15"
                   type="button"
                   onClick={openToolsModal}
                 >
-                  All Tools
+                  <span
+                    aria-hidden
+                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--pv-brand-primary)] text-white"
+                  >
+                    <svg fill="none" height="14" viewBox="0 0 16 16" width="14">
+                      <path
+                        d="M2 3.5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 7 3.5v2A1.5 1.5 0 0 1 5.5 7h-2A1.5 1.5 0 0 1 2 5.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 2h2A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-2A1.5 1.5 0 0 1 9 5.5v-2Zm-7 7A1.5 1.5 0 0 1 3.5 9h2A1.5 1.5 0 0 1 7 10.5v2A1.5 1.5 0 0 1 5.5 14h-2A1.5 1.5 0 0 1 2 12.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 9h2a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 9 12.5v-2Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
+                  <span className="flex-1">All Tools</span>
+                  <svg
+                    aria-hidden
+                    fill="none"
+                    height="14"
+                    viewBox="0 0 12 12"
+                    width="14"
+                  >
+                    <path
+                      d="m4.5 3 3 3-3 3"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
                 </button>
               </li>
               {PRIMARY_LINKS.map((link) => (
@@ -243,6 +309,15 @@ export function LandingHeader() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  className="block w-full rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  type="button"
+                  onClick={openFormsModal}
+                >
+                  Forms
+                </button>
+              </li>
               <li className="mt-1 flex items-center gap-3 px-2 py-1">
                 <LandingLanguageSwitcher variant="mobile" />
                 <div className="pv-theme-chip">
@@ -313,6 +388,8 @@ export function LandingHeader() {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+
+      <FormsModal isOpen={formsModalOpen} onOpenChange={setFormsModalOpen} />
     </>
   );
 }

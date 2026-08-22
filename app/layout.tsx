@@ -2,10 +2,62 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import {
+  Allura,
+  Dancing_Script,
+  Great_Vibes,
+  Pacifico,
+  Playfair_Display,
+  Sacramento,
+} from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
+
+const dancingScript = Dancing_Script({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-dancing-script",
+  weight: ["400", "700"],
+});
+
+const playfairDisplay = Playfair_Display({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-legal-serif",
+  weight: ["400", "600", "700"],
+});
+
+// Signature-tab fonts. Loaded here (with display:swap) so the Type signature
+// preview canvas can use them without a runtime fetch.
+const greatVibes = Great_Vibes({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-great-vibes",
+  weight: ["400"],
+});
+
+const allura = Allura({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-allura",
+  weight: ["400"],
+});
+
+const sacramento = Sacramento({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-sacramento",
+  weight: ["400"],
+});
+
+const pacifico = Pacifico({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-pacifico",
+  weight: ["400"],
+});
 
 import { Providers } from "./providers";
 
@@ -67,55 +119,62 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Trustpilot AFS invitation register key. Public — safe to bake into
+  // the client bundle (it ships to every visitor anyway, so it's not a
+  // secret). Hardcoded fallback ensures the loader fires in every
+  // environment even without explicit env config; setting
+  // NEXT_PUBLIC_TRUSTPILOT_INVITE_ID overrides for key rotation without
+  // a code change. Dev is still skipped by the NODE_ENV guard so local
+  // work doesn't spam Trustpilot's crawler with test hits.
+  const TRUSTPILOT_INVITE_ID_DEFAULT = "8RKmNv4GASChIZiA";
+  const envInviteId = process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID?.trim();
+  // `||` (not `??`) so an empty-string env var also falls back to the
+  // hardcoded default — Railway config often stores unset keys as `""`
+  // rather than truly undefined, which silently disabled the loader.
+  const trustpilotInviteId =
+    process.env.NODE_ENV === "development"
+      ? envInviteId
+      : envInviteId || TRUSTPILOT_INVITE_ID_DEFAULT;
+
   return (
-    <html suppressHydrationWarning className="" lang="en">
+    <html
+      suppressHydrationWarning
+      className={`${dancingScript.variable} ${playfairDisplay.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
+      lang="en"
+    >
       {/*
         Preconnect to critical third-party origins so the TCP + TLS handshakes
-        happen in parallel with HTML parsing rather than on demand. Order
-        matters: Clerk is used on every authenticated request, Weglot on every
-        page, Solidgate only in the paywall — but the penalty for an unused
-        preconnect is near zero so we include all three.
+        happen in parallel with HTML parsing rather than on demand.
       */}
-      {/* Google Fonts — loaded at runtime to avoid build-time network deps */}
-      <link href="https://fonts.googleapis.com" rel="preconnect" />
-      <link
-        crossOrigin="anonymous"
-        href="https://fonts.gstatic.com"
-        rel="preconnect"
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Playfair+Display:wght@400;600;700&display=swap"
-        rel="stylesheet"
-      />
-      {/* Clerk */}
       <link
         crossOrigin="anonymous"
         href="https://clerk.pdfvault.ai"
         rel="preconnect"
       />
       <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
-      {/* Weglot */}
       <link
         crossOrigin="anonymous"
         href="https://cdn.weglot.com"
         rel="preconnect"
       />
       <link href="https://cdn.weglot.com" rel="dns-prefetch" />
-      {/* Solidgate charge-auth */}
       <link
         crossOrigin="anonymous"
         href="https://cdn.charge-auth.com"
         rel="preconnect"
       />
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
+      {trustpilotInviteId ? (
+        <>
+          <link
+            crossOrigin="anonymous"
+            href="https://invitejs.trustpilot.com"
+            rel="preconnect"
+          />
+          <link href="https://invitejs.trustpilot.com" rel="dns-prefetch" />
+        </>
+      ) : null}
 
-      {/*
-        Read the persisted Weglot language as early as possible (before the
-        page becomes interactive) so WeglotLoader can switch to it
-        immediately after initialization. This minimizes the English flash
-        on first load and keeps the chosen language when the browser drops
-        Weglot's own cookie across route groups.
-      */}
       <Script id="weglot-lang-pref" strategy="beforeInteractive">
         {`
           try {
@@ -126,6 +185,29 @@ export default function RootLayout({
           }
         `}
       </Script>
+      {/*
+        Trustpilot Automatic Feedback Service loader. Exposes a global
+        `tp('createInvitation', {...})` API so any flow that finishes a
+        review-worthy action (post-signup, first paid conversion, etc.)
+        can trigger an invitation email through Trustpilot. Also serves
+        as Trustpilot's own domain-verification probe.
+
+        Rendered as a plain `<script>` (not `next/script`) so it appears
+        verbatim in the initial server-rendered HTML. Trustpilot's
+        verifier fetches the page over plain HTTP and does not execute
+        JavaScript, so the `tp('register', ...)` snippet MUST be present
+        in view-source. `next/script` with `strategy="afterInteractive"`
+        can inject client-side after hydration, which the verifier
+        misses — that's why domain verification was failing even after
+        the loader shipped.
+      */}
+      {trustpilotInviteId ? (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
+          }}
+        />
+      ) : null}
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <NextTopLoader color="#DF3A38" showSpinner={false} />
         <WeglotLoader />

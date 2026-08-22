@@ -31,6 +31,19 @@ const nextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  async redirects() {
+    // 308 (permanent) preserves method + tells crawlers to update the
+    // index. Keeps old bookmarks / marketing links working after the
+    // W-9 short URL was renamed to match the pdfguru slug pattern
+    // (`/w-9` → `/w-9-form`).
+    return [
+      {
+        source: "/w-9",
+        destination: "/w-9-form",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     // The Google Drive / OneDrive picker opens an OAuth popup that
     // navigates to a cross-origin auth page and back. Under the stricter
