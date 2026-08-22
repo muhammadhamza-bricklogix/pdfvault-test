@@ -27,11 +27,13 @@ const CANVAS_HEIGHT = 200;
 const MAX_UPLOAD_BYTES = 1 * 1024 * 1024;
 // Backend stamps the signature into a field rect that's taller than the
 // printed signature line — sending the raw canvas causes the ink to bleed
-// into the row above ("See the instructions for Part II, later."). We pad
-// the source image with transparent space on top + bottom + a hairline
+// into the row above ("See the instructions for Part II, later."). We
+// tight-crop the ink, then pad transparent space on top + a hairline
 // marker so no matter how the stamper fits/crops it, the visible ink lands
-// in the bottom portion of the field. 0.55 = ink occupies bottom 55%.
-const SIGNATURE_INK_BOTTOM_PCT = 0.55;
+// in the bottom portion of the field. 0.90 = ink occupies bottom 90% of
+// the field — big enough to read comfortably, 10% breathing room keeps it
+// clear of the row above.
+const SIGNATURE_INK_BOTTOM_PCT = 0.9;
 
 export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
   const [tab, setTab] = useState<Tab>("draw");
@@ -322,8 +324,10 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
     }
 
     // Local preview uses a WHITESPACE-TRIMMED version so the overlay shows
-    // the ink at full box size. The upload gets a PADDED version so the
-    // backend-stamped signature lands lower in its field rect.
+    // the ink at full box size. The upload uses the trimmed ink padded
+    // with transparent space on top so the backend-stamped signature
+    // covers the bottom 90 % of its field without crashing into the row
+    // above.
     let previewBlob: Blob = blob;
 
     try {
@@ -332,18 +336,19 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
       // Trim failed — preview from the raw blob.
     }
     const previewDataUrl = await blobToDataUrl(previewBlob);
-    let uploadBlob: Blob = blob;
+    let uploadPayload: Blob = blob;
 
     try {
-      uploadBlob = await padSignatureBottom(blob);
+      uploadPayload = await padSignatureBottom(previewBlob);
     } catch {
-      // Padding failed — upload the raw blob rather than blocking.
+      // Padding failed — upload the trimmed blob rather than blocking.
+      uploadPayload = previewBlob;
     }
 
     try {
       const { signatureKey } = await upload.mutateAsync({
         sessionId,
-        blob: uploadBlob,
+        blob: uploadPayload,
       });
 
       setSignatureKey(signatureKey);

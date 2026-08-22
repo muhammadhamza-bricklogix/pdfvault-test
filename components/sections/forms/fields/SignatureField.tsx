@@ -23,7 +23,7 @@ const SIGNATURE_INNER_WIDTH_PCT = 1 - SIGNATURE_LEFT_MARGIN_PCT;
 // portion of the field so the signature sits on the signature line without
 // bleeding hard into the text row above it. Unsigned = full height (bigger
 // tap target for "Sign here").
-const SIGNED_HEIGHT_PCT = 0.85;
+const SIGNED_HEIGHT_PCT = 0.9;
 
 export function SignatureField({ field, mode, page }: FieldProps) {
   const signatureKey = useFormEditorStore((s) => s.signatureKey);
