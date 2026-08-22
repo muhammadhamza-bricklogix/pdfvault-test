@@ -252,20 +252,23 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
       return;
     }
 
-    // Pad transparent space above the ink so the backend-stamped signature
-    // sits on the signature line without bleeding into the row above.
+    // Local preview uses the RAW ink so the overlay in the editor shows a
+    // full-size signature. The upload gets the padded version so the
+    // backend stamp lands lower in its field rect.
+    const previewDataUrl = await blobToDataUrl(blob);
+    let uploadBlob: Blob = blob;
+
     try {
-      blob = await padSignatureBottom(blob);
+      uploadBlob = await padSignatureBottom(blob);
     } catch {
-      // Padding failed — fall back to the raw blob rather than blocking.
+      // Padding failed — upload the raw blob rather than blocking.
     }
 
-    // Capture a local preview data URL so the overlay can show the actual
-    // signature image (the backend's signatureKey is opaque).
-    const previewDataUrl = await blobToDataUrl(blob);
-
     try {
-      const { signatureKey } = await upload.mutateAsync({ sessionId, blob });
+      const { signatureKey } = await upload.mutateAsync({
+        sessionId,
+        blob: uploadBlob,
+      });
 
       setSignatureKey(signatureKey);
       setSignaturePreview(previewDataUrl);

@@ -19,11 +19,11 @@ import { pdfRectToCss } from "./types";
 // 80% of the field width so it stays comfortably within the underline.
 const SIGNATURE_LEFT_MARGIN_PCT = 0.2;
 const SIGNATURE_INNER_WIDTH_PCT = 1 - SIGNATURE_LEFT_MARGIN_PCT;
-// Once the user has actually signed, shrink the visible box to the bottom
+// Once the user has actually signed, drop the visible box to the bottom
 // portion of the field so the signature sits on the signature line without
-// bleeding into the text row above it. Unsigned = full height (bigger tap
-// target for "Sign here").
-const SIGNED_HEIGHT_PCT = 0.55;
+// bleeding hard into the text row above it. Unsigned = full height (bigger
+// tap target for "Sign here").
+const SIGNED_HEIGHT_PCT = 0.85;
 
 export function SignatureField({ field, mode, page }: FieldProps) {
   const signatureKey = useFormEditorStore((s) => s.signatureKey);
