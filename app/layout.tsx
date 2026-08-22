@@ -200,10 +200,24 @@ export default function RootLayout({
         because it can inject client-side after hydration, which a
         non-JS crawler never sees.
       */}
+      {/*
+        Explicit `<head>` wrapper so we can place a raw `<script>` inside
+        it — Next.js App Router only auto-hoists `<link>` / `<meta>` etc.
+        to `<head>`; bare `<script>` tags at the `<html>` root end up in
+        `<body>`. Trustpilot's verifier crawler ONLY inspects `<head>`
+        contents for the raw `tp('register', ...)` call, and rejects the
+        Next.js Script-component wrapper (which stringifies the payload
+        into `(self.__next_s).push([...])` — the register call is inside
+        a JSON string, not an executable pattern the crawler matches).
+      */}
       {trustpilotInviteId ? (
-        <Script id="trustpilot-invite" strategy="beforeInteractive">
-          {`(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`}
-        </Script>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
+            }}
+          />
+        </head>
       ) : null}
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         <NextTopLoader color="#DF3A38" showSpinner={false} />
