@@ -21,7 +21,7 @@ export function LandingTestimonials() {
   return (
     <section
       aria-labelledby="testimonials-heading"
-      className="bg-white py-20 sm:py-24"
+      className="bg-white pt-20 pb-6 sm:pt-24 sm:pb-8"
     >
       <div className="pv-container">
         <SectionHeading
@@ -32,7 +32,7 @@ export function LandingTestimonials() {
           }
         />
 
-        <div className="mt-12 flex justify-center">
+        <div className="mt-10 flex justify-center">
           {/*
             TrustBox div — Trustpilot's bootstrap script mutates this
             container on load and injects the live widget. Don't add
@@ -49,8 +49,8 @@ export function LandingTestimonials() {
             "Frequently Asked Questions" section below would overlap).
           */}
           <div
-            className="origin-center scale-[1.8] sm:scale-[2.4]"
-            style={{ height: 60, width: "min(560px, 100%)" }}
+            className="origin-center scale-[1.35] sm:scale-[1.7]"
+            style={{ height: 44, width: "min(480px, 100%)" }}
           >
             <div
               className="trustpilot-widget"
