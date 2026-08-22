@@ -25,6 +25,13 @@ const TYPE_FONTS = [
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 200;
 const MAX_UPLOAD_BYTES = 1 * 1024 * 1024;
+// Backend stamps the signature into a field rect that's taller than the
+// printed signature line — sending the raw canvas causes the ink to bleed
+// into the row above ("See the instructions for Part II, later."). We pad
+// the source image with transparent space on top + bottom + a hairline
+// marker so no matter how the stamper fits/crops it, the visible ink lands
+// in the bottom portion of the field. 0.55 = ink occupies bottom 55%.
+const SIGNATURE_INK_BOTTOM_PCT = 0.55;
 
 export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
   const [tab, setTab] = useState<Tab>("draw");
@@ -162,6 +169,61 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
       reader.readAsDataURL(blob);
     });
 
+  const loadImage = (blob: Blob) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("image decode failed"));
+      };
+      img.src = url;
+    });
+
+  // Reshape signature so ink occupies the bottom SIGNATURE_INK_BOTTOM_PCT of
+  // a transparent canvas. Hairline markers in the top corners keep the
+  // padding non-cropable in case the backend tight-crops before fitting.
+  const padSignatureBottom = async (blob: Blob): Promise<Blob> => {
+    const img = await loadImage(blob);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+
+    if (!w || !h) return blob;
+
+    const paddedH = Math.round(h / SIGNATURE_INK_BOTTOM_PCT);
+    const canvas = document.createElement("canvas");
+
+    canvas.width = w;
+    canvas.height = paddedH;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return blob;
+    ctx.clearRect(0, 0, w, paddedH);
+    ctx.drawImage(img, 0, paddedH - h);
+    // 1 px alpha=1 pixels at the top-left / top-right corners so a tight-
+    // bounding-box crop (if the stamper does one) still spans the full
+    // padded height. Effectively invisible in the rendered output.
+    const marker = ctx.createImageData(1, 1);
+
+    marker.data[0] = 0;
+    marker.data[1] = 0;
+    marker.data[2] = 0;
+    marker.data[3] = 1;
+    ctx.putImageData(marker, 0, 0);
+    ctx.putImageData(marker, w - 1, 0);
+
+    const padded = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/png"),
+    );
+
+    return padded ?? blob;
+  };
+
   const handleApply = async () => {
     if (!sessionId) {
       toast.error({ title: "No session yet — try again in a second." });
@@ -188,6 +250,14 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
       toast.error({ title: "Couldn't capture a signature image." });
 
       return;
+    }
+
+    // Pad transparent space above the ink so the backend-stamped signature
+    // sits on the signature line without bleeding into the row above.
+    try {
+      blob = await padSignatureBottom(blob);
+    } catch {
+      // Padding failed — fall back to the raw blob rather than blocking.
     }
 
     // Capture a local preview data URL so the overlay can show the actual
