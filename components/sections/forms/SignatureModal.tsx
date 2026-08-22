@@ -224,6 +224,75 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
     return padded ?? blob;
   };
 
+  // Trim white / transparent whitespace to the tight ink bounding box so
+  // the overlay preview isn't a tiny signature floating in a canvas of
+  // empty pixels. Used ONLY for the editor preview; the upload keeps the
+  // padded version so the backend stamp lands lower.
+  const trimSignatureWhitespace = async (blob: Blob): Promise<Blob> => {
+    const img = await loadImage(blob);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+
+    if (!w || !h) return blob;
+
+    const src = document.createElement("canvas");
+
+    src.width = w;
+    src.height = h;
+    const srcCtx = src.getContext("2d");
+
+    if (!srcCtx) return blob;
+    srcCtx.drawImage(img, 0, 0);
+    const { data } = srcCtx.getImageData(0, 0, w, h);
+    let minX = w;
+    let minY = h;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const alpha = data[i + 3];
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Ink = non-transparent AND darker than near-white. Threshold at
+        // 240 catches ink even with mild anti-aliasing.
+        const isInk = alpha > 8 && (r < 240 || g < 240 || b < 240);
+
+        if (!isInk) continue;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+
+    if (maxX < 0 || maxY < 0) return blob;
+
+    const pad = 4;
+    const cropX = Math.max(0, minX - pad);
+    const cropY = Math.max(0, minY - pad);
+    const cropW = Math.min(w, maxX + pad) - cropX;
+    const cropH = Math.min(h, maxY + pad) - cropY;
+
+    if (cropW <= 0 || cropH <= 0) return blob;
+
+    const out = document.createElement("canvas");
+
+    out.width = cropW;
+    out.height = cropH;
+    const outCtx = out.getContext("2d");
+
+    if (!outCtx) return blob;
+    outCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    const trimmed = await new Promise<Blob | null>((resolve) =>
+      out.toBlob((b) => resolve(b), "image/png"),
+    );
+
+    return trimmed ?? blob;
+  };
+
   const handleApply = async () => {
     if (!sessionId) {
       toast.error({ title: "No session yet — try again in a second." });
@@ -252,10 +321,17 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
       return;
     }
 
-    // Local preview uses the RAW ink so the overlay in the editor shows a
-    // full-size signature. The upload gets the padded version so the
-    // backend stamp lands lower in its field rect.
-    const previewDataUrl = await blobToDataUrl(blob);
+    // Local preview uses a WHITESPACE-TRIMMED version so the overlay shows
+    // the ink at full box size. The upload gets a PADDED version so the
+    // backend-stamped signature lands lower in its field rect.
+    let previewBlob: Blob = blob;
+
+    try {
+      previewBlob = await trimSignatureWhitespace(blob);
+    } catch {
+      // Trim failed — preview from the raw blob.
+    }
+    const previewDataUrl = await blobToDataUrl(previewBlob);
     let uploadBlob: Blob = blob;
 
     try {
