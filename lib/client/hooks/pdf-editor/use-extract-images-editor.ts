@@ -12,7 +12,7 @@ import {
 } from "@/lib/client/hooks/billing/paywall-bus";
 import { useExtractImagesMutation } from "@/lib/client/query/mutations/pdf-tools.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
@@ -117,11 +117,12 @@ export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
       // route them through the sign-in confirm modal first (the
       // paywall's checkout intent needs auth).
       if (!signedIn) {
-        try {
-          await savePendingEditorFile(sourceFile);
-        } catch (err) {
-          logger.warn("pending editor file save failed", err);
-        }
+        // Snapshot file + fabric edits + extractedPages so the hydrator
+        // restores overlays on return (file-only save reintroduces the
+        // "first-time login drops my edits" bug).
+        await snapshotPendingEditorFile().catch((err) =>
+          logger.warn("pending editor file save failed", err),
+        );
 
         const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=extract-images`;
 

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { FormsModal } from "@/components/shared/forms-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
@@ -32,6 +33,7 @@ export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
+  const [formsModalOpen, setFormsModalOpen] = useState(false);
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -51,6 +53,7 @@ export function LandingHeader() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setToolsModalOpen(false);
 
+    setFormsModalOpen(false);
     setMobileOpen(false);
   }, [pathname]);
   // Signed-in state resolved via Clerk. Until `isLoaded` we render
@@ -72,6 +75,11 @@ export function LandingHeader() {
 
   const openToolsModal = () => {
     setToolsModalOpen(true);
+    setMobileOpen(false);
+  };
+
+  const openFormsModal = () => {
+    setFormsModalOpen(true);
     setMobileOpen(false);
   };
 
@@ -163,6 +171,15 @@ export function LandingHeader() {
                   {link.label}
                 </Link>
               ))}
+              <button
+                aria-expanded={formsModalOpen}
+                aria-haspopup="dialog"
+                className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+                type="button"
+                onClick={openFormsModal}
+              >
+                Forms
+              </button>
             </nav>
           </div>
 
@@ -292,6 +309,15 @@ export function LandingHeader() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  className="block w-full rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  type="button"
+                  onClick={openFormsModal}
+                >
+                  Forms
+                </button>
+              </li>
               <li className="mt-1 flex items-center gap-3 px-2 py-1">
                 <LandingLanguageSwitcher variant="mobile" />
                 <div className="pv-theme-chip">
@@ -362,6 +388,8 @@ export function LandingHeader() {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+
+      <FormsModal isOpen={formsModalOpen} onOpenChange={setFormsModalOpen} />
     </>
   );
 }

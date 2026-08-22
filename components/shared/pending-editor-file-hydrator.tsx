@@ -10,6 +10,7 @@ import { uploadToasts } from "@/lib/client/upload-toasts/controller";
 import {
   clearPendingEditorFile,
   loadPendingEditorFile,
+  savePendingEditorFile,
 } from "@/lib/client/upload/pending-editor-file";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
@@ -216,6 +217,16 @@ export function PendingEditorFileHydrator() {
         if (isFreshEntry && !docId) {
           await clearPendingEditorFile();
 
+          return;
+        }
+
+        // `?id=<X>` present → the cloud document loader
+        // (`useEditorDocumentLoader`) is authoritative for `file`. Racing
+        // an IDB restore against it either overwrites the correct cloud
+        // bytes with a stale local mirror or vice-versa. Skip IDB here;
+        // if the mirror needs cleanup we handle it in the file-mirror
+        // effect once `currentDocumentId` propagates.
+        if (docId) {
           return;
         }
 
@@ -595,6 +606,54 @@ export function PendingEditorFileHydrator() {
     setIsPasswordModalOpen,
     tool,
   ]);
+
+  // Step 5 — mirror the in-memory `file` to IndexedDB so a hard browser
+  // refresh doesn't strand the user on the drop-zone.
+  //
+  // Why it's needed: signed-out visitors on `/pdf-composer` don't get a
+  // `?id=<docId>` URL param (no cloud row to reference), and signed-in
+  // users whose cloud save FAILED are in the same boat. With Zustand
+  // reset on refresh and nothing else persisted, the previously opened
+  // PDF vanishes and the composer boots into the empty upload screen —
+  // exactly the QA report from 2026-08-21.
+  //
+  // We only mirror when the file is local-only (no `currentDocumentId`).
+  // For cloud-backed files the cloud loader is the authoritative
+  // rehydration source and duplicating to IDB just risks a stale mirror
+  // outliving the doc.
+  //
+  // Fabric edits + extractedPages are intentionally omitted here (they
+  // change on every stroke; writing 25 MB to IDB per stroke would jank
+  // the UI). The sign-in redirect path in the sibling flows still saves
+  // those explicitly. If hard-refresh edit restoration is needed later,
+  // add a debounced mirror for those fields.
+  useEffect(() => {
+    if (!currentFile) {
+      // File was cleared (new upload flow, close, or clearFile) — drop
+      // the mirror so a refresh doesn't restore something the user just
+      // navigated away from.
+      void clearPendingEditorFile().catch((err) =>
+        logger.warn("pending file mirror clear failed", err),
+      );
+
+      return;
+    }
+
+    // Cloud-backed doc — cloud is source of truth. Also clear any stale
+    // mirror from a prior local-only session so cross-doc restore can't
+    // fire.
+    if (currentDocumentId) {
+      void clearPendingEditorFile().catch((err) =>
+        logger.warn("pending file mirror clear (cloud) failed", err),
+      );
+
+      return;
+    }
+
+    void savePendingEditorFile(currentFile).catch((err) =>
+      logger.warn("pending file mirror save failed", err),
+    );
+  }, [currentFile, currentDocumentId]);
 
   return null;
 }

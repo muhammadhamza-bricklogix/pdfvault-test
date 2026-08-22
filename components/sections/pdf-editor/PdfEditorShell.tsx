@@ -27,6 +27,7 @@ import { usePdfSearch } from "@/lib/client/hooks/pdf-editor/use-pdf-search";
 import { useEditorAutoPersist } from "@/lib/client/hooks/pdf-editor/use-editor-auto-persist";
 import { useEditorNavigationSave } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { useSaveEditor } from "@/lib/client/hooks/pdf-editor/use-save-editor";
+import { useSignedOutAutoPersist } from "@/lib/client/hooks/pdf-editor/use-signed-out-auto-persist";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { buildPdfFromDraft } from "@/lib/client/pdf-editor/build-pages-pdf";
@@ -193,6 +194,7 @@ function EditorLayout() {
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
   useAnnotationsEditor(fabricCanvas);
+  useSignedOutAutoPersist(fabricCanvas);
 
   const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
 

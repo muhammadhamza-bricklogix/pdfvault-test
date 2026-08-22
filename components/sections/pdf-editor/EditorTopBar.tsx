@@ -49,7 +49,7 @@ import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -159,16 +159,7 @@ export function EditorInfoBar() {
       // Persist the file + any per-page Fabric edits to IDB before the
       // full-page sign-in redirect so the hydrator can restore the exact
       // state the user was in after they authenticate.
-      if (file) {
-        const { fabricJsonByPage, extractedPages } =
-          usePdfEditorStore.getState();
-
-        void savePendingEditorFile(
-          file,
-          fabricJsonByPage,
-          extractedPages,
-        ).catch(() => undefined);
-      }
+      void snapshotPendingEditorFile().catch(() => undefined);
 
       dispatchSignInPrompt({
         title: "Sign in to save",

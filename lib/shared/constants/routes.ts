@@ -23,6 +23,7 @@ export const ROUTES = {
   APP: {
     DASHBOARD: "/dashboard",
     ACTIVITY: "/dashboard/activity",
+    FORMS: "/dashboard/forms",
     SETTINGS: "/dashboard/settings",
     SETTINGS_GENERAL: "/dashboard/settings/general",
     SETTINGS_ACCOUNT: "/dashboard/settings/account",
@@ -38,5 +39,21 @@ export const ROUTES = {
     PDF_TO_DOC: "/tools/pdf-to-docx",
     SPLIT_PDF: "/tools/split-pdf",
     BY_SLUG: (slug: string) => `/tools/${slug}` as const,
+  },
+  FORMS: {
+    W9: "/forms/w-9",
+    W9_FORM: "/w9-form",
+    W9_EDIT: "/forms/w-9/edit",
+    // Short marketing URL for the W-9 editor (per stakeholder brief:
+    // https://pdfvault.ai/w-9). Renders the same `FormEditor` as
+    // W9_EDIT — keep both routes serving the same component so
+    // bookmarks from either path continue to work.
+    W9_SHORT: "/w-9",
+    W4: "/forms/w-4",
+    NEC_1099: "/forms/1099-nec",
+    W7: "/forms/w-7",
+  },
+  STATIC: {
+    W9_BLANK_PDF: "/static/forms/fw9.pdf",
   },
 } as const;

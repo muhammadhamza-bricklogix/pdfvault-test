@@ -43,6 +43,15 @@ export const AUDIT = {
   BY_DOCUMENT: (id: string) => `/audit/documents/${id}`,
 } as const;
 
+export const FORMS = {
+  // Backend starts a session at the template path, not /form-sessions.
+  START: (slug: string) => `/form-templates/${slug}/start`,
+  DETAIL: (id: string) => `/form-sessions/${id}`,
+  PATCH: (id: string) => `/form-sessions/${id}`,
+  SIGNATURE: (id: string) => `/form-sessions/${id}/signature`,
+  FINALIZE: (id: string) => `/form-sessions/${id}/finalize`,
+} as const;
+
 export const USERS = {
   PROFILE: "/users/profile",
   /** Idempotent provisioning — call once after sign-in completes. */

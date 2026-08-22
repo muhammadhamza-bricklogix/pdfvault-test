@@ -32,7 +32,7 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -112,11 +112,13 @@ export function HamburgerMenu() {
     // event after sign-in. Without this the mutation 401s and the user
     // hits the paywall "couldn't start checkout" dead-end.
     if (!isSignedIn) {
-      try {
-        await savePendingEditorFile(f);
-      } catch (err) {
-        logger.warn("pending editor file save failed", err);
-      }
+      // Snapshot file + fabric edits + extractedPages so the hydrator
+      // restores the full editor state (not just the raw file) after
+      // sign-in. Passing (file) only would drop overlays and the
+      // user's "first-time login lost my edits" bug returns.
+      await snapshotPendingEditorFile().catch((err) =>
+        logger.warn("pending editor file save failed", err),
+      );
       requireSignIn(
         "Sign in and we'll bring you back here to finish.",
         `${ROUTES.TOOLS.PDF_EDITOR}?tool=flatten`,
@@ -200,6 +202,13 @@ export function HamburgerMenu() {
     description = "Sign in to access this feature. We'll bring you back to the editor.",
     redirectUrl?: string,
   ) => {
+    // Snapshot the working editor state before the sign-in redirect so
+    // fabric overlays and extractedPages survive the full-page Clerk
+    // nav. Fire-and-forget — IDB writes are fast and the prompt modal
+    // gives the user a beat to cancel; awaiting would visibly stall
+    // the click.
+    void snapshotPendingEditorFile().catch(() => undefined);
+
     dispatchSignInPrompt({
       title: "Sign in required",
       description,
@@ -300,11 +309,27 @@ export function HamburgerMenu() {
         // Bake current edits into the cloud-saved PDF FIRST. Without
         // this the share modal would upload `store.file`, which is the
         // original upload — recipients would see the un-edited PDF.
-        // `saveBeforeAction` short-circuits when there are no unsaved
-        // changes, so this is free if the user already saved.
+        //
+        // `force: true` mirrors the Save-button flow (`useSaveEditor`,
+        // 2026-06-19 skill log). Several edit paths (page-numbers,
+        // annotations, restore-from-version) don't flip
+        // `hasUnsavedChanges`, so the default `saveBeforeAction`
+        // short-circuit would skip the upload and the share would ship
+        // the pre-edit bytes. Forcing the save guarantees the recipient
+        // sees the latest state at share-generation time.
+        //
+        // `skipWait: true` because the share modal only reads
+        // `store.file` (the fresh bytes are already committed by
+        // `applyPostSaveReset` inside the save handler) and never
+        // touches `pdfDocument`. Without this the modal waits for
+        // pdf.js to reload the newly-saved bytes and never opens when
+        // the reload is slow — the "Share only saves, modal never
+        // appears" bug reported 2026-08-21.
         void (async () => {
           const ok = await saveBeforeAction(
             "Saving your edits before generating a share link.",
+            true,
+            true,
           );
 
           if (ok) setIsShareOpen(true);

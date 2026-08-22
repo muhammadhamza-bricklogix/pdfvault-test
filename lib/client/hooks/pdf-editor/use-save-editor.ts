@@ -23,6 +23,14 @@ type SaveBeforeActionDetail = {
   // report 2026-08-19 ("edited changes gone, some appear at the very
   // bottom" on any download format).
   skipReset?: boolean;
+  // When true, apply the post-save reset (swap `store.file` to the newly
+  // saved bytes) but DO NOT await the pdf.js reload before resolving.
+  // Callers that only need the fresh `File` blob (e.g. Share — creates a
+  // link by uploading the raw bytes and never touches `pdfDocument`) can
+  // opt out of the wait to avoid stalling the follow-up UI when pdf.js
+  // reload is slow or hangs. The `applyPostSaveReset` still fires so
+  // `store.file` reflects the latest edits before the caller resumes.
+  skipWait?: boolean;
   onComplete: (result: {
     ok: boolean;
     reason?:
@@ -222,6 +230,20 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
         usePdfEditorStore
           .getState()
           .applyPostSaveReset(targetFile, result.remappedState);
+
+        // Share opts out via `skipWait`: it only needs the fresh `File`
+        // blob (already committed above) and never reads `pdfDocument`.
+        // The wait would otherwise stall the share modal open when pdf.js
+        // reload is slow — the "clicking Share only saves, modal never
+        // appears" bug reported 2026-08-21.
+        if (detail?.skipWait) {
+          logger.event(EVENTS.SAVE_BEFORE_ACTION_OK, "info", {
+            documentId: result.document.id,
+          });
+          onComplete({ ok: true });
+
+          return;
+        }
 
         // Wait for `usePdfLoader` to finish reloading pdf.js against the new
         // bytes before resolving. Otherwise the caller (e.g. Manage Pages)

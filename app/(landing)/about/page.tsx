@@ -6,7 +6,7 @@ import { PolicyPageShell } from "@/components/sections/policies/policy-page-shel
 export const metadata: Metadata = {
   title: "About PDFVault — A smarter, more secure place for your PDFs",
   description:
-    "PDFVault is the all-in-one workspace for everyday document work, built by Content Clicks LLC. Edit, convert, sign, compress, and protect PDFs — all in one place.",
+    "PDFVault is the all-in-one workspace for everyday document work, built by Fluttwings. Edit, convert, sign, compress, and protect PDFs — all in one place.",
 };
 
 export default function AboutPage() {

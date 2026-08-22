@@ -222,6 +222,7 @@ const span = async <T>(
     );
   } catch (err: unknown) {
     if (!isTransitionPlumbingError(err)) throw err;
+
     // Sentry / router transition bailed. Run the wrapped work directly
     // so its result / error reaches the caller.
     return await fn();

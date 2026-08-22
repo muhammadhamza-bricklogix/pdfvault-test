@@ -28,6 +28,13 @@ type FabricClasses = {
   Triangle: typeof Triangle;
 };
 
+// Fabric's canvas API is mutation-based by design. Hoisted so the tool
+// hook can flip target hit-testing without tripping react-hooks/immutability
+// on direct `fabricCanvas.x = y` assignments inside the effect.
+function setSkipTargetFind(canvas: Canvas, skip: boolean): void {
+  (canvas as unknown as { skipTargetFind: boolean }).skipTargetFind = skip;
+}
+
 export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const activeShapeType = usePdfEditorStore((s) => s.activeShapeType);
@@ -54,6 +61,18 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       activeTool !== "redact"
     )
       return;
+
+    // With `fc.selection = false` alone, Fabric still hit-tests individual
+    // objects on mouse:down and starts dragging any evented object under
+    // the pointer. That produces two user-visible bugs on pages with
+    // existing edits (highlights, IText, shapes): (1) clicking near an
+    // existing edit picks it up and it follows the cursor, which reads as
+    // "freehand redact"; (2) the same drag shifts the underlying edit.
+    // `skipTargetFind = true` tells Fabric to skip target lookup entirely
+    // so every click falls through to onMouseDown below and a fresh shape
+    // is drawn start→end. Restored on cleanup so Select / Edit Text can
+    // grab objects again.
+    setSkipTargetFind(fabricCanvas, true);
 
     let cancelled = false;
 
@@ -329,6 +348,9 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       fabricCanvas.off("mouse:down", onMouseDown);
       fabricCanvas.off("mouse:move", onMouseMove);
       fabricCanvas.off("mouse:up", onMouseUp);
+
+      // Restore hit-testing so Select / Edit Text can grab objects again.
+      setSkipTargetFind(fabricCanvas, false);
 
       // Clean up if unmounted mid-drag
       if (draggingRef.current && tempShapeRef.current) {

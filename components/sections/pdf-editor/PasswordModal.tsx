@@ -14,7 +14,7 @@ import {
   useEncryptFileMutation,
 } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -67,11 +67,12 @@ export function PasswordModal() {
   // after sign-in and the user picks up where they left off.
   const guardSignedIn = async (m: Mode): Promise<boolean> => {
     if (isSignedIn || !file) return true;
-    try {
-      await savePendingEditorFile(file);
-    } catch (err) {
-      logger.warn("pending editor file save failed", err);
-    }
+    // Snapshot file + fabric edits + extractedPages so the hydrator
+    // restores overlays too. File-only save reintroduces the
+    // "first-time login drops my edits" bug.
+    await snapshotPendingEditorFile().catch((err) =>
+      logger.warn("pending editor file save failed", err),
+    );
 
     const slug = m === "protect" ? "password" : "unlock";
     const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${slug}`;

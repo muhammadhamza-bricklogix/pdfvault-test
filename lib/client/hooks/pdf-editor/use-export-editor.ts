@@ -11,12 +11,9 @@ import {
   requestPaywall,
 } from "@/lib/client/hooks/billing/paywall-bus";
 import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.mutation";
-import {
-  buildEditedPdfBytes,
-  flushLiveFabricPage,
-} from "@/lib/client/pdf-editor/save-utils";
+import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { savePendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -305,26 +302,16 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         if (!signedIn) {
           logger.event(EVENTS.EXPORT_SIGNIN_REQUIRED, "info", { format });
           try {
-            // Flush the live canvas for the current page into the store so
-            // the serialized fabric state includes the user's latest edits
-            // (the store may lag the live canvas by one page-navigation).
-            if (liveCanvas) {
-              flushLiveFabricPage(page, liveCanvas);
-            }
-            // Persist the file AND any per-page Fabric edits across the
-            // full-page sign-in redirect so the editor can rehydrate both
-            // on return — otherwise the user loses all unsaved changes.
-            const { fabricJsonByPage, extractedPages } =
-              usePdfEditorStore.getState();
-
-            await savePendingEditorFile(
-              sourceFile,
-              fabricJsonByPage,
-              extractedPages,
-            );
+            // Persist file + per-page Fabric edits + extractedPages across
+            // the full-page sign-in redirect so the editor can rehydrate
+            // the exact state on return. The helper flushes the live
+            // canvas for the current page first — the store may lag one
+            // page-navigation behind the visible canvas.
+            await snapshotPendingEditorFile(liveCanvas);
             logger.breadcrumb("export", "pending_file.saved", {
               format,
-              hasFabricEdits: fabricJsonByPage.size > 0,
+              hasFabricEdits:
+                usePdfEditorStore.getState().fabricJsonByPage.size > 0,
             });
           } catch (err) {
             logger.captureError(err, "export.pending_file", { format });

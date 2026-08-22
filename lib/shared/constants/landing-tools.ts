@@ -38,7 +38,8 @@ export type LineIconId =
   | "remove-annotations"
   | "repair"
   | "bookmarks"
-  | "watermark";
+  | "watermark"
+  | "forms";
 
 export type BadgeVariant = "orange" | "blue";
 
@@ -211,6 +212,11 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         label: "Watermark",
         icon: { kind: "line", id: "watermark" },
         href: TOOL_ROUTE.watermark,
+      },
+      {
+        label: "Forms (W-9)",
+        icon: { kind: "line", id: "forms" },
+        href: "/forms/w-9",
       },
     ],
   },

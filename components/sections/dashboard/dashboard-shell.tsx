@@ -8,6 +8,7 @@ import {
   BankIcon,
   Cancel01Icon,
   CheckmarkBadge01Icon,
+  File01Icon,
   Home01Icon,
   Menu01Icon,
   MenuSquareIcon,
@@ -44,6 +45,7 @@ type NavItem = {
 };
 
 const DASHBOARD_TOOLS_PATH = "/dashboard/tools";
+const DASHBOARD_FORMS_PATH = "/dashboard/forms";
 
 const NAV_ITEMS: readonly NavItem[] = [
   {
@@ -66,6 +68,12 @@ const NAV_ITEMS: readonly NavItem[] = [
     icon: MenuSquareIcon,
     isActive: (p) => p.startsWith(DASHBOARD_TOOLS_PATH),
     label: "Tools",
+  },
+  {
+    href: DASHBOARD_FORMS_PATH,
+    icon: File01Icon,
+    isActive: (p) => p.startsWith(DASHBOARD_FORMS_PATH),
+    label: "Forms",
   },
 ];
 
