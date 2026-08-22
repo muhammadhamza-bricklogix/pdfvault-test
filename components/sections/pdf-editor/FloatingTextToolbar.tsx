@@ -416,7 +416,13 @@ export function FloatingTextToolbar({
           <span className="text-[11px] font-medium uppercase tracking-wide text-default-500">
             Color
           </span>
-          <div className="grid grid-cols-5 gap-1.5">
+          <div
+            className={
+              isMobile
+                ? "flex flex-nowrap items-center gap-1.5"
+                : "grid grid-cols-5 gap-1.5"
+            }
+          >
             {COLOR_SWATCHES.map((hex) => {
               const isActive = style.color.toLowerCase() === hex.toLowerCase();
 
@@ -425,7 +431,7 @@ export function FloatingTextToolbar({
                   key={hex}
                   aria-label={`Set color ${hex}`}
                   aria-pressed={isActive}
-                  className={`h-7 w-7 cursor-pointer rounded-md border transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  className={`h-7 w-7 shrink-0 cursor-pointer rounded-md border transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                     isActive
                       ? "border-primary shadow-[0_0_0_2px_var(--heroui-primary-200)]"
                       : "border-default-200"
@@ -443,7 +449,7 @@ export function FloatingTextToolbar({
               <ColorPicker.Trigger>
                 <button
                   aria-label="More colors"
-                  className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-md border border-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   style={{
                     background:
                       "conic-gradient(from 0deg, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #ef4444)",

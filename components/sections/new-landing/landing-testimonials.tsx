@@ -43,10 +43,10 @@ export function LandingTestimonials() {
             className="trustpilot-widget"
             data-businessunit-id="6a5635cc9545fd0a55b8cee6"
             data-locale="en-US"
-            data-style-height="150px"
+            data-style-height="20px"
             data-style-width="100%"
-            data-template-id="53aa8807dec7e10d38f59f32"
-            data-token="c01f8854-2bd8-4b15-a02b-506a0cab7737"
+            data-template-id="5419b637fa0340045cd0c936"
+            data-token="dc81dabd-6956-4355-88a6-3004f4c39da3"
           >
             <a
               href="https://www.trustpilot.com/review/pdfvault.ai"

@@ -19,6 +19,11 @@ import { pdfRectToCss } from "./types";
 // 80% of the field width so it stays comfortably within the underline.
 const SIGNATURE_LEFT_MARGIN_PCT = 0.2;
 const SIGNATURE_INNER_WIDTH_PCT = 1 - SIGNATURE_LEFT_MARGIN_PCT;
+// Once the user has actually signed, shrink the visible box to the bottom
+// portion of the field so the signature sits on the signature line without
+// bleeding into the text row above it. Unsigned = full height (bigger tap
+// target for "Sign here").
+const SIGNED_HEIGHT_PCT = 0.55;
 
 export function SignatureField({ field, mode, page }: FieldProps) {
   const signatureKey = useFormEditorStore((s) => s.signatureKey);
@@ -33,13 +38,16 @@ export function SignatureField({ field, mode, page }: FieldProps) {
     const css = pdfRectToCss(field.rect, page);
     const innerLeft = css.left + css.width * SIGNATURE_LEFT_MARGIN_PCT;
     const innerWidth = css.width * SIGNATURE_INNER_WIDTH_PCT;
+    const signedHeight = css.height * SIGNED_HEIGHT_PCT;
+    const signedTop = css.top + (css.height - signedHeight);
 
     return (
       <>
         {/* Yellow highlight rect — sits behind the button / signature so
             the whole signature line reads as "editable" even though only
             the inner 80% is the actual click target. Ignores clicks so
-            they fall through to the button below. */}
+            they fall through to the button below. Once signed, shrink +
+            drop to the bottom so it doesn't crash into the text above. */}
         <div
           aria-hidden
           className={`pointer-events-none absolute rounded-[2px] border transition-colors ${
@@ -48,9 +56,9 @@ export function SignatureField({ field, mode, page }: FieldProps) {
               : "border-yellow-500/40 bg-yellow-100/40"
           } ${error ? "ring-2 ring-danger-500" : ""}`}
           style={{
-            height: css.height,
+            height: signaturePreview ? signedHeight : css.height,
             left: css.left,
-            top: css.top,
+            top: signaturePreview ? signedTop : css.top,
             width: css.width,
           }}
         />
@@ -60,9 +68,9 @@ export function SignatureField({ field, mode, page }: FieldProps) {
             aria-label="Edit signature"
             className="pointer-events-auto absolute cursor-pointer bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             style={{
-              height: css.height,
+              height: signedHeight,
               left: innerLeft,
-              top: css.top,
+              top: signedTop,
               width: innerWidth,
             }}
             type="button"

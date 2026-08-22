@@ -121,13 +121,10 @@ export function LandingHeader() {
               <button
                 aria-expanded={toolsModalOpen}
                 aria-haspopup="dialog"
-                // Active (modal open) → solid brand pill so the entry
-                // point reads as "selected", not "just another link".
-                // Inactive → outlined pill (pv-btn-secondary). QA 2026-08-19.
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[14px] font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full border border-[var(--pv-brand-primary)] px-4 py-1.5 text-[14px] font-medium transition-colors ${
                   toolsModalOpen
-                    ? "bg-[var(--pv-brand-primary)] text-white shadow-sm ring-1 ring-[var(--pv-brand-primary)]"
-                    : "pv-btn-secondary"
+                    ? "bg-[var(--pv-brand-primary)] text-white shadow-sm"
+                    : "bg-transparent text-[var(--pv-brand-primary)] hover:bg-[var(--pv-brand-primary)]/10"
                 }`}
                 type="button"
                 onClick={openToolsModal}
@@ -265,21 +262,22 @@ export function LandingHeader() {
                   // QA 2026-08-19 (low visibility).
                   aria-expanded={toolsModalOpen}
                   aria-haspopup="dialog"
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-[var(--pv-brand-primary)]/40 bg-[var(--pv-brand-primary)]/10 px-3 py-3 text-left text-[15px] font-semibold text-[var(--pv-brand-primary)] transition-colors hover:bg-[var(--pv-brand-primary)]/15"
+                  className="flex w-full items-center gap-2 rounded-full border border-[var(--pv-brand-primary)] bg-transparent px-4 py-2.5 text-left text-[15px] font-semibold text-[var(--pv-brand-primary)] transition-colors hover:bg-[var(--pv-brand-primary)]/10"
                   type="button"
                   onClick={openToolsModal}
                 >
-                  <span
+                  <svg
                     aria-hidden
-                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--pv-brand-primary)] text-white"
+                    fill="none"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    width="14"
                   >
-                    <svg fill="none" height="14" viewBox="0 0 16 16" width="14">
-                      <path
-                        d="M2 3.5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 7 3.5v2A1.5 1.5 0 0 1 5.5 7h-2A1.5 1.5 0 0 1 2 5.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 2h2A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-2A1.5 1.5 0 0 1 9 5.5v-2Zm-7 7A1.5 1.5 0 0 1 3.5 9h2A1.5 1.5 0 0 1 7 10.5v2A1.5 1.5 0 0 1 5.5 14h-2A1.5 1.5 0 0 1 2 12.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 9h2a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 9 12.5v-2Z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </span>
+                    <path
+                      d="M2 3.5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 7 3.5v2A1.5 1.5 0 0 1 5.5 7h-2A1.5 1.5 0 0 1 2 5.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 2h2A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-2A1.5 1.5 0 0 1 9 5.5v-2Zm-7 7A1.5 1.5 0 0 1 3.5 9h2A1.5 1.5 0 0 1 7 10.5v2A1.5 1.5 0 0 1 5.5 14h-2A1.5 1.5 0 0 1 2 12.5v-2Zm7 0A1.5 1.5 0 0 1 10.5 9h2a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 9 12.5v-2Z"
+                      fill="currentColor"
+                    />
+                  </svg>
                   <span className="flex-1">All Tools</span>
                   <svg
                     aria-hidden
