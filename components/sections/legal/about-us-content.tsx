@@ -109,19 +109,16 @@ export function AboutUsContent() {
       {/* Pillars */}
       <section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {PILLARS.map((p, idx) => (
+          {PILLARS.map((p) => (
             <div
               key={p.title}
-              className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
+              className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 text-left"
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pv-brand-red)] text-[13px] font-bold text-white">
-                  0{idx + 1}
-                </span>
+              <div className="flex items-center justify-start gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
                   <HugeiconsIcon icon={p.icon} size={20} />
                 </span>
-                <h3 className="text-[15px] font-semibold text-[var(--pv-text-strong)]">
+                <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
                   {p.title}
                 </h3>
               </div>
