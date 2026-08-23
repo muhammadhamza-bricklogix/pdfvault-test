@@ -870,7 +870,7 @@ export function UploadWorkspace({
             className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
             href={ROUTES.LEGAL.TERMS}
           >
-            Terms of Use
+            Terms and Conditions
           </Link>{" "}
           and acknowledge our{" "}
           <Link
