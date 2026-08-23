@@ -836,26 +836,35 @@ export function UploadWorkspace({
             so Next.js dedupes and the script only fetches once even
             when both widgets appear on the same page. */}
         <div className="mt-6 flex justify-center">
+          {/* CSS scale enlarges the Micro TrustScore visually — the
+              widget's own layout is fixed at 20px tall, so bumping
+              data-style-height just adds whitespace. Reserved height on
+              the wrapper accounts for the scaled size so the terms line
+              below doesn't overlap. */}
           <div
-            className="trustpilot-widget"
-            data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-            data-locale="en-US"
-            data-style-height="20px"
-            data-style-width="100%"
-            data-template-id="5419b637fa0340045cd0c936"
-            data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-            style={{ maxWidth: 320, width: "100%" }}
+            className="origin-center scale-[1.35] sm:scale-[1.6]"
+            style={{ height: 32, width: "min(360px, 100%)" }}
           >
-            <a
-              href="https://www.trustpilot.com/review/pdfvault.ai"
-              rel="noopener"
-              target="_blank"
+            <div
+              className="trustpilot-widget"
+              data-businessunit-id="6a5635cc9545fd0a55b8cee6"
+              data-locale="en-US"
+              data-style-height="20px"
+              data-style-width="100%"
+              data-template-id="5419b637fa0340045cd0c936"
+              data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
             >
-              Trustpilot
-            </a>
+              <a
+                href="https://www.trustpilot.com/review/pdfvault.ai"
+                rel="noopener"
+                target="_blank"
+              >
+                Trustpilot
+              </a>
+            </div>
           </div>
         </div>
-        <p className="mt-3 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
+        <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
           By uploading a file, you agree to our{" "}
           <Link
             className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
