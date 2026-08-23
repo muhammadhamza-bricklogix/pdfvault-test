@@ -17,13 +17,15 @@ import { pdfRectToCss } from "./types";
 // or the divider line at the right. 20% left margin was chosen to visually
 // clear the "Sign Here" label; the rendered signature/button then occupies
 // 80% of the field width so it stays comfortably within the underline.
-const SIGNATURE_LEFT_MARGIN_PCT = 0.2;
+// Reduced left margin from 0.2 → 0.05 so the signed ink can span nearly
+// the full width of the printed signature line — the earlier 20 % gutter
+// left a lot of unused space next to the "Signature of U.S. person" label.
+const SIGNATURE_LEFT_MARGIN_PCT = 0.05;
 const SIGNATURE_INNER_WIDTH_PCT = 1 - SIGNATURE_LEFT_MARGIN_PCT;
-// Once the user has actually signed, drop the visible box to the bottom
-// portion of the field so the signature sits on the signature line without
-// bleeding hard into the text row above it. Unsigned = full height (bigger
-// tap target for "Sign here").
-const SIGNED_HEIGHT_PCT = 0.9;
+// Once signed, use the FULL field height so the ink scales up to fill the
+// row. The template rect (h = 24 pt) already sits just below the text row
+// above, so growing to 100 % here doesn't spill into that row.
+const SIGNED_HEIGHT_PCT = 1;
 
 export function SignatureField({ field, mode, page }: FieldProps) {
   const signatureKey = useFormEditorStore((s) => s.signatureKey);

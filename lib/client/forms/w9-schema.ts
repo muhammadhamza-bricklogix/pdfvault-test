@@ -263,7 +263,7 @@ export const W9_SCHEMA: FormSchema = {
           // hugs the "Signature of U.S. person" label on the left and
           // ends at the vertical separator before the printed "Date"
           // label so the sig ink can't spill into it. Width 175pt.
-          rect: { page: 1, x: 178, y: 195, w: 175, h: 36 },
+          rect: { page: 1, x: 178, y: 195, w: 175, h: 24 },
         },
         {
           id: "signature_date",
@@ -275,7 +275,7 @@ export const W9_SCHEMA: FormSchema = {
           // and fills the remaining printed date line to the right
           // margin — previously started 20pt too far right so the
           // input didn't sit on the actual date line.
-          rect: { page: 1, x: 405, y: 195, w: 160, h: 36 },
+          rect: { page: 1, x: 405, y: 195, w: 160, h: 24 },
         },
       ],
     },
