@@ -39,36 +39,28 @@ export function LandingTestimonials() {
             children here beyond the fallback link required by TrustBox
             (it renders when JS is disabled or the CDN is unreachable).
 
-            The Micro TrustScore template renders at a fixed internal
-            size; Trustpilot's own CSS caps the layout at ~20px tall.
-            `transform: scale(...)` on the outer wrapper makes the whole
-            widget visually larger without breaking its interactivity.
-            Because a transform doesn't reserve layout space, we set an
-            explicit inline height on the wrapper so the surrounding
-            section spacing accounts for the scaled size (otherwise the
-            "Frequently Asked Questions" section below would overlap).
+            The Mini template renders natively at 150px tall — no CSS
+            scale hacks needed. Container is capped so the widget sits
+            centered under the heading instead of stretching edge-to-
+            edge on wide viewports.
           */}
           <div
-            className="origin-center scale-[1.35] sm:scale-[1.7]"
-            style={{ height: 44, width: "min(480px, 100%)" }}
+            className="trustpilot-widget"
+            data-businessunit-id="6a5635cc9545fd0a55b8cee6"
+            data-locale="en-US"
+            data-style-height="150px"
+            data-style-width="100%"
+            data-template-id="53aa8807dec7e10d38f59f32"
+            data-token="c01f8854-2bd8-4b15-a02b-506a0cab7737"
+            style={{ maxWidth: 320, width: "100%" }}
           >
-            <div
-              className="trustpilot-widget"
-              data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-              data-locale="en-US"
-              data-style-height="30px"
-              data-style-width="100%"
-              data-template-id="5419b637fa0340045cd0c936"
-              data-token="dc81dabd-6956-4355-88a6-3004f4c39da3"
+            <a
+              href="https://www.trustpilot.com/review/pdfvault.ai"
+              rel="noopener"
+              target="_blank"
             >
-              <a
-                href="https://www.trustpilot.com/review/pdfvault.ai"
-                rel="noopener"
-                target="_blank"
-              >
-                Trustpilot
-              </a>
-            </div>
+              Trustpilot
+            </a>
           </div>
         </div>
       </div>

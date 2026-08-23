@@ -120,17 +120,54 @@ export function SignatureModal({ isOpen, onOpenChange }: SignatureModalProps) {
     const ctx = canvas.getContext("2d");
 
     if (!ctx) return;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (!typeText) return;
 
-    const fontCss = TYPE_FONTS.find((f) => f.id === typeFont)?.css ?? "cursive";
+    let cancelled = false;
+    const paint = async () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!typeText) return;
 
-    ctx.fillStyle = "#111";
-    ctx.font = `64px ${fontCss}, cursive`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(typeText, canvas.width / 2, canvas.height / 2);
+      // next/font/google exposes each face via a CSS variable
+      // (`--font-dancing-script`, etc.). Canvas 2D can't resolve CSS
+      // variables in its `font` shorthand, so every style silently fell
+      // back to system cursive. Probe the actual resolved family name
+      // through a hidden element and then wait for the face to load
+      // before drawing, or the first paint prints in the fallback.
+      const fontCss =
+        TYPE_FONTS.find((f) => f.id === typeFont)?.css ?? "cursive";
+      const probe = document.createElement("span");
+
+      probe.style.fontFamily = fontCss;
+      probe.style.position = "absolute";
+      probe.style.visibility = "hidden";
+      document.body.appendChild(probe);
+      const resolvedFamily = getComputedStyle(probe).fontFamily || "cursive";
+
+      document.body.removeChild(probe);
+
+      const fontSize = 120;
+      const fontShorthand = `${fontSize}px ${resolvedFamily}`;
+
+      try {
+        await document.fonts.load(fontShorthand, typeText);
+      } catch {
+        // Font loading is best-effort; fall through to draw anyway.
+      }
+      if (cancelled) return;
+
+      ctx.fillStyle = "#111";
+      ctx.font = fontShorthand;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(typeText, canvas.width / 2, canvas.height / 2);
+    };
+
+    void paint();
+
+    return () => {
+      cancelled = true;
+    };
   }, [typeText, typeFont, isOpen, tab]);
 
   // --- Upload -----------------------------------------------------------
