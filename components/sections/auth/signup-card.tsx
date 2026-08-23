@@ -125,9 +125,21 @@ export function SignupCard() {
     setOauthLoading(true);
 
     try {
+      // Encode the final destination onto BOTH `redirectUrl` (Clerk's
+      // stored completion path) AND the `redirectCallbackUrl` query
+      // string. Clerk's stored state occasionally gets dropped on the
+      // Google → OAuth-provider → Clerk-callback round-trip (cookie /
+      // localStorage eviction on some browsers), which then falls the
+      // `handleRedirectCallback` to the dashboard fallback and loses
+      // the user's editor session. Passing the return URL as a query
+      // param on the callback URL itself means our /sso-callback page
+      // can read it directly and force the redirect, regardless of
+      // whether Clerk still has state.
+      const callbackWithReturn = `${ROUTES.AUTH.SSO_CALLBACK}?redirect_url=${encodeURIComponent(afterSignUpPath)}`;
+
       await signUp.sso({
         strategy: "oauth_google",
-        redirectCallbackUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: callbackWithReturn,
         redirectUrl: afterSignUpPath,
       });
     } catch (err) {

@@ -2,11 +2,21 @@
 
 import { useClerk, useSignIn, useSignUp } from "@clerk/nextjs";
 import { toast } from "@heroui/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
+
+/**
+ * Only allow same-origin relative paths so the redirect can't be
+ * turned into an open-redirect via a crafted URL.
+ */
+function safeRedirect(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+
+  return raw;
+}
 
 /**
  * OAuth (Google) callback handler.
@@ -31,6 +41,7 @@ import { logger } from "@/lib/shared/utils/logger";
  */
 export default function SSOCallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { handleRedirectCallback } = useClerk();
   const { signUp } = useSignUp();
   const { signIn } = useSignIn();
@@ -45,15 +56,27 @@ export default function SSOCallbackPage() {
 
     let cancelled = false;
 
+    // signup-card / login-card forward the intended return URL as a
+    // `?redirect_url=` query param on the callback URL because Clerk's
+    // stored redirectUrl occasionally gets dropped on the Google
+    // round-trip (cookie / localStorage eviction on some browsers),
+    // which then defaulted to the DASHBOARD fallback and wiped the
+    // editor session. Reading it from our own URL means we control
+    // the destination end-to-end.
+    const returnUrl = safeRedirect(searchParams.get("redirect_url"));
+
     void (async () => {
       try {
         await handleRedirectCallback({
-          // Fallback fires only when Clerk has no stored redirectUrl
-          // (e.g. a plain sign-up from the homepage). When the user
-          // arrived here via the editor download flow, signUp.sso()
-          // stored the editor URL as redirectUrl — using Force here
-          // would override it and always send the user to the dashboard
-          // instead of back to their open document.
+          // Force overrides Clerk's stored redirectUrl. Only set when
+          // signup / login provided one explicitly — otherwise fall
+          // back so Clerk's own state (or the DASHBOARD default) wins.
+          ...(returnUrl
+            ? {
+                signInForceRedirectUrl: returnUrl,
+                signUpForceRedirectUrl: returnUrl,
+              }
+            : {}),
           signInFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
           signUpFallbackRedirectUrl: ROUTES.APP.DASHBOARD,
         });
@@ -78,7 +101,13 @@ export default function SSOCallbackPage() {
             "An account with this email already exists. Please sign in instead.",
           );
           await signUp?.reset();
-          router.replace(ROUTES.AUTH.SIGN_IN);
+          // Preserve the return URL so the user still lands back on
+          // the editor after they sign in with the existing account.
+          const signInUrl = returnUrl
+            ? `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnUrl)}`
+            : ROUTES.AUTH.SIGN_IN;
+
+          router.replace(signInUrl);
 
           return;
         }
@@ -92,7 +121,11 @@ export default function SSOCallbackPage() {
 
         if (signInExtStatus === "transferable") {
           toast("No account found for this email — let's create one.");
-          router.replace(ROUTES.AUTH.SIGN_UP);
+          const signUpUrl = returnUrl
+            ? `${ROUTES.AUTH.SIGN_UP}?redirect_url=${encodeURIComponent(returnUrl)}`
+            : ROUTES.AUTH.SIGN_UP;
+
+          router.replace(signUpUrl);
 
           return;
         }

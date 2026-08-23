@@ -173,9 +173,18 @@ export function LoginCard() {
     setOauthLoading(true);
 
     try {
+      // See matching comment in `signup-card.onGoogle` — Clerk's stored
+      // redirect state can be dropped on the OAuth round-trip on some
+      // browsers, so we also carry the return URL as a query param on
+      // the callback URL. The /sso-callback page reads it and forces
+      // the redirect, guaranteeing the user lands back on the editor
+      // (with the file + edits waiting in IDB) instead of the
+      // dashboard fallback.
+      const callbackWithReturn = `${ROUTES.AUTH.SSO_CALLBACK}?redirect_url=${encodeURIComponent(afterSignInPath)}`;
+
       await signIn.sso({
         strategy: "oauth_google",
-        redirectCallbackUrl: ROUTES.AUTH.SSO_CALLBACK,
+        redirectCallbackUrl: callbackWithReturn,
         redirectUrl: afterSignInPath,
       });
     } catch (err) {
