@@ -70,6 +70,12 @@ export function PendingEditorFileHydrator() {
   const redirectRef = useRef(false);
   const launchedRef = useRef(false);
   const autoSavedRef = useRef(false);
+  // Tracks whether `currentFile` has ever been truthy in this session.
+  // The mirror effect below uses this to decide whether a `null`
+  // currentFile is "user just cleared" (should wipe IDB) vs "fresh
+  // page load, Step 2 hasn't restored yet" (must NOT wipe IDB — that
+  // would race Step 2 and destroy the post-signin pending file).
+  const hasSeenFileRef = useRef(false);
 
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
@@ -635,7 +641,32 @@ export function PendingEditorFileHydrator() {
   // those explicitly. If hard-refresh edit restoration is needed later,
   // add a debounced mirror for those fields.
   useEffect(() => {
+    // Track file-seen state OUT of the mirror-decision branch so a
+    // fresh page load with `currentFile === null` doesn't record it
+    // as "seen" — we want the null→clear branch below to skip on the
+    // initial mount and only fire once the user has actually held a
+    // file at some point in this session.
+    if (currentFile) hasSeenFileRef.current = true;
+
     if (!currentFile) {
+      // CRITICAL: don't wipe IDB during the fresh-mount window before
+      // Step 2 has restored the post-signin pending file.
+      //
+      // Sequence on a fresh return to `/pdf-composer?export=<fmt>`:
+      //   1. Store initialises with `file = null`.
+      //   2. Clerk hasn't hydrated yet, so `authLoaded === false`.
+      //   3. Step 2 early-returns (`if (!authLoaded) return`).
+      //   4. This mirror USED TO fire unconditionally, see
+      //      `currentFile === null`, wipe IDB.
+      //   5. Clerk hydrates. Step 2 runs, reads EMPTY IDB. Drop-zone.
+      //
+      // Skip the clear when `hasSeenFileRef.current === false` — i.e.
+      // we've never held a file this session. The user's active-clear
+      // paths (Back button, close, clearFile) all involve currentFile
+      // being truthy first, so `hasSeenFileRef.current === true` by
+      // the time null flips in.
+      if (!hasSeenFileRef.current) return;
+
       // File was cleared (new upload flow, close, or clearFile) — drop
       // the mirror so a refresh doesn't restore something the user just
       // navigated away from.
