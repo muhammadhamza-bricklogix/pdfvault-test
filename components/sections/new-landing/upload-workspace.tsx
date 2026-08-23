@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Script from "next/script";
 import {
@@ -854,6 +855,23 @@ export function UploadWorkspace({
             </a>
           </div>
         </div>
+        <p className="mt-3 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
+          By uploading a file, you agree to our{" "}
+          <Link
+            className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+            href={ROUTES.LEGAL.TERMS}
+          >
+            Terms of Use
+          </Link>{" "}
+          and acknowledge our{" "}
+          <Link
+            className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+            href={ROUTES.LEGAL.PRIVACY}
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
         <Script
           async
           id="trustpilot-bootstrap"
