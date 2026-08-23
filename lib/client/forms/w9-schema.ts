@@ -263,12 +263,13 @@ export const W9_SCHEMA: FormSchema = {
           // hugs the "Signature of U.S. person" label on the left and
           // ends at the vertical separator before the printed "Date"
           // label so the sig ink can't spill into it. Width 175pt.
-          // Grown DOWNWARD by 12 pt (y 195 → 183, h 24 → 36) so the row
-          // has more room for the signature ink without pushing the TOP
-          // edge into the "See the instructions for Part II, later." text
-          // row above. Space below the signature line is empty on the
-          // template, so extending into it is safe.
-          rect: { page: 1, x: 178, y: 183, w: 175, h: 36 },
+          // Grown DOWNWARD (y 195 → 183, h 24 → 30) so the row has more
+          // room for the signature ink. h reduced from 36 → 30 to add
+          // ~6 pt of clearance under the "See the instructions for Part
+          // II, later." text row above (the earlier h=36 pushed the top
+          // edge back into that row). Space below the printed signature
+          // line is empty on the template, so extending down is safe.
+          rect: { page: 1, x: 178, y: 183, w: 175, h: 30 },
         },
         {
           id: "signature_date",
@@ -279,9 +280,8 @@ export const W9_SCHEMA: FormSchema = {
           // Date input begins immediately after the printed "Date" label
           // and fills the remaining printed date line to the right
           // margin — previously started 20pt too far right so the
-          // input didn't sit on the actual date line. Grown downward to
-          // match the sig field's new height.
-          rect: { page: 1, x: 405, y: 183, w: 160, h: 36 },
+          // input didn't sit on the actual date line.
+          rect: { page: 1, x: 405, y: 195, w: 160, h: 24 },
         },
       ],
     },

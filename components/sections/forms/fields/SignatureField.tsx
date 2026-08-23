@@ -45,25 +45,24 @@ export function SignatureField({ field, mode, page }: FieldProps) {
 
     return (
       <>
-        {/* Yellow highlight rect — sits behind the button / signature so
-            the whole signature line reads as "editable" even though only
-            the inner 80% is the actual click target. Ignores clicks so
-            they fall through to the button below. Once signed, shrink +
-            drop to the bottom so it doesn't crash into the text above. */}
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute rounded-[2px] border transition-colors ${
-            signatureKey
-              ? "border-success-400/40 bg-success-50/40"
-              : "border-yellow-500/40 bg-yellow-100/40"
-          } ${error ? "ring-2 ring-danger-500" : ""}`}
-          style={{
-            height: signaturePreview ? signedHeight : css.height,
-            left: css.left,
-            top: signaturePreview ? signedTop : css.top,
-            width: css.width,
-          }}
-        />
+        {/* Yellow highlight rect — cues the empty signature line as
+            "editable". Once the sig is placed we hide it entirely so
+            the printed form reads clean (no box around the ink). Error
+            state still shows a red ring so validation is visible. */}
+        {signaturePreview ? null : (
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute rounded-[2px] border transition-colors border-yellow-500/40 bg-yellow-100/40 ${
+              error ? "ring-2 ring-danger-500" : ""
+            }`}
+            style={{
+              height: css.height,
+              left: css.left,
+              top: css.top,
+              width: css.width,
+            }}
+          />
+        )}
 
         {signaturePreview ? (
           <button
