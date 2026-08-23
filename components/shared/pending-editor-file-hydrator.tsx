@@ -203,15 +203,19 @@ export function PendingEditorFileHydrator() {
 
     let cancelled = false;
 
-    // Flag the shell into loading state for the duration of the IDB
-    // probe + any save-first upload it triggers. Without this, a URL
-    // like `/pdf-composer?fresh=1&tool=X` with an empty IDB would
-    // strand the user on <EditorLoadingShell /> forever (PdfEditorShell
-    // used to gate the loader on the URL alone). Bounding the loader
-    // to this effect means the moment we know there's nothing to
-    // restore we drop to the drop-zone. Every code path below MUST
-    // flip this back to false — the outer try/finally guarantees that.
-    setIsRestoringSession(true);
+    // NOTE: `isRestoringSession` is NOT flipped on here — it's only set
+    // inside the post-signin restore branch below, which owns the
+    // async upload that actually needs the loading shell. Setting it
+    // upfront caused a drop-zone flash on `/pdf-composer?fresh=1&tool=X`
+    // for signed-out visitors: Clerk hydrating → Step 2 → flag=true →
+    // `<UploadScreen />` unmounts → flag=false → `<UploadScreen />`
+    // remounts. If the user clicked/dropped during that window, the
+    // event landed on `<EditorLoadingShell />` (which has no drop
+    // handler) and was lost — requiring a second attempt to upload.
+    // Reported 2026-08-23 (QA: "sign card → composer → first upload
+    // ignored, second works"). The `finally` below still calls
+    // setIsRestoringSession(false) unconditionally, which is a safe
+    // no-op when the flag was never set to true.
 
     void (async () => {
       try {
