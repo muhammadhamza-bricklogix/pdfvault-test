@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import Script from "next/script";
 import {
   useCallback,
   useEffect,
@@ -56,12 +57,6 @@ const CLOUD_PROVIDERS: CloudProvider[] = [
   // { label: "Upload from one drive", id: "onedrive" },
 ];
 
-const TRUST_ITEMS: { label: string; Icon: () => React.ReactElement }[] = [
-  { label: "Secure document storage", Icon: SecureStorageIcon },
-  { label: "Edit in your browser", Icon: EditInBrowserIcon },
-  { label: "Personal file library", Icon: FileLibraryIcon },
-];
-
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -89,87 +84,6 @@ function stashPendingCloudUpload(payload: object): void {
   } catch {
     // sessionStorage can throw in private mode — ignore.
   }
-}
-
-function TrustIconWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <svg
-      aria-hidden
-      className="shrink-0 text-[var(--pv-text-primary)]"
-      fill="none"
-      height="20"
-      viewBox="0 0 20 20"
-      width="20"
-    >
-      {children}
-    </svg>
-  );
-}
-
-// Shield with checkmark — "Secure document storage".
-function SecureStorageIcon() {
-  return (
-    <TrustIconWrapper>
-      <path
-        d="M10 2.25 4 4v5.6c0 3.6 2.7 6.4 6 7.9 3.3-1.5 6-4.3 6-7.9V4l-6-1.75Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M7.4 10.2l2.1 2.1 3.5-3.7"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </TrustIconWrapper>
-  );
-}
-
-// Document with pencil — "Edit in your browser".
-function EditInBrowserIcon() {
-  return (
-    <TrustIconWrapper>
-      <path
-        d="M12.5 2.5H5.25A1.25 1.25 0 0 0 4 3.75v12.5A1.25 1.25 0 0 0 5.25 17.5h9.5A1.25 1.25 0 0 0 16 16.25V9.5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-      <path
-        d="m14.6 2.9 2.5 2.5-5.4 5.4H9.2v-2.5z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </TrustIconWrapper>
-  );
-}
-
-// Stacked folders — "Personal file library".
-function FileLibraryIcon() {
-  return (
-    <TrustIconWrapper>
-      <path
-        d="M2.75 7.25v8.25c0 .55.45 1 1 1h11.5c.55 0 1-.45 1-1V8.5c0-.55-.45-1-1-1H9.5l-1.5-1.5H3.75c-.55 0-1 .45-1 1Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M5.5 7.25v-2c0-.55.45-1 1-1H10l1.5 1.5h5.75c.55 0 1 .45 1 1v.5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </TrustIconWrapper>
-  );
 }
 
 /**
@@ -913,22 +827,39 @@ export function UploadWorkspace({
           </div>
         </div>
 
-        {/* Trust strip — mirrors the `full` variant so `/` matches the
-            spec ("Secure document storage" / "Edit in your browser" /
-            "Personal file library" under the drop zone). Each item has
-            its own icon so the strip reads as three distinct value
-            props rather than a repeated checkmark. */}
-        <ul className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
-          {TRUST_ITEMS.map(({ label, Icon }) => (
-            <li
-              key={label}
-              className="flex items-center gap-2 text-[15px] font-medium text-[var(--pv-text-primary)]"
+        {/* Trustpilot Micro TrustScore widget — replaces the previous
+            "Secure document storage / Edit in your browser / Personal
+            file library" trust strip. Bootstrap script is loaded via
+            <Script id="trustpilot-bootstrap"> at the bottom of this
+            component; the same id is also used in landing-testimonials,
+            so Next.js dedupes and the script only fetches once even
+            when both widgets appear on the same page. */}
+        <div className="mt-6 flex justify-center">
+          <div
+            className="trustpilot-widget"
+            data-businessunit-id="6a5635cc9545fd0a55b8cee6"
+            data-locale="en-US"
+            data-style-height="20px"
+            data-style-width="100%"
+            data-template-id="5419b637fa0340045cd0c936"
+            data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+            style={{ maxWidth: 320, width: "100%" }}
+          >
+            <a
+              href="https://www.trustpilot.com/review/pdfvault.ai"
+              rel="noopener"
+              target="_blank"
             >
-              <Icon />
-              {label}
-            </li>
-          ))}
-        </ul>
+              Trustpilot
+            </a>
+          </div>
+        </div>
+        <Script
+          async
+          id="trustpilot-bootstrap"
+          src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
+          strategy="afterInteractive"
+        />
       </div>
     );
   }
@@ -1075,18 +1006,34 @@ export function UploadWorkspace({
         </div>
       </div>
 
-      {/* Trust strip */}
-      <ul className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
-        {TRUST_ITEMS.map(({ label, Icon }) => (
-          <li
-            key={label}
-            className="flex items-center gap-2 text-[15px] text-[var(--pv-text-primary)]"
+      {/* Trustpilot Micro TrustScore — same widget as the `hero` variant
+          above so both entry points show the same social proof. */}
+      <div className="mt-10 flex justify-center">
+        <div
+          className="trustpilot-widget"
+          data-businessunit-id="6a5635cc9545fd0a55b8cee6"
+          data-locale="en-US"
+          data-style-height="20px"
+          data-style-width="100%"
+          data-template-id="5419b637fa0340045cd0c936"
+          data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+          style={{ maxWidth: 320, width: "100%" }}
+        >
+          <a
+            href="https://www.trustpilot.com/review/pdfvault.ai"
+            rel="noopener"
+            target="_blank"
           >
-            <Icon />
-            {label}
-          </li>
-        ))}
-      </ul>
+            Trustpilot
+          </a>
+        </div>
+      </div>
+      <Script
+        async
+        id="trustpilot-bootstrap"
+        src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
+        strategy="afterInteractive"
+      />
     </div>
   );
 }

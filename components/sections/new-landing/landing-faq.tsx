@@ -323,7 +323,7 @@ export function LandingFAQ() {
   return (
     <section
       aria-labelledby="faq-heading"
-      className="bg-white py-16 sm:py-24"
+      className="bg-white pt-6 pb-16 sm:pt-8 sm:pb-24"
       id="faq"
     >
       <div className="pv-container">
