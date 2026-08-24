@@ -4,13 +4,14 @@ import type { Canvas } from "fabric";
 import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
+import { GeistSans } from "geist/font/sans";
 import dynamic from "next/dynamic";
-import NextImage from "next/image";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { ROUTES } from "@/lib/shared/constants/routes";
+import "@/app/(landing)/landing-theme.css";
+import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
+import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import {
   UPLOAD_ACCEPT_MIME,
   uploadAsPdf,
@@ -115,26 +116,6 @@ const PerformancePanel = dynamic(
   { ssr: false, loading: () => null },
 );
 
-function UploadScreenHeader() {
-  return (
-    <header className="flex h-14 shrink-0 items-center border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
-      <Link
-        aria-label="PDFVault home"
-        className="flex shrink-0 items-center"
-        href={ROUTES.PUBLIC.HOME}
-      >
-        <NextImage
-          alt="PDFVault"
-          className="h-[32px] w-auto object-contain"
-          height={32}
-          src="/landing/logo-with-text.png"
-          width={128}
-        />
-      </Link>
-    </header>
-  );
-}
-
 function UploadScreen() {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setIsCreatePdfModalOpen = usePdfEditorStore(
@@ -165,9 +146,11 @@ function UploadScreen() {
   };
 
   return (
-    <div className="flex flex-1 flex-col">
-      <UploadScreenHeader />
-      <div className="flex flex-1 items-center justify-center p-8">
+    <div
+      className={`${GeistSans.variable} pdfvault-landing flex flex-1 flex-col overflow-y-auto bg-white`}
+    >
+      <LandingHeader />
+      <main className="flex flex-1 items-center justify-center bg-white p-8">
         <div className="w-full max-w-5xl space-y-4">
           <FileUpload
             accept={UPLOAD_ACCEPT_MIME}
@@ -189,7 +172,8 @@ function UploadScreen() {
             </button>
           </p>
         </div>
-      </div>
+      </main>
+      <LandingFooter />
     </div>
   );
 }

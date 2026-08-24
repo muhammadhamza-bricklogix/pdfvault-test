@@ -3,14 +3,10 @@
 import type { CloudSelectedFile } from "@/lib/client/hooks/upload/use-cloud-upload";
 
 import { useAuth } from "@clerk/nextjs";
-import { GeistSans } from "geist/font/sans";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
-import "@/app/(landing)/landing-theme.css";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
-import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
-import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
   UPLOAD_ACCEPT_MIME,
@@ -171,59 +167,55 @@ export function HomeHero() {
   const cloudImportAllowed = isLoaded && Boolean(isSignedIn);
 
   return (
-    <div className={`${GeistSans.variable} pdfvault-landing bg-white`}>
-      <LandingHeader />
-      <section className="flex w-full flex-col items-center bg-white px-4 py-4 sm:py-8">
-        <div className="flex w-full max-w-5xl flex-col items-center gap-8 text-center">
-          <div className="space-y-5">
-            <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl xl:text-7xl">
-              All-in-One Online{" "}
-              <span className="text-[var(--color-accent)]">PDF</span> Editor
-            </h1>
-            <p className="mx-auto max-w-3xl text-lg leading-8 text-default-600 sm:text-xl dark:text-default-400">
-              Easily edit, convert and sign PDFs. Fast, simple and secure.
-            </p>
-          </div>
-
-          <div className="w-full max-w-5xl rounded-[2rem] border border-dashed border-[color-mix(in_oklab,var(--color-accent)_35%,transparent)] bg-[var(--color-background)]/75 p-5 backdrop-blur-sm dark:border-[color-mix(in_oklab,var(--color-accent)_25%,transparent)] sm:p-6">
-            <FileUpload
-              marketingGrouped
-              accept={UPLOAD_ACCEPT_MIME}
-              acceptLabel="PDF"
-              appearance="marketing"
-              heading="Drop your file here"
-              onFileSelect={handleFileSelect}
-            />
-            <div className="mt-6 border-t border-dashed border-default-300 pt-7 dark:border-default-600">
-              <HomeCloudUploadRow
-                cloudImportAllowed={cloudImportAllowed}
-                cloudUploadPending={uploadCloudMutation.isPending}
-                onCloudSelection={setCloudSelection}
-                onCloudUpload={handleCloudUpload}
-                onFileSelect={handleFileSelect}
-                onRequireSignInForCloud={requireSignInForCloud}
-              />
-              {cloudSelection ? (
-                <p className="mt-4 text-center text-sm text-default-600 dark:text-default-400">
-                  Cloud file selected:{" "}
-                  <span className="font-medium text-foreground">
-                    {cloudSelection.name}
-                  </span>
-                  . Import will open in editor automatically.
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <HomeStats />
+    <section className="flex w-full flex-col items-center py-4 sm:py-8">
+      <div className="flex w-full max-w-5xl flex-col items-center gap-8 text-center">
+        <div className="space-y-5">
+          <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl xl:text-7xl">
+            All-in-One Online{" "}
+            <span className="text-[var(--color-accent)]">PDF</span> Editor
+          </h1>
+          <p className="mx-auto max-w-3xl text-lg leading-8 text-default-600 sm:text-xl dark:text-default-400">
+            Easily edit, convert and sign PDFs. Fast, simple and secure.
+          </p>
         </div>
-        <DuplicateUploadModal
-          filename={pendingCloudDuplicate?.filename ?? null}
-          onIgnore={handleCloudDuplicateIgnore}
-          onOverwrite={handleCloudDuplicateOverwrite}
-        />
-      </section>
-      <LandingFooter />
-    </div>
+
+        <div className="w-full max-w-5xl rounded-[2rem] border border-dashed border-[color-mix(in_oklab,var(--color-accent)_35%,transparent)] bg-[var(--color-background)]/75 p-5 backdrop-blur-sm dark:border-[color-mix(in_oklab,var(--color-accent)_25%,transparent)] sm:p-6">
+          <FileUpload
+            marketingGrouped
+            accept={UPLOAD_ACCEPT_MIME}
+            acceptLabel="PDF"
+            appearance="marketing"
+            heading="Drop your file here"
+            onFileSelect={handleFileSelect}
+          />
+          <div className="mt-6 border-t border-dashed border-default-300 pt-7 dark:border-default-600">
+            <HomeCloudUploadRow
+              cloudImportAllowed={cloudImportAllowed}
+              cloudUploadPending={uploadCloudMutation.isPending}
+              onCloudSelection={setCloudSelection}
+              onCloudUpload={handleCloudUpload}
+              onFileSelect={handleFileSelect}
+              onRequireSignInForCloud={requireSignInForCloud}
+            />
+            {cloudSelection ? (
+              <p className="mt-4 text-center text-sm text-default-600 dark:text-default-400">
+                Cloud file selected:{" "}
+                <span className="font-medium text-foreground">
+                  {cloudSelection.name}
+                </span>
+                . Import will open in editor automatically.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <HomeStats />
+      </div>
+      <DuplicateUploadModal
+        filename={pendingCloudDuplicate?.filename ?? null}
+        onIgnore={handleCloudDuplicateIgnore}
+        onOverwrite={handleCloudDuplicateOverwrite}
+      />
+    </section>
   );
 }

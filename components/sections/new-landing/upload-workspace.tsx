@@ -18,6 +18,8 @@ import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { usePendingConversionsStore } from "@/lib/client/stores/pending-conversions-store";
+import { runPendingConversion } from "@/lib/client/upload/run-pending-conversion";
 import {
   clearPendingEditorFile,
   loadPendingEditorFile,
@@ -352,11 +354,15 @@ export function UploadWorkspace({
 
       // Convert routes for signed-in users. Two branches by direction:
       //
-      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): convert first,
-      //     save to My PDFs, land on `/dashboard`. Paywall is deferred
-      //     until the user clicks Download / Open on the row — the
-      //     conversion itself is free-to-preview so the user sees value
-      //     before being asked to pay.
+      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): register a pending
+      //     conversion in the Zustand store, fire the convert+save runner
+      //     as a background promise, then navigate to `/dashboard`
+      //     immediately. The dashboard file table renders a "Preparing
+      //     your document…" placeholder row driven by the store while the
+      //     runner works. No toast on this page — the placeholder row on
+      //     the dashboard is the only progress affordance. No paywall
+      //     either; that gate fires when the user clicks Download / Open
+      //     on the completed row.
       //
       //   • PDF→X (`exportFormat` set, e.g. pdf-to-word): no early
       //     paywall here. Save + open editor with `?export=<format>`;
@@ -368,104 +374,28 @@ export function UploadWorkspace({
         const isConvertToPdf = !exportFormat;
 
         if (isConvertToPdf) {
-          if (!isPdf(picked)) {
-            const convKey = toast.loading({
-              description: `Preparing ${picked.name}…`,
-              title: "Converting to PDF",
-            });
+          const tempId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const pdfName = isPdf(picked)
+            ? picked.name
+            : picked.name.replace(/\.[^.]+$/, "") + ".pdf";
 
-            try {
-              earlyConvertedPdf = await logger.span(
-                "upload.convert_to_pdf",
-                "upload.convert",
-                () => uploadAsPdf(picked),
-                { size: picked.size, ext: getExtension(picked.name) },
-              );
-            } catch (convErr) {
-              logger.captureError(convErr, "upload.early_convert", {
-                filename: picked.name,
-                size: picked.size,
-              });
-              toast.close(convKey);
-              toast.error({
-                title: "Conversion failed",
-                description:
-                  convErr instanceof Error ? convErr.message : undefined,
-              });
-
-              return;
-            }
-
-            toast.close(convKey);
-          } else {
-            earlyConvertedPdf = picked;
-          }
-
-          // Save the converted PDF to My PDFs, then hand the user off
-          // to the dashboard where paywall gates apply on download /
-          // open. Duplicate-filename check reuses the existing doc so
-          // users can't stack copies with the same name.
-          let dashboardDocId: string | null = null;
-
-          try {
-            const existing = await findDuplicateByFilename(
-              earlyConvertedPdf.name,
-            );
-
-            if (existing) dashboardDocId = existing.id;
-          } catch (dupErr) {
-            logger.warn("duplicate-name check failed", dupErr);
-          }
-
-          if (!dashboardDocId) {
-            const savingKey = toast.loading({
-              title: "Saving to My PDFs",
-              description: earlyConvertedPdf.name,
-            });
-
-            try {
-              const document = await logger.span(
-                "upload.save_converted_pdf",
-                "upload.save",
-                () =>
-                  documentsService.uploadDocument({
-                    file: earlyConvertedPdf as File,
-                  }),
-                { size: earlyConvertedPdf.size },
-              );
-
-              dashboardDocId = document.id;
-              logger.event(EVENTS.UPLOAD_SAVE_BEFORE_OPEN_OK, "info", {
-                documentId: document.id,
-                size: earlyConvertedPdf.size,
-              });
-            } catch (saveErr) {
-              logger.captureError(saveErr, "upload.save_converted_pdf", {
-                filename: earlyConvertedPdf.name,
-                size: earlyConvertedPdf.size,
-              });
-              toast.close(savingKey);
-              toast.error({
-                title: "Couldn't save to My PDFs",
-                description:
-                  saveErr instanceof Error ? saveErr.message : undefined,
-              });
-
-              return;
-            } finally {
-              toast.close(savingKey);
-            }
-          }
+          usePendingConversionsStore.getState().add({
+            tempId,
+            file: picked,
+            filename: pdfName,
+            sizeBytes: picked.size,
+          });
 
           logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
-            documentId: dashboardDocId,
+            documentId: null,
             tool: null,
             exportFormat: null,
           });
-          toast.success({
-            title: "Ready in My PDFs",
-            description: `${earlyConvertedPdf.name} is available in your dashboard.`,
-          });
+
+          void runPendingConversion(tempId, picked);
           router.push(ROUTES.APP.DASHBOARD);
 
           return;

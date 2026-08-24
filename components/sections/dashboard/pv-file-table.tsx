@@ -121,9 +121,11 @@ function useSortedRows(rows: readonly PvFileRow[]) {
 function getSortValue(row: PvFileRow, key: SortKey): string | number {
   if (key === "name") return row.name.toLowerCase();
   if (key === "uploadedBy") return row.uploadedByName.toLowerCase();
-  if (key === "date") return new Date(row.doc.createdAt).getTime();
+  if (key === "date") {
+    return row.doc ? new Date(row.doc.createdAt).getTime() : Date.now();
+  }
 
-  return row.doc.sizeBytes;
+  return row.doc?.sizeBytes ?? 0;
 }
 
 interface RowActionsProps {
@@ -194,14 +196,18 @@ export function PvFileTable({
   const { sorted, key, dir, cycle } = useSortedRows(rows);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
-  const allSelected = sorted.length > 0 && selected.size === sorted.length;
-  const selectedRows = sorted.filter((r) => selected.has(r.id));
+  const selectableRows = sorted.filter((r) => !r.pending);
+  const allSelected =
+    selectableRows.length > 0 && selected.size === selectableRows.length;
+  const selectedRows = selectableRows.filter((r) => selected.has(r.id));
   const handleBulkDelete = () => {
     if (!onBulkDelete || selectedRows.length === 0) return;
     onBulkDelete(selectedRows);
   };
   const toggleAll = () => {
-    setSelected(allSelected ? new Set() : new Set(sorted.map((r) => r.id)));
+    setSelected(
+      allSelected ? new Set() : new Set(selectableRows.map((r) => r.id)),
+    );
   };
   const toggleRow = (id: string) => {
     setSelected((prev) => {
@@ -302,7 +308,8 @@ export function PvFileTable({
           <tbody>
             {sorted.map((row) => {
               const isChecked = selected.has(row.id);
-              const openable = Boolean(onOpen);
+              const isPending = Boolean(row.pending);
+              const openable = Boolean(onOpen) && !isPending;
               // `role="link"` + keyboard handlers on the cell make the whole
               // row body (name + uploader + date + size) a valid open target
               // without swallowing the checkbox or action-icon clicks.
@@ -320,19 +327,26 @@ export function PvFileTable({
                     tabIndex: 0,
                   }
                 : { className: "px-3 py-3 align-middle" };
+              const pendingSubtitle =
+                row.pending?.status === "error"
+                  ? (row.pending?.errorMessage ?? "Conversion failed")
+                  : row.pending?.status === "uploading"
+                    ? "Saving to My PDFs…"
+                    : "Preparing your document…";
 
               return (
                 <tr
                   key={row.id}
                   className={`border-b border-[var(--pv-hairline)] transition-colors last:border-b-0 hover:bg-[var(--pv-fill-subtle)] ${
                     isChecked ? "bg-[var(--pv-nav-active)]/60" : ""
-                  }`}
+                  } ${isPending ? "opacity-90" : ""}`}
                 >
                   <td className="px-4 py-3 align-middle">
                     <input
                       aria-label={`Select ${row.name}`}
                       checked={isChecked}
-                      className="size-4 accent-[var(--pv-brand-red)]"
+                      className="size-4 accent-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={isPending}
                       type="checkbox"
                       onChange={() => toggleRow(row.id)}
                     />
@@ -342,13 +356,30 @@ export function PvFileTable({
                     aria-label={openable ? `Open ${row.name}` : undefined}
                   >
                     <div className="flex items-center gap-3">
-                      <TypeBadge type={row.type} />
+                      {isPending ? (
+                        <span
+                          aria-hidden
+                          className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
+                            row.pending?.status === "error"
+                              ? "bg-[var(--pv-file-pdf)]/15 text-[var(--pv-file-pdf)]"
+                              : "bg-[var(--pv-brand-red)]/12 text-[var(--pv-brand-red)]"
+                          }`}
+                        >
+                          {row.pending?.status === "error" ? (
+                            <span className="text-[12px] font-bold">!</span>
+                          ) : (
+                            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          )}
+                        </span>
+                      ) : (
+                        <TypeBadge type={row.type} />
+                      )}
                       <div className="min-w-0">
                         <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
                           {row.name}
                         </p>
                         <p className="text-[12px] text-[var(--pv-text-muted)]">
-                          {row.displaySize}
+                          {isPending ? pendingSubtitle : row.displaySize}
                         </p>
                       </div>
                     </div>
@@ -392,13 +423,21 @@ export function PvFileTable({
                     {row.fileSize}
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <RowActions
-                      row={row}
-                      onDelete={onDelete}
-                      onDownload={onDownload}
-                      onHistory={onHistory}
-                      onRename={onRename}
-                    />
+                    {isPending ? (
+                      <span className="text-[12px] italic text-[var(--pv-text-muted)]">
+                        {row.pending?.status === "error"
+                          ? "Failed"
+                          : "Working…"}
+                      </span>
+                    ) : (
+                      <RowActions
+                        row={row}
+                        onDelete={onDelete}
+                        onDownload={onDownload}
+                        onHistory={onHistory}
+                        onRename={onRename}
+                      />
+                    )}
                   </td>
                 </tr>
               );

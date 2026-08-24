@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
+import { usePendingConversionsStore } from "@/lib/client/stores/pending-conversions-store";
 import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
@@ -21,7 +22,10 @@ import { DeleteDocumentModal } from "./delete-document-modal";
 import { DocPickerModal } from "./doc-picker-modal";
 import { PendingConversionBanner } from "./pending-conversion-banner";
 import { PvFileTable } from "./pv-file-table";
-import { documentToFileRow } from "./pv-mock-my-pdfs";
+import {
+  documentToFileRow,
+  pendingConversionToFileRow,
+} from "./pv-mock-my-pdfs";
 import { PvPageHeader, UploadPdfButton } from "./pv-page-header";
 import { PvQuickToolCards } from "./pv-quick-tool-cards";
 import { PvSearchToolbar } from "./pv-search-toolbar";
@@ -110,9 +114,26 @@ export function DashboardHome() {
     [user],
   );
 
+  // Pending conversions land at the top so the "Preparing your
+  // document…" row is the first thing the user sees when they get
+  // bounced here from a `/convert/*` upload. Filtered against saved
+  // rows by filename so a completed conversion that has already
+  // refetched into `items` doesn't render twice for one blink.
+  const pendingItems = usePendingConversionsStore((s) => s.items);
+  const pendingRows: readonly PvFileRow[] = useMemo(() => {
+    const savedNames = new Set(items.map((d) => d.filename));
+
+    return pendingItems
+      .filter((p) => !savedNames.has(p.filename))
+      .map((p) => pendingConversionToFileRow(p, uploader));
+  }, [pendingItems, items, uploader]);
+
   const rows: readonly PvFileRow[] = useMemo(
-    () => items.map((doc) => documentToFileRow(doc, uploader)),
-    [items, uploader],
+    () => [
+      ...pendingRows,
+      ...items.map((doc) => documentToFileRow(doc, uploader)),
+    ],
+    [pendingRows, items, uploader],
   );
 
   const filteredRows = useMemo(() => {
@@ -129,6 +150,7 @@ export function DashboardHome() {
   }, [rows, search]);
 
   const handleDownload = async (row: PvFileRow) => {
+    if (!row.doc) return;
     try {
       await triggerDocumentDownload(row.doc);
     } catch (err) {
@@ -152,19 +174,30 @@ export function DashboardHome() {
       <PvFileTable
         isLoading={query.isLoading}
         rows={filteredRows}
-        onBulkDelete={(bulk) => setBulkDeleteTargets(bulk.map((r) => r.doc))}
-        onDelete={(row) => setDeleteTarget(row.doc)}
+        onBulkDelete={(bulk) =>
+          setBulkDeleteTargets(
+            bulk.map((r) => r.doc).filter((d): d is Document => d !== null),
+          )
+        }
+        onDelete={(row) => {
+          if (row.doc) setDeleteTarget(row.doc);
+        }}
         onDownload={(row) => void handleDownload(row)}
-        onHistory={(row) => setHistoryTarget(row.doc)}
+        onHistory={(row) => {
+          if (row.doc) setHistoryTarget(row.doc);
+        }}
         onOpen={(row) => {
-          void openDocumentInEditor(router, row.id).catch((err) => {
+          if (!row.doc) return;
+          void openDocumentInEditor(router, row.doc.id).catch((err) => {
             toast.error({
               title: "Couldn't open file",
               description: err instanceof Error ? err.message : undefined,
             });
           });
         }}
-        onRename={(row) => setRenameTarget(row.doc)}
+        onRename={(row) => {
+          if (row.doc) setRenameTarget(row.doc);
+        }}
       />
 
       <RenameDocumentModal
