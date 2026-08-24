@@ -169,7 +169,7 @@ export function PvQuickToolCards() {
   return (
     <>
       <section aria-label="Quick tools" data-tour="dashboard-quick-tools">
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {QUICK_TOOLS.map((tool, index) => {
             const hideOnMobile = !expanded && index >= MOBILE_INITIAL_COUNT;
 
