@@ -90,30 +90,40 @@ function fetchDocumentMeta(id: string): Promise<Document> {
   // 201 with a fresh id, the URL updates to `?id=<newId>` and this
   // fetcher fires immediately. On staging/prod behind Railway (and any
   // deployment with Postgres replica lag or async cache invalidation),
-  // the `GET /documents/{id}` occasionally races the write commit and
-  // returns 404 for a brief window (~500-1500ms). Without a retry the
-  // user gets bounced to /dashboard on every upload — the exact symptom
-  // reported 2026-08-20.
+  // the `GET /documents/{id}` races the write commit and returns 404
+  // for a brief window. Without a retry the user gets bounced to
+  // /dashboard on every upload — the exact symptom reported 2026-08-20
+  // and again 2026-08-24 when the single 1500ms retry wasn't long enough.
   //
-  // Retry ONCE after 1500ms on 404 only. 401 / 500 / network errors
-  // pass through unchanged so real failures still surface fast. A real
-  // "document doesn't exist" 404 stays 404 (retry fails too), so the
+  // Retry up to 3 times with exponential backoff (500ms, 1500ms, 3000ms
+  // = ~5s total wait) on 404 only. 401 / 500 / network errors pass
+  // through unchanged so real failures still surface fast. A real
+  // "document doesn't exist" 404 stays 404 after all retries, so the
   // dashboard bounce still fires for genuinely bad ids — just not for
   // freshly-created ones.
-  const promise = documentsService
-    .getDocument(id)
-    .catch(async (err: unknown) => {
-      const status = (err as { statusCode?: number })?.statusCode;
+  const RETRY_DELAYS_MS = [500, 1500, 3000];
+  const promise = (async () => {
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        return await documentsService.getDocument(id);
+      } catch (err) {
+        const status = (err as { statusCode?: number })?.statusCode;
+        const isLastAttempt = attempt === RETRY_DELAYS_MS.length;
 
-      if (status !== 404) throw err;
-      logger.warn("[PDFedits] document meta 404 — retrying once", { id });
-      await new Promise((r) => setTimeout(r, 1500));
-
-      return documentsService.getDocument(id);
-    })
-    .finally(() => {
-      inflightMeta.delete(id);
-    });
+        if (status !== 404 || isLastAttempt) throw err;
+        logger.warn(
+          `[PDFedits] document meta 404 — retrying (${attempt + 1}/${RETRY_DELAYS_MS.length})`,
+          { id, delayMs: RETRY_DELAYS_MS[attempt] },
+        );
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+      }
+    }
+    // Unreachable — loop always returns or throws — TypeScript needs the
+    // explicit path for return-type inference.
+    throw new Error("unreachable");
+  })().finally(() => {
+    inflightMeta.delete(id);
+  });
 
   inflightMeta.set(id, promise);
 
