@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 
 import { useEffect, useState } from "react";
 
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
 // pdf.js OPS constants for text rendering operations (31–49)
@@ -68,6 +69,17 @@ export function usePageRenderer({
   fitContainer = false,
 }: UsePageRendererParams) {
   const [renderedSize, setRenderedSize] = useState<RenderedSize>(null);
+  // Read the save-reload flag so we can (a) keep `renderedSize` alive
+  // across the `pdfDocument = null` window post-save (so Fabric doesn't
+  // dispose and pre-save overlays stay visible) and (b) dispatch the
+  // `editor:post-save-render-done` event once the new render is on
+  // screen, giving Fabric a signal to swap to the swept map. In
+  // non-save flows (restore-version, Manage Pages, initial open) this
+  // flag stays false, so `renderedSize` still nulls out on page-null
+  // and Fabric cycles as before — preserving the 2026-07-23 invariant.
+  const postSaveReloadPending = usePdfEditorStore(
+    (s) => s.postSaveReloadPending,
+  );
 
   useEffect(() => {
     if (!page || !canvasRef.current) return;
@@ -143,6 +155,14 @@ export function usePageRenderer({
 
             return { height: cssHeight, width: cssWidth };
           });
+          // Notify subscribers (specifically `useFabricCanvas`) that the
+          // post-save reparse is now on screen, so Fabric can safely
+          // swap to the swept map without a visible gap.
+          if (usePdfEditorStore.getState().postSaveReloadPending) {
+            window.dispatchEvent(
+              new CustomEvent("editor:post-save-render-done"),
+            );
+          }
         }
       } catch (err) {
         // render was cancelled — expected on re-renders / doc destroy
@@ -180,5 +200,15 @@ export function usePageRenderer({
   // `hasRenderedSize` stays true, and Fabric never unmounts — the OLD
   // file's overlays keep painting over the NEW PDF page until refresh
   // (QA report 2026-07-23: "restore doesn't update until refresh").
-  return { renderedSize: page ? renderedSize : null };
+  //
+  // EXCEPTION for post-save reload: while `postSaveReloadPending` is
+  // true, keep `renderedSize` alive across the `pdfDocument = null`
+  // window so Fabric doesn't dispose. Pre-save overlays stay visible;
+  // once the new render completes, the `editor:post-save-render-done`
+  // event above triggers Fabric to swap to the swept map in place —
+  // no invisible gap. Flag is cleared by that Fabric reload handler,
+  // so subsequent restore/manage-pages flows resume normal cycle.
+  return {
+    renderedSize: page || postSaveReloadPending ? renderedSize : null,
+  };
 }

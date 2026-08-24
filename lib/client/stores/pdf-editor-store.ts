@@ -169,6 +169,20 @@ type PdfEditorStore = {
   pdfSourceUrl: string | null;
   hasUnsavedChanges: boolean;
   pendingCloudSaveAfterReload: boolean;
+  /**
+   * True from the moment `applyPostSaveReset` swaps `file` to the baked
+   * `savedFile` until the pdf.js render of the new file completes AND
+   * Fabric has reloaded from the (now-swept) `fabricJsonByPage`. Read
+   * by `usePageRenderer` to keep `renderedSize` non-null across the
+   * `pdfDocument = null` window (so Fabric doesn't dispose and the
+   * pre-save overlays stay visible) and by `useFabricCanvas` to trigger
+   * an in-place `loadFromJSON(sweptMap)` once the new render is on
+   * screen — killing the "shapes flicker off then back on" gap between
+   * Fabric disposal and pdf.js re-render. Cleared by the Fabric reload
+   * handler; false in every other flow (fresh open, restore-version,
+   * Manage Pages) so those still cycle Fabric normally.
+   */
+  postSaveReloadPending: boolean;
   fontDataByLoadedName: Map<string, FontData>;
   /** Undo stacks keyed by source PDF page number (stable across reorder). */
   historyByPage: Map<number, string[]>;
@@ -294,6 +308,7 @@ type PdfEditorStore = {
   }) => void;
   clearDocumentDirty: () => void;
   clearPendingCloudSaveAfterReload: () => void;
+  clearPostSaveReloadPending: () => void;
   /**
    * Commits a freshly-saved file as the new editor baseline. Replaces `file`
    * with the merged bytes pdf-lib just produced (so subsequent reads — Manage
@@ -373,6 +388,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   pdfSourceUrl: null,
   hasUnsavedChanges: false,
   pendingCloudSaveAfterReload: false,
+  postSaveReloadPending: false,
   fontDataByLoadedName: new Map(),
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
@@ -484,6 +500,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       pdfSourceUrl: null,
       hasUnsavedChanges: false,
       pendingCloudSaveAfterReload: false,
+      postSaveReloadPending: false,
       fontDataByLoadedName: new Map(),
       historyByPage: new Map(),
       historyIndexByPage: new Map(),
@@ -712,10 +729,19 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       // Snapshots are keyed by display page; after save the baked PDF is the
       // source of truth, so re-render thumbnails from the new bytes.
       thumbnailSnapshots: new Map(),
+      // Save-reload flicker fix: signals `usePageRenderer` to keep
+      // `renderedSize` alive across the `pdfDocument = null` window so
+      // Fabric doesn't dispose (preserving the pre-save overlay visuals),
+      // and signals `useFabricCanvas` to swap to the swept map only
+      // AFTER the new pdf.js render completes. Cleared by the Fabric
+      // reload handler once loadFromJSON finishes.
+      postSaveReloadPending: true,
     })),
 
   clearPendingCloudSaveAfterReload: () =>
     set({ pendingCloudSaveAfterReload: false }),
+
+  clearPostSaveReloadPending: () => set({ postSaveReloadPending: false }),
 
   setActiveShapeType: (type) => set({ activeShapeType: type }),
   setActiveTool: (tool) => set({ activeTool: tool }),

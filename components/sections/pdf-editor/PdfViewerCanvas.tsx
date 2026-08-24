@@ -205,6 +205,66 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     return () => onFabricCanvasReady?.(null);
   }, [fabricCanvas, onFabricCanvasReady]);
 
+  // --- Save-reload flicker fix (2026-08-24) ---
+  //
+  // Sequence on Save without this listener:
+  //   1. `applyPostSaveReset` swaps `store.file` + sweeps `fabricJsonByPage`
+  //   2. `usePdfLoader` reloads → `pdfDocument` null → Fabric disposes →
+  //      the just-drawn shape/highlight VANISHES from the Fabric layer
+  //   3. pdf.js takes ~300-500ms to render the new baked bytes
+  //   4. Shape reappears (baked into `savedFile` as a PDF object) → user
+  //      sees an ugly flash where the shape blinks out and back
+  //
+  // With this listener:
+  //   • `postSaveReloadPending = true` keeps `renderedSize` alive in
+  //     `usePageRenderer`, so Fabric stays mounted with its pre-save
+  //     objects visible throughout the reload
+  //   • Once the new pdf render finishes, `usePageRenderer` dispatches
+  //     `editor:post-save-render-done` — the pdf layer now shows the
+  //     baked shape, so we swap Fabric to the swept map in-place via
+  //     `loadFromJSON`. Shape stays visible via one layer or the other
+  //     the entire time → no visible gap.
+  //
+  // Guarded by `postSaveReloadPending` so restore-version / Manage
+  // Pages saves cycle Fabric via the normal disposal path (they need
+  // to, because the new file often has different content).
+  useEffect(() => {
+    const handler = () => {
+      const state = usePdfEditorStore.getState();
+
+      if (!state.postSaveReloadPending) return;
+      const fc = fabricRef.current;
+
+      if (!fc) return;
+      const source = state.getSourcePageIndex(state.currentPage);
+      const saved = state.fabricJsonByPage.get(source);
+
+      void (async () => {
+        try {
+          if (saved) {
+            await fc.loadFromJSON(JSON.parse(saved));
+          } else {
+            fc.clear();
+          }
+          fc.setZoom(state.zoom);
+          fc.renderAll();
+        } catch {
+          // Best-effort: on a bad-JSON parse we leave Fabric as-is
+          // rather than clearing to blank. The dispose-on-page-change
+          // path will normalize state on next navigation.
+        } finally {
+          state.clearPostSaveReloadPending();
+        }
+      })();
+    };
+
+    window.addEventListener("editor:post-save-render-done", handler);
+
+    return () => {
+      window.removeEventListener("editor:post-save-render-done", handler);
+    };
+  }, [fabricRef]);
+
   // Live thumbnail sync — after any Fabric edit on the current page, composite
   // the PDF canvas + Fabric canvas into a JPEG data URL and push it to the
   // store so the thumbnail sidebar reflects the change immediately.
