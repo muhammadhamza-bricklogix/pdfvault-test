@@ -25,6 +25,7 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
   const clearPendingCloudSaveAfterReload = usePdfEditorStore(
     (s) => s.clearPendingCloudSaveAfterReload,
   );
+  const applyPostSaveReset = usePdfEditorStore((s) => s.applyPostSaveReset);
 
   const fabricRef = useRef(fabricCanvas);
 
@@ -65,6 +66,24 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
+      // Sync the local `file` to the baked bytes just uploaded. Manage
+      // Pages swapped `store.file` to the reorder+import output (NO
+      // overlays baked), and `persistEditorDocument` then ran the
+      // overlay merge on top of those bytes to produce `savedFile`.
+      // `applyPristineSweep` (inside persist) stripped shapes /
+      // highlights / images / signatures / drawings / arrows / user-
+      // added images from `fabricJsonByPage` on the assumption those
+      // overlays now live in the source bytes. Without this reset,
+      // `store.file` still points at the unbaked merge output — so any
+      // subsequent Export / Share reads unbaked bytes AND a swept
+      // overlay map, and the user's edits vanish from the exported /
+      // shared PDF. Reported 2026-08-24 (QA: "edit + merge → export
+      // loses my edits"). Same fix as skill log 2026-06-19 (c); safe to
+      // re-add because (d)'s revert applied to sidebar reorder (now
+      // single-shot), not to Manage Pages which still relies on the
+      // auto-persist round-trip.
+      applyPostSaveReset(result.savedFile, result.remappedState);
+
       const id = result.document.id;
 
       if (searchParams.get("id") !== id) {
@@ -80,6 +99,7 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
       });
     })();
   }, [
+    applyPostSaveReset,
     clearPendingCloudSaveAfterReload,
     file,
     pdfDocument,
