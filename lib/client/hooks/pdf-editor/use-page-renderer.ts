@@ -77,13 +77,6 @@ export function usePageRenderer({
     const scale = zoom * dpr;
     const viewport = page.getViewport({ scale });
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    if (!fitContainer) {
-      canvas.style.width = `${viewport.width / dpr}px`;
-      canvas.style.height = `${viewport.height / dpr}px`;
-    }
-
     const cssWidth = viewport.width / dpr;
     const cssHeight = viewport.height / dpr;
 
@@ -110,35 +103,79 @@ export function usePageRenderer({
           operationsFilter = (i: number) => !textIndices.has(i);
         }
 
+        // Render offscreen FIRST, then copy to the visible canvas in one
+        // paint. Assigning to `canvas.width` (even the same value) is
+        // spec-mandated to clear the bitmap to fully transparent, which
+        // shows as a BLACK FLASH between save/reload cycles when the
+        // visible canvas is momentarily blank while pdf.js repaints.
+        // Rendering offscreen sidesteps the clear entirely and only
+        // touches the visible canvas after the new bitmap is ready.
+        const offscreen = document.createElement("canvas");
+
+        offscreen.width = viewport.width;
+        offscreen.height = viewport.height;
+
         renderTask = page.render({
           ...(transparent ? { background: "rgba(0,0,0,0)" } : {}),
-          canvas,
+          canvas: offscreen,
           ...(operationsFilter ? { operationsFilter } : {}),
           viewport,
         });
 
         await renderTask.promise;
 
-        if (!cancelled) {
-          logger.info("[PDFedits] render: page", {
-            page: page.pageNumber,
-            cssWidth,
-            cssHeight,
-            suppressText,
-          });
-          setRenderedSize((prev) => {
-            if (prev && prev.width === cssWidth && prev.height === cssHeight) {
-              return prev;
-            }
+        if (cancelled) return;
 
-            return { height: cssHeight, width: cssWidth };
-          });
+        // Copy the finished render onto the visible canvas in one shot.
+        // Resize only when dims differ (resizing itself clears — this
+        // is the same trap as the outer effect). blitCtx.drawImage is
+        // synchronous so the swap is a single paint with no gap.
+        if (
+          canvas.width !== viewport.width ||
+          canvas.height !== viewport.height
+        ) {
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
         }
+        if (!fitContainer) {
+          canvas.style.width = `${cssWidth}px`;
+          canvas.style.height = `${cssHeight}px`;
+        }
+        const blitCtx = canvas.getContext("2d");
+
+        if (blitCtx) {
+          if (transparent) {
+            blitCtx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+          blitCtx.drawImage(offscreen, 0, 0);
+        }
+
+        logger.info("[PDFedits] render: page", {
+          page: page.pageNumber,
+          cssWidth,
+          cssHeight,
+          suppressText,
+        });
+        setRenderedSize((prev) => {
+          if (prev && prev.width === cssWidth && prev.height === cssHeight) {
+            return prev;
+          }
+
+          return { height: cssHeight, width: cssWidth };
+        });
       } catch (err) {
-        // render was cancelled — expected on re-renders
+        // render was cancelled — expected on re-renders / doc destroy
         const name = (err as { name?: string })?.name;
 
-        if (name !== "RenderingCancelledException") {
+        if (
+          name !== "RenderingCancelledException" &&
+          // Swallow the "sendWithPromise of null" that fires when the
+          // OLD pdf.js doc gets destroyed mid-render on a save reload
+          // (`loadingTask.destroy()` nulls the worker's message
+          // handler). The new render will replace this frame; the old
+          // failure is harmless noise in the console.
+          !/sendWithPromise/.test((err as { message?: string })?.message ?? "")
+        ) {
           logger.warn("[PDFedits] render: failed", {
             page: page.pageNumber,
             err,
