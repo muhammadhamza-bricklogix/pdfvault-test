@@ -77,6 +77,23 @@ export function usePageRenderer({
     const scale = zoom * dpr;
     const viewport = page.getViewport({ scale });
 
+    // Assigning to `canvas.width` (EVEN THE SAME VALUE) is spec-mandated
+    // to clear the bitmap to fully transparent, which reads as a BLACK
+    // FLASH between save/reload cycles because the previous PDF frame
+    // vanishes for the ~500ms it takes pdf.js to paint the new one.
+    // Guard so we only pay that clear when dims actually change (new
+    // zoom, new page dims after Manage Pages). Post-save reloads render
+    // the same-dimensions bytes, so the visible canvas keeps its old
+    // pixels until pdf.js repaints over them in place.
+    if (canvas.width !== viewport.width || canvas.height !== viewport.height) {
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+    }
+    if (!fitContainer) {
+      canvas.style.width = `${viewport.width / dpr}px`;
+      canvas.style.height = `${viewport.height / dpr}px`;
+    }
+
     const cssWidth = viewport.width / dpr;
     const cssHeight = viewport.height / dpr;
 
@@ -103,66 +120,30 @@ export function usePageRenderer({
           operationsFilter = (i: number) => !textIndices.has(i);
         }
 
-        // Render offscreen FIRST, then copy to the visible canvas in one
-        // paint. Assigning to `canvas.width` (even the same value) is
-        // spec-mandated to clear the bitmap to fully transparent, which
-        // shows as a BLACK FLASH between save/reload cycles when the
-        // visible canvas is momentarily blank while pdf.js repaints.
-        // Rendering offscreen sidesteps the clear entirely and only
-        // touches the visible canvas after the new bitmap is ready.
-        const offscreen = document.createElement("canvas");
-
-        offscreen.width = viewport.width;
-        offscreen.height = viewport.height;
-
         renderTask = page.render({
           ...(transparent ? { background: "rgba(0,0,0,0)" } : {}),
-          canvas: offscreen,
+          canvas,
           ...(operationsFilter ? { operationsFilter } : {}),
           viewport,
         });
 
         await renderTask.promise;
 
-        if (cancelled) return;
+        if (!cancelled) {
+          logger.info("[PDFedits] render: page", {
+            page: page.pageNumber,
+            cssWidth,
+            cssHeight,
+            suppressText,
+          });
+          setRenderedSize((prev) => {
+            if (prev && prev.width === cssWidth && prev.height === cssHeight) {
+              return prev;
+            }
 
-        // Copy the finished render onto the visible canvas in one shot.
-        // Resize only when dims differ (resizing itself clears — this
-        // is the same trap as the outer effect). blitCtx.drawImage is
-        // synchronous so the swap is a single paint with no gap.
-        if (
-          canvas.width !== viewport.width ||
-          canvas.height !== viewport.height
-        ) {
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+            return { height: cssHeight, width: cssWidth };
+          });
         }
-        if (!fitContainer) {
-          canvas.style.width = `${cssWidth}px`;
-          canvas.style.height = `${cssHeight}px`;
-        }
-        const blitCtx = canvas.getContext("2d");
-
-        if (blitCtx) {
-          if (transparent) {
-            blitCtx.clearRect(0, 0, canvas.width, canvas.height);
-          }
-          blitCtx.drawImage(offscreen, 0, 0);
-        }
-
-        logger.info("[PDFedits] render: page", {
-          page: page.pageNumber,
-          cssWidth,
-          cssHeight,
-          suppressText,
-        });
-        setRenderedSize((prev) => {
-          if (prev && prev.width === cssWidth && prev.height === cssHeight) {
-            return prev;
-          }
-
-          return { height: cssHeight, width: cssWidth };
-        });
       } catch (err) {
         // render was cancelled — expected on re-renders / doc destroy
         const name = (err as { name?: string })?.name;
