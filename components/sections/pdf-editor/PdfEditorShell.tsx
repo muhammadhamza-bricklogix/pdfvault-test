@@ -100,6 +100,16 @@ const VersionHistoryModalHost = dynamic(
     import("./VersionHistoryModalHost").then((m) => m.VersionHistoryModalHost),
   { ssr: false, loading: () => null },
 );
+// Same shell-level pattern — Merge runs a `saveBeforeAction` (added
+// 2026-08-24 so shapes/drawings/images are baked into the source
+// before merging with additional PDFs) which triggers a pdf.js reload
+// that unmounts `HamburgerMenu`. Open state + source live in the
+// store (`isMergeModalOpen` / `mergeModalSource`) so the modal
+// appears once the reset lands.
+const MergeModalHost = dynamic(
+  () => import("./MergeModalHost").then((m) => m.MergeModalHost),
+  { ssr: false, loading: () => null },
+);
 const PerformancePanel = dynamic(
   () => import("./PerformancePanel").then((m) => m.PerformancePanel),
   { ssr: false, loading: () => null },
@@ -534,6 +544,7 @@ export function PdfEditorShell() {
       <PasswordModal />
       <ShareModal />
       <VersionHistoryModalHost />
+      <MergeModalHost />
       <PageNumbersModal />
       <FormFieldsModal />
       <ReloadConfirmModal />

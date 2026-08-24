@@ -35,13 +35,9 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
-import {
-  fileToMergeEntry,
-  type MergeEntry,
-} from "@/lib/client/pdf-tools/merge-pdfs";
+import { fileToMergeEntry } from "@/lib/client/pdf-tools/merge-pdfs";
 
 import { AnnotationsModal } from "./AnnotationsModal";
-import { MergePdfModal } from "./MergePdfModal";
 import { SplitPdfModal, type SplitPdfModalSource } from "./SplitPdfModal";
 
 // Actions still triggered by PvEditorTopChrome that need modal state /
@@ -85,8 +81,8 @@ export function HamburgerMenu() {
   const [splitSource, setSplitSource] = useState<SplitPdfModalSource | null>(
     null,
   );
-  const [isMergeOpen, setIsMergeOpen] = useState(false);
-  const [mergeSource, setMergeSource] = useState<MergeEntry | null>(null);
+  const setIsMergeOpen = usePdfEditorStore((s) => s.setIsMergeModalOpen);
+  const setMergeSource = usePdfEditorStore((s) => s.setMergeModalSource);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
   const flatten = useFlattenFileMutation();
@@ -515,14 +511,6 @@ export function HamburgerMenu() {
       <AnnotationsModal
         isOpen={isAnnotationsOpen}
         onClose={() => setIsAnnotationsOpen(false)}
-      />
-      <MergePdfModal
-        isOpen={isMergeOpen}
-        source={mergeSource}
-        onClose={() => {
-          setIsMergeOpen(false);
-          setTimeout(() => setMergeSource(null), 200);
-        }}
       />
       <SplitPdfModal
         isOpen={isSplitOpen}

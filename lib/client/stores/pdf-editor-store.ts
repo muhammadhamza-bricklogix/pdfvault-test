@@ -192,6 +192,18 @@ type PdfEditorStore = {
   isFindReplaceOpen: boolean;
   isShareModalOpen: boolean;
   isVersionHistoryModalOpen: boolean;
+  isMergeModalOpen: boolean;
+  /**
+   * MergeEntry (bytes + filename + pageCount) for the CURRENT PDF —
+   * seeded by the "Merge" flow after saveBeforeAction commits the
+   * baked bytes. Rendered by `MergeModalHost` at shell level, which
+   * survives the pdf.js reload that unmounts `HamburgerMenu`.
+   */
+  mergeModalSource: {
+    bytes: Uint8Array;
+    filename: string;
+    pageCount: number;
+  } | null;
   isPasswordModalOpen: boolean;
   /**
    * Controls whether the shared PasswordModal shows both tabs
@@ -310,6 +322,10 @@ type PdfEditorStore = {
   setPasswordModalVariant: (variant: "both" | "unlock-only") => void;
   setIsShareModalOpen: (value: boolean) => void;
   setIsVersionHistoryModalOpen: (value: boolean) => void;
+  setIsMergeModalOpen: (value: boolean) => void;
+  setMergeModalSource: (
+    source: { bytes: Uint8Array; filename: string; pageCount: number } | null,
+  ) => void;
   setIsCreatePdfModalOpen: (value: boolean) => void;
   setIsManagePagesOpen: (value: boolean) => void;
   setIsCreatingShape: (value: boolean) => void;
@@ -358,6 +374,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isPageNumbersModalOpen: false,
   isShareModalOpen: false,
   isVersionHistoryModalOpen: false,
+  isMergeModalOpen: false,
+  mergeModalSource: null,
   isPasswordModalOpen: false,
   passwordModalVariant: "both" as "both" | "unlock-only",
   isCreatePdfModalOpen: false,
@@ -465,6 +483,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       isPageNumbersModalOpen: false,
       isShareModalOpen: false,
       isVersionHistoryModalOpen: false,
+      isMergeModalOpen: false,
+      mergeModalSource: null,
       isPasswordModalOpen: false,
       passwordModalVariant: "both",
       isCreatePdfModalOpen: false,
@@ -753,6 +773,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsShareModalOpen: (value) => set({ isShareModalOpen: value }),
   setIsVersionHistoryModalOpen: (value) =>
     set({ isVersionHistoryModalOpen: value }),
+  setIsMergeModalOpen: (value) => set({ isMergeModalOpen: value }),
+  setMergeModalSource: (source) => set({ mergeModalSource: source }),
   setIsCreatePdfModalOpen: (value) =>
     set((state) => ({
       createPdfModalKey: value
