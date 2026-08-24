@@ -7,7 +7,6 @@ import type {
 } from "./paywall-bus";
 
 import { useAuth } from "@clerk/nextjs";
-import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
@@ -33,19 +32,17 @@ import { setPaywallHandler } from "./paywall-bus";
 export function usePaywall() {
   const { data: subscription, isLoading } = useSubscriptionQuery();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
-  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [preview, setPreview] = useState<PaywallPreview | null>(null);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
     null,
   );
-  // Preview column is suppressed ONLY on the dashboard shell (which
-  // covers `/dashboard/settings/billing` too). Every other surface —
-  // editor, convert routes, W-9 finalize, axios interceptor — always
-  // renders the full two-column modal so the user sees the doc / value
-  // prop alongside the plan picker. Caller-supplied `hidePreview` is
-  // ignored on purpose; the rule is route-based only.
-  const hidePreview = Boolean(pathname?.startsWith("/dashboard"));
+  // Always render the full two-column modal. When there is no doc
+  // context (dashboard "Upgrade" buttons, billing settings, axios
+  // interceptor) the left column falls back to `<GenericPreviewCard />`
+  // — a blurred generic value-prop card — so the plan picker never
+  // ships alone. Caller-supplied `hidePreview` is ignored on purpose.
+  const hidePreview = false;
   // When a paywall opens because the API interceptor asked for it, the
   // resolver settles the promise back in the axios pipeline so the
   // failed request can be retried after payment. Ref so the current
