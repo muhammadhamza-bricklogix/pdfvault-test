@@ -109,7 +109,7 @@ function CardContent({ tool }: { tool: QuickTool }) {
         <p className="pv-heading text-[15px] font-semibold leading-snug text-[var(--pv-text-strong)] sm:text-[16px]">
           {tool.title}
         </p>
-        <p className="mt-1 text-[12px] leading-snug text-[var(--pv-text-body)] sm:text-[13px]">
+        <p className="mt-1 hidden text-[12px] leading-snug text-[var(--pv-text-body)] sm:block sm:text-[13px]">
           {tool.description}
         </p>
       </div>
