@@ -15,6 +15,7 @@ import {
   EraserIcon,
   FileExportIcon,
   FileMinusIcon,
+  FloppyDiskIcon,
   HighlighterIcon,
   Image01Icon,
   Layers01Icon,
@@ -41,6 +42,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
+import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
@@ -49,6 +51,7 @@ import { useRenameDocumentMutation } from "@/lib/client/query/mutations/document
 import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -352,6 +355,53 @@ function TopAppBar() {
       />
 
       <SaveStatusChip />
+
+      {/* Save — mirrors the `onSaveClick` handler in EditorTopBar exactly
+          so the save pipeline is identical across both top-chrome layouts.
+          Signed-out users get the same IDB snapshot + sign-in prompt flow
+          (auth chain items 4, 12, 17). Signed-in users dispatch
+          `editor:save`, which useSaveEditor handles via
+          persistEditorDocument → applyPostSaveReset — the proven path
+          that carries edits into the saved bytes AND syncs `store.file`
+          so subsequent Export / Share / Merge see the baked file. */}
+      <Tooltip delay={300}>
+        <button
+          aria-label="Save"
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+          disabled={!file}
+          type="button"
+          onClick={() => {
+            if (!isSignedIn) {
+              // Persist file + fabric edits + extractedPages before the
+              // full-page sign-in redirect so the hydrator restores the
+              // full editor state on return.
+              void snapshotPendingEditorFile().catch(() => undefined);
+              dispatchSignInPrompt({
+                title: "Sign in to save",
+                description:
+                  "Create an account and we'll bring you right back to save your document where you left off.",
+                confirmLabel: "Sign in & continue",
+                redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
+              });
+
+              return;
+            }
+            window.dispatchEvent(new CustomEvent("editor:save"));
+          }}
+        >
+          <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
+          <span className="hidden sm:inline">Save</span>
+        </button>
+        <Tooltip.Content>
+          <p>
+            {!file
+              ? "Open a PDF to save"
+              : !isSignedIn
+                ? "Sign in to save to your library"
+                : "Save to My PDFs"}
+          </p>
+        </Tooltip.Content>
+      </Tooltip>
 
       <div className="ml-3 flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
         <Tooltip delay={300}>
