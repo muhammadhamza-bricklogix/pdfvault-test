@@ -198,6 +198,16 @@ function EditorLayout() {
   const { error, isLoading } = usePdfLoader();
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  // Sticky store latch — flips to true the first time a non-null doc
+  // lands and stays true across subsequent reloads (post-save file
+  // swap, restore-version). Read below so `isLoading` cycles after
+  // the first paint don't blank the editor to `<EditorLoadingShell />`.
+  // The Fabric canvas + `usePageRenderer` still cycle correctly (see
+  // `PdfViewerCanvas.effectivePage` + `usePageRenderer` line 165) so
+  // the sweep-then-remount sync that keeps the merge pipeline honest
+  // is preserved. QA report 2026-08-24 ("save reloads the pdf which
+  // is bad UX behaviour").
+  const hasEverLoaded = usePdfEditorStore((s) => s.hasEverLoadedPdf);
   const isManagePagesOpen = usePdfEditorStore((s) => s.isManagePagesOpen);
   const applyManagePagesSave = usePdfEditorStore((s) => s.applyManagePagesSave);
   const file = usePdfEditorStore((s) => s.file);
@@ -370,7 +380,12 @@ function EditorLayout() {
     ],
   );
 
-  if (isLoading) {
+  // Only show the full loading shell on the FIRST load. Subsequent
+  // reloads (post-save file swap, restore-version) keep the previous
+  // frame visible so the user doesn't see a jarring blank flash after
+  // every Save — the pdf.js re-parse is invisible; the Fabric layer
+  // briefly disappears and reappears with the swept overlays.
+  if (isLoading && !hasEverLoaded) {
     return <EditorLoadingShell />;
   }
 
@@ -382,7 +397,13 @@ function EditorLayout() {
     );
   }
 
-  if (!pdfDocument) return null;
+  // Once we've rendered at least one doc, keep the editor tree mounted
+  // even while `pdfDocument` is momentarily null (post-save reload,
+  // restore-version). The pdf.js canvas element retains its last-
+  // rendered frame so the user sees the previous content until the
+  // new doc lands. The Fabric layer + tool components handle a null
+  // pdfDocument safely (grep for `!pdfDocument` in child components).
+  if (!pdfDocument && !hasEverLoaded) return null;
 
   const managePagesModal = (
     <ManagePagesModal

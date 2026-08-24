@@ -245,6 +245,17 @@ type PdfEditorStore = {
   pageCount: number;
   pageOrder: number[];
   pdfDocument: PDFDocumentProxy | null;
+  /**
+   * Sticky latch that flips to `true` the FIRST time a non-null
+   * pdfDocument lands in this editor session, and stays true across
+   * subsequent reloads (post-save file swap, restore-version). Read by
+   * `EditorLayout` to decide whether an `isLoading` cycle should show
+   * the full `<EditorLoadingShell />` (first paint) or leave the
+   * previous frame in place (silent reload). Cleared alongside the
+   * document itself in `clearFile` so a fresh editor session opens
+   * with the full loading shell.
+   */
+  hasEverLoadedPdf: boolean;
   shapeFill: string;
   shapeStroke: string;
   shapeStrokeWidth: number;
@@ -389,6 +400,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   pageCount: 0,
   pageOrder: [],
   pdfDocument: null,
+  hasEverLoadedPdf: false,
   shapeFill: "transparent",
   shapeStroke: "#000000",
   shapeStrokeWidth: 2,
@@ -497,6 +509,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       pageCount: 0,
       pageOrder: [],
       pdfDocument: null,
+      hasEverLoadedPdf: false,
       shapeFill: "transparent",
       shapeStroke: "#000000",
       shapeStrokeWidth: 2,
@@ -798,11 +811,15 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       return { extractedPages: next };
     }),
   setPdfDocument: (doc, pageCount) =>
-    set({
+    set((state) => ({
       pageOrder: Array.from({ length: pageCount }, (_, i) => i + 1),
       pdfDocument: doc,
       pageCount,
-    }),
+      // Sticky latch: once a doc has loaded in this session, subsequent
+      // reloads (post-save file swap) skip the full loading shell so the
+      // editor doesn't blank between saves. Reset on `clearFile`.
+      hasEverLoadedPdf: state.hasEverLoadedPdf || doc != null,
+    })),
   setShapeFill: (color) => set({ shapeFill: color }),
   setShapeStroke: (color) => set({ shapeStroke: color }),
   setShapeStrokeWidth: (width) => set({ shapeStrokeWidth: width }),

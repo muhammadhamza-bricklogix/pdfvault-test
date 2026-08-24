@@ -44,7 +44,14 @@ export function usePdfLoader() {
     let loadingTask: any = null;
 
     // Clear any previously loaded document immediately so consumers don't
-    // hold a reference to a doc we're about to destroy.
+    // hold a reference to a doc we're about to destroy. This is
+    // load-bearing on the post-Save flow: it forces `EditorLayout` to
+    // unmount → Fabric canvas remounts and reloads from the SWEPT
+    // `fabricJsonByPage` (only editModeText/pageNumber remain). Without
+    // the remount, Fabric still holds the just-baked shapes as
+    // interactive objects, and the next Save writes them back into the
+    // map → merge draws them a second time on top of the copy already
+    // baked into `savedFile` → the exported PDF has doubled shapes.
     setPdfDocument(null, 0);
 
     const load = async () => {
