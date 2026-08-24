@@ -15,14 +15,11 @@ import {
 } from "react";
 
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
-import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
-import {
-  PAYWALL_CANCELLED_ERR_NAME,
-  requestPaywall,
-} from "@/lib/client/hooks/billing/paywall-bus";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { usePendingConversionsStore } from "@/lib/client/stores/pending-conversions-store";
+import { runPendingConversion } from "@/lib/client/upload/run-pending-conversion";
 import {
   clearPendingEditorFile,
   loadPendingEditorFile,
@@ -34,6 +31,8 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+
+import { TrustpilotWidget } from "./trustpilot-widget";
 
 const DEFAULT_ACCEPTED_EXTENSIONS = [
   "pdf",
@@ -353,85 +352,57 @@ export function UploadWorkspace({
         return;
       }
 
-      // Convert-to-PDF flow for signed-in users on convert routes.
-      // We convert FIRST so the paywall can show the real document
-      // instead of a blurred mock, then check entitlement.
+      // Convert routes for signed-in users. Two branches by direction:
       //
-      // Use `ensureFreshEntitlement()` (not the raw snapshot) — the
-      // snapshot fails closed while `useSubscriptionQuery` hasn't
-      // resolved yet, and this call-site runs on the very first render
-      // after a post-signin auto-resume, well before the query lands.
+      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): register a pending
+      //     conversion in the Zustand store, fire the convert+save runner
+      //     as a background promise, then navigate to `/dashboard`
+      //     immediately. The dashboard file table renders a "Preparing
+      //     your document…" placeholder row driven by the store while the
+      //     runner works. No toast on this page — the placeholder row on
+      //     the dashboard is the only progress affordance. No paywall
+      //     either; that gate fires when the user clicks Download / Open
+      //     on the completed row.
+      //
+      //   • PDF→X (`exportFormat` set, e.g. pdf-to-word): no early
+      //     paywall here. Save + open editor with `?export=<format>`;
+      //     `useExportEditor` handles the paywall at auto-export time
+      //     (auth-chain items 1–4 in CLAUDE.md).
       let earlyConvertedPdf: File | null = null;
 
       if (requiresAuth && authLoaded && isSignedIn) {
-        if (!isPdf(picked)) {
-          const convKey = toast.loading({
-            description: `Preparing ${picked.name}…`,
-            title: "Converting to PDF",
+        const isConvertToPdf = !exportFormat;
+
+        if (isConvertToPdf) {
+          const tempId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const pdfName = isPdf(picked)
+            ? picked.name
+            : picked.name.replace(/\.[^.]+$/, "") + ".pdf";
+
+          usePendingConversionsStore.getState().add({
+            tempId,
+            file: picked,
+            filename: pdfName,
+            sizeBytes: picked.size,
           });
 
-          try {
-            earlyConvertedPdf = await logger.span(
-              "upload.convert_to_pdf",
-              "upload.convert",
-              () => uploadAsPdf(picked),
-              { size: picked.size, ext: getExtension(picked.name) },
-            );
-          } catch (convErr) {
-            logger.captureError(convErr, "upload.early_convert", {
-              filename: picked.name,
-              size: picked.size,
-            });
-            toast.close(convKey);
-            toast.error({
-              title: "Conversion failed",
-              description:
-                convErr instanceof Error ? convErr.message : undefined,
-            });
-
-            return;
-          }
-
-          toast.close(convKey);
-        } else {
-          earlyConvertedPdf = picked;
-        }
-
-        const entitled = await ensureFreshEntitlement();
-
-        logger.breadcrumb("upload", "entitlement.checked", { entitled });
-
-        if (!entitled) {
-          logger.event(EVENTS.UPLOAD_PAYWALL_SHOWN, "info", {
-            sourceExt: getExtension(picked.name),
+          logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
+            documentId: null,
+            tool: null,
+            exportFormat: null,
           });
-          const objectUrl = URL.createObjectURL(earlyConvertedPdf);
 
-          try {
-            const outcome = await requestPaywall({
-              filename: picked.name,
-              previewObjectUrl: objectUrl,
-              sourceExt: getExtension(picked.name),
-              targetExt: "pdf",
-            });
+          void runPendingConversion(tempId, picked);
+          router.push(ROUTES.APP.DASHBOARD);
 
-            if (outcome !== "success") {
-              logger.event(EVENTS.UPLOAD_PAYWALL_CANCELLED, "info");
-
-              return;
-            }
-            logger.event(EVENTS.UPLOAD_PAYWALL_SUCCESS, "info");
-          } catch (err) {
-            if (
-              (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
-            ) {
-              return;
-            }
-            throw err;
-          } finally {
-            URL.revokeObjectURL(objectUrl);
-          }
+          return;
         }
+
+        // PDF→X: input is already PDF, editor's export gate handles paywall.
+        earlyConvertedPdf = picked;
       }
 
       setOpening(true);
@@ -845,19 +816,16 @@ export function UploadWorkspace({
             className="origin-center scale-[1.35] sm:scale-[1.6]"
             style={{ height: 32, width: "min(360px, 100%)" }}
           >
-            <div
-              className="trustpilot-widget"
-              data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-              data-locale="en-US"
-              data-style-height="20px"
-              data-style-width="100%"
-              data-template-id="5419b637fa0340045cd0c936"
-              data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-            >
-              <a href="" rel="noopener" target="_blank">
-                Trustpilot
-              </a>
-            </div>
+            <TrustpilotWidget
+              businessUnitId="6a5635cc9545fd0a55b8cee6"
+              locale="en-US"
+              reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
+              skeletonHeight={20}
+              styleHeight="20px"
+              styleWidth="100%"
+              templateId="5419b637fa0340045cd0c936"
+              token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+            />
           </div>
         </div>
         <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
@@ -1032,24 +1000,17 @@ export function UploadWorkspace({
       {/* Trustpilot Micro TrustScore — same widget as the `hero` variant
           above so both entry points show the same social proof. */}
       <div className="mt-10 flex justify-center">
-        <div
-          className="trustpilot-widget"
-          data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-          data-locale="en-US"
-          data-style-height="20px"
-          data-style-width="100%"
-          data-template-id="5419b637fa0340045cd0c936"
-          data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-          style={{ maxWidth: 320, width: "100%" }}
-        >
-          <a
-            href="https://www.trustpilot.com/review/pdfvault.ai"
-            rel="noopener"
-            target="_blank"
-          >
-            Trustpilot
-          </a>
-        </div>
+        <TrustpilotWidget
+          businessUnitId="6a5635cc9545fd0a55b8cee6"
+          locale="en-US"
+          maxWidth={320}
+          reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
+          skeletonHeight={20}
+          styleHeight="20px"
+          styleWidth="100%"
+          templateId="5419b637fa0340045cd0c936"
+          token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+        />
       </div>
       <Script
         async

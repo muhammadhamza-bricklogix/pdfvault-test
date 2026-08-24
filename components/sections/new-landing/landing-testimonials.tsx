@@ -1,6 +1,7 @@
 import Script from "next/script";
 
 import { SectionHeading } from "./section-heading";
+import { TrustpilotWidget } from "./trustpilot-widget";
 
 /**
  * Landing-page testimonial section — powered by a Trustpilot TrustBox
@@ -44,24 +45,17 @@ export function LandingTestimonials() {
             centered under the heading instead of stretching edge-to-
             edge on wide viewports.
           */}
-          <div
-            className="trustpilot-widget"
-            data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-            data-locale="en-US"
-            data-style-height="150px"
-            data-style-width="100%"
-            data-template-id="53aa8807dec7e10d38f59f32"
-            data-token="c01f8854-2bd8-4b15-a02b-506a0cab7737"
-            style={{ maxWidth: 320, width: "100%" }}
-          >
-            <a
-              href="https://www.trustpilot.com/review/pdfvault.ai"
-              rel="noopener"
-              target="_blank"
-            >
-              Trustpilot
-            </a>
-          </div>
+          <TrustpilotWidget
+            businessUnitId="6a5635cc9545fd0a55b8cee6"
+            locale="en-US"
+            maxWidth={320}
+            reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
+            skeletonHeight={150}
+            styleHeight="150px"
+            styleWidth="100%"
+            templateId="53aa8807dec7e10d38f59f32"
+            token="c01f8854-2bd8-4b15-a02b-506a0cab7737"
+          />
         </div>
       </div>
 

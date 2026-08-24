@@ -6,8 +6,9 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { setPendingConversionsQueryClient } from "@/lib/client/upload/run-pending-conversion";
 import { queryClientConfig } from "@/lib/config/tanstack.config";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -72,6 +73,16 @@ function createInstrumentedClient(): QueryClient {
 
 export function QueryProvider({ children }: QueryProviderProps) {
   const [queryClient] = useState(createInstrumentedClient);
+
+  // Bridge the app-level client to the module-scope `runPendingConversion`
+  // so background convert-and-save work (fired-and-forgotten from the
+  // upload workspace before navigation) can invalidate the documents list
+  // when it settles.
+  useEffect(() => {
+    setPendingConversionsQueryClient(queryClient);
+
+    return () => setPendingConversionsQueryClient(null);
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

@@ -25,8 +25,8 @@ type Tool = {
 const TABS: Tab[] = [
   { id: "edit", label: "PDF Composer" },
   { id: "convert-to", label: "Convert to PDF" },
-  { id: "compress", label: "Compress PDF" },
   { id: "convert-from", label: "Convert from PDF" },
+  { id: "compress", label: "Compress" },
   { id: "others", label: "Others" },
 ];
 
