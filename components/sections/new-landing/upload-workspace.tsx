@@ -854,11 +854,7 @@ export function UploadWorkspace({
               data-template-id="5419b637fa0340045cd0c936"
               data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
             >
-              <a
-                href="https://www.trustpilot.com/review/pdfvault.ai"
-                rel="noopener"
-                target="_blank"
-              >
+              <a href="" rel="noopener" target="_blank">
                 Trustpilot
               </a>
             </div>
