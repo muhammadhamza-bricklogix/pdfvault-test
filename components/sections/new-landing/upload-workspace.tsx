@@ -799,58 +799,62 @@ export function UploadWorkspace({
           </div>
         </div>
 
-        {/* Trustpilot Micro TrustScore widget — replaces the previous
-            "Secure document storage / Edit in your browser / Personal
-            file library" trust strip. Bootstrap script is loaded via
-            <Script id="trustpilot-bootstrap"> at the bottom of this
-            component; the same id is also used in landing-testimonials,
-            so Next.js dedupes and the script only fetches once even
-            when both widgets appear on the same page. */}
-        <div className="mt-6 flex justify-center">
-          {/* CSS scale enlarges the Micro TrustScore visually — the
-              widget's own layout is fixed at 20px tall, so bumping
-              data-style-height just adds whitespace. Reserved height on
-              the wrapper accounts for the scaled size so the terms line
-              below doesn't overlap. */}
-          <div
-            className="origin-center scale-[1.35] sm:scale-[1.6]"
-            style={{ height: 32, width: "min(360px, 100%)" }}
-          >
-            <TrustpilotWidget
-              businessUnitId="6a5635cc9545fd0a55b8cee6"
-              locale="en-US"
-              reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
-              skeletonHeight={20}
-              styleHeight="20px"
-              styleWidth="100%"
-              templateId="5419b637fa0340045cd0c936"
-              token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+        {/* Trustpilot Micro TrustScore + terms line — landing route only.
+            The hero variant of UploadWorkspace ships on `/` (via
+            LandingHero) and could theoretically be reused elsewhere; the
+            pathname gate keeps social proof + terms copy exclusive to
+            the marketing home. Bootstrap script is only injected when
+            the widget renders so we don't fetch Trustpilot's CDN on
+            routes that never show a widget. */}
+        {pathname === "/" ? (
+          <>
+            <div className="mt-6 flex justify-center">
+              {/* CSS scale enlarges the Micro TrustScore visually — the
+                  widget's own layout is fixed at 20px tall, so bumping
+                  data-style-height just adds whitespace. Reserved height on
+                  the wrapper accounts for the scaled size so the terms line
+                  below doesn't overlap. */}
+              <div
+                className="origin-center scale-[1.35] sm:scale-[1.6]"
+                style={{ height: 32, width: "min(360px, 100%)" }}
+              >
+                <TrustpilotWidget
+                  businessUnitId="6a5635cc9545fd0a55b8cee6"
+                  locale="en-US"
+                  reviewUrl=""
+                  skeletonHeight={20}
+                  styleHeight="20px"
+                  styleWidth="100%"
+                  templateId="5419b637fa0340045cd0c936"
+                  token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+                />
+              </div>
+            </div>
+            <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
+              By uploading a file, you agree to our{" "}
+              <Link
+                className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+                href={ROUTES.LEGAL.TERMS}
+              >
+                Terms and Conditions
+              </Link>{" "}
+              and acknowledge our{" "}
+              <Link
+                className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+                href={ROUTES.LEGAL.PRIVACY}
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+            <Script
+              async
+              id="trustpilot-bootstrap"
+              src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
+              strategy="afterInteractive"
             />
-          </div>
-        </div>
-        <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
-          By uploading a file, you agree to our{" "}
-          <Link
-            className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
-            href={ROUTES.LEGAL.TERMS}
-          >
-            Terms and Conditions
-          </Link>{" "}
-          and acknowledge our{" "}
-          <Link
-            className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
-            href={ROUTES.LEGAL.PRIVACY}
-          >
-            Privacy Policy
-          </Link>
-          .
-        </p>
-        <Script
-          async
-          id="trustpilot-bootstrap"
-          src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
-          strategy="afterInteractive"
-        />
+          </>
+        ) : null}
       </div>
     );
   }
