@@ -43,16 +43,20 @@ export function usePdfLoader() {
     let cancelled = false;
     let loadingTask: any = null;
 
-    // Clear any previously loaded document immediately so consumers don't
-    // hold a reference to a doc we're about to destroy. This is
-    // load-bearing on the post-Save flow: it forces `EditorLayout` to
-    // unmount → Fabric canvas remounts and reloads from the SWEPT
-    // `fabricJsonByPage` (only editModeText/pageNumber remain). Without
-    // the remount, Fabric still holds the just-baked shapes as
-    // interactive objects, and the next Save writes them back into the
-    // map → merge draws them a second time on top of the copy already
-    // baked into `savedFile` → the exported PDF has doubled shapes.
-    setPdfDocument(null, 0);
+    // Non-save reloads (initial open, restore-version, Manage Pages,
+    // opening a different doc) still clear pdfDocument up front — the
+    // usePageRenderer / useFabricCanvas cycle depends on that transition
+    // to remount cleanly. Save-reloads (post `applyPostSaveReset`) skip
+    // this: they set `postSaveReloadPending = true` first, and the
+    // Fabric-reload handler in `PdfViewerCanvas` swaps overlays via
+    // `loadFromJSON` AFTER the new render lands. Keeping the old
+    // pdfDocument alive during the load eliminates the visible "pdf
+    // refreshes after save" flicker — the pre-save render stays on
+    // screen the whole time, then flips atomically to the new content
+    // once `setPdfDocument(doc)` fires below.
+    const isSaveReload = usePdfEditorStore.getState().postSaveReloadPending;
+
+    if (!isSaveReload) setPdfDocument(null, 0);
 
     const load = async () => {
       setIsLoading(true);
@@ -142,7 +146,14 @@ export function usePdfLoader() {
     return () => {
       cancelled = true;
       loadingTask?.destroy();
-      setPdfDocument(null, 0);
+      // Same guard as the mount branch above — save-reloads swap the
+      // pdfDocument atomically via `setPdfDocument(newDoc)` inside the
+      // `load` async body; nulling it here would introduce the exact
+      // gap we're avoiding. Non-save reloads still null so the next
+      // effect run starts from a clean slate.
+      if (!usePdfEditorStore.getState().postSaveReloadPending) {
+        setPdfDocument(null, 0);
+      }
     };
     // sourceKey changes when pdfSourceUrl or file identity changes.
     // pdfSourceUrl is captured via closure inside the effect; we don't list it
