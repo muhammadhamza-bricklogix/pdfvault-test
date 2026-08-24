@@ -100,7 +100,7 @@ const QUICK_TOOLS: readonly QuickTool[] = [
 // two cards fit per row without the 148 px illustration overflowing.
 // Desktop (sm+): back to the horizontal figma layout.
 const CARD_CLASSNAME =
-  "group flex h-full w-full flex-col-reverse items-start gap-3 overflow-hidden rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-4 py-4 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5";
+  "group flex h-full w-full flex-col items-start gap-3 overflow-hidden rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-4 py-4 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5";
 
 function CardContent({ tool }: { tool: QuickTool }) {
   return (
