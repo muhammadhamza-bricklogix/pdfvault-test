@@ -258,9 +258,35 @@ export function HamburgerMenu() {
         if (!requireFile("searching")) return;
         setIsFindReplaceOpen(true);
         break;
-      case "merge":
-        void openMergeModal();
+      case "merge": {
+        if (!requireFile("merging")) return;
+        // Bake current edits into the cloud-saved PDF FIRST. Without
+        // this the merge modal reads `store.file` — the pre-edit source
+        // — and the merged output is missing the user's shapes,
+        // drawings, images, signatures, etc. Same pattern as Share.
+        //
+        // `force: true`: several edit paths (page-numbers, annotations,
+        // restore-from-version) don't flip `hasUnsavedChanges`, so the
+        // default short-circuit would skip the upload and merge stale
+        // bytes.
+        //
+        // `skipWait: true`: `openMergeModal` reads `store.file` (the
+        // fresh baked bytes are already committed by
+        // `applyPostSaveReset` inside the save handler) and doesn't
+        // touch `pdfDocument`. Waiting for pdf.js to reload would stall
+        // the modal open on slow devices — same class of bug as the
+        // Share flow fixed 2026-08-21.
+        void (async () => {
+          const ok = await saveBeforeAction(
+            "Saving your edits before merging.",
+            true,
+            true,
+          );
+
+          if (ok) void openMergeModal();
+        })();
         break;
+      }
       case "split":
         void openSplitModal();
         break;
