@@ -396,23 +396,24 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* Save stays as a discrete icon — the PRD only reshapes the
-                right-most export controls, and Save is a distinct action
-                (cloud persist) from the download/checkout trio below. */}
-            <Tooltip delay={300}>
-              <Button
-                aria-label="Save"
-                isDisabled={!canSave}
-                size="sm"
-                variant="tertiary"
-                onPress={onSaveClick}
-              >
-                <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>{saveTooltip}</p>
-              </Tooltip.Content>
-            </Tooltip>
+            {/* Save button — HIDDEN for now per product decision. Restore
+                by removing the surrounding `{false && (…)}` wrapper. */}
+            {false && (
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Save"
+                  isDisabled={!canSave}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={onSaveClick}
+                >
+                  <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>{saveTooltip}</p>
+                </Tooltip.Content>
+              </Tooltip>
+            )}
 
             <Separator
               className="!h-4 hidden self-center sm:block"

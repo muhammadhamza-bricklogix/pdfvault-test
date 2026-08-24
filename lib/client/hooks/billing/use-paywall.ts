@@ -7,6 +7,7 @@ import type {
 } from "./paywall-bus";
 
 import { useAuth } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
@@ -32,12 +33,19 @@ import { setPaywallHandler } from "./paywall-bus";
 export function usePaywall() {
   const { data: subscription, isLoading } = useSubscriptionQuery();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [preview, setPreview] = useState<PaywallPreview | null>(null);
-  const [hidePreview, setHidePreview] = useState(false);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
     null,
   );
+  // Preview column is suppressed ONLY on the dashboard shell (which
+  // covers `/dashboard/settings/billing` too). Every other surface —
+  // editor, convert routes, W-9 finalize, axios interceptor — always
+  // renders the full two-column modal so the user sees the doc / value
+  // prop alongside the plan picker. Caller-supplied `hidePreview` is
+  // ignored on purpose; the rule is route-based only.
+  const hidePreview = Boolean(pathname?.startsWith("/dashboard"));
   // When a paywall opens because the API interceptor asked for it, the
   // resolver settles the promise back in the axios pipeline so the
   // failed request can be retried after payment. Ref so the current
@@ -73,7 +81,6 @@ export function usePaywall() {
     setIsOpen(false);
     setPending(null);
     setPreview(null);
-    setHidePreview(false);
     // Notify the bus-side promise that the user bailed so the axios
     // interceptor can reject with PaywallCancelledError instead of
     // hanging forever.
@@ -90,7 +97,6 @@ export function usePaywall() {
     });
     setIsOpen(false);
     setPreview(null);
-    setHidePreview(false);
     // Give React one microtask to unmount the modal cleanly before
     // firing the queued action — otherwise a download or router-push
     // can race the modal teardown.
@@ -152,11 +158,11 @@ export function usePaywall() {
           logger.event(EVENTS.PAYWALL_OPENED, "info", {
             source: "bus",
             hasPreview: Boolean(incomingPreview),
-            hidePreview: options?.hidePreview ?? false,
+            // Caller hint retained for telemetry; route decides display.
+            callerHidePreview: options?.hidePreview ?? false,
           });
           busResolverRef.current = resolve;
           setPreview(incomingPreview ?? null);
-          setHidePreview(options?.hidePreview ?? false);
           setIsOpen(true);
         }),
     );

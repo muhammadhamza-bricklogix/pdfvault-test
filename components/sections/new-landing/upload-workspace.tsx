@@ -996,7 +996,6 @@ export function UploadWorkspace({
           </div>
         </div>
       </div>
-
     </div>
   );
 }
