@@ -96,24 +96,27 @@ const QUICK_TOOLS: readonly QuickTool[] = [
   },
 ];
 
+// Mobile: vertical stack (icon top-right, title + description below) so
+// two cards fit per row without the 148 px illustration overflowing.
+// Desktop (sm+): back to the horizontal figma layout.
 const CARD_CLASSNAME =
-  "group flex w-full items-center justify-between gap-4 overflow-hidden rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-5 py-4 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2";
+  "group flex h-full w-full flex-col-reverse items-start gap-3 overflow-hidden rounded-[16px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] px-4 py-4 text-left transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] focus-visible:ring-offset-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5";
 
 function CardContent({ tool }: { tool: QuickTool }) {
   return (
     <>
       <div className="min-w-0">
-        <p className="pv-heading text-[16px] font-semibold leading-snug text-[var(--pv-text-strong)]">
+        <p className="pv-heading text-[15px] font-semibold leading-snug text-[var(--pv-text-strong)] sm:text-[16px]">
           {tool.title}
         </p>
-        <p className="mt-1 text-[13px] leading-snug text-[var(--pv-text-body)]">
+        <p className="mt-1 text-[12px] leading-snug text-[var(--pv-text-body)] sm:text-[13px]">
           {tool.description}
         </p>
       </div>
-      <span className="shrink-0">
+      <span className="shrink-0 self-end sm:self-auto">
         <Image
           alt=""
-          className="h-[84px] w-auto object-contain transition-transform duration-200 group-hover:scale-[1.03]"
+          className="h-[56px] w-auto object-contain transition-transform duration-200 group-hover:scale-[1.03] sm:h-[84px]"
           height={ILLUSTRATION_HEIGHT}
           src={tool.illustrationSrc}
           width={ILLUSTRATION_WIDTH}
