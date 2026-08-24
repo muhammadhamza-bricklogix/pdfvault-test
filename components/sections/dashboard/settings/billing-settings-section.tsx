@@ -355,7 +355,7 @@ function SubscriptionCard({
           <Button isDisabled={restoring} variant="primary" onPress={onRestore}>
             {restoring ? "Renewing…" : "Renew subscription"}
           </Button>
-        ) : sub.status === "CANCELLED" ? (
+        ) : sub.status === "CANCELLED" || sub.status === "EXPIRED" ? (
           <p className="text-[13px] text-[var(--pv-text-muted)]">
             This subscription is closed. Start a new one from any Convert /
             Download action.
@@ -550,6 +550,8 @@ function statusLabel(sub: SubscriptionSnapshot): string {
       return "Payment past due";
     case "CANCELLED":
       return "Cancelled";
+    case "EXPIRED":
+      return "Expired";
     case "PAUSED":
       return "Paused";
     default:

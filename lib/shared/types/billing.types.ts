@@ -12,8 +12,13 @@ export type SubscriptionStatus =
   | "TRIALING"
   | "ACTIVE"
   | "PAST_DUE"
+  | "REDEMPTION"
+  | "UNPAID"
   | "CANCELLED"
+  | "EXPIRED"
   | "PAUSED"
+  | "CREATED"
+  | "PENDING"
   | "NONE";
 
 export interface Plan {
