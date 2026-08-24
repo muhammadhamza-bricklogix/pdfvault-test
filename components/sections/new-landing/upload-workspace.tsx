@@ -15,11 +15,6 @@ import {
 } from "react";
 
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
-import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
-import {
-  PAYWALL_CANCELLED_ERR_NAME,
-  requestPaywall,
-} from "@/lib/client/hooks/billing/paywall-bus";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -34,6 +29,8 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+
+import { TrustpilotWidget } from "./trustpilot-widget";
 
 const DEFAULT_ACCEPTED_EXTENSIONS = [
   "pdf",
@@ -353,85 +350,129 @@ export function UploadWorkspace({
         return;
       }
 
-      // Convert-to-PDF flow for signed-in users on convert routes.
-      // We convert FIRST so the paywall can show the real document
-      // instead of a blurred mock, then check entitlement.
+      // Convert routes for signed-in users. Two branches by direction:
       //
-      // Use `ensureFreshEntitlement()` (not the raw snapshot) — the
-      // snapshot fails closed while `useSubscriptionQuery` hasn't
-      // resolved yet, and this call-site runs on the very first render
-      // after a post-signin auto-resume, well before the query lands.
+      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): convert first,
+      //     save to My PDFs, land on `/dashboard`. Paywall is deferred
+      //     until the user clicks Download / Open on the row — the
+      //     conversion itself is free-to-preview so the user sees value
+      //     before being asked to pay.
+      //
+      //   • PDF→X (`exportFormat` set, e.g. pdf-to-word): no early
+      //     paywall here. Save + open editor with `?export=<format>`;
+      //     `useExportEditor` handles the paywall at auto-export time
+      //     (auth-chain items 1–4 in CLAUDE.md).
       let earlyConvertedPdf: File | null = null;
 
       if (requiresAuth && authLoaded && isSignedIn) {
-        if (!isPdf(picked)) {
-          const convKey = toast.loading({
-            description: `Preparing ${picked.name}…`,
-            title: "Converting to PDF",
-          });
+        const isConvertToPdf = !exportFormat;
 
-          try {
-            earlyConvertedPdf = await logger.span(
-              "upload.convert_to_pdf",
-              "upload.convert",
-              () => uploadAsPdf(picked),
-              { size: picked.size, ext: getExtension(picked.name) },
-            );
-          } catch (convErr) {
-            logger.captureError(convErr, "upload.early_convert", {
-              filename: picked.name,
-              size: picked.size,
+        if (isConvertToPdf) {
+          if (!isPdf(picked)) {
+            const convKey = toast.loading({
+              description: `Preparing ${picked.name}…`,
+              title: "Converting to PDF",
             });
+
+            try {
+              earlyConvertedPdf = await logger.span(
+                "upload.convert_to_pdf",
+                "upload.convert",
+                () => uploadAsPdf(picked),
+                { size: picked.size, ext: getExtension(picked.name) },
+              );
+            } catch (convErr) {
+              logger.captureError(convErr, "upload.early_convert", {
+                filename: picked.name,
+                size: picked.size,
+              });
+              toast.close(convKey);
+              toast.error({
+                title: "Conversion failed",
+                description:
+                  convErr instanceof Error ? convErr.message : undefined,
+              });
+
+              return;
+            }
+
             toast.close(convKey);
-            toast.error({
-              title: "Conversion failed",
-              description:
-                convErr instanceof Error ? convErr.message : undefined,
-            });
-
-            return;
+          } else {
+            earlyConvertedPdf = picked;
           }
 
-          toast.close(convKey);
-        } else {
-          earlyConvertedPdf = picked;
-        }
-
-        const entitled = await ensureFreshEntitlement();
-
-        logger.breadcrumb("upload", "entitlement.checked", { entitled });
-
-        if (!entitled) {
-          logger.event(EVENTS.UPLOAD_PAYWALL_SHOWN, "info", {
-            sourceExt: getExtension(picked.name),
-          });
-          const objectUrl = URL.createObjectURL(earlyConvertedPdf);
+          // Save the converted PDF to My PDFs, then hand the user off
+          // to the dashboard where paywall gates apply on download /
+          // open. Duplicate-filename check reuses the existing doc so
+          // users can't stack copies with the same name.
+          let dashboardDocId: string | null = null;
 
           try {
-            const outcome = await requestPaywall({
-              filename: picked.name,
-              previewObjectUrl: objectUrl,
-              sourceExt: getExtension(picked.name),
-              targetExt: "pdf",
+            const existing = await findDuplicateByFilename(
+              earlyConvertedPdf.name,
+            );
+
+            if (existing) dashboardDocId = existing.id;
+          } catch (dupErr) {
+            logger.warn("duplicate-name check failed", dupErr);
+          }
+
+          if (!dashboardDocId) {
+            const savingKey = toast.loading({
+              title: "Saving to My PDFs",
+              description: earlyConvertedPdf.name,
             });
 
-            if (outcome !== "success") {
-              logger.event(EVENTS.UPLOAD_PAYWALL_CANCELLED, "info");
+            try {
+              const document = await logger.span(
+                "upload.save_converted_pdf",
+                "upload.save",
+                () =>
+                  documentsService.uploadDocument({
+                    file: earlyConvertedPdf as File,
+                  }),
+                { size: earlyConvertedPdf.size },
+              );
+
+              dashboardDocId = document.id;
+              logger.event(EVENTS.UPLOAD_SAVE_BEFORE_OPEN_OK, "info", {
+                documentId: document.id,
+                size: earlyConvertedPdf.size,
+              });
+            } catch (saveErr) {
+              logger.captureError(saveErr, "upload.save_converted_pdf", {
+                filename: earlyConvertedPdf.name,
+                size: earlyConvertedPdf.size,
+              });
+              toast.close(savingKey);
+              toast.error({
+                title: "Couldn't save to My PDFs",
+                description:
+                  saveErr instanceof Error ? saveErr.message : undefined,
+              });
 
               return;
+            } finally {
+              toast.close(savingKey);
             }
-            logger.event(EVENTS.UPLOAD_PAYWALL_SUCCESS, "info");
-          } catch (err) {
-            if (
-              (err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME
-            ) {
-              return;
-            }
-            throw err;
-          } finally {
-            URL.revokeObjectURL(objectUrl);
           }
+
+          logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
+            documentId: dashboardDocId,
+            tool: null,
+            exportFormat: null,
+          });
+          toast.success({
+            title: "Ready in My PDFs",
+            description: `${earlyConvertedPdf.name} is available in your dashboard.`,
+          });
+          router.push(ROUTES.APP.DASHBOARD);
+
+          return;
         }
+
+        // PDF→X: input is already PDF, editor's export gate handles paywall.
+        earlyConvertedPdf = picked;
       }
 
       setOpening(true);
@@ -845,23 +886,16 @@ export function UploadWorkspace({
             className="origin-center scale-[1.35] sm:scale-[1.6]"
             style={{ height: 32, width: "min(360px, 100%)" }}
           >
-            <div
-              className="trustpilot-widget"
-              data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-              data-locale="en-US"
-              data-style-height="20px"
-              data-style-width="100%"
-              data-template-id="5419b637fa0340045cd0c936"
-              data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-            >
-              <a
-                href="https://www.trustpilot.com/review/pdfvault.ai"
-                rel="noopener"
-                target="_blank"
-              >
-                Trustpilot
-              </a>
-            </div>
+            <TrustpilotWidget
+              businessUnitId="6a5635cc9545fd0a55b8cee6"
+              locale="en-US"
+              reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
+              skeletonHeight={20}
+              styleHeight="20px"
+              styleWidth="100%"
+              templateId="5419b637fa0340045cd0c936"
+              token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+            />
           </div>
         </div>
         <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
@@ -1036,24 +1070,17 @@ export function UploadWorkspace({
       {/* Trustpilot Micro TrustScore — same widget as the `hero` variant
           above so both entry points show the same social proof. */}
       <div className="mt-10 flex justify-center">
-        <div
-          className="trustpilot-widget"
-          data-businessunit-id="6a5635cc9545fd0a55b8cee6"
-          data-locale="en-US"
-          data-style-height="20px"
-          data-style-width="100%"
-          data-template-id="5419b637fa0340045cd0c936"
-          data-token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-          style={{ maxWidth: 320, width: "100%" }}
-        >
-          <a
-            href="https://www.trustpilot.com/review/pdfvault.ai"
-            rel="noopener"
-            target="_blank"
-          >
-            Trustpilot
-          </a>
-        </div>
+        <TrustpilotWidget
+          businessUnitId="6a5635cc9545fd0a55b8cee6"
+          locale="en-US"
+          maxWidth={320}
+          reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
+          skeletonHeight={20}
+          styleHeight="20px"
+          styleWidth="100%"
+          templateId="5419b637fa0340045cd0c936"
+          token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+        />
       </div>
       <Script
         async

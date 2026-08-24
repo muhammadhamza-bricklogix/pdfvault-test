@@ -8,7 +8,7 @@ import type {
 
 import { Button, Input, TextField } from "@heroui/react";
 import { MantineProvider } from "@mantine/core";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { MantineReactTable } from "mantine-react-table";
 
@@ -19,8 +19,8 @@ import {
   formatDocumentBytes,
   formatDocumentDate,
 } from "@/lib/client/utils/documents-table-display";
+import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
-import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
@@ -71,6 +71,7 @@ const EmptyDocuments = (
 
 export function DocumentsTable() {
   const query = useDocumentsQuery();
+  const router = useRouter();
   const [renameTarget, setRenameTarget] = useState<Document | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Document[] | null>(
@@ -147,12 +148,22 @@ export function DocumentsTable() {
         accessorKey: "filename",
         header: "Name",
         Cell: ({ row }) => (
-          <Link
-            className="line-clamp-1 font-medium text-[var(--color-foreground)] underline-offset-2 hover:underline"
-            href={`${ROUTES.TOOLS.PDF_EDITOR}?id=${row.original.id}`}
+          <button
+            className="line-clamp-1 cursor-pointer text-left font-medium text-[var(--color-foreground)] underline-offset-2 hover:underline"
+            type="button"
+            onClick={() => {
+              void openDocumentInEditor(router, row.original.id).catch(
+                (err) => {
+                  toast.error({
+                    title: "Couldn't open file",
+                    description: err instanceof Error ? err.message : undefined,
+                  });
+                },
+              );
+            }}
           >
             {row.original.filename}
-          </Link>
+          </button>
         ),
       },
       {
@@ -213,7 +224,7 @@ export function DocumentsTable() {
         ),
       },
     ],
-    [],
+    [router],
   );
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});

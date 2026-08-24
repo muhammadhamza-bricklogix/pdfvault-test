@@ -16,8 +16,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
+import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
-import { ROUTES } from "@/lib/shared/constants/routes";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -36,8 +36,15 @@ export function DocumentActionsMenu({
   const queryClient = useQueryClient();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  const handleOpen = () => {
-    router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${doc.id}`);
+  const handleOpen = async () => {
+    try {
+      await openDocumentInEditor(router, doc.id);
+    } catch (err) {
+      toast.error({
+        title: "Couldn't open file",
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
   };
 
   const handleDownload = async () => {
@@ -60,7 +67,7 @@ export function DocumentActionsMenu({
           className="text-default-600"
           size="sm"
           variant="ghost"
-          onPress={handleOpen}
+          onPress={() => void handleOpen()}
         >
           <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
         </Button>

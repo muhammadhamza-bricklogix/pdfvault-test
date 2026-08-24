@@ -11,9 +11,9 @@ import { useEffect, useMemo, useState } from "react";
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
 import { useProductTour } from "@/lib/client/tour/use-product-tour";
+import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
-import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
@@ -156,7 +156,14 @@ export function DashboardHome() {
         onDelete={(row) => setDeleteTarget(row.doc)}
         onDownload={(row) => void handleDownload(row)}
         onHistory={(row) => setHistoryTarget(row.doc)}
-        onOpen={(row) => router.push(`${ROUTES.TOOLS.PDF_EDITOR}?id=${row.id}`)}
+        onOpen={(row) => {
+          void openDocumentInEditor(router, row.id).catch((err) => {
+            toast.error({
+              title: "Couldn't open file",
+              description: err instanceof Error ? err.message : undefined,
+            });
+          });
+        }}
         onRename={(row) => setRenameTarget(row.doc)}
       />
 
