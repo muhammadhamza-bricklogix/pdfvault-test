@@ -45,13 +45,28 @@ export function isPdf(file: File): boolean {
   return file.type === "application/pdf" || getExtension(file) === "pdf";
 }
 
+export interface UploadAsPdfOptions {
+  /**
+   * Skip the client-side paywall pre-flight gate so the conversion
+   * attempt reaches the backend even when the entitlement snapshot is
+   * unset / false. The backend still validates and may return 402 —
+   * callers are responsible for handling that outcome. Used by the
+   * pending-conversion runner where we want the converted PDF to land
+   * in the user's library BEFORE any paywall interaction.
+   */
+  bypassPaywallGate?: boolean;
+}
+
 /**
  * Routes non-PDF uploads through the backend conversion endpoint and returns
  * a PDF File ready to load into the editor. PDFs pass straight through.
  * Throws a user-facing Error for formats that don't have a backend converter
  * yet — callers should surface the message via toast.
  */
-export async function uploadAsPdf(file: File): Promise<File> {
+export async function uploadAsPdf(
+  file: File,
+  options?: UploadAsPdfOptions,
+): Promise<File> {
   if (isPdf(file)) return file;
 
   const ext = getExtension(file);
@@ -67,7 +82,9 @@ export async function uploadAsPdf(file: File): Promise<File> {
     throw new Error("File type not supported.");
   }
 
-  const result = await conversionService.convert({ file, type });
+  const result = options?.bypassPaywallGate
+    ? await conversionService.convertPreview({ file, type })
+    : await conversionService.convert({ file, type });
   const baseName = file.name.replace(/\.[^.]+$/, "") || "document";
   const arrayBuffer = await result.blob.arrayBuffer();
 

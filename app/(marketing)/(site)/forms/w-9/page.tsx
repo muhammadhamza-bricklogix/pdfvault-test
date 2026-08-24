@@ -4,6 +4,7 @@ import {
   W9LandingContent,
   buildW9JsonLd,
 } from "@/components/sections/forms/W9LandingContent";
+import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 const SITE_URL = (
@@ -41,6 +42,7 @@ export default function W9Page() {
 
   return (
     <>
+      <LandingHeader />
       <W9LandingContent />
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howTo) }}

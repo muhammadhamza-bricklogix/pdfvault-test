@@ -997,27 +997,6 @@ export function UploadWorkspace({
         </div>
       </div>
 
-      {/* Trustpilot Micro TrustScore — same widget as the `hero` variant
-          above so both entry points show the same social proof. */}
-      <div className="mt-10 flex justify-center">
-        <TrustpilotWidget
-          businessUnitId="6a5635cc9545fd0a55b8cee6"
-          locale="en-US"
-          maxWidth={320}
-          reviewUrl="https://www.trustpilot.com/review/pdfvault.ai"
-          skeletonHeight={20}
-          styleHeight="20px"
-          styleWidth="100%"
-          templateId="5419b637fa0340045cd0c936"
-          token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-        />
-      </div>
-      <Script
-        async
-        id="trustpilot-bootstrap"
-        src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
-        strategy="afterInteractive"
-      />
     </div>
   );
 }

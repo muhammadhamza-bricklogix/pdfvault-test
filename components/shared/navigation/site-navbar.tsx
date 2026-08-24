@@ -29,7 +29,15 @@ const DRAWER_LINKS = [
 // Route prefixes that render their own bespoke chrome (logo + language) and
 // don't want the marketing SiteNavbar stacked on top. Keeping this local so
 // SiteFooter can mirror the same list without a shared import cycle.
-const HIDE_ON_PATHNAMES = ["/sign-in", "/sign-up", "/forgot-password"];
+const HIDE_ON_PATHNAMES = [
+  "/sign-in",
+  "/sign-up",
+  "/forgot-password",
+  // /forms/w-9 renders the LandingHeader inside its page so its chrome
+  // matches the marketing landing page. Bail out here to prevent
+  // SiteNavbar stacking on top.
+  "/forms/w-9",
+];
 
 // Editor / tool routes where a signed-out user may have a pending file +
 // edits waiting in IndexedDB. Sign-in / Sign-up nav from these routes

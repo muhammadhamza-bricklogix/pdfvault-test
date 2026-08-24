@@ -36,7 +36,13 @@ export async function runPendingConversion(
 
   try {
     store.setStatus(tempId, "converting");
-    const pdfFile = isPdf(file) ? file : await uploadAsPdf(file);
+    // `bypassPaywallGate: true` skips the axios pre-flight paywall
+    // check on `/conversion/*`. The user hasn't been asked to pay yet
+    // by design — the paywall for this flow only fires when they
+    // click Open / Download on the finished row in the dashboard.
+    const pdfFile = isPdf(file)
+      ? file
+      : await uploadAsPdf(file, { bypassPaywallGate: true });
 
     store.setStatus(tempId, "uploading");
     await documentsService.uploadDocument({ file: pdfFile });
