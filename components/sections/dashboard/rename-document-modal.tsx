@@ -92,11 +92,12 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
             <Modal.Heading>Rename document</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
-            {/* `px-1` insets the TextField 4px from the Modal.Body edges so
+            {/* `p-1` insets the TextField 4px from the Modal.Body edges so
                 HeroUI's focus ring on the Input doesn't get shaved by the
-                Modal.Dialog's ~24px rounded corners. */}
+                Modal.Dialog's rounded corners (bottom edge was clipping the
+                ring — vertical inset is as necessary as the horizontal one). */}
             <form
-              className="flex flex-col gap-3 px-1"
+              className="flex flex-col gap-3 p-1"
               onSubmit={(e) => {
                 e.preventDefault();
                 void handleSubmit();

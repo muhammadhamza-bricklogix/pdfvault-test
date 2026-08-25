@@ -828,17 +828,35 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     let startX = 0;
     let startY = 0;
     let startScrollTop = 0;
+    // Track whether the touch started inside the PDF viewer element.
+    // The listeners below are attached to `document` so Fabric's own
+    // touch handling doesn't swallow them, but that means every touch
+    // on the page fires here — including swipes on the BottomDock's
+    // tool-tabs strip and the FloatingTextToolbar. Without this guard,
+    // a horizontal swipe on the dock (dx=278, dy=0) satisfies the
+    // `absDx > absDy && absDx > 50 && !hasHorizontalOverflow` branch
+    // below and inadvertently flips PDF pages. QA report 2026-08-26:
+    // "when I scroll the bottom nav the above page viewer is scrolling
+    // automatically" — actually the PAGE was changing, not scrolling.
+    let touchStartedInsideViewer = false;
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       startScrollTop = el.scrollTop;
+      const target = e.target as Node | null;
+
+      touchStartedInsideViewer = Boolean(target && el.contains(target));
     };
 
     const onTouchEnd = (e: TouchEvent) => {
       if (e.changedTouches.length !== 1) return;
       if (mobilePageNavRef.current) return;
+      // Bail if the gesture started outside the viewer — dock, toolbar,
+      // hamburger menu, modal chrome, etc. See `touchStartedInsideViewer`
+      // comment above for the failure mode this prevents.
+      if (!touchStartedInsideViewer) return;
 
       const state = usePdfEditorStore.getState();
 

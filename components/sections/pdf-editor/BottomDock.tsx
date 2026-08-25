@@ -65,16 +65,13 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
     return () => window.removeEventListener("editor:toggle-thumbs", toggle);
   }, []);
 
-  // JS-level touch containment. CSS `touch-action` alone doesn't hold on
-  // iOS Safari for `position: fixed` overlays — vertical drags on the
-  // dock's padding/gaps still bubble up and scroll the PDF viewer
-  // beneath. This listener runs on the outer dock with
-  // `{ passive: false }` so we can `preventDefault()` mid-gesture, which
-  // iOS respects unconditionally. We only allow the browser's native
-  // behavior for touches that both (a) start on an element inside a
-  // horizontal scroller marked `data-touch-scroll-x` AND (b) are
-  // horizontal-dominant. Everything else is preventDefault'd → no
-  // scroll leakage. Logs are intentional for QA — remove once verified.
+  // Observability logs so we can quickly diagnose any future touch
+  // regressions on this dock — the previous "page above scrolls when I
+  // swipe the dock" bug turned out to be `PdfViewerCanvas`'s
+  // `document`-scoped touchend triggering page navigation on the dock's
+  // horizontal swipe (2026-08-26 QA). Real fix lives there — a guard
+  // that only fires page-nav for touches starting inside the viewer.
+  // These logs are cheap; leave them until we're confident.
   useEffect(() => {
     const el = rootRef.current;
 
@@ -108,26 +105,18 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
       const isHorizontal = Math.abs(dx) > Math.abs(dy);
-      const shouldAllow = insideScroller && isHorizontal;
 
-      if (!shouldAllow && event.cancelable) {
-        event.preventDefault();
-      }
       // eslint-disable-next-line no-console
       console.log("[PDFedits] dock touchmove", {
         dx: Math.round(dx),
         dy: Math.round(dy),
         isHorizontal,
         insideScroller,
-        prevented: !shouldAllow,
       });
     };
 
-    // `passive: false` is required to call preventDefault() on touchmove.
-    // iOS Safari and Chrome treat the default as `passive: true` on the
-    // document root, but not when we attach explicitly with the option.
     el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: true });
 
     return () => {
       el.removeEventListener("touchstart", onStart);

@@ -111,14 +111,12 @@ export function FloatingTextToolbar({
   const activeObjRef = useRef<IText | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
 
-  // JS-level touch containment for the mobile toolbar — same reasoning
-  // as the BottomDock listener. iOS Safari doesn't respect
-  // `touch-action: none` on `position: fixed` overlays for gestures
-  // that start on padding, so we intercept touchmove ourselves with
-  // `{ passive: false }`. Horizontal scrolls on the inner
-  // `data-touch-scroll-x` strip are allowed through; everything else
-  // is preventDefault'd so the PDF viewer above never scrolls. Logs
-  // stay for QA verification.
+  // Observability logs for touch behaviour on the mobile toolbar. The
+  // real "page above swipes when I swipe the toolbar" bug was in
+  // `PdfViewerCanvas`'s document-scoped page-nav handler firing on
+  // touches outside the viewer (fixed 2026-08-26 with a
+  // `touchStartedInsideViewer` guard). Keeping the logs for now so any
+  // future regressions surface quickly on-device.
   useEffect(() => {
     if (!isMobile) return;
     const el = rootRef.current;
@@ -153,23 +151,18 @@ export function FloatingTextToolbar({
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
       const isHorizontal = Math.abs(dx) > Math.abs(dy);
-      const shouldAllow = insideScroller && isHorizontal;
 
-      if (!shouldAllow && event.cancelable) {
-        event.preventDefault();
-      }
       // eslint-disable-next-line no-console
       console.log("[PDFedits] text-toolbar touchmove", {
         dx: Math.round(dx),
         dy: Math.round(dy),
         isHorizontal,
         insideScroller,
-        prevented: !shouldAllow,
       });
     };
 
     el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: true });
 
     return () => {
       el.removeEventListener("touchstart", onStart);
