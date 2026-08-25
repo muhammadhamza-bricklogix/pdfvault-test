@@ -67,7 +67,7 @@ export function CookiePolicyContent() {
     <>
       <div className="mb-6" id="c-meta">
         <p>
-          <strong>Updated date:</strong> 22 July 2026.
+          <strong>Updated date:</strong> 24 August 2026.
         </p>
         <p className="mt-2">
           <strong>Address:</strong> Dimostheni Severi 12, 6th floor, Flat/Office
@@ -85,6 +85,11 @@ export function CookiePolicyContent() {
           technologies. Session cookies expire when you close your browser;
           persistent cookies remain until a set expiration date or until you
           delete them.
+        </p>
+        <p className="mt-3">
+          This Cookie Policy forms part of, and should be read together with,
+          our Privacy Policy, which describes more generally how we process
+          personal data.
         </p>
       </LegalSectionCard>
 
@@ -110,7 +115,10 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Essential for the Service to function; they cannot be disabled. They
-          include authentication and security cookies.
+          include authentication and security cookies. The legal basis for
+          these cookies is our legitimate interest in operating a secure,
+          functioning Service; consent is not required for strictly necessary
+          cookies.
         </p>
         <CookieTable
           rows={[
@@ -142,7 +150,8 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Remember your preferences and choices to make the Service more
-          convenient to use.
+          convenient to use. These are set only with your consent where
+          required by applicable law.
         </p>
         <CookieTable
           rows={[
@@ -174,7 +183,10 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Help us understand how visitors use the Service so we can improve it.
-          Data is aggregated and does not identify you individually.
+          These cookies assign a pseudonymous identifier to your browser; we
+          use the resulting data to produce aggregated statistics and do not
+          use it to identify you by name. Analytics cookies are set only with
+          your consent where required by applicable law.
         </p>
         <CookieTable
           rows={[
@@ -198,88 +210,54 @@ export function CookiePolicyContent() {
           Marketing and advertising cookies
         </p>
         <p>
-          We do not currently serve advertising. If we introduce advertising in
-          the future, we will update this Policy and obtain fresh consent before
-          setting any advertising cookies.
-        </p>
-
-        <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
-          Cookies observed from google.com
-        </p>
-        <p>
-          A July 2026 scan of the <code>/terms</code> page also showed the
-          following cookies associated with google.com. This set includes Google
-          account-linked cookies rather than standard anonymous analytics
-          cookies, so depending on the answer it must be reclassified and
-          disclosed above as an analytics, advertising, or sign-in integration,
-          and gated behind consent accordingly before this Policy is finalized.
+          We do not display third-party advertisements on the Service. However,
+          we advertise PDFVault through Google Ads, and we use Google
+          advertising cookies and pixels on the Service to measure the
+          performance of those campaigns (conversion tracking) and, where
+          enabled, to build audiences for remarketing. These cookies are set
+          only with your consent where required by applicable law, and you can
+          withdraw consent at any time via the &ldquo;Cookie Settings&rdquo;
+          link (see Section 5). Under some US state privacy laws, this activity
+          may constitute a &ldquo;sale&rdquo; or &ldquo;sharing&rdquo; of
+          personal information, and the opt-out rights described in Section 5
+          and in our Privacy Policy apply to it.
         </p>
         <CookieTable
           rows={[
             {
-              name: "SID, HSID, SSID",
-              provider: "google.com",
+              name: "_gcl_au",
+              provider: "Google Ads (via Google tag)",
               purpose:
-                "Google account authentication — helps protect user data and Google Account sign-in from unauthorized access.",
-              expiry: "2 years",
+                "Stores ad-click information to measure conversions from our Google Ads campaigns.",
+              expiry: "90 days",
             },
             {
-              name: "APISID, SAPISID",
-              provider: "google.com",
+              name: "_gcl_aw",
+              provider: "Google Ads",
               purpose:
-                "Google account authentication — used to verify Google Account identity for signed-in requests.",
-              expiry: "2 years",
+                "Stores the click identifier (GCLID) when you arrive via a Google ad, for conversion attribution.",
+              expiry: "90 days",
             },
             {
-              name: "__Secure-1PSID, __Secure-1PAPISID, __Secure-1PSIDCC, __Secure-1PSIDTS",
-              provider: "google.com",
+              name: "IDE",
+              provider: "doubleclick.net (Google)",
               purpose:
-                "Secure (first-party) variants of the account-authentication cookies above.",
-              expiry: "2 years",
+                "Used by Google advertising services for ad measurement and, where enabled, remarketing.",
+              expiry:
+                "Up to 13 months (EEA/UK) / up to 2 years elsewhere",
             },
             {
-              name: "__Secure-3PSID, __Secure-3PAPISID, __Secure-3PSIDCC, __Secure-3PSIDTS",
-              provider: "google.com",
-              purpose:
-                "Secure cross-site variants of the account-authentication cookies above.",
-              expiry: "1 year",
-            },
-            {
-              name: "NID",
-              provider: "google.com",
-              purpose:
-                "Per Google, used to store preferences and, where applicable, ad-personalization settings.",
-              expiry: "—",
-            },
-            {
-              name: "AEC",
-              provider: "google.com",
-              purpose:
-                "Per Google, used for security purposes, including protecting against abusive requests.",
-              expiry: "—",
-            },
-            {
-              name: "__Secure-ENID",
-              provider: "google.com",
-              purpose:
-                "Per Google, used for ad personalization and measurement.",
-              expiry: "—",
-            },
-            {
-              name: "__Secure-BUCKET",
-              provider: "google.com",
-              purpose: "Per Google, used for experiment / feature bucketing.",
-              expiry: "Session",
-            },
-            {
-              name: "SEARCH_SAMESITE, S",
-              provider: "google.com",
-              purpose:
-                "Per Google, session and site-compatibility cookies; the “S” cookie observed referenced a Google billing UI component.",
-              expiry: "Session",
+              name: "test_cookie",
+              provider: "doubleclick.net (Google)",
+              purpose: "Checks whether your browser supports cookies.",
+              expiry: "15 minutes",
             },
           ]}
         />
+        <p className="mt-3 text-[13px] italic text-[var(--pv-text-tertiary)]">
+          The exact cookies set may vary with how the Google tag is configured;
+          we review and update this table when our configuration changes.
+        </p>
       </LegalSectionCard>
 
       <LegalSectionCard
@@ -290,9 +268,33 @@ export function CookiePolicyContent() {
         <p>
           Some third-party services we use may set their own cookies, including
           Clerk (authentication), Adyen (fraud prevention during checkout),
-          GoDaddy (hosting and email), Zendesk (customer support), CloudConvert
-          (file conversion), and Google LLC (analytics). These providers&rsquo;
-          own privacy and cookie policies apply to their processing.
+          Zendesk (customer support), CloudConvert (file conversion), and
+          Google LLC (analytics and sign-in). These providers&rsquo; own
+          privacy and cookie policies apply to their processing.
+        </p>
+
+        <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
+          Cookies associated with Google sign-in
+        </p>
+        <p>
+          The only Google integration on the Service is the optional
+          &ldquo;Sign in with Google&rdquo; feature (provided via Clerk) on our
+          sign-in and sign-up pages. No page on the Service automatically loads
+          Google-owned scripts, and Google cookies are not set for visitors who
+          do not use Google sign-in.
+        </p>
+        <p className="mt-3">
+          If you choose to sign in with Google, the sign-in flow redirects
+          through accounts.google.com, where Google LLC may set or refresh its
+          own account cookies (for example SID, HSID, SSID, APISID, SAPISID,
+          and their __Secure-1P / __Secure-3P variants) on the google.com
+          domain. These cookies are set by Google on its own domain, not by us;
+          we cannot set, read, or control them. They are used by Google to
+          authenticate your Google Account and protect it from unauthorized
+          access, and are governed by Google&rsquo;s own Privacy Policy. If you
+          are already signed in to a Google Account in your browser,
+          Google&rsquo;s cookies may be present on your device independently of
+          the Service.
         </p>
       </LegalSectionCard>
 
@@ -305,7 +307,9 @@ export function CookiePolicyContent() {
           <strong>EEA and UK visitors:</strong> on your first visit you will see
           a cookie consent banner allowing you to accept or reject non-essential
           cookies before they are set. You can change or withdraw your consent
-          at any time via the &ldquo;Cookie Settings&rdquo; link in the footer.
+          at any time via the &ldquo;Cookie Settings&rdquo; link in the footer
+          of the Service. Withdrawing consent does not affect the lawfulness of
+          processing before withdrawal.
         </p>
         <p className="mt-3">
           <strong>US visitors:</strong> where state law grants you the right to
@@ -328,7 +332,11 @@ export function CookiePolicyContent() {
         title="Do Not Track"
       >
         <p>
-          Our website does not currently respond to DNT signals but honors GPC.
+          Some browsers offer a &ldquo;Do Not Track&rdquo; (DNT) signal. There
+          is currently no accepted industry standard for responding to DNT
+          signals, and our website does not currently respond to them. We do,
+          however, honor Global Privacy Control (GPC) signals as described in
+          Section 5.
         </p>
       </LegalSectionCard>
 
@@ -338,9 +346,10 @@ export function CookiePolicyContent() {
         title="Changes to This Policy"
       >
         <p>
-          We may update this Cookie Policy periodically. Material changes will
-          be announced via a notice on the Service, and the &ldquo;Effective
-          date&rdquo; above will be updated.
+          We may update this Cookie Policy periodically, including to reflect
+          changes in the cookies we use. Material changes will be announced via
+          a notice on the Service, and the &ldquo;Updated date&rdquo; above
+          will be revised accordingly.
         </p>
       </LegalSectionCard>
 
