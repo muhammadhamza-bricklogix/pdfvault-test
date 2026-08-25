@@ -102,9 +102,21 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   };
 
   return (
+    // `touch-none` (= `touch-action: none`) on the outer fixed chrome
+    // so ANY touch that starts on the dock — including padding between
+    // buttons, gaps around the strip, the Manage button, or the
+    // thumbnail-strip wrapper — is consumed with no scroll effect. The
+    // inner horizontal scroll strip below re-enables `touch-pan-x` for
+    // itself so users can still swipe the tool tabs left/right. Button
+    // taps are unaffected because `touch-action` doesn't gate click
+    // events. Prior `touch-pan-x` on the inner strip only worked when
+    // the finger landed EXACTLY on that scroll strip; touches on the
+    // outer div's padding still leaked to the PDF viewer above via
+    // iOS Safari's default scroll-chaining behavior. QA report
+    // 2026-08-26 (second pass).
     <div
       aria-label="Editor dock"
-      className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 flex flex-col border-t border-default-200 bg-[var(--color-background)]/95 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)] backdrop-blur-md"
+      className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 flex touch-none flex-col border-t border-default-200 bg-[var(--color-background)]/95 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)] backdrop-blur-md"
       role="toolbar"
     >
       <ShapePropertiesContent
