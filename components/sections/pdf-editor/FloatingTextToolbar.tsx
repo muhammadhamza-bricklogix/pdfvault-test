@@ -109,6 +109,73 @@ export function FloatingTextToolbar({
 
   const [style, setStyle] = useState<TextStyle>(DEFAULT_STYLE);
   const activeObjRef = useRef<IText | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
+
+  // JS-level touch containment for the mobile toolbar — same reasoning
+  // as the BottomDock listener. iOS Safari doesn't respect
+  // `touch-action: none` on `position: fixed` overlays for gestures
+  // that start on padding, so we intercept touchmove ourselves with
+  // `{ passive: false }`. Horizontal scrolls on the inner
+  // `data-touch-scroll-x` strip are allowed through; everything else
+  // is preventDefault'd so the PDF viewer above never scrolls. Logs
+  // stay for QA verification.
+  useEffect(() => {
+    if (!isMobile) return;
+    const el = rootRef.current;
+
+    if (!el) return;
+    let startX = 0;
+    let startY = 0;
+    let insideScroller = false;
+
+    const onStart = (event: TouchEvent) => {
+      const t = event.touches[0];
+
+      if (!t) return;
+      startX = t.clientX;
+      startY = t.clientY;
+      const target = event.target as HTMLElement | null;
+
+      insideScroller = Boolean(target?.closest?.("[data-touch-scroll-x]"));
+      // eslint-disable-next-line no-console
+      console.log("[PDFedits] text-toolbar touchstart", {
+        x: Math.round(startX),
+        y: Math.round(startY),
+        insideScroller,
+        target: target?.tagName,
+      });
+    };
+
+    const onMove = (event: TouchEvent) => {
+      const t = event.touches[0];
+
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      const isHorizontal = Math.abs(dx) > Math.abs(dy);
+      const shouldAllow = insideScroller && isHorizontal;
+
+      if (!shouldAllow && event.cancelable) {
+        event.preventDefault();
+      }
+      // eslint-disable-next-line no-console
+      console.log("[PDFedits] text-toolbar touchmove", {
+        dx: Math.round(dx),
+        dy: Math.round(dy),
+        isHorizontal,
+        insideScroller,
+        prevented: !shouldAllow,
+      });
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+    };
+  }, [isMobile]);
 
   // Show when editText tool is active OR when a text object is selected.
   const isEditTextMode = activeTool === "editText";
@@ -278,6 +345,7 @@ export function FloatingTextToolbar({
     // touch-action since it's a floating right-side panel that doesn't
     // sit atop the PDF viewer's scroll area.
     <aside
+      ref={rootRef}
       aria-label="Text formatting"
       className={
         isMobile
@@ -310,6 +378,7 @@ export function FloatingTextToolbar({
             ? "flex touch-pan-x items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             : "flex flex-col gap-4"
         }
+        data-touch-scroll-x={isMobile ? "" : undefined}
       >
         {/* Font family */}
         <div className="flex shrink-0 flex-col gap-1.5">

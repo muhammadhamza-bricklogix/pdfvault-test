@@ -15,7 +15,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -55,6 +55,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
     (s) => s.setIsPageNumbersModalOpen,
   );
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const toggle = () => setIsThumbsOpen((prev) => !prev);
@@ -62,6 +63,76 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
     window.addEventListener("editor:toggle-thumbs", toggle);
 
     return () => window.removeEventListener("editor:toggle-thumbs", toggle);
+  }, []);
+
+  // JS-level touch containment. CSS `touch-action` alone doesn't hold on
+  // iOS Safari for `position: fixed` overlays — vertical drags on the
+  // dock's padding/gaps still bubble up and scroll the PDF viewer
+  // beneath. This listener runs on the outer dock with
+  // `{ passive: false }` so we can `preventDefault()` mid-gesture, which
+  // iOS respects unconditionally. We only allow the browser's native
+  // behavior for touches that both (a) start on an element inside a
+  // horizontal scroller marked `data-touch-scroll-x` AND (b) are
+  // horizontal-dominant. Everything else is preventDefault'd → no
+  // scroll leakage. Logs are intentional for QA — remove once verified.
+  useEffect(() => {
+    const el = rootRef.current;
+
+    if (!el) return;
+    let startX = 0;
+    let startY = 0;
+    let insideScroller = false;
+
+    const onStart = (event: TouchEvent) => {
+      const t = event.touches[0];
+
+      if (!t) return;
+      startX = t.clientX;
+      startY = t.clientY;
+      const target = event.target as HTMLElement | null;
+
+      insideScroller = Boolean(target?.closest?.("[data-touch-scroll-x]"));
+      // eslint-disable-next-line no-console
+      console.log("[PDFedits] dock touchstart", {
+        x: Math.round(startX),
+        y: Math.round(startY),
+        insideScroller,
+        target: target?.tagName,
+      });
+    };
+
+    const onMove = (event: TouchEvent) => {
+      const t = event.touches[0];
+
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      const isHorizontal = Math.abs(dx) > Math.abs(dy);
+      const shouldAllow = insideScroller && isHorizontal;
+
+      if (!shouldAllow && event.cancelable) {
+        event.preventDefault();
+      }
+      // eslint-disable-next-line no-console
+      console.log("[PDFedits] dock touchmove", {
+        dx: Math.round(dx),
+        dy: Math.round(dy),
+        isHorizontal,
+        insideScroller,
+        prevented: !shouldAllow,
+      });
+    };
+
+    // `passive: false` is required to call preventDefault() on touchmove.
+    // iOS Safari and Chrome treat the default as `passive: true` on the
+    // document root, but not when we attach explicitly with the option.
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+    };
   }, []);
 
   const handleAction = (id: string) => {
@@ -115,6 +186,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
     // iOS Safari's default scroll-chaining behavior. QA report
     // 2026-08-26 (second pass).
     <div
+      ref={rootRef}
       aria-label="Editor dock"
       className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 flex touch-none flex-col border-t border-default-200 bg-[var(--color-background)]/95 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)] backdrop-blur-md"
       role="toolbar"
@@ -151,7 +223,10 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
             users saw the page slide out from under them while just trying
             to swipe the toolbar. Horizontal scrolling of the strip and tap
             clicks on the buttons are unaffected. */}
-        <div className="flex min-w-0 flex-1 touch-pan-x items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          data-touch-scroll-x
+          className="flex min-w-0 flex-1 touch-pan-x items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           <ToolsContent showLabels toolIconSize={18} />
           {ACTION_TOOLS.map((tool) => (
             <button

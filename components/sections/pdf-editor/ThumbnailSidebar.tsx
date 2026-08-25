@@ -561,13 +561,20 @@ type ThumbnailStripProps = {
 
 export function ThumbnailStrip({ onReorderPages }: ThumbnailStripProps) {
   return (
-    <div aria-label="Page thumbnails" className="w-full" role="listbox">
+    // `data-touch-scroll-x` on the wrapper (SortablePageList doesn't
+    // spread arbitrary props, so putting it there wouldn't reach the
+    // DOM). BottomDock's touchmove containment reads via `closest()`,
+    // which walks up ancestors — hitting this wrapper is enough for
+    // the "allow horizontal drag" check to pass.
+    <div
+      aria-label="Page thumbnails"
+      className="w-full"
+      data-touch-scroll-x=""
+      role="listbox"
+    >
       <SortablePageList
-        // `touch-pan-x` — this strip is mobile-only (rendered inside
-        // BottomDock) and its `overflow-x-auto` used to let vertical
-        // drags leak up to the PDF viewer, so users swiping through
-        // thumbnails would accidentally pan the PDF above. Same fix as
-        // the tool-tabs strip in BottomDock. QA report 2026-08-26.
+        // `touch-pan-x` — CSS-level intent-declaration; the JS listener
+        // on BottomDock is the authoritative gate on iOS.
         className="flex w-full touch-pan-x gap-1 overflow-x-auto overflow-y-hidden px-2 py-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1"
         layout="horizontal"
         onReorderPages={onReorderPages}

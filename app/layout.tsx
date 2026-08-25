@@ -164,6 +164,12 @@ export default function RootLayout({
         rel="preconnect"
       />
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
+      <link
+        crossOrigin="anonymous"
+        href="https://consent.cookiebot.com"
+        rel="preconnect"
+      />
+      <link href="https://consent.cookiebot.com" rel="dns-prefetch" />
       {trustpilotInviteId ? (
         <>
           <link
@@ -175,6 +181,22 @@ export default function RootLayout({
         </>
       ) : null}
 
+      {/*
+        Cookiebot consent banner. Must load in <head> before any other
+        third-party scripts so `data-blockingmode="auto"` can rewrite
+        cookie-setting <script> tags before they execute. `beforeInteractive`
+        is the only Next.js strategy that guarantees head placement during
+        SSR — `afterInteractive` injects post-hydration, which lets other
+        scripts race Cookiebot and drop cookies before consent is captured.
+      */}
+      <Script
+        data-blockingmode="auto"
+        data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
+        id="Cookiebot"
+        src="https://consent.cookiebot.com/uc.js"
+        strategy="beforeInteractive"
+        type="text/javascript"
+      />
       <Script id="weglot-lang-pref" strategy="beforeInteractive">
         {`
           try {
