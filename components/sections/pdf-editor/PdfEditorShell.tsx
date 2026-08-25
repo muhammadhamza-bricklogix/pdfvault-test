@@ -480,6 +480,40 @@ export function PdfEditorShell() {
     return true;
   });
 
+  // Reset any leftover `postSaveReloadPending` from a prior shell
+  // instance that unmounted mid-save-reload — most commonly the
+  // Hamburger → "My PDFs" flow, where `useEditorNavigationSave` fires
+  // `applyPostSaveReset(savedFile)` (sets the flag true) and
+  // immediately `router.push('/dashboard')`. The shell unmounts before
+  // `editor:post-save-render-done` can dispatch, so
+  // `clearPostSaveReloadPending()` never runs. On the next PDF open
+  // the flag is still true, which makes `usePdfLoader` skip clearing
+  // the destroyed `pdfDocument` proxy from the store — subsequent
+  // `pdfDocument.getPage()` calls (in `PdfViewerCanvas`) then throw
+  // synchronously with `Cannot read properties of null (reading
+  // 'sendWithPromise')` because the proxy's `messageHandler` was
+  // nulled by the previous unmount's `loadingTask.destroy()`. The flag
+  // is only meaningful within a single mounted shell lifetime, so
+  // clearing it at mount time is safe — a genuine in-session save-
+  // reload sets it AFTER this initializer runs. QA repro
+  // 2026-08-25: edit → hamburger → My PDFs → re-open same PDF →
+  // "Something went wrong. The tool failed to load."
+  useState(() => {
+    const state = usePdfEditorStore.getState();
+
+    if (state.postSaveReloadPending) {
+      // Also clear the stale pdfDocument. If the flag was stuck true,
+      // the store still holds the destroyed proxy from the previous
+      // session — `usePdfLoader` won't clear it (flag guard), and
+      // `PdfViewerCanvas` reads directly from the store on mount, so
+      // we need to null it here BEFORE any child hook runs a read.
+      state.setPdfDocument(null, 0);
+      state.clearPostSaveReloadPending();
+    }
+
+    return true;
+  });
+
   const file = usePdfEditorStore((s) => s.file);
   const createPdfModalKey = usePdfEditorStore((s) => s.createPdfModalKey);
   const isCreatePdfModalOpen = usePdfEditorStore((s) => s.isCreatePdfModalOpen);
