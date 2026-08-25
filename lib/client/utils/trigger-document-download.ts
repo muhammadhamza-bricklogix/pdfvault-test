@@ -20,7 +20,7 @@ function safeDownloadFilename(name: string): string {
  * dismissed gate.
  */
 export async function triggerDocumentDownload(doc: Document): Promise<void> {
-  const allowed = await gateEntitledAction();
+  const allowed = await gateEntitledAction(doc);
 
   if (!allowed) return;
 

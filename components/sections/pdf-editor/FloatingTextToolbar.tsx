@@ -116,15 +116,22 @@ export function FloatingTextToolbar({
   const visible = isEditTextMode || hasTextSelection;
 
   // Reset to defaults when leaving editText mode so the panel starts
-  // fresh next time the tool is activated.
-  useEffect(() => {
+  // fresh next time the tool is activated. State reset uses React's
+  // "adjust state during render" pattern (react-hooks/set-state-in-effect
+  // flags the effect variant); the ref reset stays in an effect because
+  // ref mutations aren't allowed during render.
+  const [prevEditTextMode, setPrevEditTextMode] = useState(isEditTextMode);
+
+  if (prevEditTextMode !== isEditTextMode) {
+    setPrevEditTextMode(isEditTextMode);
     if (!isEditTextMode) {
       setHasTextSelection(false);
       setStyle(DEFAULT_STYLE);
-      activeObjRef.current = null;
     }
-    // DEFAULT_STYLE is a stable constant defined above — intentionally omitted
-    // from deps to avoid re-triggering on every render.
+  }
+
+  useEffect(() => {
+    if (!isEditTextMode) activeObjRef.current = null;
   }, [isEditTextMode]);
 
   useEffect(() => {

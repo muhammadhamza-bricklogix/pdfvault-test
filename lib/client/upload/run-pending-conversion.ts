@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { usePendingConversionsStore } from "@/lib/client/stores/pending-conversions-store";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
@@ -11,8 +10,8 @@ let queryClientRef: QueryClient | null = null;
 /**
  * QueryProvider registers the app-level QueryClient here so
  * `runPendingConversion` (which lives outside any React tree) can
- * invalidate the documents list once the background convert + upload
- * settles. `null` on unmount so a stale client doesn't outlive HMR.
+ * invalidate the documents list once the background upload settles.
+ * `null` on unmount so a stale client doesn't outlive HMR.
  */
 export function setPendingConversionsQueryClient(
   client: QueryClient | null,
@@ -21,12 +20,17 @@ export function setPendingConversionsQueryClient(
 }
 
 /**
- * Runs the convert-to-PDF + save pipeline for one pending item, updating
- * the Zustand store's status as it progresses. Intentionally not exposed
- * as a hook — callers fire-and-forget it from the upload workspace
- * right before navigating to `/dashboard`, and the promise continues to
- * resolve after the upload page unmounts because it captures the File
- * in closure and doesn't rely on React state.
+ * Uploads the original file to `POST /documents/upload` and lets the
+ * backend handle the X→PDF conversion. The backend persists the source
+ * mimetype in `originalContentType` on the Document row so the dashboard
+ * can tell "converted" (paywalled) apart from "native PDF upload"
+ * (free). Sending a pre-converted PDF would defeat that distinction —
+ * do NOT re-add client-side `uploadAsPdf` here.
+ *
+ * Intentionally not exposed as a hook — callers fire-and-forget it from
+ * the upload workspace right before navigating to `/dashboard`, and the
+ * promise continues to resolve after the upload page unmounts because
+ * it captures the File in closure and doesn't rely on React state.
  */
 export async function runPendingConversion(
   tempId: string,
@@ -35,17 +39,8 @@ export async function runPendingConversion(
   const store = usePendingConversionsStore.getState();
 
   try {
-    store.setStatus(tempId, "converting");
-    // `bypassPaywallGate: true` skips the axios pre-flight paywall
-    // check on `/conversion/*`. The user hasn't been asked to pay yet
-    // by design — the paywall for this flow only fires when they
-    // click Open / Download on the finished row in the dashboard.
-    const pdfFile = isPdf(file)
-      ? file
-      : await uploadAsPdf(file, { bypassPaywallGate: true });
-
     store.setStatus(tempId, "uploading");
-    await documentsService.uploadDocument({ file: pdfFile });
+    await documentsService.uploadDocument({ file });
 
     logger.event("upload.pending_conversion_ok", "info", {
       tempId,

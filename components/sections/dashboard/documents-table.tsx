@@ -152,14 +152,12 @@ export function DocumentsTable() {
             className="line-clamp-1 cursor-pointer text-left font-medium text-[var(--color-foreground)] underline-offset-2 hover:underline"
             type="button"
             onClick={() => {
-              void openDocumentInEditor(router, row.original.id).catch(
-                (err) => {
-                  toast.error({
-                    title: "Couldn't open file",
-                    description: err instanceof Error ? err.message : undefined,
-                  });
-                },
-              );
+              void openDocumentInEditor(router, row.original).catch((err) => {
+                toast.error({
+                  title: "Couldn't open file",
+                  description: err instanceof Error ? err.message : undefined,
+                });
+              });
             }}
           >
             {row.original.filename}

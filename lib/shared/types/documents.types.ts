@@ -13,6 +13,17 @@ export type Document = {
   /** Presigned S3 URL — valid for ~15 minutes. */
   url: string;
   /**
+   * Original upload filename when the source wasn't a PDF (backend
+   * converted it to PDF for the editor). Null for native PDF uploads.
+   * Frontend uses `originalContentType` to distinguish paid conversions
+   * (paywall on Open/Download) from free native uploads (no paywall).
+   */
+  originalFilename?: string | null;
+  /** Original upload mimetype when the source wasn't a PDF (else null).
+   *  When non-null, the document is a converted PDF and the dashboard
+   *  gates Open/Download on entitlement. */
+  originalContentType?: string | null;
+  /**
    * Serialized PDF-editor overlay state from the last save (watermark/bg
    * config + per-page Fabric JSON). Null for fresh documents and for any
    * doc saved before the editorState column existed. Frontend treats null
@@ -22,6 +33,17 @@ export type Document = {
   createdAt: string;
   updatedAt: string;
 };
+
+/**
+ * True when the document originated from a conversion (X→PDF) rather
+ * than a native PDF upload. Drives the dashboard Open/Download paywall
+ * gate — only converted docs are paid.
+ */
+export function isConvertedDocument(
+  doc: Pick<Document, "originalContentType"> | null | undefined,
+): boolean {
+  return Boolean(doc?.originalContentType);
+}
 
 export type DocumentListResponse = Paginated<Document>;
 

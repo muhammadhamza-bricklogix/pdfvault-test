@@ -188,7 +188,7 @@ export function DashboardHome() {
         }}
         onOpen={(row) => {
           if (!row.doc) return;
-          void openDocumentInEditor(router, row.doc.id).catch((err) => {
+          void openDocumentInEditor(router, row.doc).catch((err) => {
             toast.error({
               title: "Couldn't open file",
               description: err instanceof Error ? err.message : undefined,

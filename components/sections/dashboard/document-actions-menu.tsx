@@ -38,7 +38,7 @@ export function DocumentActionsMenu({
 
   const handleOpen = async () => {
     try {
-      await openDocumentInEditor(router, doc.id);
+      await openDocumentInEditor(router, doc);
     } catch (err) {
       toast.error({
         title: "Couldn't open file",
