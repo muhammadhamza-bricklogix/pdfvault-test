@@ -448,8 +448,12 @@ export function ShapePropertiesContent({
   }
 
   const isHorizontal = orientation === "horizontal";
+  // `touch-pan-x` on the horizontal (mobile) branch — only caller is
+  // BottomDock's shape-properties strip. Same fix as the tool-tabs and
+  // thumbnails strips: without a scoped touch-action, vertical drags
+  // started on this strip walk up the DOM and pan the PDF viewer above.
   const containerClass = isHorizontal
-    ? "flex min-w-0 max-w-full flex-row items-start gap-6 overflow-x-auto overflow-y-hidden px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    ? "flex min-w-0 max-w-full touch-pan-x flex-row items-start gap-6 overflow-x-auto overflow-y-hidden px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     : "flex max-h-[calc(100vh-10rem)] min-w-0 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
   const sectionWrapperClass = isHorizontal ? "shrink-0" : "";
   const dividerClass = isHorizontal

@@ -289,11 +289,16 @@ export function FloatingTextToolbar({
       >
         <HugeiconsIcon icon={Cancel01Icon} size={16} />
       </button>
-      {/* On mobile: horizontal scrollable row; on desktop: vertical column */}
+      {/* On mobile: horizontal scrollable row; on desktop: vertical column.
+          `touch-pan-x` on the mobile branch confines touch gestures to
+          horizontal panning — without it, a vertical drag started on this
+          strip has no gesture handler and the browser walks up the DOM
+          and pans the PDF viewer above (same fix as the BottomDock strip,
+          QA report 2026-08-26). */}
       <div
         className={
           isMobile
-            ? "flex items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            ? "flex touch-pan-x items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             : "flex flex-col gap-4"
         }
       >
