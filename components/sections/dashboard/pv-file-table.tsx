@@ -165,7 +165,7 @@ function RowActions({
   ];
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-center gap-1">
       {actions.map(({ label, icon, handler, danger }) => (
         <button
           key={label}
@@ -306,7 +306,7 @@ export function PvFileTable({
                 />
               </th>
               <th
-                className="px-4 py-3 text-right text-[13px] font-medium text-[var(--pv-text-body)]"
+                className="px-4 py-3 text-center text-[13px] font-medium text-[var(--pv-text-body)]"
                 scope="col"
               >
                 Actions
@@ -430,7 +430,7 @@ export function PvFileTable({
                   >
                     {row.fileSize}
                   </td>
-                  <td className="px-4 py-3 align-middle">
+                  <td className="px-4 py-3 text-center align-middle">
                     {isPending ? (
                       <span className="text-[12px] italic text-[var(--pv-text-muted)]">
                         {row.pending?.status === "error"

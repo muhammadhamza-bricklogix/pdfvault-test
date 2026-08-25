@@ -201,7 +201,12 @@ export function PaywallModal({
       },
       {
         onSuccess: (intent) => {
-          logger.event(EVENTS.CHECKOUT_INTENT_OK, "info");
+          logger.event(EVENTS.CHECKOUT_INTENT_OK, "info", {
+            currency: intent.currency,
+            amountTodayMinor: intent.amountTodayMinor,
+            amountRenewMinor: intent.amountRenewMinor,
+            alternatePlans: intent.alternatePlans,
+          });
           setIntent(intent);
         },
         onError: (err) => {
@@ -659,7 +664,9 @@ function PlanStep({
         ) : (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
             You are enrolling in an annual subscription to pdfvault.ai. You
-            agree to be billed {todayDisplay} per year until you cancel.
+            agree to be billed{" "}
+            {formatMinor(annual.amountRenewMinor, annual.currency)} per year
+            until you cancel.
             Payments will be charged from the card you specified below. To
             cancel, visit your{" "}
             <a

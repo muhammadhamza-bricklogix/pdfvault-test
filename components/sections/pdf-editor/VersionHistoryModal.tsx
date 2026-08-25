@@ -318,7 +318,14 @@ export function VersionHistoryModal({
               )}
 
               {!loading && versions.length > 0 && (
-                <ul className="-mx-2 max-h-[50vh] overflow-y-auto">
+                // Dropped `-mx-2` (extended the list 8px past Modal.Body
+                // on each side, so the row's LEFT border was shaved by
+                // Modal.Dialog's ~24px rounded corner). Added
+                // `overflow-x-hidden` so any wide inner content (long
+                // filenames, translated button labels) scrolls the row
+                // internally instead of bleeding past the modal's right
+                // edge with a horizontal scrollbar.
+                <ul className="max-h-[50vh] space-y-2 overflow-x-hidden overflow-y-auto px-1">
                   {versions.map((v) => {
                     const isEditing = editingId === v.id;
                     const isRenaming = renamingId === v.id;

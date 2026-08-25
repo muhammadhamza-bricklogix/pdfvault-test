@@ -97,8 +97,14 @@ export function ReloadConfirmModal() {
               Cancel
             </Button>
             <Button
+              // `tertiary` (was `secondary`) drops the outline so the button
+              // doesn't render a visible vertical border where it touches
+              // the filled Save & reload button next to it. Semantic weight
+              // is still correct — this is a secondary action, but the
+              // outline treatment reads as a divider between the two
+              // rightmost buttons at typical modal widths.
               isDisabled={isSaving}
-              variant="secondary"
+              variant="tertiary"
               onPress={handleReloadAnyway}
             >
               Reload anyway

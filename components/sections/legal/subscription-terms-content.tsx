@@ -134,6 +134,20 @@ export function SubscriptionTermsContent() {
           or refund the unused portion of that period, except as set out in
           the Refund Policy or required by law.
         </p>
+
+        <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
+          4.1 Content Access After Cancellation
+        </p>
+        <p>
+          If your account is closed or your access to the Service ends, you
+          may no longer be able to access Content you have stored with us.
+          Where we close or suspend your account on our own initiative, we
+          will try to notify you beforehand so you have a chance to download
+          anything you want to keep, except where we are not permitted by
+          law to give that notice. It is your responsibility to download any
+          Content you wish to retain before your account is closed; Content
+          still on our servers at that point may be permanently deleted.
+        </p>
       </LegalSectionCard>
 
       <LegalSectionCard icon={Tag01Icon} id="st-5" title="5. Price Changes">

@@ -425,7 +425,12 @@ export function LandingTools() {
         <div className="mt-10 flex justify-center">
           <div
             aria-label="Tool categories"
-            className="inline-flex max-w-full flex-wrap justify-center gap-1 rounded-full border border-[var(--pv-card-border)] bg-white p-1"
+            // `p-2 sm:p-1` — mobile bumps the inner gutter from 4px to 8px
+            // so the selected pill (which has `scale-[1.02]` and a soft
+            // shadow) no longer visually touches the outer container edge.
+            // Desktop keeps the tighter `p-1` since tabs sit in a single
+            // row there and 4px reads clean.
+            className="inline-flex max-w-full flex-wrap justify-center gap-1 rounded-full border border-[var(--pv-card-border)] bg-white p-2 sm:p-1"
             role="tablist"
           >
             {TABS.map((tab, index) => {

@@ -132,7 +132,14 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
           </Tooltip>
         )}
 
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* `touch-pan-x` (= `touch-action: pan-x`) constrains this strip to
+            horizontal-only touch panning. Without it, a vertical drag that
+            starts on the dock has no gesture registered for the element, so
+            the browser walks up the DOM and pans the PDF viewer instead —
+            users saw the page slide out from under them while just trying
+            to swipe the toolbar. Horizontal scrolling of the strip and tap
+            clicks on the buttons are unaffected. */}
+        <div className="flex min-w-0 flex-1 touch-pan-x items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ToolsContent showLabels toolIconSize={18} />
           {ACTION_TOOLS.map((tool) => (
             <button

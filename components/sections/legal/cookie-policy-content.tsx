@@ -136,6 +136,20 @@ export function CookiePolicyContent() {
                 "Authentication / session token used to keep you signed in.",
               expiry: "Session",
             },
+            {
+              name: "__cf_bm",
+              provider: "Cloudflare",
+              purpose:
+                "Bot-management cookie that distinguishes legitimate visitors from automated traffic, to protect the Service against abuse.",
+              expiry: "30 minutes",
+            },
+            {
+              name: "_cfuvid",
+              provider: "Cloudflare",
+              purpose:
+                "Used alongside __cf_bm to distinguish individual visitors sharing an IP address, supporting rate-limiting and security.",
+              expiry: "Session",
+            },
           ]}
         />
         <p className="mt-3 text-[13px] italic text-[var(--pv-text-tertiary)]">
@@ -174,6 +188,55 @@ export function CookiePolicyContent() {
               purpose:
                 "Stores your selected language so the translation service can restore it across pages.",
               expiry: "Until cleared",
+            },
+            {
+              name: "csrf",
+              provider: "Trustpilot",
+              purpose:
+                "Security token that protects the Trustpilot review widget against cross-site request forgery.",
+              expiry: "Session",
+            },
+            {
+              name: "_iidt",
+              provider: "Trustpilot",
+              purpose:
+                "Recognizes a returning visitor across sessions for fraud-prevention purposes.",
+              expiry: "~13 months",
+            },
+            {
+              name: "jwt",
+              provider: "Trustpilot",
+              purpose:
+                "Authentication token used internally by the Trustpilot widget.",
+              expiry: "Session",
+            },
+            {
+              name: "OptanonAlertBoxClosed",
+              provider: "Trustpilot (via OneTrust)",
+              purpose:
+                "Records that a visitor has dismissed Trustpilot's own cookie banner within the widget.",
+              expiry: "1 year",
+            },
+            {
+              name: "OptanonConsent",
+              provider: "Trustpilot (via OneTrust)",
+              purpose:
+                "Stores the visitor's cookie consent choices made within the Trustpilot widget.",
+              expiry: "1 year",
+            },
+            {
+              name: "tp-consumer-id",
+              provider: "Trustpilot",
+              purpose:
+                "Identifies the visitor to Trustpilot for review-collection purposes.",
+              expiry: "Not confirmed",
+            },
+            {
+              name: "TP.uuid",
+              provider: "Trustpilot",
+              purpose:
+                "Unique identifier assigned by Trustpilot to the visitor's browser.",
+              expiry: "Not confirmed",
             },
           ]}
         />
@@ -268,9 +331,10 @@ export function CookiePolicyContent() {
         <p>
           Some third-party services we use may set their own cookies, including
           Clerk (authentication), Adyen (fraud prevention during checkout),
-          Zendesk (customer support), CloudConvert (file conversion), and
-          Google LLC (analytics and sign-in). These providers&rsquo; own
-          privacy and cookie policies apply to their processing.
+          Zendesk (customer support), CloudConvert (file conversion), Google
+          LLC (analytics and sign-in) and Trustpilot (online review platform).
+          These providers&rsquo; own privacy and cookie policies apply to their
+          processing.
         </p>
 
         <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
@@ -356,7 +420,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard icon={Mail01Icon} id="c-4-7" title="Contact">
         <p>
           Questions about this Cookie Policy:{" "}
-          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
+          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>.
         </p>
         <p className="mt-3">
           FLUTTWINGS INVESTMENTS LIMITED

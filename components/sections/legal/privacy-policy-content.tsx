@@ -379,8 +379,9 @@ export function PrivacyPolicyContent() {
             <strong>Payment processing:</strong> Adyen.
           </li>
           <li>
-            <strong>Hosting and infrastructure:</strong> Amazon Web Services
-            (AWS), including CloudFront (content delivery) and Route 53 (DNS).
+            <strong>Hosting and infrastructure:</strong> Cloudflare, Amazon Web
+            Services (AWS), including CloudFront (content delivery) and Route
+            53 (DNS).
           </li>
           <li>
             <strong>Customer support:</strong> Zendesk.
