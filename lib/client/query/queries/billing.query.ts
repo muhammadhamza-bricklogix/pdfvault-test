@@ -7,6 +7,7 @@ import {
   isEntitledSnapshot,
   setEntitledSnapshot,
 } from "@/lib/client/hooks/billing/entitlement-cache";
+import { useIsEntitlementAllowlisted } from "@/lib/client/hooks/billing/use-entitlement-allowlist";
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 
@@ -19,6 +20,7 @@ import { billingKeys } from "@/lib/shared/constants/query-keys";
  * also invalidates this key on success.
  */
 export function useSubscriptionQuery() {
+  const allowlisted = useIsEntitlementAllowlisted();
   const result = useQuery({
     queryKey: billingKeys.subscription(),
     queryFn: billingService.getSubscription,
@@ -26,13 +28,18 @@ export function useSubscriptionQuery() {
   });
 
   // Mirror the entitlement flag into the module-level snapshot the
-  // axios request interceptor reads. Cheap to run every render; only
-  // fires the effect when the boolean changes.
+  // axios request interceptor reads. Allowlisted users are treated as
+  // entitled regardless of what the backend snapshot says.
   useEffect(() => {
+    if (allowlisted) {
+      setEntitledSnapshot(true);
+
+      return;
+    }
     if (result.data) {
       setEntitledSnapshot(isEntitledSnapshot(result.data));
     }
-  }, [result.data]);
+  }, [allowlisted, result.data]);
 
   return result;
 }

@@ -248,7 +248,15 @@ export function PvFileTable({
           </div>
         </div>
       ) : null}
-      <div className="overflow-x-auto rounded-[16px] border border-[var(--pv-hairline)]">
+      {/* `min-w-0` overrides the default `min-width: auto` that a flex-item
+          inherits from its parent flex-col — without it, the wrapper is
+          forced to at least `min-w-[720px]` (the table's own min-width),
+          which pushes the whole dashboard page wider than a mobile
+          viewport and forces users to pinch-zoom just to see the table.
+          With `min-w-0` the wrapper shrinks to container width and the
+          `overflow-x-auto` scroll behavior for the 720px table kicks in
+          as intended. */}
+      <div className="min-w-0 overflow-x-auto rounded-[16px] border border-[var(--pv-hairline)]">
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
             <tr className="border-b border-[var(--pv-hairline)] bg-[var(--pv-fill-subtle)]">

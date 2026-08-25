@@ -20,6 +20,7 @@ import type { SubscriptionSnapshot } from "@/lib/shared/types/billing.types";
 
 let entitledSnapshot = false;
 let billingEnabledSnapshot = false;
+let allowlistedSnapshot = false;
 
 /**
  * Single source of truth for "is the caller entitled to gated features?".
@@ -44,9 +45,17 @@ export function setBillingEnabledSnapshot(value: boolean): void {
 }
 
 export function getEntitledSnapshot(): boolean {
-  return entitledSnapshot;
+  return entitledSnapshot || allowlistedSnapshot;
 }
 
 export function getBillingEnabledSnapshot(): boolean {
   return billingEnabledSnapshot;
+}
+
+export function setAllowlistedSnapshot(value: boolean): void {
+  allowlistedSnapshot = value;
+}
+
+export function getAllowlistedSnapshot(): boolean {
+  return allowlistedSnapshot;
 }
