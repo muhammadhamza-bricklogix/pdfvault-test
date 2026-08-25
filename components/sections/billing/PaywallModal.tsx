@@ -195,7 +195,10 @@ export function PaywallModal({
 
     logger.event(EVENTS.CHECKOUT_INTENT_START, "info", { plan: "monthly" });
     createIntent.mutate(
-      { disclaimerVersion: DISCLAIMER_VERSION },
+      {
+        disclaimerVersion: DISCLAIMER_VERSION,
+        fileName: preview?.filename,
+      },
       {
         onSuccess: (intent) => {
           logger.event(EVENTS.CHECKOUT_INTENT_OK, "info");
@@ -313,7 +316,10 @@ export function PaywallModal({
     setRetryLoading(true);
     setPayFailed(false);
     createIntent.mutate(
-      { disclaimerVersion: DISCLAIMER_VERSION },
+      {
+        disclaimerVersion: DISCLAIMER_VERSION,
+        fileName: preview?.filename,
+      },
       {
         onSuccess: (fresh) => {
           setIntent(fresh);
@@ -361,7 +367,11 @@ export function PaywallModal({
     }
     setContinueLoading(true);
     createIntent.mutate(
-      { disclaimerVersion: DISCLAIMER_VERSION, planKind: "ANNUAL" },
+      {
+        disclaimerVersion: DISCLAIMER_VERSION,
+        planKind: "ANNUAL",
+        fileName: preview?.filename,
+      },
       {
         onSuccess: (fresh) => {
           setIntent(fresh);

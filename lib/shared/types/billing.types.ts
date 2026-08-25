@@ -44,6 +44,15 @@ export interface SubscriptionSnapshot {
 export interface CheckoutIntentRequest {
   planKind?: PlanKind;
   disclaimerVersion: string;
+  /**
+   * Filename of the file the user was working with when the paywall
+   * opened (source doc on convert/export, dashboard row for
+   * Open/Download). Forwarded to Customer.io as `file_name` on the
+   * `checkout_started` event so lifecycle emails can reference the doc
+   * that motivated the checkout. Optional — omitted for paywall opens
+   * with no document context (billing settings, identity popover).
+   */
+  fileName?: string;
 }
 
 export interface AlternatePlanPricing {

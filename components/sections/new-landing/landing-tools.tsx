@@ -1,12 +1,37 @@
 /* eslint-disable no-console */
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { SectionHeading } from "./section-heading";
+
+/**
+ * Signed-in users clicking a `?tool=<slug>` tile used to briefly land on
+ * `/pdf-composer?fresh=1&tool=<slug>` before `PendingEditorFileHydrator`
+ * bounced them to `/dashboard?openPicker=<slug>` — visible URL flash and
+ * an unnecessary editor mount. Send them straight to the picker route
+ * from the click so nothing intermediate paints. Signed-out users
+ * (and anon SSR) keep the composer URL — they have no library to pick
+ * from, so the drop-zone flow is correct for them.
+ */
+function resolveToolHref(rawHref: string, isSignedIn: boolean): string {
+  if (!isSignedIn) return rawHref;
+  if (!rawHref.startsWith(ROUTES.TOOLS.PDF_EDITOR)) return rawHref;
+  const query = rawHref.split("?")[1];
+
+  if (!query) return rawHref;
+  const params = new URLSearchParams(query);
+  const tool = params.get("tool");
+
+  if (!tool) return rawHref;
+
+  return `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
+}
 
 const convert = (slug: string) => `/convert/${slug}` as const;
 
@@ -258,6 +283,7 @@ function ArrowIcon() {
 const MOBILE_INITIAL_COUNT = 4;
 
 export function LandingTools() {
+  const { isSignedIn } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("edit");
   const [expanded, setExpanded] = useState(false);
   // Reset "View more" whenever the active tab changes so a fresh tab
@@ -451,7 +477,7 @@ export function LandingTools() {
               >
                 <a
                   className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
-                  href={tool.href}
+                  href={resolveToolHref(tool.href, Boolean(isSignedIn))}
                 >
                   <span className="mx-auto flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">
                     <Image
