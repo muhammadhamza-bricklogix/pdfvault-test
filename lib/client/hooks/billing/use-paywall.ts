@@ -15,6 +15,7 @@ import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { isEntitledSnapshot } from "./entitlement-cache";
+import { useIsEntitlementAllowlisted } from "./use-entitlement-allowlist";
 import { setPaywallHandler } from "./paywall-bus";
 
 /**
@@ -32,6 +33,7 @@ import { setPaywallHandler } from "./paywall-bus";
 export function usePaywall() {
   const { data: subscription, isLoading } = useSubscriptionQuery();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const allowlisted = useIsEntitlementAllowlisted();
   const [isOpen, setIsOpen] = useState(false);
   const [preview, setPreview] = useState<PaywallPreview | null>(null);
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
@@ -51,7 +53,7 @@ export function usePaywall() {
     null,
   );
 
-  const entitled = isEntitledSnapshot(subscription);
+  const entitled = allowlisted || isEntitledSnapshot(subscription);
 
   const guard = useCallback(
     async (action: () => void | Promise<void>) => {

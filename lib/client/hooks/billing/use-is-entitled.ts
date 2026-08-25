@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 
 import { isEntitledSnapshot } from "@/lib/client/hooks/billing/entitlement-cache";
+import { useIsEntitlementAllowlisted } from "@/lib/client/hooks/billing/use-entitlement-allowlist";
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 
@@ -18,12 +19,15 @@ import { billingKeys } from "@/lib/shared/constants/query-keys";
  */
 export function useIsEntitled(): boolean {
   const { isSignedIn } = useAuth();
+  const allowlisted = useIsEntitlementAllowlisted();
   const { data } = useQuery({
     queryKey: billingKeys.subscription(),
     queryFn: billingService.getSubscription,
     staleTime: 30_000,
     enabled: !!isSignedIn,
   });
+
+  if (allowlisted) return true;
 
   return isEntitledSnapshot(data);
 }
