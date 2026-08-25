@@ -21,10 +21,10 @@ const POSITIONS: { id: PageNumberPosition; label: string }[] = [
 
 const FORMATS: { id: PageNumberFormat; label: string; sample: string }[] = [
   { id: "n", label: "Number only", sample: "1" },
-  { id: "page-n", label: "Page Number", sample: "Page 1" },
-  { id: "n-of-N", label: "Number of Number", sample: "1 of 10" },
-  { id: "page-n-of-N", label: "Page Number of Number", sample: "Page 1 of 10" },
-  { id: "n-slash-N", label: "Number / Number", sample: "1/10" },
+  { id: "page-n", label: "Page number", sample: "Page 1" },
+  { id: "n-of-N", label: "Number of total", sample: "1 of 10" },
+  { id: "page-n-of-N", label: "Page number of total", sample: "Page 1 of 10" },
+  { id: "n-slash-N", label: "Number / total", sample: "1/10" },
 ];
 
 /**
@@ -225,7 +225,7 @@ function PageNumbersModalContent() {
                       aria-pressed={selected}
                       className={`rounded-lg border p-2 text-xs transition ${
                         selected
-                          ? "border-accent bg-accent/5 ring-2 ring-accent"
+                          ? "border-accent bg-accent/5 ring-2 ring-inset ring-accent"
                           : "border-default-200 hover:bg-default-50"
                       }`}
                       type="button"
@@ -252,7 +252,7 @@ function PageNumbersModalContent() {
                       aria-pressed={selected}
                       className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
                         selected
-                          ? "border-accent bg-accent/5 ring-2 ring-accent"
+                          ? "border-accent bg-accent/5 ring-2 ring-inset ring-accent"
                           : "border-default-200 hover:bg-default-50"
                       }`}
                       type="button"
