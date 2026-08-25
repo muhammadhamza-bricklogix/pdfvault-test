@@ -4,8 +4,8 @@ import { useAuth, useClerk } from "@clerk/nextjs";
 import { Modal } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { FormsModal } from "@/components/shared/forms-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
@@ -37,15 +37,6 @@ export function LandingHeader() {
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  // Serialized so React only re-runs the auto-dismiss effect when the
-  // query string actually changes (`?tool=edit` → `?tool=compress`),
-  // not on every render when Next hands us a new URLSearchParams
-  // reference with identical contents.
-  const searchParamsKey = useMemo(
-    () => searchParams?.toString() ?? "",
-    [searchParams],
-  );
   const entitled = useIsEntitled();
 
   const handleLogOut = () => {
@@ -57,18 +48,18 @@ export function LandingHeader() {
   // changes. Tiles inside the modal used to leave the modal open behind
   // the destination page ("nothing happened" QA report); syncing to
   // pathname avoids the need to thread a callback through the
-  // server-safe AllToolsCatalog. Search params are included too because
-  // composer tool tiles route to `/pdf-composer?fresh=1&tool=<slug>` —
-  // same pathname, different query — and without a query-scoped dep
-  // the modal stays open when the user switches from one tool to
-  // another while already on `/pdf-composer`.
+  // server-safe AllToolsCatalog. Same-pathname tile navigation
+  // (`?tool=edit` → `?tool=compress` on `/pdf-composer`) is handled
+  // separately by the click delegator on the Modal.Body below —
+  // adding `useSearchParams()` here forces a Suspense boundary that
+  // breaks static prerender on `/convert/[slug]`.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setToolsModalOpen(false);
 
     setFormsModalOpen(false);
     setMobileOpen(false);
-  }, [pathname, searchParamsKey]);
+  }, [pathname]);
   // Signed-in state resolved via Clerk. Until `isLoaded` we render
   // nothing on the auth slot so the header doesn't flash Login → then
   // → Dashboard on hydration.
