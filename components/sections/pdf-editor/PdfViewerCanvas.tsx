@@ -845,9 +845,23 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       startScrollTop = el.scrollTop;
-      const target = e.target as Node | null;
+      const target = e.target as (Node & Element) | null;
+      const inViewer = Boolean(target && el.contains(target));
+      // FloatingTextToolbar and FloatingShapeToolbar are DOM-nested
+      // INSIDE `viewerScrollRef` (they render inside `containerRef` so
+      // they can absolutely-position relative to the canvas on desktop),
+      // even though on mobile they're `position: fixed` at the bottom
+      // of the screen. So `el.contains(target)` returns true for
+      // touches on them, and horizontal swipes on the FONT/SIZE/STYLE
+      // strip inadvertently flipped PDF pages via `navigatePage()`
+      // below. Exclude any element inside a `data-editor-overlay`
+      // subtree — the two floating toolbars carry that attribute on
+      // their mobile branch. Same pattern as the earlier BottomDock
+      // fix which lives OUTSIDE the viewer entirely; overlays inside
+      // the viewer need an explicit opt-out.
+      const isOverlay = Boolean(target?.closest?.("[data-editor-overlay]"));
 
-      touchStartedInsideViewer = Boolean(target && el.contains(target));
+      touchStartedInsideViewer = inViewer && !isOverlay;
     };
 
     const onTouchEnd = (e: TouchEvent) => {

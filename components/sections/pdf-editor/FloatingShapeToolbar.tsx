@@ -156,6 +156,10 @@ export function FloatingShapeToolbar({
   return (
     <div
       className="pointer-events-auto absolute z-50 -translate-x-1/2"
+      // Opt out of PdfViewerCanvas's document-scoped swipe-nav — this
+      // overlay is DOM-nested inside `viewerScrollRef` so without this
+      // marker a horizontal swipe on its buttons would flip pages.
+      data-editor-overlay=""
       style={{ left: toolbarState.left, top: Math.max(0, toolbarState.top) }}
     >
       <Toolbar
