@@ -272,7 +272,10 @@ export function FloatingTextToolbar({
       aria-label="Text formatting"
       className={
         isMobile
-          ? "pointer-events-auto fixed inset-x-0 bottom-[58px] z-50 flex flex-col gap-2 border-t border-default-200 bg-white px-4 pb-3 pt-2 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)]"
+          ? // `bottom-[70px]` (was 58) lifts the panel ~12px above the
+            // BottomDock so the two chrome bars visually separate instead
+            // of stacking flush together (QA report 2026-08-25).
+            "pointer-events-auto fixed inset-x-0 bottom-[70px] z-50 flex flex-col gap-2 border-t border-default-200 bg-white px-4 pb-3 pt-2 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)]"
           : "pointer-events-auto fixed right-4 top-1/2 z-50 flex w-[188px] -translate-y-1/2 flex-col gap-4 rounded-2xl border border-default-200 bg-white p-4 shadow-[0_8px_24px_rgba(16,24,40,0.08)]"
       }
       role="region"
