@@ -394,7 +394,28 @@ export function LandingHeader() {
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="max-h-[80vh] overflow-y-auto p-0">
-              <AllToolsCatalog />
+              {/* Click delegation: any tile navigation dismisses the modal
+                  synchronously, regardless of whether the destination is a
+                  new pathname (`/pdf-composer` → `/dashboard`) or a same-
+                  path query change (`?tool=edit` → `?tool=compress`). The
+                  pathname/searchParams useEffect above misses same-path
+                  query nav in Next 16 in some flows, so this is the
+                  authoritative dismiss. Keeping `AllToolsCatalog` prop-free
+                  is required by CLAUDE.md item 20 (RSC serialization). */}
+              {/* Delegation catches native click events bubbled up from
+                  each Link — including the click Enter/Space fires on a
+                  focused <a> — so keyboard users get the same dismiss
+                  as mouse users without a separate onKeyDown here. */}
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
+              <div
+                onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("a")) {
+                    setToolsModalOpen(false);
+                  }
+                }}
+              >
+                <AllToolsCatalog />
+              </div>
             </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>
