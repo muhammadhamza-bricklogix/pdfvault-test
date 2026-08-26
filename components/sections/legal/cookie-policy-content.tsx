@@ -135,20 +135,6 @@ export function CookiePolicyContent() {
                 "Authentication / session token used to keep you signed in.",
               expiry: "Session",
             },
-            {
-              name: "__cf_bm",
-              provider: "Cloudflare",
-              purpose:
-                "Bot-management cookie that distinguishes legitimate visitors from automated traffic, to protect the Service against abuse.",
-              expiry: "30 minutes",
-            },
-            {
-              name: "_cfuvid",
-              provider: "Cloudflare",
-              purpose:
-                "Used alongside __cf_bm to distinguish individual visitors sharing an IP address, supporting rate-limiting and security.",
-              expiry: "Session",
-            },
           ]}
         />
         <p className="mt-3 text-[13px] italic text-[var(--pv-text-tertiary)]">
