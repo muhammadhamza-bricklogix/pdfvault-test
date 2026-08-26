@@ -166,12 +166,6 @@ export default function RootLayout({
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
       <link
         crossOrigin="anonymous"
-        href="https://consent.cookiebot.com"
-        rel="preconnect"
-      />
-      <link href="https://consent.cookiebot.com" rel="dns-prefetch" />
-      <link
-        crossOrigin="anonymous"
         href="https://www.googletagmanager.com"
         rel="preconnect"
       />
@@ -187,26 +181,6 @@ export default function RootLayout({
         </>
       ) : null}
 
-      {/*
-        Cookiebot consent banner. Loaded with `lazyOnload` so it never
-        blocks LCP / FCP on the landing page — Next.js will inject an
-        async <script> after the window `load` event fires. The banner
-        appears ~1 render frame later than with `beforeInteractive`,
-        but the landing paint is unblocked. Preconnect above still opens
-        the TLS handshake early so the eventual fetch is instant.
-        Trade-off: a very short window exists where third-party cookies
-        can fire before Cookiebot's auto-blocking installs. Acceptable
-        for our stack (Clerk, Weglot, Trustpilot all first-party or
-        consented-by-config); revisit if a compliance audit flags it.
-      */}
-      <Script
-        data-blockingmode="auto"
-        data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
-        id="Cookiebot"
-        src="https://consent.cookiebot.com/uc.js"
-        strategy="lazyOnload"
-        type="text/javascript"
-      />
       {/* Google Tag Manager */}
       <Script id="gtm-init" strategy="afterInteractive">
         {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
