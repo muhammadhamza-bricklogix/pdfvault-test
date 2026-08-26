@@ -200,6 +200,7 @@ export default function RootLayout({
         consented-by-config); revisit if a compliance audit flags it.
       */}
       <Script
+        data-blockingmode="auto"
         data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
         id="Cookiebot"
         src="https://consent.cookiebot.com/uc.js"
