@@ -200,112 +200,13 @@ export default function RootLayout({
         consented-by-config); revisit if a compliance audit flags it.
       */}
       <Script
-        // data-blockingmode="auto"
+        data-blockingmode="auto"
         data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
         id="Cookiebot"
         src="https://consent.cookiebot.com/uc.js"
         strategy="lazyOnload"
         type="text/javascript"
       />
-      {/*
-        Cookiebot customiser + persistence guard.
-        - Overwrites the banner body text with our exact copy (Cookiebot's
-          dashboard-configured text is ignored / empty on this template).
-        - Renames "Allow all" → "Accept All" and "Deny" → "Reject".
-        - Hides the redundant "Allow selection" button (only Customize /
-          Reject / Accept All should be visible).
-        - Re-invokes `Cookiebot.show()` on every load if the user has no
-          recorded response, so the banner persists until an explicit
-          Accept / Reject / Customize+Save.
-      */}
-      {/* <Script id="cookiebot-customize" strategy="afterInteractive">
-        {`
-          (function () {
-            var TEXT_HTML =
-              'We use cookies and similar technologies to improve your experience and serve personalized ads. ' +
-              '<a href="/privacy">Privacy Policy</a> and <a href="/cookies">Cookie Policy</a>.';
-
-            function setText() {
-              // Inject a dedicated text node right before the buttons.
-              // We create our own element (id "pv-cookie-banner-text")
-              // rather than reusing Cookiebot's own text node, because
-              // some templates omit that node entirely, and even when it
-              // exists, Cookiebot's runtime CSS often collapses or hides
-              // it. Our element carries a unique id so our overrides win.
-              var buttons =
-                document.getElementById("CybotCookiebotDialogBodyButtonsWrapper") ||
-                document.getElementById("CybotCookiebotDialogBodyButtons");
-              if (!buttons || !buttons.parentNode) return;
-              var el = document.getElementById("pv-cookie-banner-text");
-              if (!el) {
-                el = document.createElement("div");
-                el.id = "pv-cookie-banner-text";
-                buttons.parentNode.insertBefore(el, buttons);
-              } else if (el.nextSibling !== buttons) {
-                buttons.parentNode.insertBefore(el, buttons);
-              }
-              if (el.innerHTML !== TEXT_HTML) el.innerHTML = TEXT_HTML;
-              // Suppress Cookiebot's own (empty / duplicate) text node
-              // if it's present, so we don't end up with two paragraphs.
-              var native = document.getElementById("CybotCookiebotDialogBodyContentText");
-              if (native) native.style.display = "none";
-            }
-            function relabel(id, label) {
-              var el = document.getElementById(id);
-              if (el && el.textContent !== label) el.textContent = label;
-            }
-            function hideNode(id) {
-              var el = document.getElementById(id);
-              if (el && el.style.display !== "none") el.style.display = "none";
-            }
-            function apply() {
-              setText();
-              relabel("CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll", "Accept All");
-              relabel("CybotCookiebotDialogBodyButtonAccept", "Accept All");
-              relabel("CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll", "Reject");
-              relabel("CybotCookiebotDialogBodyButtonDecline", "Reject");
-              relabel("CybotCookiebotDialogBodyLevelButtonCustomize", "Customize");
-              // Remove the "Allow selection" button — redundant with
-              // "Accept All" when the inline category toggles are hidden.
-              hideNode("CybotCookiebotDialogBodyLevelButtonAccept");
-              hideNode("CybotCookiebotDialogBodyLevelButtonAcceptWrapper");
-            }
-            function ensureVisible() {
-              try {
-                var cb = window.Cookiebot;
-                if (!cb || cb.hasResponse) return;
-                if (typeof cb.show === "function") cb.show();
-              } catch (e) {}
-            }
-
-            window.addEventListener("CookiebotOnDialogInit", function () {
-              apply();
-              ensureVisible();
-            });
-            window.addEventListener("CookiebotOnDialogDisplay", apply);
-            window.addEventListener("CookiebotOnLoad", function () {
-              apply();
-              ensureVisible();
-            });
-
-            // Belt-and-braces: watch ONLY direct children of <body>
-            // (that's where Cookiebot injects/removes its dialog root).
-            // subtree:true here fires on every DOM change across the
-            // whole app and is a major perf hit on a landing page.
-            var mo = new MutationObserver(function () {
-              try {
-                if (document.getElementById("CybotCookiebotDialog")) apply();
-              } catch (e) {}
-            });
-            function startObserver() {
-              if (!document.body) return;
-              mo.observe(document.body, { childList: true, subtree: false });
-            }
-            if (document.body) startObserver();
-            else document.addEventListener("DOMContentLoaded", startObserver);
-          })();
-        `}
-      </Script> */}
       {/* Google Tag Manager */}
       <Script id="gtm-init" strategy="afterInteractive">
         {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
