@@ -17,7 +17,21 @@ import { useEffect, useRef, useState } from "react";
  * shimmer skeleton behind the div, and swaps the skeleton out once
  * the iframe appears (MutationObserver + a defensive interval, since
  * Trustpilot's script sometimes replaces the entire node subtree).
+ *
+ * Module-scope cache: once the iframe is rendered, we snapshot its DOM
+ * on unmount and re-attach it on the next mount (SPA navigation return),
+ * so the skeleton doesn't re-flash for 300–1500 ms every visit.
  */
+type CachedWidget = { nodes: ChildNode[] };
+const widgetCache = new Map<string, CachedWidget>();
+
+const hasIframe = (nodes: readonly ChildNode[]) =>
+  nodes.some(
+    (n) =>
+      n.nodeName === "IFRAME" ||
+      (n.nodeType === 1 && (n as Element).querySelector("iframe") !== null),
+  );
+
 type TrustpilotWidgetProps = {
   businessUnitId: string;
   locale: string;
@@ -51,7 +65,12 @@ export function TrustpilotWidget({
   style,
 }: TrustpilotWidgetProps) {
   const widgetRef = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
+  const cacheKey = `${templateId}|${businessUnitId}|${locale}|${token}|${styleHeight}|${styleWidth}`;
+  const [loaded, setLoaded] = useState(() => {
+    const entry = widgetCache.get(cacheKey);
+
+    return entry ? hasIframe(entry.nodes) : false;
+  });
 
   useEffect(() => {
     const node = widgetRef.current;
@@ -60,10 +79,25 @@ export function TrustpilotWidget({
 
     const isReady = () => node.querySelector("iframe") !== null;
 
-    if (isReady()) {
-      setLoaded(true);
+    // Cache hit — re-attach the previously rendered iframe DOM into the
+    // fresh widget div. The iframe stays live across the move in
+    // Chromium/WebKit (same-document appendChild), so no reload happens
+    // and the widget appears instantly on route return.
+    const cached = widgetCache.get(cacheKey);
 
-      return;
+    if (cached && hasIframe(cached.nodes)) {
+      while (node.firstChild) node.removeChild(node.firstChild);
+      for (const child of cached.nodes) node.appendChild(child);
+
+      return () => {
+        widgetCache.set(cacheKey, { nodes: Array.from(node.childNodes) });
+      };
+    }
+
+    if (isReady()) {
+      return () => {
+        widgetCache.set(cacheKey, { nodes: Array.from(node.childNodes) });
+      };
     }
 
     const observer = new MutationObserver(() => {
@@ -98,8 +132,11 @@ export function TrustpilotWidget({
       observer.disconnect();
       window.clearInterval(pollId);
       window.clearTimeout(timeoutId);
+      if (isReady()) {
+        widgetCache.set(cacheKey, { nodes: Array.from(node.childNodes) });
+      }
     };
-  }, []);
+  }, [cacheKey]);
 
   const wrapperStyle: CSSProperties = {
     ...(maxWidth !== undefined ? { maxWidth, width: "100%" } : null),
