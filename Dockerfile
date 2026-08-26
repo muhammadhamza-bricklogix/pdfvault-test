@@ -16,18 +16,27 @@
 # (CLERK_SECRET_KEY, SHARE_SECRET) are passed via task-definition env / SSM
 # at container start.
 
-# ---------- Stage 1: build ----------
-# Bun 1.3.13 required for Next 16.3+: worker_threads.Worker options
-# (stdout/stderr/resourceLimits) and Turbopack's CommonJS-wrapping runtime
-# both crash on 1.2.19. Keep this in lockstep with `engines.bun` in
-# package.json.
-FROM oven/bun:1.3.13-slim AS builder
+# ---------- Stage 1a: install deps with Bun (fast, deterministic) ----------
+FROM oven/bun:1.3.13-slim AS deps
 
 WORKDIR /app
 
-# Build-time (NEXT_PUBLIC_*) inputs. These get baked into the JS bundle —
-# rebuild when they change. Defaults are placeholders that fail fast at
-# runtime if not overridden.
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
+
+
+# ---------- Stage 1b: build with Node (Bun crashes on Next's built CJS) ----------
+# Next 16 executes emitted CJS chunks during "Collecting page data" to
+# resolve dynamic params, sitemap entries, generateStaticParams, etc. Bun's
+# require() implementation rejects those wrapped modules with
+# "Expected CommonJS module to have a function wrapper" and crashes
+# (SIGILL under Turbopack, TypeError under webpack). Node handles them
+# natively — this stage uses Node just for `next build`, keeping the fast
+# Bun install from the previous stage.
+FROM node:22-bookworm-slim AS builder
+
+WORKDIR /app
+
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
@@ -46,13 +55,15 @@ ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
     NEXT_PUBLIC_WEGLOT_API_KEY=${NEXT_PUBLIC_WEGLOT_API_KEY} \
     NEXT_TELEMETRY_DISABLED=1
 
-# Copy the lockfile so Bun can do a reproducible install.
-COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile
-
-# Copy the rest of the app and build.
+# Reuse the resolved dep tree from the Bun install so we don't run a
+# second, slower npm install here. Files are already immutable for the
+# build so ownership stays root:root.
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN bun run build
+
+# Invoke next directly through node so nothing in the build stack falls
+# back to Bun's runtime.
+RUN node ./node_modules/next/dist/bin/next build --webpack
 
 # ---------- Stage 2: runtime ----------
 FROM node:22-bookworm-slim AS runner
