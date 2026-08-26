@@ -198,31 +198,80 @@ export default function RootLayout({
         type="text/javascript"
       />
       {/*
-        Persistence guard: Cookiebot hides the banner if the user closes it
-        without choosing (ESC, click-outside on some templates, or the
-        Cookiebot session marker). We only want the banner to stay hidden
-        AFTER an explicit Accept / Reject / Customize+Save. This script
-        re-shows the banner on every page load if `Cookiebot.hasResponse`
-        is still false, and re-shows it again if it ever gets hidden while
-        the user has no recorded response.
+        Cookiebot customiser + persistence guard.
+        - Overwrites the banner body text with our exact copy (Cookiebot's
+          dashboard-configured text is ignored / empty on this template).
+        - Renames "Allow all" → "Accept All" and "Deny" → "Reject".
+        - Hides the redundant "Allow selection" button (only Customize /
+          Reject / Accept All should be visible).
+        - Re-invokes `Cookiebot.show()` on every load if the user has no
+          recorded response, so the banner persists until an explicit
+          Accept / Reject / Customize+Save.
       */}
-      <Script id="cookiebot-force-show" strategy="afterInteractive">
+      <Script id="cookiebot-customize" strategy="afterInteractive">
         {`
           (function () {
+            var TEXT_HTML =
+              'We use cookies and similar technologies to improve your experience and serve personalized ads. ' +
+              '<a href="/privacy">Privacy Policy</a> and <a href="/cookies">Cookie Policy</a>.';
+
+            function setText() {
+              var el = document.getElementById("CybotCookiebotDialogBodyContentText");
+              if (!el) {
+                // Some Cookiebot templates omit the text node — inject one
+                // into the content container so the body isn't empty.
+                var container =
+                  document.getElementById("CybotCookiebotDialogBodyContent") ||
+                  document.getElementById("CybotCookiebotDialogBody");
+                if (!container) return;
+                el = document.createElement("div");
+                el.id = "CybotCookiebotDialogBodyContentText";
+                container.insertBefore(el, container.firstChild);
+              }
+              if (el.innerHTML !== TEXT_HTML) el.innerHTML = TEXT_HTML;
+            }
+            function relabel(id, label) {
+              var el = document.getElementById(id);
+              if (el && el.textContent !== label) el.textContent = label;
+            }
+            function hideNode(id) {
+              var el = document.getElementById(id);
+              if (el && el.style.display !== "none") el.style.display = "none";
+            }
+            function apply() {
+              setText();
+              relabel("CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll", "Accept All");
+              relabel("CybotCookiebotDialogBodyButtonAccept", "Accept All");
+              relabel("CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll", "Reject");
+              relabel("CybotCookiebotDialogBodyButtonDecline", "Reject");
+              relabel("CybotCookiebotDialogBodyLevelButtonCustomize", "Customize");
+              // Remove the "Allow selection" button — redundant with
+              // "Accept All" when the inline category toggles are hidden.
+              hideNode("CybotCookiebotDialogBodyLevelButtonAccept");
+              hideNode("CybotCookiebotDialogBodyLevelButtonAcceptWrapper");
+            }
             function ensureVisible() {
               try {
                 var cb = window.Cookiebot;
-                if (!cb) return;
-                if (cb.hasResponse) return;
+                if (!cb || cb.hasResponse) return;
                 if (typeof cb.show === "function") cb.show();
               } catch (e) {}
             }
-            window.addEventListener("CookiebotOnLoad", ensureVisible);
-            window.addEventListener("CookiebotOnDialogInit", ensureVisible);
-            // Belt-and-braces: if Cookiebot ever removes the dialog from
-            // the DOM without a recorded response, re-invoke show().
+
+            window.addEventListener("CookiebotOnDialogInit", function () {
+              apply();
+              ensureVisible();
+            });
+            window.addEventListener("CookiebotOnDialogDisplay", apply);
+            window.addEventListener("CookiebotOnLoad", function () {
+              apply();
+              ensureVisible();
+            });
+
+            // Belt-and-braces: watch for Cookiebot re-renders and reapply.
             var mo = new MutationObserver(function () {
               try {
+                apply();
                 var cb = window.Cookiebot;
                 if (!cb || cb.hasResponse) return;
                 var el = document.getElementById("CybotCookiebotDialog");
@@ -231,13 +280,12 @@ export default function RootLayout({
                 }
               } catch (e) {}
             });
-            if (document.body) {
-              mo.observe(document.body, { childList: true, subtree: false });
-            } else {
-              document.addEventListener("DOMContentLoaded", function () {
-                mo.observe(document.body, { childList: true, subtree: false });
-              });
+            function startObserver() {
+              if (!document.body) return;
+              mo.observe(document.body, { childList: true, subtree: true });
             }
+            if (document.body) startObserver();
+            else document.addEventListener("DOMContentLoaded", startObserver);
           })();
         `}
       </Script>

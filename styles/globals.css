@@ -363,10 +363,20 @@ body {
 
 /* Also hide the "Allow selection" button — user asked for exactly three
  * buttons (Customize / Reject / Accept All); "Allow selection" collides
- * with Accept All when no toggles are visible. */
-#CybotCookiebotDialogBodyLevelButtonAccept,
-#CybotCookiebotDialogBodyLevelButtonAcceptWrapper {
+ * with Accept All when no toggles are visible. Extra ID prefix boosts
+ * specificity past Cookiebot's `#CybotCookiebotDialog #CybotCookiebot…`
+ * chained selectors + inline blue-background rule. */
+#CybotCookiebotDialog #CybotCookiebotDialogBodyLevelButtonAccept,
+#CybotCookiebotDialog #CybotCookiebotDialogBodyLevelButtonAcceptWrapper,
+#CybotCookiebotDialog #CybotCookiebotDialogBodyButtonsWrapper #CybotCookiebotDialogBodyLevelButtonAccept {
   display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Body: single row, text flexes, buttons on the right. Neutralise
