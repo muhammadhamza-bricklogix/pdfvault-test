@@ -182,19 +182,23 @@ export default function RootLayout({
       ) : null}
 
       {/*
-        Cookiebot consent banner. Must load in <head> before any other
-        third-party scripts so `data-blockingmode="auto"` can rewrite
-        cookie-setting <script> tags before they execute. `beforeInteractive`
-        is the only Next.js strategy that guarantees head placement during
-        SSR — `afterInteractive` injects post-hydration, which lets other
-        scripts race Cookiebot and drop cookies before consent is captured.
+        Cookiebot consent banner. Loaded with `lazyOnload` so it never
+        blocks LCP / FCP on the landing page — Next.js will inject an
+        async <script> after the window `load` event fires. The banner
+        appears ~1 render frame later than with `beforeInteractive`,
+        but the landing paint is unblocked. Preconnect above still opens
+        the TLS handshake early so the eventual fetch is instant.
+        Trade-off: a very short window exists where third-party cookies
+        can fire before Cookiebot's auto-blocking installs. Acceptable
+        for our stack (Clerk, Weglot, Trustpilot all first-party or
+        consented-by-config); revisit if a compliance audit flags it.
       */}
       <Script
         data-blockingmode="auto"
         data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
         id="Cookiebot"
         src="https://consent.cookiebot.com/uc.js"
-        strategy="beforeInteractive"
+        strategy="lazyOnload"
         type="text/javascript"
       />
       {/*
@@ -278,7 +282,10 @@ export default function RootLayout({
               ensureVisible();
             });
 
-            // Belt-and-braces: watch for Cookiebot re-renders and reapply.
+            // Belt-and-braces: watch ONLY direct children of <body>
+            // (that's where Cookiebot injects/removes its dialog root).
+            // subtree:true here fires on every DOM change across the
+            // whole app and is a major perf hit on a landing page.
             var mo = new MutationObserver(function () {
               try {
                 apply();
@@ -292,7 +299,7 @@ export default function RootLayout({
             });
             function startObserver() {
               if (!document.body) return;
-              mo.observe(document.body, { childList: true, subtree: true });
+              mo.observe(document.body, { childList: true, subtree: false });
             }
             if (document.body) startObserver();
             else document.addEventListener("DOMContentLoaded", startObserver);
