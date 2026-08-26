@@ -965,6 +965,16 @@ function SuccessStep({
     onFinishRef.current = onFinish;
   }, [onFinish]);
 
+  // Fire Google Ads "Trial Start Signal" conversion on payment success.
+  useEffect(() => {
+    if (typeof window.gtag === "function") {
+      window.gtag("event", "conversion", {
+        send_to: "AW-18226423046/31lDCOKzxeccEIbKhPND",
+        transaction_id: "",
+      });
+    }
+  }, []);
+
   // Auto-proceed after 1.5 s so gated actions (downloads, conversions)
   // kick off without requiring an extra click. The user still has the
   // button to proceed immediately.

@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { GtagConversion } from "@/components/shared/gtag-conversion";
 import { SignupScreen } from "@/components/sections/auth/signup-screen";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -19,8 +20,11 @@ export default async function SignUpPage() {
   }
 
   return (
-    <Suspense fallback={null}>
-      <SignupScreen />
-    </Suspense>
+    <>
+      <GtagConversion sendTo="AW-18226423046/_l8jCOv0yuccEIbKhPND" />
+      <Suspense fallback={null}>
+        <SignupScreen />
+      </Suspense>
+    </>
   );
 }

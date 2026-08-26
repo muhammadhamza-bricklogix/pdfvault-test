@@ -170,6 +170,12 @@ export default function RootLayout({
         rel="preconnect"
       />
       <link href="https://consent.cookiebot.com" rel="dns-prefetch" />
+      <link
+        crossOrigin="anonymous"
+        href="https://www.googletagmanager.com"
+        rel="preconnect"
+      />
+      <link href="https://www.googletagmanager.com" rel="dns-prefetch" />
       {trustpilotInviteId ? (
         <>
           <link
@@ -299,6 +305,26 @@ export default function RootLayout({
           })();
         `}
       </Script>
+      {/* Google Tag Manager */}
+      <Script id="gtm-init" strategy="afterInteractive">
+        {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5R5LRTTD');`}
+      </Script>
+      {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-K6PVB4B39T"
+        strategy="afterInteractive"
+      />
+      <Script id="gtag-init" strategy="afterInteractive">
+        {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-K6PVB4B39T');
+gtag('config', 'AW-18226423046');`}
+      </Script>
       <Script id="weglot-lang-pref" strategy="beforeInteractive">
         {`
           try {
@@ -344,6 +370,16 @@ export default function RootLayout({
         </head>
       ) : null}
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            height="0"
+            src="https://www.googletagmanager.com/ns.html?id=GTM-5R5LRTTD"
+            style={{ display: "none", visibility: "hidden" }}
+            title="Google Tag Manager"
+            width="0"
+          />
+        </noscript>
         <NextTopLoader color="#DF3A38" showSpinner={false} />
         <WeglotLoader />
         <ClerkProvider
