@@ -88,8 +88,13 @@ const nextConfig = {
       "https://oauth2.googleapis.com",
       "https://api.charge-auth.com",
       "https://api.solidgate.com",
+      // Sentry ingest is `<orgId>.ingest.<region>.sentry.io` — wildcards
+      // cover any org id / region so a rotated or new DSN does not silently
+      // start getting blocked without a code change.
+      "https://*.ingest.sentry.io",
+      "https://*.ingest.us.sentry.io",
+      "https://*.ingest.de.sentry.io",
       "https://*.sentry.io",
-      "https://o4508959538905088.ingest.us.sentry.io",
     ].join(" ");
 
     const frameSrc = [
