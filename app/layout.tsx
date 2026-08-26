@@ -289,12 +289,6 @@ export default function RootLayout({
             var mo = new MutationObserver(function () {
               try {
                 apply();
-                var cb = window.Cookiebot;
-                if (!cb || cb.hasResponse) return;
-                var el = document.getElementById("CybotCookiebotDialog");
-                if (!el || el.offsetParent === null) {
-                  if (typeof cb.show === "function") cb.show();
-                }
               } catch (e) {}
             });
             function startObserver() {

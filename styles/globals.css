@@ -320,9 +320,6 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
   transform: none !important;
   overflow: visible !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  display: block !important;
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
   font-size: 14px !important;
@@ -339,6 +336,7 @@ body {
 /* Kill the dark backdrop overlay Cookiebot renders behind the dialog. */
 #CybotCookiebotDialogBodyUnderlay {
   display: none !important;
+  pointer-events: none !important;
 }
 
 /* Hide chrome we don't want in the compact bar:
