@@ -293,15 +293,18 @@ body {
 /* because Cookiebot's own stylesheet loads at runtime with high-specificity */
 /* + inline style rules that would otherwise win the cascade.                */
 
-/* Root shell: fixed slim bar pinned to the bottom, always visible on scroll,
- * with a 5vh gap from the viewport bottom. Explicit top/left/right/bottom
- * (not the `inset` shorthand) because Cookiebot writes an inline `top:` on
- * the element and the shorthand loses to it in specificity. */
+/* Root shell: fixed slim bar pinned to the bottom, centered at 80vw,
+ * always visible on scroll, with a 5vh gap from the viewport bottom.
+ * Explicit top/left/right/bottom (not the `inset` shorthand) because
+ * Cookiebot writes an inline `top:` on the element and the shorthand
+ * loses to it in specificity. 10vw on each side yields 80vw total width;
+ * `margin: 0 auto` is a no-op alongside symmetric offsets but kept as a
+ * belt-and-braces centering hint. */
 #CybotCookiebotDialog {
   position: fixed !important;
   top: auto !important;
-  left: 16px !important;
-  right: 16px !important;
+  left: 10vw !important;
+  right: 10vw !important;
   bottom: 5vh !important;
   width: auto !important;
   max-width: none !important;
@@ -389,7 +392,7 @@ body {
   flex-direction: row !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 16px !important;
+  gap: 32px !important;
 }
 
 #CybotCookiebotDialogBody {
@@ -397,7 +400,7 @@ body {
   flex-direction: row !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 16px !important;
+  gap: 32px !important;
   width: 100% !important;
   max-width: none !important;
   min-height: 0 !important;
