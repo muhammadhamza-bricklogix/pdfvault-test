@@ -320,6 +320,8 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
   transform: none !important;
   overflow: visible !important;
+  animation: none !important;
+  transition: none !important;
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
   font-size: 14px !important;

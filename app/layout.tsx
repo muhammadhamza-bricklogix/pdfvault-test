@@ -194,7 +194,6 @@ export default function RootLayout({
         consented-by-config); revisit if a compliance audit flags it.
       */}
       <Script
-        data-blockingmode="auto"
         data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
         id="Cookiebot"
         src="https://consent.cookiebot.com/uc.js"
@@ -288,7 +287,7 @@ export default function RootLayout({
             // whole app and is a major perf hit on a landing page.
             var mo = new MutationObserver(function () {
               try {
-                apply();
+                if (document.getElementById("CybotCookiebotDialog")) apply();
               } catch (e) {}
             });
             function startObserver() {
