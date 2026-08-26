@@ -28,6 +28,7 @@ export function PasswordModal() {
   const variant = usePdfEditorStore((s) => s.passwordModalVariant);
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setPdfSourceUrl = usePdfEditorStore((s) => s.setPdfSourceUrl);
   const documentPassword = usePdfEditorStore((s) => s.documentPassword);
   const documentPasswordFileKey = usePdfEditorStore(
     (s) => s.documentPasswordFileKey,
@@ -167,6 +168,21 @@ export function PasswordModal() {
         const verdict = await verifyPdfPassword(file, unprotectPassword);
 
         if (verdict.status === "not-encrypted") {
+          // In the dedicated Unlock PDF flow (e.g. `?tool=unlock` from a
+          // dashboard tile), the modal is opened for us — the file might
+          // already be unencrypted. Instead of blocking the user behind
+          // an error they can't submit past, close the modal and let
+          // them keep editing. QA 2026-08-26: users hit the unlock
+          // screen with an already-unlocked PDF and had no way through.
+          if (isUnlockOnly) {
+            toast.info({
+              title: "PDF is already unlocked",
+              description: "You can start editing straight away.",
+            });
+            handleClose();
+
+            return;
+          }
           setUnprotectError(
             "This PDF is not password-protected — there's nothing to remove.",
           );
@@ -215,6 +231,15 @@ export function PasswordModal() {
         type: "application/pdf",
       });
 
+      // Cloud-loaded docs (`?id=<doc>`) set `pdfSourceUrl` first and
+      // `usePdfLoader` keys off it — a bare `setFile` here would leave
+      // pdf.js pointed at the ORIGINAL encrypted URL and the editor
+      // would stay on the "This PDF is password-protected" error screen
+      // even though the unlock succeeded (QA 2026-08-26: green toast
+      // fires but the user can't proceed). Clearing the URL forces the
+      // loader to re-run against the new File identity — mirrors what
+      // `applyPostSaveReset` does after a save.
+      setPdfSourceUrl(null);
       setFile(unlockedFile);
       // Protection is gone — forget the remembered password so a
       // second Remove attempt correctly falls back to pdf.js checks.
