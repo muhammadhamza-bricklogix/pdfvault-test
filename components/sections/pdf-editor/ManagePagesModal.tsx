@@ -562,7 +562,11 @@ export function ManagePagesModal({
               <Modal.Heading>Move to page</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="gap-4">
-              <div className="flex flex-col gap-2">
+              {/* `p-1` on the field wrapper insets the NumberField 4px on
+                  both x and y axes so its focus ring / hover border don't
+                  get shaved by Modal.Dialog's ~24px rounded corners. Same
+                  pattern as the Rename Document modal. */}
+              <div className="flex flex-col gap-2 p-1">
                 <Label htmlFor="move-target-page">Target page number</Label>
                 <NumberField
                   id="move-target-page"
