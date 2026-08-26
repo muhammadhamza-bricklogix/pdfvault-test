@@ -17,7 +17,11 @@
 # at container start.
 
 # ---------- Stage 1: build ----------
-FROM oven/bun:1.2.19-slim AS builder
+# Bun 1.3.13 required for Next 16.3+: worker_threads.Worker options
+# (stdout/stderr/resourceLimits) and Turbopack's CommonJS-wrapping runtime
+# both crash on 1.2.19. Keep this in lockstep with `engines.bun` in
+# package.json.
+FROM oven/bun:1.3.13-slim AS builder
 
 WORKDIR /app
 
