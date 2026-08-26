@@ -200,7 +200,7 @@ export default function RootLayout({
         consented-by-config); revisit if a compliance audit flags it.
       */}
       <Script
-        data-blockingmode="auto"
+        // data-blockingmode="auto"
         data-cbid="6175cf10-0b87-4966-a8c2-aab9628f2492"
         id="Cookiebot"
         src="https://consent.cookiebot.com/uc.js"
@@ -218,7 +218,7 @@ export default function RootLayout({
           recorded response, so the banner persists until an explicit
           Accept / Reject / Customize+Save.
       */}
-      <Script id="cookiebot-customize" strategy="afterInteractive">
+      {/* <Script id="cookiebot-customize" strategy="afterInteractive">
         {`
           (function () {
             var TEXT_HTML =
@@ -305,7 +305,7 @@ export default function RootLayout({
             else document.addEventListener("DOMContentLoaded", startObserver);
           })();
         `}
-      </Script>
+      </Script> */}
       {/* Google Tag Manager */}
       <Script id="gtm-init" strategy="afterInteractive">
         {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

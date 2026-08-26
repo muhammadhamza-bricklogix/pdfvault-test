@@ -819,8 +819,8 @@ export function UploadWorkspace({
                 style={{ height: 32, width: "min(360px, 100%)" }}
               >
                 <TrustpilotWidget
-                  businessUnitId="6a5635cc9545fd0a55b8cee6"
                   disableLink
+                  businessUnitId="6a5635cc9545fd0a55b8cee6"
                   locale="en-US"
                   reviewUrl=""
                   skeletonHeight={20}
