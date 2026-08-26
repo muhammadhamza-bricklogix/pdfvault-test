@@ -293,10 +293,16 @@ body {
 /* because Cookiebot's own stylesheet loads at runtime with high-specificity */
 /* + inline style rules that would otherwise win the cascade.                */
 
-/* Root shell: fixed slim bar pinned to the bottom, full-bleed with padding. */
+/* Root shell: fixed slim bar pinned to the bottom, always visible on scroll,
+ * with a 5vh gap from the viewport bottom. Explicit top/left/right/bottom
+ * (not the `inset` shorthand) because Cookiebot writes an inline `top:` on
+ * the element and the shorthand loses to it in specificity. */
 #CybotCookiebotDialog {
   position: fixed !important;
-  inset: auto 16px 16px 16px !important;
+  top: auto !important;
+  left: 16px !important;
+  right: 16px !important;
+  bottom: 5vh !important;
   width: auto !important;
   max-width: none !important;
   min-width: 0 !important;
@@ -311,6 +317,9 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
   transform: none !important;
   overflow: visible !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
   font-size: 14px !important;
@@ -482,7 +491,10 @@ body {
  * width evenly. */
 @media (max-width: 640px) {
   #CybotCookiebotDialog {
-    inset: auto 8px 8px 8px !important;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 5vh !important;
     padding: 12px 14px !important;
     border-radius: 12px !important;
     font-size: 13px !important;
