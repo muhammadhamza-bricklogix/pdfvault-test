@@ -743,7 +743,7 @@ export function LoginCard() {
             className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
             href={signUpHref}
           >
-            Sign up
+            Get Started
           </Link>
         </p>
       ) : null}

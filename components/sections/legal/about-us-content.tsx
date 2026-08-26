@@ -149,17 +149,17 @@ export function AboutUsContent() {
           {TOOLS.map((t) => (
             <div
               key={t.title}
-              className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5"
+              className="group rounded-2xl border border-[var(--pv-border-subtle,#dee2e6)] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,#f12c23_35%,transparent)] hover:shadow-[0_10px_28px_-18px_rgba(241,44,35,0.35)]"
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
-                  <HugeiconsIcon icon={t.icon} size={20} />
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23] transition-colors group-hover:bg-[color-mix(in_srgb,#f12c23_18%,transparent)]">
+                  <HugeiconsIcon icon={t.icon} size={22} strokeWidth={1.8} />
                 </span>
-                <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
+                <h3 className="text-[16px] font-semibold leading-tight text-[#121212]">
                   {t.title}
                 </h3>
               </div>
-              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pv-text-body)]">
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pv-text-secondary,#5f5f5f)]">
                 {t.body}
               </p>
             </div>

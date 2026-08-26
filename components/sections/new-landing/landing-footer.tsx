@@ -46,7 +46,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       // Changelog removed; replaced with the auth pair per PM review.
       { label: "Login", href: ROUTES.AUTH.SIGN_IN },
-      { label: "Register", href: ROUTES.AUTH.SIGN_UP },
+      { label: "Get Started", href: ROUTES.AUTH.SIGN_UP },
     ],
   },
 ];

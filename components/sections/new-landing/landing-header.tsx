@@ -12,7 +12,6 @@ import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { AllToolsCatalog } from "./all-tools-catalog";
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -21,11 +20,14 @@ type NavLink = { label: string; href: string };
 
 // Primary nav tools — real routes, not `#hash` anchors. Order per PM
 // review 2026-07: Edit → Convert → Compress. AI Summarizer hidden until
-// the AI feature ships.
+// the AI feature ships. Edit and Compress land on marketing pages
+// (`/edit`, `/compress`) that mirror the `/convert/[slug]` layout —
+// hero title + upload workspace — so the visitor sees a consistent
+// tool-landing experience across the nav bar.
 const PRIMARY_LINKS: NavLink[] = [
-  { label: "Edit", href: ROUTES.TOOLS.PDF_EDITOR },
+  { label: "Edit", href: "/edit" },
   { label: "Convert", href: "/convert/pdf-to-word" },
-  { label: "Compress", href: TOOL_ROUTE.compress },
+  { label: "Compress", href: "/compress" },
   // { label: "AI Summarizer", href: "/ai-summarizer" },
 ];
 

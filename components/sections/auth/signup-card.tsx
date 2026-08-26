@@ -499,7 +499,7 @@ export function SignupCard() {
               : ROUTES.AUTH.SIGN_IN
           }
         >
-          Sign In
+          Log In
         </Link>
       </p>
 

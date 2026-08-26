@@ -174,7 +174,7 @@ export function CompressModal() {
                 Quality preset
               </legend>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 px-2">
                 {PRESET_OPTIONS.map((opt) => {
                   const checked = preset === opt.value;
 
