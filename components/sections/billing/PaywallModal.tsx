@@ -666,9 +666,8 @@ function PlanStep({
             You are enrolling in an annual subscription to pdfvault.ai. You
             agree to be billed{" "}
             {formatMinor(annual.amountRenewMinor, annual.currency)} per year
-            until you cancel.
-            Payments will be charged from the card you specified below. To
-            cancel, visit your{" "}
+            until you cancel. Payments will be charged from the card you
+            specified below. To cancel, visit your{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
               href="/dashboard/settings/billing"

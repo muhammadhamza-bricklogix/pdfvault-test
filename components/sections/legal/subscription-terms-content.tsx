@@ -42,21 +42,16 @@ export function SubscriptionTermsContent() {
         </p>
       </div>
 
-      <LegalSectionCard
-        icon={SparklesIcon}
-        id="st-intro"
-        title="Important"
-      >
+      <LegalSectionCard icon={SparklesIcon} id="st-intro" title="Important">
         <p>
           These Subscription Terms govern your PDFVault trial and monthly
-          subscription, including automatic renewal. They form an integral
-          part of our{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>;
-          capitalised terms not defined here have the meaning given in the
-          Terms and Conditions. In the event of a conflict between these
-          Subscription Terms and the Terms and Conditions in relation to
-          trial and subscription billing, these Subscription Terms prevail.
-          Charges are also subject to our{" "}
+          subscription, including automatic renewal. They form an integral part
+          of our <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>;
+          capitalised terms not defined here have the meaning given in the Terms
+          and Conditions. In the event of a conflict between these Subscription
+          Terms and the Terms and Conditions in relation to trial and
+          subscription billing, these Subscription Terms prevail. Charges are
+          also subject to our{" "}
           <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>.
         </p>
       </LegalSectionCard>
@@ -65,10 +60,10 @@ export function SubscriptionTermsContent() {
         <p>
           Certain features of the Service — including downloading a completed
           file — require a paid trial. When you start a trial, you will be
-          charged <strong>US$0.99 for 7 days</strong> of full access to
-          premium download and editing features. Unless you cancel before the
-          end of the 7-day trial period, your trial will automatically convert
-          into a recurring monthly subscription and you will be charged the
+          charged <strong>US$0.99 for 7 days</strong> of full access to premium
+          download and editing features. Unless you cancel before the end of the
+          7-day trial period, your trial will automatically convert into a
+          recurring monthly subscription and you will be charged the
           subscription price shown at checkout. Where required by applicable
           law, we will send you a reminder before your trial converts.
         </p>
@@ -85,9 +80,9 @@ export function SubscriptionTermsContent() {
           charges your payment method for another 30-day period. You will
           continue to have access to all subscription features for as long as
           your subscription remains active. The renewal rate will be no more
-          than the rate for the immediately prior period, excluding
-          promotional or discount pricing, unless we notify you of a rate
-          change beforehand as described in Section 5.
+          than the rate for the immediately prior period, excluding promotional
+          or discount pricing, unless we notify you of a rate change beforehand
+          as described in Section 5.
         </p>
       </LegalSectionCard>
 
@@ -99,8 +94,8 @@ export function SubscriptionTermsContent() {
         <p>
           Payment is charged, via our payment processor Adyen, to the payment
           method you submit at the time of purchase — both for the initial
-          US$0.99 trial charge and for each subsequent US$25 monthly renewal.
-          By starting a trial or subscription, you authorize us to charge the
+          US$0.99 trial charge and for each subsequent US$25 monthly renewal. By
+          starting a trial or subscription, you authorize us to charge the
           applicable fees to that payment method on an ongoing basis until you
           cancel. If a renewal payment fails, a retry mechanism applies as
           described in Section 7.
@@ -123,30 +118,30 @@ export function SubscriptionTermsContent() {
           </li>
         </ul>
         <p className="mt-3">
-          Cancelling disables automatic renewal. If you cancel during your
-          7-day trial, you will not be charged the monthly fee, but the
-          US$0.99 trial charge is not refunded except as described in our{" "}
+          Cancelling disables automatic renewal. If you cancel during your 7-day
+          trial, you will not be charged the monthly fee, but the US$0.99 trial
+          charge is not refunded except as described in our{" "}
           <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link> or where
           required by law. If you cancel after conversion to a paid
           subscription, cancellation takes effect at the end of the current
           billing period: you keep access to subscription features for the
-          remainder of the period you already paid for, and we do not prorate
-          or refund the unused portion of that period, except as set out in
-          the Refund Policy or required by law.
+          remainder of the period you already paid for, and we do not prorate or
+          refund the unused portion of that period, except as set out in the
+          Refund Policy or required by law.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           4.1 Content Access After Cancellation
         </p>
         <p>
-          If your account is closed or your access to the Service ends, you
-          may no longer be able to access Content you have stored with us.
-          Where we close or suspend your account on our own initiative, we
-          will try to notify you beforehand so you have a chance to download
-          anything you want to keep, except where we are not permitted by
-          law to give that notice. It is your responsibility to download any
-          Content you wish to retain before your account is closed; Content
-          still on our servers at that point may be permanently deleted.
+          If your account is closed or your access to the Service ends, you may
+          no longer be able to access Content you have stored with us. Where we
+          close or suspend your account on our own initiative, we will try to
+          notify you beforehand so you have a chance to download anything you
+          want to keep, except where we are not permitted by law to give that
+          notice. It is your responsibility to download any Content you wish to
+          retain before your account is closed; Content still on our servers at
+          that point may be permanently deleted.
         </p>
       </LegalSectionCard>
 
@@ -154,20 +149,20 @@ export function SubscriptionTermsContent() {
         <p>
           To the maximum extent permitted by applicable law, we may change
           subscription fees. We will give you reasonable advance notice of any
-          pricing change by email or another prominent method before the
-          change takes effect. If you do not agree to a new price, you can
-          cancel before the change takes effect; continued use after the
-          change takes effect constitutes acceptance of the new price.
+          pricing change by email or another prominent method before the change
+          takes effect. If you do not agree to a new price, you can cancel
+          before the change takes effect; continued use after the change takes
+          effect constitutes acceptance of the new price.
         </p>
       </LegalSectionCard>
 
       <LegalSectionCard icon={MoneyReceive02Icon} id="st-6" title="6. Refunds">
         <p>
           Charges made under these Subscription Terms are subject to our{" "}
-          <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>, which
-          includes a 14-day money-back guarantee on your first monthly
-          subscription charge and describes the additional withdrawal rights
-          available to EU, EEA, and UK residents (see also Section 8 below).
+          <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>, which includes
+          a 14-day money-back guarantee on your first monthly subscription
+          charge and describes the additional withdrawal rights available to EU,
+          EEA, and UK residents (see also Section 8 below).
         </p>
       </LegalSectionCard>
 
@@ -180,10 +175,10 @@ export function SubscriptionTermsContent() {
           If a renewal payment fails due to insufficient funds, expired card
           details, or other processing issues, we may make several attempts to
           process the renewal using the same payment method, and may suspend
-          access to premium features until payment succeeds. We will notify
-          you by email if this happens. If all attempts fail, your
-          subscription will be automatically cancelled and access suspended
-          until a valid payment method is provided.
+          access to premium features until payment succeeds. We will notify you
+          by email if this happens. If all attempts fail, your subscription will
+          be automatically cancelled and access suspended until a valid payment
+          method is provided.
         </p>
       </LegalSectionCard>
 
@@ -193,31 +188,30 @@ export function SubscriptionTermsContent() {
         title="8. Right of Withdrawal (EU, EEA and UK Residents)"
       >
         <p>
-          If you are a resident of the European Union, European Economic
-          Area, or United Kingdom, you have{" "}
-          <strong>14 days from the date you subscribe</strong> to withdraw
-          from your contract with us, without giving any reason and without
-          cost, subject to the exception below. To exercise the right of
-          withdrawal, notify us of your decision by email at{" "}
+          If you are a resident of the European Union, European Economic Area,
+          or United Kingdom, you have{" "}
+          <strong>14 days from the date you subscribe</strong> to withdraw from
+          your contract with us, without giving any reason and without cost,
+          subject to the exception below. To exercise the right of withdrawal,
+          notify us of your decision by email at{" "}
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a> before
           the withdrawal period expires; it is sufficient to send your notice
-          before the 14 days elapse. A model withdrawal form is included in
-          the <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>.
+          before the 14 days elapse. A model withdrawal form is included in the{" "}
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>.
         </p>
         <p className="mt-3">
           If you withdraw, we will reimburse all payments received from you
-          without undue delay, and in any event no later than 14 days from
-          the day you informed us of your decision, using the same payment
-          method as the original transaction, at no extra cost to you.
+          without undue delay, and in any event no later than 14 days from the
+          day you informed us of your decision, using the same payment method as
+          the original transaction, at no extra cost to you.
         </p>
         <p className="mt-4 rounded-lg border border-[var(--pv-brand-red,#f12c23)] bg-[var(--pv-brand-red,#f12c23)]/10 p-4 text-[14px] italic">
-          If you asked us to begin providing the download or service
-          immediately during the withdrawal period and acknowledged that you
-          would lose your right of withdrawal by doing so, then — unless the
-          Service is defective — you will not be eligible for a refund of
-          digital content already delivered, and will only be eligible for a
-          proportional refund of any digital service used up until you
-          notified us.
+          If you asked us to begin providing the download or service immediately
+          during the withdrawal period and acknowledged that you would lose your
+          right of withdrawal by doing so, then — unless the Service is
+          defective — you will not be eligible for a refund of digital content
+          already delivered, and will only be eligible for a proportional refund
+          of any digital service used up until you notified us.
         </p>
       </LegalSectionCard>
 

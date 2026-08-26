@@ -51,12 +51,12 @@ export function RefundPolicyContent() {
           Subscription Terms. Capitalised terms not defined here have the
           meaning given in the Terms and Conditions. Nothing in this Policy
           limits or excludes any non-waivable statutory rights you have under
-          the laws of your country of residence, including the rights
-          described in Section 6 below.
+          the laws of your country of residence, including the rights described
+          in Section 6 below.
         </p>
         <p className="mt-3">
-          The version of this Policy in force on the date of a charge applies
-          to that charge. We may update this Policy from time to time; material
+          The version of this Policy in force on the date of a charge applies to
+          that charge. We may update this Policy from time to time; material
           changes will be notified by email or prominent notice on the Service
           before they take effect.
         </p>
@@ -93,12 +93,12 @@ export function RefundPolicyContent() {
         <p>
           Subscriptions renew automatically as described in the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> and the
-          Subscription Terms, and where required by applicable law we will
-          send you a reminder before a renewal charge. We do not offer
-          automatic refunds for renewal charges. However, if you cancel within
-          48 hours of a renewal charge and have not made material use of paid
-          features since that charge, contact us and we will consider a refund
-          on a case-by-case basis.
+          Subscription Terms, and where required by applicable law we will send
+          you a reminder before a renewal charge. We do not offer automatic
+          refunds for renewal charges. However, if you cancel within 48 hours of
+          a renewal charge and have not made material use of paid features since
+          that charge, contact us and we will consider a refund on a
+          case-by-case basis.
         </p>
         <p className="mt-3">
           To avoid a renewal charge altogether, cancel before the renewal date
@@ -124,10 +124,10 @@ export function RefundPolicyContent() {
           purchase that included them is refunded under this Policy.
         </p>
         <p className="mt-3">
-          One-time add-on purchases are refundable within 14 days of the
-          charge if the add-on has not been used. Recurring add-ons are
-          treated as renewals under Section 3 and are cancelled automatically
-          when the main subscription is cancelled.
+          One-time add-on purchases are refundable within 14 days of the charge
+          if the add-on has not been used. Recurring add-ons are treated as
+          renewals under Section 3 and are cancelled automatically when the main
+          subscription is cancelled.
         </p>
       </LegalSectionCard>
 
@@ -164,28 +164,28 @@ export function RefundPolicyContent() {
           contract for digital content or digital services within 14 days of
           purchase, without giving any reason, as described in the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> (which
-          include a model withdrawal form). This right applies to the trial
-          fee and to subscription charges alike.
+          include a model withdrawal form). This right applies to the trial fee
+          and to subscription charges alike.
         </p>
         <p className="mt-3">
           If you expressly consented to immediate performance of the Service
           during the withdrawal period and acknowledged the consequences for
           your withdrawal right, then: for digital services, if you withdraw
-          within the 14-day period, we may deduct a proportionate amount for
-          the service already provided up to the time you informed us of your
-          withdrawal; and for digital content that has been fully delivered,
-          the right of withdrawal is lost.
+          within the 14-day period, we may deduct a proportionate amount for the
+          service already provided up to the time you informed us of your
+          withdrawal; and for digital content that has been fully delivered, the
+          right of withdrawal is lost.
         </p>
         <p className="mt-3">
-          Where you validly exercise the right of withdrawal, we will refund
-          the amounts due without undue delay and no later than 14 days from
-          the date we receive your withdrawal notice, using the same payment
-          method as the original transaction, at no cost to you.
+          Where you validly exercise the right of withdrawal, we will refund the
+          amounts due without undue delay and no later than 14 days from the
+          date we receive your withdrawal notice, using the same payment method
+          as the original transaction, at no cost to you.
         </p>
         <p className="mt-3">
-          Our 14-Day Money-Back Guarantee in Section 2 is more generous than
-          the statutory right (a full refund with no deduction) and operates
-          in addition to, not instead of, your statutory rights.
+          Our 14-Day Money-Back Guarantee in Section 2 is more generous than the
+          statutory right (a full refund with no deduction) and operates in
+          addition to, not instead of, your statutory rights.
         </p>
       </LegalSectionCard>
 
@@ -196,28 +196,32 @@ export function RefundPolicyContent() {
       >
         <p>
           Email <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>{" "}
-          with the subject line &ldquo;Refund Request,&rdquo; the email
-          address associated with your account, the date and amount of the
-          charge, and, optionally, your reason for the request. We may ask
-          you to verify your identity or ownership of the account before
-          processing a refund.
+          with the subject line &ldquo;Refund Request,&rdquo; the email address
+          associated with your account, the date and amount of the charge, and,
+          optionally, your reason for the request. We may ask you to verify your
+          identity or ownership of the account before processing a refund.
         </p>
         <p className="mt-3">
-          Approved refunds are processed within 5&ndash;10 business days to
-          the original payment method, in the original transaction currency.
-          We are not responsible for exchange-rate differences or fees applied
-          by your bank or card issuer, and your bank or card issuer may take
-          additional time to post the credit.
+          Approved refunds are processed within 5&ndash;10 business days to the
+          original payment method, in the original transaction currency. We are
+          not responsible for exchange-rate differences or fees applied by your
+          bank or card issuer, and your bank or card issuer may take additional
+          time to post the credit.
         </p>
       </LegalSectionCard>
 
       <LegalSectionCard icon={CancelCircleIcon} id="r-5-8" title="Exclusions">
-        <p>Except where required by applicable law, refunds are not available for:</p>
+        <p>
+          Except where required by applicable law, refunds are not available
+          for:
+        </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>Charges older than the applicable refund window in this Policy.</li>
           <li>
-            Subscription renewal charges outside the window described in
-            Section 3.
+            Charges older than the applicable refund window in this Policy.
+          </li>
+          <li>
+            Subscription renewal charges outside the window described in Section
+            3.
           </li>
           <li>
             Credits that have been used, and promotional or bonus credits.
@@ -238,8 +242,8 @@ export function RefundPolicyContent() {
           slower to resolve than contacting us directly. If a chargeback is
           filed against a valid charge, we may suspend your account pending
           resolution. Fraudulent or improper chargebacks may result in
-          termination of your account and, where appropriate, legal action,
-          as set out in the Terms and Conditions.
+          termination of your account and, where appropriate, legal action, as
+          set out in the Terms and Conditions.
         </p>
       </LegalSectionCard>
 

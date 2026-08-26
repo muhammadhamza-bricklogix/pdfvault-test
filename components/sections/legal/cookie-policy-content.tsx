@@ -115,10 +115,9 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Essential for the Service to function; they cannot be disabled. They
-          include authentication and security cookies. The legal basis for
-          these cookies is our legitimate interest in operating a secure,
-          functioning Service; consent is not required for strictly necessary
-          cookies.
+          include authentication and security cookies. The legal basis for these
+          cookies is our legitimate interest in operating a secure, functioning
+          Service; consent is not required for strictly necessary cookies.
         </p>
         <CookieTable
           rows={[
@@ -164,8 +163,8 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Remember your preferences and choices to make the Service more
-          convenient to use. These are set only with your consent where
-          required by applicable law.
+          convenient to use. These are set only with your consent where required
+          by applicable law.
         </p>
         <CookieTable
           rows={[
@@ -246,10 +245,10 @@ export function CookiePolicyContent() {
         </p>
         <p>
           Help us understand how visitors use the Service so we can improve it.
-          These cookies assign a pseudonymous identifier to your browser; we
-          use the resulting data to produce aggregated statistics and do not
-          use it to identify you by name. Analytics cookies are set only with
-          your consent where required by applicable law.
+          These cookies assign a pseudonymous identifier to your browser; we use
+          the resulting data to produce aggregated statistics and do not use it
+          to identify you by name. Analytics cookies are set only with your
+          consent where required by applicable law.
         </p>
         <CookieTable
           rows={[
@@ -306,8 +305,7 @@ export function CookiePolicyContent() {
               provider: "doubleclick.net (Google)",
               purpose:
                 "Used by Google advertising services for ad measurement and, where enabled, remarketing.",
-              expiry:
-                "Up to 13 months (EEA/UK) / up to 2 years elsewhere",
+              expiry: "Up to 13 months (EEA/UK) / up to 2 years elsewhere",
             },
             {
               name: "test_cookie",
@@ -331,9 +329,9 @@ export function CookiePolicyContent() {
         <p>
           Some third-party services we use may set their own cookies, including
           Clerk (authentication), Adyen (fraud prevention during checkout),
-          Zendesk (customer support), CloudConvert (file conversion), Google
-          LLC (analytics and sign-in) and Trustpilot (online review platform).
-          These providers&rsquo; own privacy and cookie policies apply to their
+          Zendesk (customer support), CloudConvert (file conversion), Google LLC
+          (analytics and sign-in) and Trustpilot (online review platform). These
+          providers&rsquo; own privacy and cookie policies apply to their
           processing.
         </p>
 
@@ -341,19 +339,19 @@ export function CookiePolicyContent() {
           Cookies associated with Google sign-in
         </p>
         <p>
-          The only Google integration on the Service is the optional
-          &ldquo;Sign in with Google&rdquo; feature (provided via Clerk) on our
-          sign-in and sign-up pages. No page on the Service automatically loads
-          Google-owned scripts, and Google cookies are not set for visitors who
-          do not use Google sign-in.
+          The only Google integration on the Service is the optional &ldquo;Sign
+          in with Google&rdquo; feature (provided via Clerk) on our sign-in and
+          sign-up pages. No page on the Service automatically loads Google-owned
+          scripts, and Google cookies are not set for visitors who do not use
+          Google sign-in.
         </p>
         <p className="mt-3">
           If you choose to sign in with Google, the sign-in flow redirects
           through accounts.google.com, where Google LLC may set or refresh its
-          own account cookies (for example SID, HSID, SSID, APISID, SAPISID,
-          and their __Secure-1P / __Secure-3P variants) on the google.com
-          domain. These cookies are set by Google on its own domain, not by us;
-          we cannot set, read, or control them. They are used by Google to
+          own account cookies (for example SID, HSID, SSID, APISID, SAPISID, and
+          their __Secure-1P / __Secure-3P variants) on the google.com domain.
+          These cookies are set by Google on its own domain, not by us; we
+          cannot set, read, or control them. They are used by Google to
           authenticate your Google Account and protect it from unauthorized
           access, and are governed by Google&rsquo;s own Privacy Policy. If you
           are already signed in to a Google Account in your browser,
@@ -412,8 +410,8 @@ export function CookiePolicyContent() {
         <p>
           We may update this Cookie Policy periodically, including to reflect
           changes in the cookies we use. Material changes will be announced via
-          a notice on the Service, and the &ldquo;Updated date&rdquo; above
-          will be revised accordingly.
+          a notice on the Service, and the &ldquo;Updated date&rdquo; above will
+          be revised accordingly.
         </p>
       </LegalSectionCard>
 

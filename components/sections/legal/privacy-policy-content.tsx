@@ -66,10 +66,10 @@ export function PrivacyPolicyContent() {
         <p>
           To use our Service, we ask you to create an account by providing your
           email. When you access our website, we automatically collect cookies
-          from your device, language settings, time zone, device type,
-          operating system, and information about your interactions with the
-          website. We use this data to provide our Service, analyse how
-          customers use the website, and serve and measure ads.
+          from your device, language settings, time zone, device type, operating
+          system, and information about your interactions with the website. We
+          use this data to provide our Service, analyse how customers use the
+          website, and serve and measure ads.
         </p>
         <p className="mt-3">
           This Privacy Policy explains what personal data is collected when you
@@ -93,15 +93,15 @@ export function PrivacyPolicyContent() {
         <p className="mt-3">
           Any translation from the English version is provided for convenience
           only. In the event of any difference in meaning between the
-          English-language version of this Privacy Policy and a translation,
-          the English-language version prevails.
+          English-language version of this Privacy Policy and a translation, the
+          English-language version prevails.
         </p>
         <p className="mt-3">
           &ldquo;GDPR&rdquo; means the General Data Protection Regulation (EU)
           2016/679. &ldquo;EEA&rdquo; includes all current EU and European Free
           Trade Association member states, and for the purposes of this Policy
-          also includes the United Kingdom. &ldquo;Process,&rdquo; in respect
-          of personal data, includes to collect, store, and disclose to others.
+          also includes the United Kingdom. &ldquo;Process,&rdquo; in respect of
+          personal data, includes to collect, store, and disclose to others.
         </p>
       </LegalSectionCard>
 
@@ -111,8 +111,8 @@ export function PrivacyPolicyContent() {
         title="Personal Data Controller"
       >
         <p>
-          FLUTTWINGS INVESTMENTS LIMITED, a company registered under the laws
-          of the Republic of Cyprus, having its registered office at Dimostheni
+          FLUTTWINGS INVESTMENTS LIMITED, a company registered under the laws of
+          the Republic of Cyprus, having its registered office at Dimostheni
           Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia, Cyprus, is the
           controller of your personal data.
         </p>
@@ -144,8 +144,8 @@ export function PrivacyPolicyContent() {
           <li>
             <strong>Purchase Data:</strong> billing data you provide to our
             payment processor, Adyen. We do not collect or store full card
-            numbers, though we may receive limited data such as a secure
-            payment token, transaction amount, date, and time.
+            numbers, though we may receive limited data such as a secure payment
+            token, transaction amount, date, and time.
           </li>
           <li>
             <strong>Content:</strong> files and documents you upload to deliver
@@ -252,19 +252,16 @@ export function PrivacyPolicyContent() {
           3.6 To personalise our ads
         </p>
         <p>
-          We advertise PDFVault through Google Ads to reach potential
-          customers. In connection with this, Google advertising cookies and
-          pixels on the Website collect technical information, including
-          advertising and click identifiers, to measure the performance of our
-          campaigns (conversion tracking) and, where enabled, to build
-          audiences for remarketing. Details of the specific cookies used are
-          set out in our{" "}
+          We advertise PDFVault through Google Ads to reach potential customers.
+          In connection with this, Google advertising cookies and pixels on the
+          Website collect technical information, including advertising and click
+          identifiers, to measure the performance of our campaigns (conversion
+          tracking) and, where enabled, to build audiences for remarketing.
+          Details of the specific cookies used are set out in our{" "}
           <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>.
         </p>
         <p className="mt-3">
-          <strong>
-            How to opt out or influence personalized advertising.
-          </strong>{" "}
+          <strong>How to opt out or influence personalized advertising.</strong>{" "}
           Google allows its users to opt out of Google&rsquo;s personalized ads
           and to prevent their data from being used by Google Analytics via
           Google&rsquo;s Ads Settings. You may also opt out of interest-based
@@ -300,9 +297,9 @@ export function PrivacyPolicyContent() {
           3.8 To enforce our Terms and to prevent and combat fraud
         </p>
         <p>
-          We use personal data to enforce our agreements and to detect,
-          prevent, and combat fraud, which may involve sharing information with
-          law enforcement in connection with a dispute.
+          We use personal data to enforce our agreements and to detect, prevent,
+          and combat fraud, which may involve sharing information with law
+          enforcement in connection with a dispute.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
@@ -326,19 +323,19 @@ export function PrivacyPolicyContent() {
           4.1 Performance of a contract
         </p>
         <p>
-          To provide the Service, provide customer support, communicate with
-          you about your use of the Service, and process your payments.
+          To provide the Service, provide customer support, communicate with you
+          about your use of the Service, and process your payments.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           4.2 Legitimate interests
         </p>
         <p>
-          To communicate with you about your use of the Service, to research
-          and improve the Service, to enforce our Terms and prevent fraud, and
-          in connection with a merger, acquisition, or legal claim. Where we
-          rely on legitimate interests, you may object to this processing at
-          any time (see Section 6).
+          To communicate with you about your use of the Service, to research and
+          improve the Service, to enforce our Terms and prevent fraud, and in
+          connection with a merger, acquisition, or legal claim. Where we rely
+          on legitimate interests, you may object to this processing at any time
+          (see Section 6).
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
@@ -346,8 +343,8 @@ export function PrivacyPolicyContent() {
         </p>
         <p>
           For marketing communications and personalized advertising, including
-          cookies and similar tracking technologies. You may withdraw consent
-          at any time via our cookie preferences or by contacting us.
+          cookies and similar tracking technologies. You may withdraw consent at
+          any time via our cookie preferences or by contacting us.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
@@ -368,8 +365,8 @@ export function PrivacyPolicyContent() {
           5.1 Service providers
         </p>
         <p>
-          We share personal data with third parties that provide services on
-          our behalf, based on our instructions, including:
+          We share personal data with third parties that provide services on our
+          behalf, based on our instructions, including:
         </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
@@ -380,8 +377,8 @@ export function PrivacyPolicyContent() {
           </li>
           <li>
             <strong>Hosting and infrastructure:</strong> Cloudflare, Amazon Web
-            Services (AWS), including CloudFront (content delivery) and Route
-            53 (DNS).
+            Services (AWS), including CloudFront (content delivery) and Route 53
+            (DNS).
           </li>
           <li>
             <strong>Customer support:</strong> Zendesk.
@@ -413,9 +410,9 @@ export function PrivacyPolicyContent() {
           5.2 Law enforcement and public authorities
         </p>
         <p>
-          We may disclose personal data to enforce our Terms, protect our
-          rights or the rights of others, and to respond to lawful requests
-          from courts, law enforcement, or regulatory authorities.
+          We may disclose personal data to enforce our Terms, protect our rights
+          or the rights of others, and to respond to lawful requests from
+          courts, law enforcement, or regulatory authorities.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
@@ -423,17 +420,17 @@ export function PrivacyPolicyContent() {
         </p>
         <p>
           If we are involved in a merger, acquisition, divestiture, or asset
-          sale, customer information is typically one of the transferred
-          assets, with notice to you.
+          sale, customer information is typically one of the transferred assets,
+          with notice to you.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           5.4 Affiliates
         </p>
         <p>
-          We may share your personal information with companies that are part
-          of our corporate group, who will handle it consistently with this
-          Privacy Policy.
+          We may share your personal information with companies that are part of
+          our corporate group, who will handle it consistently with this Privacy
+          Policy.
         </p>
       </LegalSectionCard>
 
@@ -445,8 +442,7 @@ export function PrivacyPolicyContent() {
         <p>
           You have the right to: access, review, or correct your personal data;
           request erasure of your personal data, subject to legal retention
-          requirements; and object to or restrict our use of your personal
-          data.
+          requirements; and object to or restrict our use of your personal data.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
@@ -465,22 +461,18 @@ export function PrivacyPolicyContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard
-        icon={UserCircleIcon}
-        id="p-3-7"
-        title="Age Limitation"
-      >
+      <LegalSectionCard icon={UserCircleIcon} id="p-3-7" title="Age Limitation">
         <p>
           The Service is intended for use by individuals aged 18 and older. If
           you are under 18, you may only use the Service with the involvement
           and approval of a parent or legal guardian, as described in our{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. We do
-          not knowingly collect personal information directly from a minor
-          without appropriate parental or guardian involvement. If you believe
-          we have collected personal information from a minor without
-          appropriate parental or guardian involvement, contact us immediately
-          at <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a> and we will
-          take appropriate action, which may include deleting that information.
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. We do not
+          knowingly collect personal information directly from a minor without
+          appropriate parental or guardian involvement. If you believe we have
+          collected personal information from a minor without appropriate
+          parental or guardian involvement, contact us immediately at{" "}
+          <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a> and we will take
+          appropriate action, which may include deleting that information.
         </p>
       </LegalSectionCard>
 
@@ -490,12 +482,12 @@ export function PrivacyPolicyContent() {
         title="International Data Transfers"
       >
         <p>
-          We may transfer personal data to countries other than the one in
-          which it was originally collected, in order to provide the Service.
-          Where we transfer personal data originating from the EEA or UK to
-          countries without an adequate level of data protection, we rely on
-          the European Commission&rsquo;s Standard Contractual Clauses and the
-          UK International Data Transfer Addendum, as applicable.
+          We may transfer personal data to countries other than the one in which
+          it was originally collected, in order to provide the Service. Where we
+          transfer personal data originating from the EEA or UK to countries
+          without an adequate level of data protection, we rely on the European
+          Commission&rsquo;s Standard Contractual Clauses and the UK
+          International Data Transfer Addendum, as applicable.
         </p>
       </LegalSectionCard>
 
@@ -523,26 +515,25 @@ export function PrivacyPolicyContent() {
           and others). In the preceding 12 months, we have collected the
           categories of personal information described in Section 2
           (identifiers, commercial information, and internet activity
-          information) for the purposes described in Section 3, and shared
-          them with the categories of recipients described in Section 5.
+          information) for the purposes described in Section 3, and shared them
+          with the categories of recipients described in Section 5.
         </p>
         <p className="mt-3">
-          You may have the right to: know and access the personal information
-          we hold about you; delete it; correct it; receive it in a portable
+          You may have the right to: know and access the personal information we
+          hold about you; delete it; correct it; receive it in a portable
           format; opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; and
-          targeted advertising; limit use of sensitive personal information;
-          and not be discriminated against for exercising these rights. We
-          honor Global Privacy Control (GPC) signals as an opt-out of
-          sale/sharing where required. To exercise any right, or to appeal a
-          decision, email{" "}
+          targeted advertising; limit use of sensitive personal information; and
+          not be discriminated against for exercising these rights. We honor
+          Global Privacy Control (GPC) signals as an opt-out of sale/sharing
+          where required. To exercise any right, or to appeal a decision, email{" "}
           <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>. Authorized
           agents may submit requests with proof of authorization.
         </p>
         <p className="mt-3">
           Privacy laws in some US states define &ldquo;sale&rdquo; broadly
-          enough to include sharing via cookies or similar tracking
-          technologies for certain advertising activities, including the Google
-          Ads integration described in Section 3.6. We do not sell personal
+          enough to include sharing via cookies or similar tracking technologies
+          for certain advertising activities, including the Google Ads
+          integration described in Section 3.6. We do not sell personal
           information for monetary compensation; however, this cookie-based
           advertising activity may qualify as a &ldquo;sale&rdquo; or
           &ldquo;share&rdquo; under such laws even without payment, and the
@@ -571,8 +562,8 @@ export function PrivacyPolicyContent() {
         <p className="mt-3">
           We will store personal data for as long as reasonably necessary to
           fulfil the purposes in this Policy, including complying with legal
-          obligations and enforcing our agreements. You may request deletion
-          of your account and associated data at any time (see Section 6).
+          obligations and enforcing our agreements. You may request deletion of
+          your account and associated data at any time (see Section 6).
         </p>
       </LegalSectionCard>
 
