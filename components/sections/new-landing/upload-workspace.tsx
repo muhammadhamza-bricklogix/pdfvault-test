@@ -820,6 +820,7 @@ export function UploadWorkspace({
               >
                 <TrustpilotWidget
                   businessUnitId="6a5635cc9545fd0a55b8cee6"
+                  disableLink
                   locale="en-US"
                   reviewUrl=""
                   skeletonHeight={20}

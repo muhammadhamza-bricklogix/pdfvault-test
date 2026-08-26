@@ -30,6 +30,8 @@ type TrustpilotWidgetProps = {
   skeletonHeight: number;
   /** Optional max width for the outer wrapper (matches previous inline style caps). */
   maxWidth?: number | string;
+  /** When true, drops the fallback anchor AND blocks clicks on the injected iframe so nothing redirects to Trustpilot. */
+  disableLink?: boolean;
   className?: string;
   style?: CSSProperties;
 };
@@ -44,6 +46,7 @@ export function TrustpilotWidget({
   reviewUrl,
   skeletonHeight,
   maxWidth,
+  disableLink = false,
   className,
   style,
 }: TrustpilotWidgetProps) {
@@ -114,7 +117,7 @@ export function TrustpilotWidget({
       ) : null}
       <div
         ref={widgetRef}
-        className="trustpilot-widget"
+        className={`trustpilot-widget${disableLink ? " pointer-events-none" : ""}`}
         data-businessunit-id={businessUnitId}
         data-locale={locale}
         data-style-height={styleHeight}
@@ -123,9 +126,13 @@ export function TrustpilotWidget({
         data-token={token}
         style={{ minHeight: skeletonHeight }}
       >
-        <a href={reviewUrl} rel="noopener" target="_blank">
-          Trustpilot
-        </a>
+        {disableLink ? (
+          <span>Trustpilot</span>
+        ) : (
+          <a href={reviewUrl} rel="noopener" target="_blank">
+            Trustpilot
+          </a>
+        )}
       </div>
     </div>
   );
