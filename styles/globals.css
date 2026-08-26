@@ -380,7 +380,18 @@ body {
 }
 
 /* Body: single row, text flexes, buttons on the right. Neutralise
- * Cookiebot's grid layout completely. */
+ * Cookiebot's grid layout completely. Also flip the dialog root itself
+ * into a flex container so our injected `#pv-cookie-banner-text` sits
+ * next to `#CybotCookiebotDialogBodyButtonsWrapper` even when Cookiebot
+ * moves the buttons wrapper up to be a direct child of the root. */
+#CybotCookiebotDialog {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
 #CybotCookiebotDialogBody {
   display: flex !important;
   flex-direction: row !important;
@@ -397,6 +408,24 @@ body {
   grid-template-columns: none !important;
   grid-template-rows: none !important;
   grid-template-areas: none !important;
+}
+
+/* Our injected text node — sits on the left, takes remaining width. */
+#pv-cookie-banner-text {
+  display: block !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  color: #111 !important;
+  text-align: left !important;
+}
+
+#pv-cookie-banner-text a {
+  color: #111 !important;
+  text-decoration: underline !important;
 }
 
 #CybotCookiebotDialogBodyContent {
@@ -510,10 +539,16 @@ body {
     font-size: 13px !important;
   }
 
+  #CybotCookiebotDialog,
   #CybotCookiebotDialogBody {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 10px !important;
+  }
+
+  #pv-cookie-banner-text {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
   }
 
   #CybotCookiebotDialogBodyContentText {

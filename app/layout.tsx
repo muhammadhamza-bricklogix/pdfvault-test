@@ -216,19 +216,29 @@ export default function RootLayout({
               '<a href="/privacy">Privacy Policy</a> and <a href="/cookies">Cookie Policy</a>.';
 
             function setText() {
-              var el = document.getElementById("CybotCookiebotDialogBodyContentText");
+              // Inject a dedicated text node right before the buttons.
+              // We create our own element (id "pv-cookie-banner-text")
+              // rather than reusing Cookiebot's own text node, because
+              // some templates omit that node entirely, and even when it
+              // exists, Cookiebot's runtime CSS often collapses or hides
+              // it. Our element carries a unique id so our overrides win.
+              var buttons =
+                document.getElementById("CybotCookiebotDialogBodyButtonsWrapper") ||
+                document.getElementById("CybotCookiebotDialogBodyButtons");
+              if (!buttons || !buttons.parentNode) return;
+              var el = document.getElementById("pv-cookie-banner-text");
               if (!el) {
-                // Some Cookiebot templates omit the text node — inject one
-                // into the content container so the body isn't empty.
-                var container =
-                  document.getElementById("CybotCookiebotDialogBodyContent") ||
-                  document.getElementById("CybotCookiebotDialogBody");
-                if (!container) return;
                 el = document.createElement("div");
-                el.id = "CybotCookiebotDialogBodyContentText";
-                container.insertBefore(el, container.firstChild);
+                el.id = "pv-cookie-banner-text";
+                buttons.parentNode.insertBefore(el, buttons);
+              } else if (el.nextSibling !== buttons) {
+                buttons.parentNode.insertBefore(el, buttons);
               }
               if (el.innerHTML !== TEXT_HTML) el.innerHTML = TEXT_HTML;
+              // Suppress Cookiebot's own (empty / duplicate) text node
+              // if it's present, so we don't end up with two paragraphs.
+              var native = document.getElementById("CybotCookiebotDialogBodyContentText");
+              if (native) native.style.display = "none";
             }
             function relabel(id, label) {
               var el = document.getElementById(id);
