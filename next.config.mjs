@@ -45,6 +45,103 @@ const nextConfig = {
     ];
   },
   async headers() {
+    // Global Content-Security-Policy. Third-party surface: Clerk (auth iframe +
+    // hosted pages), Weglot (translations), Trustpilot (widget), Solidgate
+    // (charge-auth iframe), Google (Drive Picker OAuth), Microsoft (OneDrive
+    // Picker OAuth), Sentry (browser bundle + reporting). Anything outside
+    // these origins is blocked.
+    //
+    // `frame-ancestors 'none'` replaces X-Frame-Options; `report-only` is NOT
+    // used here — we accept short-term breakage over a permissive open policy.
+    // If a legitimate third-party source is missed, add it to the appropriate
+    // directive rather than removing the directive.
+    const scriptSrc = [
+      "'self'",
+      "'unsafe-inline'", // Next inlines the runtime bootstrap
+      "'unsafe-eval'", // Weglot + Sentry require in some flows
+      "https://cdn.weglot.com",
+      "https://invitejs.trustpilot.com",
+      "https://widget.trustpilot.com",
+      "https://cdn.charge-auth.com",
+      "https://apis.google.com",
+      "https://accounts.google.com",
+      "https://login.microsoftonline.com",
+      "https://clerk.pdfvault.ai",
+      "https://*.clerk.accounts.dev",
+      "https://challenges.cloudflare.com",
+      "https://browser.sentry-cdn.com",
+    ].join(" ");
+
+    const connectSrc = [
+      "'self'",
+      "https://api.pdfvault.ai",
+      "https://api.pdfedits.io",
+      "https://clerk.pdfvault.ai",
+      "https://*.clerk.accounts.dev",
+      "https://cdn.weglot.com",
+      "https://cache.weglot.com",
+      "https://api.weglot.com",
+      "https://graph.microsoft.com",
+      "https://login.microsoftonline.com",
+      "https://accounts.google.com",
+      "https://www.googleapis.com",
+      "https://oauth2.googleapis.com",
+      "https://api.charge-auth.com",
+      "https://api.solidgate.com",
+      "https://*.sentry.io",
+      "https://o4508959538905088.ingest.us.sentry.io",
+    ].join(" ");
+
+    const frameSrc = [
+      "'self'",
+      "https://clerk.pdfvault.ai",
+      "https://*.clerk.accounts.dev",
+      "https://accounts.google.com",
+      "https://docs.google.com",
+      "https://login.microsoftonline.com",
+      "https://cdn.charge-auth.com",
+      "https://widget.trustpilot.com",
+      "https://challenges.cloudflare.com",
+    ].join(" ");
+
+    const imgSrc = [
+      "'self'",
+      "data:",
+      "blob:",
+      "https:",
+    ].join(" ");
+
+    const styleSrc = [
+      "'self'",
+      "'unsafe-inline'", // required by HeroUI + Tailwind runtime + Weglot
+      "https://cdn.weglot.com",
+      "https://fonts.googleapis.com",
+    ].join(" ");
+
+    const fontSrc = [
+      "'self'",
+      "data:",
+      "https://fonts.gstatic.com",
+      "https://cdn.weglot.com",
+    ].join(" ");
+
+    const csp = [
+      "default-src 'self'",
+      `script-src ${scriptSrc}`,
+      `connect-src ${connectSrc}`,
+      `frame-src ${frameSrc}`,
+      `img-src ${imgSrc}`,
+      `style-src ${styleSrc}`,
+      `font-src ${fontSrc}`,
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://clerk.pdfvault.ai",
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
     // The Google Drive / OneDrive picker opens an OAuth popup that
     // navigates to a cross-origin auth page and back. Under the stricter
     // `Cross-Origin-Opener-Policy: same-origin` (which Next.js / Vercel /
@@ -64,6 +161,19 @@ const nextConfig = {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin-allow-popups",
           },
+          { key: "Content-Security-Policy", value: csp },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value:
+              "camera=(), microphone=(), geolocation=(), payment=(self \"https://cdn.charge-auth.com\"), usb=(), interest-cohort=()",
+          },
+          { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
       // Public share viewer + bytes endpoint: never cache, never index,
