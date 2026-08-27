@@ -210,6 +210,90 @@ function triggerDownload(downloadUrl: string) {
   document.body.removeChild(link);
 }
 
+type LastSaveRef = {
+  current: { key: string; documentId: string } | null;
+};
+
+type QueryClientRef = {
+  current: ReturnType<typeof useQueryClient> | undefined;
+};
+
+/**
+ * Upload the stamped W-9 to the user's library. Returns `true` if the
+ * row landed (fresh upload or dedupe hit), `false` if the upload failed.
+ * Idempotent per `(sessionId, values, signatureKey, currentDocumentId)`
+ * — repeat Done clicks with identical payload don't create duplicates.
+ *
+ * `currentDocumentId` in the pdf-editor store is what makes this an
+ * upsert on subsequent saves; the first successful upload writes it via
+ * `setCurrentDocument`, and later clicks pass that same id back to the
+ * backend so the row is overwritten instead of duplicated.
+ */
+async function ensureLibrarySave(
+  downloadUrl: string,
+  sessionId: string,
+  values: Record<string, string>,
+  signatureKey: string | null,
+  normalizedValues: Record<string, string>,
+  lastSaveRef: LastSaveRef,
+  queryClientRef: QueryClientRef,
+): Promise<boolean> {
+  const { currentDocumentId } = usePdfEditorStore.getState();
+  const saveCacheKey = `${sessionId}::${signatureKey ?? ""}::${JSON.stringify(
+    normalizedValues,
+  )}::${currentDocumentId ?? ""}`;
+
+  if (lastSaveRef.current && lastSaveRef.current.key === saveCacheKey) {
+    return true;
+  }
+
+  try {
+    const res = await fetch(downloadUrl);
+
+    if (!res.ok) {
+      throw new Error(`Couldn't fetch the stamped W-9 (HTTP ${res.status}).`);
+    }
+    const blob = await res.blob();
+    const stampedFile = new File([blob], "w-9.pdf", {
+      type: "application/pdf",
+    });
+    const editorState = JSON.stringify({
+      v: 1,
+      w9: { values, signatureKey },
+    });
+    const savedDoc = await documentsService.uploadDocument({
+      file: stampedFile,
+      documentId: currentDocumentId ?? undefined,
+      editorState,
+    });
+
+    usePdfEditorStore.getState().setCurrentDocument({
+      id: savedDoc.id,
+      name: savedDoc.filename,
+    });
+    lastSaveRef.current = {
+      key: saveCacheKey,
+      documentId: savedDoc.id,
+    };
+
+    try {
+      queryClientRef.current?.invalidateQueries({
+        queryKey: documentKeys.lists(),
+      });
+    } catch {
+      /* non-fatal */
+    }
+
+    return true;
+  } catch (saveErr) {
+    // eslint-disable-next-line no-console
+    console.error("[w9.save_on_export] library upload failed:", saveErr);
+    logger.captureError(saveErr, "w9.save_on_export");
+
+    return false;
+  }
+}
+
 export function W9FinalizeIntercept() {
   // Clerk auth state — read at render, mirrored into refs so the
   // stopImmediatePropagation event handler (registered ONCE via
@@ -304,10 +388,29 @@ export function W9FinalizeIntercept() {
         // the backend gave us the first time. Skip the network call so
         // the backend's "already finalized" 400 never surfaces.
         triggerDownload(lastFinalizeRef.current.downloadUrl);
-        toast.success({
-          title: "W-9 ready",
-          description: "Your filled PDF has downloaded.",
-        });
+
+        // Retry the library save if the first attempt failed. The
+        // finalize cache hitting doesn't mean the library upload
+        // succeeded — if the backend was down last time, this click
+        // still needs to land the row in My PDFs.
+        void (async () => {
+          const savedNow = await ensureLibrarySave(
+            lastFinalizeRef.current!.downloadUrl,
+            sessionId,
+            values,
+            signatureKey,
+            normalizedValues,
+            lastSaveRef,
+            queryClientRef,
+          );
+
+          toast.success({
+            title: "W-9 ready",
+            description: savedNow
+              ? "Your filled PDF has downloaded and been saved to My PDFs."
+              : "Your filled PDF has downloaded.",
+          });
+        })();
 
         return;
       }
@@ -382,9 +485,26 @@ export function W9FinalizeIntercept() {
           // user gets the PDF.
           triggerDownload(downloadUrl);
 
+          // ALSO save the stamped copy to the user's library. The
+          // "Done → Download" flow is the only save affordance on
+          // `/w-9-form` (the standalone Save button is hidden per
+          // product), so if we don't persist here the user's filled
+          // W-9 never lands in My PDFs.
+          const savedNow = await ensureLibrarySave(
+            downloadUrl,
+            sessionId,
+            values,
+            signatureKey,
+            normalizedValues,
+            lastSaveRef,
+            queryClientRef,
+          );
+
           toast.success({
             title: "W-9 ready",
-            description: "Your filled PDF has downloaded.",
+            description: savedNow
+              ? "Your filled PDF has downloaded and been saved to My PDFs."
+              : "Your filled PDF has downloaded. Save to My PDFs failed — please try again.",
           });
         } catch (err) {
           const parsed = extractApiFieldErrors(err);

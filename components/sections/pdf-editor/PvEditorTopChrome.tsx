@@ -39,6 +39,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
@@ -211,6 +212,13 @@ function PillGroup({
 // ---------------------------------------------------------------------------
 
 function TopAppBar() {
+  const pathname = usePathname();
+  // Explicit Save affordance for the W-9 route only. The generic
+  // composer's Save button is hidden per product decision, but on
+  // `/w-9-form` there's no other in-flow save trigger — the user's
+  // only path to My PDFs otherwise is Done → Download, which is
+  // paid + downloads to disk. QA 2026-08-28.
+  const showW9Save = pathname === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -369,10 +377,12 @@ function TopAppBar() {
       <SaveStatusChip />
 
       {/* Save button — HIDDEN for now per product decision. Restore by
-          removing the surrounding `{false && (…)}` wrapper. Handler +
+          removing the surrounding `{showW9Save && (…)}` wrapper. Handler +
           auth flow (items 4, 12, 17) preserved intact so re-enabling
-          is a one-line change. */}
-      {false && (
+          is a one-line change. Currently enabled ONLY on the W-9 route
+          (`/w-9-form`) where the user needs an explicit save affordance
+          that doesn't force a paid download. */}
+      {showW9Save && (
         <Tooltip delay={300}>
           <button
             aria-label="Save"
