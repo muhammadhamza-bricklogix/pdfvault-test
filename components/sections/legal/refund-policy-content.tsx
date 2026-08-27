@@ -47,9 +47,9 @@ export function RefundPolicyContent() {
           This Refund Policy applies to purchases of PDFVault subscriptions,
           plans, and paid features made on pdfvault.ai (the
           &ldquo;Service&rdquo;) and forms an integral part of our{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> and
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and conditions</Link> and
           Subscription Terms. Capitalised terms not defined here have the
-          meaning given in the Terms and Conditions. Nothing in this Policy
+          meaning given in the Terms and conditions. Nothing in this Policy
           limits or excludes any non-waivable statutory rights you have under
           the laws of your country of residence, including the rights described
           in Section 6 below.
@@ -79,7 +79,7 @@ export function RefundPolicyContent() {
           The guarantee does not apply to: subscription renewal charges (your
           second monthly charge onward), which are addressed in Section 3; or
           accounts suspended or terminated for violation of the Terms and
-          Conditions. The guarantee applies once per customer.
+          conditions. The guarantee applies once per customer.
         </p>
         <p className="mt-3">
           If a refund is issued under this Section, your subscription is
@@ -92,7 +92,7 @@ export function RefundPolicyContent() {
       <LegalSectionCard icon={RefreshIcon} id="r-5-3" title="Renewals">
         <p>
           Subscriptions renew automatically as described in the{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> and the
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and conditions</Link> and the
           Subscription Terms, and where required by applicable law we will send
           you a reminder before a renewal charge. We do not offer automatic
           refunds for renewal charges. However, if you cancel within 48 hours of
@@ -120,7 +120,7 @@ export function RefundPolicyContent() {
           Credits that have been used or consumed are non-refundable.
           Promotional or bonus credits have no monetary value and are
           non-refundable in all circumstances, as set out in the Terms and
-          Conditions. Unused purchased credits are refunded only where the
+          conditions. Unused purchased credits are refunded only where the
           purchase that included them is refunded under this Policy.
         </p>
         <p className="mt-3">
@@ -163,7 +163,7 @@ export function RefundPolicyContent() {
           or the United Kingdom, you have a statutory right to withdraw from a
           contract for digital content or digital services within 14 days of
           purchase, without giving any reason, as described in the{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> (which
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and conditions</Link> (which
           include a model withdrawal form). This right applies to the trial fee
           and to subscription charges alike.
         </p>
@@ -228,7 +228,7 @@ export function RefundPolicyContent() {
           </li>
           <li>
             Accounts suspended or terminated for violation of the Terms and
-            Conditions.
+            conditions.
           </li>
         </ul>
       </LegalSectionCard>
@@ -243,7 +243,7 @@ export function RefundPolicyContent() {
           filed against a valid charge, we may suspend your account pending
           resolution. Fraudulent or improper chargebacks may result in
           termination of your account and, where appropriate, legal action, as
-          set out in the Terms and Conditions.
+          set out in the Terms and conditions.
         </p>
       </LegalSectionCard>
 

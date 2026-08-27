@@ -172,7 +172,7 @@ Every external dependency needs a production account, production keys stored in 
 ## 6. Data protection & compliance
 
 - [ ] Legal entity + address on file with every vendor is **FLUTTWINGS INVESTMENTS LIMITED**, Cyprus (matches the footer + Privacy Policy).
-- [ ] Privacy Policy, Terms & Conditions, Refund Policy, Cookie Policy, Do Not Sell, Contact page all live at `/privacy`, `/terms-and-conditions`, `/refund`, `/cookies`, `/do-not-sell`, `/contact` — verify links from footer, sign-up card, and checkout page all work.
+- [ ] Privacy Policy, Terms and conditions, Refund Policy, Cookie Policy, Do Not Sell, Contact page all live at `/privacy`, `/terms-and-conditions`, `/refund`, `/cookies`, `/do-not-sell`, `/contact` — verify links from footer, sign-up card, and checkout page all work.
 - [ ] New **About Us** page (`/about`) + **Subscription Terms** page (`/subscription-terms`) are linked from the footer + checkout copy where relevant.
 - [ ] **GDPR**: cookie consent banner behavior verified (accept / reject / manage). No non-essential trackers fire before consent. "Do Not Sell" workflow tested for CA users.
 - [ ] **GDPR data-subject requests**: email inbox and process defined for `support@pdfvault.ai` to receive access / deletion requests, and the backend has a way to actually delete a user's account + data.

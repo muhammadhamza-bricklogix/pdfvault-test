@@ -34,7 +34,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
     heading: "LEGAL",
     links: [
       { label: "Privacy Policy", href: ROUTES.LEGAL.PRIVACY },
-      { label: "Terms & Conditions", href: ROUTES.LEGAL.TERMS },
+      { label: "Terms and conditions", href: ROUTES.LEGAL.TERMS },
       { label: "Subscription Terms", href: ROUTES.LEGAL.SUBSCRIPTION_TERMS },
       { label: "Refund Policy", href: ROUTES.LEGAL.REFUND },
       { label: "Cookie Policy", href: ROUTES.LEGAL.COOKIES },
@@ -215,7 +215,7 @@ export function LandingFooter() {
             </p>
             {/* Legal entity + short-form address required by Solidgate
                 compliance (EU-visible footer). Full postal address lives in
-                the Terms and Conditions + Privacy Policy pages. */}
+                the Terms and conditions + Privacy Policy pages. */}
             <p className="text-center text-[11px] text-white/60 sm:text-right sm:text-[13px]">
               {FOOTER_COMPANY_ENTITY}, {FOOTER_COMPANY_ADDRESS_PLACEHOLDER}
             </p>

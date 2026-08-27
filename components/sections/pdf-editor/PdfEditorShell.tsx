@@ -522,6 +522,17 @@ export function PdfEditorShell() {
   );
   const setIsSignedIn = usePdfEditorStore((s) => s.setIsSignedIn);
   const pendingDocumentId = shellSearchParams.get("id");
+  // QA 2026-08-27: signed-in user opens a locked file on `/unlock-pdf` (or
+  // any `?tool=unlock` entry) — the PasswordModal opens over the editor,
+  // but the loaded PDF content is still readable behind the backdrop,
+  // "which makes the password protection a bit useless." Blur the editor
+  // shell while unlock is pending so the content stays obscured until
+  // the correct password is entered. HeroUI's Modal portals to
+  // `document.body`, so blurring this wrapper doesn't affect the modal.
+  const isPasswordModalOpen = usePdfEditorStore((s) => s.isPasswordModalOpen);
+  const passwordModalVariant = usePdfEditorStore((s) => s.passwordModalVariant);
+  const blurUnderlyingContent =
+    isPasswordModalOpen && passwordModalVariant === "unlock-only";
 
   useEditorDocumentLoader();
 
@@ -573,7 +584,14 @@ export function PdfEditorShell() {
 
   return (
     <div className="flex h-full flex-col">
-      {content}
+      <div
+        aria-hidden={blurUnderlyingContent || undefined}
+        className={`flex h-full flex-col transition-[filter] duration-200 ${
+          blurUnderlyingContent ? "pointer-events-none select-none blur-lg" : ""
+        }`}
+      >
+        {content}
+      </div>
       <CreatePdfModal
         key={createPdfModalKey}
         isOpen={isCreatePdfModalOpen}

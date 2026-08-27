@@ -837,7 +837,7 @@ export function UploadWorkspace({
                 className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
                 href={ROUTES.LEGAL.TERMS}
               >
-                Terms and Conditions
+                Terms and conditions
               </Link>{" "}
               and acknowledge our{" "}
               <Link

@@ -516,7 +516,7 @@ export function SignupCard() {
             href={ROUTES.LEGAL.TERMS}
             target="_blank"
           >
-            Terms and Conditions
+            Terms and conditions
           </Link>{" "}
           and{" "}
           <Link

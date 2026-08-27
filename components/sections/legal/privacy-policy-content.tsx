@@ -82,7 +82,7 @@ export function PrivacyPolicyContent() {
           By using the Service, you confirm that (i) you have read, understand,
           and agree to this Privacy Policy, and (ii) you are at least 18 years
           of age, or are using the Service with the involvement and approval of
-          a parent or legal guardian as described in our Terms and Conditions.
+          a parent or legal guardian as described in our Terms and conditions.
         </p>
         <p className="mt-3">
           If you do not meet this requirement, or are unable to make this
@@ -465,7 +465,7 @@ export function PrivacyPolicyContent() {
           The Service is intended for use by individuals aged 18 and older. If
           you are under 18, you may only use the Service with the involvement
           and approval of a parent or legal guardian, as described in our{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. We do not
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and conditions</Link>. We do not
           knowingly collect personal information directly from a minor without
           appropriate parental or guardian involvement. If you believe we have
           collected personal information from a minor without appropriate

@@ -46,10 +46,10 @@ export function SubscriptionTermsContent() {
         <p>
           These Subscription Terms govern your PDFVault trial and monthly
           subscription, including automatic renewal. They form an integral part
-          of our <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>;
+          of our <Link href={ROUTES.LEGAL.TERMS}>Terms and conditions</Link>;
           capitalised terms not defined here have the meaning given in the Terms
-          and Conditions. In the event of a conflict between these Subscription
-          Terms and the Terms and Conditions in relation to trial and
+          and conditions. In the event of a conflict between these Subscription
+          Terms and the Terms and conditions in relation to trial and
           subscription billing, these Subscription Terms prevail. Charges are
           also subject to our{" "}
           <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>.
@@ -197,7 +197,7 @@ export function SubscriptionTermsContent() {
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a> before
           the withdrawal period expires; it is sufficient to send your notice
           before the 14 days elapse. A model withdrawal form is included in the{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>.
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and conditions</Link>.
         </p>
         <p className="mt-3">
           If you withdraw, we will reimburse all payments received from you

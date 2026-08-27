@@ -168,14 +168,14 @@ export function IdentityPopover({
               </ListBox.Item>
             )}
 
-            <ListBox.Item id="terms" textValue="Terms and Conditions">
+            <ListBox.Item id="terms" textValue="Terms and conditions">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
                   className="size-4 shrink-0 text-default-600"
                   icon={LegalDocumentIcon}
                 />
               </div>
-              <Label>Terms and Conditions</Label>
+              <Label>Terms and conditions</Label>
             </ListBox.Item>
 
             <ListBox.Item id="theme" textValue="Theme">
