@@ -9,7 +9,7 @@ import type {
   WatermarkConfig,
 } from "@/lib/client/stores/pdf-editor-store";
 
-import { rgb } from "pdf-lib";
+import { BlendMode, rgb } from "pdf-lib";
 
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -732,10 +732,21 @@ export async function mergeFabricEditsIntoPdf({
     const isOverlay = wm?.layer === "overlay";
 
     // ------------------------------------------------------------------
-    // Case A: Background image applies — re-render source page with a
-    // transparent background, draw the bg image first, then place the
-    // transparent re-render on top so original content reads over the image.
-    // Watermark and fabric edits layer normally on top of that.
+    // Case A: Background image applies — render the source page opaque
+    // (pdf.js v5 forces alpha:false on its render canvas — see
+    // node_modules/pdfjs-dist/legacy/build/pdf.mjs:23171 — so a
+    // "transparent" render is impossible; the canvas resolves to opaque
+    // white by default, or opaque black if we pass `background: rgba(0,0,0,0)`
+    // — the reason the earlier layered approach shipped black pages).
+    // Instead we mirror what the preview does (canvas `mix-blend-mode:
+    // multiply` on top of an <img>) by drawing the page render first,
+    // then compositing the bg image on top with BlendMode.Multiply.
+    // Multiply semantics: white × img = img (image shows through paper);
+    // dark_text × img = darker (text darkens image). Same visual as the
+    // preview and as build-pages-pdf.ts's per-page bg-color path.
+    // Watermark, whiteout, drawIText, and fabric overlays all draw AFTER
+    // this composite so they appear opaque on top, unaffected by the
+    // multiply blend below.
     // ------------------------------------------------------------------
     if (needsBackground) {
       const sourcePage = sourcePdf.getPage(pageNum - 1);
@@ -751,25 +762,31 @@ export async function mergeFabricEditsIntoPdf({
         bg!.fit,
       );
 
-      newPage.drawImage(bgImg, { ...rect, opacity: bg!.opacity });
-
       const pdfjsPage = await pdfDocument.getPage(pageNum);
-      const transparentRender = await renderPageToPng(pdfjsPage, {
+      const opaqueRender = await renderPageToPng(pdfjsPage, {
         // Keep the source text in the raster — modified editModeText
-        // gets whiteout + vector drawIText AFTER this render is placed,
-        // so the source word is covered and the new text is rendered as
-        // selectable PDF text on top. Suppressing here would lose all
-        // source text on bg-image pages.
+        // gets whiteout + vector drawIText AFTER the bg composite is
+        // placed, so the source word is covered and the new text is
+        // rendered as selectable PDF text on top. Suppressing here
+        // would lose all source text on bg-image pages.
         suppressText: false,
-        transparent: true,
       });
-      const pageRender = await outputPdf.embedPng(transparentRender.png);
+      const pageRender = await outputPdf.embedPng(opaqueRender.png);
 
+      // Draw the source page first (opaque, white bg with content).
       newPage.drawImage(pageRender, {
         height: pdfHeight,
         width: pdfWidth,
         x: 0,
         y: 0,
+      });
+
+      // Composite the bg image on top with Multiply — same visual as the
+      // preview's `mix-blend-mode: multiply` on the PDF canvas.
+      newPage.drawImage(bgImg, {
+        ...rect,
+        blendMode: BlendMode.Multiply,
+        opacity: bg!.opacity,
       });
 
       if (needsWatermark && !isOverlay) {
