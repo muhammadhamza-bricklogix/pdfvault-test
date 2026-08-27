@@ -181,14 +181,26 @@ export default function RootLayout({
         </>
       ) : null}
 
-      {/* Google Tag Manager */}
-      <Script id="gtm-init" strategy="afterInteractive">
-        {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-5R5LRTTD');`}
-      </Script>
+      {/*
+        Google Tag Manager — raw <script> inside <head>, NOT next/script.
+        next/script (any strategy) serializes the payload into
+        `(self.__next_s).push([...])`, so the GTM snippet ends up inside a
+        JSON string, not as executable inline JS in the initial HTML source.
+        Google Tag Assistant + Preview/Debug detect containers by scanning
+        the raw HTML source for the inline snippet — the serialized form
+        fails detection and Preview mode won't attach, even though the
+        container loads at runtime after hydration. Same failure mode as
+        Trustpilot below. Placing a raw <script> inside an explicit <head>
+        is the only way to guarantee the snippet ships as executable inline
+        in `<head>` during SSR.
+      */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
+          }}
+        />
+      </head>
       {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-K6PVB4B39T"

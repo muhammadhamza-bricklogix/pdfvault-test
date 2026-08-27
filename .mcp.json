@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "gtm-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://gtm-mcp.stape.ai/mcp"
+      ],
+      "env": {}
+    }
+  }
+}
