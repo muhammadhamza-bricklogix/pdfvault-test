@@ -82,15 +82,29 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   return raw;
 }
 
-// Flow:
-//   1. "credentials" → email + password submitted via signIn.create({
-//                      identifier, password }). If Clerk returns
-//                      status "complete", finalize immediately. If it
-//                      returns "needs_second_factor", advance to
-//                      "twoFactor" (invariant #16 — 2FA-enabled
-//                      accounts must not silently loop back).
-//   2. "twoFactor" → preserved 2FA path (email/phone/TOTP/backup).
-type Step = "credentials" | "twoFactor";
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Sign-in mode.
+//   - "code"     → default. Email → 6-digit OTP → verify → finalize.
+//   - "password" → email + password → existing single-factor flow.
+// User toggles between them via the link below the primary CTA. Either
+// mode can escalate to the 2FA step when Clerk returns needs_second_factor.
+type Mode = "code" | "password";
+
+// Flow steps:
+//   1. "credentials" → email (+ password when mode === "password").
+//                      Submit branches on mode:
+//                        - code:     signIn.emailCode.sendCode({ emailAddress })
+//                                    → advance to "codeVerify".
+//                        - password: signIn.password({ emailAddress, password }).
+//                                    complete → finalize;
+//                                    needs_second_factor → advance to "twoFactor".
+//   2. "codeVerify" → 6-digit input for the first-factor email code.
+//                     signIn.emailCode.verifyCode. complete → finalize;
+//                     needs_second_factor → advance to "twoFactor"
+//                     (invariant #16 — 2FA-enabled accounts must not silently loop back).
+//   3. "twoFactor"  → preserved 2FA path (email/phone/TOTP/backup).
+type Step = "credentials" | "codeVerify" | "twoFactor";
 
 type FieldErrors = {
   email?: string;
@@ -109,6 +123,7 @@ export function LoginCard() {
   const { signIn } = useSignIn();
   const searchParams = useSearchParams();
 
+  const [mode, setMode] = useState<Mode>("code");
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -252,6 +267,32 @@ export function LoginCard() {
     return true;
   };
 
+  // Fires the email OTP send call. Uses Clerk's `emailCode.sendCode`
+  // future-API helper — the SDK creates the sign-in internally when
+  // one isn't in progress, so we don't need a separate create step.
+  const sendEmailCode = async (emailAddress: string): Promise<boolean> => {
+    const { error } = await signIn.emailCode.sendCode({ emailAddress });
+
+    if (error) {
+      const code = (error as { errors?: { code?: string }[] })?.errors?.[0]
+        ?.code;
+      const msg = readClerkError(
+        error,
+        "Couldn't send your verification code. Try again.",
+      );
+
+      if (code === "form_identifier_not_found") {
+        setErrors({ email: msg });
+      } else {
+        setErrors({ form: msg });
+      }
+
+      return false;
+    }
+
+    return true;
+  };
+
   const onSubmitCredentials = async (
     event: React.FormEvent<HTMLFormElement>,
   ) => {
@@ -259,21 +300,34 @@ export function LoginCard() {
     if (!signIn) return;
 
     const trimmedEmail = email.trim();
-    const parsed = authSignInSchema.safeParse({
-      emailAddress: trimmedEmail,
-      password,
-    });
 
-    if (!parsed.success) {
-      const flat = parsed.error.flatten().fieldErrors;
-
+    // Validate email in both modes. Password only in password mode —
+    // authSignInSchema requires both, so we branch here to keep the
+    // schema untouched.
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
       setNotice(null);
-      setErrors({
-        email: flat.emailAddress?.[0],
-        password: flat.password?.[0],
-      });
+      setErrors({ email: "Enter a valid email address." });
 
       return;
+    }
+
+    if (mode === "password") {
+      const parsed = authSignInSchema.safeParse({
+        emailAddress: trimmedEmail,
+        password,
+      });
+
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+
+        setNotice(null);
+        setErrors({
+          email: flat.emailAddress?.[0],
+          password: flat.password?.[0],
+        });
+
+        return;
+      }
     }
 
     setEmail(trimmedEmail);
@@ -282,8 +336,30 @@ export function LoginCard() {
     setSubmitting(true);
 
     try {
-      const { error: createError } = await signIn.create({
-        identifier: trimmedEmail,
+      if (mode === "code") {
+        // Passwordless: single-shot send. Clerk's future API resolves
+        // the account, chooses the email_code first factor, and mails
+        // the code in one call.
+        const sent = await sendEmailCode(trimmedEmail);
+
+        if (!sent) {
+          setSubmitting(false);
+
+          return;
+        }
+
+        logger.event(EVENTS.SIGNIN_CODE_SENT, "info");
+        setCode("");
+        setStep("codeVerify");
+        setNotice(`We sent a 6-digit code to ${trimmedEmail}.`);
+        setSubmitting(false);
+
+        return;
+      }
+
+      // mode === "password"
+      const { error: createError } = await signIn.password({
+        emailAddress: trimmedEmail,
         password,
       });
 
@@ -292,9 +368,6 @@ export function LoginCard() {
           createError,
           "Couldn't sign you in. Please try again.",
         );
-        // Pin the message to the field that caused it when we can tell —
-        // avoids the "form error" bar hiding underneath a valid-looking
-        // form.
         const code = (createError as { errors?: { code?: string }[] })
           ?.errors?.[0]?.code;
 
@@ -377,6 +450,56 @@ export function LoginCard() {
     setSubmitting(true);
 
     try {
+      if (step === "codeVerify") {
+        // First-factor email code path (mode === "code").
+        const { error: attemptError } = await signIn.emailCode.verifyCode({
+          code: trimmedCode,
+        });
+
+        if (attemptError) {
+          setErrors({
+            code: readClerkError(
+              attemptError,
+              "That code didn't work. Try again.",
+            ),
+          });
+          setSubmitting(false);
+
+          return;
+        }
+
+        if (signIn.status === "complete") {
+          logger.event(EVENTS.SIGNIN_CREDENTIALS_COMPLETE, "info", {
+            method: "email_code",
+          });
+          await finalizeAndRedirect();
+
+          return;
+        }
+
+        // Even email-code sign-in accounts can have 2FA enabled — Clerk
+        // still returns needs_second_factor after the first factor
+        // succeeds. Invariant #16 applies here too.
+        if (signIn.status === "needs_second_factor") {
+          logger.event(EVENTS.SIGNIN_NEEDS_2FA, "info");
+          const ok = await prepSecondFactor();
+
+          setSubmitting(false);
+          if (ok) {
+            setCode("");
+            setStep("twoFactor");
+          }
+
+          return;
+        }
+
+        setErrors({ code: "Verification didn't finish. Try again." });
+        setSubmitting(false);
+
+        return;
+      }
+
+      // step === "twoFactor"
       const verifyResult = await verifySecondFactor(trimmedCode);
       const attemptError = verifyResult?.error ?? null;
 
@@ -404,7 +527,8 @@ export function LoginCard() {
       setErrors({ code: "Verification didn't finish. Try again." });
       setSubmitting(false);
     } catch (err) {
-      logger.captureError(err, "signin.2fa_verify", {
+      logger.captureError(err, "signin.code_verify", {
+        step,
         strategy: secondFactorStrategy,
       });
       setErrors({
@@ -416,18 +540,29 @@ export function LoginCard() {
 
   const onResendCode = async () => {
     if (!signIn) return;
-    if (
-      secondFactorStrategy !== "email_code" &&
-      secondFactorStrategy !== "phone_code"
-    ) {
-      // TOTP / backup codes are user-generated — nothing to resend.
-      return;
-    }
-
     setErrors({});
     setResending(true);
 
     try {
+      if (step === "codeVerify") {
+        const sent = await sendEmailCode(email);
+
+        if (sent) {
+          setNotice(`A new code was sent to ${email}.`);
+        }
+
+        return;
+      }
+
+      // step === "twoFactor"
+      if (
+        secondFactorStrategy !== "email_code" &&
+        secondFactorStrategy !== "phone_code"
+      ) {
+        // TOTP / backup codes are user-generated — nothing to resend.
+        return;
+      }
+
       const { error: sendErr } =
         secondFactorStrategy === "email_code"
           ? await signIn.mfa.sendEmailCode()
@@ -468,6 +603,14 @@ export function LoginCard() {
     }
   };
 
+  const switchMode = (next: Mode) => {
+    if (next === mode) return;
+    setMode(next);
+    setErrors({});
+    setNotice(null);
+    setPassword("");
+  };
+
   const forgotPasswordHref =
     afterSignInPath !== ROUTES.APP.DASHBOARD
       ? `${ROUTES.AUTH.FORGOT_PASSWORD}?redirect_url=${encodeURIComponent(afterSignInPath)}`
@@ -478,7 +621,23 @@ export function LoginCard() {
       ? `${ROUTES.AUTH.SIGN_UP}?redirect_url=${encodeURIComponent(afterSignInPath)}`
       : ROUTES.AUTH.SIGN_UP;
 
-  const isTwoFactor = step === "twoFactor";
+  const isVerifying = step === "codeVerify" || step === "twoFactor";
+  const codeStepTitle =
+    step === "codeVerify"
+      ? "Check your email"
+      : secondFactorStrategy === "phone_code"
+        ? "Check your phone"
+        : "Check your email";
+  const codeStepSubtitle =
+    step === "codeVerify"
+      ? `We sent a 6-digit code to ${email}.`
+      : secondFactorStrategy === "phone_code"
+        ? "We sent a 6-digit code to your phone."
+        : `We sent a 6-digit code to ${email}.`;
+  const showResendLink =
+    step === "codeVerify" ||
+    secondFactorStrategy === "email_code" ||
+    secondFactorStrategy === "phone_code";
 
   return (
     <section
@@ -489,14 +648,14 @@ export function LoginCard() {
         className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
         id={headingId}
       >
-        {isTwoFactor ? "Check your email" : "Good to see you back!"}
+        {isVerifying ? codeStepTitle : "Good to see you back!"}
       </h1>
       <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
-        {isTwoFactor
-          ? secondFactorStrategy === "phone_code"
-            ? `We sent a 6-digit code to your phone.`
-            : `We sent a 6-digit code to ${email}.`
-          : "Please enter your details below to log in."}
+        {isVerifying
+          ? codeStepSubtitle
+          : mode === "code"
+            ? "Enter your email and we'll send you a sign-in code."
+            : "Please enter your details below to log in."}
       </p>
 
       {step === "credentials" ? (
@@ -559,76 +718,80 @@ export function LoginCard() {
               </p>
             ) : null}
 
-            <label
-              className="mt-4 block text-[14px] text-[#5f5f5f]"
-              htmlFor={passwordId}
-            >
-              Password
-              <span aria-hidden className="text-[#f12c23]">
-                *
-              </span>
-            </label>
-            <div className="relative mt-2">
-              <input
-                required
-                aria-describedby={errors.password ? passwordErrorId : undefined}
-                aria-invalid={errors.password ? true : undefined}
-                autoComplete="current-password"
-                className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
-                id={passwordId}
-                name="password"
-                placeholder="Enter Your Password"
-                type={passwordRevealed ? "text" : "password"}
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  if (errors.password) {
-                    setErrors((prev) => ({ ...prev, password: undefined }));
-                  }
-                }}
-              />
-              <PasswordRevealToggle
-                revealed={passwordRevealed}
-                onToggle={() => setPasswordRevealed((v) => !v)}
-              />
-            </div>
-            {errors.password ? (
-              <p
-                className="mt-1.5 text-[13px] text-[#f12c23]"
-                id={passwordErrorId}
-                role="alert"
-              >
-                {errors.password}
-              </p>
-            ) : null}
+            {mode === "password" ? (
+              <>
+                <label
+                  className="mt-4 block text-[14px] text-[#5f5f5f]"
+                  htmlFor={passwordId}
+                >
+                  Password
+                  <span aria-hidden className="text-[#f12c23]">
+                    *
+                  </span>
+                </label>
+                <div className="relative mt-2">
+                  <input
+                    required
+                    aria-describedby={
+                      errors.password ? passwordErrorId : undefined
+                    }
+                    aria-invalid={errors.password ? true : undefined}
+                    autoComplete="current-password"
+                    className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
+                    id={passwordId}
+                    name="password"
+                    placeholder="Enter Your Password"
+                    type={passwordRevealed ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      if (errors.password) {
+                        setErrors((prev) => ({ ...prev, password: undefined }));
+                      }
+                    }}
+                  />
+                  <PasswordRevealToggle
+                    revealed={passwordRevealed}
+                    onToggle={() => setPasswordRevealed((v) => !v)}
+                  />
+                </div>
+                {errors.password ? (
+                  <p
+                    className="mt-1.5 text-[13px] text-[#f12c23]"
+                    id={passwordErrorId}
+                    role="alert"
+                  >
+                    {errors.password}
+                  </p>
+                ) : null}
 
-            {/* Remember me + Forgot password. Clerk manages session TTL
-                server-side via its Sessions settings, so the checkbox is
-                intentionally cosmetic here — remove the checkbox if the
-                team decides not to display it rather than wiring it to
-                localStorage, which would set false expectations. */}
-            <div className="mt-3 flex items-center justify-between text-[13px] text-[#5f5f5f]">
-              <label
-                className="flex cursor-pointer items-center gap-2"
-                htmlFor={rememberMeId}
-              >
-                <input
-                  checked={rememberMe}
-                  className="size-4 cursor-pointer accent-[#f12c23]"
-                  id={rememberMeId}
-                  name="rememberMe"
-                  type="checkbox"
-                  onChange={(event) => setRememberMe(event.target.checked)}
-                />
-                Remember me
-              </label>
-              <Link
-                className="text-[#5f5f5f] underline-offset-2 hover:text-[#f12c23] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-                href={forgotPasswordHref}
-              >
-                Forgot password?
-              </Link>
-            </div>
+                {/* Remember me + Forgot password. Only useful in password
+                    mode — code mode has no password to forget, and the
+                    Clerk session TTL is server-side either way. */}
+                <div className="mt-3 flex items-center justify-between text-[13px] text-[#5f5f5f]">
+                  <label
+                    className="flex cursor-pointer items-center gap-2"
+                    htmlFor={rememberMeId}
+                  >
+                    <input
+                      checked={rememberMe}
+                      className="size-4 cursor-pointer accent-[#f12c23]"
+                      id={rememberMeId}
+                      name="rememberMe"
+                      type="checkbox"
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                    />
+                    Remember me
+                  </label>
+                  <Link
+                    className="text-[#5f5f5f] underline-offset-2 hover:text-[#f12c23] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+                    href={forgotPasswordHref}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              </>
+            ) : null}
 
             {errors.form ? (
               <p
@@ -645,7 +808,26 @@ export function LoginCard() {
               disabled={submitting}
               type="submit"
             >
-              {submitting ? "Signing in…" : "Log in"}
+              {submitting
+                ? mode === "code"
+                  ? "Sending code…"
+                  : "Signing in…"
+                : mode === "code"
+                  ? "Send verification code"
+                  : "Log in"}
+            </button>
+
+            {/* Mode toggle. Default is code; user can switch to password
+                and back. Kept as a text button, matching the "Forgot
+                password?" affordance below. */}
+            <button
+              className="mt-3 block w-full cursor-pointer text-center text-[14px] text-[#666666] underline underline-offset-2 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              type="button"
+              onClick={() => switchMode(mode === "code" ? "password" : "code")}
+            >
+              {mode === "code"
+                ? "Log in with password instead"
+                : "Log in with a code instead"}
             </button>
           </form>
         </>
@@ -657,7 +839,9 @@ export function LoginCard() {
             onClick={goBackToCredentials}
           >
             <BackChevron />
-            Use different credentials
+            {step === "codeVerify"
+              ? "Use a different email"
+              : "Use different credentials"}
           </button>
 
           <label className="block text-[14px] text-[#5f5f5f]" htmlFor={codeId}>
@@ -715,8 +899,7 @@ export function LoginCard() {
             {submitting ? "Verifying…" : "Verify & continue"}
           </button>
 
-          {secondFactorStrategy === "email_code" ||
-          secondFactorStrategy === "phone_code" ? (
+          {showResendLink ? (
             <button
               className="mt-3 block w-full text-center text-[13px] text-[#666666] hover:text-[#1a1c21] disabled:opacity-60"
               disabled={resending}
@@ -732,7 +915,7 @@ export function LoginCard() {
       <p aria-live="polite" className="sr-only" id={statusId}>
         {notice}
       </p>
-      {notice && isTwoFactor ? (
+      {notice && isVerifying ? (
         <p className="mt-3 text-center text-[13px] text-[#666666]">{notice}</p>
       ) : null}
 

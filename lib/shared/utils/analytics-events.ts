@@ -21,6 +21,7 @@ export const EVENTS = {
   SIGNIN_NEEDS_2FA: "signin.needs_2fa",
   SIGNIN_2FA_COMPLETE: "signin.2fa_complete",
   SIGNIN_FINALIZE_START: "signin.finalize_start",
+  SIGNIN_CODE_SENT: "signin.code_sent",
 
   SIGNUP_CODE_SENT: "signup.code_sent",
   SIGNUP_VERIFY_COMPLETE: "signup.verify_complete",
