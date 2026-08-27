@@ -88,7 +88,7 @@ const TOOLS: Tool[] = [
     icon: "/landing/signature.svg",
     title: "Sign",
     description: "Add your signature with vector strokes.",
-    href: "/edit",
+    href: "/sign-pdf",
     toolSlug: "sign",
     tabs: ["edit"],
   },
