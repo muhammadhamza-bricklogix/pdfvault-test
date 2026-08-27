@@ -91,6 +91,17 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         return;
       }
 
+      // Specialized routes (e.g. `/w-9-form`) own their own save
+      // pipeline (`W9FinalizeIntercept` → finalize-then-upload) and
+      // set `autoPersistDisabled` so this generic Fabric-merge save
+      // doesn't upload the blank template on top of the stamped
+      // version as a duplicate row (QA 2026-08-27).
+      if (usePdfEditorStore.getState().autoPersistDisabled) {
+        navigate();
+
+        return;
+      }
+
       isNavigatingRef.current = true;
 
       const loadingKey = toast.loading({
@@ -155,6 +166,8 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
   useEffect(() => {
     const onPageHide = () => {
       if (!file || !isSignedIn || isNavigatingRef.current) return;
+      // Same specialized-route guard as `onNavigateAfterSave` above.
+      if (usePdfEditorStore.getState().autoPersistDisabled) return;
 
       void persistEditorDocument({ fabricCanvas: fabricRef.current });
     };

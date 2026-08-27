@@ -1,6 +1,7 @@
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import type { Document } from "@/lib/shared/types/documents.types";
 
+import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { gateEntitledAction } from "./gate-entitled-action";
@@ -47,7 +48,25 @@ export async function openDocumentInEditor(
 
   if (!allowed) return;
 
-  if (isW9Document(doc)) {
+  // Detect W-9 for the dashboard→W-9-editor round trip. The list
+  // endpoint trims payload size and often omits `editorState`, so a
+  // list row's `editorState` may be `undefined` on a saved W-9 that
+  // absolutely has one. Fall back to a per-doc GET before deciding.
+  // Slight extra latency at click time is worth it — the alternative
+  // is silently routing every saved W-9 into the generic composer.
+  let w9 = isW9Document(doc);
+
+  if (!w9 && doc.editorState == null) {
+    try {
+      const full = await documentsService.getDocument(doc.id);
+
+      w9 = isW9Document(full);
+    } catch {
+      // Non-fatal — fall through to the composer route.
+    }
+  }
+
+  if (w9) {
     const query = new URLSearchParams({ resumeDocId: doc.id });
 
     router.push(`${ROUTES.FORMS.W9_SHORT}?${query.toString()}`);

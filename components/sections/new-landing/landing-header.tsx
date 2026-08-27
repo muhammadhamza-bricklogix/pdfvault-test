@@ -26,7 +26,7 @@ type NavLink = { label: string; href: string };
 // tool-landing experience across the nav bar.
 const PRIMARY_LINKS: NavLink[] = [
   { label: "Edit", href: "/edit" },
-  { label: "Convert", href: "/convert/pdf-to-word" },
+  { label: "Convert", href: "/convert/file-to-pdf" },
   { label: "Compress", href: "/compress" },
   // { label: "AI Summarizer", href: "/ai-summarizer" },
 ];

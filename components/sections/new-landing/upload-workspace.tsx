@@ -42,29 +42,6 @@ const DEFAULT_ACCEPTED_EXTENSIONS = [
   "jpeg",
   "png",
 ];
-// X→PDF conversion is supported by the backend for these extensions —
-// mirrors EXT_TO_CONVERSION in `lib/client/file-conversion/upload-to-pdf.ts`.
-// Kept in sync manually; a mismatch surfaces as a client-side "Unsupported
-// file" error from `uploadAsPdf` at conversion time.
-const CONVERT_TO_PDF_EXTENSIONS = [
-  "doc",
-  "docx",
-  "xls",
-  "xlsx",
-  "ppt",
-  "pptx",
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "html",
-  "htm",
-  "txt",
-];
-// Human-readable list shown under the hero heading in convert mode.
-// Grouped alias formats (jpg/jpeg, html/htm) share one label.
-const CONVERT_TO_PDF_LABEL_LIST =
-  "Word, Excel, PowerPoint, JPG, PNG, GIF, HTML, TXT";
 const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB (matches landing hero caption)
 
 type CloudProvider = {
@@ -263,29 +240,14 @@ interface UploadWorkspaceProps {
    *    caption. No cloud chips, no trust strip. Used on `/`.
    */
   variant?: "full" | "hero";
-  /**
-   * Only meaningful when `variant === "hero"`. Switches the hero drop-zone
-   * between:
-   *  - `"edit"` (default): current behaviour — opens picked file in the
-   *    PDF composer.
-   *  - `"convert"`: heading + description + accept + CTA switch to the
-   *    "Convert File to PDF" flow. On file drop, reuses the exact same
-   *    X→PDF pipeline that `/convert/*` uses (invariant #17 — pending
-   *    conversion + background runner + `/dashboard` redirect + placeholder
-   *    row). Sign-in prompt fires at drop time for signed-out visitors,
-   *    same as `/convert/*`.
-   */
-  heroMode?: "edit" | "convert";
 }
 
 export function UploadWorkspace({
   acceptExtensions,
   exportFormat,
-  heroMode = "edit",
   tool,
   variant = "full",
 }: UploadWorkspaceProps = {}) {
-  const isHeroConvert = variant === "hero" && heroMode === "convert";
   const inputRef = useRef<HTMLInputElement>(null);
   // Holds a File dropped before Clerk hydrated. `openFileInEditor`
   // stashes here + returns early when `authLoaded === false` on a
@@ -312,16 +274,14 @@ export function UploadWorkspace({
   // preview for convert routes. The composer preview flow (Flow 2) is
   // reserved for `/pdf-composer` uploads.
   const requiresAuth = useMemo(
-    () => Boolean(pathname?.startsWith("/convert/")) || isHeroConvert,
-    [pathname, isHeroConvert],
+    () => Boolean(pathname?.startsWith("/convert/")),
+    [pathname],
   );
 
-  const acceptedExtensions = useMemo(() => {
-    if (acceptExtensions) return acceptExtensions;
-    if (isHeroConvert) return CONVERT_TO_PDF_EXTENSIONS;
-
-    return DEFAULT_ACCEPTED_EXTENSIONS;
-  }, [acceptExtensions, isHeroConvert]);
+  const acceptedExtensions = useMemo(
+    () => acceptExtensions ?? DEFAULT_ACCEPTED_EXTENSIONS,
+    [acceptExtensions],
+  );
   const acceptAttr = useMemo(
     () => acceptedExtensions.map((ext) => `.${ext}`).join(","),
     [acceptedExtensions],
@@ -802,20 +762,8 @@ export function UploadWorkspace({
               <div className="flex flex-col items-center">
                 <HeroFolderIcon />
                 <h2 className="mt-6 text-[22px] font-semibold leading-[28px] text-[#121212] sm:text-[24px] sm:leading-[30px]">
-                  {isHeroConvert
-                    ? "Convert File to PDF"
-                    : "Drag & drop file to edit"}
+                  Drag &amp; drop file to edit
                 </h2>
-
-                {isHeroConvert ? (
-                  <p className="mt-3 max-w-[420px] text-[14px] leading-relaxed text-[#5f5f5f]">
-                    Supported formats:{" "}
-                    <span className="font-medium text-[#121212]">
-                      {CONVERT_TO_PDF_LABEL_LIST}
-                    </span>
-                    .
-                  </p>
-                ) : null}
 
                 <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[#B4B4B4]">
                   <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
@@ -831,7 +779,7 @@ export function UploadWorkspace({
                     openPicker();
                   }}
                 >
-                  {isHeroConvert ? "Convert to PDF" : "Upload to Edit"}
+                  Upload to Edit
                 </button>
 
                 <p className="mt-5 text-[14px] text-[#8A8A8A]">

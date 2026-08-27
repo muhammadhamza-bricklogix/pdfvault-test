@@ -35,6 +35,14 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
 
   useEffect(() => {
     if (!pendingCloudSaveAfterReload || !pdfDocument || !file) return;
+    // Specialized routes (e.g. `/w-9-form`) own their own save pipeline;
+    // skip the generic Fabric-merge auto-save so it doesn't clobber the
+    // stamped copy uploaded by `W9FinalizeIntercept`.
+    if (usePdfEditorStore.getState().autoPersistDisabled) {
+      clearPendingCloudSaveAfterReload();
+
+      return;
+    }
 
     clearPendingCloudSaveAfterReload();
 

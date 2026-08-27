@@ -245,6 +245,16 @@ type PdfEditorStore = {
   isSignatureModalOpen: boolean;
   isSignedIn: boolean;
   /**
+   * When true, hooks that trigger auto/nav/pagehide cloud saves
+   * (`useEditorNavigationSave`, `useEditorAutoPersist`) skip persisting
+   * because a specialized editor owns the save pipeline for this route.
+   * Set by `W9EditorBootstrap` so the W-9 route only ever saves the
+   * server-stamped PDF (via `W9FinalizeIntercept`'s finalize-then-upload
+   * flow) — otherwise a `pagehide` on the way out would upload the blank
+   * template on top of it as a duplicate row. Cleared on unmount.
+   */
+  autoPersistDisabled: boolean;
+  /**
    * Source page indexes that have had their text successfully extracted
    * into the Fabric IText overlay (driven by the "Edit Text" tool). Once
    * a page is in this set we know:
@@ -357,6 +367,7 @@ type PdfEditorStore = {
   setIsCreatingShape: (value: boolean) => void;
   setIsRestoringHistory: (value: boolean) => void;
   setIsRestoringSession: (value: boolean) => void;
+  setAutoPersistDisabled: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   markPageExtracted: (sourcePage: number) => void;
@@ -410,6 +421,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isManagePagesOpen: false,
   isRestoringHistory: false,
   isRestoringSession: false,
+  autoPersistDisabled: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
   extractedPages: new Set(),
@@ -825,6 +837,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsManagePagesOpen: (value) => set({ isManagePagesOpen: value }),
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsRestoringSession: (value) => set({ isRestoringSession: value }),
+  setAutoPersistDisabled: (value) => set({ autoPersistDisabled: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
   markPageExtracted: (sourcePage) =>

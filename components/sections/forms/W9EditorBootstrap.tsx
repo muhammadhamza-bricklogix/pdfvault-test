@@ -62,6 +62,12 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     // Wipe any leftover file first so the drop-zone / previous PDF
     // doesn't flash before ours loads.
     usePdfEditorStore.getState().clearFile();
+    // Take ownership of the save pipeline for this route. The pdf-composer
+    // shell's generic Fabric-merge save (`useEditorNavigationSave`,
+    // `useEditorAutoPersist`) would otherwise upload the blank W-9
+    // template on navigation / pagehide → duplicate rows in My PDFs
+    // (QA 2026-08-27). `W9FinalizeIntercept` handles Save via finalize.
+    usePdfEditorStore.getState().setAutoPersistDisabled(true);
 
     // Parallel bootstrap: template fetch + form session. Neither
     // depends on the other so we don't want them serialized.
@@ -130,16 +136,33 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
             const doc = await documentsService.getDocument(resumeDocId);
 
             if (cancelled) return;
+
+            // Only claim ownership of this document row if it's really
+            // a saved W-9 (has a `w9` marker in `editorState`). Without
+            // this check a stray `?resumeDocId=<non-w9-id>` link could
+            // cause the next Save to upsert a stamped W-9 on top of an
+            // unrelated user document → silent data loss.
+            type ResumeEnvelope = {
+              w9?: { values?: Record<string, string> };
+            };
+            let parsed: ResumeEnvelope | null = null;
+
+            if (doc.editorState) {
+              try {
+                parsed = JSON.parse(doc.editorState) as ResumeEnvelope;
+              } catch {
+                parsed = null;
+              }
+            }
+
+            if (!parsed?.w9) return;
+
             usePdfEditorStore.getState().setCurrentDocument({
               id: doc.id,
               name: doc.filename,
             });
 
-            if (!doc.editorState) return;
-            const parsed = JSON.parse(doc.editorState) as {
-              w9?: { values?: Record<string, string> };
-            };
-            const values = parsed?.w9?.values;
+            const values = parsed.w9.values;
 
             if (values && typeof values === "object") {
               // `sessionPromise` may still be in flight — the store
@@ -161,6 +184,7 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       // the W-9 file and a subsequent `/w-9-form` visit gets a fresh
       // session (avoids replaying a stale sessionId on a new mount).
       usePdfEditorStore.getState().clearFile();
+      usePdfEditorStore.getState().setAutoPersistDisabled(false);
       useFormEditorStore.getState().reset();
     };
   }, [setFile, resumeDocId]);
