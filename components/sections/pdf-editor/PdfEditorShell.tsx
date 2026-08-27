@@ -411,6 +411,40 @@ export function PdfEditorShell() {
     return true;
   });
 
+  // QA 2026-08-28: signed-out user edits a PDF, clicks Done, signs up via
+  // Google, returns to `/pdf-composer?export=<fmt>`. `useExportEditor`
+  // already snapshotted the file + Fabric edits to IDB before the
+  // redirect, and `PendingEditorFileHydrator` Step 2 knows how to
+  // restore them (post-signin branch: upload → router.replace to add
+  // `?id=<newId>`). But Step 2 only sets `isRestoringSession=true`
+  // AFTER `await loadPendingEditorFile()` — an async gap of tens of ms.
+  // In that gap, this shell's first render sees `!file && !pendingDocumentId
+  // && !isRestoringSession` → `shouldRedirectAway=true` → the redirect
+  // effect fires `router.replace('/dashboard')` and the user lands on
+  // My PDFs with the upload toast stuck at 99% because the hydrator's
+  // async upload keeps running on an unmounted tree.
+  //
+  // Latch `isRestoringSession=true` synchronously in a useState
+  // initializer when the URL declares an auto-launch (`?export=` or
+  // `?tool=` without `?id=`). Runs before first paint, so the shell's
+  // first render sees the flag true and skips the redirect. Step 2's
+  // `finally` clears it once async work settles — either the restore
+  // succeeded (file set OR `?id=` added → `shouldRedirectAway=false`
+  // for a different reason) or IDB was empty and the redirect fires
+  // legitimately on the next render.
+  useState(() => {
+    const hasAutoLaunch = Boolean(
+      (shellSearchParams.get("export") || shellSearchParams.get("tool")) &&
+        !shellSearchParams.get("id"),
+    );
+
+    if (hasAutoLaunch) {
+      usePdfEditorStore.setState({ isRestoringSession: true });
+    }
+
+    return true;
+  });
+
   // Reset any leftover `postSaveReloadPending` from a prior shell
   // instance that unmounted mid-save-reload — most commonly the
   // Hamburger → "My PDFs" flow, where `useEditorNavigationSave` fires
@@ -511,8 +545,7 @@ export function PdfEditorShell() {
   // hero drop-zone). Effect runs post-render, so the fallback content
   // stays on `<EditorLoadingShell />` for the ~1 frame between the
   // decision and the redirect committing.
-  const shouldRedirectAway =
-    !file && !pendingDocumentId && !isRestoringSession;
+  const shouldRedirectAway = !file && !pendingDocumentId && !isRestoringSession;
 
   useEffect(() => {
     if (!shouldRedirectAway) return;

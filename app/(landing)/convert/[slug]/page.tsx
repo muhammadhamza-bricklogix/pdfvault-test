@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
