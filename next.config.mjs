@@ -58,16 +58,28 @@ const nextConfig = {
     // `/oauth-callback` page then can't `postMessage` the access token
     // back to the parent and the picker hangs.
     //
-    // `same-origin-allow-popups` keeps cross-origin isolation for the
-    // main app while letting popups we OPEN keep their opener pointer.
-    // It's the standard COOP value for OAuth flows.
+    // We explicitly set `unsafe-none` (rather than the tighter
+    // `same-origin-allow-popups`) because Google Tag Assistant Preview
+    // opens the site as a popup from `tagassistant.google.com`. Under
+    // `same-origin-allow-popups`, the browser puts a cross-origin-opened
+    // popup in a separate browsing context group and Tag Assistant can't
+    // reach it — Preview shows "window was closed before a connection
+    // could be established" and "0 Google tags found" even though the
+    // GTM container ships correctly. `unsafe-none` preserves the opener
+    // bidirectionally and lets Tag Assistant attach.
+    //
+    // Safety trade-off: `unsafe-none` disables cross-origin isolation.
+    // Safe here because the app doesn't use SharedArrayBuffer or
+    // high-precision timers, and the Drive OAuth flow's final
+    // postMessage lands on same-origin `/oauth-callback`, which COOP
+    // never restricted anyway.
     return [
       {
         source: "/:path*",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
-            value: "same-origin-allow-popups",
+            value: "unsafe-none",
           },
         ],
       },
