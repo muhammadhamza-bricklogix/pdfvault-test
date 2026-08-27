@@ -127,6 +127,13 @@ export function PaywallModal({
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  // Fetched in parallel with the primary (monthly) intent so the
+  // plan-picker card shows the same annual per-month price the payment
+  // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
+  // from the standalone ANNUAL intent in some geos, producing a
+  // different figure on the two screens. Reusing this cached intent on
+  // Continue also skips the extra round-trip.
+  const [annualIntent, setAnnualIntent] = useState<CheckoutIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
   // When Solidgate reports a decline, we surface a "Try another card"
   // affordance instead of leaving the user staring at the read-only
@@ -220,8 +227,31 @@ export function PaywallModal({
       },
     );
 
+    // Fire the annual intent alongside the monthly one. The plan
+    // picker uses its `amountRenewMinor` so the per-month price shown
+    // on the picker matches exactly what the payment step will display
+    // for the annual plan. Failure is silent — the picker falls back
+    // to `intent.alternatePlans[ANNUAL]` in that case.
+    let cancelled = false;
+
+    billingService
+      .createCheckoutIntent({
+        disclaimerVersion: DISCLAIMER_VERSION,
+        planKind: "ANNUAL",
+        fileName: preview?.filename,
+      })
+      .then((annual) => {
+        if (cancelled) return;
+        setAnnualIntent(annual);
+      })
+      .catch((err) => {
+        logger.captureError(err, "checkout.annual_intent_prefetch");
+      });
+
     return () => {
+      cancelled = true;
       setIntent(null);
+      setAnnualIntent(null);
       setError(null);
       setPayFailed(false);
       setRetryKey(0);
@@ -370,6 +400,17 @@ export function PaywallModal({
 
       return;
     }
+
+    // Reuse the parallel-fetched annual intent when it's already
+    // landed — same paymentIntent the picker priced against. Only
+    // re-fetch when it's still pending or failed.
+    if (annualIntent) {
+      setIntent(annualIntent);
+      setStep("pay");
+
+      return;
+    }
+
     setContinueLoading(true);
     createIntent.mutate(
       {
@@ -380,6 +421,7 @@ export function PaywallModal({
       {
         onSuccess: (fresh) => {
           setIntent(fresh);
+          setAnnualIntent(fresh);
           setStep("pay");
           setContinueLoading(false);
         },
@@ -431,6 +473,7 @@ export function PaywallModal({
             <LoadingState />
           ) : step === "plan" ? (
             <PlanStep
+              annualIntent={annualIntent}
               continueLoading={continueLoading}
               hidePreview={hidePreview}
               intent={intent}
@@ -469,6 +512,7 @@ export function PaywallModal({
 // ─────────────────────────────────────────────────────────────
 function PlanStep({
   intent,
+  annualIntent,
   preview,
   hidePreview,
   selectedPlan,
@@ -477,6 +521,7 @@ function PlanStep({
   continueLoading,
 }: {
   intent: CheckoutIntent;
+  annualIntent: CheckoutIntent | null;
   preview: PaywallPreview | null;
   hidePreview: boolean;
   selectedPlan: PlanId;
@@ -484,11 +529,21 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
-  // Everything below is driven by the intent + alternatePlans the
-  // backend just quoted. Never bake USD strings — the same modal
-  // renders EUR / PKR / INR / etc. once local pricing kicks in.
+  // Monthly numbers come from the primary intent. Annual numbers
+  // prefer the standalone ANNUAL intent (fetched in parallel on modal
+  // open) so the per-month figure on the picker matches exactly what
+  // the payment step will show. When the ANNUAL intent hasn't landed
+  // yet we fall back to `intent.alternatePlans[ANNUAL]` — never bake
+  // USD strings because the same modal renders EUR / PKR / INR /
+  // etc. once local pricing kicks in.
   const monthly = pickPlan(intent, "TRIAL_MONTHLY");
-  const annual = pickPlan(intent, "ANNUAL");
+  const annual = annualIntent
+    ? {
+        amountTodayMinor: annualIntent.amountTodayMinor,
+        amountRenewMinor: annualIntent.amountRenewMinor,
+        currency: annualIntent.currency,
+      }
+    : pickPlan(intent, "ANNUAL");
   const fullAccessPrice = formatMinor(
     monthly.amountTodayMinor,
     monthly.currency,

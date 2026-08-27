@@ -1,5 +1,3 @@
-import { TOOL_ROUTE } from "./tool-routes";
-
 const convert = (slug: string) => `/convert/${slug}` as const;
 
 /**
@@ -68,48 +66,51 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
     // review asked for. Same href — tile still opens the PDF editor.
     heading: "PDF COMPOSER",
     tools: [
+      // Each composer tool routes to its own marketing landing page
+      // (`/edit`, `/compress`, `/organize-pdf`, …) that renders the shared
+      // hero + upload workspace defined by `ToolLandingPage`. The workspace
+      // forwards the file into `/pdf-composer?tool=<slug>` under the hood,
+      // so the tile lands the user on a discoverable URL with a consistent
+      // UI regardless of which tool they picked from the modal.
       {
         label: "Edit & Sign",
         icon: { kind: "line", id: "editor" },
-        // PRD §5 — tool-specific routing: land in the edit-text tool
-        // directly instead of the generic composer. Signature is one
-        // tap away in the toolbar for the "& Sign" half.
-        href: TOOL_ROUTE.edit,
+        href: "/edit",
       },
       {
         label: "Compress",
         icon: { kind: "line", id: "compress" },
-        href: TOOL_ROUTE.compress,
+        href: "/compress",
       },
       {
         label: "Organize Pages",
         icon: { kind: "line", id: "organize" },
-        href: TOOL_ROUTE.managePages,
+        href: "/organize-pdf",
       },
       {
         label: "Split & Extract Pages",
         icon: { kind: "line", id: "split" },
-        href: TOOL_ROUTE.split,
+        href: "/split-pdf",
       },
       {
         label: "Password Protect",
         icon: { kind: "line", id: "password" },
-        href: TOOL_ROUTE.password,
+        href: "/password-protect-pdf",
       },
       {
         label: "Unlock PDF",
         icon: { kind: "line", id: "unlock" },
-        href: TOOL_ROUTE.unlock,
+        href: "/unlock-pdf",
       },
       {
         label: "Rotate Pages",
         icon: { kind: "line", id: "rotate" },
-        href: TOOL_ROUTE.managePages,
+        href: "/rotate-pdf",
       },
       {
         label: "Delete Pages",
         icon: { kind: "line", id: "delete" },
-        href: TOOL_ROUTE.managePages,
+        href: "/delete-pages",
       },
     ],
   },
@@ -201,17 +202,17 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       {
         label: "Extract Images",
         icon: { kind: "line", id: "extract-images" },
-        href: TOOL_ROUTE.extractImages,
+        href: "/extract-images",
       },
       {
         label: "Remove Annotations",
         icon: { kind: "line", id: "remove-annotations" },
-        href: TOOL_ROUTE.flatten,
+        href: "/remove-annotations",
       },
       {
         label: "Watermark",
         icon: { kind: "line", id: "watermark" },
-        href: TOOL_ROUTE.watermark,
+        href: "/watermark-pdf",
       },
       {
         label: "Forms (W-9)",

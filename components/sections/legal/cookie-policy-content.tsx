@@ -356,7 +356,7 @@ export function CookiePolicyContent() {
         title="5. YOUR CHOICES AND CONSENT"
       >
         <p>
-          <strong>EEA and UK visitors:</strong>{" "}on your first visit you will see
+          <strong>EEA and UK visitors:</strong> on your first visit you will see
           a cookie consent banner allowing you to accept or reject non-essential
           cookies before they are set. You can change or withdraw your consent
           at any time via the &ldquo;Cookie Settings&rdquo; link in the footer
@@ -364,7 +364,7 @@ export function CookiePolicyContent() {
           processing before withdrawal.
         </p>
         <p className="mt-3">
-          <strong>US visitors:</strong>{" "}where state law grants you the right to
+          <strong>US visitors:</strong> where state law grants you the right to
           opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
           advertising via cookies, you may do so via the &ldquo;Cookie
           Settings&rdquo; link. We honor Global Privacy Control (GPC) browser
