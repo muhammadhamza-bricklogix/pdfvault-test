@@ -4,18 +4,10 @@ import type { Canvas } from "fabric";
 import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
-import { GeistSans } from "geist/font/sans";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import "@/app/(landing)/landing-theme.css";
-import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
-import { LandingHeader } from "@/components/sections/new-landing/landing-header";
-import {
-  UPLOAD_ACCEPT_MIME,
-  uploadAsPdf,
-} from "@/lib/client/file-conversion/upload-to-pdf";
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotations-editor";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
@@ -41,8 +33,8 @@ import {
 import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
-import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
 import { EditorInfoBar } from "./EditorTopBar";
@@ -115,68 +107,6 @@ const PerformancePanel = dynamic(
   () => import("./PerformancePanel").then((m) => m.PerformancePanel),
   { ssr: false, loading: () => null },
 );
-
-function UploadScreen() {
-  const setFile = usePdfEditorStore((s) => s.setFile);
-  const setIsCreatePdfModalOpen = usePdfEditorStore(
-    (s) => s.setIsCreatePdfModalOpen,
-  );
-
-  const handleSelect = async (file: File) => {
-    const isAlreadyPdf = file.type === "application/pdf";
-    const loadingKey = isAlreadyPdf
-      ? null
-      : toast.loading({
-          description: `Preparing ${file.name} for the editor.`,
-          title: "Converting to PDF",
-        });
-
-    try {
-      const pdfFile = await uploadAsPdf(file);
-
-      setFile(pdfFile);
-    } catch (err) {
-      toast.error({
-        description: err instanceof Error ? err.message : undefined,
-        title: "Couldn't open file",
-      });
-    } finally {
-      if (loadingKey) toast.close(loadingKey);
-    }
-  };
-
-  return (
-    <div
-      className={`${GeistSans.variable} pdfvault-landing flex flex-1 flex-col overflow-y-auto bg-white`}
-    >
-      <LandingHeader />
-      <main className="flex flex-1 items-center justify-center bg-white p-8">
-        <div className="w-full max-w-5xl space-y-4">
-          <FileUpload
-            accept={UPLOAD_ACCEPT_MIME}
-            acceptLabel="PDF, Word, Excel, PowerPoint, Image"
-            appearance="marketing"
-            description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
-            heading="Drop your file here"
-            marketingFootnote="PDF, Word, Excel, PowerPoint, Image · Up to 100 MB"
-            onFileSelect={handleSelect}
-          />
-          <p className="text-center text-sm text-default-400">
-            or{" "}
-            <button
-              className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
-              type="button"
-              onClick={() => setIsCreatePdfModalOpen(true)}
-            >
-              create a blank PDF
-            </button>
-          </p>
-        </div>
-      </main>
-      <LandingFooter />
-    </div>
-  );
-}
 
 function EditorLayout() {
   const { error, isLoading } = usePdfLoader();
@@ -459,6 +389,7 @@ function EditorLayout() {
 export function PdfEditorShell() {
   const { isSignedIn } = useAuth();
   const shellSearchParams = useSearchParams();
+  const shellRouter = useRouter();
 
   // Synchronous fresh-entry clear — runs BEFORE the store selectors
   // below read `file` on first render. Kills the stale-file →
@@ -572,14 +503,33 @@ export function PdfEditorShell() {
   // `isRestoringSession` gives us the same flash-suppression without
   // the stuck state, because the hydrator sets that flag at the very
   // top of its effect.
+  // 2026-08-28: user asked to permanently remove the shell-level
+  // "Drop your file here" screen. Landing on /pdf-composer with no
+  // file loaded and no pending document / session-restore in flight
+  // now redirects instead — signed-in users land on their dashboard,
+  // signed-out users land on the marketing home (which has its own
+  // hero drop-zone). Effect runs post-render, so the fallback content
+  // stays on `<EditorLoadingShell />` for the ~1 frame between the
+  // decision and the redirect committing.
+  const shouldRedirectAway =
+    !file && !pendingDocumentId && !isRestoringSession;
+
+  useEffect(() => {
+    if (!shouldRedirectAway) return;
+    const target = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
+
+    shellRouter.replace(target);
+  }, [shouldRedirectAway, isSignedIn, shellRouter]);
+
   let content: React.ReactNode;
 
   if (file) {
     content = <EditorLayout />;
-  } else if (pendingDocumentId || isRestoringSession) {
-    content = <EditorLoadingShell />;
   } else {
-    content = <UploadScreen />;
+    // Covers the loading branch (pendingDocumentId / isRestoringSession)
+    // AND the redirect branch — a brief spinner while `router.replace`
+    // takes effect avoids a flash of blank white.
+    content = <EditorLoadingShell />;
   }
 
   return (
