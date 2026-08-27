@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { SiAmericanexpress, SiMastercard, SiVisa } from "react-icons/si";
 
 import {
   useCreateCheckoutIntentMutation,
@@ -134,6 +135,14 @@ export function PaywallModal({
   // different figure on the two screens. Reusing this cached intent on
   // Continue also skips the extra round-trip.
   const [annualIntent, setAnnualIntent] = useState<CheckoutIntent | null>(null);
+  // Explicit "backend rejected the ANNUAL pre-fetch" flag — the
+  // primary intent's alternatePlans is the source of truth for whether
+  // annual is seeded, but this flag lets us hide the card immediately
+  // when the pre-fetch 404s even if alternatePlans hasn't proven it
+  // yet. Prevents the "£1.65/mo" mis-quote (monthly price divided by
+  // 12) and the "Couldn't start annual checkout — Resource not found"
+  // dead-end on Continue.
+  const [annualUnavailable, setAnnualUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // When Solidgate reports a decline, we surface a "Try another card"
   // affordance instead of leaving the user staring at the read-only
@@ -230,8 +239,10 @@ export function PaywallModal({
     // Fire the annual intent alongside the monthly one. The plan
     // picker uses its `amountRenewMinor` so the per-month price shown
     // on the picker matches exactly what the payment step will display
-    // for the annual plan. Failure is silent — the picker falls back
-    // to `intent.alternatePlans[ANNUAL]` in that case.
+    // for the annual plan. On failure (e.g. `Plan ANNUAL is not
+    // seeded`) we flag the annual option as unavailable so the picker
+    // hides that card instead of quoting the monthly price as annual
+    // and dead-ending Continue at "resource not found".
     let cancelled = false;
 
     billingService
@@ -245,6 +256,8 @@ export function PaywallModal({
         setAnnualIntent(annual);
       })
       .catch((err) => {
+        if (cancelled) return;
+        setAnnualUnavailable(true);
         logger.captureError(err, "checkout.annual_intent_prefetch");
       });
 
@@ -252,6 +265,7 @@ export function PaywallModal({
       cancelled = true;
       setIntent(null);
       setAnnualIntent(null);
+      setAnnualUnavailable(false);
       setError(null);
       setPayFailed(false);
       setRetryKey(0);
@@ -474,6 +488,7 @@ export function PaywallModal({
           ) : step === "plan" ? (
             <PlanStep
               annualIntent={annualIntent}
+              annualUnavailable={annualUnavailable}
               continueLoading={continueLoading}
               hidePreview={hidePreview}
               intent={intent}
@@ -513,6 +528,7 @@ export function PaywallModal({
 function PlanStep({
   intent,
   annualIntent,
+  annualUnavailable,
   preview,
   hidePreview,
   selectedPlan,
@@ -522,6 +538,7 @@ function PlanStep({
 }: {
   intent: CheckoutIntent;
   annualIntent: CheckoutIntent | null;
+  annualUnavailable: boolean;
   preview: PaywallPreview | null;
   hidePreview: boolean;
   selectedPlan: PlanId;
@@ -529,6 +546,26 @@ function PlanStep({
   onContinue: () => void;
   continueLoading: boolean;
 }) {
+  // Annual is offered only when the backend actually has an ANNUAL
+  // plan seeded. Signal: either the standalone ANNUAL intent resolved
+  // OR the primary intent's alternatePlans includes an ANNUAL row.
+  // When the pre-fetch already 404'd (annualUnavailable=true) we hide
+  // regardless — no point offering a plan the checkout will reject.
+  const annualInAlternates = Boolean(
+    intent.alternatePlans?.some((row) => row.planKind === "ANNUAL"),
+  );
+  const annualAvailable =
+    !annualUnavailable && (Boolean(annualIntent) || annualInAlternates);
+
+  // Snap the picker back to monthly if the user had annual selected
+  // but the backend just told us it isn't available. Runs at most once
+  // per unavailability transition.
+  useEffect(() => {
+    if (!annualAvailable && selectedPlan === "annual") {
+      onSelectPlan("monthly");
+    }
+  }, [annualAvailable, selectedPlan, onSelectPlan]);
+
   // Monthly numbers come from the primary intent. Annual numbers
   // prefer the standalone ANNUAL intent (fetched in parallel on modal
   // open) so the per-month figure on the picker matches exactly what
@@ -600,18 +637,14 @@ function PlanStep({
       {hidePreview ? (
         <div className="flex flex-col gap-4 p-6 md:p-8">
           <PlanCards
+            annualAvailable={annualAvailable}
             annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
             onSelectPlan={onSelectPlan}
           />
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
-            <span>We accept</span>
-            <CardBadge label="VISA" />
-            <CardBadge label="Mastercard" />
-            <CardBadge label="Amex" />
-          </div>
+          <AcceptedCards />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -666,18 +699,14 @@ function PlanStep({
           {/* Right — plan cards column */}
           <div className="flex flex-col gap-4 p-6 md:p-8">
             <PlanCards
+              annualAvailable={annualAvailable}
               annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
               selectedPlan={selectedPlan}
               onSelectPlan={onSelectPlan}
             />
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
-              <span>We accept</span>
-              <CardBadge label="VISA" />
-              <CardBadge label="Mastercard" />
-              <CardBadge label="Amex" />
-            </div>
+            <AcceptedCards />
           </div>
         </div>
       )}
@@ -1326,11 +1355,13 @@ function PlanCards({
   onSelectPlan,
   fullAccessPrice,
   annualPrice,
+  annualAvailable,
 }: {
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
   fullAccessPrice: string;
   annualPrice: string;
+  annualAvailable: boolean;
 }) {
   const plans = [
     {
@@ -1341,14 +1372,18 @@ function PlanCards({
       note: "",
       badge: "Most popular",
     },
-    {
-      id: "annual" as PlanId,
-      title: "Annual Plan",
-      price: annualPrice,
-      priceSuffix: "/ month",
-      note: "",
-      badge: undefined as string | undefined,
-    },
+    ...(annualAvailable
+      ? [
+          {
+            id: "annual" as PlanId,
+            title: "Annual Plan",
+            price: annualPrice,
+            priceSuffix: "/ month",
+            note: "",
+            badge: undefined as string | undefined,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -1429,11 +1464,36 @@ function PlanCards({
   );
 }
 
-function CardBadge({ label }: { label: string }) {
+const ACCEPTED_CARD_BRANDS = [
+  { Icon: SiVisa, label: "Visa", brandColor: "#1434CB" },
+  { Icon: SiMastercard, label: "Mastercard", brandColor: "#EB001B" },
+  {
+    Icon: SiAmericanexpress,
+    label: "American Express",
+    brandColor: "#006FCF",
+  },
+] as const;
+
+function AcceptedCards() {
   return (
-    <span className="inline-flex h-7 items-center rounded-md border border-[#ececec] bg-white px-2.5 text-[10px] font-semibold tracking-wide text-[#1a1c21] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      {label}
-    </span>
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
+      <span>We accept</span>
+      {ACCEPTED_CARD_BRANDS.map(({ Icon, label, brandColor }) => (
+        <span
+          key={label}
+          aria-label={label}
+          className="inline-flex h-7 min-w-[38px] items-center justify-center rounded-md border border-[#ececec] bg-white px-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+          role="img"
+        >
+          <Icon
+            aria-hidden
+            className="h-4 w-auto"
+            style={{ color: brandColor }}
+            title={label}
+          />
+        </span>
+      ))}
+    </div>
   );
 }
 
