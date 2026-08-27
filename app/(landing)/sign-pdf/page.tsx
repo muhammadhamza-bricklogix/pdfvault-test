@@ -1,5 +1,18 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+
+import { ToolLandingPage } from "@/components/sections/new-landing/tool-landing-page";
+
+const TITLE = "Sign PDF online";
+const DESCRIPTION =
+  "Add your handwritten or typed signature to any PDF — draw with vector strokes, drop it where you need, and save the signed file.";
+
+export const metadata: Metadata = {
+  title: `${TITLE} — PDFVault`,
+  description: DESCRIPTION,
+};
 
 export default function SignPdfLandingPage() {
-  redirect("/pdf-composer?fresh=1&tool=sign");
+  return (
+    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="sign" />
+  );
 }

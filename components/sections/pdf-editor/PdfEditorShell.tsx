@@ -6,16 +6,15 @@ import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/man
 import { useAuth } from "@clerk/nextjs";
 import { GeistSans } from "geist/font/sans";
 import dynamic from "next/dynamic";
+import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import "@/app/(landing)/landing-theme.css";
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
-import {
-  UPLOAD_ACCEPT_MIME,
-  uploadAsPdf,
-} from "@/lib/client/file-conversion/upload-to-pdf";
+import { uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotations-editor";
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
@@ -42,7 +41,6 @@ import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-s
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { toast } from "@/lib/shared/utils/toast";
-import { FileUpload } from "@/components/ui/file-upload";
 
 import { BottomDock } from "./BottomDock";
 import { EditorInfoBar } from "./EditorTopBar";
@@ -116,23 +114,52 @@ const PerformancePanel = dynamic(
   { ssr: false, loading: () => null },
 );
 
+const ACCEPT_EXTENSIONS = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
+const ACCEPT_ATTR = ACCEPT_EXTENSIONS.map((ext) => `.${ext}`).join(",");
+
+/**
+ * Composer upload screen — mirrors the `/convert/[slug]` hero
+ * ("Drag & drop file to edit" + "Upload to Edit" + "Size upto 100 MB")
+ * so every upload surface in the app looks the same (QA 2026-08-27).
+ * Unlike `UploadWorkspace` this stays put on `/pdf-composer` after the
+ * drop — the hydrator's Step 3 auto-save handles library persistence
+ * for signed-in users; navigation would double-fetch through
+ * `useEditorDocumentLoader`.
+ */
 function UploadScreen() {
   const setFile = usePdfEditorStore((s) => s.setFile);
-  const setIsCreatePdfModalOpen = usePdfEditorStore(
-    (s) => s.setIsCreatePdfModalOpen,
-  );
+  const searchParams = useSearchParams();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tool = searchParams.get("tool");
+  const isUnlockTool = tool === "unlock" || tool === "password";
+  const heading = isUnlockTool
+    ? "Drag & drop file to unlock"
+    : "Drag & drop file to edit";
+  const ctaLabel = isUnlockTool ? "Upload to Unlock" : "Upload to Edit";
 
-  const handleSelect = async (file: File) => {
-    const isAlreadyPdf = file.type === "application/pdf";
+  const handleSelect = async (picked: File) => {
+    const extension = picked.name.split(".").pop()?.toLowerCase() ?? "";
+
+    if (!ACCEPT_EXTENSIONS.includes(extension)) {
+      setError(
+        `We can't open .${extension || "this"} files here. Supported: ${ACCEPT_EXTENSIONS.map((e) => `.${e}`).join(", ")}.`,
+      );
+
+      return;
+    }
+    setError(null);
+    const isAlreadyPdf = picked.type === "application/pdf";
     const loadingKey = isAlreadyPdf
       ? null
       : toast.loading({
-          description: `Preparing ${file.name} for the editor.`,
+          description: `Preparing ${picked.name} for the editor.`,
           title: "Converting to PDF",
         });
 
     try {
-      const pdfFile = await uploadAsPdf(file);
+      const pdfFile = await uploadAsPdf(picked);
 
       setFile(pdfFile);
     } catch (err) {
@@ -145,33 +172,142 @@ function UploadScreen() {
     }
   };
 
+  const openPicker = () => inputRef.current?.click();
+
+  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    const picked = event.dataTransfer.files?.[0];
+
+    if (picked) void handleSelect(picked);
+  };
+
+  const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = event.target.files?.[0];
+
+    if (picked) void handleSelect(picked);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const onZoneKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openPicker();
+    }
+  };
+
   return (
     <div
       className={`${GeistSans.variable} pdfvault-landing flex flex-1 flex-col overflow-y-auto bg-white`}
     >
       <LandingHeader />
-      <main className="flex flex-1 items-center justify-center bg-white p-8">
-        <div className="w-full max-w-5xl space-y-4">
-          <FileUpload
-            accept={UPLOAD_ACCEPT_MIME}
-            acceptLabel="PDF, Word, Excel, PowerPoint, Image"
-            appearance="marketing"
-            description="Upload a PDF to open it directly, or a Word, Excel, PowerPoint, or image file — we'll convert it to PDF first."
-            heading="Drop your file here"
-            marketingFootnote="PDF, Word, Excel, PowerPoint, Image · Up to 100 MB"
-            onFileSelect={handleSelect}
-          />
-          <p className="text-center text-sm text-default-400">
-            or{" "}
-            <button
-              className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
-              type="button"
-              onClick={() => setIsCreatePdfModalOpen(true)}
+      <main>
+        <section className="bg-white pt-14 pb-8 sm:pt-20 sm:pb-10">
+          <div className="pv-container flex flex-col items-center text-center">
+            <Link
+              className="mb-4 inline-flex items-center gap-1 text-[13px] font-medium text-[#5f5f5f] transition-colors hover:text-[var(--pv-brand-red,#f12c23)]"
+              href="/"
             >
-              create a blank PDF
-            </button>
-          </p>
-        </div>
+              <span aria-hidden>←</span> Back to all tools
+            </Link>
+            <h1 className="pv-display max-w-[820px] text-[#121212]">
+              PDF Composer
+            </h1>
+            <p className="mt-6 max-w-[560px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
+              Drop a PDF, Word, Excel, PowerPoint, or image file and start
+              editing right in your browser.
+            </p>
+          </div>
+        </section>
+        <section className="pb-20">
+          <div className="mx-auto w-full max-w-[880px] px-6">
+            <div className="mx-auto w-full max-w-[820px]">
+              <div className="rounded-[24px] border border-black/5 bg-white p-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                <div
+                  aria-label="Upload a file. Drop a file here, or activate to browse."
+                  className="relative flex cursor-pointer flex-col items-center justify-center rounded-[16px] px-6 py-14 text-center outline-none sm:py-16"
+                  role="button"
+                  tabIndex={0}
+                  onClick={openPicker}
+                  onDragLeave={() => setDragActive(false)}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragActive(true);
+                  }}
+                  onDrop={onDrop}
+                  onKeyDown={onZoneKeyDown}
+                >
+                  <svg
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    fill="none"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 100 100"
+                  >
+                    <rect
+                      height="99"
+                      rx="1.1"
+                      ry="2.7"
+                      stroke={
+                        dragActive ? "var(--pv-brand-primary)" : "#CCCCCC"
+                      }
+                      strokeDasharray="10 8"
+                      strokeWidth="1"
+                      vectorEffect="non-scaling-stroke"
+                      width="99"
+                      x="0.5"
+                      y="0.5"
+                    />
+                  </svg>
+                  <input
+                    ref={inputRef}
+                    accept={ACCEPT_ATTR}
+                    className="sr-only"
+                    type="file"
+                    onChange={onInputChange}
+                  />
+                  <Image
+                    priority
+                    alt=""
+                    className="h-auto w-[84px] object-contain"
+                    height={72}
+                    src="/landing/Group.png"
+                    width={84}
+                  />
+                  <h2 className="mt-6 text-[22px] font-semibold leading-[28px] text-[#121212] sm:text-[24px] sm:leading-[30px]">
+                    {heading}
+                  </h2>
+                  <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[#B4B4B4]">
+                    <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                    <span>OR</span>
+                    <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                  </div>
+                  <button
+                    className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openPicker();
+                    }}
+                  >
+                    {ctaLabel}
+                  </button>
+                  <p className="mt-5 text-[14px] text-[#8A8A8A]">
+                    Size upto 100 MB
+                  </p>
+                  {error ? (
+                    <p
+                      className="mt-4 text-[14px] text-[var(--pv-error,#dc2626)]"
+                      role="alert"
+                    >
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
       <LandingFooter />
     </div>

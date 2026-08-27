@@ -12,7 +12,6 @@ import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { AllToolsCatalog } from "./all-tools-catalog";
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -21,14 +20,13 @@ type NavLink = { label: string; href: string };
 
 // Primary nav tools — real routes, not `#hash` anchors. Order per PM
 // review 2026-07: Edit → Convert → Compress. AI Summarizer hidden until
-// the AI feature ships. Edit / Compress route straight into the PDF
-// composer with the matching tool preselected — one upload screen for
-// every composer entry (QA 2026-08-27). Convert still owns its own
-// per-slug marketing page since that flow explains the target format.
+// the AI feature ships. Edit / Compress land on the shared marketing
+// hero (`/edit`, `/compress`) that mirrors `/convert/[slug]` — same
+// "Drag & drop file to edit" screen for every uploader.
 const PRIMARY_LINKS: NavLink[] = [
-  { label: "Edit", href: TOOL_ROUTE.edit },
+  { label: "Edit", href: "/edit" },
   { label: "Convert", href: "/convert/pdf-to-word" },
-  { label: "Compress", href: TOOL_ROUTE.compress },
+  { label: "Compress", href: "/compress" },
   // { label: "AI Summarizer", href: "/ai-summarizer" },
 ];
 

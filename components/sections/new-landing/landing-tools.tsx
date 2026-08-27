@@ -6,31 +6,31 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 import { SectionHeading } from "./section-heading";
 
 /**
- * Signed-in users clicking a `?tool=<slug>` tile used to briefly land on
- * `/pdf-composer?fresh=1&tool=<slug>` before `PendingEditorFileHydrator`
- * bounced them to `/dashboard?openPicker=<slug>` — visible URL flash and
- * an unnecessary editor mount. Send them straight to the picker route
- * from the click so nothing intermediate paints. Signed-out users
- * (and anon SSR) keep the composer URL — they have no library to pick
- * from, so the drop-zone flow is correct for them.
+ * Signed-in users clicking a composer/others tile used to briefly land on
+ * the marketing landing page or `/pdf-composer?fresh=1&tool=<slug>` before
+ * `PendingEditorFileHydrator` bounced them to `/dashboard?openPicker=<slug>`
+ * — visible URL flash and an unnecessary editor mount. Send them straight
+ * to the picker route from the click so nothing intermediate paints.
+ * Signed-out users get the marketing landing page (`href`) — they have
+ * no library to pick from, so the drop-zone flow is correct for them.
+ *
+ * `toolSlug` is opt-in per tile: composer/others tools set it so their
+ * signed-in click routes through `openPicker`; convert tiles leave it
+ * unset so signed-in users land on the same marketing URL as guests.
  */
-function resolveToolHref(rawHref: string, isSignedIn: boolean): string {
+function resolveToolHref(
+  rawHref: string,
+  toolSlug: string | undefined,
+  isSignedIn: boolean,
+): string {
   if (!isSignedIn) return rawHref;
-  if (!rawHref.startsWith(ROUTES.TOOLS.PDF_EDITOR)) return rawHref;
-  const query = rawHref.split("?")[1];
+  if (!toolSlug) return rawHref;
 
-  if (!query) return rawHref;
-  const params = new URLSearchParams(query);
-  const tool = params.get("tool");
-
-  if (!tool) return rawHref;
-
-  return `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
+  return `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(toolSlug)}`;
 }
 
 const convert = (slug: string) => `/convert/${slug}` as const;
@@ -45,6 +45,13 @@ type Tool = {
   description: string;
   href: string;
   tabs: TabId[];
+  /**
+   * Composer/others tools set this to the `?tool=<slug>` value the editor
+   * would open with (e.g. `"edit"`, `"manage"`, `"compress"`). Used by
+   * `resolveToolHref` to route signed-in users to `/dashboard?openPicker=<slug>`
+   * instead of the guest marketing page. Convert tiles leave it unset.
+   */
+  toolSlug?: string;
 };
 
 const TABS: Tab[] = [
@@ -63,32 +70,34 @@ const TABS: Tab[] = [
 // each tab well-populated.
 const TOOLS: Tool[] = [
   // ─── Edit & Sign ────────────────────────────────────────────────────────
-  // Composer/others tiles route straight into `/pdf-composer?tool=<slug>`
-  // via `TOOL_ROUTE.*` — one upload screen for the whole app (QA
-  // 2026-08-27). Signed-in users take the `resolveToolHref` shortcut into
-  // the dashboard picker; signed-out users land on the composer's own
-  // drop-zone which `PendingEditorFileHydrator` auto-launches into the
-  // matching tool.
+  // Composer/others tiles link to the shared marketing landing pages
+  // (`ToolLandingPage`) — same hero + `UploadWorkspace(variant="hero")`
+  // the `/convert/[slug]` routes use — so every uploader sees the same
+  // "Drag & drop file to edit" screen. `toolSlug` preserves the
+  // signed-in dashboard-picker shortcut inside `resolveToolHref`.
   {
     icon: "/landing/editor.svg",
     title: "Edit",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
-    href: TOOL_ROUTE.editor,
+    href: "/edit",
+    toolSlug: "edit",
     tabs: ["edit"],
   },
   {
     icon: "/landing/signature.svg",
     title: "Sign",
     description: "Add your signature with vector strokes.",
-    href: TOOL_ROUTE.sign,
+    href: "/sign-pdf",
+    toolSlug: "sign",
     tabs: ["edit"],
   },
   {
     icon: "/landing/editor.svg",
     title: "Watermark",
     description: "Stamp a watermark with vector strokes.",
-    href: TOOL_ROUTE.watermark,
+    href: "/watermark-pdf",
+    toolSlug: "watermark",
     tabs: ["others"],
   },
   {
@@ -96,7 +105,8 @@ const TOOLS: Tool[] = [
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: TOOL_ROUTE.managePages,
+    href: "/organize-pdf",
+    toolSlug: "manage",
     tabs: ["edit", "others"],
   },
   {
@@ -104,7 +114,8 @@ const TOOLS: Tool[] = [
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: TOOL_ROUTE.split,
+    href: "/split-pdf",
+    toolSlug: "split",
     tabs: ["edit", "compress", "others"],
   },
   {
@@ -112,14 +123,16 @@ const TOOLS: Tool[] = [
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: TOOL_ROUTE.password,
+    href: "/password-protect-pdf",
+    toolSlug: "password",
     tabs: ["edit", "others"],
   },
   {
     icon: "/landing/unlock.svg",
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: TOOL_ROUTE.unlock,
+    href: "/unlock-pdf",
+    toolSlug: "unlock",
     tabs: ["edit", "others"],
   },
   {
@@ -127,7 +140,8 @@ const TOOLS: Tool[] = [
     title: "Rotate Pages",
     description:
       "Fix upside-down scans or mixed-orientation bundles in seconds.",
-    href: TOOL_ROUTE.managePages,
+    href: "/rotate-pdf",
+    toolSlug: "manage",
     tabs: ["edit", "others"],
   },
   {
@@ -135,7 +149,8 @@ const TOOLS: Tool[] = [
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: TOOL_ROUTE.managePages,
+    href: "/delete-pages",
+    toolSlug: "manage",
     tabs: ["edit", "others"],
   },
 
@@ -189,14 +204,16 @@ const TOOLS: Tool[] = [
     icon: "/landing/convert.svg",
     title: "Compress PDF",
     description: "Reduce file size with three compression levels.",
-    href: TOOL_ROUTE.compress,
+    href: "/compress",
+    toolSlug: "compress",
     tabs: ["compress"],
   },
   {
     icon: "/landing/organize.svg",
     title: "Merge & Compress",
     description: "Combine multiple PDFs and squeeze them in a single pass.",
-    href: TOOL_ROUTE.managePages,
+    href: "/organize-pdf",
+    toolSlug: "manage",
     tabs: ["compress"],
   },
 
@@ -256,14 +273,16 @@ const TOOLS: Tool[] = [
     icon: "/landing/split.svg",
     title: "Extract Images",
     description: "Pull every embedded image out of a PDF in one click.",
-    href: TOOL_ROUTE.extractImages,
+    href: "/extract-images",
+    toolSlug: "extract-images",
     tabs: ["others"],
   },
   {
     icon: "/landing/delete.svg",
     title: "Remove Annotations",
     description: "Strip notes, highlights, and comments in one pass.",
-    href: TOOL_ROUTE.flatten,
+    href: "/remove-annotations",
+    toolSlug: "flatten",
     tabs: ["others"],
   },
 ];
@@ -488,7 +507,11 @@ export function LandingTools() {
               >
                 <a
                   className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
-                  href={resolveToolHref(tool.href, Boolean(isSignedIn))}
+                  href={resolveToolHref(
+                    tool.href,
+                    tool.toolSlug,
+                    Boolean(isSignedIn),
+                  )}
                 >
                   <span className="mx-auto flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">
                     <Image
