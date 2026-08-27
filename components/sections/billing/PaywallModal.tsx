@@ -589,6 +589,13 @@ function PlanStep({
     Math.round(annual.amountRenewMinor / 12),
     annual.currency,
   );
+  // Full annual figure the card shows underneath the per-month price
+  // ("Billed as $300.00 / year"). Same source as the payment step's
+  // order-summary card, so both screens agree.
+  const annualFullPrice = formatMinor(
+    annual.amountRenewMinor,
+    annual.currency,
+  );
   const todayDisplay =
     selectedPlan === "annual"
       ? formatMinor(annual.amountTodayMinor, annual.currency)
@@ -638,6 +645,7 @@ function PlanStep({
         <div className="flex flex-col gap-4 p-6 md:p-8">
           <PlanCards
             annualAvailable={annualAvailable}
+            annualFullPrice={annualFullPrice}
             annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
@@ -700,6 +708,7 @@ function PlanStep({
           <div className="flex flex-col gap-4 p-6 md:p-8">
             <PlanCards
               annualAvailable={annualAvailable}
+              annualFullPrice={annualFullPrice}
               annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
               selectedPlan={selectedPlan}
@@ -1355,12 +1364,14 @@ function PlanCards({
   onSelectPlan,
   fullAccessPrice,
   annualPrice,
+  annualFullPrice,
   annualAvailable,
 }: {
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
   fullAccessPrice: string;
   annualPrice: string;
+  annualFullPrice: string;
   annualAvailable: boolean;
 }) {
   const plans = [
@@ -1379,7 +1390,7 @@ function PlanCards({
             title: "Annual Plan",
             price: annualPrice,
             priceSuffix: "/ month",
-            note: "",
+            note: `Billed as ${annualFullPrice} / year`,
             badge: undefined as string | undefined,
           },
         ]
