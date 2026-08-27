@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
@@ -8,13 +9,16 @@ import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { formsService } from "@/lib/shared/api/services/forms.service";
-import { useFormEditorStore } from "@/lib/client/stores";
+import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 const EXPORT_EVENT = "editor:export";
+const SAVE_EVENT = "editor:save";
 const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
 
 type SaveBeforeActionDetail = {
@@ -216,11 +220,14 @@ export function W9FinalizeIntercept() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const isSignedInRef = useRef(!!isSignedIn);
   const authLoadedRef = useRef(authLoaded);
+  const queryClient = useQueryClient();
+  const queryClientRef = useRef(queryClient);
 
   useEffect(() => {
     isSignedInRef.current = !!isSignedIn;
     authLoadedRef.current = authLoaded;
-  }, [isSignedIn, authLoaded]);
+    queryClientRef.current = queryClient;
+  }, [isSignedIn, authLoaded, queryClient]);
 
   // Dedup key + last successful downloadUrl. Even though the backend is
   // now idempotent for FINALIZED sessions, the frontend cache saves a
@@ -229,6 +236,9 @@ export function W9FinalizeIntercept() {
   const lastFinalizeRef = useRef<{ key: string; downloadUrl: string } | null>(
     null,
   );
+  // Same idempotency for Save — dedup a second click with the same
+  // values + signature + document identity.
+  const lastSaveRef = useRef<{ key: string; documentId: string } | null>(null);
 
   useLayoutEffect(() => {
     const handler = (event: Event) => {
@@ -456,23 +466,173 @@ export function W9FinalizeIntercept() {
     // in for no useful reason since finalize is what actually needs
     // to run). Resolve the save as a no-op success so the modal
     // proceeds to dispatch the export event our other handler catches.
-    const saveHandler = (event: Event) => {
+    const saveBeforeActionHandler = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
 
       detail?.onComplete?.({ ok: true });
     };
 
-    window.addEventListener(SAVE_BEFORE_ACTION_EVENT, saveHandler, {
+    // QA 2026-08-27: `useSaveEditor` would otherwise Fabric-merge the
+    // blank W-9 template + upload the result — the yellow form-fill
+    // overlays live in `useFormEditorStore`, not on the Fabric canvas,
+    // so that save persisted an empty PDF and every reopen from the
+    // dashboard looked blank. Route Save through the same finalize
+    // backend the download uses (stamps values + signature onto the
+    // template), fetch the stamped bytes, then upload THOSE to the
+    // library. Include the raw form values in `editorState` under a
+    // `w9` marker so `openDocumentInEditor` can round-trip the user
+    // back to `/w-9-form` with their entries pre-filled.
+    const saveHandler = (event: Event) => {
+      event.stopImmediatePropagation();
+
+      const { sessionId, values, signatureKey } = useFormEditorStore.getState();
+      const { currentDocumentId } = usePdfEditorStore.getState();
+
+      if (!sessionId) {
+        toast.error({
+          title: "Session not ready",
+          description:
+            "Give it a moment while we start your W-9 session, then try Save again.",
+        });
+
+        return;
+      }
+
+      if (!authLoadedRef.current) {
+        toast.error({
+          title: "Just a sec",
+          description: "Signing you in — try Save again in a moment.",
+        });
+
+        return;
+      }
+
+      if (!isSignedInRef.current) {
+        savePendingW9Values(values);
+        dispatchSignInPrompt({
+          title: "Sign in to save",
+          description:
+            "Sign in and we'll bring you back to finish your W-9 with your entries preserved.",
+          confirmLabel: "Sign in & continue",
+          destination: "sign-in",
+          redirectUrl: ROUTES.FORMS.W9,
+        });
+
+        return;
+      }
+
+      const normalizedValues = normalizeW9ValuesForFinalize(values);
+      const cacheKey = `${sessionId}::${signatureKey ?? ""}::${JSON.stringify(
+        normalizedValues,
+      )}::${currentDocumentId ?? ""}`;
+
+      if (lastSaveRef.current && lastSaveRef.current.key === cacheKey) {
+        toast.info({
+          title: "Already saved",
+          description: "No changes since your last save.",
+        });
+
+        return;
+      }
+
+      const loadingKey = toast.loading({
+        title: "Saving your W-9",
+        description: "Stamping your values and saving to your library.",
+      });
+
+      void (async () => {
+        try {
+          // Save routes through finalize (a paid feature). Same
+          // entitlement flow as the download intercept so users
+          // pay once and both save + download work.
+          const entitled = await ensureFreshEntitlement();
+
+          if (!entitled) {
+            const outcome = await requestPaywall({
+              filename: "w-9.pdf",
+              sourceExt: "pdf",
+              targetExt: "pdf",
+            });
+
+            if (outcome !== "success") return;
+          }
+
+          const { downloadUrl } = await formsService.finalizeFormSession({
+            sessionId,
+            values: normalizedValues,
+            signatureKey,
+          });
+
+          const res = await fetch(downloadUrl);
+
+          if (!res.ok) {
+            throw new Error(
+              `Couldn't fetch the stamped W-9 (HTTP ${res.status}).`,
+            );
+          }
+          const blob = await res.blob();
+          const stampedFile = new File([blob], "w-9.pdf", {
+            type: "application/pdf",
+          });
+
+          const editorState = JSON.stringify({
+            v: 1,
+            w9: { values, signatureKey },
+          });
+
+          const document = await documentsService.uploadDocument({
+            file: stampedFile,
+            documentId: currentDocumentId ?? undefined,
+            editorState,
+          });
+
+          usePdfEditorStore.getState().setCurrentDocument({
+            id: document.id,
+            name: document.filename,
+          });
+          lastSaveRef.current = { key: cacheKey, documentId: document.id };
+
+          try {
+            queryClientRef.current?.invalidateQueries({
+              queryKey: documentKeys.lists(),
+            });
+          } catch {
+            /* non-fatal */
+          }
+
+          toast.success({
+            title: "Saved to your library",
+            description: "Your filled W-9 is now in My PDFs.",
+          });
+        } catch (err) {
+          logger.captureError(err, "w9.save");
+          const parsed = extractApiFieldErrors(err);
+
+          toast.error({
+            title: "Couldn't save the W-9",
+            description: parsed.message,
+          });
+        } finally {
+          toast.close(loadingKey);
+        }
+      })();
+    };
+
+    window.addEventListener(SAVE_BEFORE_ACTION_EVENT, saveBeforeActionHandler, {
       capture: true,
     });
     window.addEventListener(EXPORT_EVENT, handler, { capture: true });
+    window.addEventListener(SAVE_EVENT, saveHandler, { capture: true });
 
     return () => {
-      window.removeEventListener(SAVE_BEFORE_ACTION_EVENT, saveHandler, {
-        capture: true,
-      });
+      window.removeEventListener(
+        SAVE_BEFORE_ACTION_EVENT,
+        saveBeforeActionHandler,
+        { capture: true },
+      );
       window.removeEventListener(EXPORT_EVENT, handler, { capture: true });
+      window.removeEventListener(SAVE_EVENT, saveHandler, { capture: true });
     };
   }, []);
 

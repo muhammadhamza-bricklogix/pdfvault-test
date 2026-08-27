@@ -11,6 +11,15 @@ import { toast } from "@/lib/shared/utils/toast";
 
 type NavigateAfterSaveDetail = {
   url: string;
+  /**
+   * When true, `clearFile()` runs after the save (or the early-bail) and
+   * BEFORE `router.push(url)`. Used by the Back-to-dashboard buttons so
+   * the next editor entry doesn't paint the previous PDF for a frame
+   * while the new one loads (QA 2026-08-18). "My PDFs" leaves this
+   * false because the store's file is fine to keep around while the
+   * library opens in a fresh route.
+   */
+  clearFileAfter?: boolean;
 };
 
 // Module-level flag flipped by callers (e.g. ReloadConfirmModal) that
@@ -51,8 +60,14 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
       if (!detail?.url || isNavigatingRef.current) return;
 
-      if (!file) {
+      const clearFileAfter = detail.clearFileAfter === true;
+      const navigate = () => {
+        if (clearFileAfter) usePdfEditorStore.getState().clearFile();
         router.push(detail.url);
+      };
+
+      if (!file) {
+        navigate();
 
         return;
       }
@@ -62,7 +77,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           title: "Sign in to save",
           description: "Sign in to keep your edits in your library.",
         });
-        router.push(detail.url);
+        navigate();
 
         return;
       }
@@ -71,7 +86,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       // and navigate immediately. Avoids the misleading flash users were
       // seeing on every back-to-library click even with no edits.
       if (!usePdfEditorStore.getState().hasUnsavedChanges) {
-        router.push(detail.url);
+        navigate();
 
         return;
       }
@@ -120,7 +135,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
             .applyPostSaveReset(result.savedFile, result.remappedState);
         }
 
-        router.push(detail.url);
+        navigate();
       } finally {
         toast.close(loadingKey);
         isNavigatingRef.current = false;

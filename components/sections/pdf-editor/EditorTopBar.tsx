@@ -42,7 +42,6 @@ import {
   Toolbar,
   Tooltip,
 } from "@heroui/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
@@ -83,7 +82,6 @@ export function EditorInfoBar() {
   const canUndo = mobileHistoryIdx > 0;
   const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
 
-  const router = useRouter();
   const renameDoc = useRenameDocumentMutation();
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -187,8 +185,22 @@ export function EditorInfoBar() {
   // Reported 2026-08-18: "open PDF, edit, go back, open another PDF still
   // shows the previous PDF".
   const handleBack = () => {
-    usePdfEditorStore.getState().clearFile();
-    router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
+    // Save-then-navigate mirrors the Hamburger's "My PDFs" flow so a
+    // user pressing Back with unsaved edits (text, watermark, signature,
+    // drawings, etc.) doesn't lose them. The listener in
+    // `useEditorNavigationSave` handles the "no file / signed out / no
+    // unsaved changes" fast paths, so this is safe for every state.
+    // `clearFileAfter: true` preserves the 2026-08-18 fix — clearing
+    // the store before re-entry stops the previous PDF flashing on the
+    // next editor load.
+    window.dispatchEvent(
+      new CustomEvent("editor:navigate-after-save", {
+        detail: {
+          url: isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME,
+          clearFileAfter: true,
+        },
+      }),
+    );
   };
 
   // PRD §7.3: Print / Download / Done all open the same format modal.

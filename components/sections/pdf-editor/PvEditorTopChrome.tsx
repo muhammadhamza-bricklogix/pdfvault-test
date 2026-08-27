@@ -39,7 +39,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
 import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
@@ -219,7 +218,6 @@ function TopAppBar() {
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
-  const router = useRouter();
   const renameDoc = useRenameDocumentMutation();
 
   const history = historyByPage.get(currentPage) ?? [];
@@ -247,8 +245,22 @@ function TopAppBar() {
   // doc — doesn't render the previous PDF while the new load is in flight.
   // Reported 2026-08-18.
   const handleBack = () => {
-    usePdfEditorStore.getState().clearFile();
-    router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
+    // Save-then-navigate mirrors the Hamburger's "My PDFs" flow so
+    // pressing Back with unsaved edits (text, watermark, signature,
+    // drawings, etc.) doesn't lose them. `useEditorNavigationSave`
+    // handles the "no file / signed out / no unsaved changes" fast
+    // paths, so this dispatch is safe from every state.
+    // `clearFileAfter: true` preserves the 2026-08-18 fix — clearing
+    // the store before re-entry stops the previous PDF flashing on the
+    // next editor load.
+    window.dispatchEvent(
+      new CustomEvent("editor:navigate-after-save", {
+        detail: {
+          url: isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME,
+          clearFileAfter: true,
+        },
+      }),
+    );
   };
 
   const commitRename = () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
@@ -7,6 +8,7 @@ import {
   clearPendingW9Values,
   readPendingW9Values,
 } from "@/lib/client/forms/pending-w9-values";
+import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -45,6 +47,8 @@ type W9EditorBootstrapProps = {
 export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const currentFile = usePdfEditorStore((s) => s.file);
+  const searchParams = useSearchParams();
+  const resumeDocId = searchParams.get("resumeDocId");
 
   const hasBootstrappedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +113,47 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       logger.captureError(err, "w9.session_bootstrap");
     });
 
-    void Promise.all([templatePromise, sessionPromise]);
+    // Resume flow — `?resumeDocId=<id>` is set by
+    // `openDocumentInEditor` when the user clicks a saved W-9 in
+    // Dashboard → My PDFs. Fetch the document metadata, parse the
+    // `w9` marker from `editorState`, and restore the raw form
+    // values so the yellow overlays paint with the user's previous
+    // entries. Signature key is intentionally NOT restored: it
+    // belongs to the old form session and the new session's S3
+    // namespace rejects it. User re-signs on the resume flow.
+    // Also seed `currentDocumentId` on the pdf-editor store so the
+    // next Save upserts the same row (via `documentsService.uploadDocument`
+    // in `W9FinalizeIntercept`) instead of creating a duplicate.
+    const resumePromise = resumeDocId
+      ? (async () => {
+          try {
+            const doc = await documentsService.getDocument(resumeDocId);
+
+            if (cancelled) return;
+            usePdfEditorStore.getState().setCurrentDocument({
+              id: doc.id,
+              name: doc.filename,
+            });
+
+            if (!doc.editorState) return;
+            const parsed = JSON.parse(doc.editorState) as {
+              w9?: { values?: Record<string, string> };
+            };
+            const values = parsed?.w9?.values;
+
+            if (values && typeof values === "object") {
+              // `sessionPromise` may still be in flight — the store
+              // action merges into `values` so the order is safe
+              // (each `setValues` spreads into the previous map).
+              useFormEditorStore.getState().setValues(values);
+            }
+          } catch (err) {
+            logger.captureError(err, "w9.resume_from_dashboard");
+          }
+        })()
+      : Promise.resolve();
+
+    void Promise.all([templatePromise, sessionPromise, resumePromise]);
 
     return () => {
       cancelled = true;
@@ -119,7 +163,7 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       usePdfEditorStore.getState().clearFile();
       useFormEditorStore.getState().reset();
     };
-  }, [setFile]);
+  }, [setFile, resumeDocId]);
 
   if (error) {
     return (

@@ -1,11 +1,9 @@
-import Link from "next/link";
-
 import { LandingFooter } from "./landing-footer";
 import { LandingHeader } from "./landing-header";
 import { UploadWorkspace } from "./upload-workspace";
 
 interface ToolLandingPageProps {
-  /** Hero headline shown under the "Back to all tools" link. */
+  /** Hero headline shown at the top of the page. */
   title: string;
   /** One-sentence hero description shown under the title. */
   description: string;
@@ -42,12 +40,6 @@ export function ToolLandingPage({
       <main>
         <section className="bg-white pt-14 pb-8 sm:pt-20 sm:pb-10">
           <div className="pv-container flex flex-col items-center text-center">
-            <Link
-              className="mb-4 inline-flex items-center gap-1 text-[13px] font-medium text-[#5f5f5f] transition-colors hover:text-[var(--pv-brand-red,#f12c23)]"
-              href="/"
-            >
-              <span aria-hidden>←</span> Back to all tools
-            </Link>
             <h1 className="pv-display max-w-[820px] text-[#121212]">{title}</h1>
             <p className="mt-6 max-w-[560px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
               {description}
