@@ -112,7 +112,7 @@ export default function DangerZonePage() {
               </p>
               <input
                 autoComplete="off"
-                className="mt-2 w-full rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-danger"
+                className="mx-0.5 mt-3 mb-1 w-[calc(100%-4px)] rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-danger"
                 placeholder={email}
                 type="email"
                 value={confirmation}

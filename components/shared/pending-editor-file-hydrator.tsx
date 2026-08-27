@@ -112,18 +112,37 @@ export function PendingEditorFileHydrator() {
   // with the auth-gated redirect and only cleared after Clerk finished
   // resolving — long enough for the loader shell to paint and, on some
   // slower auth resolutions, get stuck.
+  //
+  // QA 2026-08-27: preserve a file the caller placed on the store just
+  // before `router.push` — the new marketing landing pages
+  // (`/edit`, `/split-pdf`, `/compress`, …) route through `UploadWorkspace`
+  // which calls `setFile(pdfFile)` and then navigates to
+  // `/pdf-composer?tool=<slug>` with NO `?id=` for signed-out users.
+  // Without this guard the reset nukes the file the user just uploaded
+  // and the composer paints the drop-zone again ("two upload screens"
+  // bug). Callers that legitimately want a fresh entry still add
+  // `?fresh=1` (all `TOOL_ROUTE.*` entries do) so they keep working.
   useEffect(() => {
     if (resetRef.current) return;
 
     resetRef.current = true;
 
     if ((tool || exportFormat || isFreshEntry) && !docId) {
-      logger.breadcrumb("hydrator", "reset.tool_tile", {
-        tool,
-        exportFormat,
-        isFreshEntry,
-      });
-      clearFile();
+      const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
+
+      if (isFreshEntry || !hasSameSessionFile) {
+        logger.breadcrumb("hydrator", "reset.tool_tile", {
+          tool,
+          exportFormat,
+          isFreshEntry,
+        });
+        clearFile();
+      } else {
+        logger.breadcrumb("hydrator", "reset.tool_tile.skipped_has_file", {
+          tool,
+          exportFormat,
+        });
+      }
     }
   }, [clearFile, docId, exportFormat, isFreshEntry, tool]);
 
@@ -144,7 +163,18 @@ export function PendingEditorFileHydrator() {
     // from. Only fires for tools (not bare `?fresh=1` or `?export=`
     // returns) so users who click "PDF Composer" itself still land on
     // the editor.
-    if (tool && !docId && isSignedIn) {
+    //
+    // QA 2026-08-27: skip the redirect when the store already has a
+    // file — that means UploadWorkspace on a marketing page
+    // (`/edit`, `/split-pdf`, …) just placed the user's dropped PDF on
+    // the store and navigated here. Bouncing them to the dashboard
+    // picker would abandon the file they literally just dropped and
+    // land them on an unrelated screen. Save-first-then-open lives in
+    // UploadWorkspace; if that upload failed the user still expects to
+    // continue with the file in-memory, not lose it to a picker.
+    const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
+
+    if (tool && !docId && isSignedIn && !hasSameSessionFile) {
       logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
         tool,
       });
