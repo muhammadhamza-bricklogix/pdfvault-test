@@ -1,11 +1,28 @@
 import type { Canvas as FabricCanvas } from "fabric";
+import type { QueryClient } from "@tanstack/react-query";
 import type { Document } from "@/lib/shared/types/documents.types";
 import type { BuildEditedPdfRemappedState } from "@/lib/client/pdf-editor/save-utils";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { logger } from "@/lib/shared/utils/logger";
+
+// 2026-08-28: `persistEditorDocument` calls `documentsService.uploadDocument`
+// directly (not through a `useMutation` hook) so the tanstack query cache
+// isn't invalidated automatically. Without this, the dashboard's file list
+// and any `documentKeys.detail(id)` consumers keep serving pre-save
+// metadata — including the stale signed URL — so when the user reopens
+// the freshly-saved file the loader can fetch the OLD bytes from a
+// cached signed URL and it looks like the save was lost.
+// QueryProvider registers the app-level client here on mount and
+// clears it on unmount (mirrors `setPendingConversionsQueryClient`).
+let editorSaveQueryClient: QueryClient | null = null;
+
+export function setEditorSaveQueryClient(client: QueryClient | null): void {
+  editorSaveQueryClient = client;
+}
 
 // Reject editor-state payloads larger than ~800 KB BEFORE we send. The backend
 // rejects > 1 MiB outright; this is the headroom for HTTP overhead + the
@@ -354,6 +371,31 @@ export async function persistEditorDocument({
       currentDocumentName: document.filename,
       hasUnsavedChanges: false,
     });
+
+    // Invalidate the docs list + prime the detail cache so the dashboard
+    // reflects the new size/updatedAt AND the next `useEditorDocumentLoader`
+    // call for this id gets fresh metadata (fresh signed URL pointing at
+    // the just-uploaded bytes) instead of a stale cached response. Without
+    // this the user reopens the same doc and sees pre-save content — QA
+    // report 2026-08-28 ("used draw tool, save toast fired, changes not
+    // there on reopen"). Fire-and-forget: the save is already committed
+    // server-side; a cache-refresh failure shouldn't block the caller.
+    if (editorSaveQueryClient) {
+      try {
+        editorSaveQueryClient.setQueryData(
+          documentKeys.detail(document.id),
+          document,
+        );
+        void editorSaveQueryClient.invalidateQueries({
+          queryKey: documentKeys.lists(),
+        });
+        void editorSaveQueryClient.invalidateQueries({
+          queryKey: documentKeys.detail(document.id),
+        });
+      } catch (invalidateErr) {
+        logger.warn("[PDFedits] save: cache invalidate failed", invalidateErr);
+      }
+    }
 
     return {
       document,
