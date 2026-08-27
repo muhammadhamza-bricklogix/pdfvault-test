@@ -1496,7 +1496,17 @@ function MastercardMark() {
 }
 
 const ACCEPTED_CARD_BRANDS = [
-  { Mark: () => <SiVisa aria-hidden className="h-4 w-auto" style={{ color: "#1434CB" }} title="Visa" />, label: "Visa" },
+  {
+    Mark: () => (
+      <SiVisa
+        aria-hidden
+        className="h-4 w-auto"
+        style={{ color: "#1434CB" }}
+        title="Visa"
+      />
+    ),
+    label: "Visa",
+  },
   { Mark: MastercardMark, label: "Mastercard" },
   {
     Mark: () => (

@@ -52,8 +52,7 @@ export function SubscriptionTermsContent() {
           event of a conflict between these Subscription Terms and the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> in
           relation to trial and subscription billing, these Subscription Terms
-          prevail. Charges are
-          also subject to our{" "}
+          prevail. Charges are also subject to our{" "}
           <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>.
         </p>
       </LegalSectionCard>

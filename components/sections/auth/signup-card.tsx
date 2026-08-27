@@ -60,14 +60,20 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   ) {
     return "We couldn't find an account with that email. Create one to get started.";
   }
+  if (code === "form_password_required" || /password is required/i.test(s)) {
+    return "This workspace requires a password. Toggle 'Sign up with password' and try again.";
+  }
 
   return raw;
 }
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type FieldErrors = {
   email?: string;
   password?: string;
   code?: string;
+  form?: string;
 };
 
 const INPUT_CLASS =
@@ -75,12 +81,21 @@ const INPUT_CLASS =
 
 const LABEL_CLASS = "block text-[14px] leading-[18px] text-[#6f6f6f]";
 
+// Signup mode.
+//   - "code"     → default. Passwordless signup: create({ emailAddress })
+//                  then verifications.sendEmailCode() + verifyEmailCode().
+//   - "password" → email + password: signUp.password({ ... }) then
+//                  verifications.sendEmailCode() + verifyEmailCode()
+//                  (previous behavior).
+// Both paths converge on the same "verify" step, so the code UI is shared.
+type Mode = "code" | "password";
 type Step = "credentials" | "verify";
 
 export function SignupCard() {
   const { signUp } = useSignUp();
   const searchParams = useSearchParams();
 
+  const [mode, setMode] = useState<Mode>("code");
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,19 +119,21 @@ export function SignupCard() {
     [searchParams],
   );
 
-  // Live validity — disables Create Account until every field passes
-  // the same rules the submit handler runs. Prevents users from
-  // clicking through and hitting a wall of red inline errors. Uses
-  // authSignUpSchema so the button state and the on-submit branch
-  // agree exactly (min 8, one letter, one digit).
-  const credentialsValid = useMemo(
-    () =>
-      authSignUpSchema.safeParse({
-        emailAddress: email.trim(),
-        password,
-      }).success,
-    [email, password],
-  );
+  // Enables/disables the primary CTA. In code mode only the email needs
+  // to look valid; in password mode we still run the full schema so the
+  // helper text ("min 8, one letter, one digit") stays authoritative.
+  const credentialsValid = useMemo(() => {
+    const trimmedEmail = email.trim();
+
+    if (mode === "code") {
+      return EMAIL_REGEX.test(trimmedEmail);
+    }
+
+    return authSignUpSchema.safeParse({
+      emailAddress: trimmedEmail,
+      password,
+    }).success;
+  }, [email, password, mode]);
 
   const onGoogle = async () => {
     if (!signUp) return;
@@ -156,52 +173,95 @@ export function SignupCard() {
     if (!signUp) return;
 
     const trimmedEmail = email.trim();
-    const parsed = authSignUpSchema.safeParse({
-      emailAddress: trimmedEmail,
-      password,
-    });
 
-    if (!parsed.success) {
-      const flat = parsed.error.flatten().fieldErrors;
-
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
       setNotice(null);
-      setErrors({
-        email: flat.emailAddress?.[0],
-        password: flat.password?.[0],
-      });
+      setErrors({ email: "Enter a valid email address." });
 
       return;
     }
 
-    setNotice(null);
-    setErrors({});
-
-    setSubmitting(true);
-    try {
-      // PRD §4 — Name is no longer collected at sign-up. Users can set
-      // first/last from Settings later. Keep the sign-up call minimal so
-      // the fewest possible Clerk fields can reject the request.
-      const { error: passwordError } = await signUp.password({
+    if (mode === "password") {
+      const parsed = authSignUpSchema.safeParse({
         emailAddress: trimmedEmail,
         password,
       });
 
-      if (passwordError) {
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+
+        setNotice(null);
         setErrors({
-          password: readClerkError(
-            passwordError,
-            "Couldn't create your account.",
-          ),
+          email: flat.emailAddress?.[0],
+          password: flat.password?.[0],
         });
 
         return;
+      }
+    }
+
+    setNotice(null);
+    setErrors({});
+    setSubmitting(true);
+    try {
+      if (mode === "code") {
+        // Passwordless signup: create with just the email address, then
+        // send the verification code. If the Clerk instance requires a
+        // password on signup, `create` will 422 with form_password_required
+        // — humaniseClerkMessage rewrites that to nudge the user to
+        // toggle the password mode.
+        const { error: createError } = await signUp.create({
+          emailAddress: trimmedEmail,
+        });
+
+        if (createError) {
+          const errorCode = (createError as { errors?: { code?: string }[] })
+            ?.errors?.[0]?.code;
+          const msg = readClerkError(
+            createError,
+            "Couldn't create your account.",
+          );
+
+          if (errorCode === "form_password_required") {
+            setErrors({ form: msg });
+          } else if (errorCode === "form_identifier_exists") {
+            setErrors({ email: msg });
+          } else {
+            setErrors({ form: msg });
+          }
+
+          return;
+        }
+      } else {
+        // Password mode — original flow.
+        const { error: passwordError } = await signUp.password({
+          emailAddress: trimmedEmail,
+          password,
+        });
+
+        if (passwordError) {
+          const errorCode = (passwordError as { errors?: { code?: string }[] })
+            ?.errors?.[0]?.code;
+          const msg = readClerkError(
+            passwordError,
+            "Couldn't create your account.",
+          );
+
+          if (errorCode === "form_identifier_exists") {
+            setErrors({ email: msg });
+          } else {
+            setErrors({ password: msg });
+          }
+
+          return;
+        }
       }
 
       const sendCode = await signUp.verifications.sendEmailCode();
 
       if (sendCode.error) {
         setErrors({
-          password: readClerkError(
+          form: readClerkError(
             sendCode.error,
             "Couldn't send the verification code.",
           ),
@@ -216,7 +276,7 @@ export function SignupCard() {
     } catch (err) {
       logger.captureError(err, "signup.credentials");
       setErrors({
-        password: readClerkError(
+        form: readClerkError(
           err,
           "Something went wrong while creating your account.",
         ),
@@ -267,6 +327,7 @@ export function SignupCard() {
             // is on the next request. `router.push` runs in-tab before
             // mobile Safari commits the cookie, which makes the middleware
             // treat the user as signed-out and bounce them to /sign-up.
+            // Invariant #15 — do not change to router.push.
             window.location.assign(decorateUrl(afterSignUpPath));
           },
         });
@@ -319,6 +380,14 @@ export function SignupCard() {
     }
   };
 
+  const switchMode = (next: Mode) => {
+    if (next === mode) return;
+    setMode(next);
+    setErrors({});
+    setNotice(null);
+    setPassword("");
+  };
+
   return (
     <section
       aria-labelledby={headingId}
@@ -332,7 +401,9 @@ export function SignupCard() {
       </h1>
       <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
         {step === "credentials"
-          ? "Please enter your details below to create your account"
+          ? mode === "code"
+            ? "Enter your email — we'll send you a 6-digit code to sign up."
+            : "Please enter your details below to create your account"
           : `We sent a code to ${email}.`}
       </p>
 
@@ -385,54 +456,78 @@ export function SignupCard() {
               ) : null}
             </div>
 
-            <div className="mt-[8px]">
-              <label className={LABEL_CLASS} htmlFor={passwordId}>
-                Password
-                <span aria-hidden className="text-[#f12c23]">
-                  *
-                </span>
-              </label>
-              <div className="relative mt-2">
-                <input
-                  required
-                  aria-describedby={
-                    errors.password ? undefined : passwordHelperId
-                  }
-                  aria-invalid={errors.password ? true : undefined}
-                  autoComplete="new-password"
-                  className={`${INPUT_CLASS} mt-0 pr-11`}
-                  id={passwordId}
-                  name="password"
-                  placeholder="Enter Your Password"
-                  type={passwordRevealed ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <PasswordRevealToggle
-                  revealed={passwordRevealed}
-                  onToggle={() => setPasswordRevealed((v) => !v)}
-                />
+            {mode === "password" ? (
+              <div className="mt-[8px]">
+                <label className={LABEL_CLASS} htmlFor={passwordId}>
+                  Password
+                  <span aria-hidden className="text-[#f12c23]">
+                    *
+                  </span>
+                </label>
+                <div className="relative mt-2">
+                  <input
+                    required
+                    aria-describedby={
+                      errors.password ? undefined : passwordHelperId
+                    }
+                    aria-invalid={errors.password ? true : undefined}
+                    autoComplete="new-password"
+                    className={`${INPUT_CLASS} mt-0 pr-11`}
+                    id={passwordId}
+                    name="password"
+                    placeholder="Enter Your Password"
+                    type={passwordRevealed ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <PasswordRevealToggle
+                    revealed={passwordRevealed}
+                    onToggle={() => setPasswordRevealed((v) => !v)}
+                  />
+                </div>
+                {errors.password ? (
+                  <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
+                    {errors.password}
+                  </p>
+                ) : (
+                  <p
+                    className="mt-2 text-[13px] text-[#7a7a7a]"
+                    id={passwordHelperId}
+                  >
+                    Password must contain at least 8 characters
+                  </p>
+                )}
               </div>
-              {errors.password ? (
-                <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
-                  {errors.password}
-                </p>
-              ) : (
-                <p
-                  className="mt-2 text-[13px] text-[#7a7a7a]"
-                  id={passwordHelperId}
-                >
-                  Password must contain at least 8 characters
-                </p>
-              )}
-            </div>
+            ) : null}
+
+            {errors.form ? (
+              <p className="mt-3 text-[13px] text-[#f12c23]" role="alert">
+                {errors.form}
+              </p>
+            ) : null}
 
             <button
               className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
               disabled={submitting || !credentialsValid}
               type="submit"
             >
-              {submitting ? "Creating account…" : "Create Account"}
+              {submitting
+                ? mode === "code"
+                  ? "Sending code…"
+                  : "Creating account…"
+                : mode === "code"
+                  ? "Send verification code"
+                  : "Create Account"}
+            </button>
+
+            <button
+              className="mt-3 block w-full cursor-pointer text-center text-[14px] text-[#666666] underline underline-offset-2 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              type="button"
+              onClick={() => switchMode(mode === "code" ? "password" : "code")}
+            >
+              {mode === "code"
+                ? "Sign up with password instead"
+                : "Sign up with a code instead"}
             </button>
           </form>
         </>
