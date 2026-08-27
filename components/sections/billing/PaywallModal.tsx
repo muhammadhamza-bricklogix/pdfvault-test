@@ -592,10 +592,7 @@ function PlanStep({
   // Full annual figure the card shows underneath the per-month price
   // ("Billed as $300.00 / year"). Same source as the payment step's
   // order-summary card, so both screens agree.
-  const annualFullPrice = formatMinor(
-    annual.amountRenewMinor,
-    annual.currency,
-  );
+  const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
   const todayDisplay =
     selectedPlan === "annual"
       ? formatMinor(annual.amountTodayMinor, annual.currency)
