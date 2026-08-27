@@ -4,10 +4,18 @@
 // dev, direct Railway hits, etc.). Backend still trusts CDN headers
 // first — this is the fallback signal.
 //
-// Detection priority:
-//   1. `Intl.Locale(navigator.language).region` — most direct.
-//   2. Parse `xx-YY` from `navigator.language` / `navigator.languages`.
-//   3. IANA timezone → country lookup (Asia/Karachi → PK, etc.).
+// Detection priority (timezone-first — physical location signal):
+//   1. IANA timezone → country lookup (Asia/Karachi → PK, etc.).
+//      Every major OS reports the device's actual local time zone,
+//      so this is the strongest signal for where the user is.
+//   2. `Intl.Locale(navigator.language).region` — fallback when the
+//      timezone isn't in our map or the browser doesn't expose it.
+//   3. Parse `xx-YY` from `navigator.language` / `navigator.languages`.
+//
+// Locale used to be the primary source, but most browsers ship
+// `en-US` by default regardless of the user's country — so a
+// Pakistan-based user with a stock Chrome would get flagged as US
+// and see USD pricing. Timezone dodges that trap.
 //
 // Result is memoised — the timezone and locale don't change mid-session.
 
@@ -21,7 +29,7 @@ export function detectClientCountry(): string | null {
     return cached;
   }
 
-  cached = detectFromLocale() ?? detectFromTimezone() ?? null;
+  cached = detectFromTimezone() ?? detectFromLocale() ?? null;
 
   return cached;
 }

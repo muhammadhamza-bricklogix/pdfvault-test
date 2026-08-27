@@ -303,8 +303,8 @@ function NoSubscriptionCard() {
         You&apos;re on the free plan
       </p>
       <p className="max-w-md text-[13px] text-[var(--pv-text-muted)]">
-        Start a 7-day trial for $0.99 to unlock conversions, exports, and
-        sharing. Cancel anytime.
+        Start a 7-day trial to unlock conversions, exports, and sharing. Cancel
+        anytime — trial price is quoted in your local currency at checkout.
       </p>
       <Button variant="primary" onPress={handleAdd}>
         Add billing method
