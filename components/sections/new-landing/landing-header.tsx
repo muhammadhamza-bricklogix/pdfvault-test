@@ -20,10 +20,9 @@ type NavLink = { label: string; href: string };
 
 // Primary nav tools — real routes, not `#hash` anchors. Order per PM
 // review 2026-07: Edit → Convert → Compress. AI Summarizer hidden until
-// the AI feature ships. Edit and Compress land on marketing pages
-// (`/edit`, `/compress`) that mirror the `/convert/[slug]` layout —
-// hero title + upload workspace — so the visitor sees a consistent
-// tool-landing experience across the nav bar.
+// the AI feature ships. Edit / Compress land on the shared marketing
+// hero (`/edit`, `/compress`) that mirrors `/convert/[slug]` — same
+// "Drag & drop file to edit" screen for every uploader.
 const PRIMARY_LINKS: NavLink[] = [
   { label: "Edit", href: "/edit" },
   { label: "Convert", href: "/convert/pdf-to-word" },

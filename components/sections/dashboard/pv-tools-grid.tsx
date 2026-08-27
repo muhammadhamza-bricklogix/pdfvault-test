@@ -28,12 +28,10 @@ interface ToolCardEntry {
   action?: "forms";
 }
 
-// Each composer tile links to its marketing landing page — the same hero
-// + upload workspace guests see when they open a tool from the landing
-// header / All Tools modal / landing-tools section. Signed-in users hit
-// the workspace's save-first flow which persists dropped files to their
-// library, so the UI stays consistent across surfaces without diverging
-// into a separate picker modal.
+// Each composer tile links to its marketing landing page so signed-out
+// dashboard visitors (and signed-in users who missed the picker
+// shortcut) see the same "Drag & drop file to edit" hero as every other
+// uploader.
 const TOOL_CARDS: readonly ToolCardEntry[] = [
   {
     title: "PDF Composer",
