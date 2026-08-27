@@ -181,26 +181,6 @@ export default function RootLayout({
         </>
       ) : null}
 
-      {/*
-        Google Tag Manager — raw <script> inside <head>, NOT next/script.
-        next/script (any strategy) serializes the payload into
-        `(self.__next_s).push([...])`, so the GTM snippet ends up inside a
-        JSON string, not as executable inline JS in the initial HTML source.
-        Google Tag Assistant + Preview/Debug detect containers by scanning
-        the raw HTML source for the inline snippet — the serialized form
-        fails detection and Preview mode won't attach, even though the
-        container loads at runtime after hydration. Same failure mode as
-        Trustpilot below. Placing a raw <script> inside an explicit <head>
-        is the only way to guarantee the snippet ships as executable inline
-        in `<head>` during SSR.
-      */}
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
-          }}
-        />
-      </head>
       {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-K6PVB4B39T"
@@ -224,39 +204,48 @@ gtag('config', 'AW-18226423046');`}
         `}
       </Script>
       {/*
-        Trustpilot Automatic Feedback Service loader. Exposes a global
-        `tp('createInvitation', {...})` API and serves as Trustpilot's
-        own domain-verification probe.
+        Single explicit <head> block. React errors if <head> is rendered
+        more than once inside the same tree, so all raw inline <script>
+        tags that must ship in <head> during SSR live together here:
 
-        MUST use `next/script` with `strategy="beforeInteractive"` — the
-        `beforeInteractive` strategy is the only one Next.js guarantees
-        to inline into `<head>` during SSR. Raw `<script>` at `<html>`
-        root gets hoisted to `<body>` by React, and Trustpilot's verifier
-        only scans `<head>` for the `tp('register', ...)` call, so any
-        `<body>`-placed variant fails domain verification even when the
-        snippet is present in view-source. `afterInteractive` also fails
-        because it can inject client-side after hydration, which a
-        non-JS crawler never sees.
+        1. Google Tag Manager (GTM-5R5LRTTD) — raw <script>, NOT
+           next/script. next/script (any strategy) serializes the payload
+           into `(self.__next_s).push([...])`, so the GTM snippet ends up
+           inside a JSON string, not as executable inline JS in the
+           initial HTML source. Google Tag Assistant + Preview/Debug
+           detect containers by scanning the raw HTML source for the
+           inline snippet — the serialized form fails detection and
+           Preview mode won't attach, even though the container loads at
+           runtime after hydration. Same failure mode as Trustpilot below.
+           Placing a raw <script> inside an explicit <head> is the only
+           way to guarantee the snippet ships as executable inline in
+           <head> during SSR.
+
+        2. Trustpilot Automatic Feedback Service loader. Exposes a
+           global `tp('createInvitation', {...})` API and serves as
+           Trustpilot's own domain-verification probe. Trustpilot's
+           verifier crawler ONLY inspects <head> contents for the raw
+           `tp('register', ...)` call, and rejects the Next.js
+           Script-component wrapper (which stringifies the payload into
+           `(self.__next_s).push([...])` — the register call is inside a
+           JSON string, not an executable pattern the crawler matches).
+           `afterInteractive` also fails because it can inject client-side
+           after hydration, which a non-JS crawler never sees.
       */}
-      {/*
-        Explicit `<head>` wrapper so we can place a raw `<script>` inside
-        it — Next.js App Router only auto-hoists `<link>` / `<meta>` etc.
-        to `<head>`; bare `<script>` tags at the `<html>` root end up in
-        `<body>`. Trustpilot's verifier crawler ONLY inspects `<head>`
-        contents for the raw `tp('register', ...)` call, and rejects the
-        Next.js Script-component wrapper (which stringifies the payload
-        into `(self.__next_s).push([...])` — the register call is inside
-        a JSON string, not an executable pattern the crawler matches).
-      */}
-      {trustpilotInviteId ? (
-        <head>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
+          }}
+        />
+        {trustpilotInviteId ? (
           <script
             dangerouslySetInnerHTML={{
               __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
             }}
           />
-        </head>
-      ) : null}
+        ) : null}
+      </head>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         {/* Google Tag Manager (noscript) */}
         <noscript>
