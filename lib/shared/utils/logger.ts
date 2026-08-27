@@ -194,6 +194,7 @@ const isTransitionPlumbingError = (err: unknown): boolean => {
   if (!(err instanceof Error)) return false;
   const name = err.name;
   const message = err.message;
+  const stack = err.stack ?? "";
 
   if (name === "AbortError" && /transition was skipped/i.test(message)) {
     return true;
@@ -202,6 +203,25 @@ const isTransitionPlumbingError = (err: unknown): boolean => {
   if (
     name === "InvalidStateError" &&
     /transition was aborted|invalid state/i.test(message)
+  ) {
+    return true;
+  }
+
+  // 2026-08-28: Sentry browser-tracing's web-vitals reporter throws
+  //   TypeError: Cannot read properties of undefined (reading 'startTime')
+  // from `et.reportAllChanges` when a PerformanceObserver callback fires
+  // with an unexpected entry shape (extensions / DevTools interfering,
+  // BFCache restores, page-visibility transitions). Symptom user reported:
+  // "clicked any tool → console TypeError → saving toast shows but nothing
+  // saves" — the TypeError bubbled up through `Sentry.startSpan`, rejected
+  // the wrapping `logger.span` promise, and prevented the save's
+  // `onComplete` callback from running (the "Saving…" toast hangs, the
+  // caller's action never proceeds).
+  if (
+    name === "TypeError" &&
+    (/reading 'startTime'/i.test(message) ||
+      /reportAllChanges/i.test(stack) ||
+      /web-vitals/i.test(stack))
   ) {
     return true;
   }
@@ -215,17 +235,55 @@ const span = async <T>(
   fn: () => Promise<T> | T,
   attributes?: Record<string, boolean | number | string>,
 ): Promise<T> => {
-  try {
-    return await Sentry.startSpan(
-      { name, op, attributes },
-      async () => await fn(),
-    );
-  } catch (err: unknown) {
-    if (!isTransitionPlumbingError(err)) throw err;
+  // Book-keeping so we can distinguish a real error from `fn()` (must
+  // rethrow) vs. a Sentry / router / web-vitals instrumentation throw
+  // (safe to retry `fn()` — or reuse its result if it already ran).
+  let fnStarted = false;
+  let fnCompleted = false;
+  let fnResult: T | undefined;
+  let fnError: unknown = null;
 
-    // Sentry / router transition bailed. Run the wrapped work directly
-    // so its result / error reaches the caller.
-    return await fn();
+  const guardedFn = async (): Promise<T> => {
+    fnStarted = true;
+    try {
+      const value = await fn();
+
+      fnResult = value;
+      fnCompleted = true;
+
+      return value;
+    } catch (err) {
+      fnError = err;
+      throw err;
+    }
+  };
+
+  try {
+    return await Sentry.startSpan({ name, op, attributes }, guardedFn);
+  } catch (err: unknown) {
+    // `fn()` ran to completion and returned a value — the throw came from
+    // Sentry's span-close plumbing (e.g. web-vitals TypeError while the
+    // span was being finalized). Return the real result so the caller's
+    // pipeline (save → onComplete → close toast) continues.
+    if (fnCompleted) {
+      return fnResult as T;
+    }
+
+    // `fn()` started AND threw its own error — that's the real failure the
+    // caller cares about. Rethrow the ORIGINAL error, not the plumbing one.
+    if (fnStarted && fnError !== null) {
+      throw fnError;
+    }
+
+    // `fn()` never ran — instrumentation broke during span setup. Rerun
+    // the wrapped work directly so save / export / upload flows still
+    // complete. Only accept known-plumbing errors here so a real Sentry
+    // bug we should surface doesn't get silently retried.
+    if (isTransitionPlumbingError(err)) {
+      return await fn();
+    }
+
+    throw err;
   }
 };
 
