@@ -13,14 +13,14 @@ import {
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 
 export const cookieTocEntries: LegalTocEntry[] = [
-  { id: "c-4-1", label: "1. WHAT ARE COOKIES" },
-  { id: "c-4-2", label: "2. WHO SETS COOKIES ON THIS SITE" },
-  { id: "c-4-3", label: "3. CATEGORIES OF COOKIES WE USE" },
-  { id: "c-4-4", label: "4. THIRD-PARTY COOKIES" },
-  { id: "managing-cookies", label: "5. YOUR CHOICES AND CONSENT" },
-  { id: "c-4-5", label: "6. DO NOT TRACK" },
-  { id: "c-4-6", label: "7. CHANGES TO THIS POLICY" },
-  { id: "c-4-7", label: "8. CONTACT" },
+  { id: "c-4-1", label: "1. What Are Cookies" },
+  { id: "c-4-2", label: "2. Who Sets Cookies on This Site" },
+  { id: "c-4-3", label: "3. Categories of Cookies We Use" },
+  { id: "c-4-4", label: "4. Third-Party Cookies" },
+  { id: "managing-cookies", label: "5. Your Choices and Consent" },
+  { id: "c-4-5", label: "6. Do Not Track" },
+  { id: "c-4-6", label: "7. Changes to This Policy" },
+  { id: "c-4-7", label: "8. Contact" },
 ];
 
 /**
@@ -78,7 +78,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={CookieIcon}
         id="c-4-1"
-        title="1. WHAT ARE COOKIES"
+        title="1. What Are Cookies"
       >
         <p>
           Cookies are small text files placed on your device by websites you
@@ -100,19 +100,20 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Share01Icon}
         id="c-4-2"
-        title="2. WHO SETS COOKIES ON THIS SITE"
+        title="2. Who Sets Cookies on This Site"
       >
         <p>
-          This Cookie Policy is issued by FLUTTWINGS INVESTMENTS LIMITED, the
-          operator of pdfvault.ai. First-party cookies are set by us;
-          third-party cookies are set by our service providers (see Section 4).
+          This Cookie Policy is issued by{" "}
+          <strong>FLUTTWINGS INVESTMENTS LIMITED</strong>, the operator of
+          pdfvault.ai. First-party cookies are set by us; third-party cookies
+          are set by our service providers (see Section 4).
         </p>
       </LegalSectionCard>
 
       <LegalSectionCard
         icon={Settings02Icon}
         id="c-4-3"
-        title="3. CATEGORIES OF COOKIES WE USE"
+        title="3. Categories of Cookies We Use"
       >
         <p className="font-semibold text-[var(--legal-burgundy)]">
           3.1 STRICTLY NECESSARY COOKIES
@@ -314,7 +315,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Share01Icon}
         id="c-4-4"
-        title="4. THIRD-PARTY COOKIES"
+        title="4. Third-Party Cookies"
       >
         <p>
           Some third-party services we use may set their own cookies, including
@@ -353,22 +354,23 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={ArrowReloadHorizontalIcon}
         id="managing-cookies"
-        title="5. YOUR CHOICES AND CONSENT"
+        title="5. Your Choices and Consent"
       >
         <p>
-          <strong>EEA and UK visitors:</strong> on your first visit you will see
-          a cookie consent banner allowing you to accept or reject non-essential
-          cookies before they are set. You can change or withdraw your consent
-          at any time via the &ldquo;Cookie Settings&rdquo; link in the footer
-          of the Service. Withdrawing consent does not affect the lawfulness of
-          processing before withdrawal.
+          <strong>EEA and UK visitors:</strong>{" "}
+          on your first visit you will see a cookie consent banner allowing you
+          to accept or reject non-essential cookies before they are set. You can
+          change or withdraw your consent at any time via the &ldquo;Cookie
+          Settings&rdquo; link in the footer of the Service. Withdrawing consent
+          does not affect the lawfulness of processing before withdrawal.
         </p>
         <p className="mt-3">
-          <strong>US visitors:</strong> where state law grants you the right to
-          opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
-          advertising via cookies, you may do so via the &ldquo;Cookie
-          Settings&rdquo; link. We honor Global Privacy Control (GPC) browser
-          signals where required by law.
+          <strong>US visitors:</strong>{" "}
+          where state law grants you the right to opt out of
+          &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted advertising
+          via cookies, you may do so via the &ldquo;Cookie Settings&rdquo; link.
+          We honor Global Privacy Control (GPC) browser signals where required
+          by law.
         </p>
         <p className="mt-3">
           You can also control cookies through your browser settings (Chrome,
@@ -381,7 +383,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={FingerPrintCheckIcon}
         id="c-4-5"
-        title="6. DO NOT TRACK"
+        title="6. Do Not Track"
       >
         <p>
           Some browsers offer a &ldquo;Do Not Track&rdquo; (DNT) signal. There
@@ -395,7 +397,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Globe02Icon}
         id="c-4-6"
-        title="7. CHANGES TO THIS POLICY"
+        title="7. Changes to This Policy"
       >
         <p>
           We may update this Cookie Policy periodically, including to reflect
@@ -405,7 +407,7 @@ export function CookiePolicyContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Mail01Icon} id="c-4-7" title="8. CONTACT">
+      <LegalSectionCard icon={Mail01Icon} id="c-4-7" title="8. Contact">
         <p>
           Questions about this Cookie Policy:{" "}
           <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>.
