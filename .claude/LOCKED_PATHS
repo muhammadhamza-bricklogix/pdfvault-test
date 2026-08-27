@@ -13,12 +13,16 @@
 # To remove a lock, delete the line and tell Claude.
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# PDF EDITOR — stable as of 2026-06-22. Off-limits without explicit approval.
+# PDF EDITOR — stable as of 2026-08-19 (commit 53892a5 zoom/toolbar fixes).
 # Source of truth for WHY each lock exists: CLAUDE.md "Off-limits" section
 # and .claude/skills/pdf-editor-architecture/SKILL.md decisions log.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Watermark rendering — inline renderPageToPng + per-page hasGenuineEdits guard
+# Watermark rendering + per-page hasGenuineEdits guard.
+# UNLOCKED 2026-08-27 (user decision). Invariants still hold — see CLAUDE.md
+# "Load-bearing invariants" list. Verify before touching the inline
+# renderPageToPng, TEXT_OPS_MIN/MAX/RASTER_SCALE constants, or the
+# hasGenuineEdits guard at the top of the per-page loop.
 # lib/client/pdf-editor/merge-pdf.ts
 
 # IText objectCaching=false (Fabric perf vs render-order bug)
@@ -27,8 +31,11 @@ lib/client/hooks/pdf-editor/use-edit-text-mode.ts
 # Mobile-touch trio + Fabric canvas wiring (touchAction sync per active tool)
 lib/client/hooks/pdf-editor/use-fabric-canvas.ts
 
-# Mobile viewer: suppressText branch, mx-auto w-fit scroll container, pinch floor
-# TEMP unlocked (user approved 2026-07-23 for restore-reload fix)
+# Mobile viewer: suppressText branch, mx-auto w-fit scroll container, pinch floor.
+# UNLOCKED 2026-08-27 (user decision — was TEMP unlocked 2026-07-23 for the
+# restore-reload effectivePage fix; now permanent). Invariants still hold — see
+# CLAUDE.md "Load-bearing invariants" list. Verify before touching the scroll
+# container pattern, the suppressText branch, or PINCH_MIN_ZOOM.
 # components/sections/pdf-editor/PdfViewerCanvas.tsx
 
 # pdf.js loader — Safari polyfills + legacy build path

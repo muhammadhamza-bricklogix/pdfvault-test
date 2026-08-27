@@ -1,14 +1,13 @@
 ---
-name: locked-paths-temp-unlock-2026-07-23
-description: PdfViewerCanvas.tsx currently commented out in .claude/LOCKED_PATHS after restore-reload fix; user needs to re-lock.
-metadata: 
+name: locked-paths-permanent-unlock-2026-08-27
+description: PdfViewerCanvas.tsx and merge-pdf.ts unlocked permanently in .claude/LOCKED_PATHS; invariants still hold, verify before changing.
+metadata:
   node_type: memory
   type: project
-  originSessionId: 9629d15b-b659-4fa3-ad80-a07dfff646d8
 ---
 
-`components/sections/pdf-editor/PdfViewerCanvas.tsx` entry in `.claude/LOCKED_PATHS` is currently commented out (temp-unlocked 2026-07-23 for the restore-reload effectivePage fix). The auto-mode classifier refused to let Claude restore the line automatically.
+`components/sections/pdf-editor/PdfViewerCanvas.tsx` and `lib/client/pdf-editor/merge-pdf.ts` are permanently unlocked in `.claude/LOCKED_PATHS` as of 2026-08-27. Previously PdfViewerCanvas.tsx was TEMP unlocked 2026-07-23 for the restore-reload effectivePage fix; user made both unlocks permanent while refreshing project docs.
 
-**Why:** User approved a fix to PdfViewerCanvas.tsx (derive `effectivePage = pdfDocument ? page : null`) so the 2abb697 guard actually fires on version restore. Only the getPage effect + downstream page consumers changed — mobile-touch trio and `mx-auto w-fit` scroll container still stand.
+**Why:** The mechanical block was getting in the way of the recurring fix cadence on these two files (mobile touch, scroll container, path/coord fixes, hasGenuineEdits). The invariants themselves are still load-bearing — the enforcement moved from the lock hook into CLAUDE.md's "Load-bearing invariants (verify before changing)" list.
 
-**How to apply:** Ask the user to re-enable the lock by uncommenting the `components/sections/pdf-editor/PdfViewerCanvas.tsx` line in `.claude/LOCKED_PATHS` (lines 30–32 region). This should happen right after the fix is verified + committed.
+**How to apply:** Do NOT re-lock these two paths without asking. When editing either file, read the CLAUDE.md "Load-bearing invariants" list first — same rules apply, just verify instead of unlock. Skill log entries the invariants trace back to: 2026-06-10 (e) mobile touch + scroll container, 2026-06-15 (c) hasGenuineEdits, 2026-08-19 fit-to-width cap.

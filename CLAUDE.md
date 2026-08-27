@@ -71,20 +71,48 @@ It lives at `.claude/skills/pdf-editor-architecture/SKILL.md` and documents the 
 - Manage-Pages rotation is **baked into the content stream** (`append-pdf-page.ts`), not `/Rotate` metadata.
 - Background image preview uses `mix-blend-mode: multiply` on the PDF canvas; export uses `BlendMode.Multiply` on `drawImage`.
 - Mobile renders the watermark + background-image config in a Modal (`MobileToolPropertiesModal`), not the right sidebar.
-- Editor modals (`CreatePdfModal`, `ManagePagesModal`, `PerformancePanel`) are lazy-loaded via `next/dynamic`.
-- **Mobile is view-only for text.** `PdfViewerCanvas.tsx` passes `suppressText: !isMobile` to `usePageRenderer` AND `fabricCanvas: isMobile ? null : fabricCanvas` to `useEditTextMode`. Mobile lets pdf.js paint glyphs natively; desktop suppresses pdf.js text and renders editable Fabric IText on top. The reason isn't UX preference — it's that pdf.js v5's `getTextContent` throws on older iOS Safari WebKit (`"undefined is not a function (near '...t of e...')"`), and the only reliable way to keep the page from going blank is to never call it on mobile. Do not "unify" mobile + desktop here without a verified plan for the iOS Safari versions in staging.
+- Editor modals (`CreatePdfModal`, `ManagePagesModal`, `PerformancePanel`, and the feature modals listed below in "Recent editor surface") are lazy-loaded via `next/dynamic`.
+- **Text editing is tool-gated for everyone (mobile + desktop).** `PdfViewerCanvas.tsx` drives `suppressText` from `extractedPages.has(sourcePage)`. Default state: pdf.js paints text natively. When the user activates the **Edit Text** toolbar tool, `useEditTextMode` runs `extractTextBlocks` for that page, places Fabric IText objects, and calls `markPageExtracted(sourcePage)` — only then does `suppressText` flip on. If `getTextContent` throws on older iOS Safari WebKit (`"undefined is not a function (near '...t of e...')"`), the hook reverts `activeTool` to `select` and toasts the user; the page never flips to overlay mode, so native pdf.js text keeps painting and the page stays readable. See skill log 2026-06-14 (b) + 2026-06-10 (c) for history.
 - **pdfjs-dist MUST be loaded through `lib/client/pdf-editor/load-pdfjs.ts` (`loadPdfJs()` helper).** That helper installs Safari polyfills (`Promise.withResolvers`, `Object.hasOwn`, `structuredClone`) BEFORE importing the legacy build (`pdfjs-dist/legacy/build/pdf.mjs`), and the worker URL points to `pdfjs-dist/legacy/build/pdf.worker.min.mjs`. The modern build + missing polyfills both break pdf.js on older iOS Safari WebKit. Type-only imports (`import type { … } from "pdfjs-dist"`) are fine to leave on the bare specifier since they're erased at build time.
 
-### Off-limits without explicit user approval
+### Recent editor surface (2026-06 → 2026-08)
 
-The user considers the editor **stable as of 2026-06-10**. Several recent fixes are load-bearing — reverting them re-introduces user-visible regressions the user has already reported and we've already fixed. Do not modify any of these without asking first:
+The editor has grown well past the base viewer + toolbar. New feature surfaces landed on top of the same load-bearing pipeline; they're modal-mounted from `PdfEditorShell` or `HamburgerMenu`, and each has its own hook:
 
-- The watermark code in `lib/client/pdf-editor/merge-pdf.ts` (the inline `renderPageToPng` + `TEXT_OPS_MIN/MAX/RASTER_SCALE` constants stay there even though a shared util exists for `build-pages-pdf.ts`). NOTE: the per-page-loop `hasGenuineEdits` guard at the top of the loop is user-approved (2026-06-15) and must STAY — it's what preserves selectable text on export, share, and extract-images for pages whose only overlays are auto-extracted `editorType === "editModeText"` IText. See skill log 2026-06-15 (c) for the reasoning.
-- `objectCaching: false` on IText in `use-edit-text-mode.ts`.
-- **Mobile-touch trio in `lib/client/hooks/pdf-editor/use-fabric-canvas.ts`** — `allowTouchScrolling`, `upperCanvasEl.style.touchAction`, and wrapper `touchAction` are kept in sync per active tool. Drawing tools = `false / "none" / "none"`; everything else = `true / "pan-x pan-y" / "pan-x pan-y"`. Wrapper-only changes don't survive Fabric's upper-canvas overlay, and `allowTouchScrolling` alone doesn't update touch-action at runtime. Reverting any of the three freezes 1-finger pan when zoomed in on iOS Safari. See skill log 2026-06-10 (e).
-- **`mx-auto w-fit` scroll-container pattern in `components/sections/pdf-editor/PdfViewerCanvas.tsx`.** Don't replace with `flex justify-center`; flex centring traps the user at the centre of a zoomed-and-overflowing child on iOS Safari. See skill log 2026-06-10 (e).
+- **Search** — `PdfSearchBar` + `SearchHighlightLayer` + `use-pdf-search`
+- **Find & Replace** — `FindReplaceModal` + `lib/client/pdf-editor/find-replace.ts`
+- **Page Numbers** — `PageNumbersModal` + `use-page-numbers-editor` + `add-page-numbers.ts` + `renumber-page-numbers.ts`
+- **Form Fields** — `FormFieldsModal` + `use-form-fields-editor` + `form-fields.ts`
+- **Annotations panel** — `AnnotationsModal` + `use-annotations-editor`
+- **Merge / Split / Compress** — `MergePdfModal` + `SplitPdfModal` + `CompressModal` + `MergeModalHost`
+- **Sign** — `SignatureModal` (draws to `SignatureField`, exports through `W9FinalizeIntercept` for W-9)
+- **Share** — `ShareModal` (dispatches `editor:save-before-action` to bake edits before generating the share URL)
+- **Version History** — `VersionHistoryModal` + `VersionHistoryModalHost` + `VersionPreviewModal`
+- **Password protect** — `PasswordModal` + `verify-pdf-password.ts`
+- **Reload guard** — `ReloadConfirmModal` (fires when `hasUnsavedChanges` and the URL wants to swap the doc)
+- **Save chip + floating toolbars** — `SaveStatusChip`, `FloatingTextToolbar`, `FloatingShapeToolbar`
+- **Signed-out autosave** — `use-signed-out-auto-persist` mirrors the signed-in autosave into IDB so sign-in continues seamlessly
+- **Mobile navigation** — swipe gestures on `PdfViewerCanvas` (page next/prev) + `BottomDock` touch containment
+- **Post-save reload latch** — `postSaveReloadPending` in the store + sticky `pdfDocument` guard prevent black flash + flicker while the merged bytes reload
+
+Anything new should follow the existing patterns: shell-level hook when it needs `fabricCanvas`, modal fires an `editor:*` event, save-before-action if the tool consumes the user's edits.
+
+### Load-bearing invariants (verify before changing)
+
+The user considers the editor **stable as of 2026-08-19** (last confirmed-clean commit `53892a5`: zoom + toolbar layout fixes). These invariants each fix a specific user-reported regression — reverting any of them re-introduces the bug. Not mechanically locked, but do NOT change without a plan and a mobile walk.
+
+- **`merge-pdf.ts` `hasGenuineEdits` guard.** The per-page-loop guard (`editorType === "editModeText"`-only pages fall through to Case 1/2 instead of Case 3 rasterize) is what preserves selectable text on export, share, and extract-images. Also keep the inline `renderPageToPng` + `TEXT_OPS_MIN/MAX/RASTER_SCALE` constants — a shared util exists for `build-pages-pdf.ts` but merge-pdf's copy is intentionally isolated. See skill log 2026-06-15 (c).
+- **`objectCaching: false` on IText in `use-edit-text-mode.ts`.** Enabling caching desyncs the render order against Fabric's paint queue.
+- **Mobile-touch trio in `use-fabric-canvas.ts`** — `allowTouchScrolling`, `upperCanvasEl.style.touchAction`, and wrapper `touchAction` are kept in sync per active tool. Drawing tools = `false / "none" / "none"`; everything else = `true / "pan-x pan-y" / "pan-x pan-y"`. Wrapper-only changes don't survive Fabric's upper-canvas overlay, and `allowTouchScrolling` alone doesn't update touch-action at runtime. Reverting any of the three freezes 1-finger pan when zoomed in on iOS Safari. See skill log 2026-06-10 (e).
+- **`mx-auto w-fit` scroll-container pattern in `PdfViewerCanvas.tsx`.** Don't replace with `flex justify-center`; flex centring traps the user at the centre of a zoomed-and-overflowing child on iOS Safari. See skill log 2026-06-10 (e).
 - **Shell-level `useExtractImagesEditor` hook + `editor:extract-images` event.** Don't fold image-extraction back into `HamburgerMenu.runExtractImages` — the menu has no `fabricCanvas` ref, so a direct mutation call ships the **original upload**, not the edits. Backend then returns 400 / "no images found." See skill log 2026-06-10 (f).
-- **Mobile text rendering**: `suppressText: !isMobile` and `fabricCanvas: isMobile ? null : fabricCanvas` in `PdfViewerCanvas.tsx`. Mobile is intentionally view-only for text because `getTextContent` throws on older iOS Safari WebKit. See skill log 2026-06-10 (c).
+- **Mobile text rendering.** `PdfViewerCanvas.tsx` drives `suppressText` from `extractedPages.has(sourcePage)` — pdf.js paints text natively until the user activates the **Edit Text** tool, then `useEditTextMode` extracts the page and flips `suppressText` on. If `getTextContent` throws (older iOS Safari WebKit), the hook reverts `activeTool` to `select` and toasts — the page never flips to overlay mode, so native pdf.js text keeps painting. See skill log 2026-06-14 (b) + 2026-06-10 (c).
+- **Fit-to-width cap at `MAX_ZOOM = 1.0`** in `PdfViewerCanvas.tsx`. Browser zoom-out inflates `clientWidth`, so an uncapped fit result exceeded the toolbar's max preset (2.0) and locked the `+` button. See skill log 2026-08-19.
+- **`ToolToolbar` uses `flex-wrap justify-center`, not `w-fit`, in `PvEditorTopChrome.tsx`.** The `mx-auto w-fit` trap only applies to `PdfViewerCanvas` (mobile-critical). `ToolToolbar` is desktop-only — `w-fit` there prevents wrap and pushes tools off-screen at higher browser zoom. See skill log 2026-08-19.
+- **Page-number overlays are overlay-only on Save.** `stripPageNumberOverlays` runs before the merge on the Save path but not the Export path — download PDFs carry page numbers, cloud-saved PDFs render them from Fabric state on reload. See skill log 2026-06-19 (d).
+- **Sidebar page reorder = materialize-into-source-bytes pattern.** `materialize-page-order.ts` rebuilds the source bytes with the reordered pages, then the merge runs against identity ordering. Don't try to teach `merge-pdf.ts` to consume `pageOrder` directly. See skill log 2026-06-19 (a).
+
+The lock hook still enforces the tightest subset (`use-edit-text-mode.ts`, `use-fabric-canvas.ts`, `load-pdfjs.ts`, `pdfjs-polyfills.ts`, `use-extract-images-editor.ts`, `append-pdf-page.ts`) — see `.claude/LOCKED_PATHS`.
 
 For the full evidence trail (why each rule exists, what broke when we tried otherwise), open `.claude/skills/pdf-editor-architecture/SKILL.md` and read the "Known issues / decisions log" at the bottom — newest entries are at the top. **Always check that log before refactoring anything in `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, or `components/sections/pdf-editor/**`.**
 
