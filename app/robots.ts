@@ -13,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
           "/contact",
           "/privacy",
           "/terms-and-conditions",
-          "/refund",
+          "/refund-policy",
           "/subscription-terms",
           "/cookies",
           "/do-not-sell",

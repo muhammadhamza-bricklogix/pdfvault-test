@@ -703,7 +703,7 @@ function PlanStep({
           for details. We provide refunds in accordance with our{" "}
           <a
             className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-            href="/refund"
+            href="/refund-policy"
           >
             Refund Policy
           </a>
@@ -879,7 +879,7 @@ function PayStep({
             &amp;{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
-              href="/refund"
+              href="/refund-policy"
             >
               Refund
             </a>{" "}

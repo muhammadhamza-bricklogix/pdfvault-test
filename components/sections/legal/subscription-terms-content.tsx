@@ -42,7 +42,7 @@ export function SubscriptionTermsContent() {
         </p>
       </div>
 
-      <LegalSectionCard icon={SparklesIcon} id="st-intro" title="Important">
+      <LegalSectionCard icon={SparklesIcon} id="st-intro" title="IMPORTANT">
         <p>
           These Subscription Terms govern your PDFVault trial and monthly
           subscription, including automatic renewal. They form an integral part
@@ -56,7 +56,7 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Timer01Icon} id="st-1" title="1. Trial">
+      <LegalSectionCard icon={Timer01Icon} id="st-1" title="1. TRIAL">
         <p>
           Certain features of the Service — including downloading a completed
           file — require a paid trial. When you start a trial, you will be
@@ -72,7 +72,7 @@ export function SubscriptionTermsContent() {
       <LegalSectionCard
         icon={CalendarSetting01Icon}
         id="st-2"
-        title="2. Subscription and Automatic Renewal"
+        title="2. SUBSCRIPTION AND AUTOMATIC RENEWAL"
       >
         <p>
           After your trial, your subscription renews automatically at{" "}
@@ -89,7 +89,7 @@ export function SubscriptionTermsContent() {
       <LegalSectionCard
         icon={CreditCardIcon}
         id="st-3"
-        title="3. Payment Method"
+        title="3. PAYMENT METHOD"
       >
         <p>
           Payment is charged, via our payment processor Adyen, to the payment
@@ -102,7 +102,7 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Cancel01Icon} id="st-4" title="4. Cancellation">
+      <LegalSectionCard icon={Cancel01Icon} id="st-4" title="4. CANCELLATION">
         <p>You may cancel your trial or subscription at any time:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>In your account settings, under Subscription.</li>
@@ -145,7 +145,7 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Tag01Icon} id="st-5" title="5. Price Changes">
+      <LegalSectionCard icon={Tag01Icon} id="st-5" title="5. PRICE CHANGES">
         <p>
           To the maximum extent permitted by applicable law, we may change
           subscription fees. We will give you reasonable advance notice of any
@@ -156,7 +156,7 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={MoneyReceive02Icon} id="st-6" title="6. Refunds">
+      <LegalSectionCard icon={MoneyReceive02Icon} id="st-6" title="6. REFUNDS">
         <p>
           Charges made under these Subscription Terms are subject to our{" "}
           <Link href={ROUTES.LEGAL.REFUND}>Refund Policy</Link>, which includes
@@ -169,7 +169,7 @@ export function SubscriptionTermsContent() {
       <LegalSectionCard
         icon={AlertCircleIcon}
         id="st-7"
-        title="7. Failed Payments"
+        title="7. FAILED PAYMENTS"
       >
         <p>
           If a renewal payment fails due to insufficient funds, expired card
@@ -185,7 +185,7 @@ export function SubscriptionTermsContent() {
       <LegalSectionCard
         icon={ShoppingBag01Icon}
         id="st-8"
-        title="8. Right of Withdrawal (EU, EEA and UK Residents)"
+        title="8. RIGHT OF WITHDRAWAL (EU, EEA AND UK RESIDENTS)"
       >
         <p>
           If you are a resident of the European Union, European Economic Area,
@@ -215,9 +215,9 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Mail01Icon} id="st-9" title="9. Contact">
+      <LegalSectionCard icon={Mail01Icon} id="st-9" title="9. CONTACT">
         <p>
-          FLUTTWINGS INVESTMENTS LIMITED
+          <strong>FLUTTWINGS INVESTMENTS LIMITED</strong>
           <br />
           Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,
           Cyprus.

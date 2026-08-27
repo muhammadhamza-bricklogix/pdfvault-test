@@ -13,14 +13,14 @@ import {
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
 
 export const cookieTocEntries: LegalTocEntry[] = [
-  { id: "c-4-1", label: "What Are Cookies" },
-  { id: "c-4-2", label: "Who Sets Cookies on This Site" },
-  { id: "c-4-3", label: "Categories of Cookies We Use" },
-  { id: "c-4-4", label: "Third-Party Cookies" },
-  { id: "managing-cookies", label: "Your Choices and Consent" },
-  { id: "c-4-5", label: "Do Not Track" },
-  { id: "c-4-6", label: "Changes to This Policy" },
-  { id: "c-4-7", label: "Contact" },
+  { id: "c-4-1", label: "1. WHAT ARE COOKIES" },
+  { id: "c-4-2", label: "2. WHO SETS COOKIES ON THIS SITE" },
+  { id: "c-4-3", label: "3. CATEGORIES OF COOKIES WE USE" },
+  { id: "c-4-4", label: "4. THIRD-PARTY COOKIES" },
+  { id: "managing-cookies", label: "5. YOUR CHOICES AND CONSENT" },
+  { id: "c-4-5", label: "6. DO NOT TRACK" },
+  { id: "c-4-6", label: "7. CHANGES TO THIS POLICY" },
+  { id: "c-4-7", label: "8. CONTACT" },
 ];
 
 /**
@@ -75,7 +75,11 @@ export function CookiePolicyContent() {
         </p>
       </div>
 
-      <LegalSectionCard icon={CookieIcon} id="c-4-1" title="What Are Cookies">
+      <LegalSectionCard
+        icon={CookieIcon}
+        id="c-4-1"
+        title="1. WHAT ARE COOKIES"
+      >
         <p>
           Cookies are small text files placed on your device by websites you
           visit. They are widely used to make websites work, improve user
@@ -96,7 +100,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Share01Icon}
         id="c-4-2"
-        title="Who Sets Cookies on This Site"
+        title="2. WHO SETS COOKIES ON THIS SITE"
       >
         <p>
           This Cookie Policy is issued by FLUTTWINGS INVESTMENTS LIMITED, the
@@ -108,10 +112,10 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Settings02Icon}
         id="c-4-3"
-        title="Categories of Cookies We Use"
+        title="3. CATEGORIES OF COOKIES WE USE"
       >
         <p className="font-semibold text-[var(--legal-burgundy)]">
-          Strictly necessary cookies
+          3.1 STRICTLY NECESSARY COOKIES
         </p>
         <p>
           Essential for the Service to function; they cannot be disabled. They
@@ -145,7 +149,7 @@ export function CookiePolicyContent() {
         </p>
 
         <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
-          Functional cookies
+          3.2 FUNCTIONAL COOKIES
         </p>
         <p>
           Remember your preferences and choices to make the Service more
@@ -227,7 +231,7 @@ export function CookiePolicyContent() {
         />
 
         <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
-          Analytics cookies
+          3.3 ANALYTICS COOKIES
         </p>
         <p>
           Help us understand how visitors use the Service so we can improve it.
@@ -255,7 +259,7 @@ export function CookiePolicyContent() {
         />
 
         <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
-          Marketing and advertising cookies
+          3.4 MARKETING AND ADVERTISING COOKIES
         </p>
         <p>
           We do not display third-party advertisements on the Service. However,
@@ -310,7 +314,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Share01Icon}
         id="c-4-4"
-        title="Third-Party Cookies"
+        title="4. THIRD-PARTY COOKIES"
       >
         <p>
           Some third-party services we use may set their own cookies, including
@@ -322,7 +326,7 @@ export function CookiePolicyContent() {
         </p>
 
         <p className="mt-6 font-semibold text-[var(--legal-burgundy)]">
-          Cookies associated with Google sign-in
+          4.1 COOKIES ASSOCIATED WITH GOOGLE SIGN-IN
         </p>
         <p>
           The only Google integration on the Service is the optional &ldquo;Sign
@@ -349,10 +353,10 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={ArrowReloadHorizontalIcon}
         id="managing-cookies"
-        title="Your Choices and Consent"
+        title="5. YOUR CHOICES AND CONSENT"
       >
         <p>
-          <strong>EEA and UK visitors:</strong> on your first visit you will see
+          <strong>EEA and UK visitors:</strong>{" "}on your first visit you will see
           a cookie consent banner allowing you to accept or reject non-essential
           cookies before they are set. You can change or withdraw your consent
           at any time via the &ldquo;Cookie Settings&rdquo; link in the footer
@@ -360,7 +364,7 @@ export function CookiePolicyContent() {
           processing before withdrawal.
         </p>
         <p className="mt-3">
-          <strong>US visitors:</strong> where state law grants you the right to
+          <strong>US visitors:</strong>{" "}where state law grants you the right to
           opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
           advertising via cookies, you may do so via the &ldquo;Cookie
           Settings&rdquo; link. We honor Global Privacy Control (GPC) browser
@@ -377,7 +381,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={FingerPrintCheckIcon}
         id="c-4-5"
-        title="Do Not Track"
+        title="6. DO NOT TRACK"
       >
         <p>
           Some browsers offer a &ldquo;Do Not Track&rdquo; (DNT) signal. There
@@ -391,7 +395,7 @@ export function CookiePolicyContent() {
       <LegalSectionCard
         icon={Globe02Icon}
         id="c-4-6"
-        title="Changes to This Policy"
+        title="7. CHANGES TO THIS POLICY"
       >
         <p>
           We may update this Cookie Policy periodically, including to reflect
@@ -401,13 +405,13 @@ export function CookiePolicyContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Mail01Icon} id="c-4-7" title="Contact">
+      <LegalSectionCard icon={Mail01Icon} id="c-4-7" title="8. CONTACT">
         <p>
           Questions about this Cookie Policy:{" "}
           <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai</a>.
         </p>
         <p className="mt-3">
-          FLUTTWINGS INVESTMENTS LIMITED
+          <strong>FLUTTWINGS INVESTMENTS LIMITED</strong>
           <br />
           Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,
           Cyprus.

@@ -16,7 +16,7 @@ export const ROUTES = {
     COOKIES: "/cookies",
     DO_NOT_SELL: "/do-not-sell",
     PRIVACY: "/privacy",
-    REFUND: "/refund",
+    REFUND: "/refund-policy",
     SUBSCRIPTION_TERMS: "/subscription-terms",
     TERMS: "/terms-and-conditions",
   },

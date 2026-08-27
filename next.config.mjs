@@ -42,6 +42,11 @@ const nextConfig = {
         destination: "/w-9-form",
         permanent: true,
       },
+      {
+        source: "/refund",
+        destination: "/refund-policy",
+        permanent: true,
+      },
     ];
   },
   async headers() {

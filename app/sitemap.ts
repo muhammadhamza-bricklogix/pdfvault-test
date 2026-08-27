@@ -27,7 +27,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.4,
       url: `${BASE_URL}/terms-and-conditions`,
     },
-    { changeFrequency: "monthly", priority: 0.4, url: `${BASE_URL}/refund` },
+    {
+      changeFrequency: "monthly",
+      priority: 0.4,
+      url: `${BASE_URL}/refund-policy`,
+    },
     {
       changeFrequency: "monthly",
       priority: 0.4,
