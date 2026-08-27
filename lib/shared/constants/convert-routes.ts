@@ -20,6 +20,31 @@ export interface ConvertRoute {
  */
 export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
   // ── Convert TO PDF ────────────────────────────────────────────────────────
+  // Generic X→PDF entrypoint. The accept list mirrors EXT_TO_CONVERSION in
+  // `lib/client/file-conversion/upload-to-pdf.ts` — every extension the
+  // backend converter supports. UploadWorkspace treats this as an X→PDF
+  // convert route (no `exportFormat`) and routes each drop through the
+  // pending-conversion runner + dashboard placeholder row (invariant #17).
+  "file-to-pdf": {
+    title: "Convert File to PDF",
+    description:
+      "Supported formats: Word, Excel, PowerPoint, JPG, PNG, GIF, HTML, TXT.",
+    accept: [
+      "doc",
+      "docx",
+      "xls",
+      "xlsx",
+      "ppt",
+      "pptx",
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "html",
+      "htm",
+      "txt",
+    ],
+  },
   "word-to-pdf": {
     title: "Convert Word to PDF",
     description:

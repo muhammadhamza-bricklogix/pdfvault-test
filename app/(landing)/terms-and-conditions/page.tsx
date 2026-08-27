@@ -4,14 +4,14 @@ import { PolicyPageShell } from "@/components/sections/policies/policy-page-shel
 import { TermsAndConditionsContent } from "@/components/sections/legal/terms-and-conditions-content";
 
 export const metadata: Metadata = {
-  title: "Terms and conditions — PDFVault",
+  title: "Terms and Conditions — PDFVault",
   description:
     "The rules and guidelines that govern your use of PDFVault. Please read carefully before using the service.",
 };
 
 export default function TermsPage() {
   return (
-    <PolicyPageShell title="Terms and conditions">
+    <PolicyPageShell title="Terms and Conditions">
       <TermsAndConditionsContent />
     </PolicyPageShell>
   );

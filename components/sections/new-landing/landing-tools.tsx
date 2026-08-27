@@ -220,10 +220,11 @@ const TOOLS: Tool[] = [
   // ─── Convert from PDF ───────────────────────────────────────────────────
   {
     icon: "/landing/convert.svg",
-    title: "PDF to Word",
-    description: "Turn a PDF into an editable .docx you can keep working in.",
-    href: convert("pdf-to-word"),
-    tabs: ["convert-from"],
+    title: "Convert File to PDF",
+    description:
+      "Supported formats: Word, Excel, PowerPoint, JPG, PNG, GIF, HTML, TXT.",
+    href: convert("file-to-pdf"),
+    tabs: ["convert-to"],
   },
   {
     icon: "/landing/convert.svg",

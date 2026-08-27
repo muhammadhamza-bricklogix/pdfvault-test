@@ -103,7 +103,7 @@ export function TermsAndConditionsContent() {
         title="1. Acceptance of Terms"
       >
         <p>
-          These Terms and conditions (&ldquo;Terms&rdquo;) govern the
+          These Terms and Conditions (&ldquo;Terms&rdquo;) govern the
           relationship between you and FLUTTWINGS INVESTMENTS LIMITED, a company
           incorporated under the laws of Cyprus, with its registered address at
           Dimostheni Severi 12, 6th floor, Flat/Office 601, 1080, Nicosia,

@@ -104,7 +104,7 @@ export function formatFooterCopyrightLine(year: number): string {
 
 export const FOOTER_LEGAL_STRIP_LINKS: FooterNavLink[] = [
   { href: ROUTES.LEGAL.PRIVACY, label: "Privacy Policy" },
-  { href: ROUTES.LEGAL.TERMS, label: "Terms and conditions" },
+  { href: ROUTES.LEGAL.TERMS, label: "Terms and Conditions" },
   { href: ROUTES.LEGAL.COOKIES, label: "Cookie Policy" },
 ];
 

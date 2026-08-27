@@ -34,7 +34,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
     heading: "LEGAL",
     links: [
       { label: "Privacy Policy", href: ROUTES.LEGAL.PRIVACY },
-      { label: "Terms and conditions", href: ROUTES.LEGAL.TERMS },
+      { label: "Terms and Conditions", href: ROUTES.LEGAL.TERMS },
       { label: "Subscription Terms", href: ROUTES.LEGAL.SUBSCRIPTION_TERMS },
       { label: "Refund Policy", href: ROUTES.LEGAL.REFUND },
       { label: "Cookie Policy", href: ROUTES.LEGAL.COOKIES },
