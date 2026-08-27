@@ -142,7 +142,7 @@ export function WatermarkPropertiesContent() {
   );
 
   return (
-    <div className="flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {/* Enable / Disable */}
       <Switch
         isSelected={config.enabled}

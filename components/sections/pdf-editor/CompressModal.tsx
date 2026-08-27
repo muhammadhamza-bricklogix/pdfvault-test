@@ -160,7 +160,7 @@ export function CompressModal() {
             <Modal.Heading>Compress PDF</Modal.Heading>
           </Modal.Header>
 
-          <Modal.Body className="space-y-5">
+          <Modal.Body className="space-y-5 px-4 sm:px-6">
             <div className="space-y-2">
               <p className="text-xs text-default-500">
                 {file
