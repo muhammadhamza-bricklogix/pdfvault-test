@@ -15,6 +15,7 @@ import {
   PaywallCancelledError,
   requestPaywall,
 } from "@/lib/client/hooks/billing/paywall-bus";
+import { detectClientCountry } from "@/lib/client/utils/detect-country";
 import { toApiError } from "@/lib/shared/utils/api-error";
 import { logger } from "@/lib/shared/utils/logger";
 import { scrubUrl } from "@/lib/shared/utils/scrub-url";
@@ -88,6 +89,16 @@ apiClient.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.set("Authorization", `Bearer ${token}`);
     (config as RetriableConfig)._hadToken = true;
+  }
+
+  // Client-inferred country hint. Backend GeoService prefers CDN geo
+  // headers when present; this fallback covers localhost dev and
+  // deployments without a geo-aware CDN so the paywall quotes local
+  // pricing via Solidgate's per-country product-price rows.
+  const country = detectClientCountry();
+
+  if (country && !config.headers.has("x-country-code")) {
+    config.headers.set("x-country-code", country);
   }
 
   (config as RetriableConfig)._sentryStart = Date.now();
