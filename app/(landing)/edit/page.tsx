@@ -1,18 +1,9 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { ToolLandingPage } from "@/components/sections/new-landing/tool-landing-page";
-
-const TITLE = "Edit PDF online";
-const DESCRIPTION =
-  "Add text, images, signatures, highlights, or drawings to any PDF — no install, no sign-up required.";
-
-export const metadata: Metadata = {
-  title: `${TITLE} — PDFVault`,
-  description: DESCRIPTION,
-};
-
+// Legacy marketing landing page — this URL now forwards straight into the
+// PDF composer with the Edit Text tool preselected. QA 2026-08-27:
+// consolidating on a single upload screen (the composer's own drop-zone)
+// eliminates the double-upload confusion the marketing hero introduced.
 export default function EditLandingPage() {
-  return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="edit" />
-  );
+  redirect("/pdf-composer?fresh=1&tool=edit");
 }

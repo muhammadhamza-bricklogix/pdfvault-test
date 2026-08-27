@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { FormsModal } from "@/components/shared/forms-modal";
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 type IconGlyph = typeof Edit02Icon;
 
@@ -28,64 +29,62 @@ interface ToolCardEntry {
   action?: "forms";
 }
 
-// Each composer tile links to its marketing landing page — the same hero
-// + upload workspace guests see when they open a tool from the landing
-// header / All Tools modal / landing-tools section. Signed-in users hit
-// the workspace's save-first flow which persists dropped files to their
-// library, so the UI stays consistent across surfaces without diverging
-// into a separate picker modal.
+// Composer tiles route straight into `/pdf-composer?tool=<slug>` via
+// `TOOL_ROUTE.*` — one upload screen for the whole app (QA 2026-08-27).
+// The composer's own `<UploadScreen />` handles the drop and the hydrator
+// auto-launches the matching modal / tool once the file lands.
 const TOOL_CARDS: readonly ToolCardEntry[] = [
   {
     title: "PDF Composer",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
-    href: "/edit",
+    href: TOOL_ROUTE.editor,
     icon: Edit02Icon,
   },
   {
     title: "Compress Document",
     description: "Reduce PDF file size with upto 3 compression levels.",
-    href: "/compress",
+    href: TOOL_ROUTE.compress,
     icon: LayerAddIcon,
   },
   {
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: "/organize-pdf",
+    href: TOOL_ROUTE.managePages,
     icon: LayoutGridIcon,
   },
   {
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: "/split-pdf",
+    href: TOOL_ROUTE.split,
     icon: Scissor01Icon,
   },
   {
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: "/password-protect-pdf",
+    href: TOOL_ROUTE.password,
     icon: SquareLock02Icon,
   },
   {
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: "/unlock-pdf",
+    href: TOOL_ROUTE.unlock,
     icon: SquareUnlock01Icon,
   },
   {
     title: "Rotate Pages",
     description: "Fix upside-down scans or mixed-orientation bundles.",
-    href: "/rotate-pdf",
+    href: TOOL_ROUTE.managePages,
     icon: RefreshIcon,
   },
   {
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: "/delete-pages",
+    href: TOOL_ROUTE.managePages,
     icon: Delete02Icon,
   },
   {

@@ -5,7 +5,6 @@ import {
   HelpCircleIcon,
   LegalDocumentIcon,
   Logout03Icon,
-  PaintBucketIcon,
   Setting07Icon,
   SquareUnlock01Icon,
   UserCircleIcon,
@@ -15,7 +14,6 @@ import { Description, Label, ListBox, Popover } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ThemeSegmented } from "@/components/ui/theme/theme-segmented";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
@@ -178,19 +176,6 @@ export function IdentityPopover({
               <Label>Terms and conditions</Label>
             </ListBox.Item>
 
-            <ListBox.Item id="theme" textValue="Theme">
-              <div className="flex h-8 items-center justify-center">
-                <HugeiconsIcon
-                  className="size-4 shrink-0 text-default-600"
-                  icon={PaintBucketIcon}
-                />
-              </div>
-              <div className="flex w-full items-center justify-between gap-4">
-                <Label>Theme</Label>
-                <ThemeSegmented size="sm" />
-              </div>
-            </ListBox.Item>
-
             <ListBox.Item id="help" textValue="Help">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
@@ -206,8 +191,8 @@ export function IdentityPopover({
           </ListBox>
 
           {/* Extra top margin + thicker divider isolates the destructive
-              Log out action from T&C / Help / Theme rows above. QA
-              testers reported hitting T&C when going for Log out
+              Log out action from T&C / Help rows above. QA testers
+              reported hitting T&C when going for Log out
               (2026-07-29 item 49). */}
           <ListBox
             aria-label="Session"

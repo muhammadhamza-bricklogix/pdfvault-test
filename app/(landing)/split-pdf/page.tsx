@@ -1,18 +1,5 @@
-import type { Metadata } from "next";
-
-import { ToolLandingPage } from "@/components/sections/new-landing/tool-landing-page";
-
-const TITLE = "Split & Extract PDF pages";
-const DESCRIPTION =
-  "Break a PDF into smaller files or pull out just the pages you need — pick page ranges and download in seconds.";
-
-export const metadata: Metadata = {
-  title: `${TITLE} — PDFVault`,
-  description: DESCRIPTION,
-};
+import { redirect } from "next/navigation";
 
 export default function SplitPdfLandingPage() {
-  return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="split" />
-  );
+  redirect("/pdf-composer?fresh=1&tool=split");
 }
