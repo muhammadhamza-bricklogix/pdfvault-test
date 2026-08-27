@@ -430,10 +430,22 @@ export function PendingEditorFileHydrator() {
   // Step 3 — background auto-save for signed-in users. Fires once per
   // file-without-doc-id combo. Failure is non-blocking; the editor still
   // opens and the user can hit Save manually.
+  //
+  // 2026-08-28: hard-gated on `isSignedIn`. Without this the effect fires
+  // for signed-out visitors too — POST /documents/upload always 401s
+  // for them, generating a red console error on every anonymous upload
+  // (user report: "not logged in, uploaded a file, seeing 401 in
+  // console"). Signed-out sessions still auto-persist through
+  // `useSignedOutAutoPersist` (IDB mirror for post-signin restore); the
+  // server upload only makes sense once auth is confirmed. Wait for
+  // Clerk to finish loading before deciding so we don't skip a
+  // legitimate signed-in save on first paint.
   useEffect(() => {
     if (autoSavedRef.current) return;
     if (!currentFile) return;
     if (currentDocumentId) return; // already tied to a document row
+    if (!authLoaded) return; // Clerk still booting — defer the decision
+    if (!isSignedIn) return; // anonymous session — IDB-only via `useSignedOutAutoPersist`
 
     autoSavedRef.current = true;
 
@@ -494,8 +506,10 @@ export function PendingEditorFileHydrator() {
       }
     })();
   }, [
+    authLoaded,
     currentDocumentId,
     currentFile,
+    isSignedIn,
     pathname,
     queryClient,
     router,
