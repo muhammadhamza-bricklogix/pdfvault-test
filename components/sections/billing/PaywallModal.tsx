@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { SiAmericanexpress, SiMastercard, SiVisa } from "react-icons/si";
+import { SiAmericanexpress, SiVisa } from "react-icons/si";
 
 import {
   useCreateCheckoutIntentMutation,
@@ -1472,13 +1472,42 @@ function PlanCards({
   );
 }
 
+// Mastercard uses its two-circle brand mark (red + amber overlapping),
+// which react-icons/si can't render because Simple Icons is monochrome
+// (single-color silhouette). Inline SVG below matches the official
+// Mastercard brand mark.
+function MastercardMark() {
+  return (
+    <svg
+      aria-hidden
+      className="h-4 w-auto"
+      viewBox="0 0 40 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Mastercard</title>
+      <circle cx="15" cy="12" fill="#EB001B" r="7" />
+      <circle cx="25" cy="12" fill="#F79E1B" r="7" />
+      <path
+        d="M20 6.5c1.72 1.29 2.83 3.35 2.83 5.5s-1.11 4.21-2.83 5.5c-1.72-1.29-2.83-3.35-2.83-5.5s1.11-4.21 2.83-5.5z"
+        fill="#FF5F00"
+      />
+    </svg>
+  );
+}
+
 const ACCEPTED_CARD_BRANDS = [
-  { Icon: SiVisa, label: "Visa", brandColor: "#1434CB" },
-  { Icon: SiMastercard, label: "Mastercard", brandColor: "#EB001B" },
+  { Mark: () => <SiVisa aria-hidden className="h-4 w-auto" style={{ color: "#1434CB" }} title="Visa" />, label: "Visa" },
+  { Mark: MastercardMark, label: "Mastercard" },
   {
-    Icon: SiAmericanexpress,
+    Mark: () => (
+      <SiAmericanexpress
+        aria-hidden
+        className="h-4 w-auto"
+        style={{ color: "#006FCF" }}
+        title="American Express"
+      />
+    ),
     label: "American Express",
-    brandColor: "#006FCF",
   },
 ] as const;
 
@@ -1486,19 +1515,14 @@ function AcceptedCards() {
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6c6c6c]">
       <span>We accept</span>
-      {ACCEPTED_CARD_BRANDS.map(({ Icon, label, brandColor }) => (
+      {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
         <span
           key={label}
           aria-label={label}
           className="inline-flex h-7 min-w-[38px] items-center justify-center rounded-md border border-[#ececec] bg-white px-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
           role="img"
         >
-          <Icon
-            aria-hidden
-            className="h-4 w-auto"
-            style={{ color: brandColor }}
-            title={label}
-          />
+          <Mark />
         </span>
       ))}
     </div>
