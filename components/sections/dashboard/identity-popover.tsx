@@ -94,7 +94,17 @@ export function IdentityPopover({
       // and the call would 401. Failure is intentionally swallowed: nothing
       // should block the user from signing out.
       void usersService.signOutAudit().catch(() => undefined);
-      void signOut();
+      // Full-page navigation via Clerk's `redirectUrl` guarantees the
+      // session cookie is cleared before the next render — same iOS
+      // Safari cookie-commit reasoning as the sign-in / sign-up flow
+      // (CLAUDE.md item 15). Bare `void signOut()` left users still
+      // "signed in" until refresh when the SPA re-rendered before the
+      // cookie invalidated (QA 2026-08-28).
+      void signOut({ redirectUrl: ROUTES.PUBLIC.HOME }).catch(() => {
+        // Belt-and-braces: if Clerk's signOut promise rejects (rare)
+        // force a hard nav so the next page hydrates without a session.
+        window.location.assign(ROUTES.PUBLIC.HOME);
+      });
     }
   };
 
