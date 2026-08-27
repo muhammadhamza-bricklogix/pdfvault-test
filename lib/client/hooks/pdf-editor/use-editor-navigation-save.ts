@@ -106,7 +106,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
       const loadingKey = toast.loading({
         title: "Saving…",
-        description: "Saving your PDF before opening your library.",
+        description: "Saving your edits before you leave.",
       });
 
       try {
@@ -130,25 +130,69 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           force: true,
         });
 
-        if (!result.ok && result.reason === "error") {
-          toast.error({
-            title: "Could not save",
-            description:
-              "We couldn't save your PDF before leaving. Please try Save first.",
-          });
+        // Close the loading toast BEFORE surfacing the outcome — otherwise
+        // the follow-up success/error toast stacks under "Saving…".
+        toast.close(loadingKey);
+
+        if (!result.ok) {
+          // 2026-08-28: user report — "clicked Back, saw Saving toast, but
+          // when I reopen the PDF nothing was saved." Root cause was that
+          // every non-`ok` reason except `error` silently fell through to
+          // `navigate()`, so a save that skipped because pdf.js was still
+          // hydrating (`not-loaded`) — or because the store snapshot
+          // disagreed with the caller's precondition check (`no-changes`,
+          // `no-file`, `not-signed-in`) — left the user on the dashboard
+          // convinced the edits were persisted. Surface each reason
+          // explicitly and abort the navigation so the user can retry.
+          if (result.reason === "error") {
+            toast.error({
+              title: "Could not save",
+              description:
+                "We couldn't save your PDF before leaving. Please try Save first.",
+            });
+          } else if (result.reason === "not-loaded") {
+            toast.error({
+              title: "Still loading",
+              description:
+                "The PDF is still loading — wait a moment, then try Back again.",
+            });
+          } else if (result.reason === "no-file") {
+            // Truly no file → safe to navigate away, nothing to lose.
+            navigate();
+          } else if (result.reason === "not-signed-in") {
+            toast.info({
+              title: "Sign in to save",
+              description: "Sign in to keep your edits in your library.",
+            });
+            navigate();
+          } else if (result.reason === "no-changes") {
+            // Store's own dirty flag disagreed with our earlier check
+            // (raced during the async gap). Nothing to save → navigate.
+            navigate();
+          }
 
           return;
         }
 
-        if (result.ok) {
-          usePdfEditorStore
-            .getState()
-            .applyPostSaveReset(result.savedFile, result.remappedState);
-        }
+        usePdfEditorStore
+          .getState()
+          .applyPostSaveReset(result.savedFile, result.remappedState);
+
+        toast.success({
+          title: "Saved",
+          description: "Your edits were saved to your library.",
+        });
 
         navigate();
-      } finally {
+      } catch (err) {
         toast.close(loadingKey);
+        toast.error({
+          title: "Could not save",
+          description:
+            "We couldn't save your PDF before leaving. Please try Save first.",
+        });
+        throw err;
+      } finally {
         isNavigatingRef.current = false;
       }
     };
