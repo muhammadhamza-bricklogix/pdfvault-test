@@ -20,9 +20,21 @@ import { toast } from "@/lib/shared/utils/toast";
 const EXPORT_EVENT = "editor:export";
 const SAVE_EVENT = "editor:save";
 const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
+// Dedicated event for the hamburger Back → My PDFs flow on `/w-9-form`.
+// Keeps the standalone `editor:save` (Save button) and the download
+// intercept paths untouched — this listener owns the "save then let the
+// caller continue" contract with a promise-returning `onComplete`.
+const SAVE_AND_CONTINUE_EVENT = "editor:w9-save-and-continue";
 
 type SaveBeforeActionDetail = {
   onComplete?: (result: { ok: boolean }) => void;
+};
+
+type SaveAndContinueDetail = {
+  onComplete: (result: {
+    ok: boolean;
+    reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
+  }) => void;
 };
 
 /**
@@ -739,11 +751,138 @@ export function W9FinalizeIntercept() {
       })();
     };
 
+    // Hamburger Back → My PDFs on /w-9-form dispatches this event and
+    // awaits `onComplete` before navigating. Mirrors the standalone
+    // `saveHandler` (finalize → fetch stamped → upload with editorState
+    // w9 marker) but resolves the caller's promise so navigation only
+    // fires once the row is persisted. Existing paths are untouched —
+    // if this event isn't dispatched, nothing changes. If the user
+    // hasn't touched the form yet OR it matches the last save cache,
+    // we short-circuit with `ok: true` so the nav proceeds immediately.
+    const saveAndContinueHandler = (event: Event) => {
+      event.stopImmediatePropagation();
+      const detail = (event as CustomEvent<SaveAndContinueDetail>).detail;
+      const { sessionId, values, signatureKey } = useFormEditorStore.getState();
+      const { currentDocumentId } = usePdfEditorStore.getState();
+
+      if (!sessionId) {
+        detail.onComplete({ ok: true, reason: "not-ready" });
+
+        return;
+      }
+
+      if (!authLoadedRef.current || !isSignedInRef.current) {
+        // Signed-out on W-9: nothing to save (finalize would 401).
+        // Resolve with reason so the caller can decide (currently it
+        // just navigates — user can sign in from dashboard and their
+        // in-progress values live on in the form session backend).
+        detail.onComplete({ ok: true, reason: "not-signed-in" });
+
+        return;
+      }
+
+      const hasAnyValue = Object.values(values ?? {}).some(
+        (v) => typeof v === "string" && v.trim() !== "",
+      );
+
+      if (!hasAnyValue && !signatureKey) {
+        // Empty form — nothing worth stamping. Skip the finalize call
+        // (which the backend rejects with a validation error) and let
+        // the caller continue.
+        detail.onComplete({ ok: true, reason: "not-ready" });
+
+        return;
+      }
+
+      const normalizedValues = normalizeW9ValuesForFinalize(values);
+      const cacheKey = `${sessionId}::${signatureKey ?? ""}::${JSON.stringify(
+        normalizedValues,
+      )}::${currentDocumentId ?? ""}`;
+
+      if (lastSaveRef.current && lastSaveRef.current.key === cacheKey) {
+        // Already persisted this exact payload — no work to do.
+        detail.onComplete({ ok: true });
+
+        return;
+      }
+
+      void (async () => {
+        try {
+          const entitled = await ensureFreshEntitlement();
+
+          if (!entitled) {
+            const outcome = await requestPaywall({
+              filename: "w-9.pdf",
+              sourceExt: "pdf",
+              targetExt: "pdf",
+            });
+
+            if (outcome !== "success") {
+              detail.onComplete({ ok: false, reason: "cancelled" });
+
+              return;
+            }
+          }
+
+          const { downloadUrl } = await formsService.finalizeFormSession({
+            sessionId,
+            values: normalizedValues,
+            signatureKey,
+          });
+
+          const res = await fetch(downloadUrl);
+
+          if (!res.ok) {
+            throw new Error(
+              `Couldn't fetch the stamped W-9 (HTTP ${res.status}).`,
+            );
+          }
+          const blob = await res.blob();
+          const stampedFile = new File([blob], "w-9.pdf", {
+            type: "application/pdf",
+          });
+          const editorState = JSON.stringify({
+            v: 1,
+            w9: { values, signatureKey },
+          });
+          const document = await documentsService.uploadDocument({
+            file: stampedFile,
+            documentId: currentDocumentId ?? undefined,
+            editorState,
+          });
+
+          usePdfEditorStore.getState().setCurrentDocument({
+            id: document.id,
+            name: document.filename,
+          });
+          lastSaveRef.current = { key: cacheKey, documentId: document.id };
+
+          try {
+            queryClientRef.current?.invalidateQueries({
+              queryKey: documentKeys.lists(),
+            });
+          } catch {
+            /* non-fatal */
+          }
+
+          detail.onComplete({ ok: true });
+        } catch (err) {
+          logger.captureError(err, "w9.save_and_continue");
+          detail.onComplete({ ok: false, reason: "error" });
+        }
+      })();
+    };
+
     window.addEventListener(SAVE_BEFORE_ACTION_EVENT, saveBeforeActionHandler, {
       capture: true,
     });
     window.addEventListener(EXPORT_EVENT, handler, { capture: true });
     window.addEventListener(SAVE_EVENT, saveHandler, { capture: true });
+    window.addEventListener(
+      SAVE_AND_CONTINUE_EVENT,
+      saveAndContinueHandler as EventListener,
+      { capture: true },
+    );
 
     return () => {
       window.removeEventListener(
@@ -753,6 +892,11 @@ export function W9FinalizeIntercept() {
       );
       window.removeEventListener(EXPORT_EVENT, handler, { capture: true });
       window.removeEventListener(SAVE_EVENT, saveHandler, { capture: true });
+      window.removeEventListener(
+        SAVE_AND_CONTINUE_EVENT,
+        saveAndContinueHandler as EventListener,
+        { capture: true },
+      );
     };
   }, []);
 
