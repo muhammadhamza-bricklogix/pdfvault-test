@@ -1,6 +1,6 @@
 "use client";
 
-import { useSignUp } from "@clerk/nextjs";
+import { useClerk, useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
@@ -130,6 +130,12 @@ export function SignupCard({
   onSwitchToLogin,
 }: SignupCardProps = {}) {
   const { signUp } = useSignUp();
+  // `useClerk()` gives us `setActive` for the recovery path (when the
+  // SDK loses the session id after its internal `retryImmediately`
+  // fires — see `onSubmitCode`) and `clerk.client.reload()` for the
+  // belt-and-braces re-sync.
+  const clerk = useClerk();
+  const setActiveSession = clerk?.setActive;
   const searchParams = useSearchParams();
 
   const [mode, setMode] = useState<Mode>("code");
@@ -429,64 +435,148 @@ export function SignupCard({
           .unverifiedFields,
       });
 
-      // Sign the user in AND land back on the file the user was
-      // editing (2026-08-28 user requirement). We treat two states as
-      // "verified server-side, safe to finalize":
-      //   1. `signUp.status === "complete"` — happy path
-      //   2. The verify call returned `verification_already_verified`
-      //      — Clerk's server already flipped the sign-up to complete
-      //      on an earlier call, but the client-side `signUp.status`
-      //      may still read stale. Finalize regardless; if it fails
-      //      we'll surface the specific error.
-      // Either way `signUp.finalize` commits the Clerk session cookie
-      // AND navigates to `afterSignUpPath`, which the caller set to
-      // `/pdf-composer?export=<fmt>` (or wherever the user was) — so
-      // the hydrator's post-signin restore path (items #8-#12) picks
-      // the file back up from IDB, and `useExportEditor` re-fires the
-      // queued download once the paywall (if any) clears.
-      const alreadyVerifiedFallback = Boolean(
+      // Sign the user in AND land back on the file they were editing
+      // (2026-08-28 user requirement). Three paths converge here:
+      //
+      //   1. `signUp.status === "complete"` — happy path. Use
+      //      `signUp.finalize` which commits the session cookie AND
+      //      navigates in one call.
+      //
+      //   2. `verification_already_verified` recovery (log evidence
+      //      2026-08-28): Clerk SDK's `retryImmediately` retried our
+      //      verify request and the retry hit "already verified"
+      //      because the first request had already succeeded
+      //      server-side. The SDK stored the FAILED retry response,
+      //      wiping the `createdSessionId` from the successful first
+      //      call. `signUp.finalize` then throws "Cannot finalize
+      //      sign-up without a created session".
+      //
+      //      Recovery ladder for this case:
+      //      (a) If `signUp.createdSessionId` IS still present, call
+      //          `setActive({ session })` directly — cheaper than
+      //          finalize, and the session is what we need anyway.
+      //      (b) Else reload the Clerk client to re-sync from server
+      //          state, then re-check `createdSessionId` and setActive.
+      //      (c) Else the account exists server-side but we can't
+      //          recover the session client-side — redirect to
+      //          /sign-in with the email prefilled so the user can
+      //          log in with their new account. The pending file is
+      //          still in IDB, so post-signin the hydrator restores
+      //          it exactly as if they'd signed up cleanly.
+      const alreadyVerifiedRecovery = Boolean(
         verifyError &&
           (verifyError as { errors?: { code?: string }[] })?.errors?.[0]
             ?.code === "verification_already_verified",
       );
-      const shouldFinalize =
-        signUp.status === "complete" || alreadyVerifiedFallback;
 
-      if (shouldFinalize) {
+      const finalizeAndNavigate = async (): Promise<
+        { ok: true } | { ok: false; err: unknown }
+      > => {
+        try {
+          const { error: finalizeError } = await signUp.finalize({
+            navigate: ({ decorateUrl }) => {
+              // Invariant #15 — full-page nav for the iOS Safari
+              // cookie commit; suppress editor's beforeunload guard
+              // (AuthModal opens on top of an unsaved editor).
+              suppressNextUnload();
+              window.location.assign(decorateUrl(afterSignUpPath));
+            },
+          });
+
+          if (finalizeError) return { ok: false, err: finalizeError };
+
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, err };
+        }
+      };
+
+      const setActiveAndNavigate = async (
+        sessionId: string,
+      ): Promise<boolean> => {
+        try {
+          if (!setActiveSession) return false;
+          suppressNextUnload();
+          await setActiveSession({ session: sessionId });
+          // `setActive` doesn't navigate; do it explicitly. Same full-
+          // page assign pattern (item #15) so the cookie commit lands
+          // before middleware runs on the destination route.
+          window.location.assign(afterSignUpPath);
+
+          return true;
+        } catch (err) {
+          logger.captureError(err, "signup.set_active_recovery");
+
+          return false;
+        }
+      };
+
+      if (signUp.status === "complete") {
         logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
           redirectPath: afterSignUpPath,
-          viaAlreadyVerifiedRecovery: alreadyVerifiedFallback,
         });
-        const { error: finalizeError } = await signUp.finalize({
-          navigate: ({ decorateUrl }) => {
-            // Full-page navigation so the freshly-set Clerk session cookie
-            // is on the next request. `router.push` runs in-tab before
-            // mobile Safari commits the cookie, which makes the middleware
-            // treat the user as signed-out and bounce them to /sign-up.
-            // Invariant #15 — do not change to router.push.
-            //
-            // AuthModal opens on TOP of the editor (2026-08-28 unify),
-            // so `useEditorNavigationSave.beforeunload` fires the
-            // native "Leave site?" prompt on this assign — user just
-            // edited before clicking Done/Download so
-            // `hasUnsavedChanges` is true. Suppress the guard first
-            // (same pattern as `ReloadConfirmModal`). No effect on the
-            // standalone `/sign-up` page where the composer isn't
-            // mounted.
-            suppressNextUnload();
-            window.location.assign(decorateUrl(afterSignUpPath));
-          },
-        });
+        const result = await finalizeAndNavigate();
 
-        if (finalizeError) {
-          logger.captureError(finalizeError, "signup.finalize");
+        if (!result.ok) {
+          logger.captureError(result.err, "signup.finalize");
           setErrors({
             code: readClerkError(
-              finalizeError,
+              result.err,
               "Couldn't finish creating your account.",
             ),
           });
         }
+
+        return;
+      }
+
+      if (alreadyVerifiedRecovery) {
+        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
+          redirectPath: afterSignUpPath,
+          viaAlreadyVerifiedRecovery: true,
+        });
+
+        // Recovery step (a): try `createdSessionId` from the local
+        // signUp object.
+        const sessionId = (signUp as { createdSessionId?: string | null })
+          .createdSessionId;
+
+        if (sessionId && (await setActiveAndNavigate(sessionId))) return;
+
+        // Recovery step (b): re-sync Clerk client state from server
+        // and re-check. `clerk.client.reload()` refreshes the client's
+        // view of the currently-in-progress sign-up.
+        try {
+          if (clerk.client) {
+            await clerk.client.reload();
+            const refreshedSessionId = (
+              clerk.client.signUp as { createdSessionId?: string | null }
+            )?.createdSessionId;
+
+            if (
+              refreshedSessionId &&
+              (await setActiveAndNavigate(refreshedSessionId))
+            ) {
+              return;
+            }
+          }
+        } catch (reloadErr) {
+          logger.captureError(reloadErr, "signup.client_reload_recovery");
+        }
+
+        // Recovery step (c): account exists server-side but we can't
+        // resume the session from the client. Send the user to
+        // /sign-in with their email so they can complete manually. The
+        // pending file is still in IDB — the hydrator picks it back up
+        // on the composer mount after they log in.
+        logger.warn(
+          "signup.recover_via_signin: session_id missing, redirecting to /sign-in",
+          { emailAddress: email },
+        );
+        suppressNextUnload();
+        window.location.assign(
+          `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}&email=${encodeURIComponent(email)}`,
+        );
 
         return;
       }
