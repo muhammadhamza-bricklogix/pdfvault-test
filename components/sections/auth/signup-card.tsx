@@ -99,11 +99,16 @@ const INPUT_CLASS =
 const LABEL_CLASS = "block text-[14px] leading-[18px] text-[#6f6f6f]";
 
 // Signup mode.
-//   - "code"     → default. Passwordless signup: create({ emailAddress })
-//                  then verifications.sendEmailCode() + verifyEmailCode().
-//   - "password" → email + password: signUp.password({ ... }) then
-//                  verifications.sendEmailCode() + verifyEmailCode()
-//                  (previous behavior).
+//   - "password" → default (2026-08-28). Email + password:
+//                  signUp.password({ ... }) then
+//                  verifications.sendEmailCode() + verifyEmailCode().
+//                  Required by Clerk instances that mandate a password —
+//                  the previous "code" default returned 200 on every
+//                  server call but left the sign-up in
+//                  `missing_requirements`, so no session was created.
+//   - "code"     → passwordless: create({ emailAddress }) then
+//                  verifications.sendEmailCode() + verifyEmailCode().
+//                  Kept as opt-in for instances configured to allow it.
 // Both paths converge on the same "verify" step, so the code UI is shared.
 type Mode = "code" | "password";
 type Step = "credentials" | "verify";
@@ -138,7 +143,12 @@ export function SignupCard({
   const setActiveSession = clerk?.setActive;
   const searchParams = useSearchParams();
 
-  const [mode, setMode] = useState<Mode>("code");
+  // Default to "password" — the staging Clerk instance requires a password
+  // (missing_requirements after verify → no createdSessionId → Path D
+  // fallback stranded the user at /sign-in with no account). The
+  // passwordless "code" mode stays available via the switch-mode link
+  // for instances configured to allow email-only sign-up. QA 2026-08-28.
+  const [mode, setMode] = useState<Mode>("password");
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -563,13 +573,57 @@ export function SignupCard({
         logger.captureError(reloadErr, "signup.client_reload_recovery");
       }
 
-      // Path D — fall back to /sign-in with the email prefilled so
-      // the user can complete the loop manually. Account exists,
-      // file is in IDB.
+      // Before Path D, check WHY signUp didn't finalize. When the
+      // Clerk dashboard requires a field this form didn't collect
+      // (most commonly `password`), the sign-up sits in
+      // `missing_requirements` — the User row is never created, so a
+      // bounce to /sign-in would strand them ("We couldn't find an
+      // account with that email"). Recover inside the modal instead:
+      // switch back to the credentials step in password mode with the
+      // email prefilled and surface a plain-English error naming what
+      // Clerk wants. Also flip `signUpNeedsCompletion` so the next
+      // submit calls `signUp.update({ password })` instead of
+      // `signUp.create(...)` (which would 400 with `form_identifier_exists`
+      // against the same email).
+      const status = (signUp as { status?: string | null }).status ?? null;
+      const missingFields =
+        (signUp as { missingFields?: string[] }).missingFields ?? [];
+
+      if (status === "missing_requirements") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[SIGNUP_FLOW] missing_requirements — recovering in-modal",
+          {
+            missingFields,
+            email,
+          },
+        );
+
+        const needsPassword = missingFields.includes("password");
+        const message = needsPassword
+          ? "Almost there — this account needs a password. Set one and continue."
+          : missingFields.length
+            ? `To finish signing up, please provide: ${missingFields.join(", ")}.`
+            : "We couldn't finish creating your account. Please try again.";
+
+        if (needsPassword) {
+          setMode("password");
+        }
+        setStep("credentials");
+        setCode("");
+        setErrors({ form: message });
+
+        return;
+      }
+
+      // Path D — genuine no-session-id state we don't know how to
+      // recover from in-modal. Fall through to /sign-in with the email
+      // prefilled; account may or may not exist server-side depending
+      // on how the SDK exited, but at least the user has a next step.
       // eslint-disable-next-line no-console
       console.warn(
         "[SIGNUP_FLOW] no session id — routing to /sign-in as fallback",
-        { email, afterSignUpPath },
+        { email, afterSignUpPath, status, missingFields },
       );
       suppressNextUnload();
       window.location.assign(
@@ -748,7 +802,7 @@ export function SignupCard({
                 Keep this element inside the form — Clerk's docs put
                 it exactly here (QA 2026-08-28: user hit 400 on the
                 verify-code step). Empty on purpose. */}
-            <div id="clerk-captcha" className="mt-3" />
+            <div className="mt-3" id="clerk-captcha" />
 
             <button
               className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
