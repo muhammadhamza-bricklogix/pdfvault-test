@@ -66,6 +66,33 @@ type SaveAndContinueDetail = {
 type FieldError = { field: string; message: string };
 
 /**
+ * The backend finalize endpoint requires a non-empty `signatureKey`.
+ * When the user hits Save / Download before they've signed, class-
+ * validator surfaces "signatureKey must be longer than or equal to 1
+ * characters; signatureKey must be a string" — raw validator strings
+ * that shouldn't be exposed. Return a friendly `{ title, description }`
+ * when the error boils down to a missing signature; return null
+ * otherwise so the caller falls through to the parsed message.
+ */
+function friendlySignatureError(parsed: {
+  message: string;
+  fields?: FieldError[];
+}): { title: string; description: string } | null {
+  const signatureFieldFlagged = parsed.fields?.some((f) =>
+    /signature/i.test(f.field),
+  );
+  const mentionsSignatureKey = /signaturekey/i.test(parsed.message);
+
+  if (!signatureFieldFlagged && !mentionsSignatureKey) return null;
+
+  return {
+    title: "Add your signature to continue",
+    description:
+      "Draw or upload a signature in the Signature tool, then try again — your typed answers are already saved.",
+  };
+}
+
+/**
  * Extract per-field validation messages from an error.
  *
  * The API client wraps axios errors in a custom `ApiError` class with the
@@ -846,10 +873,14 @@ export function W9FinalizeIntercept() {
             responseBody: parsed.raw,
             requestPayload: parsed.requestPayload,
           });
-          toast.error({
-            title: "Couldn't generate the W-9",
-            description: parsed.message,
-          });
+          const friendly = friendlySignatureError(parsed);
+
+          toast.error(
+            friendly ?? {
+              title: "Couldn't generate the W-9",
+              description: parsed.message,
+            },
+          );
         } finally {
           toast.close(loadingKey);
         }
@@ -1019,11 +1050,14 @@ export function W9FinalizeIntercept() {
         } catch (err) {
           logger.captureError(err, "w9.save");
           const parsed = extractApiFieldErrors(err);
+          const friendly = friendlySignatureError(parsed);
 
-          toast.error({
-            title: "Couldn't save the W-9",
-            description: parsed.message,
-          });
+          toast.error(
+            friendly ?? {
+              title: "Couldn't save the W-9",
+              description: parsed.message,
+            },
+          );
         } finally {
           toast.close(loadingKey);
         }

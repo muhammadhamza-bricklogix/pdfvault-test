@@ -4,10 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
-import {
-  clearPendingW9Values,
-  readPendingW9Values,
-} from "@/lib/client/forms/pending-w9-values";
+import { readPendingW9Values } from "@/lib/client/forms/pending-w9-values";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
@@ -102,16 +99,26 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       if (cancelled) return;
       useFormEditorStore.getState().hydrateFromSession(session);
 
-      // Restore any values the user typed BEFORE a sign-in redirect
-      // (W9FinalizeIntercept persists them to sessionStorage when it
-      // dispatches the sign-in prompt so a paywalled download doesn't
-      // lose the whole form). Signature is intentionally not restored
-      // — the fresh session's S3 namespace rejects the previous key.
+      // Restore any values persisted locally (W9AutoPersist writes on
+      // every change; sign-in redirects also stash values here). We do
+      // NOT clear the storage after reading — W9AutoPersist keeps it
+      // fresh, so a subsequent refresh with no new typing still
+      // restores the same partial fill. Only `clearPendingW9Values` on
+      // successful finalize (see W9FinalizeIntercept). Signature is
+      // intentionally not restored — the fresh session's S3 namespace
+      // rejects the previous key.
       const pending = readPendingW9Values();
 
-      if (pending) {
+      if (pending && Object.keys(pending).length > 0) {
         useFormEditorStore.getState().setValues(pending);
-        clearPendingW9Values();
+        // Immediately mirror the restored values into the freshly
+        // created backend session so the DB row for THIS user reflects
+        // the pending state even before the user types anything new.
+        // Fire-and-forget — auto-persist will keep it in sync going
+        // forward, and a failure here doesn't block the editor.
+        formsService
+          .patchFormSession(session.id, pending)
+          .catch(() => undefined);
       }
     })().catch((err: unknown) => {
       // Session failure is non-fatal — the pdf-composer editor still
