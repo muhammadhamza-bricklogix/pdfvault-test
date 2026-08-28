@@ -143,7 +143,10 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
             // cause the next Save to upsert a stamped W-9 on top of an
             // unrelated user document → silent data loss.
             type ResumeEnvelope = {
-              w9?: { values?: Record<string, string> };
+              w9?: {
+                values?: Record<string, string>;
+                signaturePreview?: string | null;
+              };
             };
             let parsed: ResumeEnvelope | null = null;
 
@@ -169,6 +172,21 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
               // action merges into `values` so the order is safe
               // (each `setValues` spreads into the previous map).
               useFormEditorStore.getState().setValues(values);
+            }
+
+            // Restore the signature IMAGE (data URL) so the yellow
+            // "Sign here" placeholder is replaced by the previously
+            // drawn ink on reopen. Signature KEY is intentionally
+            // still null — the fresh session's S3 namespace won't
+            // accept the old key. If the user hits Done → Download
+            // without re-signing, `W9FinalizeIntercept` re-uploads
+            // this preview to the new session before finalizing.
+            const signaturePreview = parsed.w9.signaturePreview;
+
+            if (typeof signaturePreview === "string" && signaturePreview) {
+              useFormEditorStore
+                .getState()
+                .setSignaturePreview(signaturePreview);
             }
           } catch (err) {
             logger.captureError(err, "w9.resume_from_dashboard");

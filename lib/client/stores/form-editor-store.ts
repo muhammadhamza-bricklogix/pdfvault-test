@@ -54,6 +54,13 @@ export const useFormEditorStore = create<FormEditorState>()((set) => ({
       schema: session.schema,
       pdfUrl: session.pdfUrl,
       signatureKey: session.signatureKey,
+      // Preserve a signature preview that the resume path may have
+      // restored before this promise resolved. Same race guard as the
+      // `values` merge below — a fresh session has no preview, so
+      // keeping the existing one costs nothing; on a resume we NEED
+      // to keep the restored data URL or the PDF overlay shows the
+      // "Sign here" placeholder again (QA 2026-08-28).
+      signaturePreview: s.signaturePreview ?? null,
       finalizedUrl: session.finalizedUrl,
       // MERGE session.values into whatever `values` already holds,
       // with EXISTING values winning on collisions. Previously this

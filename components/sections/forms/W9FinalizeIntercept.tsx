@@ -241,6 +241,62 @@ type QueryClientRef = {
  * `setCurrentDocument`, and later clicks pass that same id back to the
  * backend so the row is overwritten instead of duplicated.
  */
+/**
+ * Convert a `data:image/...;base64,…` URL into a Blob. Used to lift a
+ * restored signaturePreview back into an uploadable form when the user
+ * resumes a saved W-9 and immediately hits Done → Download / Save
+ * without re-signing (the previous `signatureKey` belongs to the old
+ * form session and the new session's S3 namespace rejects it).
+ */
+function dataUrlToBlob(dataUrl: string): Blob | null {
+  const match = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
+
+  if (!match) return null;
+  const mime = match[1];
+  const bytes = atob(match[2]);
+  const arr = new Uint8Array(bytes.length);
+
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+
+  return new Blob([arr], { type: mime });
+}
+
+/**
+ * Ensures the current session has a valid `signatureKey` before
+ * finalize/save fires. If the store already has a key, returns it
+ * unchanged. If there's a `signaturePreview` (data URL) but no key —
+ * the typical post-resume state — re-uploads the preview to the
+ * current session, updates the store with the fresh key, and returns
+ * it. Returns null when neither exists (unsigned form) or on upload
+ * failure (caller decides whether to proceed without a signature).
+ */
+async function ensureSignatureKeyForSession(
+  sessionId: string,
+): Promise<string | null> {
+  const state = useFormEditorStore.getState();
+
+  if (state.signatureKey) return state.signatureKey;
+  if (!state.signaturePreview) return null;
+  const blob = dataUrlToBlob(state.signaturePreview);
+
+  if (!blob) return null;
+
+  try {
+    const { signatureKey } = await formsService.uploadSignature({
+      sessionId,
+      blob,
+    });
+
+    useFormEditorStore.getState().setSignatureKey(signatureKey);
+
+    return signatureKey;
+  } catch (err) {
+    logger.captureError(err, "w9.signature_reupload", { sessionId });
+
+    return null;
+  }
+}
+
 async function ensureLibrarySave(
   downloadUrl: string,
   sessionId: string,
@@ -271,7 +327,14 @@ async function ensureLibrarySave(
     });
     const editorState = JSON.stringify({
       v: 1,
-      w9: { values, signatureKey },
+      w9: {
+        values,
+        signatureKey,
+        // Persist the local preview data URL so reopening the W-9
+        // from Dashboard restores the visible signature on the
+        // overlay (see save handler comment).
+        signaturePreview: useFormEditorStore.getState().signaturePreview,
+      },
     });
     const savedDoc = await documentsService.uploadDocument({
       file: stampedFile,
@@ -481,10 +544,19 @@ export function W9FinalizeIntercept() {
             }
           }
 
+          // Re-upload the signature if we only have a preview from a
+          // resumed session (no key registered against the current
+          // session's S3 namespace). Falls back to the pre-existing
+          // key if the reupload fails so the user still gets a
+          // download (backend will 422 if a signature was required
+          // and the resulting key is null — surfaces via the toast).
+          const effectiveSignatureKey =
+            (await ensureSignatureKeyForSession(sessionId)) ?? signatureKey;
+
           const { downloadUrl } = await formsService.finalizeFormSession({
             sessionId,
             values: normalizedValues,
-            signatureKey,
+            signatureKey: effectiveSignatureKey,
           });
 
           // Cache so repeat clicks with the same values reuse this URL
@@ -690,10 +762,13 @@ export function W9FinalizeIntercept() {
             if (outcome !== "success") return;
           }
 
+          const effectiveSignatureKey =
+            (await ensureSignatureKeyForSession(sessionId)) ?? signatureKey;
+
           const { downloadUrl } = await formsService.finalizeFormSession({
             sessionId,
             values: normalizedValues,
-            signatureKey,
+            signatureKey: effectiveSignatureKey,
           });
 
           const res = await fetch(downloadUrl);
@@ -710,7 +785,19 @@ export function W9FinalizeIntercept() {
 
           const editorState = JSON.stringify({
             v: 1,
-            w9: { values, signatureKey },
+            w9: {
+              values,
+              signatureKey: effectiveSignatureKey,
+              // Persist the local preview data URL so reopening the
+              // W-9 from Dashboard restores the visible signature on
+              // the form overlay. `signatureKey` alone can't be
+              // rendered — SignatureField reads `signaturePreview`
+              // (see fields/SignatureField.tsx) — and the fresh
+              // session on reopen doesn't have this cached anywhere
+              // else (QA 2026-08-28).
+              signaturePreview:
+                useFormEditorStore.getState().signaturePreview,
+            },
           });
 
           const document = await documentsService.uploadDocument({
@@ -824,10 +911,13 @@ export function W9FinalizeIntercept() {
             }
           }
 
+          const effectiveSignatureKey =
+            (await ensureSignatureKeyForSession(sessionId)) ?? signatureKey;
+
           const { downloadUrl } = await formsService.finalizeFormSession({
             sessionId,
             values: normalizedValues,
-            signatureKey,
+            signatureKey: effectiveSignatureKey,
           });
 
           const res = await fetch(downloadUrl);
@@ -843,7 +933,19 @@ export function W9FinalizeIntercept() {
           });
           const editorState = JSON.stringify({
             v: 1,
-            w9: { values, signatureKey },
+            w9: {
+              values,
+              signatureKey: effectiveSignatureKey,
+              // Persist the local preview data URL so reopening the
+              // W-9 from Dashboard restores the visible signature on
+              // the form overlay. `signatureKey` alone can't be
+              // rendered — SignatureField reads `signaturePreview`
+              // (see fields/SignatureField.tsx) — and the fresh
+              // session on reopen doesn't have this cached anywhere
+              // else (QA 2026-08-28).
+              signaturePreview:
+                useFormEditorStore.getState().signaturePreview,
+            },
           });
           const document = await documentsService.uploadDocument({
             file: stampedFile,
