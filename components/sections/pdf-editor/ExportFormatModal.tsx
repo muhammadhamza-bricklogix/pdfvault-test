@@ -25,6 +25,8 @@ type FormatOption = {
   iconColor: string;
 };
 
+// Order matters — the format tiles render in this order into a 2-column
+// grid (2026-08-29 PM), so row 1 = PDF + Word, row 2 = PNG + JPG.
 const FORMAT_OPTIONS: FormatOption[] = [
   {
     ext: ".pdf",
@@ -35,20 +37,20 @@ const FORMAT_OPTIONS: FormatOption[] = [
     label: "PDF",
   },
   {
-    ext: ".png",
-    icon: FileImageIcon,
-    iconBg: "bg-orange-50",
-    iconColor: "text-orange-500",
-    id: "png",
-    label: "PNG",
-  },
-  {
     ext: ".docx",
     icon: Doc01Icon,
     iconBg: "bg-blue-50",
     iconColor: "text-blue-500",
     id: "docx",
     label: "Word",
+  },
+  {
+    ext: ".png",
+    icon: FileImageIcon,
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-500",
+    id: "png",
+    label: "PNG",
   },
   // Excel + PPTX hidden 2026-08-28 pending future work on those
   // conversion pipelines. Do not remove; re-enable by uncommenting
@@ -199,16 +201,14 @@ function ExportFormatModalBody({
         </div>
 
         {/* Format tiles — grid width adapts to the number of visible
-            options so a single PDF tile (W-9) fills full width, two
-            tiles split 50/50, and the default 6 tiles stay 3-across. */}
+            options. Single tile (W-9 with only PDF) fills full width;
+            everything else uses 2-across per 2026-08-29 PM: row 1 =
+            PDF + Word, row 2 = PNG + JPG. W-9's 3-tile variant lays
+            out 2+1 with the last tile alone on the second row. */}
         <div
           aria-label="Export format"
           className={`grid gap-3 ${
-            visibleOptions.length === 1
-              ? "grid-cols-1"
-              : visibleOptions.length === 2
-                ? "grid-cols-2"
-                : "grid-cols-3"
+            visibleOptions.length === 1 ? "grid-cols-1" : "grid-cols-2"
           }`}
           role="radiogroup"
         >
