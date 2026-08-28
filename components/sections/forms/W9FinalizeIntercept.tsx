@@ -8,6 +8,7 @@ import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-va
 import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
+import { conversionService } from "@/lib/shared/api/services/conversion.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
@@ -222,6 +223,24 @@ function triggerDownload(downloadUrl: string) {
   document.body.removeChild(link);
 }
 
+/**
+ * Download a Blob returned by CloudConvert as a file. Used by the
+ * Word (`docx`) branch after the stamped PDF is converted server-side.
+ */
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  // Revoke on next tick so the download commits first.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 type LastSaveRef = {
   current: { key: string; documentId: string } | null;
 };
@@ -241,6 +260,32 @@ type QueryClientRef = {
  * `setCurrentDocument`, and later clicks pass that same id back to the
  * backend so the row is overwritten instead of duplicated.
  */
+/**
+ * Fetch the stamped PDF returned by finalize, POST it to the shared
+ * conversion service as `pdf_to_docx`, and trigger a browser download
+ * of the resulting .docx. Used by the W-9 Word format branch in the
+ * download intercept.
+ */
+async function convertAndDownloadW9AsDocx(
+  stampedPdfUrl: string,
+  userFilename?: string,
+): Promise<void> {
+  const res = await fetch(stampedPdfUrl);
+
+  if (!res.ok) {
+    throw new Error(`Couldn't fetch the stamped W-9 (HTTP ${res.status}).`);
+  }
+  const blob = await res.blob();
+  const pdfFile = new File([blob], "w-9.pdf", { type: "application/pdf" });
+  const result = await conversionService.convert({
+    file: pdfFile,
+    type: "pdf_to_docx",
+  });
+  const base = (userFilename?.trim() || "w-9").replace(/\.[^./\\]+$/, "");
+
+  triggerBlobDownload(result.blob, `${base}.docx`);
+}
+
 /**
  * Convert a `data:image/...;base64,…` URL into a Blob. Used to lift a
  * restored signaturePreview back into an uploadable form when the user
@@ -405,6 +450,17 @@ export function W9FinalizeIntercept() {
       // this event — server finalize is our source of truth here.
       event.stopImmediatePropagation();
 
+      // Only PDF + Word are exposed by `ExportFormatModal` on /w-9-form
+      // (see the pathname filter there). PDF is native to the finalize
+      // endpoint; Word chains PDF → DOCX through `conversionService`
+      // AFTER finalize returns the stamped PDF. Any other value falls
+      // back to PDF so a stale caller can't confuse the flow.
+      const detail = (
+        event as CustomEvent<{ format?: string; filename?: string }>
+      ).detail;
+      const requestedFormat = detail?.format === "docx" ? "docx" : "pdf";
+      const requestedFilename = detail?.filename;
+
       const { sessionId, values, signatureKey } = useFormEditorStore.getState();
 
       if (!sessionId) {
@@ -461,16 +517,44 @@ export function W9FinalizeIntercept() {
       if (lastFinalizeRef.current && lastFinalizeRef.current.key === cacheKey) {
         // Second (or Nth) click with identical payload — reuse the URL
         // the backend gave us the first time. Skip the network call so
-        // the backend's "already finalized" 400 never surfaces.
-        triggerDownload(lastFinalizeRef.current.downloadUrl);
+        // the backend's "already finalized" 400 never surfaces. Word
+        // requests still need the conversion step below; PDF requests
+        // fire the download directly against the cached URL.
+        const cachedDownloadUrl = lastFinalizeRef.current.downloadUrl;
 
-        // Retry the library save if the first attempt failed. The
-        // finalize cache hitting doesn't mean the library upload
-        // succeeded — if the backend was down last time, this click
-        // still needs to land the row in My PDFs.
         void (async () => {
+          if (requestedFormat === "docx") {
+            const docxLoadingKey = toast.loading({
+              title: "Converting to Word",
+              description: "Turning your stamped W-9 into a .docx…",
+            });
+
+            try {
+              await convertAndDownloadW9AsDocx(
+                cachedDownloadUrl,
+                requestedFilename,
+              );
+            } catch (convertErr) {
+              logger.captureError(convertErr, "w9.convert_docx_cached");
+              toast.error({
+                title: "Word conversion failed",
+                description: "Please try Download again in a moment.",
+              });
+              toast.close(docxLoadingKey);
+
+              return;
+            }
+            toast.close(docxLoadingKey);
+          } else {
+            triggerDownload(cachedDownloadUrl);
+          }
+
+          // Retry the library save if the first attempt failed. The
+          // finalize cache hitting doesn't mean the library upload
+          // succeeded — if the backend was down last time, this click
+          // still needs to land the row in My PDFs.
           const savedNow = await ensureLibrarySave(
-            lastFinalizeRef.current!.downloadUrl,
+            cachedDownloadUrl,
             sessionId,
             values,
             signatureKey,
@@ -482,8 +566,8 @@ export function W9FinalizeIntercept() {
           toast.success({
             title: "W-9 ready",
             description: savedNow
-              ? "Your filled PDF has downloaded and been saved to My PDFs."
-              : "Your filled PDF has downloaded.",
+              ? `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded and been saved to My PDFs.`
+              : `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded.`,
           });
         })();
 
@@ -564,10 +648,31 @@ export function W9FinalizeIntercept() {
           // second finalize on the same session with a 400).
           lastFinalizeRef.current = { key: cacheKey, downloadUrl };
 
-          // `download` attribute suggests a filename; some CORS setups
-          // ignore it and rely on Content-Disposition — either way the
-          // user gets the PDF.
-          triggerDownload(downloadUrl);
+          if (requestedFormat === "docx") {
+            // Word branch: fetch the stamped PDF the finalize endpoint
+            // just produced, send it through the shared conversion
+            // service (`pdf_to_docx`), then download the resulting
+            // .docx. Failure surfaces as a toast — the user can retry
+            // Download (finalize cache hits, no re-stamp cost) or
+            // switch back to PDF.
+            try {
+              await convertAndDownloadW9AsDocx(downloadUrl, requestedFilename);
+            } catch (convertErr) {
+              logger.captureError(convertErr, "w9.convert_docx", { sessionId });
+              toast.error({
+                title: "Word conversion failed",
+                description:
+                  "Your PDF is ready via Download → PDF. Please try Word again in a moment.",
+              });
+
+              return;
+            }
+          } else {
+            // `download` attribute suggests a filename; some CORS setups
+            // ignore it and rely on Content-Disposition — either way the
+            // user gets the PDF.
+            triggerDownload(downloadUrl);
+          }
 
           // ALSO save the stamped copy to the user's library. The
           // "Done → Download" flow is the only save affordance on
@@ -587,8 +692,8 @@ export function W9FinalizeIntercept() {
           toast.success({
             title: "W-9 ready",
             description: savedNow
-              ? "Your filled PDF has downloaded and been saved to My PDFs."
-              : "Your filled PDF has downloaded. Save to My PDFs failed — please try again.",
+              ? `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded and been saved to My PDFs.`
+              : `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded. Save to My PDFs failed — please try again.`,
           });
         } catch (err) {
           const parsed = extractApiFieldErrors(err);

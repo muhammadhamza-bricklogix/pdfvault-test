@@ -11,7 +11,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Input, Modal, TextField } from "@heroui/react";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -94,6 +95,24 @@ function ExportFormatModalBody({
   onClose: () => void;
 }) {
   const file = usePdfEditorStore((s) => s.file);
+  const pathname = usePathname();
+  // W-9 is a form product: server-stamped output only makes sense as
+  // PDF (the finalize endpoint's native format) or Word (chained
+  // PDF → DOCX conversion in W9FinalizeIntercept). PNG / Excel / JPG /
+  // PPTX would confuse users — the finalize backend has no path to
+  // those and would still return PDF. Filter the picker here so users
+  // never pick an unsupported format on /w-9-form.
+  const isW9Route = useMemo(
+    () => pathname?.startsWith("/w-9-form") ?? false,
+    [pathname],
+  );
+  const visibleOptions = useMemo(
+    () =>
+      isW9Route
+        ? FORMAT_OPTIONS.filter((o) => o.id === "pdf" || o.id === "docx")
+        : FORMAT_OPTIONS,
+    [isW9Route],
+  );
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");
   const [fileName, setFileName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
@@ -173,13 +192,17 @@ function ExportFormatModalBody({
           />
         </div>
 
-        {/* Format tiles — 3-column grid of visual cards */}
+        {/* Format tiles — 3-column grid of visual cards. On /w-9-form
+            the grid drops to 2 columns since only PDF + Word are
+            offered; leaving 3 columns would create an awkward gap. */}
         <div
           aria-label="Export format"
-          className="grid grid-cols-3 gap-3"
+          className={`grid gap-3 ${
+            visibleOptions.length <= 2 ? "grid-cols-2" : "grid-cols-3"
+          }`}
           role="radiogroup"
         >
-          {FORMAT_OPTIONS.map((opt) => {
+          {visibleOptions.map((opt) => {
             const checked = selected === opt.id;
 
             return (
