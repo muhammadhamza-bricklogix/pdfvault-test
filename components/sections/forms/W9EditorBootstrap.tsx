@@ -56,6 +56,28 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
     let cancelled = false;
 
+    // SYNC restore FIRST — before any async network work. Reads local
+    // state (values + signature preview) and pushes it into the store
+    // right away so the form paints with the user's previous entries
+    // instead of an empty template for the ~1s of session/template
+    // network round-trips. Without this, users perceive their data as
+    // "wiped" every time they return to the route (QA 2026-08-29).
+    // `hydrateFromSession` below preserves store values via its merge
+    // (existing wins over session), so this early restore isn't
+    // clobbered when the network call resolves.
+    const earlyPending = readPendingW9State();
+
+    if (earlyPending) {
+      if (Object.keys(earlyPending.values).length > 0) {
+        useFormEditorStore.getState().setValues(earlyPending.values);
+      }
+      if (earlyPending.signaturePreview) {
+        useFormEditorStore
+          .getState()
+          .setSignaturePreview(earlyPending.signaturePreview);
+      }
+    }
+
     // Wipe any leftover file first so the drop-zone / previous PDF
     // doesn't flash before ours loads.
     usePdfEditorStore.getState().clearFile();
@@ -99,35 +121,20 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       if (cancelled) return;
       useFormEditorStore.getState().hydrateFromSession(session);
 
-      // Restore any partial state persisted locally (W9AutoPersist
-      // writes values + signature preview on every change; sign-in
-      // redirects also stash values here). We do NOT clear the
-      // storage after reading — W9AutoPersist keeps it fresh, so a
-      // subsequent refresh with no new typing still restores the
-      // same partial fill.
-      //
-      // Signature key stays null: the fresh session's S3 namespace
-      // won't accept the previous key. Instead we restore the local
-      // data-URL preview so the overlay paints the user's signature
-      // immediately, and `ensureSignatureKeyForSession` re-uploads it
-      // to the new session at finalize time.
-      const pending = readPendingW9State();
+      // Values + signature preview already restored synchronously at
+      // the top of this effect (see `earlyPending` above). Still
+      // PATCH the freshly-created backend session with the restored
+      // values so the DB row for THIS user reflects the local state
+      // even before the user types anything new. `hydrateFromSession`
+      // already merged the store values (existing wins), so read from
+      // the store rather than re-reading storage — captures anything
+      // the user typed between mount and session resolution too.
+      const restoredValues = useFormEditorStore.getState().values;
 
-      if (pending) {
-        if (Object.keys(pending.values).length > 0) {
-          useFormEditorStore.getState().setValues(pending.values);
-          // Mirror restored values into the freshly created backend
-          // session so the DB row for THIS user matches the pending
-          // state even before the user types anything new.
-          formsService
-            .patchFormSession(session.id, pending.values)
-            .catch(() => undefined);
-        }
-        if (pending.signaturePreview) {
-          useFormEditorStore
-            .getState()
-            .setSignaturePreview(pending.signaturePreview);
-        }
+      if (Object.keys(restoredValues).length > 0) {
+        formsService
+          .patchFormSession(session.id, restoredValues)
+          .catch(() => undefined);
       }
     })().catch((err: unknown) => {
       // Session failure is non-fatal — the pdf-composer editor still
