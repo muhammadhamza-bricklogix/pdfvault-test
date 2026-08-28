@@ -25,6 +25,7 @@ import { PvFileTable } from "./pv-file-table";
 import {
   documentToFileRow,
   pendingConversionToFileRow,
+  w9TemplateRow,
 } from "./pv-mock-my-pdfs";
 import { PvPageHeader, UploadPdfButton } from "./pv-page-header";
 import { PvQuickToolCards } from "./pv-quick-tool-cards";
@@ -128,12 +129,21 @@ export function DashboardHome() {
       .map((p) => pendingConversionToFileRow(p, uploader));
   }, [pendingItems, items, uploader]);
 
+  // Static W-9 template row anchors the top of the table so the user
+  // can start a fresh W-9 without hunting for the tool. Order: pending
+  // conversions → template shortcut → real documents.
+  const templateRows: readonly PvFileRow[] = useMemo(
+    () => [w9TemplateRow(uploader)],
+    [uploader],
+  );
+
   const rows: readonly PvFileRow[] = useMemo(
     () => [
       ...pendingRows,
+      ...templateRows,
       ...items.map((doc) => documentToFileRow(doc, uploader)),
     ],
-    [pendingRows, items, uploader],
+    [pendingRows, templateRows, items, uploader],
   );
 
   const filteredRows = useMemo(() => {
@@ -187,6 +197,11 @@ export function DashboardHome() {
           if (row.doc) setHistoryTarget(row.doc);
         }}
         onOpen={(row) => {
+          if (row.template) {
+            router.push(row.template.href);
+
+            return;
+          }
           if (!row.doc) return;
           void openDocumentInEditor(router, row.doc).catch((err) => {
             toast.error({
