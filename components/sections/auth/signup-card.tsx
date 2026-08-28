@@ -429,9 +429,33 @@ export function SignupCard({
           .unverifiedFields,
       });
 
-      if (signUp.status === "complete") {
+      // Sign the user in AND land back on the file the user was
+      // editing (2026-08-28 user requirement). We treat two states as
+      // "verified server-side, safe to finalize":
+      //   1. `signUp.status === "complete"` — happy path
+      //   2. The verify call returned `verification_already_verified`
+      //      — Clerk's server already flipped the sign-up to complete
+      //      on an earlier call, but the client-side `signUp.status`
+      //      may still read stale. Finalize regardless; if it fails
+      //      we'll surface the specific error.
+      // Either way `signUp.finalize` commits the Clerk session cookie
+      // AND navigates to `afterSignUpPath`, which the caller set to
+      // `/pdf-composer?export=<fmt>` (or wherever the user was) — so
+      // the hydrator's post-signin restore path (items #8-#12) picks
+      // the file back up from IDB, and `useExportEditor` re-fires the
+      // queued download once the paywall (if any) clears.
+      const alreadyVerifiedFallback = Boolean(
+        verifyError &&
+          (verifyError as { errors?: { code?: string }[] })?.errors?.[0]
+            ?.code === "verification_already_verified",
+      );
+      const shouldFinalize =
+        signUp.status === "complete" || alreadyVerifiedFallback;
+
+      if (shouldFinalize) {
         logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
           redirectPath: afterSignUpPath,
+          viaAlreadyVerifiedRecovery: alreadyVerifiedFallback,
         });
         const { error: finalizeError } = await signUp.finalize({
           navigate: ({ decorateUrl }) => {
@@ -467,9 +491,22 @@ export function SignupCard({
         return;
       }
 
-      setNotice(
-        "One more step is needed to finish creating your account. Please check your email.",
-      );
+      // Reached only when verify SUCCEEDED but signUp still isn't
+      // complete — typically Clerk dashboard requires fields our form
+      // doesn't collect. `missingFields` was logged above; surface a
+      // more actionable error to the user instead of the previous
+      // silent notice.
+      const missing =
+        (signUp as { missingFields?: string[] }).missingFields ?? [];
+      const unverified =
+        (signUp as { unverifiedFields?: string[] }).unverifiedFields ?? [];
+
+      setErrors({
+        form:
+          missing.length || unverified.length
+            ? `Your account still needs: ${[...missing, ...unverified].join(", ")}. Please contact support.`
+            : "Sign-up didn't complete. Please try again.",
+      });
     } catch (err) {
       logger.captureError(err, "signup.verify");
       setErrors({
