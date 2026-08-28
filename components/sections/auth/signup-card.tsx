@@ -352,6 +352,16 @@ export function SignupCard({
       );
 
       if (verifyError) {
+        // Log the full Clerk error to captureError so the DevTools
+        // console shows the actual code / message. Common causes of a
+        // 400 here:
+        //   • `form_code_incorrect` — user mistyped the OTP
+        //   • `verification_expired` — code timed out (10 min TTL)
+        //   • `verification_already_verified` — code was used
+        //   • `verification_missing` — sign-up was flagged by bot
+        //     protection (usually the clerk-captcha div was missing
+        //     or the Turnstile widget hadn't loaded before `create`)
+        logger.captureError(verifyError, "signup.verify_email_code");
         setErrors({
           code: readClerkError(
             verifyError,
@@ -563,6 +573,20 @@ export function SignupCard({
               </p>
             ) : null}
 
+            {/* Clerk Smart CAPTCHA mount point. Placed INSIDE the form
+                just before the submit button, per the reference
+                example in Clerk's custom-flow bot-protection docs.
+                Clerk auto-renders Cloudflare Turnstile into this div
+                when the sign-up form mounts, and attaches the
+                resulting token to `signUp.create()`. If the div is
+                missing OR the widget hasn't mounted yet when the
+                user submits, `attempt_verification` will 400 later
+                because the sign-up was flagged as bot-unverified.
+                Keep this element inside the form — Clerk's docs put
+                it exactly here (QA 2026-08-28: user hit 400 on the
+                verify-code step). Empty on purpose. */}
+            <div id="clerk-captcha" className="mt-3" />
+
             <button
               className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
               disabled={submitting || !credentialsValid}
@@ -694,19 +718,6 @@ export function SignupCard({
           .
         </p>
       ) : null}
-
-      {/* Clerk Smart CAPTCHA mount point. Must be in the DOM BEFORE
-          `signUp.create()` fires — otherwise Clerk logs
-          "Cannot initialize Smart CAPTCHA widget because the
-          `clerk-captcha` DOM element was not found; falling back to
-          Invisible CAPTCHA widget" and the fallback path often 400s
-          on `POST /v1/client/sign_ups/...` (QA 2026-08-28: user hit
-          400 right after entering the email verification code). The
-          div is styled invisibly by Clerk's widget; keeping it
-          unconditionally mounted (outside the step conditional) means
-          both the credentials submit and the verify-code submit find
-          the anchor. See: https://clerk.com/docs/guides/development/custom-flows/authentication/bot-sign-up-protection */}
-      <div id="clerk-captcha" />
     </section>
   );
 }
