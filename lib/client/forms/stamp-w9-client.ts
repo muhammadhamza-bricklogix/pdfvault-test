@@ -175,20 +175,25 @@ export async function stampW9Client(
 
 /**
  * SSN parent widget is named `f1_11_12_13[0]`; segment widgets are
- * `f1_11[0]`, `f1_12[0]`, `f1_13[0]`. Same shape for EIN
- * `f1_14_15[0]` → `f1_14[0]`, `f1_15[0]`. Derive per-segment names by
- * splitting the numeric run in the parent.
+ * `f1_11[0]`, `f1_12[0]`, `f1_13[0]`. EIN parent `f1_14_15[0]` →
+ * `f1_14[0]`, `f1_15[0]`.
+ *
+ * Naming convention: `f<page>_<sub1>_<sub2>_...` — the FIRST number is
+ * a shared page/group prefix, everything after is a per-segment index.
+ * So the segment widget is `f<page>_<subN>[0]`, not `f<subN>[0]`.
  */
 function extractSegmentFieldNames(parentPdfRef: string): string[] {
-  // Match trailing `f<num>_<num>_<num>...[<n>]` — grab prefix + list.
-  const match = /^(.*)f(\d+(?:_\d+)+)\[(\d+)\]$/.exec(parentPdfRef);
+  // Match trailing `f<page>_<sub>(_<sub>)+[<n>]` — captures the page
+  // prefix separately so we can preserve it on every segment name.
+  const match = /^(.*)f(\d+)_((?:\d+_)*\d+)\[(\d+)\]$/.exec(parentPdfRef);
 
   if (!match) return [];
   const prefix = match[1];
-  const nums = match[2]!.split("_");
-  const bracket = match[3];
+  const page = match[2];
+  const subs = match[3]!.split("_");
+  const bracket = match[4];
 
-  return nums.map((n) => `${prefix}f${n}[${bracket}]`);
+  return subs.map((sub) => `${prefix}f${page}_${sub}[${bracket}]`);
 }
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array | null {
