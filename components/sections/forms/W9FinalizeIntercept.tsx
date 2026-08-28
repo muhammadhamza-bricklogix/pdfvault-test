@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
 import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
+import { renderPdfPagesToImages } from "@/lib/client/forms/render-pdf-pages-to-images";
 import { stampW9Client } from "@/lib/client/forms/stamp-w9-client";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
@@ -315,11 +316,25 @@ async function convertAndDownloadW9AsDocx(
 }
 
 /**
- * Fetch the stamped W-9, POST it through `conversionService` as
- * `pdf_to_png` / `pdf_to_jpg`, and trigger a browser download of the
- * resulting image. Backend routes the CloudConvert job. W-9 is a single
- * page so the response is one image (multi-page rasterization is a
- * server concern we don't need to solve here).
+ * Send the stamped W-9 to the backend CloudConvert bridge
+ * (`pdf_to_png` / `pdf_to_jpg`), then hand the user separate image
+ * files — one per page — instead of a single `.zip`.
+ *
+ * Why the two-layer flow:
+ *   - Backend still owns the conversion (CloudConvert quota, retries,
+ *     entitlement gating stay server-side).
+ *   - CloudConvert bundles multi-page PDF → image output as a `.zip`
+ *     archive. The W-9 template is 6 pages, so users got a zip they
+ *     didn't ask for (QA 2026-08-29). Unpack that zip on the client
+ *     via jszip and download each image entry as its own file. If the
+ *     backend returned a single image (single-page PDF), pass through.
+ *   - If unzipping / MIME sniffing goes sideways we fall back to
+ *     client-side rasterization (`renderPdfPagesToImages`) so the user
+ *     still gets their images.
+ *
+ * File naming: single-page → `<base>.<ext>`; multi-page →
+ * `<base>-page-<n>.<ext>`, ordered by the numeric suffix CloudConvert
+ * puts in each zip entry name.
  */
 async function convertAndDownloadW9AsImage(
   stampedPdfUrl: string,
@@ -331,15 +346,131 @@ async function convertAndDownloadW9AsImage(
   if (!res.ok) {
     throw new Error(`Couldn't fetch the stamped W-9 (HTTP ${res.status}).`);
   }
-  const blob = await res.blob();
-  const pdfFile = new File([blob], "w-9.pdf", { type: "application/pdf" });
+  const pdfBuf = await res.arrayBuffer();
+  const pdfBytes = new Uint8Array(pdfBuf);
+  const pdfFile = new File([pdfBytes], "w-9.pdf", { type: "application/pdf" });
+
   const result = await conversionService.convert({
     file: pdfFile,
     type: format === "png" ? "pdf_to_png" : "pdf_to_jpg",
   });
+
+  await deliverImagesFromConvertResult(
+    result.blob,
+    result.fileName,
+    format,
+    userFilename,
+    // Client-side fallback if the returned blob is neither an image
+    // nor a valid zip.
+    () => downloadPdfBytesAsImagesClient(pdfBytes, format, userFilename),
+  );
+}
+
+/**
+ * Inspect the CloudConvert response blob and download images as
+ * separate files. Handles three shapes:
+ *   1. Single image (blob.type starts with `image/`) — direct download.
+ *   2. Zip archive — unpack via jszip, download each image entry.
+ *   3. Unknown/unexpected — call the provided fallback (client render).
+ */
+async function deliverImagesFromConvertResult(
+  blob: Blob,
+  responseFileName: string,
+  format: "png" | "jpg",
+  userFilename: string | undefined,
+  onFallback: () => Promise<void>,
+): Promise<void> {
+  const base = (userFilename?.trim() || "w-9").replace(/\.[^./\\]+$/, "");
+  const mimeGuess = blob.type ?? "";
+  const looksLikeZip =
+    /zip/i.test(mimeGuess) || /\.zip$/i.test(responseFileName ?? "");
+  const looksLikeImage = mimeGuess.startsWith("image/");
+
+  if (looksLikeImage && !looksLikeZip) {
+    triggerBlobDownload(blob, `${base}.${format}`);
+
+    return;
+  }
+
+  if (!looksLikeZip) {
+    // MIME can be `application/octet-stream` — sniff magic bytes to
+    // decide zip vs unknown. PK\x03\x04 header = zip.
+    const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+    const isZipMagic =
+      head[0] === 0x50 &&
+      head[1] === 0x4b &&
+      (head[2] === 0x03 || head[2] === 0x05 || head[2] === 0x07) &&
+      (head[3] === 0x04 || head[3] === 0x06 || head[3] === 0x08);
+
+    if (!isZipMagic) {
+      // Not an image, not a zip. Bail to the fallback.
+      await onFallback();
+
+      return;
+    }
+  }
+
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(blob);
+  const entries = Object.values(zip.files).filter(
+    (entry) => !entry.dir && new RegExp(`\\.${format}$`, "i").test(entry.name),
+  );
+
+  if (entries.length === 0) {
+    // Zip existed but had no matching image entries — fall back.
+    await onFallback();
+
+    return;
+  }
+
+  // CloudConvert names entries like `w-9-01.png`, `w-9-02.png`.
+  // Sort numerically by the trailing digits so page order is stable.
+  entries.sort(
+    (a, b) => extractLeadingPageIndex(a.name) - extractLeadingPageIndex(b.name),
+  );
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]!;
+    const entryBlob = await entry.async("blob");
+    const filename =
+      entries.length === 1
+        ? `${base}.${format}`
+        : `${base}-page-${i + 1}.${format}`;
+
+    triggerBlobDownload(entryBlob, filename);
+    // Small delay so Chrome doesn't collapse the anchor clicks into
+    // a single "download multiple files?" prompt.
+    await new Promise((r) => setTimeout(r, 120));
+  }
+}
+
+function extractLeadingPageIndex(name: string): number {
+  const m = /(\d+)(?=\.[^.]+$)/.exec(name);
+
+  return m ? Number.parseInt(m[1]!, 10) : Number.MAX_SAFE_INTEGER;
+}
+
+async function downloadPdfBytesAsImagesClient(
+  pdfBytes: Uint8Array,
+  format: "png" | "jpg",
+  userFilename?: string,
+): Promise<void> {
+  const images = await renderPdfPagesToImages(pdfBytes, format);
+
+  if (images.length === 0) {
+    throw new Error("No pages rendered from the stamped W-9");
+  }
   const base = (userFilename?.trim() || "w-9").replace(/\.[^./\\]+$/, "");
 
-  triggerBlobDownload(result.blob, `${base}.${format}`);
+  for (const img of images) {
+    const filename =
+      images.length === 1
+        ? `${base}.${format}`
+        : `${base}-page-${img.page}.${format}`;
+
+    triggerBlobDownload(img.blob, filename);
+    await new Promise((r) => setTimeout(r, 120));
+  }
 }
 
 /**
@@ -943,9 +1074,21 @@ export function W9FinalizeIntercept() {
                 type: requestedFormat === "png" ? "pdf_to_png" : "pdf_to_jpg",
               });
 
-              triggerBlobDownload(
+              // Same zip-unpack + per-page download path the primary
+              // branch uses so users always get separate image files.
+              // Client-side pdf.js render is the fallback if the zip
+              // is malformed.
+              await deliverImagesFromConvertResult(
                 result.blob,
-                `${baseName}.${requestedFormat}`,
+                result.fileName,
+                requestedFormat,
+                requestedFilename,
+                () =>
+                  downloadPdfBytesAsImagesClient(
+                    stampedBytes,
+                    requestedFormat,
+                    requestedFilename,
+                  ),
               );
             } else {
               triggerBlobDownload(stampedBlob, `${baseName}.pdf`);
