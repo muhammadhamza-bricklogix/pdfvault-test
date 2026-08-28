@@ -13,7 +13,7 @@ import {
 } from "@/lib/client/billing/generate-receipt-pdf";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { useInvoicesQuery } from "@/lib/client/query/queries/billing.query";
-import { formatMinor } from "@/lib/shared/utils/currency";
+import { formatMinorWithCode } from "@/lib/shared/utils/currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -77,10 +77,26 @@ function InvoiceRow({
   customerEmail: string | null;
   planName: string | null;
 }) {
-  // Uses the shared `formatMinor` helper so the amount here matches
-  // the paywall + success step + receipt PDF — same purchased-currency
-  // format across every surface the user visits.
-  const formatted = formatMinor(row.amountMinor, row.currency);
+  // Show the ISO currency code alongside the symbol so users can
+  // verify which currency they were actually charged in — "$" alone
+  // is ambiguous across USD / CAD / AUD / MXN / …, and QA 2026-08-28
+  // reported "$275.22 shown for a PKR charge" (the user expected ₨).
+  // With code shown, the row reads "$275.22 USD" — clearly USD.
+  const formatted = formatMinorWithCode(row.amountMinor, row.currency);
+
+  // Diagnostic breadcrumb: if the raw `row.currency` from the backend
+  // ever disagrees with what the user expects (e.g. row says USD but
+  // the user believes they paid PKR), we can spot it in the console
+  // without wiring a full server-side audit. Only fires in dev / when
+  // logger's debug level is enabled — production stays quiet.
+  logger.debug?.("[billing.invoice.row]", {
+    id: row.id,
+    amountMinor: row.amountMinor,
+    currency: row.currency,
+    status: row.status,
+    type: row.type,
+    formatted,
+  });
 
   const date = new Date(row.paidAt ?? row.createdAt).toLocaleDateString(
     undefined,

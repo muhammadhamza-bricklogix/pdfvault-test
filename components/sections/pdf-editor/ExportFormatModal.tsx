@@ -96,12 +96,12 @@ function ExportFormatModalBody({
 }) {
   const file = usePdfEditorStore((s) => s.file);
   const pathname = usePathname();
-  // W-9 is a form product: server-stamped output only makes sense as
-  // PDF (the finalize endpoint's native format) or Word (chained
-  // PDF → DOCX conversion in W9FinalizeIntercept). PNG / Excel / JPG /
-  // PPTX would confuse users — the finalize backend has no path to
-  // those and would still return PDF. Filter the picker here so users
-  // never pick an unsupported format on /w-9-form.
+  // W-9 is a form product: only PDF is offered for now. Word (DOCX)
+  // was temporarily wired through a PDF → DOCX conversion but was
+  // removed per product on 2026-08-28 — user pinned scope to PDF only.
+  // Every other format the picker would offer (PNG / Excel / JPG /
+  // PPTX) has no server-side path from the finalize endpoint, so
+  // filtering to PDF-only keeps the picker honest.
   const isW9Route = useMemo(
     () => pathname?.startsWith("/w-9-form") ?? false,
     [pathname],
@@ -109,7 +109,7 @@ function ExportFormatModalBody({
   const visibleOptions = useMemo(
     () =>
       isW9Route
-        ? FORMAT_OPTIONS.filter((o) => o.id === "pdf" || o.id === "docx")
+        ? FORMAT_OPTIONS.filter((o) => o.id === "pdf")
         : FORMAT_OPTIONS,
     [isW9Route],
   );
@@ -192,13 +192,17 @@ function ExportFormatModalBody({
           />
         </div>
 
-        {/* Format tiles — 3-column grid of visual cards. On /w-9-form
-            the grid drops to 2 columns since only PDF + Word are
-            offered; leaving 3 columns would create an awkward gap. */}
+        {/* Format tiles — grid width adapts to the number of visible
+            options so a single PDF tile (W-9) fills full width, two
+            tiles split 50/50, and the default 6 tiles stay 3-across. */}
         <div
           aria-label="Export format"
           className={`grid gap-3 ${
-            visibleOptions.length <= 2 ? "grid-cols-2" : "grid-cols-3"
+            visibleOptions.length === 1
+              ? "grid-cols-1"
+              : visibleOptions.length === 2
+                ? "grid-cols-2"
+                : "grid-cols-3"
           }`}
           role="radiogroup"
         >

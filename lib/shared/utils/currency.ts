@@ -91,3 +91,19 @@ export function formatMinorAscii(minor: number, currency: string): string {
 
   return `${amount.toFixed(2)} ${currency.toUpperCase()}`;
 }
+
+/**
+ * Symbol + ISO code together (`"$275.22 USD"`, `"₨ 275.22 PKR"`). Use
+ * on surfaces where the user needs to verify which currency they were
+ * charged in — currency symbols overlap across regions ($ = USD / CAD
+ * / AUD / MXN / …) and users occasionally report display bugs when
+ * the ambiguous symbol doesn't match the region they expected. Adding
+ * the ISO code eliminates the ambiguity without hiding the pretty
+ * symbol.
+ */
+export function formatMinorWithCode(minor: number, currency: string): string {
+  const code = currency.toUpperCase();
+  const symbol = formatMinor(minor, code);
+
+  return `${symbol} ${code}`;
+}
