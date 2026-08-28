@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -193,6 +194,11 @@ export function SignupCard({
       // whether Clerk still has state.
       const callbackWithReturn = `${ROUTES.AUTH.SSO_CALLBACK}?redirect_url=${encodeURIComponent(afterSignUpPath)}`;
 
+      // Same reason as the credentials `signUp.finalize` path — Google
+      // OAuth does a full-page redirect, which trips the editor's
+      // `beforeunload` guard when this modal was opened over unsaved
+      // edits.
+      suppressNextUnload();
       await signUp.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,
@@ -367,6 +373,16 @@ export function SignupCard({
             // mobile Safari commits the cookie, which makes the middleware
             // treat the user as signed-out and bounce them to /sign-up.
             // Invariant #15 — do not change to router.push.
+            //
+            // AuthModal opens on TOP of the editor (2026-08-28 unify),
+            // so `useEditorNavigationSave.beforeunload` fires the
+            // native "Leave site?" prompt on this assign — user just
+            // edited before clicking Done/Download so
+            // `hasUnsavedChanges` is true. Suppress the guard first
+            // (same pattern as `ReloadConfirmModal`). No effect on the
+            // standalone `/sign-up` page where the composer isn't
+            // mounted.
+            suppressNextUnload();
             window.location.assign(decorateUrl(afterSignUpPath));
           },
         });

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignInSchema } from "@/lib/shared/schemas/auth/sign-in.schema";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -209,6 +210,19 @@ export function LoginCard({
     });
     const { error: finalizeError } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
+        // AuthModal opens on TOP of the editor (2026-08-28 unify), so
+        // by the time we assign a new URL the composer still has
+        // `hasUnsavedChanges === true` — user just edited before
+        // clicking Done/Download. Without the suppress, the
+        // `beforeunload` guard in `useEditorNavigationSave` fires the
+        // browser's native "Leave site?" prompt right after sign-in
+        // completes, and if the user picks "Leave" the nav can land
+        // them on `/` because Clerk's redirect races the browser's
+        // cancellation. `suppressNextUnload()` mirrors the pattern
+        // already used by `ReloadConfirmModal`. No effect on the
+        // standalone `/sign-in` page (no editor mounted, no
+        // beforeunload listener).
+        suppressNextUnload();
         window.location.assign(decorateUrl(afterSignInPath));
       },
     });
@@ -239,6 +253,10 @@ export function LoginCard({
       // dashboard fallback.
       const callbackWithReturn = `${ROUTES.AUTH.SSO_CALLBACK}?redirect_url=${encodeURIComponent(afterSignInPath)}`;
 
+      // Same reason as `finalizeAndRedirect` above — signIn.sso does a
+      // full-page redirect to Google, which trips `beforeunload` when
+      // the modal is opened from the editor with unsaved edits.
+      suppressNextUnload();
       await signIn.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,
