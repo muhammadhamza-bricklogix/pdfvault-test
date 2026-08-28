@@ -1,12 +1,13 @@
 "use client";
 
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useReverification, useUser } from "@clerk/nextjs";
+import { isReverificationCancelledError } from "@clerk/nextjs/errors";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Modal } from "@heroui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import {
   PvFormRow,
@@ -56,6 +57,12 @@ function humaniseDeleteError(err: unknown): string {
   if (code === "user_delete_self_not_enabled") {
     return "Account deletion is disabled for this workspace. Email support@pdfvault.ai and we'll remove your account for you.";
   }
+  if (code === "session_reverification_required") {
+    // Should never surface — `useReverification` wraps the delete call
+    // and opens Clerk's own verification modal automatically. Kept as
+    // a fallback in case the wrapper is bypassed.
+    return "For your security we need to verify it's you. A verification prompt should appear — if it didn't, try again.";
+  }
   if (code === "form_password_incorrect") {
     return "Password check failed. Sign out and back in, then try again.";
   }
@@ -88,6 +95,22 @@ export default function DangerZonePage() {
   // Billing so the fix is one click away.
   const billingActive = isBillingActive(subscription);
 
+  // QA 2026-08-28: Clerk now enforces "session reverification" for
+  // sensitive actions (delete account, remove MFA, etc.) — first hit
+  // returns `session_reverification_required` and Clerk expects the
+  // client to prompt the user to re-authenticate (password / MFA),
+  // then retry. Wrapping `user.delete()` with `useReverification`
+  // gives us that flow for free: on the reverification error it opens
+  // Clerk's own verification modal and, once the user completes it,
+  // reruns the wrapped fetcher. Without this wrap the delete just
+  // errors out with the raw 403 the user pasted.
+  const deleteAccount = useReverification(
+    useCallback(async () => {
+      if (!user) throw new Error("No signed-in user.");
+      await user.delete();
+    }, [user]),
+  );
+
   const handleDelete = async () => {
     if (!user || !canConfirm) return;
 
@@ -95,10 +118,17 @@ export default function DangerZonePage() {
     setError(null);
 
     try {
-      await user.delete();
+      await deleteAccount();
       await signOut();
       router.push(ROUTES.PUBLIC.HOME);
     } catch (err) {
+      // User closed the reverification modal without completing it —
+      // silent bail, keep the confirm dialog open so they can retry.
+      if (isReverificationCancelledError(err)) {
+        setIsDeleting(false);
+
+        return;
+      }
       setError(humaniseDeleteError(err));
       setIsDeleting(false);
     }

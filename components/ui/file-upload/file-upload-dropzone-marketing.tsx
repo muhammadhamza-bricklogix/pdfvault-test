@@ -2,8 +2,11 @@ import { Add01Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@heroui/react";
 
+// Excel + PowerPoint formats hidden 2026-08-28 pending future work on
+// those conversion pipelines. Do not remove without re-checking the
+// UI surfaces they were also hidden from (footer, home-tool-grid, etc).
 export const DEFAULT_MARKETING_FOOTNOTE =
-  "Up to 100 MB for PDF and up to 20 MB for Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx), Image (.gif, .jpg, .jpeg, .png), HTML, or Plain Text (.txt)";
+  "Up to 100 MB for PDF and up to 20 MB for Word (.doc, .docx), Image (.gif, .jpg, .jpeg, .png), HTML, or Plain Text (.txt)";
 
 type FileUploadDropzoneMarketingProps = {
   browseLabel?: string;

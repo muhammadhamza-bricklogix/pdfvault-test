@@ -41,9 +41,9 @@ const GROUPS: FaqGroup[] = [
         q: "What file types does PDFVault support?",
         a: (
           <>
-            PDFVault works with PDF files as well as common formats like Word,
-            Excel, PowerPoint, and images (JPG, PNG), which can be converted to
-            and from PDF.
+            {/* Excel + PowerPoint hidden 2026-08-28 pending pipeline work. */}
+            PDFVault works with PDF files as well as common formats like Word
+            and images (JPG, PNG), which can be converted to and from PDF.
           </>
         ),
       },

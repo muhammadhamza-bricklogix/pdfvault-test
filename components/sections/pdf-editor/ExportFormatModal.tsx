@@ -50,14 +50,17 @@ const FORMAT_OPTIONS: FormatOption[] = [
     id: "docx",
     label: "Word",
   },
-  {
-    ext: ".xlsx",
-    icon: Doc01Icon,
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-    id: "xlsx",
-    label: "Excel",
-  },
+  // Excel + PPTX hidden 2026-08-28 pending future work on those
+  // conversion pipelines. Do not remove; re-enable by uncommenting
+  // when the pipelines are ready.
+  // {
+  //   ext: ".xlsx",
+  //   icon: Doc01Icon,
+  //   iconBg: "bg-emerald-50",
+  //   iconColor: "text-emerald-500",
+  //   id: "xlsx",
+  //   label: "Excel",
+  // },
   {
     ext: ".jpg",
     icon: FileImageIcon,
@@ -66,14 +69,14 @@ const FORMAT_OPTIONS: FormatOption[] = [
     id: "jpg",
     label: "JPG",
   },
-  {
-    ext: ".pptx",
-    icon: FileImageIcon,
-    iconBg: "bg-amber-50",
-    iconColor: "text-amber-500",
-    id: "pptx",
-    label: "PPTX",
-  },
+  // {
+  //   ext: ".pptx",
+  //   icon: FileImageIcon,
+  //   iconBg: "bg-amber-50",
+  //   iconColor: "text-amber-500",
+  //   id: "pptx",
+  //   label: "PPTX",
+  // },
 ];
 
 function stripExt(name: string): string {
@@ -108,9 +111,7 @@ function ExportFormatModalBody({
   );
   const visibleOptions = useMemo(
     () =>
-      isW9Route
-        ? FORMAT_OPTIONS.filter((o) => o.id === "pdf")
-        : FORMAT_OPTIONS,
+      isW9Route ? FORMAT_OPTIONS.filter((o) => o.id === "pdf") : FORMAT_OPTIONS,
     [isW9Route],
   );
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");

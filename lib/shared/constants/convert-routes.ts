@@ -27,15 +27,17 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
   // pending-conversion runner + dashboard placeholder row (invariant #17).
   "file-to-pdf": {
     title: "Convert File to PDF",
-    description:
-      "Supported formats: Word, Excel, PowerPoint, JPG, PNG, GIF, HTML, TXT.",
+    // Excel + PowerPoint hidden 2026-08-28 pending pipeline work.
+    // Re-enable by adding xls/xlsx/ppt/pptx back to `accept` and
+    // restoring the original description string below.
+    description: "Supported formats: Word, JPG, PNG, GIF, HTML, TXT.",
     accept: [
       "doc",
       "docx",
-      "xls",
-      "xlsx",
-      "ppt",
-      "pptx",
+      // "xls",
+      // "xlsx",
+      // "ppt",
+      // "pptx",
       "jpg",
       "jpeg",
       "png",

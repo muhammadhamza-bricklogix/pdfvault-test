@@ -248,11 +248,10 @@ export function TermsAndConditionsContent() {
         <p>
           The Service provides a browser-based platform for working with PDF
           documents; including editing, signing, merging, splitting,
-          compressing, and converting files between formats such as Word, Excel,
-          PowerPoint, JPG, and PNG. The Company may update, modify, or
-          discontinue specific tools or features from time to time to maintain
-          technical reliability, comply with applicable law, and improve user
-          experience.
+          compressing, and converting files between formats such as Word, JPG,
+          and PNG. The Company may update, modify, or discontinue specific tools
+          or features from time to time to maintain technical reliability,
+          comply with applicable law, and improve user experience.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">

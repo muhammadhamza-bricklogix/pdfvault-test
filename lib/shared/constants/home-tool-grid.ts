@@ -114,8 +114,10 @@ const PDF_TO_FORMAT_TITLES = [
   "PDF to OEB",
   "PDF to PDB",
   "PDF to PNG",
-  "PDF to PPT",
-  "PDF to PPTX",
+  // Hidden 2026-08-28 — pending future work on PPT/XLSX pipelines.
+  // Do not remove; re-add these entries when the conversions are ready.
+  // "PDF to PPT",
+  // "PDF to PPTX",
   "PDF to PS",
   "PDF to PSD",
   "PDF to RTF",
@@ -124,8 +126,8 @@ const PDF_TO_FORMAT_TITLES = [
   "PDF to TXT",
   "PDF to WEBP",
   "PDF to WMF",
-  "PDF to XLS",
-  "PDF to XLSX",
+  // "PDF to XLS",
+  // "PDF to XLSX",
 ] as const;
 
 const PDF_TO_FORMAT_CARDS: HomeToolCard[] = PDF_TO_FORMAT_TITLES.map(
@@ -150,9 +152,8 @@ const HOME_TOOL_GRID_PRIMARY_CARDS: HomeToolCard[] = [
     title: "Edit PDF",
   },
   {
-    description:
-      "Turn PDFs into spreadsheets, Word docs, and more — starting with Excel.",
-    href: ROUTES.TOOLS.PDF_TO_EXCEL,
+    description: "Turn PDFs into editable Word documents, images, and more.",
+    href: ROUTES.TOOLS.PDF_TO_DOC,
     icon: ChartBarIncreasingIcon,
     title: "Convert Document",
   },
@@ -206,18 +207,20 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
     icon: File01Icon,
     title: "Word to PDF",
   },
-  {
-    description: "Export slides to PDF for handouts and archiving.",
-    href: ROUTES.TOOLS.BY_SLUG("pptx-to-pdf"),
-    icon: ShapesIcon,
-    title: "PPTX to PDF",
-  },
-  {
-    description: "Flatten spreadsheets to PDF for reporting and distribution.",
-    href: ROUTES.TOOLS.EXCEL_TO_PDF,
-    icon: ChartBarIncreasingIcon,
-    title: "Excel to PDF",
-  },
+  // Hidden 2026-08-28 — PPTX + Excel conversions parked pending future
+  // work. Do not remove; re-enable once the pipelines are ready.
+  // {
+  //   description: "Export slides to PDF for handouts and archiving.",
+  //   href: ROUTES.TOOLS.BY_SLUG("pptx-to-pdf"),
+  //   icon: ShapesIcon,
+  //   title: "PPTX to PDF",
+  // },
+  // {
+  //   description: "Flatten spreadsheets to PDF for reporting and distribution.",
+  //   href: ROUTES.TOOLS.EXCEL_TO_PDF,
+  //   icon: ChartBarIncreasingIcon,
+  //   title: "Excel to PDF",
+  // },
   {
     description: "Combine raster images into a single lightweight PDF.",
     href: ROUTES.TOOLS.BY_SLUG("jpg-to-pdf"),

@@ -133,16 +133,18 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "badge", variant: "orange", badge: "JPG" },
         href: convert("jpg-to-pdf"),
       },
-      {
-        label: "EXCEL to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "XLS" },
-        href: convert("excel-to-pdf"),
-      },
-      {
-        label: "POWERPOINT to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "PPT" },
-        href: convert("powerpoint-to-pdf"),
-      },
+      // Hidden 2026-08-28 — Excel/PowerPoint conversions parked pending
+      // future work. Do not remove; re-enable once pipelines are ready.
+      // {
+      //   label: "EXCEL to PDF",
+      //   icon: { kind: "badge", variant: "orange", badge: "XLS" },
+      //   href: convert("excel-to-pdf"),
+      // },
+      // {
+      //   label: "POWERPOINT to PDF",
+      //   icon: { kind: "badge", variant: "orange", badge: "PPT" },
+      //   href: convert("powerpoint-to-pdf"),
+      // },
       {
         label: "TXT  to PDF",
         icon: { kind: "badge", variant: "orange", badge: "TXT" },
@@ -170,16 +172,18 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
         href: convert("pdf-to-jpg"),
       },
-      {
-        label: "PDF to EXCEL",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-excel"),
-      },
-      {
-        label: "PDF to POWERPOINT",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-powerpoint"),
-      },
+      // Hidden 2026-08-28 — PDF → Excel/PowerPoint parked pending
+      // future work. Do not remove; re-enable once pipelines are ready.
+      // {
+      //   label: "PDF to EXCEL",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-excel"),
+      // },
+      // {
+      //   label: "PDF to POWERPOINT",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-powerpoint"),
+      // },
       {
         label: "PDF to HTML",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },

@@ -88,8 +88,8 @@ const EDITOR_STEPS: DriveStep[] = [
     element: '[data-tour="editor-download"]',
     popover: {
       title: "Download",
-      description:
-        "Export as PDF, Word, Excel, PowerPoint, image, HTML, or plain text.",
+      // Excel/PowerPoint hidden 2026-08-28 pending pipeline work.
+      description: "Export as PDF, Word, image, HTML, or plain text.",
     },
   },
 ];

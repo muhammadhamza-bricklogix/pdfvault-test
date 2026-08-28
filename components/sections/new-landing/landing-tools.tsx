@@ -162,20 +162,22 @@ const TOOLS: Tool[] = [
     href: convert("word-to-pdf"),
     tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "Excel to PDF",
-    description: "Turn .xls or .xlsx spreadsheets into print-ready PDFs.",
-    href: convert("excel-to-pdf"),
-    tabs: ["convert-to"],
-  },
-  {
-    icon: "/landing/convert.svg",
-    title: "PowerPoint to PDF",
-    description: "Convert .ppt or .pptx decks into shareable PDF slides.",
-    href: convert("powerpoint-to-pdf"),
-    tabs: ["convert-to"],
-  },
+  // Hidden 2026-08-28 — Excel/PowerPoint conversions parked pending
+  // future work. Do not remove; re-enable when pipelines are ready.
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "Excel to PDF",
+  //   description: "Turn .xls or .xlsx spreadsheets into print-ready PDFs.",
+  //   href: convert("excel-to-pdf"),
+  //   tabs: ["convert-to"],
+  // },
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PowerPoint to PDF",
+  //   description: "Convert .ppt or .pptx decks into shareable PDF slides.",
+  //   href: convert("powerpoint-to-pdf"),
+  //   tabs: ["convert-to"],
+  // },
   {
     icon: "/landing/convert.svg",
     title: "JPG to PDF",
@@ -222,24 +224,27 @@ const TOOLS: Tool[] = [
     icon: "/landing/convert.svg",
     title: "Convert File to PDF",
     description:
-      "Supported formats: Word, Excel, PowerPoint, JPG, PNG, GIF, HTML, TXT.",
+      // Excel + PowerPoint hidden 2026-08-28 pending pipeline work.
+      "Supported formats: Word, JPG, PNG, GIF, HTML, TXT.",
     href: convert("file-to-pdf"),
     tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to Excel",
-    description: "Pull tables out of a PDF and into a ready-to-edit Excel.",
-    href: convert("pdf-to-excel"),
-    tabs: ["convert-from"],
-  },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to PowerPoint",
-    description: "Turn a PDF into a .pptx deck, one slide per page.",
-    href: convert("pdf-to-powerpoint"),
-    tabs: ["convert-from"],
-  },
+  // Hidden 2026-08-28 — PDF → Excel/PowerPoint parked pending future
+  // work. Do not remove; re-enable when pipelines are ready.
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to Excel",
+  //   description: "Pull tables out of a PDF and into a ready-to-edit Excel.",
+  //   href: convert("pdf-to-excel"),
+  //   tabs: ["convert-from"],
+  // },
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to PowerPoint",
+  //   description: "Turn a PDF into a .pptx deck, one slide per page.",
+  //   href: convert("pdf-to-powerpoint"),
+  //   tabs: ["convert-from"],
+  // },
   {
     icon: "/landing/convert.svg",
     title: "PDF to JPG",

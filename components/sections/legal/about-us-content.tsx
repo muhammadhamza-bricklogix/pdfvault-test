@@ -42,7 +42,8 @@ const TOOLS = [
   {
     icon: CloudUploadIcon,
     title: "Convert to PDF",
-    body: "Turn Word, Excel, images, and more into clean PDFs.",
+    // Excel/PowerPoint hidden 2026-08-28 pending pipeline work.
+    body: "Turn Word documents, images, and more into clean PDFs.",
   },
   {
     icon: RefreshIcon,
@@ -52,7 +53,7 @@ const TOOLS = [
   {
     icon: Pdf01Icon,
     title: "Convert from PDF",
-    body: "Export PDFs back to editable Word, Excel, or image files.",
+    body: "Export PDFs back to editable Word documents or image files.",
   },
 ] as const;
 

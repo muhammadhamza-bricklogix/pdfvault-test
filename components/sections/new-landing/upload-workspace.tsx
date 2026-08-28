@@ -287,7 +287,7 @@ export function UploadWorkspace({
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
-  // Only convert-TO-pdf routes (Word/PNG/JPG/Excel/PowerPoint/TXT → PDF)
+  // Only convert-TO-pdf routes (Word/PNG/JPG/TXT → PDF; Excel + PowerPoint hidden 2026-08-28)
   // Per the 2026-07-20 flow spec, every `/convert/*` route (both X→PDF
   // and PDF→X) sits under "Flow 1 — Convert file": Land → Sign-in →
   // Conversion → Payment → Download. So the sign-in gate fires at

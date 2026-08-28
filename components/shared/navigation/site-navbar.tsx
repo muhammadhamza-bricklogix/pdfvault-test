@@ -18,7 +18,9 @@ import { LanguageSwitcher } from "./language-switcher";
 const PDF_TOOL_LINKS = [
   { href: ROUTES.PUBLIC.ALL_TOOLS, label: "All tools overview" },
   { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF Composer" },
-  { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
+  // Hidden 2026-08-28 — PDF → Excel parked pending future work.
+  // Do not remove; re-enable once the pipeline is ready.
+  // { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
 ] as const;
 
 const DRAWER_LINKS = [
