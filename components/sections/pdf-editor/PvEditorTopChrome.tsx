@@ -537,6 +537,14 @@ function TopAppBar() {
 // ---------------------------------------------------------------------------
 
 function ToolToolbar() {
+  // W-9 form (`/w-9-form`) reuses `<PdfEditorShell />` for its canvas but
+  // the form is fill-and-sign — the generic PDF-tools row (Edit / Draw /
+  // Shapes / Merge / Manage Pages, etc.) doesn't apply and clutters the
+  // page. `W9FormFieldsPortal` already renders the fill overlays; hiding
+  // the tool row here keeps that flow focused. All other routes are
+  // unaffected. Path check is done AFTER hook calls to satisfy the
+  // rules-of-hooks order.
+  const pathname = usePathname();
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCompressModalOpen = usePdfEditorStore(
@@ -555,6 +563,8 @@ function ToolToolbar() {
 
   const disabled = !file;
   const canManagePages = !!pdfDocument && pageCount > 0;
+
+  const isW9Route = pathname === ROUTES.FORMS.W9_SHORT;
 
   const isActionDisabled = (id: string): boolean => {
     if (id === "manage-pages") return !canManagePages;
@@ -624,6 +634,8 @@ function ToolToolbar() {
       ] as const,
     [],
   );
+
+  if (isW9Route) return null;
 
   return (
     // Desktop-only toolbar (mobile uses `BottomDock`), so the iOS Safari

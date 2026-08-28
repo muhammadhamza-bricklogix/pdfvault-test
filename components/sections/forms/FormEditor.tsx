@@ -247,9 +247,9 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
             role="group"
           >
             <Button
+              isIconOnly
               aria-label="Zoom out"
               isDisabled={!canZoomOut}
-              isIconOnly
               size="sm"
               variant="tertiary"
               onPress={handleZoomOut}
@@ -263,9 +263,9 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
               {zoomPercent}
             </span>
             <Button
+              isIconOnly
               aria-label="Zoom in"
               isDisabled={!canZoomIn}
-              isIconOnly
               size="sm"
               variant="tertiary"
               onPress={handleZoomIn}
