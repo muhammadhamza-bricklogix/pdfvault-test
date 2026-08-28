@@ -201,14 +201,17 @@ function ExportFormatModalBody({
         </div>
 
         {/* Format tiles — grid width adapts to the number of visible
-            options. Single tile (W-9 with only PDF) fills full width;
-            everything else uses 2-across per 2026-08-29 PM: row 1 =
-            PDF + Word, row 2 = PNG + JPG. W-9's 3-tile variant lays
-            out 2+1 with the last tile alone on the second row. */}
+            options. 1 tile → full width; exactly 3 tiles (W-9: PDF /
+            JPG / PNG) → one row of 3 per 2026-08-29 late-PM request;
+            everything else uses 2-across. */}
         <div
           aria-label="Export format"
           className={`grid gap-3 ${
-            visibleOptions.length === 1 ? "grid-cols-1" : "grid-cols-2"
+            visibleOptions.length === 1
+              ? "grid-cols-1"
+              : visibleOptions.length === 3
+                ? "grid-cols-3"
+                : "grid-cols-2"
           }`}
           role="radiogroup"
         >

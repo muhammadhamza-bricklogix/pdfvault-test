@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { PdfEditorShell } from "@/components/sections/pdf-editor/PdfEditorShell";
+import { W9AutoPersist } from "@/components/sections/forms/W9AutoPersist";
 import { W9EditorBootstrap } from "@/components/sections/forms/W9EditorBootstrap";
 import { W9FinalizeIntercept } from "@/components/sections/forms/W9FinalizeIntercept";
 import { W9FormFieldsPortal } from "@/components/sections/forms/W9FormFieldsPortal";
@@ -43,6 +44,7 @@ export default function W9FormPage() {
     <Suspense fallback={null}>
       <W9EditorBootstrap>
         <W9FinalizeIntercept />
+        <W9AutoPersist />
         <PdfEditorShell />
         <W9FormFieldsPortal />
       </W9EditorBootstrap>
