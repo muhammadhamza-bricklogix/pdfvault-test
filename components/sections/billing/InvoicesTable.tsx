@@ -5,14 +5,22 @@ import type { Invoice } from "@/lib/shared/types/billing.types";
 import { useUser } from "@clerk/nextjs";
 import { EyeIcon, DownloadCircle02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   generateReceiptPdf,
   receiptFileName,
 } from "@/lib/client/billing/generate-receipt-pdf";
-import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
-import { useInvoicesQuery } from "@/lib/client/query/queries/billing.query";
+import {
+  persistUserCurrency,
+  readPersistedUserCurrency,
+  resolveDisplayCurrency,
+} from "@/lib/client/billing/user-currency";
+import {
+  useInvoicesQuery,
+  usePlansQuery,
+  useSubscriptionQuery,
+} from "@/lib/client/query/queries/billing.query";
 import { formatMinorWithCode } from "@/lib/shared/utils/currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -28,7 +36,28 @@ import { toast } from "@/lib/shared/utils/toast";
 export function InvoicesTable() {
   const { data, isLoading } = useInvoicesQuery();
   const { data: subscription } = useSubscriptionQuery();
+  const { data: plans } = usePlansQuery();
   const { user } = useUser();
+
+  // Region-correct currency for this user. `Plan[]` from
+  // `/billing/plans` is localised server-side by the visitor's country
+  // (same signal Solidgate uses at checkout), so its currency is the
+  // ground truth we use to override the backend's Payment-writer bug
+  // that stamps every invoice as "USD" regardless of actual charge
+  // currency. Falls back to a previously persisted value so the paywall
+  // → invoice hand-off works before Plans query resolves.
+  const regionCurrency = useMemo(() => {
+    const fromPlans = plans?.find((p) => p.currency)?.currency ?? null;
+
+    return fromPlans ?? readPersistedUserCurrency();
+  }, [plans]);
+
+  // Persist Plans-derived currency so downstream surfaces that don't
+  // themselves hit /billing/plans (paywall's synthesized receipt) still
+  // see it. `persistUserCurrency` is idempotent + a no-op on missing input.
+  useEffect(() => {
+    if (regionCurrency) persistUserCurrency(regionCurrency);
+  }, [regionCurrency]);
 
   if (isLoading) {
     return <p className="py-4 text-sm text-default-500">Loading invoices…</p>;
@@ -59,6 +88,7 @@ export function InvoicesTable() {
               key={row.id}
               customerEmail={customerEmail}
               planName={planName}
+              regionCurrency={regionCurrency}
               row={row}
             />
           ))}
@@ -72,17 +102,22 @@ function InvoiceRow({
   row,
   customerEmail,
   planName,
+  regionCurrency,
 }: {
   row: Invoice;
   customerEmail: string | null;
   planName: string | null;
+  regionCurrency: string | null;
 }) {
-  // Show the ISO currency code alongside the symbol so users can
-  // verify which currency they were actually charged in — "$" alone
-  // is ambiguous across USD / CAD / AUD / MXN / …, and QA 2026-08-28
-  // reported "$275.22 shown for a PKR charge" (the user expected ₨).
-  // With code shown, the row reads "$275.22 USD" — clearly USD.
-  const formatted = formatMinorWithCode(row.amountMinor, row.currency);
+  // Backend Payment writer stamps every invoice as USD regardless of
+  // the actual Solidgate charge currency (QA 2026-08-28 → 29, e.g.
+  // PKR-paid subscription showing "$275.22 USD"). `regionCurrency`
+  // comes from `/billing/plans` — server-side localised to the user's
+  // country, same signal Solidgate uses at checkout — so we use it as
+  // the display currency when the backend defaulted to USD.
+  // See `lib/client/billing/user-currency.ts` for the full rationale.
+  const displayCurrency = resolveDisplayCurrency(row.currency, regionCurrency);
+  const formatted = formatMinorWithCode(row.amountMinor, displayCurrency);
 
   // Diagnostic breadcrumb: if the raw `row.currency` from the backend
   // ever disagrees with what the user expects (e.g. row says USD but
@@ -92,7 +127,9 @@ function InvoiceRow({
   logger.debug?.("[billing.invoice.row]", {
     id: row.id,
     amountMinor: row.amountMinor,
-    currency: row.currency,
+    backendCurrency: row.currency,
+    regionCurrency,
+    displayCurrency,
     status: row.status,
     type: row.type,
     formatted,
@@ -102,6 +139,11 @@ function InvoiceRow({
     undefined,
     { year: "numeric", month: "short", day: "numeric" },
   );
+
+  // Hand the currency-corrected copy of the invoice to the receipt
+  // generator so the PDF matches the table row (backend row is left
+  // untouched — it's still the source of truth for id / status / etc).
+  const invoiceForReceipt: Invoice = { ...row, currency: displayCurrency };
 
   return (
     <tr className="border-t border-[var(--pv-hairline)]">
@@ -116,7 +158,7 @@ function InvoiceRow({
       <td className="px-3 py-2 text-right">
         <ReceiptActions
           customerEmail={customerEmail}
-          invoice={row}
+          invoice={invoiceForReceipt}
           planName={planName}
         />
       </td>

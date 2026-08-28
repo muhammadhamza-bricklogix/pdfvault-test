@@ -25,6 +25,7 @@ import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { formatMinor } from "@/lib/shared/utils/currency";
+import { persistUserCurrency } from "@/lib/client/billing/user-currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -228,6 +229,11 @@ export function PaywallModal({
             amountRenewMinor: intent.amountRenewMinor,
             alternatePlans: intent.alternatePlans,
           });
+          // Mirror the region-correct currency into localStorage so the
+          // billing table + receipt PDF can display the actual charged
+          // currency even when the backend's Payment writer defaults to
+          // "USD". See `lib/client/billing/user-currency.ts`.
+          persistUserCurrency(intent.currency);
           setIntent(intent);
         },
         onError: (err) => {
