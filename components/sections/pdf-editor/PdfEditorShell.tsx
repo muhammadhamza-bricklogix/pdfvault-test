@@ -7,6 +7,7 @@ import { useAuth } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+
 import "@/app/(landing)/landing-theme.css";
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotations-editor";

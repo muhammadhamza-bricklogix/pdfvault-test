@@ -101,6 +101,9 @@ function ExportFormatModalBody({
   onClose: () => void;
 }) {
   const file = usePdfEditorStore((s) => s.file);
+  // Currently-open doc — a self-match on filename shouldn't count as
+  // a duplicate; that's just the user re-downloading their own row.
+  const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const pathname = usePathname();
   // W-9 offers PDF plus image formats (PNG / JPG). Image branches route
   // the stamped PDF through `conversionService` (pdf_to_png / pdf_to_jpg)
@@ -141,21 +144,18 @@ function ExportFormatModalBody({
   const [duplicateFor, setDuplicateFor] = useState<string | null>(null);
   const [checkingFor, setCheckingFor] = useState<string | null>(null);
   const activeCheckId = useRef(0);
-  const selectedExt = useMemo(
-    () => visibleOptions.find((o) => o.id === selected)?.ext ?? ".pdf",
-    [visibleOptions, selected],
-  );
+  // Library row is ALWAYS `<base>.pdf` regardless of the download
+  // format the user picks (image/word downloads are derived from the
+  // stamped PDF that lands in My PDFs). So the duplicate check runs
+  // against `.pdf` even when the user selected PNG / JPG / Word.
   const fullFilename = useMemo(() => {
     const trimmed = fileName.trim();
 
     if (!trimmed) return "";
-    // Strip any user-supplied extension, then re-append the one that
-    // matches the currently-selected format so the duplicate check
-    // matches what the download will actually be named.
     const base = trimmed.replace(/\.[^./\\]+$/, "");
 
-    return `${base}${selectedExt}`;
-  }, [fileName, selectedExt]);
+    return `${base}.pdf`;
+  }, [fileName]);
   const duplicateExists =
     duplicateFor !== null && duplicateFor === fullFilename;
   const checkingDuplicate =
@@ -179,7 +179,13 @@ function ExportFormatModalBody({
         const match = await findDuplicateByFilename(checkFor);
 
         if (cancelled || checkId !== activeCheckId.current) return;
-        setDuplicateFor(match ? checkFor : null);
+        // A hit on the currently-open doc isn't a real duplicate —
+        // that's the row we'd upsert into anyway. Only flag rows
+        // that belong to a DIFFERENT document.
+        const isRealDuplicate =
+          match !== null && match.id !== currentDocumentId;
+
+        setDuplicateFor(isRealDuplicate ? checkFor : null);
       } catch {
         // Network / auth failures don't block download — user can
         // still ship the file. Silent so an unrelated 401 doesn't
@@ -197,7 +203,7 @@ function ExportFormatModalBody({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [fullFilename, isW9Route]);
+  }, [fullFilename, isW9Route, currentDocumentId]);
 
   const handleDownload = async () => {
     setIsSaving(true);
