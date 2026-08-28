@@ -4,37 +4,41 @@ import type { ConversionType } from "@/lib/shared/types/conversion.types";
 
 import { conversionService } from "@/lib/shared/api/services/conversion.service";
 
+// GIF / HTML / TXT / Excel / PowerPoint mappings commented out 2026-08-29
+// (PM: PDF/Word/PNG/JPG only). Kept in place — uncomment to re-enable.
 const EXT_TO_CONVERSION: Record<string, ConversionType> = {
   doc: "doc_to_pdf",
   docx: "docx_to_pdf",
-  gif: "gif_to_pdf",
-  htm: "html_to_pdf",
-  html: "html_to_pdf",
+  // gif: "gif_to_pdf",
+  // htm: "html_to_pdf",
+  // html: "html_to_pdf",
   jpeg: "jpg_to_pdf",
   jpg: "jpg_to_pdf",
   png: "png_to_pdf",
-  ppt: "ppt_to_pdf",
-  pptx: "pptx_to_pdf",
-  txt: "txt_to_pdf",
-  xls: "xls_to_pdf",
-  xlsx: "xlsx_to_pdf",
+  // ppt: "ppt_to_pdf",
+  // pptx: "pptx_to_pdf",
+  // txt: "txt_to_pdf",
+  // xls: "xls_to_pdf",
+  // xlsx: "xlsx_to_pdf",
 };
 
 const UNSUPPORTED_EXTENSIONS = new Set(["bmp"]);
 
+// Excel / PowerPoint / GIF / HTML / TXT mime types commented out
+// 2026-08-29 (PM: PDF/Word/PNG/JPG only). Restore to re-enable.
 export const UPLOAD_ACCEPT_MIME = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  // "application/vnd.ms-excel",
+  // "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  // "application/vnd.ms-powerpoint",
+  // "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "image/jpeg",
   "image/png",
-  "image/gif",
-  "text/html",
-  "text/plain",
+  // "image/gif",
+  // "text/html",
+  // "text/plain",
 ];
 
 function getExtension(file: File): string {

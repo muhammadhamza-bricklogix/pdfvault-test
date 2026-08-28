@@ -193,13 +193,14 @@ const TOOLS: Tool[] = [
     href: convert("png-to-pdf"),
     tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "TXT to PDF",
-    description: "Wrap a plain-text file into a formatted, page-ready PDF.",
-    href: convert("txt-to-pdf"),
-    tabs: ["convert-to"],
-  },
+  // TXT to PDF hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "TXT to PDF",
+  //   description: "Wrap a plain-text file into a formatted, page-ready PDF.",
+  //   href: convert("txt-to-pdf"),
+  //   tabs: ["convert-to"],
+  // },
 
   // ─── Compress PDF ───────────────────────────────────────────────────────
   {
@@ -224,8 +225,9 @@ const TOOLS: Tool[] = [
     icon: "/landing/convert.svg",
     title: "Convert File to PDF",
     description:
-      // Excel + PowerPoint hidden 2026-08-28 pending pipeline work.
-      "Supported formats: Word, JPG, PNG, GIF, HTML, TXT.",
+      // Excel + PowerPoint hidden 2026-08-28. GIF/HTML/TXT hidden
+      // 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+      "Supported formats: Word, JPG, PNG.",
     href: convert("file-to-pdf"),
     tabs: ["convert-to"],
   },
@@ -259,20 +261,21 @@ const TOOLS: Tool[] = [
     href: convert("pdf-to-png"),
     tabs: ["convert-from"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to HTML",
-    description: "Turn a PDF into a lightweight HTML page you can embed.",
-    href: convert("pdf-to-html"),
-    tabs: ["convert-from"],
-  },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to Plain Text",
-    description: "Extract the raw text from a PDF as a plain .txt file.",
-    href: convert("pdf-to-text"),
-    tabs: ["convert-from"],
-  },
+  // PDF to HTML + PDF to Plain Text hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to HTML",
+  //   description: "Turn a PDF into a lightweight HTML page you can embed.",
+  //   href: convert("pdf-to-html"),
+  //   tabs: ["convert-from"],
+  // },
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to Plain Text",
+  //   description: "Extract the raw text from a PDF as a plain .txt file.",
+  //   href: convert("pdf-to-text"),
+  //   tabs: ["convert-from"],
+  // },
 
   // ─── Others ─────────────────────────────────────────────────────────────
   {

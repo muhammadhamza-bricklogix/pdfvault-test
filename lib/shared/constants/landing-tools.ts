@@ -145,11 +145,12 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       //   icon: { kind: "badge", variant: "orange", badge: "PPT" },
       //   href: convert("powerpoint-to-pdf"),
       // },
-      {
-        label: "TXT  to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "TXT" },
-        href: convert("txt-to-pdf"),
-      },
+      // TXT to PDF hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+      // {
+      //   label: "TXT  to PDF",
+      //   icon: { kind: "badge", variant: "orange", badge: "TXT" },
+      //   href: convert("txt-to-pdf"),
+      // },
       // "Any format to PDF" removed — no backend pipeline for arbitrary formats.
     ],
   },
@@ -184,16 +185,17 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
       //   href: convert("pdf-to-powerpoint"),
       // },
-      {
-        label: "PDF to HTML",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-html"),
-      },
-      {
-        label: "PDF to Plain Text",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-text"),
-      },
+      // PDF to HTML + PDF to Plain Text hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+      // {
+      //   label: "PDF to HTML",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-html"),
+      // },
+      // {
+      //   label: "PDF to Plain Text",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-text"),
+      // },
     ],
   },
   {
