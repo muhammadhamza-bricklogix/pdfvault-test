@@ -409,16 +409,27 @@ export function UploadWorkspace({
           // `report.docx` → `report.pdf`). PDF→X already runs this
           // guard further below; the convert-to-PDF branch previously
           // skipped it and let the backend silently insert a second
-          // row with the same filename (QA 2026-08-28). Swallow lookup
-          // errors — a flaky list call shouldn't block the upload.
+          // row with the same filename (QA 2026-08-28). Case-
+          // insensitive per the fix in `findDuplicateByFilename`.
+          // Swallow lookup errors — a flaky list call shouldn't block
+          // the upload.
           let existingDocId: string | null = null;
 
           try {
             const existing = await findDuplicateByFilename(pdfName);
 
+            // eslint-disable-next-line no-console
+            console.info("[CONVERT_DUPLICATE_CHECK]", {
+              lookedFor: pdfName,
+              matched: existing?.filename ?? null,
+              matchedId: existing?.id ?? null,
+            });
+
             if (existing) existingDocId = existing.id;
           } catch (dupErr) {
             logger.warn("convert duplicate-name check failed", dupErr);
+            // eslint-disable-next-line no-console
+            console.error("[CONVERT_DUPLICATE_CHECK] lookup threw", dupErr);
           }
 
           if (existingDocId) {
