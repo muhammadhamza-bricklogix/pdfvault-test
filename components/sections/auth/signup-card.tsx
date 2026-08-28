@@ -371,22 +371,29 @@ export function SignupCard({
       );
 
       if (verifyError) {
-        // Log the full Clerk error to captureError so the DevTools
-        // console shows the actual code / message. Common causes of a
-        // 400 here:
-        //   • `form_code_incorrect` — user mistyped the OTP
-        //   • `verification_expired` — code timed out (10 min TTL)
-        //   • `verification_already_verified` — code was used already
-        //     (Clerk already flipped `signUp.status = "complete"` on
-        //     the earlier call — fall through to finalize instead of
-        //     erroring). This is the recovery path for the 2026-08-28
-        //     double-submit bug: even with the sync ref guard above,
-        //     if a stale second submit sneaks through (browser autofill
-        //     replay, StrictMode dev double-fire) we treat it as a
-        //     success and finalize the session that already exists.
-        //   • `verification_missing` — sign-up was flagged by bot
-        //     protection (usually the clerk-captcha div was missing
-        //     or the Turnstile widget hadn't loaded before `create`)
+        // Dump the full Clerk error to console. `logger.captureError`
+        // alone can serialize `errors[0].code`/`.message` into a
+        // string that loses the array structure — for a 400 on
+        // `attempt_verification` we need every field: `code`,
+        // `message`, `longMessage`, `meta`. Print with the full JSON
+        // shape and a distinctive tag so it's grep-friendly in the
+        // DevTools filter.
+        // eslint-disable-next-line no-console
+        console.error(
+          "[SIGNUP_VERIFY_400]",
+          JSON.stringify(
+            {
+              errors: (verifyError as { errors?: unknown[] })?.errors,
+              status: (verifyError as { status?: number })?.status,
+              clerkTraceId: (verifyError as { clerkTraceId?: string })
+                ?.clerkTraceId,
+              raw: verifyError,
+            },
+            null,
+            2,
+          ),
+        );
+
         const errorCode = (verifyError as { errors?: { code?: string }[] })
           ?.errors?.[0]?.code;
 
@@ -408,6 +415,19 @@ export function SignupCard({
           return;
         }
       }
+
+      // Log the full sign-up state right after verify so a stuck flow
+      // (2026-08-28: user reported "stuck at code screen") surfaces
+      // WHY. The most common cause is a Clerk dashboard config that
+      // requires fields our form doesn't collect (first_name,
+      // last_name, phone_number, etc.). `missingFields` +
+      // `unverifiedFields` name the exact blocker.
+      logger.info("signup.verify_post_state", {
+        status: signUp.status,
+        missingFields: (signUp as { missingFields?: string[] }).missingFields,
+        unverifiedFields: (signUp as { unverifiedFields?: string[] })
+          .unverifiedFields,
+      });
 
       if (signUp.status === "complete") {
         logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
