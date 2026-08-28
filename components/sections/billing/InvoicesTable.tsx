@@ -13,6 +13,7 @@ import {
 } from "@/lib/client/billing/generate-receipt-pdf";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { useInvoicesQuery } from "@/lib/client/query/queries/billing.query";
+import { formatMinor } from "@/lib/shared/utils/currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -76,11 +77,10 @@ function InvoiceRow({
   customerEmail: string | null;
   planName: string | null;
 }) {
-  const formatted = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: row.currency,
-    minimumFractionDigits: 2,
-  }).format(row.amountMinor / 100);
+  // Uses the shared `formatMinor` helper so the amount here matches
+  // the paywall + success step + receipt PDF — same purchased-currency
+  // format across every surface the user visits.
+  const formatted = formatMinor(row.amountMinor, row.currency);
 
   const date = new Date(row.paidAt ?? row.createdAt).toLocaleDateString(
     undefined,

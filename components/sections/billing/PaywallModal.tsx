@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  CheckoutIntent,
-  Invoice,
-} from "@/lib/shared/types/billing.types";
+import type { CheckoutIntent, Invoice } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
 import { Tick01Icon } from "@hugeicons/core-free-icons";
@@ -27,6 +24,7 @@ import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
+import { formatMinor } from "@/lib/shared/utils/currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -1647,13 +1645,12 @@ function ErrorState({ error }: { error: string }) {
   );
 }
 
-function formatMinor(minor: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(minor / 100);
-}
+// `formatMinor` now lives in `lib/shared/utils/currency.ts` and is
+// imported at the top of this file so every currency display across
+// the app renders from the same helper. The whole-app consistency
+// requirement (user sees their PURCHASED currency everywhere) is
+// enforced by every caller sourcing `currency` from backend data
+// (CheckoutIntent / Invoice / Plan) rather than a hardcoded string.
 
 /**
  * Pull pricing for a given plan kind out of the checkout-intent
