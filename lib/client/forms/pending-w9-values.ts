@@ -1,8 +1,10 @@
 /**
  * Persists partial W-9 state (typed values + drawn signature preview)
- * across refresh, sign-in redirects, and tab restores. Data lives in
- * `sessionStorage` so it's scoped to the browser tab and cleared on
- * tab close.
+ * across refresh, sign-in redirects, tab close, and browser restart.
+ * Data lives in `localStorage` so the user can navigate away — logo,
+ * hamburger "My PDFs", close the tab entirely — and still resume where
+ * they left off on their next visit. Cleared only on explicit
+ * `clearPendingW9Values` (called after successful finalize).
  *
  * `signatureKey` and `sessionId` are intentionally NOT persisted — the
  * mount always starts a fresh backend session, so the old key would
@@ -31,7 +33,7 @@ function safeParse(raw: string | null): unknown {
 
 export function savePendingW9State(state: PendingW9State): void {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
     /* storage disabled / quota — silent */
   }
@@ -52,7 +54,7 @@ export function savePendingW9Values(values: Record<string, string>): void {
 }
 
 export function readPendingW9State(): PendingW9State | null {
-  const parsed = safeParse(sessionStorage.getItem(KEY));
+  const parsed = safeParse(localStorage.getItem(KEY));
 
   if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
     const p = parsed as Partial<PendingW9State>;
@@ -69,11 +71,11 @@ export function readPendingW9State(): PendingW9State | null {
 
   // Migration: an older tab may have written the raw values map under
   // the legacy key. Read it once and drop it.
-  const legacy = safeParse(sessionStorage.getItem(LEGACY_VALUES_KEY));
+  const legacy = safeParse(localStorage.getItem(LEGACY_VALUES_KEY));
 
   if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
     try {
-      sessionStorage.removeItem(LEGACY_VALUES_KEY);
+      localStorage.removeItem(LEGACY_VALUES_KEY);
     } catch {
       /* no-op */
     }
@@ -102,8 +104,8 @@ export function readPendingW9Values(): Record<string, string> | null {
 
 export function clearPendingW9Values(): void {
   try {
-    sessionStorage.removeItem(KEY);
-    sessionStorage.removeItem(LEGACY_VALUES_KEY);
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(LEGACY_VALUES_KEY);
   } catch {
     /* no-op */
   }

@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
 import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
+import { stampW9Client } from "@/lib/client/forms/stamp-w9-client";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { conversionService } from "@/lib/shared/api/services/conversion.service";
@@ -905,14 +906,73 @@ export function W9FinalizeIntercept() {
             responseBody: parsed.raw,
             requestPayload: parsed.requestPayload,
           });
-          const friendly = friendlySignatureError(parsed);
 
-          toast.error(
-            friendly ?? {
-              title: "Couldn't generate the W-9",
-              description: parsed.message,
-            },
-          );
+          // Server rejected the form (validation). Rather than block
+          // the user, stamp the W-9 client-side with whatever they've
+          // typed so far and deliver the partial download. Non-PDF
+          // formats route the client-stamped bytes through the same
+          // conversion service the server-stamp path uses.
+          try {
+            const previewNow =
+              useFormEditorStore.getState().signaturePreview ?? null;
+            const stampedBytes = await stampW9Client(values, previewNow);
+            const stampedBlob = new Blob([stampedBytes.buffer as ArrayBuffer], {
+              type: "application/pdf",
+            });
+            const baseName = (requestedFilename?.trim() || "w-9").replace(
+              /\.[^./\\]+$/,
+              "",
+            );
+
+            if (requestedFormat === "docx") {
+              const pdfFile = new File([stampedBlob], "w-9.pdf", {
+                type: "application/pdf",
+              });
+              const result = await conversionService.convert({
+                file: pdfFile,
+                type: "pdf_to_docx",
+              });
+
+              triggerBlobDownload(result.blob, `${baseName}.docx`);
+            } else if (requestedFormat === "png" || requestedFormat === "jpg") {
+              const pdfFile = new File([stampedBlob], "w-9.pdf", {
+                type: "application/pdf",
+              });
+              const result = await conversionService.convert({
+                file: pdfFile,
+                type: requestedFormat === "png" ? "pdf_to_png" : "pdf_to_jpg",
+              });
+
+              triggerBlobDownload(
+                result.blob,
+                `${baseName}.${requestedFormat}`,
+              );
+            } else {
+              triggerBlobDownload(stampedBlob, `${baseName}.pdf`);
+            }
+
+            toast.success({
+              title: "Partial W-9 ready",
+              description: `Downloaded your ${formatLabel} with what you've entered so far. Add any missing fields or a signature and Download again for a complete copy.`,
+            });
+
+            return;
+          } catch (fallbackErr) {
+            logger.captureError(fallbackErr, "w9.client_stamp_fallback", {
+              sessionId,
+            });
+            // Client fallback also failed — surface the original
+            // server error / friendly signature hint so the user sees
+            // *something* actionable.
+            const friendly = friendlySignatureError(parsed);
+
+            toast.error(
+              friendly ?? {
+                title: "Couldn't generate the W-9",
+                description: parsed.message,
+              },
+            );
+          }
         } finally {
           toast.close(loadingKey);
         }
