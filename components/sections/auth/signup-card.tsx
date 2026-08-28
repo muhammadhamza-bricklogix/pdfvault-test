@@ -435,168 +435,146 @@ export function SignupCard({
           .unverifiedFields,
       });
 
-      // Sign the user in AND land back on the file they were editing
-      // (2026-08-28 user requirement). Three paths converge here:
+      // 2026-08-28 real-log evidence: the server returns 200 on all
+      // three sign_ups / prepare_verification / attempt_verification
+      // requests — the account and session ARE created — but
+      // `signUp.finalize` was silently no-op'ing (either
+      // `signUp.status` still read stale after the await, or
+      // Clerk's navigate callback didn't fire). Rework: skip
+      // finalize entirely and drive setActive + full-page nav
+      // ourselves whenever we can pin down a `createdSessionId`.
+      // That gives us both correctness (session cookie commits
+      // before we navigate) AND visibility (each step prints a
+      // distinctive log tag so we can see WHERE it stops if it
+      // still stalls).
       //
-      //   1. `signUp.status === "complete"` — happy path. Use
-      //      `signUp.finalize` which commits the session cookie AND
-      //      navigates in one call.
-      //
-      //   2. `verification_already_verified` recovery (log evidence
-      //      2026-08-28): Clerk SDK's `retryImmediately` retried our
-      //      verify request and the retry hit "already verified"
-      //      because the first request had already succeeded
-      //      server-side. The SDK stored the FAILED retry response,
-      //      wiping the `createdSessionId` from the successful first
-      //      call. `signUp.finalize` then throws "Cannot finalize
-      //      sign-up without a created session".
-      //
-      //      Recovery ladder for this case:
-      //      (a) If `signUp.createdSessionId` IS still present, call
-      //          `setActive({ session })` directly — cheaper than
-      //          finalize, and the session is what we need anyway.
-      //      (b) Else reload the Clerk client to re-sync from server
-      //          state, then re-check `createdSessionId` and setActive.
-      //      (c) Else the account exists server-side but we can't
-      //          recover the session client-side — redirect to
-      //          /sign-in with the email prefilled so the user can
-      //          log in with their new account. The pending file is
-      //          still in IDB, so post-signin the hydrator restores
-      //          it exactly as if they'd signed up cleanly.
+      // Priority ladder:
+      //   (A) verify returned 200 AND signUp.createdSessionId is
+      //       set → setActive({ session }) + navigate. Most common
+      //       happy path.
+      //   (B) verify returned "already verified" (SDK retry
+      //       artifact — see previous fix) AND we still have a
+      //       sessionId locally → same setActive path.
+      //   (C) No local sessionId → try `clerk.client.reload()` to
+      //       re-sync from the server, re-check `createdSessionId`.
+      //   (D) Still nothing → send the user to /sign-in with their
+      //       email; the account exists server-side and the pending
+      //       file waits in IDB, so post-signin the hydrator
+      //       restores it exactly as if they'd signed up cleanly.
       const alreadyVerifiedRecovery = Boolean(
         verifyError &&
           (verifyError as { errors?: { code?: string }[] })?.errors?.[0]
             ?.code === "verification_already_verified",
       );
 
-      const finalizeAndNavigate = async (): Promise<
-        { ok: true } | { ok: false; err: unknown }
-      > => {
-        try {
-          const { error: finalizeError } = await signUp.finalize({
-            navigate: ({ decorateUrl }) => {
-              // Invariant #15 — full-page nav for the iOS Safari
-              // cookie commit; suppress editor's beforeunload guard
-              // (AuthModal opens on top of an unsaved editor).
-              suppressNextUnload();
-              window.location.assign(decorateUrl(afterSignUpPath));
-            },
-          });
-
-          if (finalizeError) return { ok: false, err: finalizeError };
-
-          return { ok: true };
-        } catch (err) {
-          return { ok: false, err };
-        }
-      };
-
       const setActiveAndNavigate = async (
         sessionId: string,
+        via: string,
       ): Promise<boolean> => {
         try {
-          if (!setActiveSession) return false;
+          if (!setActiveSession) {
+            // eslint-disable-next-line no-console
+            console.error("[SIGNUP_FLOW] setActiveSession is null", { via });
+
+            return false;
+          }
+          // eslint-disable-next-line no-console
+          console.info("[SIGNUP_FLOW] setActive → nav", {
+            via,
+            sessionId,
+            afterSignUpPath,
+          });
           suppressNextUnload();
           await setActiveSession({ session: sessionId });
-          // `setActive` doesn't navigate; do it explicitly. Same full-
-          // page assign pattern (item #15) so the cookie commit lands
-          // before middleware runs on the destination route.
+          // Manual full-page nav (item #15 iOS Safari cookie commit).
           window.location.assign(afterSignUpPath);
 
           return true;
         } catch (err) {
-          logger.captureError(err, "signup.set_active_recovery");
+          logger.captureError(err, "signup.set_active", { via });
 
           return false;
         }
       };
 
-      if (signUp.status === "complete") {
-        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
-          redirectPath: afterSignUpPath,
-        });
-        const result = await finalizeAndNavigate();
-
-        if (!result.ok) {
-          logger.captureError(result.err, "signup.finalize");
-          setErrors({
-            code: readClerkError(
-              result.err,
-              "Couldn't finish creating your account.",
-            ),
-          });
-        }
-
-        return;
-      }
-
-      if (alreadyVerifiedRecovery) {
-        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
-          redirectPath: afterSignUpPath,
-          viaAlreadyVerifiedRecovery: true,
-        });
-
-        // Recovery step (a): try `createdSessionId` from the local
-        // signUp object.
-        const sessionId = (signUp as { createdSessionId?: string | null })
-          .createdSessionId;
-
-        if (sessionId && (await setActiveAndNavigate(sessionId))) return;
-
-        // Recovery step (b): re-sync Clerk client state from server
-        // and re-check. `clerk.client.reload()` refreshes the client's
-        // view of the currently-in-progress sign-up.
-        try {
-          if (clerk.client) {
-            await clerk.client.reload();
-            const refreshedSessionId = (
-              clerk.client.signUp as { createdSessionId?: string | null }
-            )?.createdSessionId;
-
-            if (
-              refreshedSessionId &&
-              (await setActiveAndNavigate(refreshedSessionId))
-            ) {
-              return;
-            }
-          }
-        } catch (reloadErr) {
-          logger.captureError(reloadErr, "signup.client_reload_recovery");
-        }
-
-        // Recovery step (c): account exists server-side but we can't
-        // resume the session from the client. Send the user to
-        // /sign-in with their email so they can complete manually. The
-        // pending file is still in IDB — the hydrator picks it back up
-        // on the composer mount after they log in.
-        logger.warn(
-          "signup.recover_via_signin: session_id missing, redirecting to /sign-in",
-          { emailAddress: email },
+      const readSessionId = (): string | null => {
+        return (
+          (signUp as { createdSessionId?: string | null }).createdSessionId ??
+          null
         );
-        suppressNextUnload();
-        window.location.assign(
-          `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}&email=${encodeURIComponent(email)}`,
-        );
+      };
 
-        return;
-      }
-
-      // Reached only when verify SUCCEEDED but signUp still isn't
-      // complete — typically Clerk dashboard requires fields our form
-      // doesn't collect. `missingFields` was logged above; surface a
-      // more actionable error to the user instead of the previous
-      // silent notice.
-      const missing =
-        (signUp as { missingFields?: string[] }).missingFields ?? [];
-      const unverified =
-        (signUp as { unverifiedFields?: string[] }).unverifiedFields ?? [];
-
-      setErrors({
-        form:
-          missing.length || unverified.length
-            ? `Your account still needs: ${[...missing, ...unverified].join(", ")}. Please contact support.`
-            : "Sign-up didn't complete. Please try again.",
+      // eslint-disable-next-line no-console
+      console.info("[SIGNUP_FLOW] post_verify_state", {
+        verifyStatus: verifyError ? "error" : "ok",
+        alreadyVerifiedRecovery,
+        signUpStatus: signUp.status,
+        createdSessionId: readSessionId(),
+        missingFields: (signUp as { missingFields?: string[] }).missingFields,
+        unverifiedFields: (signUp as { unverifiedFields?: string[] })
+          .unverifiedFields,
       });
+
+      // Path A + B combined — try local sessionId regardless of
+      // whether verify was clean or was the retry-artifact recovery.
+      const sessionId = readSessionId();
+
+      if (sessionId) {
+        if (
+          await setActiveAndNavigate(
+            sessionId,
+            alreadyVerifiedRecovery ? "already_verified_recovery" : "clean",
+          )
+        ) {
+          return;
+        }
+      }
+
+      // Path C — client re-sync + retry setActive. Fires when the
+      // local signUp object doesn't hold the sessionId (SDK's retry
+      // dropped it, or the server-side ok response landed but
+      // hadn't propagated to the client yet).
+      try {
+        if (clerk.client) {
+          // eslint-disable-next-line no-console
+          console.info("[SIGNUP_FLOW] reloading clerk.client");
+          await clerk.client.reload();
+          const refreshedSessionId = (
+            clerk.client.signUp as { createdSessionId?: string | null }
+          )?.createdSessionId;
+
+          // eslint-disable-next-line no-console
+          console.info("[SIGNUP_FLOW] post_reload", {
+            refreshedSessionId,
+            refreshedStatus: clerk.client.signUp?.status,
+          });
+
+          if (
+            refreshedSessionId &&
+            (await setActiveAndNavigate(
+              refreshedSessionId,
+              "post_reload_recovery",
+            ))
+          ) {
+            return;
+          }
+        }
+      } catch (reloadErr) {
+        logger.captureError(reloadErr, "signup.client_reload_recovery");
+      }
+
+      // Path D — fall back to /sign-in with the email prefilled so
+      // the user can complete the loop manually. Account exists,
+      // file is in IDB.
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[SIGNUP_FLOW] no session id — routing to /sign-in as fallback",
+        { email, afterSignUpPath },
+      );
+      suppressNextUnload();
+      window.location.assign(
+        `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}&email=${encodeURIComponent(email)}`,
+      );
     } catch (err) {
       logger.captureError(err, "signup.verify");
       setErrors({
