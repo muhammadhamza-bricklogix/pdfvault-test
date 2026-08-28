@@ -12,8 +12,9 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Input, Modal, TextField } from "@heroui/react";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 type FormatOption = {
@@ -125,6 +126,68 @@ function ExportFormatModalBody({
   const [fileName, setFileName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Duplicate-name check against the user's My PDFs library. Only runs
+  // on the W-9 route per product ask 2026-08-29 — the shell composer's
+  // Download flow uses `currentDocumentId`-based upserts and doesn't
+  // need this guard. Debounced 400 ms so the list-endpoint isn't hit
+  // on every keystroke, and cancellable so a rapid-fire rename doesn't
+  // race an older lookup back into view.
+  const [duplicateExists, setDuplicateExists] = useState(false);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const activeCheckId = useRef(0);
+  const selectedExt = useMemo(
+    () => visibleOptions.find((o) => o.id === selected)?.ext ?? ".pdf",
+    [visibleOptions, selected],
+  );
+  const fullFilename = useMemo(() => {
+    const trimmed = fileName.trim();
+
+    if (!trimmed) return "";
+    // Strip any user-supplied extension, then re-append the one that
+    // matches the currently-selected format so the duplicate check
+    // matches what the download will actually be named.
+    const base = trimmed.replace(/\.[^./\\]+$/, "");
+
+    return `${base}${selectedExt}`;
+  }, [fileName, selectedExt]);
+
+  useEffect(() => {
+    if (!isW9Route) return;
+    if (!fullFilename) {
+      setDuplicateExists(false);
+      setCheckingDuplicate(false);
+
+      return;
+    }
+    const checkId = ++activeCheckId.current;
+    let cancelled = false;
+
+    setCheckingDuplicate(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const match = await findDuplicateByFilename(fullFilename);
+
+        if (cancelled || checkId !== activeCheckId.current) return;
+        setDuplicateExists(Boolean(match));
+      } catch {
+        // Network / auth failures don't block download — user can
+        // still ship the file. Silent so an unrelated 401 doesn't
+        // spawn a scary red banner in the download modal.
+        if (cancelled || checkId !== activeCheckId.current) return;
+        setDuplicateExists(false);
+      } finally {
+        if (!cancelled && checkId === activeCheckId.current) {
+          setCheckingDuplicate(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [fullFilename, isW9Route]);
+
   const handleDownload = async () => {
     setIsSaving(true);
 
@@ -179,25 +242,46 @@ function ExportFormatModalBody({
 
       <Modal.Body className="space-y-5">
         {/* Editable file name — inline title style so users immediately
-            see it's the output filename and can click to rename it. */}
-        <div className="flex items-center gap-2 rounded-xl border border-default-200 bg-default-50 px-3 py-2.5">
-          <TextField
-            className="min-w-0 flex-1"
-            value={fileName}
-            onChange={setFileName}
+            see it's the output filename and can click to rename it.
+            W-9 route also runs a debounced duplicate-name check against
+            the user's My PDFs library (see effect above). */}
+        <div>
+          <div
+            className={`flex items-center gap-2 rounded-xl border bg-default-50 px-3 py-2.5 ${
+              duplicateExists
+                ? "border-danger-500 bg-danger-50"
+                : "border-default-200"
+            }`}
           >
-            <Input
-              aria-label="File name"
-              className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
-              id="export-file-name"
-              placeholder="document"
+            <TextField
+              className="min-w-0 flex-1"
+              value={fileName}
+              onChange={setFileName}
+            >
+              <Input
+                aria-invalid={duplicateExists}
+                aria-label="File name"
+                className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
+                id="export-file-name"
+                placeholder="document"
+              />
+            </TextField>
+            <HugeiconsIcon
+              className="shrink-0 text-default-400"
+              icon={PencilEdit01Icon}
+              size={15}
             />
-          </TextField>
-          <HugeiconsIcon
-            className="shrink-0 text-default-400"
-            icon={PencilEdit01Icon}
-            size={15}
-          />
+          </div>
+          {isW9Route && duplicateExists ? (
+            <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
+              A file named <span className="font-semibold">{fullFilename}</span>{" "}
+              already exists in My PDFs. Rename to keep both copies.
+            </p>
+          ) : isW9Route && checkingDuplicate ? (
+            <p className="mt-1.5 px-1 text-[12px] text-default-400">
+              Checking name…
+            </p>
+          ) : null}
         </div>
 
         {/* Format tiles — grid width adapts to the number of visible
@@ -251,7 +335,7 @@ function ExportFormatModalBody({
       <Modal.Footer className="justify-center">
         <Button
           className="w-[90%]"
-          isDisabled={!file || isSaving}
+          isDisabled={!file || isSaving || duplicateExists}
           onPress={handleDownload}
         >
           {!isSaving && (
