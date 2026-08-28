@@ -1,6 +1,9 @@
 "use client";
 
-import type { CheckoutIntent } from "@/lib/shared/types/billing.types";
+import type {
+  CheckoutIntent,
+  Invoice,
+} from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
 import { Tick01Icon } from "@hugeicons/core-free-icons";
@@ -12,6 +15,10 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { SiAmericanexpress, SiVisa } from "react-icons/si";
 
+import {
+  generateReceiptPdf,
+  receiptFileName,
+} from "@/lib/client/billing/generate-receipt-pdf";
 import {
   useCreateCheckoutIntentMutation,
   useSyncSubscriptionMutation,
@@ -1050,6 +1057,7 @@ function SuccessStep({
   const renew = formatMinor(intent.amountRenewMinor, intent.currency);
   const nextDate = formatFullRenewalDate();
   const onFinishRef = useRef(onFinish);
+  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -1065,14 +1073,65 @@ function SuccessStep({
     }
   }, []);
 
-  // Auto-proceed after 1.5 s so gated actions (downloads, conversions)
-  // kick off without requiring an extra click. The user still has the
-  // button to proceed immediately.
-  useEffect(() => {
-    const id = window.setTimeout(() => onFinishRef.current(), 1500);
+  // 2026-08-28: auto-dismiss removed. Users asked to stay on the
+  // success step so they can download the receipt inline. The user
+  // now clicks Continue to fire any pending gated action (download /
+  // conversion) — the paywall bus resolves either way when the modal
+  // closes, so nothing is silently dropped. The previous 1.5 s auto-
+  // proceed feedback (`Download auto-start`) is superseded by this
+  // more explicit flow.
 
-    return () => window.clearTimeout(id);
-  }, []);
+  // Download the receipt inline. Synthesizes an `Invoice` from the
+  // CheckoutIntent so we don't need to wait for the backend to
+  // materialize the real invoice row (that arrives on the next
+  // Solidgate webhook, typically seconds after the payment settles).
+  // Once the row lands, the /dashboard/settings/billing table shows
+  // the same receipt via the existing InvoicesTable flow.
+  const handleDownloadReceipt = async () => {
+    if (isGeneratingReceipt) return;
+    setIsGeneratingReceipt(true);
+    try {
+      const invoice: Invoice = {
+        id: intent.orderId,
+        amountMinor: intent.amountTodayMinor,
+        currency: intent.currency,
+        status: "APPROVED",
+        type: intent.amountTodayMinor === 0 ? "TRIAL" : "RECURRING",
+        invoiceNumber: null,
+        invoiceUrl: null,
+        paidAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      const bytes = await generateReceiptPdf(invoice, {
+        customerEmail: null,
+        planName: `Full Access · ${selectedPlan === "annual" ? "Annual" : "Monthly"}`,
+      });
+      const blob = new Blob([bytes as BlobPart], {
+        type: "application/pdf",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = receiptFileName(invoice);
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      logger.captureError(err, "paywall.receipt_download");
+      toast.error({
+        title: "Couldn't download receipt",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Try again from Settings → Billing.",
+      });
+    } finally {
+      setIsGeneratingReceipt(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-5 p-8 text-center">
@@ -1136,12 +1195,14 @@ function SuccessStep({
         Continue
         <span aria-hidden>→</span>
       </button>
-      <a
-        className="flex h-[48px] w-full cursor-pointer items-center justify-center rounded-2xl border border-[#ececec] text-[14px] font-medium text-[#1a1c21] transition-colors hover:bg-[#fafafa]"
-        href="/dashboard/settings/billing"
+      <button
+        className="flex h-[48px] w-full cursor-pointer items-center justify-center rounded-2xl border border-[#ececec] text-[14px] font-medium text-[#1a1c21] transition-colors hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={isGeneratingReceipt}
+        type="button"
+        onClick={() => void handleDownloadReceipt()}
       >
-        View receipt
-      </a>
+        {isGeneratingReceipt ? "Preparing receipt…" : "Download receipt"}
+      </button>
     </div>
   );
 }

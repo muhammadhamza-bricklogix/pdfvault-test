@@ -49,7 +49,7 @@ export function InvoicesTable() {
             <th className="px-3 py-2">Invoice</th>
             <th className="px-3 py-2">Amount</th>
             <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2 text-right">Receipt</th>
+            <th className="px-3 py-2 text-right">Receipt actions</th>
           </tr>
         </thead>
         <tbody>

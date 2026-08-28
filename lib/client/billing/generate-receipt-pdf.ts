@@ -45,10 +45,18 @@ export interface ReceiptContext {
 }
 
 function formatMoney(amountMinor: number, currency: string): string {
+  // `currencyDisplay: "code"` returns "USD 12.99" / "EUR 12.99" — always
+  // 7-bit ASCII, so it survives the WinAnsi sanitizer that runs on
+  // every drawText call. The pre-2026-08-28 default (symbol) rendered
+  // to "€12.99", which the sanitizer stripped down to "?12.99" because
+  // U+20AC is outside the printable ASCII range — receipts lost the
+  // currency indicator entirely. Using the ISO code both keeps the
+  // currency visible AND makes the receipt unambiguous across locales.
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency,
+      currencyDisplay: "code",
       minimumFractionDigits: 2,
     }).format(amountMinor / 100);
   } catch {
