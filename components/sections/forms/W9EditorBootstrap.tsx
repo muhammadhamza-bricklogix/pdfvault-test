@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
-import { readPendingW9Values } from "@/lib/client/forms/pending-w9-values";
+import { readPendingW9State } from "@/lib/client/forms/pending-w9-values";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
@@ -99,26 +99,35 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       if (cancelled) return;
       useFormEditorStore.getState().hydrateFromSession(session);
 
-      // Restore any values persisted locally (W9AutoPersist writes on
-      // every change; sign-in redirects also stash values here). We do
-      // NOT clear the storage after reading — W9AutoPersist keeps it
-      // fresh, so a subsequent refresh with no new typing still
-      // restores the same partial fill. Only `clearPendingW9Values` on
-      // successful finalize (see W9FinalizeIntercept). Signature is
-      // intentionally not restored — the fresh session's S3 namespace
-      // rejects the previous key.
-      const pending = readPendingW9Values();
+      // Restore any partial state persisted locally (W9AutoPersist
+      // writes values + signature preview on every change; sign-in
+      // redirects also stash values here). We do NOT clear the
+      // storage after reading — W9AutoPersist keeps it fresh, so a
+      // subsequent refresh with no new typing still restores the
+      // same partial fill.
+      //
+      // Signature key stays null: the fresh session's S3 namespace
+      // won't accept the previous key. Instead we restore the local
+      // data-URL preview so the overlay paints the user's signature
+      // immediately, and `ensureSignatureKeyForSession` re-uploads it
+      // to the new session at finalize time.
+      const pending = readPendingW9State();
 
-      if (pending && Object.keys(pending).length > 0) {
-        useFormEditorStore.getState().setValues(pending);
-        // Immediately mirror the restored values into the freshly
-        // created backend session so the DB row for THIS user reflects
-        // the pending state even before the user types anything new.
-        // Fire-and-forget — auto-persist will keep it in sync going
-        // forward, and a failure here doesn't block the editor.
-        formsService
-          .patchFormSession(session.id, pending)
-          .catch(() => undefined);
+      if (pending) {
+        if (Object.keys(pending.values).length > 0) {
+          useFormEditorStore.getState().setValues(pending.values);
+          // Mirror restored values into the freshly created backend
+          // session so the DB row for THIS user matches the pending
+          // state even before the user types anything new.
+          formsService
+            .patchFormSession(session.id, pending.values)
+            .catch(() => undefined);
+        }
+        if (pending.signaturePreview) {
+          useFormEditorStore
+            .getState()
+            .setSignaturePreview(pending.signaturePreview);
+        }
       }
     })().catch((err: unknown) => {
       // Session failure is non-fatal — the pdf-composer editor still

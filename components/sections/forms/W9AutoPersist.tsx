@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
+import { savePendingW9State } from "@/lib/client/forms/pending-w9-values";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
@@ -18,19 +18,22 @@ const LOCAL_DEBOUNCE_MS = 400;
 const DB_DEBOUNCE_MS = 1200;
 
 /**
- * Mirrors `useFormEditorStore.values` into TWO places on every change:
+ * Mirrors the mutable W-9 form state (`values` + `signaturePreview`)
+ * into two places on every change:
  *
- *   1. `sessionStorage` (via `savePendingW9Values`). Instant, no
- *      network hop, powers the same-tab refresh restore path that
- *      `W9EditorBootstrap` reads on mount.
+ *   1. `sessionStorage` (via `savePendingW9State`). Instant, no network
+ *      hop, powers the same-tab refresh restore path that
+ *      `W9EditorBootstrap` reads on mount. Preview lives here as a
+ *      data URL so a fresh session on remount can re-upload it and get
+ *      a valid `signatureKey` without asking the user to redraw.
  *   2. The backend form session (via `formsService.patchFormSession`).
- *      Longer debounce so a burst of typing coalesces into one PATCH.
- *      Fire-and-forget — errors are logged but never toasted, matching
- *      the "silent auto-save" contract the user asked for.
+ *      Only the `values` half — the signature blob is uploaded through
+ *      the dedicated `/signature` endpoint, and PATCH's `values` shape
+ *      wouldn't accept it anyway. Fire-and-forget; errors are logged
+ *      but never toasted, matching the "silent auto-save" contract.
  *
  * Deliberate non-features:
- *   - No toast. Auto-save is silent per user request; the save chip
- *     already surfaces document-level state for the finalized copy.
+ *   - No toast. Auto-save is silent per user request.
  *   - No finalize call. Finalize requires a signature + is paid —
  *     PATCH keeps the partial values in the DB row without either.
  */
@@ -38,11 +41,16 @@ export function W9AutoPersist() {
   useEffect(() => {
     let localTimeout: number | null = null;
     let dbTimeout: number | null = null;
-    let latest = useFormEditorStore.getState().values;
+    const snap = () => {
+      const s = useFormEditorStore.getState();
+
+      return { values: s.values, signaturePreview: s.signaturePreview };
+    };
+    let latest = snap();
 
     const flushLocal = () => {
       localTimeout = null;
-      savePendingW9Values(latest);
+      savePendingW9State(latest);
     };
 
     const flushDb = () => {
@@ -50,19 +58,26 @@ export function W9AutoPersist() {
       const { sessionId } = useFormEditorStore.getState();
 
       if (!sessionId) return;
-      formsService.patchFormSession(sessionId, latest).catch((err: unknown) => {
-        logger.captureError(err, "w9.auto_persist_patch", { sessionId });
-      });
+      formsService
+        .patchFormSession(sessionId, latest.values)
+        .catch((err: unknown) => {
+          logger.captureError(err, "w9.auto_persist_patch", { sessionId });
+        });
     };
 
     const unsub = useFormEditorStore.subscribe((state, prev) => {
-      if (state.values === prev.values) return;
-      latest = state.values;
+      const valuesChanged = state.values !== prev.values;
+      const previewChanged = state.signaturePreview !== prev.signaturePreview;
+
+      if (!valuesChanged && !previewChanged) return;
+      latest = snap();
 
       if (localTimeout === null) {
         localTimeout = window.setTimeout(flushLocal, LOCAL_DEBOUNCE_MS);
       }
-      if (dbTimeout === null) {
+      // Only PATCH when the values changed — signature isn't part of
+      // the PATCH payload.
+      if (valuesChanged && dbTimeout === null) {
         dbTimeout = window.setTimeout(flushDb, DB_DEBOUNCE_MS);
       }
     });
@@ -71,19 +86,15 @@ export function W9AutoPersist() {
       unsub();
       if (localTimeout !== null) {
         window.clearTimeout(localTimeout);
-        // Sync flush on unmount so a route change doesn't drop the
-        // last few keystrokes typed inside the debounce window.
-        savePendingW9Values(latest);
+        savePendingW9State(latest);
       }
       if (dbTimeout !== null) {
         window.clearTimeout(dbTimeout);
-        // Best-effort DB flush on unmount too. Failure is swallowed —
-        // the local flush above already covers the same-tab reload.
         const { sessionId } = useFormEditorStore.getState();
 
         if (sessionId) {
           formsService
-            .patchFormSession(sessionId, latest)
+            .patchFormSession(sessionId, latest.values)
             .catch((err: unknown) => {
               logger.captureError(err, "w9.auto_persist_patch_unmount", {
                 sessionId,

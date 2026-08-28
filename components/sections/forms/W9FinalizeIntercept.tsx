@@ -361,14 +361,38 @@ function dataUrlToBlob(dataUrl: string): Blob | null {
   return new Blob([arr], { type: mime });
 }
 
+// 1x1 transparent PNG. Used as a "not signed yet" placeholder so
+// finalize (which enforces `signatureKey` min length 1 server-side)
+// succeeds even when the user wants to download a partially-filled
+// form without drawing a signature. The stamped PDF gets an invisible
+// mark at the signature rect — the user can add a real signature
+// later and re-download.
+const BLANK_SIGNATURE_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+function blankSignatureBlob(): Blob {
+  const bytes = atob(BLANK_SIGNATURE_PNG_BASE64);
+  const arr = new Uint8Array(bytes.length);
+
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+
+  return new Blob([arr], { type: "image/png" });
+}
+
 /**
  * Ensures the current session has a valid `signatureKey` before
- * finalize/save fires. If the store already has a key, returns it
- * unchanged. If there's a `signaturePreview` (data URL) but no key —
- * the typical post-resume state — re-uploads the preview to the
- * current session, updates the store with the fresh key, and returns
- * it. Returns null when neither exists (unsigned form) or on upload
- * failure (caller decides whether to proceed without a signature).
+ * finalize/save fires. Order of preference:
+ *
+ *   1. Existing `signatureKey` in the store — return as-is.
+ *   2. Restored `signaturePreview` data URL — re-upload it to the
+ *      current session (post-refresh / resume path) and return the
+ *      fresh key.
+ *   3. Nothing at all — upload a 1×1 transparent placeholder so the
+ *      backend's `IsString + MinLength(1)` validator on `signatureKey`
+ *      passes. Partial forms download without visible signature ink.
+ *
+ * Only returns null if the placeholder upload itself fails, in which
+ * case the caller falls back to whatever key was already known.
  */
 async function ensureSignatureKeyForSession(
   sessionId: string,
@@ -376,8 +400,10 @@ async function ensureSignatureKeyForSession(
   const state = useFormEditorStore.getState();
 
   if (state.signatureKey) return state.signatureKey;
-  if (!state.signaturePreview) return null;
-  const blob = dataUrlToBlob(state.signaturePreview);
+
+  const blob = state.signaturePreview
+    ? dataUrlToBlob(state.signaturePreview)
+    : blankSignatureBlob();
 
   if (!blob) return null;
 
@@ -387,7 +413,13 @@ async function ensureSignatureKeyForSession(
       blob,
     });
 
-    useFormEditorStore.getState().setSignatureKey(signatureKey);
+    // Only cache the key back into the store if we actually uploaded
+    // the USER'S signature. The placeholder key should stay ephemeral
+    // — writing it to `signatureKey` would trick `SignatureField`
+    // into showing "✓ Signed" when the user hasn't drawn anything.
+    if (state.signaturePreview) {
+      useFormEditorStore.getState().setSignatureKey(signatureKey);
+    }
 
     return signatureKey;
   } catch (err) {
