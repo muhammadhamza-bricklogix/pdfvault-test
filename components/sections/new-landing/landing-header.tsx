@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { FormsModal } from "@/components/shared/forms-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
@@ -17,6 +18,29 @@ import { AllToolsCatalog } from "./all-tools-catalog";
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
 
 type NavLink = { label: string; href: string };
+
+// Editor / tool routes where a signed-out user may have a pending file
+// waiting in the upload workspace or IndexedDB. When the modal opens
+// from one of these routes we hand `redirectUrl=<current path>` down
+// to LoginCard/SignupCard so the finalize `window.location.assign(…)`
+// (item #15) lands back with the pending work intact. Non-editor
+// routes (/, /all-tools) omit `redirectUrl` — the cards fall back to
+// the dashboard default.
+const AUTH_RETURN_ROUTES = [
+  "/pdf-composer",
+  "/pdf-editor",
+  "/w-9-form",
+  "/forms/w-9",
+  "/convert/",
+] as const;
+
+function authReturnUrlFor(pathname: string): string | undefined {
+  const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
+    pathname.startsWith(prefix),
+  );
+
+  return returnHere ? pathname : undefined;
+}
 
 // Primary nav tools — real routes, not `#hash` anchors. Order per PM
 // review 2026-07: Edit → Convert → Compress. AI Summarizer hidden until
@@ -213,23 +237,24 @@ export function LandingHeader() {
                   </button>
                 </>
               ) : (
-                <>
-                  <Link
-                    className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-                    href={ROUTES.AUTH.SIGN_IN}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    // Desktop-only. On mobile the hamburger drawer owns the
-                    // "Get started" CTA, so we hide it in the top bar to
-                    // eliminate the duplicate QA flagged (2026-08-19).
-                    className="pv-btn-primary hidden px-5 py-1.5 text-[14px] lg:inline-flex"
-                    href={ROUTES.AUTH.SIGN_UP}
-                  >
-                    Get started
-                  </Link>
-                </>
+                // Single "Login" CTA — modal hosts both sign-in and
+                // sign-up (in-card tab switch). Removed the second
+                // "Get started" button per the 2026-08-28 unify (PM).
+                // `redirectUrl` only when this route has pending file /
+                // upload work; the modal's cards still do the item #15
+                // finalize `window.location.assign(…)` on success.
+                <button
+                  className="pv-btn-primary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                  type="button"
+                  onClick={() =>
+                    dispatchAuthModal({
+                      mode: "login",
+                      redirectUrl: authReturnUrlFor(pathname ?? ""),
+                    })
+                  }
+                >
+                  Login
+                </button>
               )
             ) : null}
 
@@ -351,22 +376,23 @@ export function LandingHeader() {
                       </button>
                     </>
                   ) : (
-                    <>
-                      <Link
-                        className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                        href={ROUTES.AUTH.SIGN_IN}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        Login
-                      </Link>
-                      <Link
-                        className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                        href={ROUTES.AUTH.SIGN_UP}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        Get started
-                      </Link>
-                    </>
+                    // Mobile drawer variant of the single Login CTA
+                    // (see desktop branch above). Close the drawer
+                    // BEFORE dispatching so the modal renders over the
+                    // regular page chrome, not over the drawer scrim.
+                    <button
+                      className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        dispatchAuthModal({
+                          mode: "login",
+                          redirectUrl: authReturnUrlFor(pathname ?? ""),
+                        });
+                      }}
+                    >
+                      Login
+                    </button>
                   )
                 ) : null}
               </li>

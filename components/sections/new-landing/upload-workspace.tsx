@@ -25,7 +25,7 @@ import {
   loadPendingEditorFile,
   savePendingEditorFile,
 } from "@/lib/client/upload/pending-editor-file";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -341,11 +341,13 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        dispatchSignInPrompt({
-          title: "Sign in to convert",
-          description:
-            "Sign in and we'll bring you back here to finish — you won't have to re-upload.",
-          confirmLabel: "Sign in & continue",
+        // AuthModal (2026-08-28 unify). Invariant #17: post-signin
+        // return by direction still runs unchanged — the cards'
+        // `window.location.assign(returnPath)` (item #15) lands the
+        // user back on the same /convert/[slug] route with the saved
+        // file waiting in IDB.
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: returnPath,
         });
 

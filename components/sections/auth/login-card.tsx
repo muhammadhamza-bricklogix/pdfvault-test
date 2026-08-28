@@ -119,7 +119,29 @@ type SecondFactorStrategy =
   | "totp"
   | "backup_code";
 
-export function LoginCard() {
+type LoginCardProps = {
+  /**
+   * Post-signin destination. When omitted, falls back to
+   * `useSearchParams().get('redirect_url')` so the standalone
+   * `/sign-in` page keeps working unchanged. AuthModal passes this in
+   * directly because it isn't rendered under `/sign-in?redirect_url=…`.
+   * Either way the finalize nav is still `window.location.assign(…)`
+   * per CLAUDE.md invariant #15 — do not swap for `router.push`.
+   */
+  redirectUrl?: string;
+  /**
+   * When rendered inside a modal, calling this switches the modal's
+   * mode to signup instead of navigating to `/sign-up`. When omitted
+   * (standalone page), the "Sign up" link falls back to a `<Link>` so
+   * the standalone route still works.
+   */
+  onSwitchToSignup?: () => void;
+};
+
+export function LoginCard({
+  redirectUrl,
+  onSwitchToSignup,
+}: LoginCardProps = {}) {
   const { signIn } = useSignIn();
   const searchParams = useSearchParams();
 
@@ -153,8 +175,11 @@ export function LoginCard() {
 
   const afterSignInPath = useMemo(
     () =>
-      safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
-    [searchParams],
+      safeRedirectPath(
+        redirectUrl ?? searchParams.get("redirect_url"),
+        ROUTES.APP.DASHBOARD,
+      ),
+    [redirectUrl, searchParams],
   );
 
   // Post-verify navigation. Invariant #15: iOS Safari commits the Clerk
@@ -922,12 +947,26 @@ export function LoginCard() {
       {step === "credentials" ? (
         <p className="mt-6 text-center text-[15px] text-[#5f5f5f]">
           Do not have an account yet?{" "}
-          <Link
-            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-            href={signUpHref}
-          >
-            Get Started
-          </Link>
+          {onSwitchToSignup ? (
+            // Modal mode — switch tabs inside the AuthModal instead of
+            // navigating to the standalone /sign-up page (which would
+            // unmount the modal and lose the pending file / redirectUrl
+            // context the caller set up).
+            <button
+              className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              type="button"
+              onClick={onSwitchToSignup}
+            >
+              Get Started
+            </button>
+          ) : (
+            <Link
+              className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              href={signUpHref}
+            >
+              Get Started
+            </Link>
+          )}
         </p>
       ) : null}
     </section>

@@ -9,7 +9,7 @@ import type {
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -143,11 +143,15 @@ export function usePaywall() {
                 ? "/"
                 : `${window.location.pathname}${window.location.search}`;
 
-            dispatchSignInPrompt({
-              title: "Sign in to continue",
-              description:
-                "This action requires an account. Sign in and we'll bring you back to finish where you left off.",
-              confirmLabel: "Sign in & continue",
+            // Signed-out paywall trigger — open AuthModal directly.
+            // Preserves item #5's intent (route signed-out users
+            // through auth before the paywall's `/billing/checkout-intent`
+            // POST, which needs a JWT). Cards' finalize still does
+            // `window.location.assign(returnTo)` (item #15), so the
+            // guarded action re-fires from the queued caller after
+            // signin, same as before.
+            dispatchAuthModal({
+              mode: "login",
               redirectUrl: returnTo,
             });
             resolve("cancelled");

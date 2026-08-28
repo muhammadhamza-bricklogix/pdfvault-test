@@ -10,7 +10,7 @@ import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitl
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -438,12 +438,12 @@ export function W9FinalizeIntercept() {
         // the new session's S3 namespace won't accept the old key.
         savePendingW9Values(values);
 
-        dispatchSignInPrompt({
-          title: "Sign in to download",
-          description:
-            "Sign in and we'll bring you back to finish your W-9 with your entries preserved.",
-          confirmLabel: "Sign in & continue",
-          destination: "sign-in",
+        // AuthModal (2026-08-28 unify). Cards' finalize does
+        // `window.location.assign(ROUTES.FORMS.W9)` (item #15) →
+        // W9EditorBootstrap re-hydrates the persisted values on the
+        // post-signin mount.
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: ROUTES.FORMS.W9,
         });
 
@@ -714,12 +714,11 @@ export function W9FinalizeIntercept() {
 
       if (!isSignedInRef.current) {
         savePendingW9Values(values);
-        dispatchSignInPrompt({
-          title: "Sign in to save",
-          description:
-            "Sign in and we'll bring you back to finish your W-9 with your entries preserved.",
-          confirmLabel: "Sign in & continue",
-          destination: "sign-in",
+        // AuthModal (2026-08-28 unify) — same rationale as the sibling
+        // download branch above (item #15 finalize + W9EditorBootstrap
+        // rehydrate on return).
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: ROUTES.FORMS.W9,
         });
 
@@ -795,8 +794,7 @@ export function W9FinalizeIntercept() {
               // (see fields/SignatureField.tsx) — and the fresh
               // session on reopen doesn't have this cached anywhere
               // else (QA 2026-08-28).
-              signaturePreview:
-                useFormEditorStore.getState().signaturePreview,
+              signaturePreview: useFormEditorStore.getState().signaturePreview,
             },
           });
 
@@ -943,8 +941,7 @@ export function W9FinalizeIntercept() {
               // (see fields/SignatureField.tsx) — and the fresh
               // session on reopen doesn't have this cached anywhere
               // else (QA 2026-08-28).
-              signaturePreview:
-                useFormEditorStore.getState().signaturePreview,
+              signaturePreview: useFormEditorStore.getState().signaturePreview,
             },
           });
           const document = await documentsService.uploadDocument({

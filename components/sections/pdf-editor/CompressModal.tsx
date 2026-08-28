@@ -23,7 +23,7 @@ import {
 import { useCompressFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -97,10 +97,11 @@ export function CompressModal() {
 
       const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=compress`;
 
-      dispatchSignInPrompt({
-        title: "Sign in to compress",
-        description: "Sign in and we'll bring you back here to finish.",
-        confirmLabel: "Sign in & continue",
+      // AuthModal (2026-08-28 unify). Cards finalize with
+      // `window.location.assign(returnTo)`; hydrator re-opens the
+      // compress modal via step #4 on return.
+      dispatchAuthModal({
+        mode: "login",
         redirectUrl: returnTo,
       });
 

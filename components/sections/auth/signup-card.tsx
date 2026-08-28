@@ -91,7 +91,27 @@ const LABEL_CLASS = "block text-[14px] leading-[18px] text-[#6f6f6f]";
 type Mode = "code" | "password";
 type Step = "credentials" | "verify";
 
-export function SignupCard() {
+type SignupCardProps = {
+  /**
+   * Post-signup destination. When omitted, falls back to
+   * `useSearchParams().get('redirect_url')` so the standalone
+   * `/sign-up` page keeps working unchanged. AuthModal passes this
+   * directly. Finalize nav is still `window.location.assign(…)` per
+   * CLAUDE.md invariant #15 — do not swap for `router.push`.
+   */
+  redirectUrl?: string;
+  /**
+   * When rendered inside a modal, switches the modal's mode to login
+   * instead of navigating to `/sign-in`. When omitted, the "Log In"
+   * link falls back to a `<Link>` so the standalone route still works.
+   */
+  onSwitchToLogin?: () => void;
+};
+
+export function SignupCard({
+  redirectUrl,
+  onSwitchToLogin,
+}: SignupCardProps = {}) {
   const { signUp } = useSignUp();
   const searchParams = useSearchParams();
 
@@ -115,8 +135,11 @@ export function SignupCard() {
 
   const afterSignUpPath = useMemo(
     () =>
-      safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
-    [searchParams],
+      safeRedirectPath(
+        redirectUrl ?? searchParams.get("redirect_url"),
+        ROUTES.APP.DASHBOARD,
+      ),
+    [redirectUrl, searchParams],
   );
 
   // Enables/disables the primary CTA. In code mode only the email needs
@@ -586,16 +609,29 @@ export function SignupCard() {
 
       <p className="mt-[28px] text-center text-[16px] text-[#4c4c4c]">
         Already have an account?{" "}
-        <Link
-          className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={
-            afterSignUpPath !== ROUTES.APP.DASHBOARD
-              ? `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}`
-              : ROUTES.AUTH.SIGN_IN
-          }
-        >
-          Log In
-        </Link>
+        {onSwitchToLogin ? (
+          // Modal mode — switch tabs inside the AuthModal instead of
+          // navigating to /sign-in (which would unmount the modal and
+          // discard the caller's pending file / redirectUrl context).
+          <button
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            type="button"
+            onClick={onSwitchToLogin}
+          >
+            Log In
+          </button>
+        ) : (
+          <Link
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            href={
+              afterSignUpPath !== ROUTES.APP.DASHBOARD
+                ? `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}`
+                : ROUTES.AUTH.SIGN_IN
+            }
+          >
+            Log In
+          </Link>
+        )}
       </p>
 
       {/* Terms & Privacy — passive statement replaces the previous

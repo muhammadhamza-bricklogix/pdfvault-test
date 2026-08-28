@@ -1,4 +1,4 @@
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { toast } from "@/lib/shared/utils/toast";
@@ -66,11 +66,11 @@ export async function saveBeforeAction(
         // drops my edits" bug for save-before-action callers.
         await snapshotPendingEditorFile().catch(() => undefined);
 
-        dispatchSignInPrompt({
-          title: "Sign in to continue",
-          description:
-            "Save your edits and open Manage Pages. We'll bring you right back to your document.",
-          confirmLabel: "Sign in & continue",
+        // AuthModal (2026-08-28 unify). Cards' finalize
+        // `window.location.assign(returnTo)` (item #15) lands the user
+        // back on the same route with the snapshotted file intact.
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: returnTo,
         });
       } else {

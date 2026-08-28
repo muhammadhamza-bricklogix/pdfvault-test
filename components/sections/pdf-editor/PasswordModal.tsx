@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { Button, Label, Modal } from "@heroui/react";
 import { useState } from "react";
 
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { verifyPdfPassword } from "@/lib/client/pdf-editor/verify-pdf-password";
 import {
@@ -88,11 +88,13 @@ export function PasswordModal() {
     const slug = m === "protect" ? "password" : "unlock";
     const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${slug}`;
 
-    dispatchSignInPrompt({
-      title:
-        m === "protect" ? "Sign in to password protect" : "Sign in to unlock",
-      description: "Sign in and we'll bring you back here to finish.",
-      confirmLabel: "Sign in & continue",
+    // Open the shared AuthModal directly (2026-08-28 unify). Cards'
+    // finalize `window.location.assign(returnTo)` (item #15) drops the
+    // user back on the composer with `?tool=<slug>`, so the hydrator
+    // re-opens THIS PasswordModal via step #4 after signin — same
+    // effective flow as the old SignInPromptModal, one fewer click.
+    dispatchAuthModal({
+      mode: "login",
       redirectUrl: returnTo,
     });
     setIsOpen(false);

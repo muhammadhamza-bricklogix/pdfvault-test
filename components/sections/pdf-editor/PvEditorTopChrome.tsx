@@ -42,7 +42,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
@@ -395,11 +395,11 @@ function TopAppBar() {
                 // full-page sign-in redirect so the hydrator restores the
                 // full editor state on return.
                 void snapshotPendingEditorFile().catch(() => undefined);
-                dispatchSignInPrompt({
-                  title: "Sign in to save",
-                  description:
-                    "Create an account and we'll bring you right back to save your document where you left off.",
-                  confirmLabel: "Sign in & continue",
+                // AuthModal (2026-08-28 unify). Cards' finalize does
+                // the item #15 `window.location.assign` — hydrator
+                // restores the snapshotted file on return.
+                dispatchAuthModal({
+                  mode: "signup",
                   redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
                 });
 
