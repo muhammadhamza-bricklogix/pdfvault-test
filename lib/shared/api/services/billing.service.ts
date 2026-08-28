@@ -6,6 +6,7 @@ import type {
   SubscriptionSnapshot,
 } from "@/lib/shared/types/billing.types";
 
+import { getStoredGoogleClickIds } from "@/lib/client/analytics/google-click-id";
 import { apiClient } from "@/lib/config/api-client";
 import { BILLING } from "@/lib/shared/constants/endpoints";
 
@@ -26,9 +27,22 @@ async function getSubscription(): Promise<SubscriptionSnapshot> {
 async function createCheckoutIntent(
   input: CheckoutIntentRequest,
 ): Promise<CheckoutIntent> {
+  // Enrich with whichever Google Ads click IDs were captured on the
+  // landing URL (see `GoogleAdsClickBoot`). Explicit-input fields still
+  // win — callers can override in tests. Undefined fields are omitted so
+  // the JSON payload stays clean when the user didn't arrive via an ad.
+  const stored = getStoredGoogleClickIds();
+  const enriched: CheckoutIntentRequest = {
+    ...(stored.gclid ? { gclid: stored.gclid } : {}),
+    ...(stored.gbraid ? { gbraid: stored.gbraid } : {}),
+    ...(stored.wbraid ? { wbraid: stored.wbraid } : {}),
+    ...(stored.clickTimestamp ? { clickTimestamp: stored.clickTimestamp } : {}),
+    ...input,
+  };
+
   const { data } = await apiClient.post<CheckoutIntent>(
     BILLING.CHECKOUT_INTENT,
-    input,
+    enriched,
   );
 
   return data;

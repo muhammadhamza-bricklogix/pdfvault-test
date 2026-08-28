@@ -1,11 +1,12 @@
 "use client";
 
-import { useSignUp } from "@clerk/nextjs";
+import { useClerk, useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -69,6 +70,22 @@ function humaniseClerkMessage(raw: string, code?: string): string {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Same helper as `login-card.maskEmail` — kept local so the two cards
+ * stay independently readable. Masks the local part of an email for
+ * the verify-step subtitle ("Please check your email hou***@gmail.com.").
+ */
+function maskEmailAddress(raw: string): string {
+  const at = raw.indexOf("@");
+
+  if (at <= 0) return raw;
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at);
+  const visible = local.slice(0, Math.min(3, local.length));
+
+  return `${visible}***${domain}`;
+}
+
 type FieldErrors = {
   email?: string;
   password?: string;
@@ -82,20 +99,56 @@ const INPUT_CLASS =
 const LABEL_CLASS = "block text-[14px] leading-[18px] text-[#6f6f6f]";
 
 // Signup mode.
-//   - "code"     → default. Passwordless signup: create({ emailAddress })
-//                  then verifications.sendEmailCode() + verifyEmailCode().
-//   - "password" → email + password: signUp.password({ ... }) then
-//                  verifications.sendEmailCode() + verifyEmailCode()
-//                  (previous behavior).
+//   - "password" → default (2026-08-28). Email + password:
+//                  signUp.password({ ... }) then
+//                  verifications.sendEmailCode() + verifyEmailCode().
+//                  Required by Clerk instances that mandate a password —
+//                  the previous "code" default returned 200 on every
+//                  server call but left the sign-up in
+//                  `missing_requirements`, so no session was created.
+//   - "code"     → passwordless: create({ emailAddress }) then
+//                  verifications.sendEmailCode() + verifyEmailCode().
+//                  Kept as opt-in for instances configured to allow it.
 // Both paths converge on the same "verify" step, so the code UI is shared.
 type Mode = "code" | "password";
 type Step = "credentials" | "verify";
 
-export function SignupCard() {
+type SignupCardProps = {
+  /**
+   * Post-signup destination. When omitted, falls back to
+   * `useSearchParams().get('redirect_url')` so the standalone
+   * `/sign-up` page keeps working unchanged. AuthModal passes this
+   * directly. Finalize nav is still `window.location.assign(…)` per
+   * CLAUDE.md invariant #15 — do not swap for `router.push`.
+   */
+  redirectUrl?: string;
+  /**
+   * When rendered inside a modal, switches the modal's mode to login
+   * instead of navigating to `/sign-in`. When omitted, the "Log In"
+   * link falls back to a `<Link>` so the standalone route still works.
+   */
+  onSwitchToLogin?: () => void;
+};
+
+export function SignupCard({
+  redirectUrl,
+  onSwitchToLogin,
+}: SignupCardProps = {}) {
   const { signUp } = useSignUp();
+  // `useClerk()` gives us `setActive` for the recovery path (when the
+  // SDK loses the session id after its internal `retryImmediately`
+  // fires — see `onSubmitCode`) and `clerk.client.reload()` for the
+  // belt-and-braces re-sync.
+  const clerk = useClerk();
+  const setActiveSession = clerk?.setActive;
   const searchParams = useSearchParams();
 
-  const [mode, setMode] = useState<Mode>("code");
+  // Default to "password" — the staging Clerk instance requires a password
+  // (missing_requirements after verify → no createdSessionId → Path D
+  // fallback stranded the user at /sign-in with no account). The
+  // passwordless "code" mode stays available via the switch-mode link
+  // for instances configured to allow email-only sign-up. QA 2026-08-28.
+  const [mode, setMode] = useState<Mode>("password");
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -105,6 +158,14 @@ export function SignupCard() {
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous double-submit guards. `submitting` state is async — a
+  // fast double-click (or button-click + Enter-key) both pass the
+  // `disabled={submitting}` gate before React re-renders. Refs
+  // interlock immediately so the second attempt bails. Without this,
+  // `verifyEmailCode` fires twice and the second call returns 400
+  // `verification_already_verified` (QA 2026-08-28).
+  const submittingCredentialsRef = useRef(false);
+  const submittingCodeRef = useRef(false);
 
   const headingId = useId();
   const emailId = useId();
@@ -115,8 +176,11 @@ export function SignupCard() {
 
   const afterSignUpPath = useMemo(
     () =>
-      safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
-    [searchParams],
+      safeRedirectPath(
+        redirectUrl ?? searchParams.get("redirect_url"),
+        ROUTES.APP.DASHBOARD,
+      ),
+    [redirectUrl, searchParams],
   );
 
   // Enables/disables the primary CTA. In code mode only the email needs
@@ -154,6 +218,11 @@ export function SignupCard() {
       // whether Clerk still has state.
       const callbackWithReturn = `${ROUTES.AUTH.SSO_CALLBACK}?redirect_url=${encodeURIComponent(afterSignUpPath)}`;
 
+      // Same reason as the credentials `signUp.finalize` path — Google
+      // OAuth does a full-page redirect, which trips the editor's
+      // `beforeunload` guard when this modal was opened over unsaved
+      // edits.
+      suppressNextUnload();
       await signUp.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,
@@ -171,12 +240,16 @@ export function SignupCard() {
   ) => {
     event.preventDefault();
     if (!signUp) return;
+    // Sync double-submit guard — see refs above.
+    if (submittingCredentialsRef.current) return;
+    submittingCredentialsRef.current = true;
 
     const trimmedEmail = email.trim();
 
     if (!EMAIL_REGEX.test(trimmedEmail)) {
       setNotice(null);
       setErrors({ email: "Enter a valid email address." });
+      submittingCredentialsRef.current = false;
 
       return;
     }
@@ -195,6 +268,7 @@ export function SignupCard() {
           email: flat.emailAddress?.[0],
           password: flat.password?.[0],
         });
+        submittingCredentialsRef.current = false;
 
         return;
       }
@@ -283,16 +357,22 @@ export function SignupCard() {
       });
     } finally {
       setSubmitting(false);
+      submittingCredentialsRef.current = false;
     }
   };
 
   const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!signUp) return;
+    // Sync double-submit interlock — see refs declared above.
+    if (submittingCodeRef.current) return;
+    submittingCodeRef.current = true;
+
     const trimmedCode = code.trim();
 
     if (trimmedCode.length < 4) {
       setErrors({ code: "Enter the code we emailed you." });
+      submittingCodeRef.current = false;
 
       return;
     }
@@ -307,46 +387,247 @@ export function SignupCard() {
       );
 
       if (verifyError) {
-        setErrors({
-          code: readClerkError(
-            verifyError,
-            "That code didn't work. Try again or resend a new one.",
+        // Dump the full Clerk error to console. `logger.captureError`
+        // alone can serialize `errors[0].code`/`.message` into a
+        // string that loses the array structure — for a 400 on
+        // `attempt_verification` we need every field: `code`,
+        // `message`, `longMessage`, `meta`. Print with the full JSON
+        // shape and a distinctive tag so it's grep-friendly in the
+        // DevTools filter.
+        // eslint-disable-next-line no-console
+        console.error(
+          "[SIGNUP_VERIFY_400]",
+          JSON.stringify(
+            {
+              errors: (verifyError as { errors?: unknown[] })?.errors,
+              status: (verifyError as { status?: number })?.status,
+              clerkTraceId: (verifyError as { clerkTraceId?: string })
+                ?.clerkTraceId,
+              raw: verifyError,
+            },
+            null,
+            2,
           ),
-        });
+        );
 
-        return;
-      }
+        const errorCode = (verifyError as { errors?: { code?: string }[] })
+          ?.errors?.[0]?.code;
 
-      if (signUp.status === "complete") {
-        logger.event(EVENTS.SIGNUP_VERIFY_COMPLETE, "info", {
-          redirectPath: afterSignUpPath,
-        });
-        const { error: finalizeError } = await signUp.finalize({
-          navigate: ({ decorateUrl }) => {
-            // Full-page navigation so the freshly-set Clerk session cookie
-            // is on the next request. `router.push` runs in-tab before
-            // mobile Safari commits the cookie, which makes the middleware
-            // treat the user as signed-out and bounce them to /sign-up.
-            // Invariant #15 — do not change to router.push.
-            window.location.assign(decorateUrl(afterSignUpPath));
-          },
-        });
-
-        if (finalizeError) {
-          logger.captureError(finalizeError, "signup.finalize");
+        if (errorCode === "verification_already_verified") {
+          logger.warn(
+            "signup.verify_email_code: already verified — falling through to finalize",
+          );
+          // Fall through: the signUp is already at status "complete"
+          // per Clerk's semantics; the code below will finalize.
+        } else {
+          logger.captureError(verifyError, "signup.verify_email_code");
           setErrors({
             code: readClerkError(
-              finalizeError,
-              "Couldn't finish creating your account.",
+              verifyError,
+              "That code didn't work. Try again or resend a new one.",
             ),
           });
+
+          return;
         }
+      }
+
+      // Log the full sign-up state right after verify so a stuck flow
+      // (2026-08-28: user reported "stuck at code screen") surfaces
+      // WHY. The most common cause is a Clerk dashboard config that
+      // requires fields our form doesn't collect (first_name,
+      // last_name, phone_number, etc.). `missingFields` +
+      // `unverifiedFields` name the exact blocker.
+      logger.info("signup.verify_post_state", {
+        status: signUp.status,
+        missingFields: (signUp as { missingFields?: string[] }).missingFields,
+        unverifiedFields: (signUp as { unverifiedFields?: string[] })
+          .unverifiedFields,
+      });
+
+      // 2026-08-28 real-log evidence: the server returns 200 on all
+      // three sign_ups / prepare_verification / attempt_verification
+      // requests — the account and session ARE created — but
+      // `signUp.finalize` was silently no-op'ing (either
+      // `signUp.status` still read stale after the await, or
+      // Clerk's navigate callback didn't fire). Rework: skip
+      // finalize entirely and drive setActive + full-page nav
+      // ourselves whenever we can pin down a `createdSessionId`.
+      // That gives us both correctness (session cookie commits
+      // before we navigate) AND visibility (each step prints a
+      // distinctive log tag so we can see WHERE it stops if it
+      // still stalls).
+      //
+      // Priority ladder:
+      //   (A) verify returned 200 AND signUp.createdSessionId is
+      //       set → setActive({ session }) + navigate. Most common
+      //       happy path.
+      //   (B) verify returned "already verified" (SDK retry
+      //       artifact — see previous fix) AND we still have a
+      //       sessionId locally → same setActive path.
+      //   (C) No local sessionId → try `clerk.client.reload()` to
+      //       re-sync from the server, re-check `createdSessionId`.
+      //   (D) Still nothing → send the user to /sign-in with their
+      //       email; the account exists server-side and the pending
+      //       file waits in IDB, so post-signin the hydrator
+      //       restores it exactly as if they'd signed up cleanly.
+      const alreadyVerifiedRecovery = Boolean(
+        verifyError &&
+          (verifyError as { errors?: { code?: string }[] })?.errors?.[0]
+            ?.code === "verification_already_verified",
+      );
+
+      const setActiveAndNavigate = async (
+        sessionId: string,
+        via: string,
+      ): Promise<boolean> => {
+        try {
+          if (!setActiveSession) {
+            // eslint-disable-next-line no-console
+            console.error("[SIGNUP_FLOW] setActiveSession is null", { via });
+
+            return false;
+          }
+          // eslint-disable-next-line no-console
+          console.info("[SIGNUP_FLOW] setActive → nav", {
+            via,
+            sessionId,
+            afterSignUpPath,
+          });
+          suppressNextUnload();
+          await setActiveSession({ session: sessionId });
+          // Manual full-page nav (item #15 iOS Safari cookie commit).
+          window.location.assign(afterSignUpPath);
+
+          return true;
+        } catch (err) {
+          logger.captureError(err, "signup.set_active", { via });
+
+          return false;
+        }
+      };
+
+      const readSessionId = (): string | null => {
+        return (
+          (signUp as { createdSessionId?: string | null }).createdSessionId ??
+          null
+        );
+      };
+
+      // eslint-disable-next-line no-console
+      console.info("[SIGNUP_FLOW] post_verify_state", {
+        verifyStatus: verifyError ? "error" : "ok",
+        alreadyVerifiedRecovery,
+        signUpStatus: signUp.status,
+        createdSessionId: readSessionId(),
+        missingFields: (signUp as { missingFields?: string[] }).missingFields,
+        unverifiedFields: (signUp as { unverifiedFields?: string[] })
+          .unverifiedFields,
+      });
+
+      // Path A + B combined — try local sessionId regardless of
+      // whether verify was clean or was the retry-artifact recovery.
+      const sessionId = readSessionId();
+
+      if (sessionId) {
+        if (
+          await setActiveAndNavigate(
+            sessionId,
+            alreadyVerifiedRecovery ? "already_verified_recovery" : "clean",
+          )
+        ) {
+          return;
+        }
+      }
+
+      // Path C — client re-sync + retry setActive. Fires when the
+      // local signUp object doesn't hold the sessionId (SDK's retry
+      // dropped it, or the server-side ok response landed but
+      // hadn't propagated to the client yet).
+      try {
+        if (clerk.client) {
+          // eslint-disable-next-line no-console
+          console.info("[SIGNUP_FLOW] reloading clerk.client");
+          await clerk.client.reload();
+          const refreshedSessionId = (
+            clerk.client.signUp as { createdSessionId?: string | null }
+          )?.createdSessionId;
+
+          // eslint-disable-next-line no-console
+          console.info("[SIGNUP_FLOW] post_reload", {
+            refreshedSessionId,
+            refreshedStatus: clerk.client.signUp?.status,
+          });
+
+          if (
+            refreshedSessionId &&
+            (await setActiveAndNavigate(
+              refreshedSessionId,
+              "post_reload_recovery",
+            ))
+          ) {
+            return;
+          }
+        }
+      } catch (reloadErr) {
+        logger.captureError(reloadErr, "signup.client_reload_recovery");
+      }
+
+      // Before Path D, check WHY signUp didn't finalize. When the
+      // Clerk dashboard requires a field this form didn't collect
+      // (most commonly `password`), the sign-up sits in
+      // `missing_requirements` — the User row is never created, so a
+      // bounce to /sign-in would strand them ("We couldn't find an
+      // account with that email"). Recover inside the modal instead:
+      // switch back to the credentials step in password mode with the
+      // email prefilled and surface a plain-English error naming what
+      // Clerk wants. Also flip `signUpNeedsCompletion` so the next
+      // submit calls `signUp.update({ password })` instead of
+      // `signUp.create(...)` (which would 400 with `form_identifier_exists`
+      // against the same email).
+      const status = (signUp as { status?: string | null }).status ?? null;
+      const missingFields =
+        (signUp as { missingFields?: string[] }).missingFields ?? [];
+
+      if (status === "missing_requirements") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[SIGNUP_FLOW] missing_requirements — recovering in-modal",
+          {
+            missingFields,
+            email,
+          },
+        );
+
+        const needsPassword = missingFields.includes("password");
+        const message = needsPassword
+          ? "Almost there — this account needs a password. Set one and continue."
+          : missingFields.length
+            ? `To finish signing up, please provide: ${missingFields.join(", ")}.`
+            : "We couldn't finish creating your account. Please try again.";
+
+        if (needsPassword) {
+          setMode("password");
+        }
+        setStep("credentials");
+        setCode("");
+        setErrors({ form: message });
 
         return;
       }
 
-      setNotice(
-        "One more step is needed to finish creating your account. Please check your email.",
+      // Path D — genuine no-session-id state we don't know how to
+      // recover from in-modal. Fall through to /sign-in with the email
+      // prefilled; account may or may not exist server-side depending
+      // on how the SDK exited, but at least the user has a next step.
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[SIGNUP_FLOW] no session id — routing to /sign-in as fallback",
+        { email, afterSignUpPath, status, missingFields },
+      );
+      suppressNextUnload();
+      window.location.assign(
+        `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}&email=${encodeURIComponent(email)}`,
       );
     } catch (err) {
       logger.captureError(err, "signup.verify");
@@ -358,6 +639,7 @@ export function SignupCard() {
       });
     } finally {
       setSubmitting(false);
+      submittingCodeRef.current = false;
     }
   };
 
@@ -391,21 +673,23 @@ export function SignupCard() {
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-8 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:min-h-[735px] sm:px-8 sm:pb-[44px] sm:pt-[38px]"
+      className="box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-6 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:px-8 sm:pb-7 sm:pt-[38px]"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
         id={headingId}
       >
-        {step === "credentials" ? "Create a FREE Account" : "Verify your email"}
-      </h1>
-      <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
         {step === "credentials"
-          ? mode === "code"
-            ? "Enter your email — we'll send you a 6-digit code to sign up."
-            : "Please enter your details below to create your account"
-          : `We sent a code to ${email}.`}
-      </p>
+          ? "Sign up for PDFVault"
+          : "Enter the code to sign up"}
+      </h1>
+      {/* Subtitle only on the verify step per the reference SS.
+          Credentials step (SS4) shows the heading alone. */}
+      {step === "verify" ? (
+        <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
+          {`Please check your email ${maskEmailAddress(email)}.`}
+        </p>
+      ) : null}
 
       {step === "credentials" ? (
         <>
@@ -506,6 +790,20 @@ export function SignupCard() {
               </p>
             ) : null}
 
+            {/* Clerk Smart CAPTCHA mount point. Placed INSIDE the form
+                just before the submit button, per the reference
+                example in Clerk's custom-flow bot-protection docs.
+                Clerk auto-renders Cloudflare Turnstile into this div
+                when the sign-up form mounts, and attaches the
+                resulting token to `signUp.create()`. If the div is
+                missing OR the widget hasn't mounted yet when the
+                user submits, `attempt_verification` will 400 later
+                because the sign-up was flagged as bot-unverified.
+                Keep this element inside the form — Clerk's docs put
+                it exactly here (QA 2026-08-28: user hit 400 on the
+                verify-code step). Empty on purpose. */}
+            <div className="mt-3" id="clerk-captcha" />
+
             <button
               className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
               disabled={submitting || !credentialsValid}
@@ -514,10 +812,10 @@ export function SignupCard() {
               {submitting
                 ? mode === "code"
                   ? "Sending code…"
-                  : "Creating account…"
+                  : "Signing up…"
                 : mode === "code"
                   ? "Send verification code"
-                  : "Create Account"}
+                  : "Sign up"}
             </button>
 
             <button
@@ -586,16 +884,29 @@ export function SignupCard() {
 
       <p className="mt-[28px] text-center text-[16px] text-[#4c4c4c]">
         Already have an account?{" "}
-        <Link
-          className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={
-            afterSignUpPath !== ROUTES.APP.DASHBOARD
-              ? `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}`
-              : ROUTES.AUTH.SIGN_IN
-          }
-        >
-          Log In
-        </Link>
+        {onSwitchToLogin ? (
+          // Modal mode — switch tabs inside the AuthModal instead of
+          // navigating to /sign-in (which would unmount the modal and
+          // discard the caller's pending file / redirectUrl context).
+          <button
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            type="button"
+            onClick={onSwitchToLogin}
+          >
+            Log In
+          </button>
+        ) : (
+          <Link
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            href={
+              afterSignUpPath !== ROUTES.APP.DASHBOARD
+                ? `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(afterSignUpPath)}`
+                : ROUTES.AUTH.SIGN_IN
+            }
+          >
+            Log In
+          </Link>
+        )}
       </p>
 
       {/* Terms & Privacy — passive statement replaces the previous

@@ -196,7 +196,7 @@ export function PvFileTable({
   const { sorted, key, dir, cycle } = useSortedRows(rows);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
-  const selectableRows = sorted.filter((r) => !r.pending);
+  const selectableRows = sorted.filter((r) => !r.pending && !r.template);
   const allSelected =
     selectableRows.length > 0 && selected.size === selectableRows.length;
   const selectedRows = selectableRows.filter((r) => selected.has(r.id));
@@ -317,6 +317,7 @@ export function PvFileTable({
             {sorted.map((row) => {
               const isChecked = selected.has(row.id);
               const isPending = Boolean(row.pending);
+              const isTemplate = Boolean(row.template);
               const openable = Boolean(onOpen) && !isPending;
               // `role="link"` + keyboard handlers on the cell make the whole
               // row body (name + uploader + date + size) a valid open target
@@ -350,14 +351,18 @@ export function PvFileTable({
                   } ${isPending ? "opacity-90" : ""}`}
                 >
                   <td className="px-4 py-3 align-middle">
-                    <input
-                      aria-label={`Select ${row.name}`}
-                      checked={isChecked}
-                      className="size-4 accent-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={isPending}
-                      type="checkbox"
-                      onChange={() => toggleRow(row.id)}
-                    />
+                    {isTemplate ? (
+                      <span aria-hidden className="inline-block size-4" />
+                    ) : (
+                      <input
+                        aria-label={`Select ${row.name}`}
+                        checked={isChecked}
+                        className="size-4 accent-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={isPending}
+                        type="checkbox"
+                        onChange={() => toggleRow(row.id)}
+                      />
+                    )}
                   </td>
                   <td
                     {...openTd}
@@ -436,6 +441,10 @@ export function PvFileTable({
                         {row.pending?.status === "error"
                           ? "Failed"
                           : "Working…"}
+                      </span>
+                    ) : isTemplate ? (
+                      <span className="text-[12px] font-medium text-[var(--pv-text-muted)]">
+                        Click to open
                       </span>
                     ) : (
                       <RowActions

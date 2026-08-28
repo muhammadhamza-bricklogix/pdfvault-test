@@ -49,15 +49,36 @@ export const useFormEditorStore = create<FormEditorState>()((set) => ({
   ...initialState,
 
   hydrateFromSession: (session) =>
-    set({
+    set((s) => ({
       sessionId: session.id,
       schema: session.schema,
       pdfUrl: session.pdfUrl,
       signatureKey: session.signatureKey,
+      // Preserve a signature preview that the resume path may have
+      // restored before this promise resolved. Same race guard as the
+      // `values` merge below — a fresh session has no preview, so
+      // keeping the existing one costs nothing; on a resume we NEED
+      // to keep the restored data URL or the PDF overlay shows the
+      // "Sign here" placeholder again (QA 2026-08-28).
+      signaturePreview: s.signaturePreview ?? null,
       finalizedUrl: session.finalizedUrl,
-      values: session.values ?? {},
+      // MERGE session.values into whatever `values` already holds,
+      // with EXISTING values winning on collisions. Previously this
+      // REPLACED `values` with `session.values ?? {}`, which raced
+      // the `?resumeDocId=<id>` restore path in `W9EditorBootstrap`:
+      // if `resumePromise` set the restored form values (via
+      // `setValues(...)`) BEFORE the parallel `sessionPromise`
+      // finished, this hydrate wiped them with `{}` and the user
+      // saw a blank form on reopen from Dashboard → My PDFs
+      // (QA report 2026-08-28). Fresh sessions have no values so
+      // this is a no-op in the common case; on the resume race,
+      // whichever promise ran first wins — resume-first keeps its
+      // restored values (session merges nothing on top), session-
+      // first seeds `{}` and resume's later `setValues(...)` lands
+      // the restored values.
+      values: { ...(session.values ?? {}), ...s.values },
       errors: {},
-    }),
+    })),
 
   setValue: (fieldId, value) =>
     set((s) => ({

@@ -26,6 +26,8 @@ import {
   PaintBucketIcon,
   PencilEdit01Icon,
   RedoIcon,
+  SearchAddIcon,
+  SearchMinusIcon,
   ShapesIcon,
   SignatureIcon,
   SplitIcon,
@@ -39,10 +41,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
@@ -208,10 +210,90 @@ function PillGroup({
 }
 
 // ---------------------------------------------------------------------------
+// Zoom pill — mirrors the manual zoom controls in `EditorInfoBar` (mobile)
+// but designed to sit inline next to `<SaveStatusChip />` in the desktop
+// top chrome. Reads / writes the shared `zoom` in `usePdfEditorStore` so
+// the pill, the Fabric canvas, and the mobile bottom dock all stay in
+// sync — no local state, no drift.
+// ---------------------------------------------------------------------------
+
+const ZOOM_STEP = 0.25;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
+
+function ZoomPill() {
+  const zoom = usePdfEditorStore((s) => s.zoom);
+  const setZoom = usePdfEditorStore((s) => s.setZoom);
+  const file = usePdfEditorStore((s) => s.file);
+
+  if (!file) return null;
+
+  const canZoomOut = zoom > ZOOM_MIN + 0.001;
+  const canZoomIn = zoom < ZOOM_MAX - 0.001;
+  const pct = `${Math.round(zoom * 100)}%`;
+
+  return (
+    <div
+      aria-label="Zoom"
+      className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border border-default-200 bg-white px-1 py-0.5"
+      role="group"
+    >
+      <Tooltip delay={300}>
+        <button
+          aria-label="Zoom out"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-default-700 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canZoomOut}
+          type="button"
+          onClick={() =>
+            setZoom(Math.max(ZOOM_MIN, Number((zoom - ZOOM_STEP).toFixed(2))))
+          }
+        >
+          <HugeiconsIcon icon={SearchMinusIcon} size={14} />
+        </button>
+        <Tooltip.Content>
+          <p>Zoom out</p>
+        </Tooltip.Content>
+      </Tooltip>
+
+      <span
+        aria-live="polite"
+        className="min-w-[38px] text-center text-[11px] font-medium tabular-nums text-default-600"
+      >
+        {pct}
+      </span>
+
+      <Tooltip delay={300}>
+        <button
+          aria-label="Zoom in"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-default-700 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canZoomIn}
+          type="button"
+          onClick={() =>
+            setZoom(Math.min(ZOOM_MAX, Number((zoom + ZOOM_STEP).toFixed(2))))
+          }
+        >
+          <HugeiconsIcon icon={SearchAddIcon} size={14} />
+        </button>
+        <Tooltip.Content>
+          <p>Zoom in</p>
+        </Tooltip.Content>
+      </Tooltip>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Top App Bar — logo, doc title, undo/redo pill, Share, Download.
 // ---------------------------------------------------------------------------
 
 function TopAppBar() {
+  const pathname = usePathname();
+  // Explicit Save affordance for the W-9 route only. The generic
+  // composer's Save button is hidden per product decision, but on
+  // `/w-9-form` there's no other in-flow save trigger — the user's
+  // only path to My PDFs otherwise is Done → Download, which is
+  // paid + downloads to disk. QA 2026-08-28.
+  const showW9Save = pathname === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -219,7 +301,6 @@ function TopAppBar() {
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
-  const router = useRouter();
   const renameDoc = useRenameDocumentMutation();
 
   const history = historyByPage.get(currentPage) ?? [];
@@ -247,8 +328,22 @@ function TopAppBar() {
   // doc — doesn't render the previous PDF while the new load is in flight.
   // Reported 2026-08-18.
   const handleBack = () => {
-    usePdfEditorStore.getState().clearFile();
-    router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
+    // Save-then-navigate mirrors the Hamburger's "My PDFs" flow so
+    // pressing Back with unsaved edits (text, watermark, signature,
+    // drawings, etc.) doesn't lose them. `useEditorNavigationSave`
+    // handles the "no file / signed out / no unsaved changes" fast
+    // paths, so this dispatch is safe from every state.
+    // `clearFileAfter: true` preserves the 2026-08-18 fix — clearing
+    // the store before re-entry stops the previous PDF flashing on the
+    // next editor load.
+    window.dispatchEvent(
+      new CustomEvent("editor:navigate-after-save", {
+        detail: {
+          url: isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME,
+          clearFileAfter: true,
+        },
+      }),
+    );
   };
 
   const commitRename = () => {
@@ -355,12 +450,15 @@ function TopAppBar() {
       />
 
       <SaveStatusChip />
+      <ZoomPill />
 
       {/* Save button — HIDDEN for now per product decision. Restore by
-          removing the surrounding `{false && (…)}` wrapper. Handler +
+          removing the surrounding `{showW9Save && (…)}` wrapper. Handler +
           auth flow (items 4, 12, 17) preserved intact so re-enabling
-          is a one-line change. */}
-      {false && (
+          is a one-line change. Currently enabled ONLY on the W-9 route
+          (`/w-9-form`) where the user needs an explicit save affordance
+          that doesn't force a paid download. */}
+      {showW9Save && (
         <Tooltip delay={300}>
           <button
             aria-label="Save"
@@ -373,11 +471,11 @@ function TopAppBar() {
                 // full-page sign-in redirect so the hydrator restores the
                 // full editor state on return.
                 void snapshotPendingEditorFile().catch(() => undefined);
-                dispatchSignInPrompt({
-                  title: "Sign in to save",
-                  description:
-                    "Create an account and we'll bring you right back to save your document where you left off.",
-                  confirmLabel: "Sign in & continue",
+                // AuthModal (2026-08-28 unify). Cards' finalize does
+                // the item #15 `window.location.assign` — hydrator
+                // restores the snapshotted file on return.
+                dispatchAuthModal({
+                  mode: "signup",
                   redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
                 });
 
@@ -515,6 +613,14 @@ function TopAppBar() {
 // ---------------------------------------------------------------------------
 
 function ToolToolbar() {
+  // W-9 form (`/w-9-form`) reuses `<PdfEditorShell />` for its canvas but
+  // the form is fill-and-sign — the generic PDF-tools row (Edit / Draw /
+  // Shapes / Merge / Manage Pages, etc.) doesn't apply and clutters the
+  // page. `W9FormFieldsPortal` already renders the fill overlays; hiding
+  // the tool row here keeps that flow focused. All other routes are
+  // unaffected. Path check is done AFTER hook calls to satisfy the
+  // rules-of-hooks order.
+  const pathname = usePathname();
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCompressModalOpen = usePdfEditorStore(
@@ -533,6 +639,8 @@ function ToolToolbar() {
 
   const disabled = !file;
   const canManagePages = !!pdfDocument && pageCount > 0;
+
+  const isW9Route = pathname === ROUTES.FORMS.W9_SHORT;
 
   const isActionDisabled = (id: string): boolean => {
     if (id === "manage-pages") return !canManagePages;
@@ -602,6 +710,8 @@ function ToolToolbar() {
       ] as const,
     [],
   );
+
+  if (isW9Route) return null;
 
   return (
     // Desktop-only toolbar (mobile uses `BottomDock`), so the iOS Safari

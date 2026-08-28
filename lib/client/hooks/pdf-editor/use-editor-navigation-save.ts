@@ -11,6 +11,15 @@ import { toast } from "@/lib/shared/utils/toast";
 
 type NavigateAfterSaveDetail = {
   url: string;
+  /**
+   * When true, `clearFile()` runs after the save (or the early-bail) and
+   * BEFORE `router.push(url)`. Used by the Back-to-dashboard buttons so
+   * the next editor entry doesn't paint the previous PDF for a frame
+   * while the new one loads (QA 2026-08-18). "My PDFs" leaves this
+   * false because the store's file is fine to keep around while the
+   * library opens in a fresh route.
+   */
+  clearFileAfter?: boolean;
 };
 
 // Module-level flag flipped by callers (e.g. ReloadConfirmModal) that
@@ -51,8 +60,14 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
       if (!detail?.url || isNavigatingRef.current) return;
 
-      if (!file) {
+      const clearFileAfter = detail.clearFileAfter === true;
+      const navigate = () => {
+        if (clearFileAfter) usePdfEditorStore.getState().clearFile();
         router.push(detail.url);
+      };
+
+      if (!file) {
+        navigate();
 
         return;
       }
@@ -62,7 +77,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           title: "Sign in to save",
           description: "Sign in to keep your edits in your library.",
         });
-        router.push(detail.url);
+        navigate();
 
         return;
       }
@@ -71,7 +86,82 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       // and navigate immediately. Avoids the misleading flash users were
       // seeing on every back-to-library click even with no edits.
       if (!usePdfEditorStore.getState().hasUnsavedChanges) {
-        router.push(detail.url);
+        navigate();
+
+        return;
+      }
+
+      // Specialized routes (e.g. `/w-9-form`) own their own save
+      // pipeline (`W9FinalizeIntercept` → finalize-then-upload) and set
+      // `autoPersistDisabled` so this generic Fabric-merge save doesn't
+      // upload the blank template on top of the stamped version as a
+      // duplicate row (QA 2026-08-27). Dispatch the dedicated
+      // `editor:w9-save-and-continue` event that the W-9 intercept
+      // listens for — it runs finalize + upload with the w9 marker in
+      // `editorState` and resolves `onComplete` when done, so the
+      // navigation only fires AFTER the row is persisted. Backed by a
+      // 30 s timeout so a hung finalize can't strand the user; on
+      // timeout we navigate anyway (the save keeps running in
+      // background and its own toast will surface the outcome).
+      if (usePdfEditorStore.getState().autoPersistDisabled) {
+        const w9LoadingKey = toast.loading({
+          title: "Saving your W-9…",
+          description: "Adding your entries to My PDFs.",
+        });
+
+        const w9Result = await new Promise<{
+          ok: boolean;
+          reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
+        }>((resolve) => {
+          const timeoutId = window.setTimeout(() => {
+            resolve({ ok: false, reason: "error" });
+          }, 30_000);
+
+          window.dispatchEvent(
+            new CustomEvent("editor:w9-save-and-continue", {
+              detail: {
+                onComplete: (result: {
+                  ok: boolean;
+                  reason?:
+                    | "error"
+                    | "not-signed-in"
+                    | "cancelled"
+                    | "not-ready";
+                }) => {
+                  window.clearTimeout(timeoutId);
+                  resolve(result);
+                },
+              },
+            }),
+          );
+        });
+
+        toast.close(w9LoadingKey);
+
+        if (w9Result.ok) {
+          if (w9Result.reason !== "not-ready") {
+            toast.success({
+              title: "Saved to My PDFs",
+              description: "Your W-9 is in your library.",
+            });
+          }
+          navigate();
+
+          return;
+        }
+
+        if (w9Result.reason === "cancelled") {
+          // User closed the paywall — stay on the form so they can
+          // decide (retry or Download later). Nothing to toast; the
+          // paywall UI already surfaces its own state.
+          return;
+        }
+
+        toast.error({
+          title: "Could not save W-9",
+          description:
+            "We couldn't save your W-9 before leaving. Please try Download to save.",
+        });
 
         return;
       }
@@ -80,7 +170,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
       const loadingKey = toast.loading({
         title: "Saving…",
-        description: "Saving your PDF before opening your library.",
+        description: "Saving your edits before you leave.",
       });
 
       try {
@@ -104,25 +194,69 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           force: true,
         });
 
-        if (!result.ok && result.reason === "error") {
-          toast.error({
-            title: "Could not save",
-            description:
-              "We couldn't save your PDF before leaving. Please try Save first.",
-          });
+        // Close the loading toast BEFORE surfacing the outcome — otherwise
+        // the follow-up success/error toast stacks under "Saving…".
+        toast.close(loadingKey);
+
+        if (!result.ok) {
+          // 2026-08-28: user report — "clicked Back, saw Saving toast, but
+          // when I reopen the PDF nothing was saved." Root cause was that
+          // every non-`ok` reason except `error` silently fell through to
+          // `navigate()`, so a save that skipped because pdf.js was still
+          // hydrating (`not-loaded`) — or because the store snapshot
+          // disagreed with the caller's precondition check (`no-changes`,
+          // `no-file`, `not-signed-in`) — left the user on the dashboard
+          // convinced the edits were persisted. Surface each reason
+          // explicitly and abort the navigation so the user can retry.
+          if (result.reason === "error") {
+            toast.error({
+              title: "Could not save",
+              description:
+                "We couldn't save your PDF before leaving. Please try Save first.",
+            });
+          } else if (result.reason === "not-loaded") {
+            toast.error({
+              title: "Still loading",
+              description:
+                "The PDF is still loading — wait a moment, then try Back again.",
+            });
+          } else if (result.reason === "no-file") {
+            // Truly no file → safe to navigate away, nothing to lose.
+            navigate();
+          } else if (result.reason === "not-signed-in") {
+            toast.info({
+              title: "Sign in to save",
+              description: "Sign in to keep your edits in your library.",
+            });
+            navigate();
+          } else if (result.reason === "no-changes") {
+            // Store's own dirty flag disagreed with our earlier check
+            // (raced during the async gap). Nothing to save → navigate.
+            navigate();
+          }
 
           return;
         }
 
-        if (result.ok) {
-          usePdfEditorStore
-            .getState()
-            .applyPostSaveReset(result.savedFile, result.remappedState);
-        }
+        usePdfEditorStore
+          .getState()
+          .applyPostSaveReset(result.savedFile, result.remappedState);
 
-        router.push(detail.url);
-      } finally {
+        toast.success({
+          title: "Saved",
+          description: "Your edits were saved to your library.",
+        });
+
+        navigate();
+      } catch (err) {
         toast.close(loadingKey);
+        toast.error({
+          title: "Could not save",
+          description:
+            "We couldn't save your PDF before leaving. Please try Save first.",
+        });
+        throw err;
+      } finally {
         isNavigatingRef.current = false;
       }
     };
@@ -140,6 +274,8 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
   useEffect(() => {
     const onPageHide = () => {
       if (!file || !isSignedIn || isNavigatingRef.current) return;
+      // Same specialized-route guard as `onNavigateAfterSave` above.
+      if (usePdfEditorStore.getState().autoPersistDisabled) return;
 
       void persistEditorDocument({ fabricCanvas: fabricRef.current });
     };

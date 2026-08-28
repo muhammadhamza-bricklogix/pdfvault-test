@@ -7,13 +7,14 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Suspense } from "react";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
+import { AuthModal } from "@/components/shared/auth-modal";
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
+import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
 import { WeglotRouteSync } from "@/components/shared/navigation/weglot-route-sync";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
 import { SentryUserContext } from "@/components/shared/sentry-user-context";
-import { SignInPromptModal } from "@/components/shared/sign-in-prompt-modal";
 import { UserSyncBoot } from "@/components/shared/user-sync-boot";
 import { UploadToastProvider } from "@/components/ui/upload-toast";
 
@@ -40,8 +41,9 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           */}
           <Toast.Provider gap={12} maxVisibleToasts={5} placement="top end" />
           <UploadToastProvider />
-          <SignInPromptModal />
+          <AuthModal />
           <MobileDebugBoot />
+          <GoogleAdsClickBoot />
           <UserSyncBoot />
           <OfflineBoot />
           <SentryUserContext />

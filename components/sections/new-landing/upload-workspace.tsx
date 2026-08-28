@@ -25,7 +25,8 @@ import {
   loadPendingEditorFile,
   savePendingEditorFile,
 } from "@/lib/client/upload/pending-editor-file";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -260,13 +261,33 @@ export function UploadWorkspace({
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  // Duplicate-name modal state for the X→PDF convert branch. PDF→X
+  // already handles duplicates with a toast + open-existing path; this
+  // one uses the Cancel/Overwrite modal because the backend conversion
+  // is destructive if we let it silently create a second row (QA
+  // 2026-08-28: `report.docx` dropped with existing `report.pdf`
+  // produced two rows named `report.pdf`).
+  const [convertDuplicate, setConvertDuplicate] = useState<{
+    /** Original picked file to hand to `runPendingConversion`. */
+    file: File;
+    /** Filename of the existing library doc that matches. */
+    filename: string;
+    /** Existing doc id — forwarded as `documentId` on Overwrite so the
+     *  backend upserts instead of inserting. */
+    existingDocId: string;
+    /** Placeholder identity for the dashboard row while the background
+     *  upload runs — matches the tempId we'd use in the no-duplicate
+     *  path. Recomputed here to keep the two flows structurally
+     *  identical. */
+    tempId: string;
+  } | null>(null);
   const errorId = useId();
   const router = useRouter();
   const pathname = usePathname();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
-  // Only convert-TO-pdf routes (Word/PNG/JPG/Excel/PowerPoint/TXT → PDF)
+  // Only convert-TO-pdf routes (Word/PNG/JPG/TXT → PDF; Excel + PowerPoint hidden 2026-08-28)
   // Per the 2026-07-20 flow spec, every `/convert/*` route (both X→PDF
   // and PDF→X) sits under "Flow 1 — Convert file": Land → Sign-in →
   // Conversion → Payment → Download. So the sign-in gate fires at
@@ -341,11 +362,13 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        dispatchSignInPrompt({
-          title: "Sign in to convert",
-          description:
-            "Sign in and we'll bring you back here to finish — you won't have to re-upload.",
-          confirmLabel: "Sign in & continue",
+        // AuthModal (2026-08-28 unify). Invariant #17: post-signin
+        // return by direction still runs unchanged — the cards'
+        // `window.location.assign(returnPath)` (item #15) lands the
+        // user back on the same /convert/[slug] route with the saved
+        // file waiting in IDB.
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: returnPath,
         });
 
@@ -381,6 +404,49 @@ export function UploadWorkspace({
           const pdfName = isPdf(picked)
             ? picked.name
             : picked.name.replace(/\.[^.]+$/, "") + ".pdf";
+
+          // Duplicate-name check for the CONVERTED filename (e.g.
+          // `report.docx` → `report.pdf`). PDF→X already runs this
+          // guard further below; the convert-to-PDF branch previously
+          // skipped it and let the backend silently insert a second
+          // row with the same filename (QA 2026-08-28). Case-
+          // insensitive per the fix in `findDuplicateByFilename`.
+          // Swallow lookup errors — a flaky list call shouldn't block
+          // the upload.
+          let existingDocId: string | null = null;
+
+          try {
+            const existing = await findDuplicateByFilename(pdfName);
+
+            // eslint-disable-next-line no-console
+            console.info("[CONVERT_DUPLICATE_CHECK]", {
+              lookedFor: pdfName,
+              matched: existing?.filename ?? null,
+              matchedId: existing?.id ?? null,
+            });
+
+            if (existing) existingDocId = existing.id;
+          } catch (dupErr) {
+            logger.warn("convert duplicate-name check failed", dupErr);
+            // eslint-disable-next-line no-console
+            console.error("[CONVERT_DUPLICATE_CHECK] lookup threw", dupErr);
+          }
+
+          if (existingDocId) {
+            // Open the Cancel/Overwrite modal. Nothing else runs until
+            // the user picks — the pending file lives in state so we
+            // can hand it to `runPendingConversion` on Overwrite. On
+            // Cancel we clear state and let them either pick a new
+            // file or leave the page.
+            setConvertDuplicate({
+              file: picked,
+              filename: pdfName,
+              existingDocId,
+              tempId,
+            });
+
+            return;
+          }
 
           usePendingConversionsStore.getState().add({
             tempId,
@@ -837,7 +903,7 @@ export function UploadWorkspace({
                 className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
                 href={ROUTES.LEGAL.TERMS}
               >
-                Terms and conditions
+                Terms and Conditions
               </Link>{" "}
               and acknowledge our{" "}
               <Link
@@ -860,147 +926,193 @@ export function UploadWorkspace({
     );
   }
 
-  return (
-    <div className="mx-auto w-full max-w-[1223px]">
-      {/* Soft-gray outer frame */}
-      <div className="flex min-h-[600px] flex-col rounded-[24px] bg-[#f5f5f5] p-[18px]">
-        {/* White inner surface holds the drop zone + provider capsules */}
-        <div className="flex flex-1 flex-col rounded-[20px] bg-white p-3">
-          {/* Dashed drop zone */}
-          <div
-            aria-describedby={error ? errorId : undefined}
-            aria-label="Upload a file. Drop a file here, or activate to browse."
-            className="relative flex flex-1 cursor-pointer flex-col items-center justify-center rounded-[13px] px-6 py-8 text-center outline-none"
-            role="button"
-            tabIndex={0}
-            onClick={openPicker}
-            onDragLeave={() => setDragActive(false)}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragActive(true);
-            }}
-            onDrop={onDrop}
-            onKeyDown={onZoneKeyDown}
-          >
-            <DashedBorder active={dragActive} />
-            <input
-              ref={inputRef}
-              accept={acceptAttr}
-              className="sr-only"
-              type="file"
-              onChange={onInputChange}
-            />
+  const handleConvertDuplicateOverwrite = () => {
+    if (!convertDuplicate) return;
+    const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-            {file ? (
-              <div className="flex flex-col items-center">
-                <Image
-                  alt=""
-                  className="h-auto w-[180px] object-contain"
-                  height={154}
-                  src="/landing/upload-image.png"
-                  width={180}
-                />
-                <p className="mt-6 text-[18px] font-semibold text-[var(--pv-text-primary)]">
-                  {file.name}
-                </p>
-                <p className="mt-1 text-[14px] text-[var(--pv-text-secondary)]">
-                  {formatSize(file.size)}
-                </p>
-                {opening ? (
-                  <p className="mt-4 text-[14px] font-medium text-[var(--pv-brand-primary)]">
-                    Opening editor…
+    // Same dispatch as the no-duplicate path, plus the existingDocId
+    // so the backend upserts. Placeholder row uses the existing id so
+    // the dashboard doesn't briefly show a new pending tile alongside
+    // the one about to be overwritten.
+    usePendingConversionsStore.getState().add({
+      tempId,
+      file,
+      filename,
+      sizeBytes: file.size,
+    });
+
+    logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+      filename,
+      documentId: existingDocId,
+      resolution: "overwrite",
+    });
+
+    void runPendingConversion(tempId, file, existingDocId);
+    setConvertDuplicate(null);
+    router.push(ROUTES.APP.DASHBOARD);
+  };
+
+  const handleConvertDuplicateCancel = () => {
+    // Cancel/Ignore — clear the pending picked file so the drop zone
+    // is ready for a fresh selection. Stay on the current /convert/
+    // route; don't touch the existing library doc.
+    logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+      filename: convertDuplicate?.filename ?? null,
+      documentId: convertDuplicate?.existingDocId ?? null,
+      resolution: "cancel",
+    });
+    setConvertDuplicate(null);
+    setFile(null);
+  };
+
+  return (
+    <>
+      <div className="mx-auto w-full max-w-[1223px]">
+        {/* Soft-gray outer frame */}
+        <div className="flex min-h-[600px] flex-col rounded-[24px] bg-[#f5f5f5] p-[18px]">
+          {/* White inner surface holds the drop zone + provider capsules */}
+          <div className="flex flex-1 flex-col rounded-[20px] bg-white p-3">
+            {/* Dashed drop zone */}
+            <div
+              aria-describedby={error ? errorId : undefined}
+              aria-label="Upload a file. Drop a file here, or activate to browse."
+              className="relative flex flex-1 cursor-pointer flex-col items-center justify-center rounded-[13px] px-6 py-8 text-center outline-none"
+              role="button"
+              tabIndex={0}
+              onClick={openPicker}
+              onDragLeave={() => setDragActive(false)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActive(true);
+              }}
+              onDrop={onDrop}
+              onKeyDown={onZoneKeyDown}
+            >
+              <DashedBorder active={dragActive} />
+              <input
+                ref={inputRef}
+                accept={acceptAttr}
+                className="sr-only"
+                type="file"
+                onChange={onInputChange}
+              />
+
+              {file ? (
+                <div className="flex flex-col items-center">
+                  <Image
+                    alt=""
+                    className="h-auto w-[180px] object-contain"
+                    height={154}
+                    src="/landing/upload-image.png"
+                    width={180}
+                  />
+                  <p className="mt-6 text-[18px] font-semibold text-[var(--pv-text-primary)]">
+                    {file.name}
                   </p>
-                ) : (
+                  <p className="mt-1 text-[14px] text-[var(--pv-text-secondary)]">
+                    {formatSize(file.size)}
+                  </p>
+                  {opening ? (
+                    <p className="mt-4 text-[14px] font-medium text-[var(--pv-brand-primary)]">
+                      Opening editor…
+                    </p>
+                  ) : (
+                    <button
+                      className="pv-btn-secondary mt-4 cursor-pointer px-4 py-1.5 text-[14px]"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setFile(null);
+                        if (inputRef.current) inputRef.current.value = "";
+                      }}
+                    >
+                      Remove file
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <Image
+                    priority
+                    alt=""
+                    className="h-auto w-[180px] object-contain"
+                    height={154}
+                    src="/landing/upload-image.png"
+                    width={180}
+                  />
+                  <h2 className="mt-[52px] text-[24px] font-semibold leading-[30px] text-[#111315]">
+                    Drop your file here to get started
+                  </h2>
+                  <p className="mt-2.5 text-[18px] leading-6 text-[#818285]">
+                    Upload a PDF or import from your cloud storage.
+                  </p>
+                  <p className="mt-3 text-[15px] font-medium leading-5 text-[#818285]">
+                    Supports{" "}
+                    {acceptedExtensions.map((e) => e.toUpperCase()).join(", ")}
+                  </p>
                   <button
-                    className="pv-btn-secondary mt-4 cursor-pointer px-4 py-1.5 text-[14px]"
+                    className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setFile(null);
-                      if (inputRef.current) inputRef.current.value = "";
+                      openPicker();
                     }}
                   >
-                    Remove file
+                    Choose File
                   </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <Image
-                  priority
-                  alt=""
-                  className="h-auto w-[180px] object-contain"
-                  height={154}
-                  src="/landing/upload-image.png"
-                  width={180}
-                />
-                <h2 className="mt-[52px] text-[24px] font-semibold leading-[30px] text-[#111315]">
-                  Drop your file here to get started
-                </h2>
-                <p className="mt-2.5 text-[18px] leading-6 text-[#818285]">
-                  Upload a PDF or import from your cloud storage.
-                </p>
-                <p className="mt-3 text-[15px] font-medium leading-5 text-[#818285]">
-                  Supports{" "}
-                  {acceptedExtensions.map((e) => e.toUpperCase()).join(", ")}
-                </p>
-                <button
-                  className="mt-7 inline-flex h-11 w-[188px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openPicker();
-                  }}
-                >
-                  Choose File
-                </button>
-              </div>
-            )}
+                </div>
+              )}
 
-            {/* Accessible status / error live region */}
-            <p
-              aria-live="polite"
-              className={`mt-4 text-[14px] ${error ? "text-[var(--pv-error)]" : "sr-only"}`}
-              id={errorId}
-              role={error ? "alert" : undefined}
-            >
-              {error}
-            </p>
-          </div>
+              {/* Accessible status / error live region */}
+              <p
+                aria-live="polite"
+                className={`mt-4 text-[14px] ${error ? "text-[var(--pv-error)]" : "sr-only"}`}
+                id={errorId}
+                role={error ? "alert" : undefined}
+              >
+                {error}
+              </p>
+            </div>
 
-          {/* Cloud provider capsules — layout adapts to the number of visible
+            {/* Cloud provider capsules — layout adapts to the number of visible
               options so the buttons split evenly. */}
-          <div
-            className={`mt-[10px] grid grid-cols-1 gap-[10px] ${
-              CLOUD_PROVIDERS.length === 1
-                ? "sm:grid-cols-1"
-                : CLOUD_PROVIDERS.length === 2
-                  ? "sm:grid-cols-2"
-                  : "sm:grid-cols-3"
-            }`}
-          >
-            {CLOUD_PROVIDERS.map((provider) => {
-              const isBusy =
-                provider.id === "google-drive" &&
-                cloudUpload.isBusy &&
-                cloudUpload.activeProvider === "gdrive";
+            <div
+              className={`mt-[10px] grid grid-cols-1 gap-[10px] ${
+                CLOUD_PROVIDERS.length === 1
+                  ? "sm:grid-cols-1"
+                  : CLOUD_PROVIDERS.length === 2
+                    ? "sm:grid-cols-2"
+                    : "sm:grid-cols-3"
+              }`}
+            >
+              {CLOUD_PROVIDERS.map((provider) => {
+                const isBusy =
+                  provider.id === "google-drive" &&
+                  cloudUpload.isBusy &&
+                  cloudUpload.activeProvider === "gdrive";
 
-              return (
-                <button
-                  key={provider.id}
-                  className="flex h-[45px] cursor-pointer items-center justify-center gap-3 rounded-[12px] bg-[#f5f5f5] text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[#ececec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isBusy}
-                  type="button"
-                  onClick={() => void onCloudProviderClick(provider.id)}
-                >
-                  {isBusy ? "Opening…" : provider.label}
-                  <ProviderBadge id={provider.id} />
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={provider.id}
+                    className="flex h-[45px] cursor-pointer items-center justify-center gap-3 rounded-[12px] bg-[#f5f5f5] text-[14px] font-medium text-[var(--pv-text-primary)] transition-colors hover:bg-[#ececec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-900)] disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isBusy}
+                    type="button"
+                    onClick={() => void onCloudProviderClick(provider.id)}
+                  >
+                    {isBusy ? "Opening…" : provider.label}
+                    <ProviderBadge id={provider.id} />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <DuplicateUploadModal
+        filename={convertDuplicate?.filename ?? null}
+        onIgnore={handleConvertDuplicateCancel}
+        onOverwrite={handleConvertDuplicateOverwrite}
+      />
+    </>
   );
 }

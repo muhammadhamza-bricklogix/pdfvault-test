@@ -3,11 +3,13 @@
 import type { FormField, FormSchema } from "@/lib/shared/types/forms.types";
 import type { RenderedPageInfo } from "./FormCanvas";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Modal } from "@heroui/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  SearchAddIcon,
+  SearchMinusIcon,
   SignatureIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -28,6 +30,10 @@ type FormEditorProps = {
   formId: string;
   schema: FormSchema;
 };
+
+const ZOOM_MIN = 0.75;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.25;
 
 export function FormEditor({ formId, schema }: FormEditorProps) {
   const sessionId = useFormEditorStore((s) => s.sessionId);
@@ -63,6 +69,18 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
   // the whole form full-width for inline editing (matches pdfguru's
   // form-first flow, but preserves the sidebar as an opt-in helper).
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [zoom, setZoom] = useState(1.5);
+  const canZoomOut = zoom > ZOOM_MIN + 0.001;
+  const canZoomIn = zoom < ZOOM_MAX - 0.001;
+  const zoomPercent = useMemo(() => `${Math.round(zoom * 100)}%`, [zoom]);
+  const handleZoomOut = useCallback(
+    () => setZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2))),
+    [],
+  );
+  const handleZoomIn = useCallback(
+    () => setZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2))),
+    [],
+  );
 
   const handleDone = useCallback(() => {
     const state = useFormEditorStore.getState();
@@ -223,6 +241,38 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
               Starting session…
             </p>
           )}
+          <div
+            aria-label="Zoom"
+            className="hidden items-center gap-1 rounded-md border border-default-200 bg-default-50 px-1 py-0.5 dark:border-default-700 dark:bg-default-100 md:inline-flex"
+            role="group"
+          >
+            <Button
+              isIconOnly
+              aria-label="Zoom out"
+              isDisabled={!canZoomOut}
+              size="sm"
+              variant="tertiary"
+              onPress={handleZoomOut}
+            >
+              <HugeiconsIcon icon={SearchMinusIcon} size={16} />
+            </Button>
+            <span
+              aria-live="polite"
+              className="min-w-10 text-center text-xs tabular-nums text-default-600"
+            >
+              {zoomPercent}
+            </span>
+            <Button
+              isIconOnly
+              aria-label="Zoom in"
+              isDisabled={!canZoomIn}
+              size="sm"
+              variant="tertiary"
+              onPress={handleZoomIn}
+            >
+              <HugeiconsIcon icon={SearchAddIcon} size={16} />
+            </Button>
+          </div>
           <Button
             aria-expanded={sidebarOpen}
             aria-label={sidebarOpen ? "Hide field list" : "Show field list"}
@@ -277,7 +327,7 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
           <FormCanvas
             pdfUrl={pdfUrl}
             renderOverlay={renderOverlay}
-            scale={1.5}
+            scale={zoom}
             onPageReady={handlePageReady}
           />
         </div>
@@ -310,7 +360,7 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
               <FormCanvas
                 pdfUrl={pdfUrl}
                 renderOverlay={() => null}
-                scale={1.5}
+                scale={zoom}
                 onPageReady={handlePageReady}
               />
             </Modal.Body>

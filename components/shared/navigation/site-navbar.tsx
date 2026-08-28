@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -17,7 +18,9 @@ import { LanguageSwitcher } from "./language-switcher";
 const PDF_TOOL_LINKS = [
   { href: ROUTES.PUBLIC.ALL_TOOLS, label: "All tools overview" },
   { href: ROUTES.TOOLS.PDF_EDITOR, label: "PDF Composer" },
-  { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
+  // Hidden 2026-08-28 — PDF → Excel parked pending future work.
+  // Do not remove; re-enable once the pipeline is ready.
+  // { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
 ] as const;
 
 const DRAWER_LINKS = [
@@ -51,14 +54,20 @@ const AUTH_RETURN_ROUTES = [
   "/convert/",
 ] as const;
 
-function withAuthRedirect(destination: string, pathname: string): string {
+/**
+ * Return path to hand to `dispatchAuthModal({ redirectUrl })` so the
+ * finalize `window.location.assign(…)` inside LoginCard/SignupCard
+ * lands back on the same route the user opened the modal from.
+ * Non-editor routes → undefined so the cards fall back to their
+ * default (dashboard). Replaces the previous `withAuthRedirect` helper
+ * that appended `?redirect_url=…` to the standalone /sign-in href.
+ */
+function authReturnUrlFor(pathname: string): string | undefined {
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
     pathname.startsWith(prefix),
   );
 
-  if (!returnHere) return destination;
-
-  return `${destination}?redirect_url=${encodeURIComponent(pathname)}`;
+  return returnHere ? pathname : undefined;
 }
 
 export function SiteNavbar() {
@@ -163,35 +172,28 @@ export function SiteNavbar() {
                     <LanguageSwitcher />
 
                     {showSignedOut ? (
-                      <>
-                        <Button
-                          className="w-full"
-                          variant="ghost"
-                          onPress={() =>
-                            navigateAndCloseDrawer(
-                              withAuthRedirect(
-                                ROUTES.AUTH.SIGN_IN,
-                                pathname ?? "",
-                              ),
-                            )
-                          }
-                        >
-                          Sign in
-                        </Button>
-                        <Button
-                          className="w-full bg-gradient-to-r from-[var(--color-accent)] to-red-600 font-semibold text-white shadow-sm"
-                          onPress={() =>
-                            navigateAndCloseDrawer(
-                              withAuthRedirect(
-                                ROUTES.AUTH.SIGN_UP,
-                                pathname ?? "",
-                              ),
-                            )
-                          }
-                        >
-                          Sign up free
-                        </Button>
-                      </>
+                      // Single "Login" CTA now — the modal hosts both
+                      // sign-in and sign-up tabs. Removes the previous
+                      // "Sign up free" button per the 2026-08-28 unify
+                      // change. Users can switch to signup via the link
+                      // inside the modal. `redirectUrl` is only set for
+                      // editor routes (see `authReturnUrlFor`) so the
+                      // cards' `window.location.assign(…)` finalize
+                      // lands back in the composer with the pending
+                      // file waiting in IDB.
+                      <Button
+                        className="w-full"
+                        variant="ghost"
+                        onPress={() => {
+                          setIsDrawerOpen(false);
+                          dispatchAuthModal({
+                            mode: "login",
+                            redirectUrl: authReturnUrlFor(pathname ?? ""),
+                          });
+                        }}
+                      >
+                        Login
+                      </Button>
                     ) : null}
 
                     {showSignedIn ? (
@@ -262,24 +264,23 @@ export function SiteNavbar() {
           </div>
 
           {showSignedOut ? (
-            <>
-              <Link
-                className="hidden px-2 text-sm font-medium text-default-600 transition-colors hover:text-foreground sm:inline-flex dark:text-default-400"
-                href={withAuthRedirect(ROUTES.AUTH.SIGN_IN, pathname ?? "")}
-              >
-                Sign in
-              </Link>
-              <Button
-                className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
-                onPress={() =>
-                  router.push(
-                    withAuthRedirect(ROUTES.AUTH.SIGN_UP, pathname ?? ""),
-                  )
-                }
-              >
-                Sign up free
-              </Button>
-            </>
+            // Single "Login" button. Modal handles both sign-in and
+            // sign-up via an in-card tab switch. Removed "Sign up free"
+            // in the 2026-08-28 unify per PM. `redirectUrl` only when
+            // we're on an editor route so post-signin lands back with
+            // the pending file intact (item #15 finalize nav still runs
+            // inside LoginCard).
+            <Button
+              className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
+              onPress={() =>
+                dispatchAuthModal({
+                  mode: "login",
+                  redirectUrl: authReturnUrlFor(pathname ?? ""),
+                })
+              }
+            >
+              Login
+            </Button>
           ) : null}
 
           {showSignedIn ? (

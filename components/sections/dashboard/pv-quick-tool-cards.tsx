@@ -56,13 +56,14 @@ const ILLUSTRATION_HEIGHT = 84;
 const QUICK_TOOLS: readonly QuickTool[] = [
   {
     title: "PDF to Word",
-    description: "PDF → Word, Excel, image, and more.",
+    // Excel/PPT hidden 2026-08-28 pending pipeline work.
+    description: "PDF → Word, image, and more.",
     href: "/convert/pdf-to-word",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Convert%20PDF.svg`,
   },
   {
     title: "Word to PDF",
-    description: "Word, Excel, PPT, and images to PDF.",
+    description: "Word and images to PDF.",
     href: "/convert/word-to-pdf",
     illustrationSrc: `${ILLUSTRATIONS_BASE}/Word%20to%20PDF.svg`,
   },

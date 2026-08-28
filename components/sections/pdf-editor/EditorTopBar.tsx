@@ -42,11 +42,10 @@ import {
   Toolbar,
   Tooltip,
 } from "@heroui/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
@@ -83,7 +82,6 @@ export function EditorInfoBar() {
   const canUndo = mobileHistoryIdx > 0;
   const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
 
-  const router = useRouter();
   const renameDoc = useRenameDocumentMutation();
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -161,13 +159,12 @@ export function EditorInfoBar() {
       // state the user was in after they authenticate.
       void snapshotPendingEditorFile().catch(() => undefined);
 
-      dispatchSignInPrompt({
-        title: "Sign in to save",
-        description:
-          "Create an account and we'll bring you right back to save your document where you left off.",
-        confirmLabel: "Sign in & continue",
-        // Explicit clean return URL so the hydrator's ?fresh=1 / ?tool=
-        // guards don't accidentally wipe the IDB file we just saved.
+      // AuthModal (2026-08-28 unify). Clean return URL — no ?fresh=1
+      // / ?tool= so the hydrator's guards don't wipe the IDB file we
+      // just snapshotted. Cards' finalize does `window.location.assign`
+      // (item #15).
+      dispatchAuthModal({
+        mode: "signup",
         redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
       });
 
@@ -187,8 +184,22 @@ export function EditorInfoBar() {
   // Reported 2026-08-18: "open PDF, edit, go back, open another PDF still
   // shows the previous PDF".
   const handleBack = () => {
-    usePdfEditorStore.getState().clearFile();
-    router.push(isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME);
+    // Save-then-navigate mirrors the Hamburger's "My PDFs" flow so a
+    // user pressing Back with unsaved edits (text, watermark, signature,
+    // drawings, etc.) doesn't lose them. The listener in
+    // `useEditorNavigationSave` handles the "no file / signed out / no
+    // unsaved changes" fast paths, so this is safe for every state.
+    // `clearFileAfter: true` preserves the 2026-08-18 fix — clearing
+    // the store before re-entry stops the previous PDF flashing on the
+    // next editor load.
+    window.dispatchEvent(
+      new CustomEvent("editor:navigate-after-save", {
+        detail: {
+          url: isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME,
+          clearFileAfter: true,
+        },
+      }),
+    );
   };
 
   // PRD §7.3: Print / Download / Done all open the same format modal.

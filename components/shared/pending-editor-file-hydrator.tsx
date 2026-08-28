@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
-import { uploadToasts } from "@/lib/client/upload-toasts/controller";
 import {
   clearPendingEditorFile,
   loadPendingEditorFile,
@@ -163,7 +162,6 @@ export function PendingEditorFileHydrator() {
     // from. Only fires for tools (not bare `?fresh=1` or `?export=`
     // returns) so users who click "PDF Composer" itself still land on
     // the editor.
-    //
     // QA 2026-08-27: skip the redirect when the store already has a
     // file — that means UploadWorkspace on a marketing page
     // (`/edit`, `/split-pdf`, …) just placed the user's dropped PDF on
@@ -206,46 +204,29 @@ export function PendingEditorFileHydrator() {
 
   // Step 2 — one-shot IDB rehydrate.
   //
-  // Two distinct paths:
+  // Fast path (2026-08-28): hydrate the store from IDB IMMEDIATELY so the
+  // editor opens with the user's pre-redirect file + Fabric edits. Step 3
+  // handles the backend upload in the background — the user is no longer
+  // blocked on `/documents/upload` completing before they see the PDF.
   //
-  //   POST-SIGN-IN RESTORE (signed-in + IDB file + `?tool=` or
-  //   `?export=` but no `?id=`):
-  //     The user was signed-out, dropped a file, tried a paid action,
-  //     signed in, and came back. We save-first-then-navigate: upload
-  //     the IDB file to /documents/upload, clear IDB, then
-  //     router.replace to add `?id=<newDocId>` to the URL. The
-  //     document loader picks up the new id and hydrates the editor
-  //     the same way any deep-link load would — no race between the
-  //     hydrator, the loader, and the auto-launch effect. While the
-  //     upload + loader fetch are in flight, the editor shell shows
-  //     `<EditorLoadingShell />` (because `?id=` is present but no
-  //     file is loaded yet) so the user sees a proper spinner instead
-  //     of a bare "Drop your file here" screen or a flash of untitled
-  //     editor chrome.
+  // Prior version ran a "save-first-then-navigate" branch for the
+  // post-signin case (signed-in + `?tool=`/`?export=` + no `?id=`), which
+  // uploaded the file to `/documents/upload` FIRST and only then swapped
+  // in the doc-id URL. On slow networks / cold backends the "Finishing
+  // up…" toast could sit at 99% indefinitely, and if the upload response
+  // didn't resolve the editor never opened. User asked to flip this:
+  // "open the pdf please, you can use the local storage for this one and
+  // once the user is signup and pdf is loaded then flush it".
   //
-  //   NORMAL REHYDRATE (any other case):
-  //     Just hydrate the store from IDB. Step 3 handles the async
-  //     auto-save in the background.
+  // IDB flush lives with `useSignedOutAutoPersist` / Step 5 mirror — once
+  // Step 3's upload sets `currentDocumentId`, the mirror effect clears IDB
+  // on the currentDocumentId branch, so we don't leak a stale copy.
   useEffect(() => {
     if (ranRef.current) return;
     if (!authLoaded) return; // wait so we can pick the right branch
     ranRef.current = true;
 
     let cancelled = false;
-
-    // NOTE: `isRestoringSession` is NOT flipped on here — it's only set
-    // inside the post-signin restore branch below, which owns the
-    // async upload that actually needs the loading shell. Setting it
-    // upfront caused a drop-zone flash on `/pdf-composer?fresh=1&tool=X`
-    // for signed-out visitors: Clerk hydrating → Step 2 → flag=true →
-    // `<UploadScreen />` unmounts → flag=false → `<UploadScreen />`
-    // remounts. If the user clicked/dropped during that window, the
-    // event landed on `<EditorLoadingShell />` (which has no drop
-    // handler) and was lost — requiring a second attempt to upload.
-    // Reported 2026-08-23 (QA: "sign card → composer → first upload
-    // ignored, second works"). The `finally` below still calls
-    // setIsRestoringSession(false) unconditionally, which is a safe
-    // no-op when the flag was never set to true.
 
     void (async () => {
       try {
@@ -298,120 +279,10 @@ export function PendingEditorFileHydrator() {
           return;
         }
 
-        const hasAutoLaunch = Boolean(tool || exportFormat);
-
-        if (isSignedIn && hasAutoLaunch && !docId) {
-          logger.event(EVENTS.HYDRATOR_POST_SIGNIN_RESTORE, "info", {
-            tool,
-            exportFormat,
-            hasFabricEdits: (pendingFabricState?.size ?? 0) > 0,
-          });
-          // Post-sign-in restore path — save-first-then-navigate.
-          // Flip isRestoringSession so PdfEditorShell renders the
-          // <EditorLoadingShell /> skeleton (not the empty drop-zone)
-          // during the save. Also open a bottom-anchored upload-progress
-          // toast that mirrors the real upload % (much less jarring
-          // than a top-right spinner for a multi-second network op).
-          setIsRestoringSession(true);
-          const trackingId = `restore-${Date.now()}`;
-
-          uploadToasts.start({
-            trackingId,
-            filename: file.name,
-          });
-
-          try {
-            const document = await documentsService.uploadDocument(
-              { file },
-              {
-                onUploadProgress: (event) => {
-                  if (!event.total) return;
-                  const pct = Math.round((event.loaded / event.total) * 100);
-
-                  uploadToasts.setProgress(
-                    trackingId,
-                    pct,
-                    "uploading_s3",
-                    pct < 100 ? "Uploading to cloud…" : "Finishing up…",
-                  );
-                },
-              },
-            );
-
-            if (cancelled) return;
-            if (!document.id) {
-              throw new Error("Server returned document without an id");
-            }
-            queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
-            await clearPendingEditorFile();
-            autoSavedRef.current = true; // Step 3 already covered
-            uploadToasts.succeed(trackingId, document);
-
-            // Seed the store with the user's pre-redirect edits BEFORE
-            // router.replace so the document loader's rehydrateEditorState
-            // call (which receives null editorState for a freshly uploaded
-            // doc) is a no-op and our fabric state survives the setFile
-            // transition. setFile only patches `file` — it does not touch
-            // fabricJsonByPage or extractedPages — so the edits remain in
-            // place and both the Fabric canvas and buildEditedPdfBytes pick
-            // them up. extractedPages must also be restored so PdfViewerCanvas
-            // sets suppressText=true for those pages, preventing pdf.js from
-            // rendering native text underneath the Fabric IText overlay
-            // (which would produce a visible double text layer after sign-in).
-            if (pendingFabricState && pendingFabricState.size > 0) {
-              usePdfEditorStore
-                .getState()
-                .replaceFabricJsonByPage(pendingFabricState);
-            }
-            if (pendingExtractedPages && pendingExtractedPages.size > 0) {
-              usePdfEditorStore.setState({
-                extractedPages: pendingExtractedPages,
-              });
-            }
-
-            // Add the fresh id to the URL. The document loader takes
-            // over from here — GET /documents/<id> hydrates the store
-            // and the auto-launch effect fires once the file lands.
-            const next = new URLSearchParams(searchParams.toString());
-
-            next.set("id", document.id);
-            router.replace(`${pathname}?${next.toString()}`);
-            logger.event(EVENTS.HYDRATOR_POST_SIGNIN_RESTORE_OK, "info", {
-              documentId: document.id,
-            });
-          } catch (saveErr) {
-            logger.captureError(saveErr, "hydrator.post_signin_restore", {
-              tool,
-              exportFormat,
-            });
-            uploadToasts.fail(trackingId, saveErr);
-            toast.error({
-              title: "Couldn't save automatically",
-              description:
-                "Continuing with your local copy — use Save from the editor.",
-            });
-            // Fall back to plain rehydrate so the user isn't stranded.
-            setCurrentDocument(null);
-            setFile(file);
-            if (pendingFabricState && pendingFabricState.size > 0) {
-              usePdfEditorStore
-                .getState()
-                .replaceFabricJsonByPage(pendingFabricState);
-            }
-            if (pendingExtractedPages && pendingExtractedPages.size > 0) {
-              usePdfEditorStore.setState({
-                extractedPages: pendingExtractedPages,
-              });
-            }
-            await clearPendingEditorFile();
-          } finally {
-            setIsRestoringSession(false);
-          }
-
-          return;
-        }
-
-        // Normal rehydrate path.
+        // Rehydrate synchronously. Editor opens with the pending file +
+        // Fabric edits + extractedPages. Step 3 uploads to the backend
+        // asynchronously; Step 4 fires the auto-launch (export /
+        // tool-open) once the editor has settled with the file.
         setCurrentDocument(null);
         setFile(file);
         if (pendingFabricState && pendingFabricState.size > 0) {
@@ -422,17 +293,28 @@ export function PendingEditorFileHydrator() {
         if (pendingExtractedPages && pendingExtractedPages.size > 0) {
           usePdfEditorStore.setState({ extractedPages: pendingExtractedPages });
         }
-        await clearPendingEditorFile();
-        logger.breadcrumb("hydrator", "rehydrate.normal_ok");
+        // IDB entry is kept until Step 3 confirms the backend upload
+        // succeeded — that way a mid-upload reload doesn't lose the file.
+        // Step 5's mirror effect clears IDB once `currentDocumentId`
+        // lands, and Step 3 does the same on success as a belt-and-braces.
+        // Signed-out sessions keep mirroring via useSignedOutAutoPersist.
+        const hasAutoLaunch = Boolean(tool || exportFormat);
+
+        if (!(isSignedIn && hasAutoLaunch)) {
+          await clearPendingEditorFile();
+        }
+        logger.breadcrumb("hydrator", "rehydrate.fast_path_ok", {
+          hasAutoLaunch,
+          isSignedIn: Boolean(isSignedIn),
+        });
       } catch (err) {
         logger.captureError(err, "hydrator.rehydrate");
       } finally {
-        // Clear the restoring flag no matter which path we took
-        // (fresh-entry cleanup, empty-IDB, non-PDF skip, currentFile
-        // present, save-first success/failure, or normal rehydrate).
-        // Without this the shell sits on <EditorLoadingShell /> even
-        // though the hydrator has nothing left to do — the exact
-        // "stuck loading on /pdf-composer?fresh=1&tool=X" report.
+        // Clear the restoring flag no matter which path we took. The
+        // shell's `useState` initializer flips it on synchronously when
+        // the URL declares an auto-launch, so we must unconditionally
+        // release it once Step 2 has settled — otherwise the shell sits
+        // on `<EditorLoadingShell />` forever.
         if (!cancelled) setIsRestoringSession(false);
       }
     })();
@@ -447,10 +329,6 @@ export function PendingEditorFileHydrator() {
     exportFormat,
     isFreshEntry,
     isSignedIn,
-    pathname,
-    queryClient,
-    router,
-    searchParams,
     setCurrentDocument,
     setFile,
     setIsRestoringSession,
@@ -460,10 +338,22 @@ export function PendingEditorFileHydrator() {
   // Step 3 — background auto-save for signed-in users. Fires once per
   // file-without-doc-id combo. Failure is non-blocking; the editor still
   // opens and the user can hit Save manually.
+  //
+  // 2026-08-28: hard-gated on `isSignedIn`. Without this the effect fires
+  // for signed-out visitors too — POST /documents/upload always 401s
+  // for them, generating a red console error on every anonymous upload
+  // (user report: "not logged in, uploaded a file, seeing 401 in
+  // console"). Signed-out sessions still auto-persist through
+  // `useSignedOutAutoPersist` (IDB mirror for post-signin restore); the
+  // server upload only makes sense once auth is confirmed. Wait for
+  // Clerk to finish loading before deciding so we don't skip a
+  // legitimate signed-in save on first paint.
   useEffect(() => {
     if (autoSavedRef.current) return;
     if (!currentFile) return;
     if (currentDocumentId) return; // already tied to a document row
+    if (!authLoaded) return; // Clerk still booting — defer the decision
+    if (!isSignedIn) return; // anonymous session — IDB-only via `useSignedOutAutoPersist`
 
     autoSavedRef.current = true;
 
@@ -475,6 +365,13 @@ export function PendingEditorFileHydrator() {
 
         setCurrentDocument({ id: document.id, name: document.filename });
         queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+        // Flush the IDB pending copy — the backend row is now the source
+        // of truth. Step 2 leaves IDB in place for the post-signin
+        // auto-launch case (so a mid-upload reload doesn't lose the
+        // file); once the upload lands, clear it so the next visit
+        // starts clean. Step 5's mirror effect also clears on the
+        // `currentDocumentId` branch, but firing here is deterministic.
+        await clearPendingEditorFile().catch(() => undefined);
         logger.event(EVENTS.HYDRATOR_BACKGROUND_AUTOSAVE_OK, "info", {
           documentId: document.id,
         });
@@ -524,8 +421,10 @@ export function PendingEditorFileHydrator() {
       }
     })();
   }, [
+    authLoaded,
     currentDocumentId,
     currentFile,
+    isSignedIn,
     pathname,
     queryClient,
     router,

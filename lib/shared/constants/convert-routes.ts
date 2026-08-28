@@ -20,6 +20,34 @@ export interface ConvertRoute {
  */
 export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
   // ── Convert TO PDF ────────────────────────────────────────────────────────
+  // Generic X→PDF entrypoint. The accept list mirrors EXT_TO_CONVERSION in
+  // `lib/client/file-conversion/upload-to-pdf.ts` — every extension the
+  // backend converter supports. UploadWorkspace treats this as an X→PDF
+  // convert route (no `exportFormat`) and routes each drop through the
+  // pending-conversion runner + dashboard placeholder row (invariant #17).
+  "file-to-pdf": {
+    title: "Convert File to PDF",
+    // Excel + PowerPoint hidden 2026-08-28 pending pipeline work.
+    // GIF + HTML + TXT hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+    // Re-enable by uncommenting the accept entries and restoring the
+    // extension names to the description string below.
+    description: "Supported formats: Word, JPG, PNG.",
+    accept: [
+      "doc",
+      "docx",
+      // "xls",
+      // "xlsx",
+      // "ppt",
+      // "pptx",
+      "jpg",
+      "jpeg",
+      "png",
+      // "gif",
+      // "html",
+      // "htm",
+      // "txt",
+    ],
+  },
   "word-to-pdf": {
     title: "Convert Word to PDF",
     description:
@@ -49,11 +77,13 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
       "Turn .ppt or .pptx decks into shareable PDF slides in seconds.",
     accept: ["ppt", "pptx"],
   },
-  "txt-to-pdf": {
-    title: "Convert TXT to PDF",
-    description: "Wrap a plain-text file in a formatted, page-ready PDF.",
-    accept: ["txt"],
-  },
+  // txt-to-pdf hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only). Restore
+  // the entry (and its landing-tools tile) to re-enable.
+  // "txt-to-pdf": {
+  //   title: "Convert TXT to PDF",
+  //   description: "Wrap a plain-text file in a formatted, page-ready PDF.",
+  //   accept: ["txt"],
+  // },
 
   // ── Convert FROM PDF ─────────────────────────────────────────────────────
   "pdf-to-word": {
@@ -89,18 +119,20 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
     accept: ["pdf"],
     exportFormat: "pptx",
   },
-  "pdf-to-html": {
-    title: "Convert PDF to HTML",
-    description:
-      "Turn a PDF into a lightweight HTML page you can embed or edit.",
-    accept: ["pdf"],
-    exportFormat: "html",
-  },
-  "pdf-to-text": {
-    title: "Convert PDF to Plain Text",
-    description:
-      "Extract the raw text from a PDF as a plain .txt file, ready to reuse.",
-    accept: ["pdf"],
-    exportFormat: "txt",
-  },
+  // pdf-to-html hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+  // "pdf-to-html": {
+  //   title: "Convert PDF to HTML",
+  //   description:
+  //     "Turn a PDF into a lightweight HTML page you can embed or edit.",
+  //   accept: ["pdf"],
+  //   exportFormat: "html",
+  // },
+  // pdf-to-text hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+  // "pdf-to-text": {
+  //   title: "Convert PDF to Plain Text",
+  //   description:
+  //     "Extract the raw text from a PDF as a plain .txt file, ready to reuse.",
+  //   accept: ["pdf"],
+  //   exportFormat: "txt",
+  // },
 };

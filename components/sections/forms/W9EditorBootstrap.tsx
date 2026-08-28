@@ -1,12 +1,11 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
-import {
-  clearPendingW9Values,
-  readPendingW9Values,
-} from "@/lib/client/forms/pending-w9-values";
+import { readPendingW9State } from "@/lib/client/forms/pending-w9-values";
+import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -45,6 +44,8 @@ type W9EditorBootstrapProps = {
 export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   const setFile = usePdfEditorStore((s) => s.setFile);
   const currentFile = usePdfEditorStore((s) => s.file);
+  const searchParams = useSearchParams();
+  const resumeDocId = searchParams.get("resumeDocId");
 
   const hasBootstrappedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +56,37 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
     let cancelled = false;
 
+    // SYNC restore FIRST — before any async network work. Reads local
+    // state (values + signature preview) and pushes it into the store
+    // right away so the form paints with the user's previous entries
+    // instead of an empty template for the ~1s of session/template
+    // network round-trips. Without this, users perceive their data as
+    // "wiped" every time they return to the route (QA 2026-08-29).
+    // `hydrateFromSession` below preserves store values via its merge
+    // (existing wins over session), so this early restore isn't
+    // clobbered when the network call resolves.
+    const earlyPending = readPendingW9State();
+
+    if (earlyPending) {
+      if (Object.keys(earlyPending.values).length > 0) {
+        useFormEditorStore.getState().setValues(earlyPending.values);
+      }
+      if (earlyPending.signaturePreview) {
+        useFormEditorStore
+          .getState()
+          .setSignaturePreview(earlyPending.signaturePreview);
+      }
+    }
+
     // Wipe any leftover file first so the drop-zone / previous PDF
     // doesn't flash before ours loads.
     usePdfEditorStore.getState().clearFile();
+    // Take ownership of the save pipeline for this route. The pdf-composer
+    // shell's generic Fabric-merge save (`useEditorNavigationSave`,
+    // `useEditorAutoPersist`) would otherwise upload the blank W-9
+    // template on navigation / pagehide → duplicate rows in My PDFs
+    // (QA 2026-08-27). `W9FinalizeIntercept` handles Save via finalize.
+    usePdfEditorStore.getState().setAutoPersistDisabled(true);
 
     // Parallel bootstrap: template fetch + form session. Neither
     // depends on the other so we don't want them serialized.
@@ -92,16 +121,20 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       if (cancelled) return;
       useFormEditorStore.getState().hydrateFromSession(session);
 
-      // Restore any values the user typed BEFORE a sign-in redirect
-      // (W9FinalizeIntercept persists them to sessionStorage when it
-      // dispatches the sign-in prompt so a paywalled download doesn't
-      // lose the whole form). Signature is intentionally not restored
-      // — the fresh session's S3 namespace rejects the previous key.
-      const pending = readPendingW9Values();
+      // Values + signature preview already restored synchronously at
+      // the top of this effect (see `earlyPending` above). Still
+      // PATCH the freshly-created backend session with the restored
+      // values so the DB row for THIS user reflects the local state
+      // even before the user types anything new. `hydrateFromSession`
+      // already merged the store values (existing wins), so read from
+      // the store rather than re-reading storage — captures anything
+      // the user typed between mount and session resolution too.
+      const restoredValues = useFormEditorStore.getState().values;
 
-      if (pending) {
-        useFormEditorStore.getState().setValues(pending);
-        clearPendingW9Values();
+      if (Object.keys(restoredValues).length > 0) {
+        formsService
+          .patchFormSession(session.id, restoredValues)
+          .catch(() => undefined);
       }
     })().catch((err: unknown) => {
       // Session failure is non-fatal — the pdf-composer editor still
@@ -109,7 +142,82 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       logger.captureError(err, "w9.session_bootstrap");
     });
 
-    void Promise.all([templatePromise, sessionPromise]);
+    // Resume flow — `?resumeDocId=<id>` is set by
+    // `openDocumentInEditor` when the user clicks a saved W-9 in
+    // Dashboard → My PDFs. Fetch the document metadata, parse the
+    // `w9` marker from `editorState`, and restore the raw form
+    // values so the yellow overlays paint with the user's previous
+    // entries. Signature key is intentionally NOT restored: it
+    // belongs to the old form session and the new session's S3
+    // namespace rejects it. User re-signs on the resume flow.
+    // Also seed `currentDocumentId` on the pdf-editor store so the
+    // next Save upserts the same row (via `documentsService.uploadDocument`
+    // in `W9FinalizeIntercept`) instead of creating a duplicate.
+    const resumePromise = resumeDocId
+      ? (async () => {
+          try {
+            const doc = await documentsService.getDocument(resumeDocId);
+
+            if (cancelled) return;
+
+            // Only claim ownership of this document row if it's really
+            // a saved W-9 (has a `w9` marker in `editorState`). Without
+            // this check a stray `?resumeDocId=<non-w9-id>` link could
+            // cause the next Save to upsert a stamped W-9 on top of an
+            // unrelated user document → silent data loss.
+            type ResumeEnvelope = {
+              w9?: {
+                values?: Record<string, string>;
+                signaturePreview?: string | null;
+              };
+            };
+            let parsed: ResumeEnvelope | null = null;
+
+            if (doc.editorState) {
+              try {
+                parsed = JSON.parse(doc.editorState) as ResumeEnvelope;
+              } catch {
+                parsed = null;
+              }
+            }
+
+            if (!parsed?.w9) return;
+
+            usePdfEditorStore.getState().setCurrentDocument({
+              id: doc.id,
+              name: doc.filename,
+            });
+
+            const values = parsed.w9.values;
+
+            if (values && typeof values === "object") {
+              // `sessionPromise` may still be in flight — the store
+              // action merges into `values` so the order is safe
+              // (each `setValues` spreads into the previous map).
+              useFormEditorStore.getState().setValues(values);
+            }
+
+            // Restore the signature IMAGE (data URL) so the yellow
+            // "Sign here" placeholder is replaced by the previously
+            // drawn ink on reopen. Signature KEY is intentionally
+            // still null — the fresh session's S3 namespace won't
+            // accept the old key. If the user hits Done → Download
+            // without re-signing, `W9FinalizeIntercept` re-uploads
+            // this preview to the new session before finalizing.
+            const signaturePreview = parsed.w9.signaturePreview;
+
+            if (typeof signaturePreview === "string" && signaturePreview) {
+              useFormEditorStore
+                .getState()
+                .setSignaturePreview(signaturePreview);
+            }
+          } catch (err) {
+            logger.captureError(err, "w9.resume_from_dashboard");
+          }
+        })()
+      : Promise.resolve();
+
+    void Promise.all([templatePromise, sessionPromise, resumePromise]);
 
     return () => {
       cancelled = true;
@@ -117,9 +225,10 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       // the W-9 file and a subsequent `/w-9-form` visit gets a fresh
       // session (avoids replaying a stale sessionId on a new mount).
       usePdfEditorStore.getState().clearFile();
+      usePdfEditorStore.getState().setAutoPersistDisabled(false);
       useFormEditorStore.getState().reset();
     };
-  }, [setFile]);
+  }, [setFile, resumeDocId]);
 
   if (error) {
     return (

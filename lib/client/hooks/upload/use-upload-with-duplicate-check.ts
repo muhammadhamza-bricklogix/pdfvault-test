@@ -37,12 +37,22 @@ export type DuplicatePrompt = {
 export async function findDuplicateByFilename(
   filename: string,
 ): Promise<Document | null> {
+  // Case-INSENSITIVE compare so `report.pdf` matches `Report.pdf` /
+  // `REPORT.PDF` in the library. Users treat filenames case-
+  // insensitively and the backend accepts arbitrary casing on upload,
+  // so a case-strict match here silently missed real duplicates
+  // (QA 2026-08-29: X→PDF convert never triggered the duplicate modal
+  // even when the library had a same-name file).
+  const needle = filename.toLowerCase();
+
   for (let page = 1; page <= DUPLICATE_CHECK_MAX_PAGES; page += 1) {
     const response = await documentsService.listDocuments({
       page,
       pageSize: DUPLICATE_CHECK_PAGE_SIZE,
     });
-    const match = response.items.find((d) => d.filename === filename);
+    const match = response.items.find(
+      (d) => d.filename.toLowerCase() === needle,
+    );
 
     if (match) return match;
     if (page >= response.pagination.totalPages) return null;

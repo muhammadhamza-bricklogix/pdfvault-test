@@ -162,20 +162,22 @@ const TOOLS: Tool[] = [
     href: convert("word-to-pdf"),
     tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "Excel to PDF",
-    description: "Turn .xls or .xlsx spreadsheets into print-ready PDFs.",
-    href: convert("excel-to-pdf"),
-    tabs: ["convert-to"],
-  },
-  {
-    icon: "/landing/convert.svg",
-    title: "PowerPoint to PDF",
-    description: "Convert .ppt or .pptx decks into shareable PDF slides.",
-    href: convert("powerpoint-to-pdf"),
-    tabs: ["convert-to"],
-  },
+  // Hidden 2026-08-28 — Excel/PowerPoint conversions parked pending
+  // future work. Do not remove; re-enable when pipelines are ready.
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "Excel to PDF",
+  //   description: "Turn .xls or .xlsx spreadsheets into print-ready PDFs.",
+  //   href: convert("excel-to-pdf"),
+  //   tabs: ["convert-to"],
+  // },
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PowerPoint to PDF",
+  //   description: "Convert .ppt or .pptx decks into shareable PDF slides.",
+  //   href: convert("powerpoint-to-pdf"),
+  //   tabs: ["convert-to"],
+  // },
   {
     icon: "/landing/convert.svg",
     title: "JPG to PDF",
@@ -191,13 +193,14 @@ const TOOLS: Tool[] = [
     href: convert("png-to-pdf"),
     tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "TXT to PDF",
-    description: "Wrap a plain-text file into a formatted, page-ready PDF.",
-    href: convert("txt-to-pdf"),
-    tabs: ["convert-to"],
-  },
+  // TXT to PDF hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "TXT to PDF",
+  //   description: "Wrap a plain-text file into a formatted, page-ready PDF.",
+  //   href: convert("txt-to-pdf"),
+  //   tabs: ["convert-to"],
+  // },
 
   // ─── Compress PDF ───────────────────────────────────────────────────────
   {
@@ -220,25 +223,30 @@ const TOOLS: Tool[] = [
   // ─── Convert from PDF ───────────────────────────────────────────────────
   {
     icon: "/landing/convert.svg",
-    title: "PDF to Word",
-    description: "Turn a PDF into an editable .docx you can keep working in.",
-    href: convert("pdf-to-word"),
-    tabs: ["convert-from"],
+    title: "Convert File to PDF",
+    description:
+      // Excel + PowerPoint hidden 2026-08-28. GIF/HTML/TXT hidden
+      // 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+      "Supported formats: Word, JPG, PNG.",
+    href: convert("file-to-pdf"),
+    tabs: ["convert-to"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to Excel",
-    description: "Pull tables out of a PDF and into a ready-to-edit Excel.",
-    href: convert("pdf-to-excel"),
-    tabs: ["convert-from"],
-  },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to PowerPoint",
-    description: "Turn a PDF into a .pptx deck, one slide per page.",
-    href: convert("pdf-to-powerpoint"),
-    tabs: ["convert-from"],
-  },
+  // Hidden 2026-08-28 — PDF → Excel/PowerPoint parked pending future
+  // work. Do not remove; re-enable when pipelines are ready.
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to Excel",
+  //   description: "Pull tables out of a PDF and into a ready-to-edit Excel.",
+  //   href: convert("pdf-to-excel"),
+  //   tabs: ["convert-from"],
+  // },
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to PowerPoint",
+  //   description: "Turn a PDF into a .pptx deck, one slide per page.",
+  //   href: convert("pdf-to-powerpoint"),
+  //   tabs: ["convert-from"],
+  // },
   {
     icon: "/landing/convert.svg",
     title: "PDF to JPG",
@@ -253,20 +261,21 @@ const TOOLS: Tool[] = [
     href: convert("pdf-to-png"),
     tabs: ["convert-from"],
   },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to HTML",
-    description: "Turn a PDF into a lightweight HTML page you can embed.",
-    href: convert("pdf-to-html"),
-    tabs: ["convert-from"],
-  },
-  {
-    icon: "/landing/convert.svg",
-    title: "PDF to Plain Text",
-    description: "Extract the raw text from a PDF as a plain .txt file.",
-    href: convert("pdf-to-text"),
-    tabs: ["convert-from"],
-  },
+  // PDF to HTML + PDF to Plain Text hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to HTML",
+  //   description: "Turn a PDF into a lightweight HTML page you can embed.",
+  //   href: convert("pdf-to-html"),
+  //   tabs: ["convert-from"],
+  // },
+  // {
+  //   icon: "/landing/convert.svg",
+  //   title: "PDF to Plain Text",
+  //   description: "Extract the raw text from a PDF as a plain .txt file.",
+  //   href: convert("pdf-to-text"),
+  //   tabs: ["convert-from"],
+  // },
 
   // ─── Others ─────────────────────────────────────────────────────────────
   {

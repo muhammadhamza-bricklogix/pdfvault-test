@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignInSchema } from "@/lib/shared/schemas/auth/sign-in.schema";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -84,6 +85,23 @@ function humaniseClerkMessage(raw: string, code?: string): string {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Masks the local part of an email for the verify-step subtitle
+ * ("Please check your email hou***@gmail.com."). Keeps the first three
+ * chars + domain visible so the user recognises which inbox to check
+ * without exposing the full identifier on a shared screen.
+ */
+function maskEmail(raw: string): string {
+  const at = raw.indexOf("@");
+
+  if (at <= 0) return raw;
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at);
+  const visible = local.slice(0, Math.min(3, local.length));
+
+  return `${visible}***${domain}`;
+}
+
 // Sign-in mode.
 //   - "code"     → default. Email → 6-digit OTP → verify → finalize.
 //   - "password" → email + password → existing single-factor flow.
@@ -119,7 +137,29 @@ type SecondFactorStrategy =
   | "totp"
   | "backup_code";
 
-export function LoginCard() {
+type LoginCardProps = {
+  /**
+   * Post-signin destination. When omitted, falls back to
+   * `useSearchParams().get('redirect_url')` so the standalone
+   * `/sign-in` page keeps working unchanged. AuthModal passes this in
+   * directly because it isn't rendered under `/sign-in?redirect_url=…`.
+   * Either way the finalize nav is still `window.location.assign(…)`
+   * per CLAUDE.md invariant #15 — do not swap for `router.push`.
+   */
+  redirectUrl?: string;
+  /**
+   * When rendered inside a modal, calling this switches the modal's
+   * mode to signup instead of navigating to `/sign-up`. When omitted
+   * (standalone page), the "Sign up" link falls back to a `<Link>` so
+   * the standalone route still works.
+   */
+  onSwitchToSignup?: () => void;
+};
+
+export function LoginCard({
+  redirectUrl,
+  onSwitchToSignup,
+}: LoginCardProps = {}) {
   const { signIn } = useSignIn();
   const searchParams = useSearchParams();
 
@@ -153,8 +193,11 @@ export function LoginCard() {
 
   const afterSignInPath = useMemo(
     () =>
-      safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
-    [searchParams],
+      safeRedirectPath(
+        redirectUrl ?? searchParams.get("redirect_url"),
+        ROUTES.APP.DASHBOARD,
+      ),
+    [redirectUrl, searchParams],
   );
 
   // Post-verify navigation. Invariant #15: iOS Safari commits the Clerk
@@ -167,6 +210,19 @@ export function LoginCard() {
     });
     const { error: finalizeError } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
+        // AuthModal opens on TOP of the editor (2026-08-28 unify), so
+        // by the time we assign a new URL the composer still has
+        // `hasUnsavedChanges === true` — user just edited before
+        // clicking Done/Download. Without the suppress, the
+        // `beforeunload` guard in `useEditorNavigationSave` fires the
+        // browser's native "Leave site?" prompt right after sign-in
+        // completes, and if the user picks "Leave" the nav can land
+        // them on `/` because Clerk's redirect races the browser's
+        // cancellation. `suppressNextUnload()` mirrors the pattern
+        // already used by `ReloadConfirmModal`. No effect on the
+        // standalone `/sign-in` page (no editor mounted, no
+        // beforeunload listener).
+        suppressNextUnload();
         window.location.assign(decorateUrl(afterSignInPath));
       },
     });
@@ -197,6 +253,10 @@ export function LoginCard() {
       // dashboard fallback.
       const callbackWithReturn = `${ROUTES.AUTH.SSO_CALLBACK}?redirect_url=${encodeURIComponent(afterSignInPath)}`;
 
+      // Same reason as `finalizeAndRedirect` above — signIn.sso does a
+      // full-page redirect to Google, which trips `beforeunload` when
+      // the modal is opened from the editor with unsaved edits.
+      suppressNextUnload();
       await signIn.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,
@@ -622,18 +682,19 @@ export function LoginCard() {
       : ROUTES.AUTH.SIGN_UP;
 
   const isVerifying = step === "codeVerify" || step === "twoFactor";
-  const codeStepTitle =
-    step === "codeVerify"
-      ? "Check your email"
-      : secondFactorStrategy === "phone_code"
-        ? "Check your phone"
-        : "Check your email";
+  // Ref-SS 3 style: "Enter the code to log in" + masked email subtitle.
+  // Phone 2FA keeps a generic subtitle since we don't have the number.
+  const codeStepTitle = "Enter the code to log in";
   const codeStepSubtitle =
     step === "codeVerify"
-      ? `We sent a 6-digit code to ${email}.`
+      ? `Please check your email ${maskEmail(email)}.`
       : secondFactorStrategy === "phone_code"
         ? "We sent a 6-digit code to your phone."
-        : `We sent a 6-digit code to ${email}.`;
+        : `Please check your email ${maskEmail(email)}.`;
+  // Ref-SS 1 (initial) shows just "Welcome back" with no subtitle.
+  // Ref-SS 2 (password mode) shows "Log in with password".
+  const credentialsTitle =
+    mode === "password" ? "Log in with password" : "Welcome back";
   const showResendLink =
     step === "codeVerify" ||
     secondFactorStrategy === "email_code" ||
@@ -642,21 +703,21 @@ export function LoginCard() {
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(446px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-9 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:min-h-[562px]"
+      className="box-border w-[min(446px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
         id={headingId}
       >
-        {isVerifying ? codeStepTitle : "Good to see you back!"}
+        {isVerifying ? codeStepTitle : credentialsTitle}
       </h1>
-      <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
-        {isVerifying
-          ? codeStepSubtitle
-          : mode === "code"
-            ? "Enter your email and we'll send you a sign-in code."
-            : "Please enter your details below to log in."}
-      </p>
+      {/* Subtitle only on the verify step per the reference SS (SS3).
+          Credentials step (SS1 + SS2) shows the heading alone. */}
+      {isVerifying ? (
+        <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
+          {codeStepSubtitle}
+        </p>
+      ) : null}
 
       {step === "credentials" ? (
         <>
@@ -813,7 +874,9 @@ export function LoginCard() {
                   ? "Sending code…"
                   : "Signing in…"
                 : mode === "code"
-                  ? "Send verification code"
+                  ? // Ref-SS 1: primary CTA on the code / email-only
+                    // step reads "Log in with email".
+                    "Log in with email"
                   : "Log in"}
             </button>
 
@@ -922,12 +985,26 @@ export function LoginCard() {
       {step === "credentials" ? (
         <p className="mt-6 text-center text-[15px] text-[#5f5f5f]">
           Do not have an account yet?{" "}
-          <Link
-            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-            href={signUpHref}
-          >
-            Get Started
-          </Link>
+          {onSwitchToSignup ? (
+            // Modal mode — switch tabs inside the AuthModal instead of
+            // navigating to the standalone /sign-up page (which would
+            // unmount the modal and lose the pending file / redirectUrl
+            // context the caller set up).
+            <button
+              className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              type="button"
+              onClick={onSwitchToSignup}
+            >
+              Sign up
+            </button>
+          ) : (
+            <Link
+              className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              href={signUpHref}
+            >
+              Sign up
+            </Link>
+          )}
         </p>
       ) : null}
     </section>

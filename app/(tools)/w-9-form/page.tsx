@@ -1,4 +1,7 @@
+import { Suspense } from "react";
+
 import { PdfEditorShell } from "@/components/sections/pdf-editor/PdfEditorShell";
+import { W9AutoPersist } from "@/components/sections/forms/W9AutoPersist";
 import { W9EditorBootstrap } from "@/components/sections/forms/W9EditorBootstrap";
 import { W9FinalizeIntercept } from "@/components/sections/forms/W9FinalizeIntercept";
 import { W9FormFieldsPortal } from "@/components/sections/forms/W9FormFieldsPortal";
@@ -31,11 +34,20 @@ export const metadata = {
 //     Fabric-merge export. Mounted BEFORE the shell so its listener
 //     registers first + can `stopImmediatePropagation` the export event.
 export default function W9FormPage() {
+  // `W9EditorBootstrap` calls `useSearchParams()` to read `?resumeDocId=<id>`
+  // for the dashboard-resume flow. Next.js requires that any component tree
+  // touching `useSearchParams()` be wrapped in a Suspense boundary so the
+  // static prerender can bail cleanly. Fallback is `null` so nothing paints
+  // while the client hydrates — `<W9EditorBootstrap />` renders its own
+  // `EditorLoadingShell` immediately after mount.
   return (
-    <W9EditorBootstrap>
-      <W9FinalizeIntercept />
-      <PdfEditorShell />
-      <W9FormFieldsPortal />
-    </W9EditorBootstrap>
+    <Suspense fallback={null}>
+      <W9EditorBootstrap>
+        <W9FinalizeIntercept />
+        <W9AutoPersist />
+        <PdfEditorShell />
+        <W9FormFieldsPortal />
+      </W9EditorBootstrap>
+    </Suspense>
   );
 }

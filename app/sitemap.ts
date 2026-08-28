@@ -2,14 +2,17 @@ import type { MetadataRoute } from "next";
 
 const BASE_URL = "https://pdfvault.ai";
 
+// Excel + PowerPoint routes hidden from the sitemap 2026-08-28 while
+// the corresponding conversion pipelines are parked. Do not remove;
+// re-enable by uncommenting once the tools ship.
 const CONVERT_TOOLS = [
   "pdf-to-word",
-  "pdf-to-excel",
-  "pdf-to-ppt",
+  // "pdf-to-excel",
+  // "pdf-to-ppt",
   "pdf-to-jpg",
   "word-to-pdf",
-  "excel-to-pdf",
-  "ppt-to-pdf",
+  // "excel-to-pdf",
+  // "ppt-to-pdf",
   "jpg-to-pdf",
   "png-to-pdf",
 ];

@@ -38,8 +38,10 @@ export const FOOTER_PRODUCT_SUBSECTIONS: FooterProductSubsection[] = [
   {
     links: [
       { href: ROUTES.TOOLS.PDF_TO_DOC, label: "PDF to Word" },
-      { href: PDF_TOOLS_HUB, label: "PDF to PPTX" },
-      { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
+      // Hidden 2026-08-28 — PPTX + Excel conversions parked pending
+      // future work. Do not remove; re-enable when pipelines are ready.
+      // { href: PDF_TOOLS_HUB, label: "PDF to PPTX" },
+      // { href: ROUTES.TOOLS.PDF_TO_EXCEL, label: "PDF to Excel" },
       { href: PDF_TOOLS_HUB, label: "PDF to JPG" },
       { href: PDF_TOOLS_HUB, label: "PDF to PNG" },
       { href: PDF_TOOLS_HUB, label: "View all" },
@@ -49,8 +51,9 @@ export const FOOTER_PRODUCT_SUBSECTIONS: FooterProductSubsection[] = [
   {
     links: [
       { href: ROUTES.TOOLS.DOC_TO_PDF, label: "Word to PDF" },
-      { href: PDF_TOOLS_HUB, label: "PPTX to PDF" },
-      { href: ROUTES.TOOLS.EXCEL_TO_PDF, label: "Excel to PDF" },
+      // Hidden 2026-08-28 — see note above.
+      // { href: PDF_TOOLS_HUB, label: "PPTX to PDF" },
+      // { href: ROUTES.TOOLS.EXCEL_TO_PDF, label: "Excel to PDF" },
       { href: PDF_TOOLS_HUB, label: "JPG to PDF" },
       { href: PDF_TOOLS_HUB, label: "PNG to PDF" },
       { href: PDF_TOOLS_HUB, label: "View all" },
@@ -104,7 +107,7 @@ export function formatFooterCopyrightLine(year: number): string {
 
 export const FOOTER_LEGAL_STRIP_LINKS: FooterNavLink[] = [
   { href: ROUTES.LEGAL.PRIVACY, label: "Privacy Policy" },
-  { href: ROUTES.LEGAL.TERMS, label: "Terms and conditions" },
+  { href: ROUTES.LEGAL.TERMS, label: "Terms and Conditions" },
   { href: ROUTES.LEGAL.COOKIES, label: "Cookie Policy" },
 ];
 

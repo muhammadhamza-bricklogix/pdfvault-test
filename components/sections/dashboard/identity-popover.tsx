@@ -92,7 +92,17 @@ export function IdentityPopover({
       // and the call would 401. Failure is intentionally swallowed: nothing
       // should block the user from signing out.
       void usersService.signOutAudit().catch(() => undefined);
-      void signOut();
+      // Full-page navigation via Clerk's `redirectUrl` guarantees the
+      // session cookie is cleared before the next render — same iOS
+      // Safari cookie-commit reasoning as the sign-in / sign-up flow
+      // (CLAUDE.md item 15). Bare `void signOut()` left users still
+      // "signed in" until refresh when the SPA re-rendered before the
+      // cookie invalidated (QA 2026-08-28).
+      void signOut({ redirectUrl: ROUTES.PUBLIC.HOME }).catch(() => {
+        // Belt-and-braces: if Clerk's signOut promise rejects (rare)
+        // force a hard nav so the next page hydrates without a session.
+        window.location.assign(ROUTES.PUBLIC.HOME);
+      });
     }
   };
 
@@ -166,14 +176,14 @@ export function IdentityPopover({
               </ListBox.Item>
             )}
 
-            <ListBox.Item id="terms" textValue="Terms and conditions">
+            <ListBox.Item id="terms" textValue="Terms and Conditions">
               <div className="flex h-8 items-center justify-center">
                 <HugeiconsIcon
                   className="size-4 shrink-0 text-default-600"
                   icon={LegalDocumentIcon}
                 />
               </div>
-              <Label>Terms and conditions</Label>
+              <Label>Terms and Conditions</Label>
             </ListBox.Item>
 
             <ListBox.Item id="help" textValue="Help">

@@ -13,7 +13,7 @@ import {
 import { useExtractImagesMutation } from "@/lib/client/query/mutations/pdf-tools.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -126,10 +126,13 @@ export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
 
         const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=extract-images`;
 
-        dispatchSignInPrompt({
-          title: "Sign in to extract images",
-          description: "Sign in and we'll bring you back here to finish.",
-          confirmLabel: "Sign in & continue",
+        // AuthModal (2026-08-28 unify). Fabric-canvas invariant
+        // (shell-level hook must keep the live ref, not the original
+        // upload) is untouched — only the sign-in prompt trigger
+        // changes. Cards' finalize does `window.location.assign(returnTo)`
+        // (item #15) and the hydrator re-opens the tool via step #4.
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: returnTo,
         });
 

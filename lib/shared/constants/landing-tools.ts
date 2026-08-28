@@ -134,21 +134,24 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "badge", variant: "orange", badge: "JPG" },
         href: convert("jpg-to-pdf"),
       },
-      {
-        label: "EXCEL to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "XLS" },
-        href: convert("excel-to-pdf"),
-      },
-      {
-        label: "POWERPOINT to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "PPT" },
-        href: convert("powerpoint-to-pdf"),
-      },
-      {
-        label: "TXT  to PDF",
-        icon: { kind: "badge", variant: "orange", badge: "TXT" },
-        href: convert("txt-to-pdf"),
-      },
+      // Hidden 2026-08-28 — Excel/PowerPoint conversions parked pending
+      // future work. Do not remove; re-enable once pipelines are ready.
+      // {
+      //   label: "EXCEL to PDF",
+      //   icon: { kind: "badge", variant: "orange", badge: "XLS" },
+      //   href: convert("excel-to-pdf"),
+      // },
+      // {
+      //   label: "POWERPOINT to PDF",
+      //   icon: { kind: "badge", variant: "orange", badge: "PPT" },
+      //   href: convert("powerpoint-to-pdf"),
+      // },
+      // TXT to PDF hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+      // {
+      //   label: "TXT  to PDF",
+      //   icon: { kind: "badge", variant: "orange", badge: "TXT" },
+      //   href: convert("txt-to-pdf"),
+      // },
       // "Any format to PDF" removed — no backend pipeline for arbitrary formats.
     ],
   },
@@ -171,26 +174,29 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
         href: convert("pdf-to-jpg"),
       },
-      {
-        label: "PDF to EXCEL",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-excel"),
-      },
-      {
-        label: "PDF to POWERPOINT",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-powerpoint"),
-      },
-      {
-        label: "PDF to HTML",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-html"),
-      },
-      {
-        label: "PDF to Plain Text",
-        icon: { kind: "badge", variant: "blue", badge: "PDF" },
-        href: convert("pdf-to-text"),
-      },
+      // Hidden 2026-08-28 — PDF → Excel/PowerPoint parked pending
+      // future work. Do not remove; re-enable once pipelines are ready.
+      // {
+      //   label: "PDF to EXCEL",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-excel"),
+      // },
+      // {
+      //   label: "PDF to POWERPOINT",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-powerpoint"),
+      // },
+      // PDF to HTML + PDF to Plain Text hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only).
+      // {
+      //   label: "PDF to HTML",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-html"),
+      // },
+      // {
+      //   label: "PDF to Plain Text",
+      //   icon: { kind: "badge", variant: "blue", badge: "PDF" },
+      //   href: convert("pdf-to-text"),
+      // },
     ],
   },
   {

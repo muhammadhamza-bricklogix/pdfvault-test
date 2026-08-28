@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { setEditorSaveQueryClient } from "@/lib/client/pdf-editor/persist-editor-document";
 import { setPendingConversionsQueryClient } from "@/lib/client/upload/run-pending-conversion";
 import { queryClientConfig } from "@/lib/config/tanstack.config";
 import { logger } from "@/lib/shared/utils/logger";
@@ -82,6 +83,18 @@ export function QueryProvider({ children }: QueryProviderProps) {
     setPendingConversionsQueryClient(queryClient);
 
     return () => setPendingConversionsQueryClient(null);
+  }, [queryClient]);
+
+  // Same bridge for `persistEditorDocument` — editor Save / Back /
+  // save-before-action call `documentsService.uploadDocument` directly
+  // (not through a `useMutation` hook), so the cache would otherwise
+  // stay stale after a save. Registering here lets the persist code
+  // invalidate `documentKeys.lists()` + `.detail(id)` so the dashboard
+  // list and the reload-after-navigate loader both refresh.
+  useEffect(() => {
+    setEditorSaveQueryClient(queryClient);
+
+    return () => setEditorSaveQueryClient(null);
   }, [queryClient]);
 
   return (

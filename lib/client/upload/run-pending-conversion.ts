@@ -35,12 +35,21 @@ export function setPendingConversionsQueryClient(
 export async function runPendingConversion(
   tempId: string,
   file: File,
+  /**
+   * When set, forwarded to `POST /documents/upload` as `documentId` so
+   * the backend overwrites an existing row instead of creating a new
+   * one. Used by the convert-route duplicate-filename flow (QA
+   * 2026-08-28: X→PDF conversion was skipping the duplicate check that
+   * PDF→X had, so uploading `report.docx` with an existing `report.pdf`
+   * silently created a second row).
+   */
+  documentId?: string,
 ): Promise<void> {
   const store = usePendingConversionsStore.getState();
 
   try {
     store.setStatus(tempId, "uploading");
-    await documentsService.uploadDocument({ file });
+    await documentsService.uploadDocument({ file, documentId });
 
     logger.event("upload.pending_conversion_ok", "info", {
       tempId,

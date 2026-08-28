@@ -1,6 +1,7 @@
 "use client";
 
 import { DISCLAIMER_TEMPLATE } from "@/lib/shared/constants/billing";
+import { formatMinor } from "@/lib/shared/utils/currency";
 
 interface DisclaimerBlockProps {
   amountTodayMinor: number;
@@ -26,15 +27,13 @@ export function DisclaimerBlock({
   intervalLabel,
   currency,
 }: DisclaimerBlockProps) {
-  const format = (minor: number) =>
-    new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-    }).format(minor / 100);
-
-  const body = DISCLAIMER_TEMPLATE.replace("{today}", format(amountTodayMinor))
-    .replace("{renew}", format(amountRenewMinor))
+  // Shared `formatMinor` keeps the disclaimer's amounts in the same
+  // format as the paywall + success step + billing table.
+  const body = DISCLAIMER_TEMPLATE.replace(
+    "{today}",
+    formatMinor(amountTodayMinor, currency),
+  )
+    .replace("{renew}", formatMinor(amountRenewMinor, currency))
     .replace("{cycle}", intervalLabel);
 
   return (

@@ -71,8 +71,24 @@ async function finalizeFormSession(
   return data;
 }
 
+/**
+ * Silent partial save. PATCHes the current session's values so a hard
+ * refresh, tab close, or cross-device continuation can pick up where
+ * the user left off. Signature is intentionally NOT included — that's
+ * uploaded through `uploadSignature` and stamped only at finalize time.
+ * Failures bubble up so the caller can decide to swallow (auto-save
+ * on typing) or surface (user-initiated save).
+ */
+async function patchFormSession(
+  sessionId: string,
+  values: Record<string, string>,
+): Promise<void> {
+  await apiClient.patch(FORMS.PATCH(sessionId), { values });
+}
+
 export const formsService = {
   startFormSession,
   uploadSignature,
   finalizeFormSession,
+  patchFormSession,
 };

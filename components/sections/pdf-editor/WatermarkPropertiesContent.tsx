@@ -21,7 +21,9 @@ import {
 } from "@heroui/react";
 import { useCallback, useRef } from "react";
 
+import { compressImageDataUrl } from "@/lib/client/pdf-editor/compress-image-data-url";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 // ---------------------------------------------------------------------------
@@ -111,38 +113,41 @@ export function WatermarkPropertiesContent() {
         return;
       }
 
-      const reader = new FileReader();
+      // Compress client-side so the resulting data URL fits inside the
+      // ~800 KB editorState soft cap. Without this a >600 KB source
+      // PNG blows past the cap once combined with the rest of the
+      // envelope, `buildEditorStateJson` trims `imageData` before
+      // uploading, and on reload the live preview has no image bytes
+      // → user reports "watermark image gone." PNG-source keeps
+      // transparency (typical for watermarks) so we preserve PNG format.
+      void (async () => {
+        try {
+          const dataUrl = await compressImageDataUrl(file, {
+            maxDim: 1200,
+            jpegQuality: 0.9,
+          });
 
-      reader.onload = () => {
-        const dataUrl = reader.result;
-
-        if (typeof dataUrl !== "string") {
+          // Save the image bytes AND make sure the watermark is enabled +
+          // type-switched to "image", so users who upload before flipping
+          // the toggles still get a visible watermark on save/export.
+          setConfig({ enabled: true, imageData: dataUrl, type: "image" });
+        } catch (err) {
+          logger.captureError(err, "watermark.compress", {
+            filename: file.name,
+            size: file.size,
+          });
           toast.error({
             title: "Upload failed",
             description: "Could not read the selected image. Try another file.",
           });
-
-          return;
         }
-
-        // Save the image bytes AND make sure the watermark is enabled +
-        // type-switched to "image", so users who upload before flipping the
-        // toggles still get a visible watermark on save/export.
-        setConfig({ enabled: true, imageData: dataUrl, type: "image" });
-      };
-      reader.onerror = () => {
-        toast.error({
-          title: "Upload failed",
-          description: "Could not read the selected image. Try another file.",
-        });
-      };
-      reader.readAsDataURL(file);
+      })();
     },
     [setConfig],
   );
 
   return (
-    <div className="flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {/* Enable / Disable */}
       <Switch
         isSelected={config.enabled}

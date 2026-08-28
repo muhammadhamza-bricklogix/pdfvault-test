@@ -52,6 +52,20 @@ const TOOL_ICONS: Record<string, typeof File01Icon> = {
 const iconFor = (id: string) => TOOL_ICONS[id] ?? File01Icon;
 
 /**
+ * Tool ids to hide from the modal while the corresponding conversion
+ * pipelines are parked (2026-08-28). The backend `/tools` endpoint
+ * still returns these entries; filtering client-side keeps the tiles
+ * out of the UI without touching backend config. Re-enable by removing
+ * ids from this set when the pipelines ship.
+ */
+const HIDDEN_TOOL_IDS: ReadonlySet<string> = new Set([
+  "pdf-to-excel",
+  "pdf-to-powerpoint",
+  "excel-to-pdf",
+  "powerpoint-to-pdf",
+]);
+
+/**
  * Tools catalog modal launched from the editor top bar. Renders a tile grid
  * powered by `GET /api/v1/tools`. Clicking a tile navigates to that tool's
  * route — the editor closes via `onClose` on navigation so the modal doesn't
@@ -76,7 +90,9 @@ export function ToolsModal({ isOpen, onClose }: ToolsModalProps) {
     router.push(tool.route);
   };
 
-  const tiles: Tool[] = data?.items ?? [];
+  const tiles: Tool[] = (data?.items ?? []).filter(
+    (t) => !HIDDEN_TOOL_IDS.has(t.id),
+  );
 
   return (
     <Modal.Backdrop

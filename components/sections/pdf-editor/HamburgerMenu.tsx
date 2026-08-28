@@ -25,7 +25,7 @@ import {
   uploadAsPdf,
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
-import { dispatchSignInPrompt } from "@/components/shared/sign-in-prompt-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -198,20 +198,23 @@ export function HamburgerMenu() {
   };
 
   const requireSignIn = (
-    description = "Sign in to access this feature. We'll bring you back to the editor.",
+    _description = "Sign in to access this feature. We'll bring you back to the editor.",
     redirectUrl?: string,
   ) => {
     // Snapshot the working editor state before the sign-in redirect so
     // fabric overlays and extractedPages survive the full-page Clerk
-    // nav. Fire-and-forget — IDB writes are fast and the prompt modal
-    // gives the user a beat to cancel; awaiting would visibly stall
-    // the click.
+    // nav (item #15 finalize). Fire-and-forget — IDB writes are fast
+    // and the modal itself gives the user a beat to cancel; awaiting
+    // would visibly stall the click.
     void snapshotPendingEditorFile().catch(() => undefined);
 
-    dispatchSignInPrompt({
-      title: "Sign in required",
-      description,
-      confirmLabel: "Sign in & continue",
+    // AuthModal (2026-08-28 unify). The old `description` copy is
+    // dropped — the modal's headline is a fixed "Log in" / "Get
+    // Started" so we can't customize per caller. The redirectUrl still
+    // rides through so the hydrator's post-signin restore path lands
+    // the user back on the same editor / tool.
+    dispatchAuthModal({
+      mode: "login",
       redirectUrl,
     });
   };

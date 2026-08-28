@@ -1,20 +1,38 @@
 import type { Canvas as FabricCanvas } from "fabric";
+import type { QueryClient } from "@tanstack/react-query";
 import type { Document } from "@/lib/shared/types/documents.types";
 import type { BuildEditedPdfRemappedState } from "@/lib/client/pdf-editor/save-utils";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { logger } from "@/lib/shared/utils/logger";
+import { toast } from "@/lib/shared/utils/toast";
 
-// Reject editor-state payloads larger than ~800 KB BEFORE we send. The backend
-// rejects > 1 MiB outright; this is the headroom for HTTP overhead + the
-// signed multipart envelope plus a safety margin. When over, we strip
-// watermark/bg `imageData` (the only field that can realistically blow up)
-// and re-serialize without it — the user still sees the watermark visually
-// because the BAKED bytes carry the image; only the UI panel restoration
-// loses the source data URL until the user re-uploads.
-const EDITOR_STATE_SOFT_LIMIT_BYTES = 800 * 1024;
+// 2026-08-28: `persistEditorDocument` calls `documentsService.uploadDocument`
+// directly (not through a `useMutation` hook) so the tanstack query cache
+// isn't invalidated automatically. Without this, the dashboard's file list
+// and any `documentKeys.detail(id)` consumers keep serving pre-save
+// metadata — including the stale signed URL — so when the user reopens
+// the freshly-saved file the loader can fetch the OLD bytes from a
+// cached signed URL and it looks like the save was lost.
+// QueryProvider registers the app-level client here on mount and
+// clears it on unmount (mirrors `setPendingConversionsQueryClient`).
+let editorSaveQueryClient: QueryClient | null = null;
+
+export function setEditorSaveQueryClient(client: QueryClient | null): void {
+  editorSaveQueryClient = client;
+}
+
+// Reject editor-state payloads larger than ~950 KB BEFORE we send. The
+// backend rejects > 1 MiB outright; this leaves 74 KB headroom for HTTP
+// overhead + the signed multipart envelope. Raised from 800 KB on
+// 2026-08-28 after users hit the silent trim path with typical watermark
+// / background image sizes. The `compressImageDataUrl` helper called by
+// the upload UIs already downscales user images so they should never
+// need the trim path — this cap is a belt-and-braces guard only.
+const EDITOR_STATE_SOFT_LIMIT_BYTES = 950 * 1024;
 
 type PristineSweepResult = {
   map: Map<number, string>;
@@ -355,6 +373,31 @@ export async function persistEditorDocument({
       hasUnsavedChanges: false,
     });
 
+    // Invalidate the docs list + prime the detail cache so the dashboard
+    // reflects the new size/updatedAt AND the next `useEditorDocumentLoader`
+    // call for this id gets fresh metadata (fresh signed URL pointing at
+    // the just-uploaded bytes) instead of a stale cached response. Without
+    // this the user reopens the same doc and sees pre-save content — QA
+    // report 2026-08-28 ("used draw tool, save toast fired, changes not
+    // there on reopen"). Fire-and-forget: the save is already committed
+    // server-side; a cache-refresh failure shouldn't block the caller.
+    if (editorSaveQueryClient) {
+      try {
+        editorSaveQueryClient.setQueryData(
+          documentKeys.detail(document.id),
+          document,
+        );
+        void editorSaveQueryClient.invalidateQueries({
+          queryKey: documentKeys.lists(),
+        });
+        void editorSaveQueryClient.invalidateQueries({
+          queryKey: documentKeys.detail(document.id),
+        });
+      } catch (invalidateErr) {
+        logger.warn("[PDFedits] save: cache invalidate failed", invalidateErr);
+      }
+    }
+
     return {
       document,
       ok: true,
@@ -394,6 +437,61 @@ function buildEditorStateJson(
   };
   const serialized = JSON.stringify(full);
 
+  // PERSIST-DIAG: summary of what's about to leave the browser as editorState.
+  // Grep `[PDFedits] PERSIST-DIAG` in the console; if this shows
+  // `watermarkImageDataStripped: true` or `bgImageDataStripped: true` on
+  // reload the watermark / background image preview will blank because the
+  // baked PDF doesn't carry them either (bakeOverlays: false on Save).
+  try {
+    const fabricSummary: Record<
+      number,
+      { objectCount: number; editorTypes: string[] }
+    > = {};
+
+    fabricMap.forEach((json, pageNum) => {
+      try {
+        const parsed = JSON.parse(json) as {
+          objects?: { editorType?: string; type?: string }[];
+        };
+        const objs = parsed.objects ?? [];
+
+        fabricSummary[pageNum] = {
+          objectCount: objs.length,
+          editorTypes: objs.map((o) => o.editorType ?? o.type ?? "?"),
+        };
+      } catch {
+        fabricSummary[pageNum] = { objectCount: -1, editorTypes: [] };
+      }
+    });
+    const wm = state.watermarkConfig;
+    const bg = state.backgroundImageConfig;
+
+    logger.info("[PDFedits] PERSIST-DIAG: buildEditorStateJson", {
+      serializedLen: serialized.length,
+      willTrim: serialized.length > EDITOR_STATE_SOFT_LIMIT_BYTES,
+      softLimit: EDITOR_STATE_SOFT_LIMIT_BYTES,
+      watermark: {
+        enabled: wm.enabled,
+        hasText: Boolean(wm.text),
+        hasImageData: Boolean(wm.imageData),
+        imageDataLen: wm.imageData ? wm.imageData.length : 0,
+      },
+      backgroundImage: {
+        enabled: bg.enabled,
+        hasImageData: Boolean(bg.imageData),
+        imageDataLen: bg.imageData ? bg.imageData.length : 0,
+      },
+      fabricPages: Array.from(fabricMap.keys()),
+      fabricSummary,
+      extractedPages: Array.from(extracted),
+    });
+  } catch (diagErr) {
+    logger.warn(
+      "[PDFedits] PERSIST-DIAG: buildEditorStateJson log failed",
+      diagErr,
+    );
+  }
+
   if (serialized.length <= EDITOR_STATE_SOFT_LIMIT_BYTES) {
     return serialized;
   }
@@ -412,7 +510,36 @@ function buildEditorStateJson(
     extractedPages: Array.from(extracted),
   };
 
-  logger.warn?.("editorState exceeded soft cap; dropped inline imageData URLs");
+  logger.warn(
+    "[PDFedits] PERSIST-DIAG: editorState exceeded soft cap; dropped inline imageData URLs — reload will lose watermark/bg image PREVIEW (bytes not baked into cloud PDF because bakeOverlays:false on Save)",
+    {
+      originalLen: serialized.length,
+      softLimit: EDITOR_STATE_SOFT_LIMIT_BYTES,
+      watermarkHadImageData: Boolean(state.watermarkConfig.imageData),
+      bgHadImageData: Boolean(state.backgroundImageConfig.imageData),
+    },
+  );
+
+  // Surface the trim to the user — silent loss is what caused the
+  // 2026-08-28 report ("half my edits gone on reopen"). The upload
+  // UIs downscale user images to fit under the cap, so hitting this
+  // branch means an unexpected payload size (e.g. huge fabricJsonByPage
+  // from many overlays). Let the user know so they can reduce edits
+  // or split the save.
+  if (typeof window !== "undefined") {
+    const droppedWatermark = Boolean(state.watermarkConfig.imageData);
+    const droppedBg = Boolean(state.backgroundImageConfig.imageData);
+    const parts: string[] = [];
+
+    if (droppedWatermark) parts.push("watermark image");
+    if (droppedBg) parts.push("background image");
+    if (parts.length > 0) {
+      toast.error({
+        title: "Saved without live previews",
+        description: `Your ${parts.join(" & ")} exceeded the save limit and won't reappear on reload. Use a smaller image.`,
+      });
+    }
+  }
 
   return JSON.stringify(trimmed);
 }
