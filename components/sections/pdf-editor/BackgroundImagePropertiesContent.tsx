@@ -14,7 +14,9 @@ import {
 } from "@heroui/react";
 import { useCallback, useRef } from "react";
 
+import { compressImageDataUrl } from "@/lib/client/pdf-editor/compress-image-data-url";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -72,31 +74,34 @@ export function BackgroundImagePropertiesContent() {
         return;
       }
 
-      const reader = new FileReader();
+      // Compress client-side so the resulting data URL fits inside the
+      // ~800 KB editorState soft cap. Without this a 3 MB source PNG
+      // produces a ~4 MB base64 string, `buildEditorStateJson` trims
+      // `imageData` before uploading, and on reload the live preview
+      // has no image bytes → user reports "background image gone."
+      // Save uses bakeOverlays:false so the cloud PDF doesn't carry the
+      // image either — the persisted data URL is the ONLY reload source.
+      void (async () => {
+        try {
+          const dataUrl = await compressImageDataUrl(file, {
+            maxDim: 1600,
+            jpegQuality: 0.85,
+          });
 
-      reader.onload = () => {
-        const dataUrl = reader.result;
-
-        if (typeof dataUrl !== "string") {
+          // Auto-enable so users who upload without first flipping the Switch
+          // still see the image apply and get it baked into the saved PDF.
+          setConfig({ enabled: true, imageData: dataUrl });
+        } catch (err) {
+          logger.captureError(err, "backgroundImage.compress", {
+            filename: file.name,
+            size: file.size,
+          });
           toast.error({
             title: "Upload failed",
             description: "Could not read the selected image. Try another file.",
           });
-
-          return;
         }
-
-        // Auto-enable so users who upload without first flipping the Switch
-        // still see the image apply and get it baked into the saved PDF.
-        setConfig({ enabled: true, imageData: dataUrl });
-      };
-      reader.onerror = () => {
-        toast.error({
-          title: "Upload failed",
-          description: "Could not read the selected image. Try another file.",
-        });
-      };
-      reader.readAsDataURL(file);
+      })();
     },
     [setConfig],
   );

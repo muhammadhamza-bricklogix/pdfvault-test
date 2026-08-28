@@ -8,6 +8,7 @@ import { Suspense } from "react";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
+import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
 import { WeglotRouteSync } from "@/components/shared/navigation/weglot-route-sync";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
@@ -42,6 +43,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <UploadToastProvider />
           <SignInPromptModal />
           <MobileDebugBoot />
+          <GoogleAdsClickBoot />
           <UserSyncBoot />
           <OfflineBoot />
           <SentryUserContext />

@@ -53,6 +53,29 @@ export interface CheckoutIntentRequest {
    * with no document context (billing settings, identity popover).
    */
   fileName?: string;
+  /**
+   * Google Ads click identifiers captured off the landing URL by
+   * `GoogleAdsClickBoot`. Backend persists whichever is present on the
+   * subscription record, then uploads to Google Ads Offline Conversion
+   * Import when the Solidgate webhook fires for the day-7 first
+   * payment (conversion action 7733397743), day-45 rebill (7733408318),
+   * and day-60 rebill (7733421050) events.
+   *
+   * Only one of `gclid` / `gbraid` / `wbraid` will normally be present
+   * per landing — Google emits `gclid` on desktop web with 3rd-party
+   * cookies allowed, `wbraid` on the web when they're blocked, and
+   * `gbraid` on iOS app conversions. All three are forwarded so the
+   * backend never has to guess which one Ads will accept.
+   *
+   * `clickTimestamp` is the ISO timestamp of the first landing that
+   * carried a click ID — Google Ads' Offline Conversion Import requires
+   * the click-time timestamp, NOT the conversion-time timestamp, on
+   * upload.
+   */
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
+  clickTimestamp?: string;
 }
 
 export interface AlternatePlanPricing {

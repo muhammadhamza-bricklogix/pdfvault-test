@@ -446,14 +446,36 @@ export function useEditorDocumentLoader() {
  * legacy "re-extract text on load" behavior for that session.
  */
 function rehydrateEditorState(editorState: string | null) {
-  if (!editorState) return;
+  // REHYDRATE-DIAG: log the raw envelope so we can tell whether the backend
+  // returned editorState at all, whether the payload is the trimmed (no
+  // imageData) variant, and how many pages carry Fabric objects. Pairs with
+  // `[PDFedits] PERSIST-DIAG` on the save side.
+  logger.info("[PDFedits] REHYDRATE-DIAG: entry", {
+    hasEditorState: Boolean(editorState),
+    editorStateLen: editorState?.length ?? 0,
+  });
+
+  if (!editorState) {
+    logger.warn(
+      "[PDFedits] REHYDRATE-DIAG: no editorState on document — watermark / bg image / editModeText overlays / extractedPages will NOT be restored; only baked PDF bytes will show",
+    );
+
+    return;
+  }
 
   let parsed: EditorStateEnvelope;
 
   try {
     const candidate = JSON.parse(editorState) as EditorStateEnvelope;
 
-    if (candidate?.v !== 1) return;
+    if (candidate?.v !== 1) {
+      logger.warn(
+        "[PDFedits] REHYDRATE-DIAG: envelope version mismatch, skipping",
+        { v: candidate?.v },
+      );
+
+      return;
+    }
     parsed = candidate;
   } catch (err) {
     logger.warn?.(
@@ -462,6 +484,58 @@ function rehydrateEditorState(editorState: string | null) {
     );
 
     return;
+  }
+
+  const wm = parsed.watermarkConfig as
+    | { enabled?: boolean; imageData?: string | null; text?: string }
+    | undefined;
+  const bg = parsed.backgroundImageConfig as
+    | { enabled?: boolean; imageData?: string | null }
+    | undefined;
+  const fabricPageKeys = parsed.fabricJsonByPage
+    ? Object.keys(parsed.fabricJsonByPage)
+    : [];
+  const fabricPageObjectCounts: Record<string, number> = {};
+
+  if (parsed.fabricJsonByPage) {
+    for (const [page, json] of Object.entries(parsed.fabricJsonByPage)) {
+      try {
+        const p = JSON.parse(json as string) as { objects?: unknown[] };
+
+        fabricPageObjectCounts[page] = p.objects?.length ?? 0;
+      } catch {
+        fabricPageObjectCounts[page] = -1;
+      }
+    }
+  }
+  logger.info("[PDFedits] REHYDRATE-DIAG: parsed envelope", {
+    watermark: {
+      present: Boolean(wm),
+      enabled: wm?.enabled,
+      hasImageData: Boolean(wm?.imageData),
+      imageDataLen: wm?.imageData ? wm.imageData.length : 0,
+      hasText: Boolean(wm?.text),
+    },
+    backgroundImage: {
+      present: Boolean(bg),
+      enabled: bg?.enabled,
+      hasImageData: Boolean(bg?.imageData),
+      imageDataLen: bg?.imageData ? bg.imageData.length : 0,
+    },
+    fabricPageKeys,
+    fabricPageObjectCounts,
+    extractedPages: parsed.extractedPages ?? [],
+  });
+
+  if (wm?.enabled && !wm.imageData) {
+    logger.warn(
+      "[PDFedits] REHYDRATE-DIAG: watermark enabled but imageData missing — most likely trimmed at save time (payload > 800 KB soft cap); live preview will not render the image",
+    );
+  }
+  if (bg?.enabled && !bg.imageData) {
+    logger.warn(
+      "[PDFedits] REHYDRATE-DIAG: backgroundImage enabled but imageData missing — most likely trimmed at save time (payload > 800 KB soft cap); live preview will not render the image",
+    );
   }
 
   const current = usePdfEditorStore.getState();
