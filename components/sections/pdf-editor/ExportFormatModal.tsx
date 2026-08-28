@@ -126,14 +126,20 @@ function ExportFormatModalBody({
   const [fileName, setFileName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Duplicate-name check against the user's My PDFs library. Only runs
-  // on the W-9 route per product ask 2026-08-29 — the shell composer's
-  // Download flow uses `currentDocumentId`-based upserts and doesn't
-  // need this guard. Debounced 400 ms so the list-endpoint isn't hit
-  // on every keystroke, and cancellable so a rapid-fire rename doesn't
-  // race an older lookup back into view.
-  const [duplicateExists, setDuplicateExists] = useState(false);
-  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  // Duplicate-name check against the user's My PDFs library. Only
+  // runs on the W-9 route per product ask 2026-08-29 — the shell
+  // composer's Download flow uses `currentDocumentId`-based upserts
+  // and doesn't need this guard. Debounced 400 ms so the list-endpoint
+  // isn't hit on every keystroke, and cancellable so a rapid-fire
+  // rename doesn't race an older lookup back into view.
+  //
+  // Stored state is the filename we last observed as a duplicate /
+  // are actively checking; the render flags below derive from those.
+  // Using stored-filename-strings keeps the whole thing pure — no
+  // synchronous set-state-in-effect calls needed when the input
+  // changes.
+  const [duplicateFor, setDuplicateFor] = useState<string | null>(null);
+  const [checkingFor, setCheckingFor] = useState<string | null>(null);
   const activeCheckId = useRef(0);
   const selectedExt = useMemo(
     () => visibleOptions.find((o) => o.id === selected)?.ext ?? ".pdf",
@@ -150,34 +156,39 @@ function ExportFormatModalBody({
 
     return `${base}${selectedExt}`;
   }, [fileName, selectedExt]);
+  const duplicateExists =
+    duplicateFor !== null && duplicateFor === fullFilename;
+  const checkingDuplicate =
+    checkingFor !== null && checkingFor === fullFilename && !duplicateExists;
 
   useEffect(() => {
-    if (!isW9Route) return;
-    if (!fullFilename) {
-      setDuplicateExists(false);
-      setCheckingDuplicate(false);
+    if (!isW9Route || !fullFilename) return;
 
-      return;
-    }
+    const checkFor = fullFilename;
     const checkId = ++activeCheckId.current;
     let cancelled = false;
-
-    setCheckingDuplicate(true);
     const timer = window.setTimeout(async () => {
+      // "checking" flag flips ON only when the debounce fires — the
+      // 400 ms window before that isn't user-perceptible latency, so
+      // no need to show a spinner just because they haven't paused
+      // typing. Set here (inside an async callback) rather than in
+      // the effect body to satisfy `react-hooks/set-state-in-effect`.
+      if (cancelled || checkId !== activeCheckId.current) return;
+      setCheckingFor(checkFor);
       try {
-        const match = await findDuplicateByFilename(fullFilename);
+        const match = await findDuplicateByFilename(checkFor);
 
         if (cancelled || checkId !== activeCheckId.current) return;
-        setDuplicateExists(Boolean(match));
+        setDuplicateFor(match ? checkFor : null);
       } catch {
         // Network / auth failures don't block download — user can
         // still ship the file. Silent so an unrelated 401 doesn't
         // spawn a scary red banner in the download modal.
         if (cancelled || checkId !== activeCheckId.current) return;
-        setDuplicateExists(false);
+        setDuplicateFor(null);
       } finally {
         if (!cancelled && checkId === activeCheckId.current) {
-          setCheckingDuplicate(false);
+          setCheckingFor(null);
         }
       }
     }, 400);
