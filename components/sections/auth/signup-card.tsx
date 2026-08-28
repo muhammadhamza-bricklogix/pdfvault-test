@@ -3,7 +3,7 @@
 import { useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
@@ -142,6 +142,14 @@ export function SignupCard({
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous double-submit guards. `submitting` state is async — a
+  // fast double-click (or button-click + Enter-key) both pass the
+  // `disabled={submitting}` gate before React re-renders. Refs
+  // interlock immediately so the second attempt bails. Without this,
+  // `verifyEmailCode` fires twice and the second call returns 400
+  // `verification_already_verified` (QA 2026-08-28).
+  const submittingCredentialsRef = useRef(false);
+  const submittingCodeRef = useRef(false);
 
   const headingId = useId();
   const emailId = useId();
@@ -216,12 +224,16 @@ export function SignupCard({
   ) => {
     event.preventDefault();
     if (!signUp) return;
+    // Sync double-submit guard — see refs above.
+    if (submittingCredentialsRef.current) return;
+    submittingCredentialsRef.current = true;
 
     const trimmedEmail = email.trim();
 
     if (!EMAIL_REGEX.test(trimmedEmail)) {
       setNotice(null);
       setErrors({ email: "Enter a valid email address." });
+      submittingCredentialsRef.current = false;
 
       return;
     }
@@ -240,6 +252,7 @@ export function SignupCard({
           email: flat.emailAddress?.[0],
           password: flat.password?.[0],
         });
+        submittingCredentialsRef.current = false;
 
         return;
       }
@@ -328,16 +341,22 @@ export function SignupCard({
       });
     } finally {
       setSubmitting(false);
+      submittingCredentialsRef.current = false;
     }
   };
 
   const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!signUp) return;
+    // Sync double-submit interlock — see refs declared above.
+    if (submittingCodeRef.current) return;
+    submittingCodeRef.current = true;
+
     const trimmedCode = code.trim();
 
     if (trimmedCode.length < 4) {
       setErrors({ code: "Enter the code we emailed you." });
+      submittingCodeRef.current = false;
 
       return;
     }
@@ -357,19 +376,37 @@ export function SignupCard({
         // 400 here:
         //   • `form_code_incorrect` — user mistyped the OTP
         //   • `verification_expired` — code timed out (10 min TTL)
-        //   • `verification_already_verified` — code was used
+        //   • `verification_already_verified` — code was used already
+        //     (Clerk already flipped `signUp.status = "complete"` on
+        //     the earlier call — fall through to finalize instead of
+        //     erroring). This is the recovery path for the 2026-08-28
+        //     double-submit bug: even with the sync ref guard above,
+        //     if a stale second submit sneaks through (browser autofill
+        //     replay, StrictMode dev double-fire) we treat it as a
+        //     success and finalize the session that already exists.
         //   • `verification_missing` — sign-up was flagged by bot
         //     protection (usually the clerk-captcha div was missing
         //     or the Turnstile widget hadn't loaded before `create`)
-        logger.captureError(verifyError, "signup.verify_email_code");
-        setErrors({
-          code: readClerkError(
-            verifyError,
-            "That code didn't work. Try again or resend a new one.",
-          ),
-        });
+        const errorCode = (verifyError as { errors?: { code?: string }[] })
+          ?.errors?.[0]?.code;
 
-        return;
+        if (errorCode === "verification_already_verified") {
+          logger.warn(
+            "signup.verify_email_code: already verified — falling through to finalize",
+          );
+          // Fall through: the signUp is already at status "complete"
+          // per Clerk's semantics; the code below will finalize.
+        } else {
+          logger.captureError(verifyError, "signup.verify_email_code");
+          setErrors({
+            code: readClerkError(
+              verifyError,
+              "That code didn't work. Try again or resend a new one.",
+            ),
+          });
+
+          return;
+        }
       }
 
       if (signUp.status === "complete") {
@@ -423,6 +460,7 @@ export function SignupCard({
       });
     } finally {
       setSubmitting(false);
+      submittingCodeRef.current = false;
     }
   };
 
