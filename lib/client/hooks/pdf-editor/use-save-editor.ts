@@ -31,15 +31,6 @@ type SaveBeforeActionDetail = {
   // reload is slow or hangs. The `applyPostSaveReset` still fires so
   // `store.file` reflects the latest edits before the caller resumes.
   skipWait?: boolean;
-  // When true, specialized routes with `autoPersistDisabled` (e.g.
-  // `/w-9-form`) MUST perform their own save via the intercept handler
-  // and resolve `onComplete` — this signals "the caller is leaving the
-  // editor, save the user's work first" (currently: hamburger Back →
-  // My PDFs on the W-9 route). Default `saveBeforeAction` calls
-  // (ExportFormatModal, CreatePdfModal, etc.) leave this off, so the
-  // W-9 intercept keeps its no-op success behavior for those paths
-  // and doesn't double up on top of the finalize-during-download flow.
-  runOnSpecializedRoute?: boolean;
   onComplete: (result: {
     ok: boolean;
     reason?:

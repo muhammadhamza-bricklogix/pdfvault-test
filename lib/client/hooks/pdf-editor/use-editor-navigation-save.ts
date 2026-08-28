@@ -95,88 +95,19 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       // pipeline (`W9FinalizeIntercept` → finalize-then-upload) and set
       // `autoPersistDisabled` so this generic Fabric-merge save doesn't
       // upload the blank template on top of the stamped version as a
-      // duplicate row (QA 2026-08-27). BUT — hamburger Back → My PDFs
-      // should still trigger THEIR save so the user's typed values +
-      // signature land in the library before the navigation. Dispatch
-      // `editor:save-before-action` with `runOnSpecializedRoute: true`
-      // so the specialized intercept knows to run finalize+upload (it
-      // ignores this flag on the normal Download flow to avoid the
-      // double-save). If nothing catches it, `onComplete` never fires
-      // and the promise stays pending — fallback timeout resolves it
-      // as `no-changes` so the user isn't stranded on a screen with a
-      // toast that never clears.
+      // duplicate row (QA 2026-08-27). Fire the standalone
+      // `editor:save` event so the W-9 intercept runs its own
+      // finalize+upload in the background — the user's typed values +
+      // signature land in the library even without clicking Done →
+      // Download. The intercept surfaces its own toasts (loading /
+      // success / error / sign-in prompt) so we don't stack any here.
+      // Navigation continues immediately: the save fires as a
+      // fire-and-forget from the caller's perspective, mirroring the
+      // "hamburger Back on a normal PDF with no unsaved changes"
+      // behavior — the row appears once the finalize returns.
       if (usePdfEditorStore.getState().autoPersistDisabled) {
-        const specializedLoadingKey = toast.loading({
-          title: "Saving…",
-          description: "Saving your entries before you leave.",
-        });
-
-        const specializedResult = await new Promise<{
-          ok: boolean;
-          reason?:
-            | "error"
-            | "no-changes"
-            | "no-file"
-            | "not-signed-in"
-            | "not-loaded";
-        }>((resolve) => {
-          const timeoutId = window.setTimeout(() => {
-            resolve({ ok: false, reason: "no-changes" });
-          }, 15_000);
-          const onComplete = (result: {
-            ok: boolean;
-            reason?:
-              | "error"
-              | "no-changes"
-              | "no-file"
-              | "not-signed-in"
-              | "not-loaded";
-          }) => {
-            window.clearTimeout(timeoutId);
-            resolve(result);
-          };
-
-          window.dispatchEvent(
-            new CustomEvent("editor:save-before-action", {
-              detail: {
-                force: true,
-                runOnSpecializedRoute: true,
-                onComplete,
-              },
-            }),
-          );
-        });
-
-        toast.close(specializedLoadingKey);
-
-        if (specializedResult.ok) {
-          toast.success({
-            title: "Saved",
-            description: "Your entries were saved to your library.",
-          });
-          navigate();
-
-          return;
-        }
-
-        if (specializedResult.reason === "not-signed-in") {
-          // The specialized intercept (W-9) opens the sign-in prompt
-          // itself. Don't navigate — user needs to complete auth first
-          // and their in-memory entries are still on screen.
-          return;
-        }
-        if (specializedResult.reason === "no-changes") {
-          // Nothing worth persisting (or the intercept didn't run) —
-          // safe to navigate away without a warning.
-          navigate();
-
-          return;
-        }
-        toast.error({
-          title: "Could not save",
-          description:
-            "We couldn't save your entries before leaving. Please try Save first.",
-        });
+        window.dispatchEvent(new CustomEvent("editor:save"));
+        navigate();
 
         return;
       }
