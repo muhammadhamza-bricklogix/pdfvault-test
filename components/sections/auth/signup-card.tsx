@@ -430,7 +430,7 @@ export function SignupCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-8 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:min-h-[735px] sm:px-8 sm:pb-[44px] sm:pt-[38px]"
+      className="box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-6 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:px-8 sm:pb-7 sm:pt-[38px]"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
