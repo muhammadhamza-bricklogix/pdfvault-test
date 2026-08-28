@@ -107,3 +107,19 @@ export function formatMinorWithCode(minor: number, currency: string): string {
 
   return `${symbol} ${code}`;
 }
+
+/**
+ * Bare-number format — no symbol, no ISO code, just the amount with
+ * two decimal places ("275.22"). Uses the current locale for group /
+ * decimal separators. Used on billing surfaces where the user has
+ * explicitly asked to hide the currency marker (e.g. billing invoice
+ * table + downloaded receipt PDF as of 2026-08-29).
+ */
+export function formatMinorBare(minor: number): string {
+  const amount = minor / 100;
+
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}

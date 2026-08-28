@@ -21,7 +21,7 @@ import {
   usePlansQuery,
   useSubscriptionQuery,
 } from "@/lib/client/query/queries/billing.query";
-import { formatMinorWithCode } from "@/lib/shared/utils/currency";
+import { formatMinorBare } from "@/lib/shared/utils/currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -109,15 +109,12 @@ function InvoiceRow({
   planName: string | null;
   regionCurrency: string | null;
 }) {
-  // Backend Payment writer stamps every invoice as USD regardless of
-  // the actual Solidgate charge currency (QA 2026-08-28 → 29, e.g.
-  // PKR-paid subscription showing "$275.22 USD"). `regionCurrency`
-  // comes from `/billing/plans` — server-side localised to the user's
-  // country, same signal Solidgate uses at checkout — so we use it as
-  // the display currency when the backend defaulted to USD.
-  // See `lib/client/billing/user-currency.ts` for the full rationale.
+  // Bare number only per user request (2026-08-29) — no `$` symbol,
+  // no `USD` code. The `resolveDisplayCurrency` call is kept for the
+  // diagnostic log below so we can still spot mismatches between the
+  // backend-stamped currency and the user's region.
   const displayCurrency = resolveDisplayCurrency(row.currency, regionCurrency);
-  const formatted = formatMinorWithCode(row.amountMinor, displayCurrency);
+  const formatted = formatMinorBare(row.amountMinor);
 
   // Diagnostic breadcrumb: if the raw `row.currency` from the backend
   // ever disagrees with what the user expects (e.g. row says USD but

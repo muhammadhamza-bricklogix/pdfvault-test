@@ -6,7 +6,7 @@ import {
   FOOTER_COMPANY_ENTITY,
   FOOTER_PUBLIC_DOMAIN,
 } from "@/lib/shared/constants/footer";
-import { formatMinorAscii } from "@/lib/shared/utils/currency";
+import { formatMinorBare } from "@/lib/shared/utils/currency";
 
 /**
  * PDFVault company address — matches the Privacy Policy / Subscription Terms
@@ -45,14 +45,13 @@ export interface ReceiptContext {
   planName?: string | null;
 }
 
-// Receipt PDF uses the shared ASCII money formatter so the currency
-// code always shows ("USD 12.99" / "EUR 12.99" / …). pdf-lib's
-// Helvetica is WinAnsi-encoded, and while WinAnsi does cover a
-// handful of currency symbols (€, £, ¥, ¢), it doesn't cover ₹, ₽,
-// ₩, ₺, etc. — writing the ISO code guarantees every user's
-// receipt shows their purchased currency regardless of glyph
-// coverage. HTML surfaces stick with the symbol variant.
-const formatMoney = formatMinorAscii;
+// Receipt PDF renders bare amounts — no symbol, no ISO code — per
+// user request 2026-08-29. Same helper backs the billing table so
+// on-screen and downloaded totals stay in lockstep. Bonus: `pdf-lib`'s
+// WinAnsi-encoded Helvetica sidesteps any glyph-coverage issues that
+// used to force the ASCII-code variant (₹ / ₽ / ₩ / ₺ never render).
+const formatMoney = (minor: number, _currency: string) =>
+  formatMinorBare(minor);
 
 /**
  * pdf-lib's `StandardFonts.Helvetica*` are WinAnsi-encoded, so any glyph
