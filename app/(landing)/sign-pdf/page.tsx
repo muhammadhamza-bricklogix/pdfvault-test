@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 
 import { ToolLandingPage } from "@/components/sections/new-landing/tool-landing-page";
 
-const TITLE = "Sign PDF";
+const TITLE = "Sign PDF online";
 const DESCRIPTION =
-  "Add your signature to any PDF with vector strokes — draw, type, or upload, then export a clean signed file.";
+  "Add your handwritten or typed signature to any PDF — draw with vector strokes, drop it where you need, and save the signed file.";
 
 export const metadata: Metadata = {
   title: `${TITLE} — PDFVault`,

@@ -125,9 +125,21 @@ export function usePdfLoader() {
           const name = (err as { name?: string })?.name;
 
           if (name === "PasswordException") {
-            setError(
-              "This PDF is password-protected. Remove the password from the PDF and try again.",
-            );
+            // QA 2026-08-27: uploading a locked PDF (e.g. one the user
+            // just password-protected + downloaded here, then re-uploaded)
+            // landed on a red "Remove the password from the PDF and try
+            // again" dead-end. Auto-open the PasswordModal in unlock-only
+            // variant instead, so the user can enter the password inline
+            // and keep working. PasswordModal reads `file` from the store
+            // — already populated by the upload path — and on success
+            // decrypts + swaps `file` to the unlocked bytes. Leave
+            // `error` null so the editor shell renders behind the modal
+            // (blurred by the shell's `unlock-only` guard added the same
+            // day) instead of the red error overlay stacking underneath.
+            const state = usePdfEditorStore.getState();
+
+            state.setPasswordModalVariant("unlock-only");
+            state.setIsPasswordModalOpen(true);
           } else if (name === "InvalidPDFException") {
             setError("This file is not a valid PDF or appears to be corrupt.");
           } else {

@@ -11,12 +11,12 @@ import { SectionHeading } from "./section-heading";
 
 /**
  * Signed-in users clicking a composer/others tile used to briefly land on
- * `/pdf-composer?fresh=1&tool=<slug>` before `PendingEditorFileHydrator`
- * bounced them to `/dashboard?openPicker=<slug>` — visible URL flash and
- * an unnecessary editor mount. Send them straight to the picker route
- * from the click so nothing intermediate paints. Signed-out users get
- * the marketing landing page (`href`) — they have no library to pick
- * from, so the drop-zone flow is correct for them.
+ * the marketing landing page or `/pdf-composer?fresh=1&tool=<slug>` before
+ * `PendingEditorFileHydrator` bounced them to `/dashboard?openPicker=<slug>`
+ * — visible URL flash and an unnecessary editor mount. Send them straight
+ * to the picker route from the click so nothing intermediate paints.
+ * Signed-out users get the marketing landing page (`href`) — they have
+ * no library to pick from, so the drop-zone flow is correct for them.
  *
  * `toolSlug` is opt-in per tile: composer/others tools set it so their
  * signed-in click routes through `openPicker`; convert tiles leave it
@@ -71,10 +71,10 @@ const TABS: Tab[] = [
 const TOOLS: Tool[] = [
   // ─── Edit & Sign ────────────────────────────────────────────────────────
   // Composer/others tiles link to the shared marketing landing pages
-  // rendered by `ToolLandingPage` — same hero + upload workspace the
-  // `/convert/[slug]` routes use — so guests see a consistent UI regardless
-  // of which tab they picked. `toolSlug` preserves the signed-in
-  // dashboard-picker shortcut inside `resolveToolHref`.
+  // (`ToolLandingPage`) — same hero + `UploadWorkspace(variant="hero")`
+  // the `/convert/[slug]` routes use — so every uploader sees the same
+  // "Drag & drop file to edit" screen. `toolSlug` preserves the
+  // signed-in dashboard-picker shortcut inside `resolveToolHref`.
   {
     icon: "/landing/editor.svg",
     title: "Edit",

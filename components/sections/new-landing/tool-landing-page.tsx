@@ -15,18 +15,18 @@ interface ToolLandingPageProps {
   tool: string;
   /**
    * File extensions the picker accepts (without leading dot). Every composer
-   * tool in the All Tools modal takes a PDF, so this defaults to `["pdf"]`.
+   * tool takes a PDF by default.
    */
   acceptExtensions?: string[];
 }
 
 /**
- * Shared marketing landing shell for every entry in the "All Tools" modal
- * that opens the PDF composer with a preselected tool. Mirrors the layout
- * used by `/convert/[slug]` — hero title + description + `UploadWorkspace`
- * — so the visitor sees the same UI regardless of which tool tile they
- * clicked. Each per-tool route (`/edit`, `/compress`, `/organize-pdf`, …)
- * is a thin wrapper around this component.
+ * Shared marketing landing shell for every tool that opens the PDF composer
+ * with a preselected tool. Mirrors `/convert/[slug]` — hero title +
+ * description + `UploadWorkspace(variant="hero")` — so the visitor sees the
+ * same "Drag & drop file to edit / Upload to Edit / Size upto 100 MB" screen
+ * regardless of which tile they clicked. Each per-tool route (`/edit`,
+ * `/compress`, `/split-pdf`, …) is a thin wrapper around this component.
  */
 export function ToolLandingPage({
   title,

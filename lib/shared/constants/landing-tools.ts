@@ -68,10 +68,11 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
     tools: [
       // Each composer tool routes to its own marketing landing page
       // (`/edit`, `/compress`, `/organize-pdf`, …) that renders the shared
-      // hero + upload workspace defined by `ToolLandingPage`. The workspace
-      // forwards the file into `/pdf-composer?tool=<slug>` under the hood,
-      // so the tile lands the user on a discoverable URL with a consistent
-      // UI regardless of which tool they picked from the modal.
+      // hero + `UploadWorkspace(variant="hero")` defined by
+      // `ToolLandingPage`. Same "Drag & drop file to edit" screen as
+      // `/convert/[slug]` so every uploader sees a consistent UI. The
+      // workspace forwards the file into `/pdf-composer?tool=<slug>`
+      // under the hood.
       {
         label: "Edit & Sign",
         icon: { kind: "line", id: "editor" },
