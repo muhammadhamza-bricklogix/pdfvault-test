@@ -99,20 +99,25 @@ function ExportFormatModalBody({
 }) {
   const file = usePdfEditorStore((s) => s.file);
   const pathname = usePathname();
-  // W-9 is a form product: only PDF is offered for now. Word (DOCX)
-  // was temporarily wired through a PDF → DOCX conversion but was
-  // removed per product on 2026-08-28 — user pinned scope to PDF only.
-  // Every other format the picker would offer (PNG / Excel / JPG /
-  // PPTX) has no server-side path from the finalize endpoint, so
-  // filtering to PDF-only keeps the picker honest.
+  // W-9 offers PDF plus image formats (PNG / JPG). Image branches route
+  // the stamped PDF through `conversionService` (pdf_to_png / pdf_to_jpg)
+  // in `W9FinalizeIntercept` after finalize returns the byte-perfect
+  // server-stamped PDF. Word / Excel / PPTX are intentionally excluded
+  // for now — DOCX was removed per product on 2026-08-28.
   const isW9Route = useMemo(
     () => pathname?.startsWith("/w-9-form") ?? false,
     [pathname],
   );
+  const W9_ALLOWED_FORMATS = useMemo(
+    () => new Set<FormatOption["id"]>(["pdf", "png", "jpg"]),
+    [],
+  );
   const visibleOptions = useMemo(
     () =>
-      isW9Route ? FORMAT_OPTIONS.filter((o) => o.id === "pdf") : FORMAT_OPTIONS,
-    [isW9Route],
+      isW9Route
+        ? FORMAT_OPTIONS.filter((o) => W9_ALLOWED_FORMATS.has(o.id))
+        : FORMAT_OPTIONS,
+    [isW9Route, W9_ALLOWED_FORMATS],
   );
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");
   const [fileName, setFileName] = useState(initialName);

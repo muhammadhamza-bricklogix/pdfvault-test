@@ -54,6 +54,14 @@ export type FormField = {
   format?: string;
   maxLength?: number;
   helpText?: string;
+  /**
+   * Overlay-only font size override in CSS px. When set, TextField skips
+   * the height-derived font-size formula (`h * 0.65`) and uses this
+   * value verbatim. Needed for tall multi-line rects (e.g. the W-9
+   * requester address block, h: 38) where the auto-scaled font would
+   * dwarf the neighbouring one-liners.
+   */
+  overlayFontSize?: number;
 };
 
 export type FormSection = {

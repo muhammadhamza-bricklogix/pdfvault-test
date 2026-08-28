@@ -287,6 +287,34 @@ async function convertAndDownloadW9AsDocx(
 }
 
 /**
+ * Fetch the stamped W-9, POST it through `conversionService` as
+ * `pdf_to_png` / `pdf_to_jpg`, and trigger a browser download of the
+ * resulting image. Backend routes the CloudConvert job. W-9 is a single
+ * page so the response is one image (multi-page rasterization is a
+ * server concern we don't need to solve here).
+ */
+async function convertAndDownloadW9AsImage(
+  stampedPdfUrl: string,
+  format: "png" | "jpg",
+  userFilename?: string,
+): Promise<void> {
+  const res = await fetch(stampedPdfUrl);
+
+  if (!res.ok) {
+    throw new Error(`Couldn't fetch the stamped W-9 (HTTP ${res.status}).`);
+  }
+  const blob = await res.blob();
+  const pdfFile = new File([blob], "w-9.pdf", { type: "application/pdf" });
+  const result = await conversionService.convert({
+    file: pdfFile,
+    type: format === "png" ? "pdf_to_png" : "pdf_to_jpg",
+  });
+  const base = (userFilename?.trim() || "w-9").replace(/\.[^./\\]+$/, "");
+
+  triggerBlobDownload(result.blob, `${base}.${format}`);
+}
+
+/**
  * Convert a `data:image/...;base64,…` URL into a Blob. Used to lift a
  * restored signaturePreview back into an uploadable form when the user
  * resumes a saved W-9 and immediately hits Done → Download / Save
@@ -450,16 +478,28 @@ export function W9FinalizeIntercept() {
       // this event — server finalize is our source of truth here.
       event.stopImmediatePropagation();
 
-      // Only PDF + Word are exposed by `ExportFormatModal` on /w-9-form
-      // (see the pathname filter there). PDF is native to the finalize
-      // endpoint; Word chains PDF → DOCX through `conversionService`
-      // AFTER finalize returns the stamped PDF. Any other value falls
-      // back to PDF so a stale caller can't confuse the flow.
+      // PDF is native to the finalize endpoint; DOCX / PNG / JPG chain
+      // the stamped PDF through `conversionService` AFTER finalize
+      // returns. Any other value falls back to PDF so a stale caller
+      // can't confuse the flow. Keep this allow-list in sync with the
+      // W-9 filter in `ExportFormatModal`.
       const detail = (
         event as CustomEvent<{ format?: string; filename?: string }>
       ).detail;
-      const requestedFormat = detail?.format === "docx" ? "docx" : "pdf";
+      const rawFormat = detail?.format;
+      const requestedFormat: "pdf" | "docx" | "png" | "jpg" =
+        rawFormat === "docx" || rawFormat === "png" || rawFormat === "jpg"
+          ? rawFormat
+          : "pdf";
       const requestedFilename = detail?.filename;
+      const formatLabel =
+        requestedFormat === "docx"
+          ? "Word file"
+          : requestedFormat === "png"
+            ? "PNG image"
+            : requestedFormat === "jpg"
+              ? "JPG image"
+              : "PDF";
 
       const { sessionId, values, signatureKey } = useFormEditorStore.getState();
 
@@ -545,6 +585,32 @@ export function W9FinalizeIntercept() {
               return;
             }
             toast.close(docxLoadingKey);
+          } else if (requestedFormat === "png" || requestedFormat === "jpg") {
+            const imgLoadingKey = toast.loading({
+              title: `Converting to ${requestedFormat.toUpperCase()}`,
+              description: `Turning your stamped W-9 into a .${requestedFormat}…`,
+            });
+
+            try {
+              await convertAndDownloadW9AsImage(
+                cachedDownloadUrl,
+                requestedFormat,
+                requestedFilename,
+              );
+            } catch (convertErr) {
+              logger.captureError(
+                convertErr,
+                `w9.convert_${requestedFormat}_cached`,
+              );
+              toast.error({
+                title: `${requestedFormat.toUpperCase()} conversion failed`,
+                description: "Please try Download again in a moment.",
+              });
+              toast.close(imgLoadingKey);
+
+              return;
+            }
+            toast.close(imgLoadingKey);
           } else {
             triggerDownload(cachedDownloadUrl);
           }
@@ -566,8 +632,8 @@ export function W9FinalizeIntercept() {
           toast.success({
             title: "W-9 ready",
             description: savedNow
-              ? `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded and been saved to My PDFs.`
-              : `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded.`,
+              ? `Your filled ${formatLabel} has downloaded and been saved to My PDFs.`
+              : `Your filled ${formatLabel} has downloaded.`,
           });
         })();
 
@@ -667,6 +733,29 @@ export function W9FinalizeIntercept() {
 
               return;
             }
+          } else if (requestedFormat === "png" || requestedFormat === "jpg") {
+            // Image branch: same pipeline as DOCX but through
+            // `pdf_to_png` / `pdf_to_jpg`. Backend routes CloudConvert;
+            // failure falls back to the "try PDF" hint so the user
+            // isn't stuck.
+            try {
+              await convertAndDownloadW9AsImage(
+                downloadUrl,
+                requestedFormat,
+                requestedFilename,
+              );
+            } catch (convertErr) {
+              logger.captureError(convertErr, `w9.convert_${requestedFormat}`, {
+                sessionId,
+              });
+              toast.error({
+                title: `${requestedFormat.toUpperCase()} conversion failed`,
+                description:
+                  "Your PDF is ready via Download → PDF. Please try again in a moment.",
+              });
+
+              return;
+            }
           } else {
             // `download` attribute suggests a filename; some CORS setups
             // ignore it and rely on Content-Disposition — either way the
@@ -692,8 +781,8 @@ export function W9FinalizeIntercept() {
           toast.success({
             title: "W-9 ready",
             description: savedNow
-              ? `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded and been saved to My PDFs.`
-              : `Your filled ${requestedFormat === "docx" ? "Word file" : "PDF"} has downloaded. Save to My PDFs failed — please try again.`,
+              ? `Your filled ${formatLabel} has downloaded and been saved to My PDFs.`
+              : `Your filled ${formatLabel} has downloaded. Save to My PDFs failed — please try again.`,
           });
         } catch (err) {
           const parsed = extractApiFieldErrors(err);

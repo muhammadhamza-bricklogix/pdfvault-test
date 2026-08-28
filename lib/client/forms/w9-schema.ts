@@ -177,6 +177,11 @@ export const W9_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].Page1[0].f1_09[0]",
           rect: { page: 1, x: 389.8, y: 467.97, w: 186.2, h: 38 },
+          // Rect is tall (multi-line block on the printed form) so the
+          // default `h * 0.65` sizing overshoots to ~25px vs the ~10px
+          // used by neighbouring address / name inputs. Pin the overlay
+          // font to match those inputs.
+          overlayFontSize: 10,
         },
         {
           id: "f1_10",
