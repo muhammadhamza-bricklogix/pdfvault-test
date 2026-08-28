@@ -83,18 +83,41 @@ export function AuthModal() {
     >
       <Modal.Container className="items-center justify-center p-4">
         <Modal.Dialog
-          // The cards themselves cap width at ~446/447px; the modal
-          // dialog matches so the surrounding chrome sits flush against
-          // the card. `p-0` because the cards own their own padding.
-          className="!w-[min(500px,calc(100vw-32px))] !max-w-[500px] overflow-hidden rounded-2xl bg-transparent p-0 shadow-none"
+          // `w-fit` so the dialog hugs the card's own width — otherwise
+          // a fixed 500px dialog would leave the 446/447px card floating
+          // inside it and the close X (positioned relative to the
+          // wrapper) would sit OUTSIDE the visible card border. Bare
+          // dialog: no bg / no shadow / no padding — the card owns all
+          // of that itself.
+          className="!w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
         >
-          {/* No Modal.Header — the cards already render their own H1.
-              Close trigger sits absolute so it hovers over the card's
-              rounded corner without pushing the layout. */}
           <div className="relative">
-            <div className="absolute right-3 top-3 z-10">
-              <Modal.CloseTrigger />
-            </div>
+            {/* Close X — INSIDE the card box (top-right corner, inside
+                the card's own padding area). Simple gray icon matching
+                the reference screenshots. Uses `close()` directly
+                instead of `Modal.CloseTrigger` so we get pixel control
+                over placement + hover state. */}
+            <button
+              aria-label="Close"
+              className="absolute right-4 top-4 z-10 inline-flex size-8 items-center justify-center rounded-md text-[#8a8a8a] transition-colors hover:bg-default-100 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+              type="button"
+              onClick={close}
+            >
+              <svg
+                aria-hidden
+                fill="none"
+                height="20"
+                viewBox="0 0 20 20"
+                width="20"
+              >
+                <path
+                  d="M5 5l10 10M15 5L5 15"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.75"
+                />
+              </svg>
+            </button>
             {mode === "login" ? (
               <LoginCard
                 redirectUrl={detail?.redirectUrl}

@@ -69,6 +69,22 @@ function humaniseClerkMessage(raw: string, code?: string): string {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Same helper as `login-card.maskEmail` — kept local so the two cards
+ * stay independently readable. Masks the local part of an email for
+ * the verify-step subtitle ("Please check your email hou***@gmail.com.").
+ */
+function maskEmailAddress(raw: string): string {
+  const at = raw.indexOf("@");
+
+  if (at <= 0) return raw;
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at);
+  const visible = local.slice(0, Math.min(3, local.length));
+
+  return `${visible}***${domain}`;
+}
+
 type FieldErrors = {
   email?: string;
   password?: string;
@@ -420,15 +436,17 @@ export function SignupCard({
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
         id={headingId}
       >
-        {step === "credentials" ? "Create a FREE Account" : "Verify your email"}
-      </h1>
-      <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
         {step === "credentials"
-          ? mode === "code"
-            ? "Enter your email — we'll send you a 6-digit code to sign up."
-            : "Please enter your details below to create your account"
-          : `We sent a code to ${email}.`}
-      </p>
+          ? "Sign up for PDFVault"
+          : "Enter the code to sign up"}
+      </h1>
+      {/* Subtitle only on the verify step per the reference SS.
+          Credentials step (SS4) shows the heading alone. */}
+      {step === "verify" ? (
+        <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
+          {`Please check your email ${maskEmailAddress(email)}.`}
+        </p>
+      ) : null}
 
       {step === "credentials" ? (
         <>
@@ -537,10 +555,10 @@ export function SignupCard({
               {submitting
                 ? mode === "code"
                   ? "Sending code…"
-                  : "Creating account…"
+                  : "Signing up…"
                 : mode === "code"
                   ? "Send verification code"
-                  : "Create Account"}
+                  : "Sign up"}
             </button>
 
             <button

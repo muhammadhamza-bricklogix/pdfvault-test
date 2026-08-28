@@ -84,6 +84,23 @@ function humaniseClerkMessage(raw: string, code?: string): string {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Masks the local part of an email for the verify-step subtitle
+ * ("Please check your email hou***@gmail.com."). Keeps the first three
+ * chars + domain visible so the user recognises which inbox to check
+ * without exposing the full identifier on a shared screen.
+ */
+function maskEmail(raw: string): string {
+  const at = raw.indexOf("@");
+
+  if (at <= 0) return raw;
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at);
+  const visible = local.slice(0, Math.min(3, local.length));
+
+  return `${visible}***${domain}`;
+}
+
 // Sign-in mode.
 //   - "code"     → default. Email → 6-digit OTP → verify → finalize.
 //   - "password" → email + password → existing single-factor flow.
@@ -647,18 +664,19 @@ export function LoginCard({
       : ROUTES.AUTH.SIGN_UP;
 
   const isVerifying = step === "codeVerify" || step === "twoFactor";
-  const codeStepTitle =
-    step === "codeVerify"
-      ? "Check your email"
-      : secondFactorStrategy === "phone_code"
-        ? "Check your phone"
-        : "Check your email";
+  // Ref-SS 3 style: "Enter the code to log in" + masked email subtitle.
+  // Phone 2FA keeps a generic subtitle since we don't have the number.
+  const codeStepTitle = "Enter the code to log in";
   const codeStepSubtitle =
     step === "codeVerify"
-      ? `We sent a 6-digit code to ${email}.`
+      ? `Please check your email ${maskEmail(email)}.`
       : secondFactorStrategy === "phone_code"
         ? "We sent a 6-digit code to your phone."
-        : `We sent a 6-digit code to ${email}.`;
+        : `Please check your email ${maskEmail(email)}.`;
+  // Ref-SS 1 (initial) shows just "Welcome back" with no subtitle.
+  // Ref-SS 2 (password mode) shows "Log in with password".
+  const credentialsTitle =
+    mode === "password" ? "Log in with password" : "Welcome back";
   const showResendLink =
     step === "codeVerify" ||
     secondFactorStrategy === "email_code" ||
@@ -673,15 +691,15 @@ export function LoginCard({
         className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
         id={headingId}
       >
-        {isVerifying ? codeStepTitle : "Good to see you back!"}
+        {isVerifying ? codeStepTitle : credentialsTitle}
       </h1>
-      <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
-        {isVerifying
-          ? codeStepSubtitle
-          : mode === "code"
-            ? "Enter your email and we'll send you a sign-in code."
-            : "Please enter your details below to log in."}
-      </p>
+      {/* Subtitle only on the verify step per the reference SS (SS3).
+          Credentials step (SS1 + SS2) shows the heading alone. */}
+      {isVerifying ? (
+        <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
+          {codeStepSubtitle}
+        </p>
+      ) : null}
 
       {step === "credentials" ? (
         <>
@@ -838,7 +856,9 @@ export function LoginCard({
                   ? "Sending code…"
                   : "Signing in…"
                 : mode === "code"
-                  ? "Send verification code"
+                  ? // Ref-SS 1: primary CTA on the code / email-only
+                    // step reads "Log in with email".
+                    "Log in with email"
                   : "Log in"}
             </button>
 
@@ -957,14 +977,14 @@ export function LoginCard({
               type="button"
               onClick={onSwitchToSignup}
             >
-              Get Started
+              Sign up
             </button>
           ) : (
             <Link
               className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
               href={signUpHref}
             >
-              Get Started
+              Sign up
             </Link>
           )}
         </p>
