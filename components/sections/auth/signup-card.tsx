@@ -694,6 +694,19 @@ export function SignupCard({
           .
         </p>
       ) : null}
+
+      {/* Clerk Smart CAPTCHA mount point. Must be in the DOM BEFORE
+          `signUp.create()` fires — otherwise Clerk logs
+          "Cannot initialize Smart CAPTCHA widget because the
+          `clerk-captcha` DOM element was not found; falling back to
+          Invisible CAPTCHA widget" and the fallback path often 400s
+          on `POST /v1/client/sign_ups/...` (QA 2026-08-28: user hit
+          400 right after entering the email verification code). The
+          div is styled invisibly by Clerk's widget; keeping it
+          unconditionally mounted (outside the step conditional) means
+          both the credentials submit and the verify-code submit find
+          the anchor. See: https://clerk.com/docs/guides/development/custom-flows/authentication/bot-sign-up-protection */}
+      <div id="clerk-captcha" />
     </section>
   );
 }
