@@ -57,6 +57,46 @@ function formatMoney(amountMinor: number, currency: string): string {
   }
 }
 
+/**
+ * pdf-lib's `StandardFonts.Helvetica*` are WinAnsi-encoded, so any glyph
+ * outside that codepage (U+2192 →, U+2013 –, U+2014 —, U+2022 •, U+2026 …,
+ * curly quotes, etc.) makes `drawText` throw. That killed "View receipt"
+ * whenever a Solidgate plan label or invoice type description happened to
+ * include a right-arrow / bullet / em-dash (QA report 2026-08-28).
+ *
+ * Rather than track down every runtime-injected string, sanitize every
+ * label at the drawText boundary. Common typographic Unicode chars get
+ * their nearest ASCII equivalent; anything else falls back to `?` so we
+ * never throw. Keeps receipt generation resilient to future changes in
+ * Solidgate's plan naming without an font-embed lift.
+ */
+const UNICODE_TO_ASCII: Array<[RegExp, string]> = [
+  [/→/g, "->"],
+  [/←/g, "<-"],
+  [/↔/g, "<->"],
+  [/↑/g, "^"],
+  [/↓/g, "v"],
+  [/—/g, "-"],
+  [/–/g, "-"],
+  [/•/g, "*"],
+  [/…/g, "..."],
+  [/[“”]/g, '"'],
+  [/[‘’]/g, "'"],
+  [/[ ]/g, " "],
+];
+
+function sanitizeForWinAnsi(text: string): string {
+  let out = text;
+
+  for (const [re, replacement] of UNICODE_TO_ASCII) {
+    out = out.replace(re, replacement);
+  }
+
+  // Strip anything still outside the ASCII printable range so pdf-lib's
+  // WinAnsi encoder can't throw on a stray glyph.
+  return out.replace(/[^\x20-\x7E]/g, "?");
+}
+
 function formatDate(iso: string | null): string {
   const date = new Date(iso ?? Date.now());
 
@@ -95,6 +135,18 @@ export async function generateReceiptPdf(
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([612, 792]); // US Letter
+
+  // Route every drawText call through the WinAnsi sanitizer so a stray
+  // → / em-dash / bullet in a Solidgate plan label can never make
+  // "View receipt" throw. Runs before pdf-lib's encoder — invisible to
+  // the rest of this function.
+  const originalDrawText = page.drawText.bind(page);
+
+  page.drawText = ((text, options) =>
+    originalDrawText(
+      sanitizeForWinAnsi(String(text ?? "")),
+      options,
+    )) as typeof page.drawText;
 
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
