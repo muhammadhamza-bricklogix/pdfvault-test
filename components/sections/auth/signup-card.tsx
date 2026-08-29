@@ -24,16 +24,23 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
  * true from its shallow-equality check, so the div is created once
  * and Clerk's SDK owns it thereafter.
  *
- * No `data-cl-size` / `data-cl-theme` attributes: Clerk's Smart
- * CAPTCHA picks the widget mode (invisible → managed challenge as
- * needed) that its managed sitekey is configured for. Explicit
- * `data-cl-size="normal"` requested a visible widget shape the
- * managed sitekey didn't serve on prod, which surfaced as a fresh
- * Turnstile 300010 + `postMessage` origin mismatch and a 400
- * `captcha_invalid` from `POST /v1/client/sign_ups`.
+ * `data-cl-size="flexible"` requests Clerk's flexible-width widget
+ * (invisible by default; falls back to a visible managed challenge
+ * when bot detection needs user interaction). Explicit `min-h` +
+ * `w-full` gives Turnstile non-zero dimensions to mount into — an
+ * empty flex parent measured 0×0 on prod and `getCaptchaToken`
+ * hung in `managedOrInvisible` mode, `_create` never dispatched.
+ * `normal` was tried before and requested a fixed 300×65 visible
+ * widget shape the managed sitekey didn't serve on prod (300010).
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
-  return <div className="mt-3 flex justify-center" id="clerk-captcha" />;
+  return (
+    <div
+      className="mt-3 min-h-[65px] w-full"
+      data-cl-size="flexible"
+      id="clerk-captcha"
+    />
+  );
 });
 
 function safeRedirectPath(raw: string | null, fallback: string): string {

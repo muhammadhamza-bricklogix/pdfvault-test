@@ -20,13 +20,18 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
  * protection can apply to `signIn.emailCode.sendCode` if the instance
  * is configured to require it, and the div must be present + stable
  * or Cloudflare Turnstile errors with `300010` (widget destroyed
- * during render). Memoised so React never re-renders it. No
- * `data-cl-size` / `data-cl-theme` — Clerk's managed sitekey picks
- * the widget mode itself; forcing "normal" surfaced a 300010 +
- * postMessage origin mismatch on prod.
+ * during render). Memoised so React never re-renders it. Uses
+ * `flexible` size + explicit min-height so the invisible widget has
+ * non-zero mount dimensions (0×0 flex parent hung getCaptchaToken).
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
-  return <div className="mt-3 flex justify-center" id="clerk-captcha" />;
+  return (
+    <div
+      className="mt-3 min-h-[65px] w-full"
+      data-cl-size="flexible"
+      id="clerk-captcha"
+    />
+  );
 });
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
