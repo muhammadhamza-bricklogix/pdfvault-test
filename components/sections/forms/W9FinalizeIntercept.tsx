@@ -317,24 +317,17 @@ async function convertAndDownloadW9AsDocx(
 
 /**
  * Send the stamped W-9 to the backend CloudConvert bridge
- * (`pdf_to_png` / `pdf_to_jpg`), then hand the user separate image
- * files — one per page — instead of a single `.zip`.
+ * (`pdf_to_png` / `pdf_to_jpg`) and hand the user ONE `.zip` archive
+ * that contains every page as its own image.
  *
- * Why the two-layer flow:
- *   - Backend still owns the conversion (CloudConvert quota, retries,
- *     entitlement gating stay server-side).
- *   - CloudConvert bundles multi-page PDF → image output as a `.zip`
- *     archive. The W-9 template is 6 pages, so users got a zip they
- *     didn't ask for (QA 2026-08-29). Unpack that zip on the client
- *     via jszip and download each image entry as its own file. If the
- *     backend returned a single image (single-page PDF), pass through.
- *   - If unzipping / MIME sniffing goes sideways we fall back to
- *     client-side rasterization (`renderPdfPagesToImages`) so the user
- *     still gets their images.
- *
- * File naming: single-page → `<base>.<ext>`; multi-page →
- * `<base>-page-<n>.<ext>`, ordered by the numeric suffix CloudConvert
- * puts in each zip entry name.
+ * Product 2026-08-29 late-PM: single archive is easier to attach,
+ * email, or store than N separate images. CloudConvert already
+ * bundles multi-page PDF → image output as a zip, so the primary
+ * path is essentially "pass through the zip verbatim." Single-image
+ * responses (rare — single-page PDFs) get wrapped into a zip on the
+ * client so the download experience stays consistent regardless of
+ * page count. Unrecognised responses fall through to client-side
+ * pdf.js rasterization, whose output is also zipped.
  */
 async function convertAndDownloadW9AsImage(
   stampedPdfUrl: string,
@@ -361,17 +354,20 @@ async function convertAndDownloadW9AsImage(
     format,
     userFilename,
     // Client-side fallback if the returned blob is neither an image
-    // nor a valid zip.
-    () => downloadPdfBytesAsImagesClient(pdfBytes, format, userFilename),
+    // nor a valid zip — rasterize and re-zip so the download UX is
+    // stable.
+    () => downloadPdfBytesAsImagesZipClient(pdfBytes, format, userFilename),
   );
 }
 
 /**
- * Inspect the CloudConvert response blob and download images as
- * separate files. Handles three shapes:
- *   1. Single image (blob.type starts with `image/`) — direct download.
- *   2. Zip archive — unpack via jszip, download each image entry.
- *   3. Unknown/unexpected — call the provided fallback (client render).
+ * Deliver the CloudConvert response as a single `.zip` download.
+ * Shapes handled:
+ *   1. Zip archive → pass through verbatim as `<base>.zip`.
+ *   2. Single image → wrap in a zip so the download UX is consistent
+ *      regardless of page count.
+ *   3. Unknown / opaque → call the provided fallback (client pdf.js
+ *      rasterize + zip).
  */
 async function deliverImagesFromConvertResult(
   blob: Blob,
@@ -386,71 +382,50 @@ async function deliverImagesFromConvertResult(
     /zip/i.test(mimeGuess) || /\.zip$/i.test(responseFileName ?? "");
   const looksLikeImage = mimeGuess.startsWith("image/");
 
-  if (looksLikeImage && !looksLikeZip) {
-    triggerBlobDownload(blob, `${base}.${format}`);
+  if (looksLikeZip) {
+    triggerBlobDownload(blob, `${base}.zip`);
 
     return;
   }
 
-  if (!looksLikeZip) {
-    // MIME can be `application/octet-stream` — sniff magic bytes to
-    // decide zip vs unknown. PK\x03\x04 header = zip.
-    const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
-    const isZipMagic =
-      head[0] === 0x50 &&
-      head[1] === 0x4b &&
-      (head[2] === 0x03 || head[2] === 0x05 || head[2] === 0x07) &&
-      (head[3] === 0x04 || head[3] === 0x06 || head[3] === 0x08);
+  if (looksLikeImage) {
+    // Wrap the single-image response so the user still gets a zip.
+    const JSZip = (await import("jszip")).default;
+    const zip = new JSZip();
 
-    if (!isZipMagic) {
-      // Not an image, not a zip. Bail to the fallback.
-      await onFallback();
+    zip.file(`${base}.${format}`, blob);
+    const zipBlob = await zip.generateAsync({ type: "blob" });
 
-      return;
-    }
-  }
-
-  const JSZip = (await import("jszip")).default;
-  const zip = await JSZip.loadAsync(blob);
-  const entries = Object.values(zip.files).filter(
-    (entry) => !entry.dir && new RegExp(`\\.${format}$`, "i").test(entry.name),
-  );
-
-  if (entries.length === 0) {
-    // Zip existed but had no matching image entries — fall back.
-    await onFallback();
+    triggerBlobDownload(zipBlob, `${base}.zip`);
 
     return;
   }
 
-  // CloudConvert names entries like `w-9-01.png`, `w-9-02.png`.
-  // Sort numerically by the trailing digits so page order is stable.
-  entries.sort(
-    (a, b) => extractLeadingPageIndex(a.name) - extractLeadingPageIndex(b.name),
-  );
+  // MIME can be `application/octet-stream` — sniff magic bytes to
+  // decide zip vs unknown. PK\x03\x04 header = zip.
+  const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const isZipMagic =
+    head[0] === 0x50 &&
+    head[1] === 0x4b &&
+    (head[2] === 0x03 || head[2] === 0x05 || head[2] === 0x07) &&
+    (head[3] === 0x04 || head[3] === 0x06 || head[3] === 0x08);
 
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i]!;
-    const entryBlob = await entry.async("blob");
-    const filename =
-      entries.length === 1
-        ? `${base}.${format}`
-        : `${base}-page-${i + 1}.${format}`;
+  if (isZipMagic) {
+    triggerBlobDownload(blob, `${base}.zip`);
 
-    triggerBlobDownload(entryBlob, filename);
-    // Small delay so Chrome doesn't collapse the anchor clicks into
-    // a single "download multiple files?" prompt.
-    await new Promise((r) => setTimeout(r, 120));
+    return;
   }
+
+  await onFallback();
 }
 
-function extractLeadingPageIndex(name: string): number {
-  const m = /(\d+)(?=\.[^.]+$)/.exec(name);
-
-  return m ? Number.parseInt(m[1]!, 10) : Number.MAX_SAFE_INTEGER;
-}
-
-async function downloadPdfBytesAsImagesClient(
+/**
+ * Client-side fallback: rasterize every page via pdf.js and pack the
+ * images into one zip. Mirrors the primary path's UX (single zip
+ * download) so the user experience is stable whether CloudConvert or
+ * the client did the work.
+ */
+async function downloadPdfBytesAsImagesZipClient(
   pdfBytes: Uint8Array,
   format: "png" | "jpg",
   userFilename?: string,
@@ -461,16 +436,21 @@ async function downloadPdfBytesAsImagesClient(
     throw new Error("No pages rendered from the stamped W-9");
   }
   const base = (userFilename?.trim() || "w-9").replace(/\.[^./\\]+$/, "");
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
 
   for (const img of images) {
-    const filename =
+    const entryName =
       images.length === 1
         ? `${base}.${format}`
         : `${base}-page-${img.page}.${format}`;
 
-    triggerBlobDownload(img.blob, filename);
-    await new Promise((r) => setTimeout(r, 120));
+    zip.file(entryName, img.blob);
   }
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+
+  triggerBlobDownload(zipBlob, `${base}.zip`);
 }
 
 /**
@@ -561,6 +541,17 @@ async function ensureSignatureKeyForSession(
   }
 }
 
+/**
+ * Coerce the modal-supplied base name into a valid `<name>.pdf`. Falls
+ * back to `w-9.pdf` when the user cleared the field or typed only
+ * whitespace so an empty file name never propagates to My PDFs.
+ */
+function normalizeLibraryFilename(input: string | undefined): string {
+  const base = (input ?? "").trim().replace(/\.[^./\\]+$/, "");
+
+  return `${base || "w-9"}.pdf`;
+}
+
 async function ensureLibrarySave(
   downloadUrl: string,
   sessionId: string,
@@ -569,11 +560,15 @@ async function ensureLibrarySave(
   normalizedValues: Record<string, string>,
   lastSaveRef: LastSaveRef,
   queryClientRef: QueryClientRef,
+  libraryFilename: string,
 ): Promise<boolean> {
   const { currentDocumentId } = usePdfEditorStore.getState();
+  // Cache key includes the filename so a rename in the export modal
+  // triggers a fresh upsert (otherwise the second click would hit the
+  // dedupe short-circuit and the library row would keep the old name).
   const saveCacheKey = `${sessionId}::${signatureKey ?? ""}::${JSON.stringify(
     normalizedValues,
-  )}::${currentDocumentId ?? ""}`;
+  )}::${currentDocumentId ?? ""}::${libraryFilename}`;
 
   if (lastSaveRef.current && lastSaveRef.current.key === saveCacheKey) {
     return true;
@@ -586,7 +581,7 @@ async function ensureLibrarySave(
       throw new Error(`Couldn't fetch the stamped W-9 (HTTP ${res.status}).`);
     }
     const blob = await res.blob();
-    const stampedFile = new File([blob], "w-9.pdf", {
+    const stampedFile = new File([blob], libraryFilename, {
       type: "application/pdf",
     });
     const editorState = JSON.stringify({
@@ -809,7 +804,9 @@ export function W9FinalizeIntercept() {
           // Retry the library save if the first attempt failed. The
           // finalize cache hitting doesn't mean the library upload
           // succeeded — if the backend was down last time, this click
-          // still needs to land the row in My PDFs.
+          // still needs to land the row in My PDFs. Filename mirrors
+          // the modal so a rename before Download → PDF renames the
+          // library row too.
           const savedNow = await ensureLibrarySave(
             cachedDownloadUrl,
             sessionId,
@@ -818,6 +815,7 @@ export function W9FinalizeIntercept() {
             normalizedValues,
             lastSaveRef,
             queryClientRef,
+            normalizeLibraryFilename(requestedFilename),
           );
 
           toast.success({
@@ -958,7 +956,9 @@ export function W9FinalizeIntercept() {
           // "Done → Download" flow is the only save affordance on
           // `/w-9-form` (the standalone Save button is hidden per
           // product), so if we don't persist here the user's filled
-          // W-9 never lands in My PDFs.
+          // W-9 never lands in My PDFs. Library row uses the modal-
+          // supplied filename so a rename before Download renames the
+          // saved copy too.
           const savedNow = await ensureLibrarySave(
             downloadUrl,
             sessionId,
@@ -967,6 +967,7 @@ export function W9FinalizeIntercept() {
             normalizedValues,
             lastSaveRef,
             queryClientRef,
+            normalizeLibraryFilename(requestedFilename),
           );
 
           toast.success({
@@ -1084,7 +1085,7 @@ export function W9FinalizeIntercept() {
                 requestedFormat,
                 requestedFilename,
                 () =>
-                  downloadPdfBytesAsImagesClient(
+                  downloadPdfBytesAsImagesZipClient(
                     stampedBytes,
                     requestedFormat,
                     requestedFilename,
