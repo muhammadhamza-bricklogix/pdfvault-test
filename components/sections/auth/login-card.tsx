@@ -20,23 +20,13 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
  * protection can apply to `signIn.emailCode.sendCode` if the instance
  * is configured to require it, and the div must be present + stable
  * or Cloudflare Turnstile errors with `300010` (widget destroyed
- * during render). Memoised so React never re-renders it, `data-cl-
- * size="normal"` for a predictable 300×65 visible widget.
- *
- * If widget still fails on production: check Clerk dashboard →
- * production instance → Attack Protection → confirm `pdfvault.ai`
- * (and `www.pdfvault.ai`) are on the Turnstile sitekey's allowed
- * domains list. This is not visible in AWS logs.
+ * during render). Memoised so React never re-renders it. No
+ * `data-cl-size` / `data-cl-theme` — Clerk's managed sitekey picks
+ * the widget mode itself; forcing "normal" surfaced a 300010 +
+ * postMessage origin mismatch on prod.
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
-  return (
-    <div
-      className="mt-3 flex justify-center"
-      data-cl-size="normal"
-      data-cl-theme="auto"
-      id="clerk-captcha"
-    />
-  );
+  return <div className="mt-3 flex justify-center" id="clerk-captcha" />;
 });
 
 function safeRedirectPath(raw: string | null, fallback: string): string {

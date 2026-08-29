@@ -24,30 +24,16 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
  * true from its shallow-equality check, so the div is created once
  * and Clerk's SDK owns it thereafter.
  *
- * `data-cl-size="normal"` requests the standard 300×65 visible
- * Turnstile widget (300010 also appears when a `flexible` widget
- * tries to render into a narrow modal that measures 0px on first
- * paint). "normal" has fixed dimensions and works predictably.
- *
- * If the widget STILL fails to load on production with a 300010 /
- * "CAPTCHA failed to load" error, the root cause is Clerk-dashboard
- * side: the production Turnstile sitekey doesn't have `pdfvault.ai`
- * on its allowed-domains list. Check:
- *   Clerk dashboard → your PRODUCTION instance → Attack Protection
- *   → Bot sign-up protection → Turnstile settings. Confirm the
- *   sitekey's allowed domains include both `pdfvault.ai` AND
- *   `www.pdfvault.ai`. This is NOT visible in AWS logs — Clerk's
- *   Turnstile config lives entirely inside Clerk's dashboard.
+ * No `data-cl-size` / `data-cl-theme` attributes: Clerk's Smart
+ * CAPTCHA picks the widget mode (invisible → managed challenge as
+ * needed) that its managed sitekey is configured for. Explicit
+ * `data-cl-size="normal"` requested a visible widget shape the
+ * managed sitekey didn't serve on prod, which surfaced as a fresh
+ * Turnstile 300010 + `postMessage` origin mismatch and a 400
+ * `captcha_invalid` from `POST /v1/client/sign_ups`.
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
-  return (
-    <div
-      className="mt-3 flex justify-center"
-      data-cl-size="normal"
-      data-cl-theme="auto"
-      id="clerk-captcha"
-    />
-  );
+  return <div className="mt-3 flex justify-center" id="clerk-captcha" />;
 });
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
