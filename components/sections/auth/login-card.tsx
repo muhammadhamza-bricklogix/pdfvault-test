@@ -1,9 +1,9 @@
 "use client";
 
-import { useSignIn } from "@clerk/nextjs";
+import { useClerk, useSignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useId, useMemo, useState } from "react";
+import { memo, useEffect, useId, useMemo, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
@@ -13,6 +13,31 @@ import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
+
+/**
+ * Stable Turnstile mount point for the signin-code flow (email OTP).
+ * Same rationale as SignupCard's `TurnstileAnchor` — Clerk's bot
+ * protection can apply to `signIn.emailCode.sendCode` if the instance
+ * is configured to require it, and the div must be present + stable
+ * or Cloudflare Turnstile errors with `300010` (widget destroyed
+ * during render). Memoised so React never re-renders it, `data-cl-
+ * size="normal"` for a predictable 300×65 visible widget.
+ *
+ * If widget still fails on production: check Clerk dashboard →
+ * production instance → Attack Protection → confirm `pdfvault.ai`
+ * (and `www.pdfvault.ai`) are on the Turnstile sitekey's allowed
+ * domains list. This is not visible in AWS logs.
+ */
+const TurnstileAnchor = memo(function TurnstileAnchor() {
+  return (
+    <div
+      className="mt-3 flex justify-center"
+      data-cl-size="normal"
+      data-cl-theme="auto"
+      id="clerk-captcha"
+    />
+  );
+});
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
@@ -161,7 +186,32 @@ export function LoginCard({
   onSwitchToSignup,
 }: LoginCardProps = {}) {
   const { signIn } = useSignIn();
+  const clerk = useClerk();
   const searchParams = useSearchParams();
+
+  // One-shot mount log for signin — same shape as
+  // `[AUTH_DIAG] signup.mount` so you can grep both under one filter.
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] signin.mount", {
+      clerkLoaded: Boolean(clerk?.loaded),
+      hasSignIn: Boolean(signIn),
+      captchaAnchorMounted: Boolean(
+        typeof document !== "undefined" &&
+          document.getElementById("clerk-captcha"),
+      ),
+      captchaSize:
+        typeof document !== "undefined"
+          ? document
+              .getElementById("clerk-captcha")
+              ?.getAttribute("data-cl-size")
+          : null,
+      origin: typeof window !== "undefined" ? window.location.origin : "ssr",
+      clerkPublishableKeyPrefix: (
+        clerk as { publishableKey?: string } | null
+      )?.publishableKey?.slice(0, 15),
+    });
+  }, []);
 
   const [mode, setMode] = useState<Mode>("code");
   const [step, setStep] = useState<Step>("credentials");
@@ -331,7 +381,24 @@ export function LoginCard({
   // future-API helper — the SDK creates the sign-in internally when
   // one isn't in progress, so we don't need a separate create step.
   const sendEmailCode = async (emailAddress: string): Promise<boolean> => {
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] signin.send_email_code.request", {
+      hasEmail: Boolean(emailAddress),
+      captchaAnchorMounted: Boolean(
+        typeof document !== "undefined" &&
+          document.getElementById("clerk-captcha"),
+      ),
+    });
     const { error } = await signIn.emailCode.sendCode({ emailAddress });
+
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] signin.send_email_code.result", {
+      hasError: Boolean(error),
+      errorCode: (error as { errors?: { code?: string }[] })?.errors?.[0]?.code,
+      errorMessage: (error as { errors?: { message?: string }[] })?.errors?.[0]
+        ?.message,
+      signInStatus: signIn.status,
+    });
 
     if (error) {
       const code = (error as { errors?: { code?: string }[] })?.errors?.[0]
@@ -418,9 +485,29 @@ export function LoginCard({
       }
 
       // mode === "password"
+      // eslint-disable-next-line no-console
+      console.info("[AUTH_DIAG] signin.password.request", {
+        hasEmail: Boolean(trimmedEmail),
+        hasPassword: Boolean(password),
+        captchaAnchorMounted: Boolean(
+          typeof document !== "undefined" &&
+            document.getElementById("clerk-captcha"),
+        ),
+      });
       const { error: createError } = await signIn.password({
         emailAddress: trimmedEmail,
         password,
+      });
+
+      // eslint-disable-next-line no-console
+      console.info("[AUTH_DIAG] signin.password.result", {
+        hasError: Boolean(createError),
+        errorCode: (createError as { errors?: { code?: string }[] })
+          ?.errors?.[0]?.code,
+        errorMessage: (createError as { errors?: { message?: string }[] })
+          ?.errors?.[0]?.message,
+        signInStatus: signIn.status,
+        needs2FA: signIn.status === "needs_second_factor",
       });
 
       if (createError) {
@@ -863,6 +950,14 @@ export function LoginCard({
                 {errors.form}
               </p>
             ) : null}
+
+            {/* Clerk Smart CAPTCHA — memoised anchor so Turnstile
+                doesn't 300010 when React re-renders on keystrokes.
+                Applies to both `signIn.emailCode.sendCode` (code
+                mode) and `signIn.password()` (password mode); Clerk
+                only reads the token when its bot-protection config
+                requires one. See `TurnstileAnchor` for details. */}
+            <TurnstileAnchor />
 
             <button
               className="mt-4 flex h-[58px] w-full cursor-pointer items-center justify-center rounded-[11px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"

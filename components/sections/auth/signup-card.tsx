@@ -3,7 +3,7 @@
 import { useClerk, useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useId, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
@@ -13,6 +13,42 @@ import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
+
+/**
+ * Stable Turnstile mount point. Memoised so it renders exactly ONCE
+ * across the whole SignupCard lifetime — every keystroke in the email
+ * field re-renders SignupCard, and Cloudflare Turnstile can't
+ * tolerate its container being reconciled during widget init
+ * (surfaces as error `300010`: "widget was destroyed while it was in
+ * the process of rendering"). React.memo with no props always returns
+ * true from its shallow-equality check, so the div is created once
+ * and Clerk's SDK owns it thereafter.
+ *
+ * `data-cl-size="normal"` requests the standard 300×65 visible
+ * Turnstile widget (300010 also appears when a `flexible` widget
+ * tries to render into a narrow modal that measures 0px on first
+ * paint). "normal" has fixed dimensions and works predictably.
+ *
+ * If the widget STILL fails to load on production with a 300010 /
+ * "CAPTCHA failed to load" error, the root cause is Clerk-dashboard
+ * side: the production Turnstile sitekey doesn't have `pdfvault.ai`
+ * on its allowed-domains list. Check:
+ *   Clerk dashboard → your PRODUCTION instance → Attack Protection
+ *   → Bot sign-up protection → Turnstile settings. Confirm the
+ *   sitekey's allowed domains include both `pdfvault.ai` AND
+ *   `www.pdfvault.ai`. This is NOT visible in AWS logs — Clerk's
+ *   Turnstile config lives entirely inside Clerk's dashboard.
+ */
+const TurnstileAnchor = memo(function TurnstileAnchor() {
+  return (
+    <div
+      className="mt-3 flex justify-center"
+      data-cl-size="normal"
+      data-cl-theme="auto"
+      id="clerk-captcha"
+    />
+  );
+});
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
@@ -142,6 +178,38 @@ export function SignupCard({
   const clerk = useClerk();
   const setActiveSession = clerk?.setActive;
   const searchParams = useSearchParams();
+
+  // One-shot mount log — pins the environment / clerk / captcha
+  // state at the moment the form first appears. Grep DevTools for
+  // `[AUTH_DIAG] signup.mount` to see this. If `captchaAnchorMounted`
+  // is false here but true at submit time, the anchor was rendered
+  // late (past the widget's init deadline) — that maps to Turnstile
+  // 300010 territory. If `clerkLoaded` is false, the SDK hadn't
+  // finished loading yet.
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] signup.mount", {
+      clerkLoaded: Boolean(clerk?.loaded),
+      hasSignUp: Boolean(signUp),
+      hasSetActive: Boolean(setActiveSession),
+      captchaAnchorMounted: Boolean(
+        typeof document !== "undefined" &&
+          document.getElementById("clerk-captcha"),
+      ),
+      captchaSize:
+        typeof document !== "undefined"
+          ? document
+              .getElementById("clerk-captcha")
+              ?.getAttribute("data-cl-size")
+          : null,
+      origin: typeof window !== "undefined" ? window.location.origin : "ssr",
+      clerkPublishableKeyPrefix: (
+        clerk as { publishableKey?: string } | null
+      )?.publishableKey?.slice(0, 15),
+    });
+    // Deliberately empty deps — this fires ONCE per mount so we
+    // don't spam the console on every re-render.
+  }, []);
 
   // Default to "password" — the staging Clerk instance requires a password
   // (missing_requirements after verify → no createdSessionId → Path D
@@ -277,6 +345,18 @@ export function SignupCard({
     setNotice(null);
     setErrors({});
     setSubmitting(true);
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] signup.credentials.submit", {
+      mode,
+      hasEmail: Boolean(trimmedEmail),
+      hasPassword: mode === "password" ? Boolean(password) : null,
+      captchaAnchorMounted: Boolean(
+        typeof document !== "undefined" &&
+          document.getElementById("clerk-captcha"),
+      ),
+      clerkOrigin:
+        typeof window !== "undefined" ? window.location.origin : "ssr",
+    });
     try {
       if (mode === "code") {
         // Passwordless signup: create with just the email address, then
@@ -286,6 +366,20 @@ export function SignupCard({
         // toggle the password mode.
         const { error: createError } = await signUp.create({
           emailAddress: trimmedEmail,
+        });
+
+        // eslint-disable-next-line no-console
+        console.info("[AUTH_DIAG] signup.create.result", {
+          mode: "code",
+          hasError: Boolean(createError),
+          errorCode: (createError as { errors?: { code?: string }[] })
+            ?.errors?.[0]?.code,
+          errorMessage: (createError as { errors?: { message?: string }[] })
+            ?.errors?.[0]?.message,
+          signUpStatus: signUp.status,
+          createdSessionId: (signUp as { createdSessionId?: string | null })
+            .createdSessionId,
+          missingFields: (signUp as { missingFields?: string[] }).missingFields,
         });
 
         if (createError) {
@@ -313,6 +407,20 @@ export function SignupCard({
           password,
         });
 
+        // eslint-disable-next-line no-console
+        console.info("[AUTH_DIAG] signup.create.result", {
+          mode: "password",
+          hasError: Boolean(passwordError),
+          errorCode: (passwordError as { errors?: { code?: string }[] })
+            ?.errors?.[0]?.code,
+          errorMessage: (passwordError as { errors?: { message?: string }[] })
+            ?.errors?.[0]?.message,
+          signUpStatus: signUp.status,
+          createdSessionId: (signUp as { createdSessionId?: string | null })
+            .createdSessionId,
+          missingFields: (signUp as { missingFields?: string[] }).missingFields,
+        });
+
         if (passwordError) {
           const errorCode = (passwordError as { errors?: { code?: string }[] })
             ?.errors?.[0]?.code;
@@ -332,6 +440,14 @@ export function SignupCard({
       }
 
       const sendCode = await signUp.verifications.sendEmailCode();
+
+      // eslint-disable-next-line no-console
+      console.info("[AUTH_DIAG] signup.send_email_code.result", {
+        hasError: Boolean(sendCode.error),
+        errorCode: (sendCode.error as { errors?: { code?: string }[] })
+          ?.errors?.[0]?.code,
+        signUpStatus: signUp.status,
+      });
 
       if (sendCode.error) {
         setErrors({
@@ -790,29 +906,11 @@ export function SignupCard({
               </p>
             ) : null}
 
-            {/* Clerk Smart CAPTCHA mount point. Placed INSIDE the form
-                just before the submit button, per the reference
-                example in Clerk's custom-flow bot-protection docs.
-                Clerk auto-renders Cloudflare Turnstile into this div
-                when the sign-up form mounts, and attaches the
-                resulting token to `signUp.create()`.
-
-                `data-cl-size="flexible"` forces a VISIBLE Turnstile
-                widget instead of the invisible default (2026-08-29
-                production bug: `clerk.pdfvault.ai` is configured for
-                managed/visible mode and Invisible fails to load with
-                "The CAPTCHA failed to load. This may be due to an
-                unsupported browser or a browser extension." Staging
-                Clerk is invisible-configured and worked fine — the
-                explicit `flexible` sizing works for BOTH modes since
-                Clerk downgrades to invisible when the instance is
-                set that way). Empty on purpose. */}
-            <div
-              className="mt-3"
-              data-cl-size="flexible"
-              data-cl-theme="auto"
-              id="clerk-captcha"
-            />
+            {/* Clerk Smart CAPTCHA — see `TurnstileAnchor` above for
+                why this is a memoised component. Rendering it inline
+                as `<div id="clerk-captcha" />` caused Turnstile 300010
+                errors on production (widget destroyed during render). */}
+            <TurnstileAnchor />
 
             <button
               className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
