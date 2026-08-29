@@ -795,14 +795,24 @@ export function SignupCard({
                 example in Clerk's custom-flow bot-protection docs.
                 Clerk auto-renders Cloudflare Turnstile into this div
                 when the sign-up form mounts, and attaches the
-                resulting token to `signUp.create()`. If the div is
-                missing OR the widget hasn't mounted yet when the
-                user submits, `attempt_verification` will 400 later
-                because the sign-up was flagged as bot-unverified.
-                Keep this element inside the form — Clerk's docs put
-                it exactly here (QA 2026-08-28: user hit 400 on the
-                verify-code step). Empty on purpose. */}
-            <div className="mt-3" id="clerk-captcha" />
+                resulting token to `signUp.create()`.
+
+                `data-cl-size="flexible"` forces a VISIBLE Turnstile
+                widget instead of the invisible default (2026-08-29
+                production bug: `clerk.pdfvault.ai` is configured for
+                managed/visible mode and Invisible fails to load with
+                "The CAPTCHA failed to load. This may be due to an
+                unsupported browser or a browser extension." Staging
+                Clerk is invisible-configured and worked fine — the
+                explicit `flexible` sizing works for BOTH modes since
+                Clerk downgrades to invisible when the instance is
+                set that way). Empty on purpose. */}
+            <div
+              className="mt-3"
+              data-cl-size="flexible"
+              data-cl-theme="auto"
+              id="clerk-captcha"
+            />
 
             <button
               className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
