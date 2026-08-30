@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -31,11 +32,12 @@ const FormsModal = dynamic(
 type NavLink = { label: string; href: string };
 
 // Editor / tool routes where a signed-out user may have a pending file
-// waiting in the upload workspace or IndexedDB. On those routes we forward
-// `?redirect_url=<current path>` to `/sign-in` so LoginCard's finalize
-// `window.location.assign(…)` (auth-chain item #15) lands the user back on
-// the same URL after they authenticate. Non-editor routes (/, /all-tools)
-// omit the query param — the LoginCard falls back to the dashboard default.
+// waiting in the upload workspace or IndexedDB. When the modal opens
+// from one of these routes we hand `redirectUrl=<current path>` down
+// to LoginCard/SignupCard so the finalize `window.location.assign(…)`
+// (item #15) lands back with the pending work intact. Non-editor
+// routes (/, /all-tools) omit `redirectUrl` — the cards fall back to
+// the dashboard default.
 const AUTH_RETURN_ROUTES = [
   "/pdf-composer",
   "/pdf-editor",
@@ -44,21 +46,12 @@ const AUTH_RETURN_ROUTES = [
   "/convert/",
 ] as const;
 
-/**
- * Build the `/sign-in` href for the header's Login CTA. Previously this
- * opened `dispatchAuthModal({ mode: "login", redirectUrl })`; landing no
- * longer ships the Clerk SDK, so the modal is replaced by a full-page nav
- * to `/sign-in` (where Clerk IS loaded). Pixel-parity: the CTA renders
- * with the exact same `pv-btn-primary` classes as the previous <button>.
- */
-function signInHrefFor(pathname: string): string {
+function authReturnUrlFor(pathname: string): string | undefined {
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
     pathname.startsWith(prefix),
   );
 
-  return returnHere
-    ? `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
-    : "/sign-in";
+  return returnHere ? pathname : undefined;
 }
 
 // Primary nav tools — real routes, not `#hash` anchors. Order per PM
@@ -257,17 +250,22 @@ export function LandingHeader() {
                   </Link>
                 </>
               ) : (
-                // Single "Login" CTA — was a <button onClick={dispatchAuthModal(...)}>
-                // that opened the shared AuthModal (Clerk-dependent). Landing
-                // no longer ships Clerk, so we navigate to /sign-in with the
-                // pending-work `?redirect_url=` param (auth-chain item #15
-                // still applies — LoginCard reads it via searchParams).
-                <Link
+                // Single "Login" CTA — modal hosts both sign-in and sign-up
+                // (in-card tab switch). `redirectUrl` only when this route has
+                // pending file / upload work; the modal's cards still do the
+                // item #15 finalize `window.location.assign(…)` on success.
+                <button
                   className="pv-btn-primary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-                  href={signInHrefFor(pathname ?? "")}
+                  type="button"
+                  onClick={() =>
+                    dispatchAuthModal({
+                      mode: "login",
+                      redirectUrl: authReturnUrlFor(pathname ?? ""),
+                    })
+                  }
                 >
                   Login
-                </Link>
+                </button>
               )
             ) : null}
 
@@ -388,17 +386,23 @@ export function LandingHeader() {
                       </Link>
                     </>
                   ) : (
-                    // Mobile drawer variant of the single Login CTA
-                    // (see desktop branch above). Full-page nav to
-                    // /sign-in — the previous modal path is gone with
-                    // Clerk being scoped off landing.
-                    <Link
+                    // Mobile drawer variant of the single Login CTA (see
+                    // desktop branch above). Close the drawer BEFORE
+                    // dispatching so the modal renders over regular page
+                    // chrome, not the drawer scrim.
+                    <button
                       className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                      href={signInHrefFor(pathname ?? "")}
-                      onClick={() => setMobileOpen(false)}
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        dispatchAuthModal({
+                          mode: "login",
+                          redirectUrl: authReturnUrlFor(pathname ?? ""),
+                        });
+                      }}
                     >
                       Login
-                    </Link>
+                    </button>
                   )
                 ) : null}
               </li>

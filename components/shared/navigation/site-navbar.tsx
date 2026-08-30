@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -54,21 +55,18 @@ const AUTH_RETURN_ROUTES = [
 ] as const;
 
 /**
- * Build the `/sign-in` href for the navbar's Login CTA. Previously we
- * opened `dispatchAuthModal({ mode: "login", redirectUrl })`; the
- * marketing surface no longer ships the Clerk SDK, so the modal is
- * replaced by a full-page nav to `/sign-in`. The `?redirect_url=` param
- * still fires the LoginCard finalize `window.location.assign(…)`
- * (auth-chain item #15) so editor return-flows are preserved.
+ * Return path to hand to `dispatchAuthModal({ redirectUrl })` so the
+ * finalize `window.location.assign(…)` inside LoginCard/SignupCard
+ * lands back on the same route the user opened the modal from.
+ * Non-editor routes → undefined so the cards fall back to their
+ * default (dashboard).
  */
-function signInHrefFor(pathname: string): string {
+function authReturnUrlFor(pathname: string): string | undefined {
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
     pathname.startsWith(prefix),
   );
 
-  return returnHere
-    ? `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
-    : "/sign-in";
+  return returnHere ? pathname : undefined;
 }
 
 export function SiteNavbar() {
@@ -175,16 +173,21 @@ export function SiteNavbar() {
                     <LanguageSwitcher />
 
                     {showSignedOut ? (
-                      // Login CTA. Was a `dispatchAuthModal` call —
-                      // marketing pages now navigate to /sign-in
-                      // (Clerk-free surface). `?redirect_url=` still
-                      // triggers LoginCard's finalize nav (item #15).
+                      // Single "Login" CTA — the modal hosts both
+                      // sign-in and sign-up tabs. `redirectUrl` is
+                      // only set for editor routes so the cards'
+                      // `window.location.assign(…)` finalize lands
+                      // back in the composer with the pending file
+                      // waiting in IDB.
                       <Button
                         className="w-full"
                         variant="ghost"
                         onPress={() => {
                           setIsDrawerOpen(false);
-                          router.push(signInHrefFor(pathname ?? ""));
+                          dispatchAuthModal({
+                            mode: "login",
+                            redirectUrl: authReturnUrlFor(pathname ?? ""),
+                          });
                         }}
                       >
                         Login
@@ -259,12 +262,19 @@ export function SiteNavbar() {
           </div>
 
           {showSignedOut ? (
-            // Login CTA. Was `dispatchAuthModal(...)` — marketing routes
-            // now navigate to /sign-in. Same gradient / shadow classes
-            // for pixel parity with the previous button.
+            // Single "Login" CTA. Modal hosts both sign-in and
+            // sign-up via an in-card tab switch. `redirectUrl` only
+            // when we're on an editor route so post-signin lands
+            // back with the pending file intact (item #15 finalize
+            // nav still runs inside LoginCard).
             <Button
               className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
-              onPress={() => router.push(signInHrefFor(pathname ?? ""))}
+              onPress={() =>
+                dispatchAuthModal({
+                  mode: "login",
+                  redirectUrl: authReturnUrlFor(pathname ?? ""),
+                })
+              }
             >
               Login
             </Button>

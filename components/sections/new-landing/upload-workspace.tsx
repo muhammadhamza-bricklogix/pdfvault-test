@@ -14,6 +14,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
@@ -381,13 +382,15 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        // Was `dispatchAuthModal({ mode: "login", redirectUrl })` — landing
-        // no longer ships Clerk so the modal is unavailable here. Navigate
-        // to /sign-in with `?redirect_url=` so LoginCard's finalize
-        // `window.location.assign(returnPath)` (auth-chain item #15) still
-        // lands the user back on the same /convert/[slug] route with the
-        // saved file waiting in IDB (invariant #17 preserved).
-        router.push(`/sign-in?redirect_url=${encodeURIComponent(returnPath)}`);
+        // AuthModal (2026-08-28 unify). Invariant #17: post-signin
+        // return by direction still runs unchanged — the cards'
+        // `window.location.assign(returnPath)` (item #15) lands the
+        // user back on the same /convert/[slug] route with the saved
+        // file waiting in IDB.
+        dispatchAuthModal({
+          mode: "login",
+          redirectUrl: returnPath,
+        });
 
         return;
       }
