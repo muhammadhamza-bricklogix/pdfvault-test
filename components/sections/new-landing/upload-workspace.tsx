@@ -13,8 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import dynamic from "next/dynamic";
-
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
@@ -35,17 +34,10 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { TrustpilotWidget } from "./trustpilot-widget";
 
-// Lazy-loaded — the duplicate modal only ever renders AFTER a
-// signed-in user drops a file whose name matches an existing doc.
-// Keeping it out of the landing bundle saves the modal's JS from
-// the LCP-zone hydration cost.
-const DuplicateUploadModal = dynamic(
-  () =>
-    import("@/components/sections/dashboard/duplicate-upload-modal").then(
-      (m) => m.DuplicateUploadModal,
-    ),
-  { ssr: false, loading: () => null },
-);
+// Sync import (was dynamic before — reverted 2026-08-31 after QA
+// reported the modal never rendered on /convert/* drops when the
+// user hit the check faster than the chunk finished loading).
+// The size hit is fractional; correctness > perf here.
 
 const DEFAULT_ACCEPTED_EXTENSIONS = [
   "pdf",
@@ -355,6 +347,57 @@ export function UploadWorkspace({
 
         return;
       }
+      // Cross-route duplicate-name pre-check for signed-in users.
+      // Fires BEFORE any conversion / sign-in / paywall branching
+      // so we never silently attach a file whose target filename
+      // (`<basename>.pdf`) already exists in the user's library.
+      // Regardless of the source extension (.pdf, .docx, .xlsx,
+      // .pptx, .jpg, .png…) the target is always `<basename>.pdf`
+      // — that's the row that would collide in "My PDFs".
+      //   • Same-name match → open the Cancel/Overwrite modal and
+      //     stop; the file lives in `convertDuplicate` until the
+      //     user picks a side (handlers below).
+      //   • No match → fall through to the normal flow.
+      // Sign-out / anon flows skip this: they don't have a library
+      // to collide with.
+      if (authLoaded && isSignedIn) {
+        const tempId =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const pdfName = isPdf(picked)
+          ? picked.name
+          : picked.name.replace(/\.[^.]+$/, "") + ".pdf";
+
+        try {
+          const existing = await findDuplicateByFilename(pdfName);
+
+          // eslint-disable-next-line no-console
+          console.info("[GENERAL_DUPLICATE_CHECK]", {
+            lookedFor: pdfName,
+            matched: existing?.filename ?? null,
+            matchedId: existing?.id ?? null,
+            sourceExt: getExtension(picked.name),
+          });
+
+          if (existing) {
+            setConvertDuplicate({
+              file: picked,
+              filename: pdfName,
+              existingDocId: existing.id,
+              tempId,
+            });
+
+            return;
+          }
+        } catch (dupErr) {
+          logger.warn("cross-route duplicate-name check failed", dupErr);
+          // eslint-disable-next-line no-console
+          console.error("[GENERAL_DUPLICATE_CHECK] lookup threw", dupErr);
+          // Fall through — a flaky list call shouldn't block the drop.
+        }
+      }
+
       // Convert routes require sign-in for the backend conversion call
       // (Flow 1 per the client-signed spec). Save the original file to
       // IDB so we can pick it up automatically after sign-in — the
