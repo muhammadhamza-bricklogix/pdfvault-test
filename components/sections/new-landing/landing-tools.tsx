@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { SectionHeading } from "./section-heading";
@@ -317,7 +317,12 @@ function ArrowIcon() {
 const MOBILE_INITIAL_COUNT = 4;
 
 export function LandingTools() {
-  const { isSignedIn } = useAuth();
+  // Was `useAuth()` from `@clerk/nextjs` — replaced with the cookie-based
+  // hint so landing no longer pulls the Clerk SDK. The value is only used
+  // to decide the tile hrefs (signed-in → /dashboard?openPicker=slug,
+  // signed-out → marketing landing), which is a display concern, not a
+  // security gate. Middleware still enforces auth on protected routes.
+  const { isSignedIn } = useClientAuthHint();
   const [activeTab, setActiveTab] = useState<TabId>("edit");
   const [expanded, setExpanded] = useState(false);
   // Reset "View more" whenever the active tab changes so a fresh tab

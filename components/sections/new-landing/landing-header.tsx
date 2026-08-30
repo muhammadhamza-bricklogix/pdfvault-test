@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth, useClerk } from "@clerk/nextjs";
 import { Modal } from "@heroui/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -8,10 +7,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
-import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
-import { usersService } from "@/lib/shared/api/services/users.service";
+import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -34,12 +31,11 @@ const FormsModal = dynamic(
 type NavLink = { label: string; href: string };
 
 // Editor / tool routes where a signed-out user may have a pending file
-// waiting in the upload workspace or IndexedDB. When the modal opens
-// from one of these routes we hand `redirectUrl=<current path>` down
-// to LoginCard/SignupCard so the finalize `window.location.assign(…)`
-// (item #15) lands back with the pending work intact. Non-editor
-// routes (/, /all-tools) omit `redirectUrl` — the cards fall back to
-// the dashboard default.
+// waiting in the upload workspace or IndexedDB. On those routes we forward
+// `?redirect_url=<current path>` to `/sign-in` so LoginCard's finalize
+// `window.location.assign(…)` (auth-chain item #15) lands the user back on
+// the same URL after they authenticate. Non-editor routes (/, /all-tools)
+// omit the query param — the LoginCard falls back to the dashboard default.
 const AUTH_RETURN_ROUTES = [
   "/pdf-composer",
   "/pdf-editor",
@@ -48,12 +44,21 @@ const AUTH_RETURN_ROUTES = [
   "/convert/",
 ] as const;
 
-function authReturnUrlFor(pathname: string): string | undefined {
+/**
+ * Build the `/sign-in` href for the header's Login CTA. Previously this
+ * opened `dispatchAuthModal({ mode: "login", redirectUrl })`; landing no
+ * longer ships the Clerk SDK, so the modal is replaced by a full-page nav
+ * to `/sign-in` (where Clerk IS loaded). Pixel-parity: the CTA renders
+ * with the exact same `pv-btn-primary` classes as the previous <button>.
+ */
+function signInHrefFor(pathname: string): string {
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
     pathname.startsWith(prefix),
   );
 
-  return returnHere ? pathname : undefined;
+  return returnHere
+    ? `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
+    : "/sign-in";
 }
 
 // Primary nav tools — real routes, not `#hash` anchors. Order per PM
@@ -73,15 +78,12 @@ export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const [formsModalOpen, setFormsModalOpen] = useState(false);
-  const { isLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
+  // Cookie-based signed-in hint. Landing no longer ships the Clerk SDK —
+  // `useClientAuthHint` reads `__client_uat` (non-HTTP-only) to render the
+  // signed-in vs signed-out header variant with the same isLoaded/isSignedIn
+  // shape as the old `useAuth()` call.
+  const { isLoaded, isSignedIn } = useClientAuthHint();
   const pathname = usePathname();
-  const entitled = useIsEntitled();
-
-  const handleLogOut = () => {
-    void usersService.signOutAudit().catch(() => undefined);
-    void signOut();
-  };
 
   // Auto-dismiss the All Tools + mobile drawer whenever the route
   // changes. Tiles inside the modal used to leave the modal open behind
@@ -241,33 +243,31 @@ export function LandingHeader() {
                   >
                     Dashboard
                   </Link>
-                  <button
+                  {/* Log out was a <button onClick={handleLogOut}> that
+                      called useClerk().signOut(). Landing no longer ships
+                      the Clerk SDK, so we navigate to /sign-out (an auth-
+                      group page that DOES ship Clerk) which handles the
+                      audit call + Clerk.signOut() + redirect back to /.
+                      Same pv-btn-secondary classes for pixel parity. */}
+                  <Link
                     className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-                    type="button"
-                    onClick={handleLogOut}
+                    href="/sign-out"
                   >
                     Log out
-                  </button>
+                  </Link>
                 </>
               ) : (
-                // Single "Login" CTA — modal hosts both sign-in and
-                // sign-up (in-card tab switch). Removed the second
-                // "Get started" button per the 2026-08-28 unify (PM).
-                // `redirectUrl` only when this route has pending file /
-                // upload work; the modal's cards still do the item #15
-                // finalize `window.location.assign(…)` on success.
-                <button
+                // Single "Login" CTA — was a <button onClick={dispatchAuthModal(...)}>
+                // that opened the shared AuthModal (Clerk-dependent). Landing
+                // no longer ships Clerk, so we navigate to /sign-in with the
+                // pending-work `?redirect_url=` param (auth-chain item #15
+                // still applies — LoginCard reads it via searchParams).
+                <Link
                   className="pv-btn-primary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
-                  type="button"
-                  onClick={() =>
-                    dispatchAuthModal({
-                      mode: "login",
-                      redirectUrl: authReturnUrlFor(pathname ?? ""),
-                    })
-                  }
+                  href={signInHrefFor(pathname ?? "")}
                 >
                   Login
-                </button>
+                </Link>
               )
             ) : null}
 
@@ -377,35 +377,28 @@ export function LandingHeader() {
                       >
                         Dashboard
                       </Link>
-                      <button
+                      {/* Same rationale as the desktop Log out above: navigate
+                          to /sign-out instead of calling useClerk() locally. */}
+                      <Link
                         className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
-                        type="button"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          handleLogOut();
-                        }}
+                        href="/sign-out"
+                        onClick={() => setMobileOpen(false)}
                       >
                         Log out
-                      </button>
+                      </Link>
                     </>
                   ) : (
                     // Mobile drawer variant of the single Login CTA
-                    // (see desktop branch above). Close the drawer
-                    // BEFORE dispatching so the modal renders over the
-                    // regular page chrome, not over the drawer scrim.
-                    <button
+                    // (see desktop branch above). Full-page nav to
+                    // /sign-in — the previous modal path is gone with
+                    // Clerk being scoped off landing.
+                    <Link
                       className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
-                      type="button"
-                      onClick={() => {
-                        setMobileOpen(false);
-                        dispatchAuthModal({
-                          mode: "login",
-                          redirectUrl: authReturnUrlFor(pathname ?? ""),
-                        });
-                      }}
+                      href={signInHrefFor(pathname ?? "")}
+                      onClick={() => setMobileOpen(false)}
                     >
                       Login
-                    </button>
+                    </Link>
                   )
                 ) : null}
               </li>

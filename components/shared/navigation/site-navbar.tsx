@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { ArrowDown01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Drawer, Dropdown, Label, Separator } from "@heroui/react";
@@ -9,8 +8,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
+import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LanguageSwitcher } from "./language-switcher";
@@ -55,19 +54,21 @@ const AUTH_RETURN_ROUTES = [
 ] as const;
 
 /**
- * Return path to hand to `dispatchAuthModal({ redirectUrl })` so the
- * finalize `window.location.assign(…)` inside LoginCard/SignupCard
- * lands back on the same route the user opened the modal from.
- * Non-editor routes → undefined so the cards fall back to their
- * default (dashboard). Replaces the previous `withAuthRedirect` helper
- * that appended `?redirect_url=…` to the standalone /sign-in href.
+ * Build the `/sign-in` href for the navbar's Login CTA. Previously we
+ * opened `dispatchAuthModal({ mode: "login", redirectUrl })`; the
+ * marketing surface no longer ships the Clerk SDK, so the modal is
+ * replaced by a full-page nav to `/sign-in`. The `?redirect_url=` param
+ * still fires the LoginCard finalize `window.location.assign(…)`
+ * (auth-chain item #15) so editor return-flows are preserved.
  */
-function authReturnUrlFor(pathname: string): string | undefined {
+function signInHrefFor(pathname: string): string {
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
     pathname.startsWith(prefix),
   );
 
-  return returnHere ? pathname : undefined;
+  return returnHere
+    ? `/sign-in?redirect_url=${encodeURIComponent(pathname)}`
+    : "/sign-in";
 }
 
 export function SiteNavbar() {
@@ -77,7 +78,9 @@ export function SiteNavbar() {
   // hydrated, preventing the "scripts inside React components" warning that
   // Clerk's `<Show>` component triggers and the auth-state flicker on slow
   // connections.
-  const { isLoaded, isSignedIn } = useAuth();
+  // Was `useAuth()` from `@clerk/nextjs` — cookie-hint reads `__client_uat`
+  // so marketing pages ship without the Clerk SDK. Same shape returned.
+  const { isLoaded, isSignedIn } = useClientAuthHint();
   const showSignedOut = isLoaded && !isSignedIn;
   const showSignedIn = isLoaded && isSignedIn;
 
@@ -172,24 +175,16 @@ export function SiteNavbar() {
                     <LanguageSwitcher />
 
                     {showSignedOut ? (
-                      // Single "Login" CTA now — the modal hosts both
-                      // sign-in and sign-up tabs. Removes the previous
-                      // "Sign up free" button per the 2026-08-28 unify
-                      // change. Users can switch to signup via the link
-                      // inside the modal. `redirectUrl` is only set for
-                      // editor routes (see `authReturnUrlFor`) so the
-                      // cards' `window.location.assign(…)` finalize
-                      // lands back in the composer with the pending
-                      // file waiting in IDB.
+                      // Login CTA. Was a `dispatchAuthModal` call —
+                      // marketing pages now navigate to /sign-in
+                      // (Clerk-free surface). `?redirect_url=` still
+                      // triggers LoginCard's finalize nav (item #15).
                       <Button
                         className="w-full"
                         variant="ghost"
                         onPress={() => {
                           setIsDrawerOpen(false);
-                          dispatchAuthModal({
-                            mode: "login",
-                            redirectUrl: authReturnUrlFor(pathname ?? ""),
-                          });
+                          router.push(signInHrefFor(pathname ?? ""));
                         }}
                       >
                         Login
@@ -264,20 +259,12 @@ export function SiteNavbar() {
           </div>
 
           {showSignedOut ? (
-            // Single "Login" button. Modal handles both sign-in and
-            // sign-up via an in-card tab switch. Removed "Sign up free"
-            // in the 2026-08-28 unify per PM. `redirectUrl` only when
-            // we're on an editor route so post-signin lands back with
-            // the pending file intact (item #15 finalize nav still runs
-            // inside LoginCard).
+            // Login CTA. Was `dispatchAuthModal(...)` — marketing routes
+            // now navigate to /sign-in. Same gradient / shadow classes
+            // for pixel parity with the previous button.
             <Button
               className="rounded-lg bg-gradient-to-r from-[var(--color-accent)] to-red-600 px-5 font-semibold text-white shadow-sm shadow-red-200 transition-shadow hover:shadow-red-300 dark:shadow-red-900/30"
-              onPress={() =>
-                dispatchAuthModal({
-                  mode: "login",
-                  redirectUrl: authReturnUrlFor(pathname ?? ""),
-                })
-              }
+              onPress={() => router.push(signInHrefFor(pathname ?? ""))}
             >
               Login
             </Button>

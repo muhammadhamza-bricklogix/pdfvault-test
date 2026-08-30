@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -15,8 +14,8 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
+import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -296,7 +295,15 @@ export function UploadWorkspace({
   const errorId = useId();
   const router = useRouter();
   const pathname = usePathname();
-  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  // Was `useAuth()` from `@clerk/nextjs` — replaced with the cookie hint
+  // so landing hero no longer pulls the Clerk SDK. The (isLoaded, isSignedIn)
+  // shape is preserved so the pending-drop deferred-until-authLoaded flow
+  // (auth-chain item #17) behaves identically. Note: cookie hint is a
+  // display-time signal; if it ever reports signed-in on an expired
+  // session, the backend upload call returns 401 and the existing error
+  // toast flow handles it — no worse than the current behaviour when a
+  // valid Clerk session expires between the check and the upload call.
+  const { isLoaded: authLoaded, isSignedIn } = useClientAuthHint();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   // Only convert-TO-pdf routes (Word/PNG/JPG/TXT → PDF; Excel + PowerPoint hidden 2026-08-28)
@@ -374,15 +381,13 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        // AuthModal (2026-08-28 unify). Invariant #17: post-signin
-        // return by direction still runs unchanged — the cards'
-        // `window.location.assign(returnPath)` (item #15) lands the
-        // user back on the same /convert/[slug] route with the saved
-        // file waiting in IDB.
-        dispatchAuthModal({
-          mode: "login",
-          redirectUrl: returnPath,
-        });
+        // Was `dispatchAuthModal({ mode: "login", redirectUrl })` — landing
+        // no longer ships Clerk so the modal is unavailable here. Navigate
+        // to /sign-in with `?redirect_url=` so LoginCard's finalize
+        // `window.location.assign(returnPath)` (auth-chain item #15) still
+        // lands the user back on the same /convert/[slug] route with the
+        // saved file waiting in IDB (invariant #17 preserved).
+        router.push(`/sign-in?redirect_url=${encodeURIComponent(returnPath)}`);
 
         return;
       }
