@@ -32,12 +32,13 @@ Sentry.init({
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 
-  // Replay integration is added lazily below (`lazyLoadIntegration`)
-  // AFTER first paint — session replay is the heaviest Sentry sub-bundle
-  // (~100 KiB gzip) and it was blocking landing LCP + TBT. Kept
-  // browserTracing here because router transitions rely on it being
-  // ready during hydration.
-  integrations: [Sentry.browserTracingIntegration()],
+  // Both Replay AND browserTracing integrations are lazy-loaded below
+  // (`lazyLoadIntegration`) AFTER first paint — they were the two
+  // heaviest Sentry sub-bundles blocking landing TBT. Errors are still
+  // captured synchronously by the core SDK; router-transition spans and
+  // session replays start ~2.5s later, which is an acceptable
+  // observability trade-off for the perf win.
+  integrations: [],
 
   debug: false,
 
@@ -128,17 +129,37 @@ Sentry.init({
 // so client-side navigations are captured as spans.
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
-// Lazy-load session replay AFTER first paint to keep the initial JS
-// budget lean on landing. Replay adds ~100 KiB gzip and doesn't need
-// to be live during the LCP window — errors are still captured because
-// the core SDK initialised synchronously above. `lazyLoadIntegration`
-// resolves to a dynamic import so the chunk lands only when this fires.
+// Lazy-load session replay AND browser tracing AFTER first paint to
+// keep the initial JS budget lean on landing. Both add substantial
+// weight (~100 KiB replay, ~50 KiB tracing gzip) and neither is
+// required for error capture, which is what the sync core SDK above
+// handles. `lazyLoadIntegration` resolves to a dynamic import so
+// each chunk only lands when this idle callback fires.
+//
+// Cost of deferring browserTracing: `Sentry.captureRouterTransitionStart`
+// (exported below for Next 16 App Router) is a no-op until this fires,
+// so router transitions in the first ~2.5s of a session aren't
+// captured as spans. Session-start transitions are still captured via
+// pageload spans; subsequent client-side navs are captured normally
+// once the integration is live. Acceptable trade-off for the TBT win.
 if (
   typeof window !== "undefined" &&
   (process.env.NODE_ENV === "production" ||
     process.env.NEXT_PUBLIC_SENTRY_ENABLE_DEV === "true")
 ) {
-  const loadReplay = () => {
+  const loadDeferredIntegrations = () => {
+    // browserTracing is bundled in Sentry core (`@sentry/browser`) and
+    // isn't a valid target for `lazyLoadIntegration` (only Replay /
+    // Feedback / Console-style integrations are). Calling it directly
+    // inside this idle callback keeps its ADD side-effect out of the
+    // synchronous init critical path — the code still ships in the core
+    // Sentry chunk but doesn't execute during hydration.
+    const client = Sentry.getClient();
+
+    if (client) {
+      client.addIntegration(Sentry.browserTracingIntegration());
+    }
+
     void Sentry.lazyLoadIntegration("replayIntegration")
       .then((replayIntegration) => {
         Sentry.getClient()?.addIntegration(
@@ -163,8 +184,8 @@ if (
   ).requestIdleCallback;
 
   if (typeof idle === "function") {
-    idle(loadReplay, { timeout: 4000 });
+    idle(loadDeferredIntegrations, { timeout: 4000 });
   } else {
-    window.setTimeout(loadReplay, 2500);
+    window.setTimeout(loadDeferredIntegrations, 2500);
   }
 }
