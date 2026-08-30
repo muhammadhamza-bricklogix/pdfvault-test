@@ -13,6 +13,7 @@ import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-downl
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
+import { toast } from "@/lib/shared/utils/toast";
 
 export type EmailFirstModalDetail = {
   /**
@@ -125,6 +126,16 @@ export function EmailFirstModal() {
     setError(null);
     setSubmitting(true);
 
+    // "Just a moment…" toast (top banner via HeroUI toast provider)
+    // gives the user feedback that the check is in flight while the
+    // button reads "Checking…". Fires immediately so it's visible
+    // during the probe; the toast's own 5s default timeout usually
+    // outlives the probe (typically < 1s).
+    const checkingToastKey = toast.info({
+      title: "Just a moment…",
+      description: "Checking your email.",
+    });
+
     try {
       // eslint-disable-next-line no-console
       console.info("[AUTH_DIAG] email_first.probe", { hasEmail: true });
@@ -213,6 +224,9 @@ export function EmailFirstModal() {
       setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
+      // Dismiss the "Just a moment…" toast whichever branch we took
+      // — success dispatch, new-account dispatch, or thrown error.
+      if (checkingToastKey) toast.close(checkingToastKey);
     }
   };
 
