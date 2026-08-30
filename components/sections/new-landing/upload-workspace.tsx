@@ -414,6 +414,62 @@ export function UploadWorkspace({
         return;
       }
 
+      // Cross-route duplicate check for signed-in users dropping a
+      // non-PDF (2026-08-30 QA: user reported that on the LANDING
+      // hero — pathname `/`, not `/convert/*` — dropping a
+      // duplicate `.docx` just left the file preview with a
+      // "Remove file" button and no signal, because the convert-
+      // branch modal below only fires on `/convert/*` routes).
+      // Compute the future pdf filename and probe the user's
+      // library BEFORE we run the network-heavy `uploadAsPdf`
+      // conversion — if a match exists, show the Overwrite/Cancel
+      // modal immediately. On Overwrite we upload with the
+      // matching docId; on Cancel we clear the drop state so the
+      // dropzone is ready for another file. Skip when the file IS
+      // already a PDF — the general save-first path further down
+      // handles PDF duplicates with its own toast + open-existing
+      // flow.
+      if (
+        authLoaded &&
+        isSignedIn &&
+        !isPdf(picked) &&
+        getExtension(picked.name) !== "pdf"
+      ) {
+        const pdfName = picked.name.replace(/\.[^.]+$/, "") + ".pdf";
+        let existingDocId: string | null = null;
+
+        try {
+          const existing = await findDuplicateByFilename(pdfName);
+
+          // eslint-disable-next-line no-console
+          console.info("[GENERAL_DUPLICATE_CHECK]", {
+            lookedFor: pdfName,
+            matched: existing?.filename ?? null,
+            matchedId: existing?.id ?? null,
+          });
+
+          if (existing) existingDocId = existing.id;
+        } catch (dupErr) {
+          logger.warn("general duplicate-name check failed", dupErr);
+        }
+
+        if (existingDocId) {
+          const tempId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+          setConvertDuplicate({
+            file: picked,
+            filename: pdfName,
+            existingDocId,
+            tempId,
+          });
+
+          return;
+        }
+      }
+
       // Convert routes for signed-in users. Two branches by direction:
       //
       //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): register a pending
