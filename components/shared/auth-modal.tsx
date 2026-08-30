@@ -81,26 +81,33 @@ export function AuthModal() {
         if (!open) close();
       }}
     >
-      {/* items-start on mobile so a tall card scrolls from the top
-          instead of getting clipped at the vertical centre; items-
-          center on sm+ where viewports are usually tall enough to fit
-          the card centred. `overflow-y-auto` on the container is what
-          actually enables the scroll — the outer Backdrop is fixed
-          height (100dvh) and the Container fills it, so setting
-          overflow on the Container gives the ENTIRE modal a scroll
-          track when its child (Dialog) is taller than viewport.
-          `overscroll-contain` stops the scroll chaining into the page
-          behind the backdrop when the user reaches the top/bottom. */}
-      <Modal.Container className="items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
+      {/* `items-start` universally — do NOT use `sm:items-center`.
+          When the card is TALLER than the viewport, `items-center`
+          pushes the top of the card ABOVE the container's scroll
+          origin (y=0), and scrollTop starts at 0 — so the top of
+          the card is clipped and unreachable (QA 2026-08-30: the
+          "Sign up for PDFVault" heading was cut off + footer legal
+          text was also cut off because both ends overflowed a
+          centred item taller than viewport). `items-start` +
+          `my-auto` on the dialog gives us the best of both: when
+          the viewport IS tall enough the auto margins centre it;
+          when it ISN'T the top pins to the container start and the
+          user scrolls down to reach the bottom.
+          `overflow-y-auto` on the container is what actually
+          enables the scroll. `overscroll-contain` stops chaining
+          into the page behind the backdrop when the user hits the
+          top/bottom of the modal. */}
+      <Modal.Container className="items-start justify-center overflow-y-auto overscroll-contain p-4">
         <Modal.Dialog
           // `w-fit` so the dialog hugs the card's own width — otherwise
           // a fixed 500px dialog would leave the 446/447px card floating
           // inside it and the close X (positioned relative to the
           // wrapper) would sit OUTSIDE the visible card border. Bare
           // dialog: no bg / no shadow / no padding — the card owns all
-          // of that itself. `my-auto` so the dialog stays vertically
-          // centred inside the scroll track when the viewport IS tall
-          // enough to fit it (only scrolls when it isn't).
+          // of that itself. `my-auto` centres vertically when the
+          // viewport has room; collapses to 0 when the card overflows
+          // and top pins to the container start (see comment on the
+          // Container above).
           className="my-auto !w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
         >
           <div className="relative">

@@ -16,30 +16,21 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 /**
  * Stable Turnstile mount point. Memoised so it renders exactly ONCE
- * across the whole SignupCard lifetime — every keystroke in the email
- * field re-renders SignupCard, and Cloudflare Turnstile can't
- * tolerate its container being reconciled during widget init
- * (surfaces as error `300010`: "widget was destroyed while it was in
- * the process of rendering"). React.memo with no props always returns
- * true from its shallow-equality check, so the div is created once
- * and Clerk's SDK owns it thereafter.
+ * across the whole SignupCard lifetime — every keystroke re-renders
+ * SignupCard and Cloudflare Turnstile can't tolerate its container
+ * being reconciled during widget init (`300010`).
  *
- * `data-cl-size="flexible"` requests Clerk's flexible-width widget
- * (invisible by default; falls back to a visible managed challenge
- * when bot detection needs user interaction). Explicit `min-h` +
- * `w-full` gives Turnstile non-zero dimensions to mount into — an
- * empty flex parent measured 0×0 on prod and `getCaptchaToken`
- * hung in `managedOrInvisible` mode, `_create` never dispatched.
- * `normal` was tried before and requested a fixed 300×65 visible
- * widget shape the managed sitekey didn't serve on prod (300010).
+ * Kept bare — no `mt-*` margin, no `min-h-*` reserved height — so
+ * when Clerk's dashboard has bot protection in invisible mode the
+ * div collapses to 0 height and doesn't visually gap the Sign up
+ * button (QA 2026-08-30, same fix already applied to LoginCard).
+ * `w-full` so Turnstile's flexible widget has a non-zero WIDTH
+ * parent (0-width flex parent was the earlier `getCaptchaToken`
+ * hang); no `min-h` needed for width-based init.
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
   return (
-    <div
-      className="mt-3 min-h-[65px] w-full"
-      data-cl-size="flexible"
-      id="clerk-captcha"
-    />
+    <div className="w-full" data-cl-size="flexible" id="clerk-captcha" />
   );
 });
 
