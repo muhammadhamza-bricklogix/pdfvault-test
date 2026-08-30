@@ -438,8 +438,24 @@ export function PdfEditorShell() {
       (shellSearchParams.get("export") || shellSearchParams.get("tool")) &&
         !shellSearchParams.get("id"),
     );
+    // 2026-08-30: also latch for the bare `/pdf-composer` refresh
+    // case. Signed-out users editing a locally-dropped PDF have
+    // their file + fabricJsonByPage mirrored to IDB by
+    // `useSignedOutAutoPersist`; on a hard-refresh the shell was
+    // firing its "no file → redirect away" effect BEFORE the
+    // hydrator could probe IDB, so users lost the file + edits
+    // even though the snapshot was safely persisted. Latching
+    // isRestoringSession=true for any /pdf-composer entry without
+    // `?fresh=1` or `?id=` (the two cases the hydrator explicitly
+    // handles: fresh wipes IDB, ?id is loader-owned) gives the
+    // IDB probe a chance to restore. Hydrator's `finally` clears
+    // the flag regardless of the branch, so if IDB was empty the
+    // shell's redirect fires normally on the next render.
+    const isFresh = shellSearchParams.get("fresh") === "1";
+    const hasId = Boolean(shellSearchParams.get("id"));
+    const shouldLatchForRestore = hasAutoLaunch || (!isFresh && !hasId);
 
-    if (hasAutoLaunch) {
+    if (shouldLatchForRestore) {
       usePdfEditorStore.setState({ isRestoringSession: true });
     }
 
