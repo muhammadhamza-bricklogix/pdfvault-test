@@ -289,6 +289,29 @@ export function UploadWorkspace({
      *  identical. */
     tempId: string;
   } | null>(null);
+  // Duplicate-name modal state for the SAVE-THEN-OPEN (non-convert)
+  // branch — signed-in user drops a file on `/pdf-composer`, `/edit`,
+  // `/split-pdf`, etc. Previously (pre 2026-08-30) this path silently
+  // ran the backend conversion, then showed a `toast.info` and opened
+  // the existing library copy — no cancel/overwrite choice, and one
+  // wasted conversion round-trip per duplicate. QA report 2026-08-30:
+  // "have `w-9.pdf` in library, dropped `w-9.docx` — expected the
+  // Cancel/Overwrite modal (same one convert routes show)."
+  // Pausing the flow BEFORE `uploadAsPdf` fires means Cancel doesn't
+  // waste a backend conversion; Overwrite forwards the existing doc
+  // id so the upload upserts instead of inserting a second row.
+  const [saveOpenDuplicate, setSaveOpenDuplicate] = useState<{
+    /** Original picked file (may still need conversion via `uploadAsPdf`). */
+    file: File;
+    /** Target PDF filename — what the library row will be named after
+     *  conversion. Used both as the modal caption AND as the doc name
+     *  on Overwrite (matches the source-of-truth for the duplicate
+     *  match). */
+    pdfName: string;
+    /** Existing doc id — passed as `documentId` on the resumed upload
+     *  so the backend upserts. */
+    existingDocId: string;
+  } | null>(null);
   const errorId = useId();
   const router = useRouter();
   const pathname = usePathname();
@@ -485,6 +508,44 @@ export function UploadWorkspace({
 
         // PDF→X: input is already PDF, editor's export gate handles paywall.
         earlyConvertedPdf = picked;
+      }
+
+      // 2026-08-30: pre-conversion duplicate check for the save-then-open
+      // branch (non-convert routes: `/pdf-composer`, `/edit`, `/split-pdf`,
+      // etc.). Fires ONLY for signed-in users who reached this point without
+      // already having `earlyConvertedPdf` set (that path is `/convert/*`
+      // and has its own modal above). We compute the TARGET pdf name — the
+      // filename the library row will land under after `uploadAsPdf` runs —
+      // and check for a match before touching the backend converter. On
+      // hit, the flow pauses and the modal is opened; Overwrite resumes
+      // through `handleSaveOpenDuplicateOverwrite` with the existing doc
+      // id so the upload upserts.
+      if (authLoaded && isSignedIn && !earlyConvertedPdf) {
+        const targetPdfName = isPdf(picked)
+          ? picked.name
+          : picked.name.replace(/\.[^.]+$/, "") + ".pdf";
+
+        try {
+          const existing = await findDuplicateByFilename(targetPdfName);
+
+          if (existing) {
+            logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+              filename: targetPdfName,
+              documentId: existing.id,
+            });
+            setSaveOpenDuplicate({
+              file: picked,
+              pdfName: targetPdfName,
+              existingDocId: existing.id,
+            });
+
+            return;
+          }
+        } catch (dupErr) {
+          // Swallow — a flaky duplicate lookup shouldn't block the upload.
+          // The post-conversion duplicate check below is the fallback.
+          logger.warn("pre-conversion duplicate check failed", dupErr);
+        }
       }
 
       setOpening(true);
@@ -981,6 +1042,103 @@ export function UploadWorkspace({
     setFile(null);
   };
 
+  // Save-then-open (non-convert) duplicate handlers. See the state
+  // declaration for the flow rationale; 2026-08-30 addition.
+  const handleSaveOpenDuplicateOverwrite = async () => {
+    if (!saveOpenDuplicate) return;
+    const { file: picked, pdfName, existingDocId } = saveOpenDuplicate;
+
+    setSaveOpenDuplicate(null);
+    logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+      filename: pdfName,
+      documentId: existingDocId,
+      resolution: "overwrite",
+    });
+    setOpening(true);
+
+    const loadingKey =
+      picked.type === "application/pdf"
+        ? null
+        : toast.loading({
+            description: `Preparing ${picked.name} for the editor.`,
+            title: "Converting to PDF",
+          });
+
+    try {
+      const pdfFile = await uploadAsPdf(picked);
+
+      if (loadingKey) toast.close(loadingKey);
+      const savingKey = toast.loading({
+        title: "Saving to My PDFs",
+        description: pdfFile.name,
+      });
+
+      try {
+        // Forward `documentId` so the backend upserts the existing row
+        // instead of inserting a second one with the same filename.
+        // Mirrors the convert-flow Overwrite handler.
+        const document = await logger.span(
+          "upload.save_before_open",
+          "upload.save",
+          () =>
+            documentsService.uploadDocument({
+              file: pdfFile,
+              documentId: existingDocId,
+            }),
+          { size: pdfFile.size, overwrite: true },
+        );
+
+        logger.event(EVENTS.UPLOAD_SAVE_BEFORE_OPEN_OK, "info", {
+          documentId: document.id,
+          size: pdfFile.size,
+        });
+        toast.success({
+          title: "Saved to My PDFs",
+          description: document.filename,
+        });
+        setCurrentDocument({ id: document.id, name: document.filename });
+        setEditorFile(pdfFile);
+        router.push(buildComposerHref(document.id));
+      } catch (saveErr) {
+        logger.captureError(saveErr, "upload.save_before_open", {
+          filename: pdfFile.name,
+          size: pdfFile.size,
+        });
+        toast.error({
+          title: "Couldn't save to My PDFs",
+          description:
+            "Your file will open locally — use Save from the editor to persist.",
+        });
+        // Open the local copy anyway so the user isn't stranded on the
+        // upload workspace with an error toast and nowhere to go.
+        setEditorFile(pdfFile);
+        router.push(buildComposerHref(existingDocId));
+      } finally {
+        toast.close(savingKey);
+      }
+    } catch (err) {
+      logger.captureError(err, "upload.open_editor", {
+        filename: picked.name,
+      });
+      toast.error({
+        title: "Couldn't open file",
+        description: err instanceof Error ? err.message : undefined,
+      });
+      setOpening(false);
+      if (loadingKey) toast.close(loadingKey);
+    }
+  };
+
+  const handleSaveOpenDuplicateCancel = () => {
+    logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+      filename: saveOpenDuplicate?.pdfName ?? null,
+      documentId: saveOpenDuplicate?.existingDocId ?? null,
+      resolution: "cancel",
+    });
+    setSaveOpenDuplicate(null);
+    setFile(null);
+  };
+
   return (
     <>
       <div className="mx-auto w-full max-w-[1223px]">
@@ -1128,6 +1286,11 @@ export function UploadWorkspace({
         filename={convertDuplicate?.filename ?? null}
         onIgnore={handleConvertDuplicateCancel}
         onOverwrite={handleConvertDuplicateOverwrite}
+      />
+      <DuplicateUploadModal
+        filename={saveOpenDuplicate?.pdfName ?? null}
+        onIgnore={handleSaveOpenDuplicateCancel}
+        onOverwrite={() => void handleSaveOpenDuplicateOverwrite()}
       />
     </>
   );
