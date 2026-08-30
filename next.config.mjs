@@ -49,9 +49,6 @@ const nextConfig = {
       "react-icons",
       "@hugeicons/react",
       "@hugeicons/core-free-icons",
-      "@clerk/nextjs",
-      "lucide-react",
-      "dayjs",
     ],
   },
   async redirects() {
