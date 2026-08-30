@@ -166,6 +166,29 @@ const nextConfig = {
           },
         ],
       },
+      // Static assets under /public — the catch-all HTML Cache-Control
+      // above (max-age=60) was being applied to /landing/*.svg + all
+      // other /public images because Next.js serves them from the same
+      // route tree. Lighthouse flagged this as "Use efficient cache
+      // lifetimes" (105 KiB of penalised assets). Override with a
+      // 30-day browser cache. Files under /public only change when a
+      // developer replaces the asset + deploys — no dynamic content.
+      // `stale-while-revalidate` gives the CDN cheap background refresh
+      // without user-visible waits when we do redeploy.
+      //
+      // Order matters: this rule appears AFTER the catch-all so its
+      // Cache-Control wins on paths that match both.
+      {
+        source:
+          "/:path*.:ext(svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value:
+              "public, max-age=2592000, stale-while-revalidate=86400, immutable",
+          },
+        ],
+      },
     ];
   },
 };
