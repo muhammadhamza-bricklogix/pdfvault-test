@@ -28,6 +28,13 @@ export type EmailFirstModalDetail = {
   redirectUrl?: string;
   /** Optional title override — defaults to "Welcome back". */
   title?: string;
+  /**
+   * Optional CTA label override — defaults to "Log in with email".
+   * The editor Done → Download flow passes "Download file" so the
+   * button copy matches the user's intent (they clicked Download,
+   * not Log In). Auth chain downstream is unchanged.
+   */
+  submitLabel?: string;
 };
 
 /**
@@ -312,7 +319,9 @@ export function EmailFirstModal() {
                   disabled={submitting}
                   type="submit"
                 >
-                  {submitting ? "Checking…" : "Log in with email"}
+                  {submitting
+                    ? "Checking…"
+                    : (detail?.submitLabel ?? "Log in with email")}
                 </button>
               </form>
 

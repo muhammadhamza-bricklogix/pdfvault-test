@@ -329,7 +329,15 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           // `window.location.assign(returnTo)` (item #15) → hydrator
           // restores the pending file (items #8–12) → `editor:export`
           // auto-fires (item #4). Chain intact.
-          dispatchEmailFirstModal({ redirectUrl: returnTo });
+          dispatchEmailFirstModal({
+            redirectUrl: returnTo,
+            // Editor Done → Download context — the user just clicked
+            // Download, so frame the modal around their file, not
+            // around "welcome back". Downstream auth chain (items
+            // #1–4, #8–12, #15) is unchanged.
+            title: "Your file is ready",
+            submitLabel: "Download file",
+          });
 
           isExportingRef.current = false;
 
