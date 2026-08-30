@@ -82,17 +82,28 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   if (code === "form_password_required" || /password is required/i.test(s)) {
     return "This workspace requires a password. Toggle 'Sign up with password' and try again.";
   }
-  // Server-side "compromised passwords" rejection. Only fires when the
-  // Clerk dashboard still has "Reject compromised passwords" ON — the
-  // client schema (`authSignUpSchema`) doesn't check for breached
-  // passwords, but Clerk enforces it independently. Turn the toggle
-  // off in Clerk dashboard → Configure → User & Authentication →
-  // Password to fully match the 8-char-min-only policy.
+  // Server-side password rejections (breach + complexity). Fires
+  // when the Clerk dashboard still enforces "Reject compromised
+  // passwords" or complexity rules — the client schema
+  // (`authSignUpSchema`) accepts any 8-char password. Rewrite the
+  // raw copy ("This password has been found in an online data
+  // breach…") to a neutral prompt so users don't see the scary
+  // breach language while we align the dashboard policy.
+  //   Clerk dashboard → Configure → User & Authentication →
+  //   Password → uncheck "Reject compromised passwords" and clear
+  //   complexity requirements.
   if (
     code === "form_password_pwned" ||
-    /pwned|data breach|compromised/i.test(s)
+    code === "form_password_not_strong_enough" ||
+    /pwned|data breach|compromised|not strong enough/i.test(s)
   ) {
-    return "Please pick a different password.";
+    return "Try any other password.";
+  }
+  if (
+    code === "form_password_length_too_short" ||
+    /at least \d+ characters?|too short/i.test(s)
+  ) {
+    return "Password must contain at least 8 characters.";
   }
 
   return raw;
@@ -253,9 +264,9 @@ export function SignupCard({
     [redirectUrl, searchParams],
   );
 
-  // Enables/disables the primary CTA. In code mode only the email needs
-  // to look valid; in password mode we still run the full schema so the
-  // helper text ("min 8, one letter, one digit") stays authoritative.
+  // Enables/disables the primary CTA. In code mode only the email
+  // needs to look valid; in password mode we run the full schema —
+  // which is now just `min(8)` — so the helper text stays truthful.
   const credentialsValid = useMemo(() => {
     const trimmedEmail = email.trim();
 
