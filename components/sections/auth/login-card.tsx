@@ -3,8 +3,9 @@
 import { useClerk, useSignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { memo, useEffect, useId, useMemo, useState } from "react";
+import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { OtpBoxes } from "@/components/ui/form/otp-boxes";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -176,12 +177,24 @@ type LoginCardProps = {
    * the standalone /sign-in page behaves unchanged.
    */
   initialEmail?: string;
+  /**
+   * When true (and `initialEmail` is a valid email), the card
+   * auto-fires `signIn.emailCode.sendCode({ emailAddress })` on
+   * mount and lands the user directly on the OTP-verify step —
+   * skipping the credentials form (2026-08-30 PM ask: after the
+   * email-first modal confirms "We found your account", we send
+   * the code automatically so the user's next screen is the code
+   * boxes). Errors during the auto-send fall back to the
+   * credentials form so the user can retry manually.
+   */
+  autoSendCode?: boolean;
 };
 
 export function LoginCard({
   redirectUrl,
   onSwitchToSignup,
   initialEmail,
+  autoSendCode,
 }: LoginCardProps = {}) {
   const { signIn } = useSignIn();
   const clerk = useClerk();
@@ -417,6 +430,43 @@ export function LoginCard({
 
     return true;
   };
+
+  // Auto-send verification code on mount when the email-first modal
+  // handed us `autoSendCode` + a prefilled email (2026-08-30 PM ask:
+  // after "We found your account" the user should land straight on
+  // the OTP boxes, not the credentials form). Guarded on a ref so
+  // React 19's StrictMode double-invoke doesn't fire the request
+  // twice — Clerk's server responds `verification_already_sent` on
+  // the second call and the SDK's `signIn.emailCode.sendCode` throws
+  // a noisy error the user shouldn't see.
+  const autoSentRef = useRef(false);
+
+  useEffect(() => {
+    if (autoSentRef.current) return;
+    if (!autoSendCode) return;
+    if (!signIn) return;
+    const trimmed = (initialEmail ?? "").trim();
+
+    if (!EMAIL_REGEX.test(trimmed)) return;
+    autoSentRef.current = true;
+
+    void (async () => {
+      // eslint-disable-next-line no-console
+      console.info("[AUTH_DIAG] signin.auto_send_code.start", {
+        hasEmail: true,
+      });
+      const sent = await sendEmailCode(trimmed);
+
+      if (sent) {
+        setStep("codeVerify");
+      }
+      // If not sent, sendEmailCode already set the error state and
+      // the user sees the credentials form with a message — natural
+      // fallback path.
+    })();
+    // Intentionally fire once on mount. `sendEmailCode` uses fresh
+    // `signIn` from closure but only runs when signIn is truthy.
+  }, []);
 
   const onSubmitCredentials = async (
     event: React.FormEvent<HTMLFormElement>,
@@ -1000,37 +1050,33 @@ export function LoginCard({
               : "Use different credentials"}
           </button>
 
-          <label className="block text-[14px] text-[#5f5f5f]" htmlFor={codeId}>
+          <label
+            className="block text-center text-[14px] text-[#5f5f5f]"
+            htmlFor={codeId}
+          >
             Verification code
             <span aria-hidden className="text-[#f12c23]">
               *
             </span>
           </label>
-          <input
-            autoFocus
-            required
-            aria-describedby={errors.code ? codeErrorId : undefined}
-            aria-invalid={errors.code ? true : undefined}
-            autoComplete="one-time-code"
-            className="mt-2 h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 text-center text-[20px] font-semibold tracking-[0.4em] text-[#1a1c21] outline-none placeholder:text-[#c4c4c4] placeholder:tracking-normal placeholder:font-normal placeholder:text-[16px] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
-            id={codeId}
-            inputMode="numeric"
-            maxLength={8}
-            name="code"
-            pattern="[0-9]*"
-            placeholder="123456"
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value.replace(/[^0-9]/g, ""));
-              if (errors.code) {
-                setErrors((prev) => ({ ...prev, code: undefined }));
-              }
-            }}
-          />
+          <div className="mt-3">
+            <OtpBoxes
+              ariaDescribedBy={errors.code ? codeErrorId : undefined}
+              hasError={Boolean(errors.code)}
+              length={6}
+              value={code}
+              onChange={(next) => {
+                setCode(next);
+                if (errors.code) {
+                  setErrors((prev) => ({ ...prev, code: undefined }));
+                }
+              }}
+            />
+          </div>
 
           {errors.code ? (
             <p
-              className="mt-1.5 text-[13px] text-[#f12c23]"
+              className="mt-2 text-center text-[13px] text-[#f12c23]"
               id={codeErrorId}
               role="alert"
             >

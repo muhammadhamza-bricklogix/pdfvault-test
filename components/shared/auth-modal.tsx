@@ -46,6 +46,15 @@ export type AuthModalDetail = {
    * `initialEmail` prop.
    */
   email?: string;
+  /**
+   * When true (login mode only), LoginCard auto-fires
+   * `signIn.emailCode.sendCode({ emailAddress })` on mount and
+   * lands the user directly on the OTP verify step — the email-
+   * first modal sets this after confirming an existing account so
+   * the code is ALREADY in the user's inbox by the time they see
+   * the boxes (2026-08-30 PM ask). No-op in signup mode.
+   */
+  autoSendCode?: boolean;
 };
 
 /**
@@ -187,6 +196,7 @@ export function AuthModal() {
             </button>
             {mode === "login" ? (
               <LoginCard
+                autoSendCode={detail?.autoSendCode}
                 initialEmail={detail?.email}
                 redirectUrl={detail?.redirectUrl}
                 onSwitchToSignup={() => setMode("signup")}

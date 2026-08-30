@@ -153,6 +153,12 @@ export function EmailFirstModal() {
             mode: "login",
             redirectUrl: detail?.redirectUrl,
             email: trimmed,
+            // Skip the credentials form — LoginCard fires
+            // `signIn.emailCode.sendCode` on mount and lands the
+            // user straight on the boxed OTP screen. Code should
+            // already be in their inbox by the time the modal
+            // renders (2026-08-30 PM ask).
+            autoSendCode: true,
           });
         }, EXISTING_ACCOUNT_HANDOFF_MS);
 
