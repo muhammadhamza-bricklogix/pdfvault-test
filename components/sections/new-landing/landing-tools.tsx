@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
@@ -367,44 +366,19 @@ export function LandingTools() {
   // re-translation cycle. The two-step causes a brief English flash so
   // the `search()` path is preferred.
   useEffect(() => {
-    console.log("[LandingTools] activeTab changed:", activeTab);
-
     const translateVisibleTab = () => {
       const w = window.Weglot;
       const current = w?.getCurrentLang();
 
-      console.log(
-        "[LandingTools] translateVisibleTab — Weglot present?",
-        !!w,
-        "currentLang:",
-        current,
-      );
+      if (!w || !current || current === "en") return;
 
-      if (!w || !current || current === "en") {
-        console.log(
-          "[LandingTools] Skipping translation — Weglot missing, no current lang, or English",
-        );
-
-        return;
-      }
-
-      const runScan = (delayLabel: string) => {
-        console.log(
-          "[LandingTools] Rescanning DOM (",
-          delayLabel,
-          ") for lang:",
-          current,
-          "search available?",
-          typeof w.search === "function",
-        );
+      const runScan = () => {
         if (typeof w.search === "function") {
           w.search();
         } else {
-          console.log(
-            "[LandingTools] Falling back to switchTo(en) -> switchTo(",
-            current,
-            ")",
-          );
+          // Older Weglot builds lack `search()` — force a full re-scan via
+          // a two-step switchTo. Brief English flash is acceptable vs. missing
+          // translated content when tabs are clicked.
           w.switchTo("en");
           w.switchTo(current);
         }
@@ -414,7 +388,7 @@ export function LandingTools() {
       // new tab content across a few frames, and Weglot's MutationObserver
       // sometimes misses nodes that land after the first scan.
       const timeouts = [0, 50, 150, 350].map((delay) =>
-        window.setTimeout(() => runScan(`${delay}ms`), delay),
+        window.setTimeout(runScan, delay),
       );
 
       return () => {
@@ -429,9 +403,6 @@ export function LandingTools() {
     // Weglot may still be loading when the component mounts or when a tab
     // is clicked. Wait for initialization, then translate the currently
     // visible panel.
-    console.log(
-      "[LandingTools] Weglot not ready — waiting for weglot:initialized",
-    );
     const onInit = () => translateVisibleTab();
 
     window.addEventListener("weglot:initialized", onInit, { once: true });

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 "use client";
 
 import type { ReactNode } from "react";
@@ -287,13 +286,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname() ?? "";
   const isMobile = useIsMobile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  console.log(
-    "[DashboardShell] render — pathname:",
-    pathname,
-    "isMobile:",
-    isMobile,
-  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

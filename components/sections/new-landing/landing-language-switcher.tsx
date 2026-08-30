@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -97,19 +96,12 @@ export function LandingLanguageSwitcher({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log("[LandingLanguageSwitcher] mounting");
-
     const onLangChange = (newLang: string) => {
-      console.log("[LandingLanguageSwitcher] languageChanged event:", newLang);
       setCurrentLang((newLang as LangCode) ?? "en");
     };
     const init = () => {
       const wgCurrent = window.Weglot?.getCurrentLang();
 
-      console.log(
-        "[LandingLanguageSwitcher] init — Weglot currentLang:",
-        wgCurrent,
-      );
       setCurrentLang((wgCurrent as LangCode) ?? "en");
       window.Weglot?.on("languageChanged", onLangChange);
       setReady(true);
@@ -118,9 +110,6 @@ export function LandingLanguageSwitcher({
     if (window.Weglot) {
       init();
     } else {
-      console.log(
-        "[LandingLanguageSwitcher] Weglot not ready — waiting for weglot:initialized",
-      );
       window.addEventListener("weglot:initialized", init, { once: true });
     }
 
@@ -154,7 +143,6 @@ export function LandingLanguageSwitcher({
   const current = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0];
 
   const select = (code: LangCode) => {
-    console.log("[LandingLanguageSwitcher] user selected language:", code);
     // Belt-and-braces: persist to localStorage synchronously here in
     // addition to the `languageChanged` listener in WeglotLoader. Some
     // Weglot builds don't fire `languageChanged` when the target
@@ -162,14 +150,9 @@ export function LandingLanguageSwitcher({
     // localStorage stale between page reloads.
     try {
       window.localStorage.setItem(WEGLOT_LANG_STORAGE_KEY, code);
-      console.log("[LandingLanguageSwitcher] wrote to localStorage:", code);
-    } catch (err) {
-      console.error(
-        "[LandingLanguageSwitcher] localStorage write failed:",
-        err,
-      );
+    } catch {
+      // Private mode or storage disabled — non-fatal.
     }
-    console.log("[LandingLanguageSwitcher] calling Weglot.switchTo:", code);
     window.Weglot?.switchTo(code);
     // Reflect the picked code immediately in local state so the
     // dropdown label updates even if Weglot's own event is delayed.

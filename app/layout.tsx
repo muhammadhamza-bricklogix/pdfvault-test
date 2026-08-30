@@ -31,6 +31,16 @@ const playfairDisplay = Playfair_Display({
 
 import { Providers } from "./providers";
 
+// Trustpilot AFS invitation register key — public, safe to bake into the
+// bundle. Hardcoded fallback fires in every env without explicit config;
+// NEXT_PUBLIC_TRUSTPILOT_INVITE_ID overrides for key rotation.
+// `||` not `??`: Railway stores unset vars as "" which `??` would pass through.
+const _envTpId = process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID?.trim();
+const TRUSTPILOT_INVITE_ID =
+  process.env.NODE_ENV === "development"
+    ? _envTpId
+    : _envTpId || "8RKmNv4GASChIZiA";
+
 export const metadata: Metadata = {
   title: {
     default: "pdfvault.ai",
@@ -89,23 +99,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Trustpilot AFS invitation register key. Public — safe to bake into
-  // the client bundle (it ships to every visitor anyway, so it's not a
-  // secret). Hardcoded fallback ensures the loader fires in every
-  // environment even without explicit env config; setting
-  // NEXT_PUBLIC_TRUSTPILOT_INVITE_ID overrides for key rotation without
-  // a code change. Dev is still skipped by the NODE_ENV guard so local
-  // work doesn't spam Trustpilot's crawler with test hits.
-  const TRUSTPILOT_INVITE_ID_DEFAULT = "8RKmNv4GASChIZiA";
-  const envInviteId = process.env.NEXT_PUBLIC_TRUSTPILOT_INVITE_ID?.trim();
-  // `||` (not `??`) so an empty-string env var also falls back to the
-  // hardcoded default — Railway config often stores unset keys as `""`
-  // rather than truly undefined, which silently disabled the loader.
-  const trustpilotInviteId =
-    process.env.NODE_ENV === "development"
-      ? envInviteId
-      : envInviteId || TRUSTPILOT_INVITE_ID_DEFAULT;
-
   return (
     <html
       suppressHydrationWarning
@@ -145,7 +138,7 @@ export default function RootLayout({
           alternative that doesn't consume a socket in the browser's
           limited preconnect pool (Lighthouse warns >4). */}
       <link href="https://cdn-cookieyes.com" rel="dns-prefetch" />
-      {trustpilotInviteId ? (
+      {TRUSTPILOT_INVITE_ID ? (
         <>
           <link
             crossOrigin="anonymous"
@@ -225,10 +218,10 @@ gtag('config', 'AW-18226423046');`}
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
           }}
         />
-        {trustpilotInviteId ? (
+        {TRUSTPILOT_INVITE_ID ? (
           <script
             dangerouslySetInnerHTML={{
-              __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
+              __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${TRUSTPILOT_INVITE_ID}');`,
             }}
           />
         ) : null}

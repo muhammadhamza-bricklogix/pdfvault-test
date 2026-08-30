@@ -13,6 +13,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 
+import { ROUTES } from "@/lib/shared/constants/routes";
+
 interface PvFileTableProps {
   rows: readonly PvFileRow[];
   isLoading?: boolean;
@@ -469,7 +471,7 @@ export function PvFileTable({
                     <p>No files match your search.</p>
                     <a
                       className="pv-btn-primary inline-flex px-5 py-1.5 text-[13px]"
-                      href="/pdf-composer"
+                      href={ROUTES.TOOLS.PDF_EDITOR}
                     >
                       Upload a PDF
                     </a>

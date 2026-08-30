@@ -14,6 +14,7 @@ import { MantineReactTable } from "mantine-react-table";
 
 import { AddFilesIllustration } from "@/components/ui/illustrations";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
+import { DOCUMENTS_TABLE_MANTINE_THEME } from "@/lib/shared/constants/mantine-theme";
 import {
   documentMatchesTableFilters,
   formatDocumentBytes,
@@ -30,36 +31,6 @@ import { DocumentThumbnail } from "./document-thumbnail";
 import { RenameDocumentModal } from "./rename-document-modal";
 
 const BULK_DOWNLOAD_DELAY_MS = 280;
-
-const BRAND_RED: [
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-] = [
-  "#fef2f2",
-  "#fde2e2",
-  "#fbc6c5",
-  "#f59896",
-  "#ef6663",
-  "#df3a38",
-  "#c92a28",
-  "#a4221f",
-  "#7f1815",
-  "#5a0e0c",
-];
-
-const DOCUMENTS_TABLE_MANTINE_THEME = {
-  colors: { brand: BRAND_RED },
-  primaryColor: "brand",
-  primaryShade: 5,
-} as const;
 
 const EmptyDocuments = (
   <div className="flex flex-col items-center justify-center gap-3 rounded-lg p-6 text-center">
