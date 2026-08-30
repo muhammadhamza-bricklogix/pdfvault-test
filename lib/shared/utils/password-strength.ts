@@ -1,9 +1,9 @@
-export type PasswordRuleKey =
-  | "length"
-  | "lowercase"
-  | "uppercase"
-  | "number"
-  | "symbol";
+// 2026-08-30 PM ask: password policy simplified to length-only
+// (min 8 chars). Old lowercase/uppercase/number/symbol rules kept
+// as commented entries so restoring the stricter policy is a
+// one-line diff. The `PasswordRuleKey` union tracks whatever rules
+// are ACTIVE — restoring a rule means re-adding its key here too.
+export type PasswordRuleKey = "length";
 
 export interface PasswordRule {
   key: PasswordRuleKey;
@@ -17,26 +17,26 @@ export const PASSWORD_RULES: PasswordRule[] = [
     label: "At least 8 characters",
     test: (value) => value.length >= 8,
   },
-  {
-    key: "lowercase",
-    label: "One lowercase letter",
-    test: (value) => /[a-z]/.test(value),
-  },
-  {
-    key: "uppercase",
-    label: "One uppercase letter",
-    test: (value) => /[A-Z]/.test(value),
-  },
-  {
-    key: "number",
-    label: "One number",
-    test: (value) => /\d/.test(value),
-  },
-  {
-    key: "symbol",
-    label: "One symbol (!@#$…)",
-    test: (value) => /[^A-Za-z0-9]/.test(value),
-  },
+  // {
+  //   key: "lowercase",
+  //   label: "One lowercase letter",
+  //   test: (value) => /[a-z]/.test(value),
+  // },
+  // {
+  //   key: "uppercase",
+  //   label: "One uppercase letter",
+  //   test: (value) => /[A-Z]/.test(value),
+  // },
+  // {
+  //   key: "number",
+  //   label: "One number",
+  //   test: (value) => /\d/.test(value),
+  // },
+  // {
+  //   key: "symbol",
+  //   label: "One symbol (!@#$…)",
+  //   test: (value) => /[^A-Za-z0-9]/.test(value),
+  // },
 ];
 
 export function evaluatePassword(value: string): {

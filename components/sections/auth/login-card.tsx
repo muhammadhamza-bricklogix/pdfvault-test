@@ -26,9 +26,7 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
  * parent was the earlier `getCaptchaToken` hang).
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
-  return (
-    <div className="w-full" data-cl-size="flexible" id="clerk-captcha" />
-  );
+  return <div className="w-full" data-cl-size="flexible" id="clerk-captcha" />;
 });
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
@@ -171,11 +169,19 @@ type LoginCardProps = {
    * the standalone route still works.
    */
   onSwitchToSignup?: () => void;
+  /**
+   * Pre-fill the email field on first render. Used by the email-first
+   * modal (2026-08-30) so the user doesn't have to retype an email
+   * they already entered in the previous step. Falls back to "" so
+   * the standalone /sign-in page behaves unchanged.
+   */
+  initialEmail?: string;
 };
 
 export function LoginCard({
   redirectUrl,
   onSwitchToSignup,
+  initialEmail,
 }: LoginCardProps = {}) {
   const { signIn } = useSignIn();
   const clerk = useClerk();
@@ -207,7 +213,7 @@ export function LoginCard({
 
   const [mode, setMode] = useState<Mode>("code");
   const [step, setStep] = useState<Step>("credentials");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);

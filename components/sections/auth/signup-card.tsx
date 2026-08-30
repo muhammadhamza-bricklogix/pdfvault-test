@@ -29,9 +29,7 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
  * hang); no `min-h` needed for width-based init.
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
-  return (
-    <div className="w-full" data-cl-size="flexible" id="clerk-captcha" />
-  );
+  return <div className="w-full" data-cl-size="flexible" id="clerk-captcha" />;
 });
 
 function safeRedirectPath(raw: string | null, fallback: string): string {
@@ -83,6 +81,18 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   }
   if (code === "form_password_required" || /password is required/i.test(s)) {
     return "This workspace requires a password. Toggle 'Sign up with password' and try again.";
+  }
+  // Server-side "compromised passwords" rejection. Only fires when the
+  // Clerk dashboard still has "Reject compromised passwords" ON — the
+  // client schema (`authSignUpSchema`) doesn't check for breached
+  // passwords, but Clerk enforces it independently. Turn the toggle
+  // off in Clerk dashboard → Configure → User & Authentication →
+  // Password to fully match the 8-char-min-only policy.
+  if (
+    code === "form_password_pwned" ||
+    /pwned|data breach|compromised/i.test(s)
+  ) {
+    return "Please pick a different password.";
   }
 
   return raw;
@@ -148,11 +158,19 @@ type SignupCardProps = {
    * link falls back to a `<Link>` so the standalone route still works.
    */
   onSwitchToLogin?: () => void;
+  /**
+   * Pre-fill the email field on first render. Used by the email-first
+   * modal (2026-08-30) so the user doesn't have to retype the email
+   * they just entered. Falls back to "" so the standalone /sign-up
+   * page behaves unchanged.
+   */
+  initialEmail?: string;
 };
 
 export function SignupCard({
   redirectUrl,
   onSwitchToLogin,
+  initialEmail,
 }: SignupCardProps = {}) {
   const { signUp } = useSignUp();
   // `useClerk()` gives us `setActive` for the recovery path (when the
@@ -202,7 +220,7 @@ export function SignupCard({
   // for instances configured to allow email-only sign-up. QA 2026-08-28.
   const [mode, setMode] = useState<Mode>("password");
   const [step, setStep] = useState<Step>("credentials");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [passwordRevealed, setPasswordRevealed] = useState(false);
   const [code, setCode] = useState("");

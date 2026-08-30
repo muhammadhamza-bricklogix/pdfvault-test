@@ -232,9 +232,7 @@ export function ForgotPasswordCard() {
     const strength = evaluatePassword(password);
 
     if (!strength.allPassed) {
-      setError(
-        "Password must be at least 8 characters and include upper, lower, number, and a symbol.",
-      );
+      setError("Password must contain at least 8 characters.");
 
       return;
     }

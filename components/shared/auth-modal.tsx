@@ -20,6 +20,13 @@ export type AuthModalDetail = {
    * When omitted, the cards fall back to `useSearchParams().get('redirect_url')`.
    */
   redirectUrl?: string;
+  /**
+   * Pre-fill the email input in the card. Set by the email-first
+   * modal (2026-08-30) so the user doesn't retype an email they just
+   * entered. Passed straight through to LoginCard/SignupCard's
+   * `initialEmail` prop.
+   */
+  email?: string;
 };
 
 /**
@@ -131,11 +138,13 @@ export function AuthModal() {
             </button>
             {mode === "login" ? (
               <LoginCard
+                initialEmail={detail?.email}
                 redirectUrl={detail?.redirectUrl}
                 onSwitchToSignup={() => setMode("signup")}
               />
             ) : (
               <SignupCard
+                initialEmail={detail?.email}
                 redirectUrl={detail?.redirectUrl}
                 onSwitchToLogin={() => setMode("login")}
               />

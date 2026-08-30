@@ -14,7 +14,7 @@ import { useConvertFileMutation } from "@/lib/client/query/mutations/conversion.
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
@@ -319,18 +319,17 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
           const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
 
-          // Open the shared AuthModal directly (2026-08-28: replaced
-          // the confirm-then-redirect SignInPromptModal). Default to
-          // signup for first-time downloaders — the modal exposes a
-          // "Log in" link inside for returning users. After finalize,
-          // LoginCard/SignupCard still do `window.location.assign(returnTo)`
-          // (invariant #15), so the hydrator's post-signin restore
-          // (items #8–12) + `editor:export` auto-fire (item #4) work
-          // exactly as before.
-          dispatchAuthModal({
-            mode: "signup",
-            redirectUrl: returnTo,
-          });
+          // Email-first modal (2026-08-30 PM ask): capture the email
+          // BEFORE choosing signin vs signup so we can branch on
+          // whether the account already exists. The modal probes
+          // Clerk with `signIn.create({ identifier })`:
+          //   - Found → dispatch AuthModal(login, email prefilled)
+          //   - Not found → dispatch AuthModal(signup, email prefilled)
+          // Either way the downstream card finalizes with
+          // `window.location.assign(returnTo)` (item #15) → hydrator
+          // restores the pending file (items #8–12) → `editor:export`
+          // auto-fires (item #4). Chain intact.
+          dispatchEmailFirstModal({ redirectUrl: returnTo });
 
           isExportingRef.current = false;
 

@@ -8,6 +8,7 @@ import { Suspense } from "react";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { AuthModal } from "@/components/shared/auth-modal";
+import { EmailFirstModal } from "@/components/shared/email-first-modal";
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
 import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
@@ -42,6 +43,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <Toast.Provider gap={12} maxVisibleToasts={5} placement="top end" />
           <UploadToastProvider />
           <AuthModal />
+          <EmailFirstModal />
           <MobileDebugBoot />
           <GoogleAdsClickBoot />
           <UserSyncBoot />
