@@ -159,18 +159,12 @@ export default function RootLayout({
           paywall flow, not needed at landing time. */}
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
 
-      {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046).
-          `lazyOnload` fires during browser idle time (after LCP) instead
-          of `afterInteractive` (which runs in the TBT window). GA still
-          captures the pageview because `dataLayer.push` calls are queued
-          before gtag.js loads and flushed when the SDK boots. Same for
-          Ads conversion tracking — a ~2s delay on capture is imperceptible
-          and buys the LCP + TBT budget. */}
+      {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-K6PVB4B39T"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
       />
-      <Script id="gtag-init" strategy="lazyOnload">
+      <Script id="gtag-init" strategy="afterInteractive">
         {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
