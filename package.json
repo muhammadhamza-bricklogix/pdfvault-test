@@ -58,10 +58,10 @@
 		"zustand": "^5.0.12"
 	},
 	"browserslist": [
-		"chrome >= 87",
-		"edge >= 88",
-		"firefox >= 78",
-		"safari >= 14"
+		"chrome >= 90",
+		"edge >= 90",
+		"firefox >= 90",
+		"safari >= 15.4"
 	],
 	"devDependencies": {
 		"@eslint/compat": "1.2.8",

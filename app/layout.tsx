@@ -10,6 +10,11 @@ import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
 
 const playfairDisplay = Playfair_Display({
   display: "swap",
+  // Only used on /privacy, /terms, /cookies etc. legal-hero components.
+  // Setting `preload: false` skips the <link rel="preload"> so landing +
+  // marketing routes don't fetch the woff2 during the LCP window; legal
+  // pages still get it (loads on demand + swaps via Georgia fallback).
+  preload: false,
   subsets: ["latin"],
   variable: "--font-legal-serif",
   weight: ["400", "600", "700"],
@@ -135,11 +140,10 @@ export default function RootLayout({
         rel="preconnect"
       />
       <link href="https://www.googletagmanager.com" rel="dns-prefetch" />
-      <link
-        crossOrigin="anonymous"
-        href="https://cdn-cookieyes.com"
-        rel="preconnect"
-      />
+      {/* CookieYes preconnect dropped 2026-08-30 — the script loads
+          `async` and doesn't affect LCP. dns-prefetch is the cheaper
+          alternative that doesn't consume a socket in the browser's
+          limited preconnect pool (Lighthouse warns >4). */}
       <link href="https://cdn-cookieyes.com" rel="dns-prefetch" />
       {trustpilotInviteId ? (
         <>

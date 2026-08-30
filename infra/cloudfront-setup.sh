@@ -43,6 +43,11 @@ CUSTOM_DOMAINS=""  # e.g. "pdfedits.io,www.pdfedits.io" — comma-separated
 CACHING_OPTIMIZED_POLICY="658327ea-f89d-4fab-a63d-7e88639e58f6"
 # AWS-managed CachingDisabled: TTL=0, always fetches from origin
 CACHING_DISABLED_POLICY="4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+# AWS-managed UseOriginCacheControlHeaders: honours the origin's
+# Cache-Control (`s-maxage`, `stale-while-revalidate`) — used for
+# prerendered HTML routes where Next.js already sets the right headers
+# via next.config.mjs `headers()`.
+USE_ORIGIN_CC_POLICY="83da9c7e-98b4-4e11-a168-04f0df8e2c65"
 
 # AWS-managed AllViewer: forwards all headers, cookies, query strings to origin
 ALL_VIEWER_ORIGIN_REQUEST="b689b0a8-53d0-40ab-baf2-68738e2966ac"
@@ -96,7 +101,7 @@ CONFIG=$(cat <<ENDJSON
     ]
   },
   "CacheBehaviors": {
-    "Quantity": 4,
+    "Quantity": 6,
     "Items": [
       {
         "PathPattern": "/_next/static/*",
@@ -131,6 +136,22 @@ CONFIG=$(cat <<ENDJSON
         "CachePolicyId": "$CACHING_DISABLED_POLICY",
         "OriginRequestPolicyId": "$ALL_VIEWER_ORIGIN_REQUEST",
         "AllowedMethods": {"Quantity": 7,"Items": ["GET","HEAD","OPTIONS","PUT","PATCH","POST","DELETE"],"CachedMethods": {"Quantity": 2,"Items": ["GET","HEAD"]}}
+      },
+      {
+        "PathPattern": "/",
+        "TargetOriginId": "pdfvault-alb",
+        "ViewerProtocolPolicy": "redirect-to-https",
+        "Compress": true,
+        "CachePolicyId": "$USE_ORIGIN_CC_POLICY",
+        "AllowedMethods": {"Quantity": 2,"Items": ["GET","HEAD"],"CachedMethods": {"Quantity": 2,"Items": ["GET","HEAD"]}}
+      },
+      {
+        "PathPattern": "/*.html",
+        "TargetOriginId": "pdfvault-alb",
+        "ViewerProtocolPolicy": "redirect-to-https",
+        "Compress": true,
+        "CachePolicyId": "$USE_ORIGIN_CC_POLICY",
+        "AllowedMethods": {"Quantity": 2,"Items": ["GET","HEAD"],"CachedMethods": {"Quantity": 2,"Items": ["GET","HEAD"]}}
       }
     ]
   },
@@ -138,7 +159,7 @@ CONFIG=$(cat <<ENDJSON
     "TargetOriginId": "pdfvault-alb",
     "ViewerProtocolPolicy": "redirect-to-https",
     "Compress": true,
-    "CachePolicyId": "$CACHING_DISABLED_POLICY",
+    "CachePolicyId": "$USE_ORIGIN_CC_POLICY",
     "OriginRequestPolicyId": "$ALL_VIEWER_ORIGIN_REQUEST",
     "AllowedMethods": {"Quantity": 7,"Items": ["GET","HEAD","OPTIONS","PUT","PATCH","POST","DELETE"],"CachedMethods": {"Quantity": 2,"Items": ["GET","HEAD"]}}
   },

@@ -126,6 +126,33 @@ const nextConfig = {
           { key: "Cache-Control", value: "public, max-age=3600" },
         ],
       },
+      // Landing + tool landing + legal pages — prerendered static HTML.
+      // Aggressively cache at the CDN edge (s-maxage=1h + swr=1d) so
+      // CloudFront serves them without hitting the ALB origin on every
+      // visit. Browser cache is tighter (max-age=60) so redeploys land
+      // fast for repeat visitors after CDN invalidation runs.
+      //
+      // `stale-while-revalidate` lets CloudFront serve the stale copy
+      // for up to 24 h while it refetches in the background — TTFB
+      // stays sub-50ms globally even during origin flakiness.
+      //
+      // NOTE: CloudFront also needs a cache behavior that RESPECTS
+      // these headers. The default distribution (see
+      // `infra/cloudfront-setup.sh`) uses CachingDisabled for the
+      // catch-all behavior — swap it to CachingOptimized for landing
+      // paths or add a per-path behavior. Otherwise these headers only
+      // affect direct-to-ALB traffic.
+      {
+        source:
+          "/((?!api|_next|dashboard|pdf-editor|pdf-composer|sign-in|sign-up|login|signup|forgot-password|share|forms|w9-form|w-9-form|oauth-callback|sso-callback).*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value:
+              "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
     ];
   },
 };

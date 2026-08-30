@@ -106,6 +106,12 @@ export function EmailFirstModal() {
 
     setError(null);
     setSubmitting(true);
+    // Existing-account path keeps `submitting` true for the whole
+    // 4s wait so the "Log in with email" button shows "Checking…"
+    // and can't be re-clicked. Signup + error paths reset it in the
+    // finally as usual.
+    let keepSubmittingForHandoff = false;
+
     try {
       // eslint-disable-next-line no-console
       console.info("[AUTH_DIAG] email_first.probe", { hasEmail: true });
@@ -141,13 +147,20 @@ export function EmailFirstModal() {
           description: "Just a moment…",
         });
 
-        // Close the email modal immediately so the user sees the
-        // banner uncluttered, then dispatch the login modal after a
-        // short pause. The setTimeout runs on `window` (no cleanup
-        // ref) because the modal has already unmounted by the time
-        // it fires — but even if not, `dispatchAuthModal` is
-        // idempotent (event dispatch).
-        close();
+        // Keep the email modal OPEN during the 4s wait (2026-08-30
+        // PM refinement — user reported the abrupt close felt jarring
+        // and wanted the modal to stay in place). `submitting` stays
+        // true so the button shows "Checking…" and can't be re-
+        // clicked. The AuthModal for login is dispatched AFTER the
+        // pause, then this modal closes on the same tick so there's
+        // no dead frame between the two modals.
+        //
+        // If the user closes this modal manually (X or backdrop)
+        // during the wait, we still dispatch the login modal — the
+        // toast + code are already in-flight, aborting the login
+        // handoff would strand them. If they DON'T want to log in
+        // any more they can close the login modal too.
+        keepSubmittingForHandoff = true;
         window.setTimeout(() => {
           dispatchAuthModal({
             mode: "login",
@@ -160,6 +173,7 @@ export function EmailFirstModal() {
             // renders (2026-08-30 PM ask).
             autoSendCode: true,
           });
+          close();
         }, EXISTING_ACCOUNT_HANDOFF_MS);
 
         return;
@@ -205,7 +219,7 @@ export function EmailFirstModal() {
       logger.captureError(err, "email_first.probe_threw");
       setError("Something went wrong. Please try again.");
     } finally {
-      setSubmitting(false);
+      if (!keepSubmittingForHandoff) setSubmitting(false);
     }
   };
 
