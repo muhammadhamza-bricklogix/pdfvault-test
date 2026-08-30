@@ -11,12 +11,11 @@ import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
-// Delay between the "We found your account" toast appearing and the
-// AuthModal(login) opening on top — gives the user time to read
-// (2026-08-30 PM ask: "show for 4-5 seconds"). The toast itself
-// auto-dismisses at 5s (DEFAULT_TIMEOUT_MS in toast.ts) so the
-// two land in the same visual window.
-const EXISTING_ACCOUNT_HANDOFF_MS = 4000;
+// How long the "We found your account · Just a moment…" toast stays
+// on top before the button re-enables and we wait for the user to
+// click Download file a second time. 2026-08-31 PM refinement: the
+// second click is what triggers the code send — no auto-timer dispatch.
+const EXISTING_ACCOUNT_TOAST_MS = 4000;
 
 export type EmailFirstModalDetail = {
   /**
@@ -80,6 +79,17 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Two-click flow for existing accounts:
+  //   click 1 → probe → toast (4s) → button re-enables
+  //   click 2 → dispatch AuthModal(login, autoSendCode: true)
+  // `confirmExistingEmail` remembers the probed email; the toast
+  // window is signalled by `awaitingSecondClick` so the button
+  // stays disabled + "Checking…" while the toast is visible.
+  const [confirmExistingEmail, setConfirmExistingEmail] = useState<
+    string | null
+  >(null);
+  const [awaitingSecondClick, setAwaitingSecondClick] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -88,6 +98,9 @@ export function EmailFirstModal() {
       setDetail(custom.detail ?? {});
       setEmail("");
       setError(null);
+      setConfirmExistingEmail(null);
+      setAwaitingSecondClick(false);
+      setSendingCode(false);
     };
 
     window.addEventListener("app:email-first-modal", onOpen);
@@ -97,11 +110,14 @@ export function EmailFirstModal() {
 
   const close = useCallback(() => {
     setDetail(null);
+    setConfirmExistingEmail(null);
+    setAwaitingSecondClick(false);
+    setSendingCode(false);
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!signIn || submitting) return;
+    if (!signIn || submitting || awaitingSecondClick || sendingCode) return;
 
     const trimmed = email.trim();
 
@@ -111,13 +127,29 @@ export function EmailFirstModal() {
       return;
     }
 
+    // Second click after a successful probe → dispatch AuthModal
+    // (login) with `autoSendCode: true`. LoginCard's mount effect
+    // fires `signIn.emailCode.sendCode` as a direct downstream
+    // consequence of this click, and the button reads "Sending
+    // verification code…" until this modal unmounts.
+    if (confirmExistingEmail && confirmExistingEmail === trimmed) {
+      setError(null);
+      setSendingCode(true);
+      dispatchAuthModal({
+        mode: "login",
+        redirectUrl: detail?.redirectUrl,
+        email: trimmed,
+        autoSendCode: true,
+      });
+      // Give the AuthModal a tick to mount + register its own
+      // listener before we unmount this one.
+      window.setTimeout(close, 100);
+
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
-    // Existing-account path keeps `submitting` true for the whole
-    // 4s wait so the "Log in with email" button shows "Checking…"
-    // and can't be re-clicked. Signup + error paths reset it in the
-    // finally as usual.
-    let keepSubmittingForHandoff = false;
 
     try {
       // eslint-disable-next-line no-console
@@ -128,8 +160,11 @@ export function EmailFirstModal() {
 
       // Existing account: `signIn.create` returns no error and the
       // signIn moves to needs_first_factor (or complete for OAuth-
-      // only accounts). Either way, route the user to Login so they
-      // can enter their password.
+      // only accounts). Show the toast, flip into the "confirm"
+      // state, and wait for the user to click Download file a
+      // second time — only then do we hand off to Login (with
+      // `autoSendCode` so the code send is a downstream consequence
+      // of that second click).
       if (!probeError) {
         // eslint-disable-next-line no-console
         console.info("[AUTH_DIAG] email_first.exists", {
@@ -144,44 +179,24 @@ export function EmailFirstModal() {
           // Best-effort; reset failures don't block the handoff.
         }
 
-        // Top banner via the existing HeroUI toast system
-        // (placement="top end" in AppProviders → renders as a
-        // top-of-viewport banner). 5s default timeout, matches the
-        // 4s handoff delay below so the toast is still visible when
-        // the login modal appears (2026-08-30 PM ask).
+        // Top banner via HeroUI toast (placement="top end" in
+        // AppProviders → renders as a top-of-viewport banner).
         toast.info({
           title: "We found your account",
           description: "Just a moment…",
         });
 
-        // Keep the email modal OPEN during the 4s wait (2026-08-30
-        // PM refinement — user reported the abrupt close felt jarring
-        // and wanted the modal to stay in place). `submitting` stays
-        // true so the button shows "Checking…" and can't be re-
-        // clicked. The AuthModal for login is dispatched AFTER the
-        // pause, then this modal closes on the same tick so there's
-        // no dead frame between the two modals.
-        //
-        // If the user closes this modal manually (X or backdrop)
-        // during the wait, we still dispatch the login modal — the
-        // toast + code are already in-flight, aborting the login
-        // handoff would strand them. If they DON'T want to log in
-        // any more they can close the login modal too.
-        keepSubmittingForHandoff = true;
+        // Freeze the button as "Checking…" for the toast window so
+        // the user can't rage-click while the message is up. After
+        // the toast fades we open up the second click by flipping
+        // `awaitingSecondClick` off + storing the probed email —
+        // the next submit branches into the confirm-dispatch above.
+        setConfirmExistingEmail(trimmed);
+        setAwaitingSecondClick(true);
+        setSubmitting(false);
         window.setTimeout(() => {
-          dispatchAuthModal({
-            mode: "login",
-            redirectUrl: detail?.redirectUrl,
-            email: trimmed,
-            // Skip the credentials form — LoginCard fires
-            // `signIn.emailCode.sendCode` on mount and lands the
-            // user straight on the boxed OTP screen. Code should
-            // already be in their inbox by the time the modal
-            // renders (2026-08-30 PM ask).
-            autoSendCode: true,
-          });
-          close();
-        }, EXISTING_ACCOUNT_HANDOFF_MS);
+          setAwaitingSecondClick(false);
+        }, EXISTING_ACCOUNT_TOAST_MS);
 
         return;
       }
@@ -226,7 +241,7 @@ export function EmailFirstModal() {
       logger.captureError(err, "email_first.probe_threw");
       setError("Something went wrong. Please try again.");
     } finally {
-      if (!keepSubmittingForHandoff) setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -303,8 +318,21 @@ export function EmailFirstModal() {
                     type="email"
                     value={email}
                     onChange={(e) => {
-                      setEmail(e.target.value);
+                      const next = e.target.value;
+
+                      setEmail(next);
                       if (error) setError(null);
+                      // Editing the email invalidates the previous
+                      // probe result — force a re-probe on next
+                      // submit so we never silently code-send to a
+                      // stale address.
+                      if (
+                        confirmExistingEmail &&
+                        confirmExistingEmail !== next.trim()
+                      ) {
+                        setConfirmExistingEmail(null);
+                        setAwaitingSecondClick(false);
+                      }
                     }}
                   />
                 </div>
@@ -316,12 +344,14 @@ export function EmailFirstModal() {
 
                 <button
                   className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-                  disabled={submitting}
+                  disabled={submitting || awaitingSecondClick || sendingCode}
                   type="submit"
                 >
-                  {submitting
-                    ? "Checking…"
-                    : (detail?.submitLabel ?? "Log in with email")}
+                  {sendingCode
+                    ? "Sending verification code…"
+                    : submitting || awaitingSecondClick
+                      ? "Checking…"
+                      : (detail?.submitLabel ?? "Log in with email")}
                 </button>
               </form>
 
