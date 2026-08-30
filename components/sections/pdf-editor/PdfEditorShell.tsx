@@ -388,7 +388,7 @@ function EditorLayout() {
 }
 
 export function PdfEditorShell() {
-  const { isSignedIn } = useAuth();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const shellSearchParams = useSearchParams();
   const shellRouter = useRouter();
 
@@ -550,10 +550,25 @@ export function PdfEditorShell() {
 
   useEffect(() => {
     if (!shouldRedirectAway) return;
+    // 2026-08-30: wait for Clerk to hydrate before deciding target.
+    // Without this guard the first render after a full-page nav
+    // (post-signup / post-signin — invariant #15's
+    // `window.location.assign`) evaluates `isSignedIn === undefined`
+    // (Clerk client-boot in flight), the ternary picks the falsy
+    // branch, and users end up on the marketing HOME (`/`) instead
+    // of their DASHBOARD. User reported edits appearing "lost"
+    // after signup because the composer redirect fired before the
+    // hydrator could restore the file, and even if the hydrator
+    // did fire the redirect was to `/` — no evidence the composer
+    // ever tried to reopen the doc. Waiting for `authLoaded` gives
+    // the hydrator time to complete its IDB restore AND Clerk time
+    // to populate `isSignedIn`, so any redirect that DOES fire
+    // lands on the correct signed-in dashboard.
+    if (!authLoaded) return;
     const target = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
     shellRouter.replace(target);
-  }, [shouldRedirectAway, isSignedIn, shellRouter]);
+  }, [shouldRedirectAway, authLoaded, isSignedIn, shellRouter]);
 
   let content: React.ReactNode;
 

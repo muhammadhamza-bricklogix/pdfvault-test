@@ -355,6 +355,29 @@ export function PendingEditorFileHydrator() {
     if (!authLoaded) return; // Clerk still booting — defer the decision
     if (!isSignedIn) return; // anonymous session — IDB-only via `useSignedOutAutoPersist`
 
+    // 2026-08-30: if Step 2 restored Fabric edits from IDB (user was
+    // signed-out, edited the PDF, then signed in), the RAW file
+    // upload below would ship the pristine original — losing all
+    // the edits when the user opens the doc from their dashboard.
+    // Set `pendingCloudSaveAfterReload=true` instead; that flag
+    // makes `useEditorAutoPersist` fire once pdf.js finishes loading
+    // and run the merge pipeline (`persistEditorDocument` bakes the
+    // Fabric layer into a new PDF byte array + uploads THAT). The
+    // raw-upload path below is only correct for the "signed-in user
+    // drops a fresh PDF" case (no edits yet).
+    const hasFabricEdits =
+      usePdfEditorStore.getState().fabricJsonByPage.size > 0;
+
+    if (hasFabricEdits) {
+      autoSavedRef.current = true;
+      usePdfEditorStore.setState({ pendingCloudSaveAfterReload: true });
+      // Nothing else to do here — useEditorAutoPersist takes over
+      // once pdfDocument is loaded. It calls persistEditorDocument
+      // with force: true, which handles the merge + upload + sets
+      // currentDocumentId + clears the flag.
+      return;
+    }
+
     autoSavedRef.current = true;
 
     void (async () => {
