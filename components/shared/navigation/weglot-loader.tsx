@@ -74,7 +74,7 @@ export function WeglotLoader() {
   return (
     <Script
       src="https://cdn.weglot.com/weglot.min.js"
-      strategy="afterInteractive"
+      strategy="lazyOnload"
       onLoad={() => {
         log(
           `${LOG_PREFIX} CDN script loaded. window.Weglot present?`,

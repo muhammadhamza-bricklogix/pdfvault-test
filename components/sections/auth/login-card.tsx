@@ -118,6 +118,15 @@ function maskEmail(raw: string): string {
   return `${visible}***${domain}`;
 }
 
+// Module-scoped dedup for the auto-send code flow. Survives React 19
+// StrictMode's dev-only mount→unmount→mount cycle (which resets any
+// component-scope ref between the two mounts and was firing
+// `signIn.emailCode.sendCode` twice per email — Clerk returned 422
+// `verification_already_sent` on the second call, generating console
+// noise + a stuck OTP screen. Storing by trimmed email means opening
+// the modal for a DIFFERENT email later still auto-sends normally.
+const autoSentEmails = new Set<string>();
+
 // Sign-in mode.
 //   - "code"     → default. Email → 6-digit OTP → verify → finalize.
 //   - "password" → email + password → existing single-factor flow.
@@ -414,6 +423,30 @@ export function LoginCard({
     if (error) {
       const code = (error as { errors?: { code?: string }[] })?.errors?.[0]
         ?.code;
+      const message = (error as { errors?: { message?: string }[] })
+        ?.errors?.[0]?.message;
+
+      // Clerk returns 422 `verification_already_sent` (or a variant
+      // like `session_exists`) when we hit sendCode a second time in
+      // the same flow — e.g. React StrictMode's dev double-mount,
+      // fast double-click on Resend, or the user reopening the modal
+      // while a code is still valid. The code IS in the user's
+      // inbox from the first attempt, so treat this as success:
+      // return true so the caller transitions to the OTP step
+      // instead of surfacing a confusing "couldn't send" error.
+      if (
+        code === "verification_already_sent" ||
+        /already sent|already exists/i.test(message ?? "")
+      ) {
+        // eslint-disable-next-line no-console
+        console.info(
+          "[AUTH_DIAG] signin.send_email_code.already_sent_recovery",
+          { code, message },
+        );
+
+        return true;
+      }
+
       const msg = readClerkError(
         error,
         "Couldn't send your verification code. Try again.",
@@ -448,7 +481,22 @@ export function LoginCard({
     const trimmed = (initialEmail ?? "").trim();
 
     if (!EMAIL_REGEX.test(trimmed)) return;
+    // Module-scope guard — survives React StrictMode's dev-mode
+    // double-mount (component ref resets between them, module set
+    // does not). If we've already sent for this exact email in this
+    // browser session, jump straight to the OTP step without hitting
+    // Clerk again.
+    if (autoSentEmails.has(trimmed)) {
+      autoSentRef.current = true;
+      // Defer the setState to a microtask so the effect doesn't
+      // trigger a cascading render synchronously (react-hooks/…
+      // set-state-in-effect lint rule).
+      queueMicrotask(() => setStep("codeVerify"));
+
+      return;
+    }
     autoSentRef.current = true;
+    autoSentEmails.add(trimmed);
 
     void (async () => {
       // eslint-disable-next-line no-console
@@ -459,10 +507,11 @@ export function LoginCard({
 
       if (sent) {
         setStep("codeVerify");
+      } else {
+        // If sendEmailCode failed, unblock retries for this email so
+        // the user can manually resend from the credentials form.
+        autoSentEmails.delete(trimmed);
       }
-      // If not sent, sendEmailCode already set the error state and
-      // the user sees the credentials form with a message — natural
-      // fallback path.
     })();
     // Intentionally fire once on mount. `sendEmailCode` uses fresh
     // `signIn` from closure but only runs when signIn is truthy.

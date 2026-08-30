@@ -930,7 +930,7 @@ export function UploadWorkspace({
               async
               id="trustpilot-bootstrap"
               src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
-              strategy="afterInteractive"
+              strategy="lazyOnload"
             />
           </>
         ) : null}

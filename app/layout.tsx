@@ -108,22 +108,21 @@ export default function RootLayout({
       lang="en"
     >
       {/*
-        Preconnect ONLY to third-party origins that fire during initial
-        landing render — Lighthouse warns above 4 preconnects because
-        each holds a socket in the browser's limited pool. Dropped
-        2026-08-30:
-          - `clerk.pdfvault.ai` — Clerk SDK is lazy-loaded now
-            (AuthModal cards via next/dynamic); the SDK self-preconnects
-            when it finally loads on user interaction, so a landing-time
-            preconnect just wastes a socket.
-          - `cdn.charge-auth.com` — Solidgate payment iframe only
-            appears deep in the paywall flow (user has clicked
-            Download, gone through auth, hit a paywalled export).
-            Wasting a landing socket for it hurt LCP more than the
-            50ms it saved on paywall open.
-        Kept as `dns-prefetch` only (cheaper — resolves DNS but
-        doesn't hold a socket).
+        Preconnect to critical third-party origins so the TCP + TLS
+        handshakes happen in parallel with HTML parsing rather than
+        on demand. Lighthouse warns >4 preconnects, but Clerk SDK is
+        loaded on EVERY page via ClerkProvider in root — dropping its
+        preconnect (attempted 2026-08-30) cost more than the warning
+        saved (Lighthouse dropped from 90 → 80). Keeping it in.
+        `cdn.charge-auth.com` stays as dns-prefetch only — it's
+        genuinely paywall-flow-only, and downgrading it saves 1 socket.
       */}
+      <link
+        crossOrigin="anonymous"
+        href="https://clerk.pdfvault.ai"
+        rel="preconnect"
+      />
+      <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
       <link
         crossOrigin="anonymous"
         href="https://cdn.weglot.com"
@@ -152,10 +151,8 @@ export default function RootLayout({
           <link href="https://invitejs.trustpilot.com" rel="dns-prefetch" />
         </>
       ) : null}
-      {/* DNS prefetch (no socket) for origins we DID drop from
-          preconnect but still hit later. Cheaper than preconnect;
-          saves ~20-50ms on first Clerk / Solidgate request. */}
-      <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
+      {/* DNS prefetch only — Solidgate payment iframe is deep in the
+          paywall flow, not needed at landing time. */}
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
 
       {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
