@@ -250,10 +250,10 @@ function ExportFormatModalBody({
       <Modal.CloseTrigger />
       <Modal.Header className="!pb-3 text-center">
         <Modal.Heading className="text-center text-xl font-bold">
-          Download File
+          Great Job!
         </Modal.Heading>
         <p className="mt-1 text-center text-sm text-default-500">
-          Choose a format to export your document.
+          Select the format to download your file.
         </p>
       </Modal.Header>
 

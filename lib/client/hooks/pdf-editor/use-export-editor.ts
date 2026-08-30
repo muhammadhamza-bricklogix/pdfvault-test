@@ -336,6 +336,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             // around "welcome back". Downstream auth chain (items
             // #1–4, #8–12, #15) is unchanged.
             title: "Your file is ready",
+            subtitle: "Create an account to download it",
             submitLabel: "Download file",
           });
 

@@ -6,7 +6,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
 
+import Link from "next/link";
+
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -27,6 +30,13 @@ export type EmailFirstModalDetail = {
   redirectUrl?: string;
   /** Optional title override — defaults to "Welcome back". */
   title?: string;
+  /**
+   * Optional subtitle rendered under the heading. Defaults to no
+   * subtitle. The editor Done → Download flow passes "Create an
+   * account to download it" so the modal explains WHY we need the
+   * email up front.
+   */
+  subtitle?: string;
   /**
    * Optional CTA label override — defaults to "Log in with email".
    * The editor Done → Download flow passes "Download file" so the
@@ -289,6 +299,11 @@ export function EmailFirstModal() {
               >
                 {detail?.title ?? "Welcome back"}
               </h1>
+              {detail?.subtitle ? (
+                <p className="mt-2 text-center text-[15px] leading-[20px] text-[#6f6f6f]">
+                  {detail.subtitle}
+                </p>
+              ) : null}
 
               <form noValidate className="mt-6" onSubmit={handleSubmit}>
                 <label
@@ -353,27 +368,26 @@ export function EmailFirstModal() {
                       ? "Checking…"
                       : (detail?.submitLabel ?? "Log in with email")}
                 </button>
+                <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
+                  By creating an account, you agree to our{" "}
+                  <Link
+                    className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+                    href={ROUTES.LEGAL.TERMS}
+                    target="_blank"
+                  >
+                    Terms and Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+                    href={ROUTES.LEGAL.PRIVACY}
+                    target="_blank"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
               </form>
-
-              <p className="mt-5 text-center text-[15px] text-[#5f5f5f]">
-                Don&apos;t have an account yet?{" "}
-                <button
-                  className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-                  type="button"
-                  onClick={() => {
-                    const trimmed = email.trim();
-
-                    dispatchAuthModal({
-                      mode: "signup",
-                      redirectUrl: detail?.redirectUrl,
-                      email: EMAIL_REGEX.test(trimmed) ? trimmed : undefined,
-                    });
-                    close();
-                  }}
-                >
-                  Sign up
-                </button>
-              </p>
             </section>
           </div>
         </Modal.Dialog>
