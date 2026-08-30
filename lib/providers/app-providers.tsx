@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { AuthModal } from "@/components/shared/auth-modal";
 import { EmailFirstModal } from "@/components/shared/email-first-modal";
+import { LoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
 import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
@@ -44,6 +45,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <UploadToastProvider />
           <AuthModal />
           <EmailFirstModal />
+          <LoginToDownloadModal />
           <MobileDebugBoot />
           <GoogleAdsClickBoot />
           <UserSyncBoot />

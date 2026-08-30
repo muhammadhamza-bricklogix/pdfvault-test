@@ -9,16 +9,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
-import { toast } from "@/lib/shared/utils/toast";
-
-// How long the "We found your account · Just a moment…" toast stays
-// on top before the button re-enables and we wait for the user to
-// click Download file a second time. 2026-08-31 PM refinement: the
-// second click is what triggers the code send — no auto-timer dispatch.
-const EXISTING_ACCOUNT_TOAST_MS = 4000;
 
 export type EmailFirstModalDetail = {
   /**
@@ -44,6 +38,11 @@ export type EmailFirstModalDetail = {
    * not Log In). Auth chain downstream is unchanged.
    */
   submitLabel?: string;
+  /**
+   * Optional email prefill. Used by the LoginToDownloadModal's Back
+   * button so the user's email is restored when they return.
+   */
+  initialEmail?: string;
 };
 
 /**
@@ -89,28 +88,16 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // Two-click flow for existing accounts:
-  //   click 1 → probe → toast (4s) → button re-enables
-  //   click 2 → dispatch AuthModal(login, autoSendCode: true)
-  // `confirmExistingEmail` remembers the probed email; the toast
-  // window is signalled by `awaitingSecondClick` so the button
-  // stays disabled + "Checking…" while the toast is visible.
-  const [confirmExistingEmail, setConfirmExistingEmail] = useState<
-    string | null
-  >(null);
-  const [awaitingSecondClick, setAwaitingSecondClick] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
       const custom = event as CustomEvent<EmailFirstModalDetail>;
+      const nextDetail = custom.detail ?? {};
 
-      setDetail(custom.detail ?? {});
-      setEmail("");
+      setDetail(nextDetail);
+      setEmail(nextDetail.initialEmail ?? "");
       setError(null);
-      setConfirmExistingEmail(null);
-      setAwaitingSecondClick(false);
-      setSendingCode(false);
+      setSubmitting(false);
     };
 
     window.addEventListener("app:email-first-modal", onOpen);
@@ -120,40 +107,17 @@ export function EmailFirstModal() {
 
   const close = useCallback(() => {
     setDetail(null);
-    setConfirmExistingEmail(null);
-    setAwaitingSecondClick(false);
-    setSendingCode(false);
+    setSubmitting(false);
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!signIn || submitting || awaitingSecondClick || sendingCode) return;
+    if (!signIn || submitting) return;
 
     const trimmed = email.trim();
 
     if (!EMAIL_REGEX.test(trimmed)) {
       setError("Enter a valid email address.");
-
-      return;
-    }
-
-    // Second click after a successful probe → dispatch AuthModal
-    // (login) with `autoSendCode: true`. LoginCard's mount effect
-    // fires `signIn.emailCode.sendCode` as a direct downstream
-    // consequence of this click, and the button reads "Sending
-    // verification code…" until this modal unmounts.
-    if (confirmExistingEmail && confirmExistingEmail === trimmed) {
-      setError(null);
-      setSendingCode(true);
-      dispatchAuthModal({
-        mode: "login",
-        redirectUrl: detail?.redirectUrl,
-        email: trimmed,
-        autoSendCode: true,
-      });
-      // Give the AuthModal a tick to mount + register its own
-      // listener before we unmount this one.
-      window.setTimeout(close, 100);
 
       return;
     }
@@ -170,11 +134,9 @@ export function EmailFirstModal() {
 
       // Existing account: `signIn.create` returns no error and the
       // signIn moves to needs_first_factor (or complete for OAuth-
-      // only accounts). Show the toast, flip into the "confirm"
-      // state, and wait for the user to click Download file a
-      // second time — only then do we hand off to Login (with
-      // `autoSendCode` so the code send is a downstream consequence
-      // of that second click).
+      // only accounts). Hand off to LoginToDownloadModal, which
+      // renders Google + email options and preserves a Back path
+      // to this modal.
       if (!probeError) {
         // eslint-disable-next-line no-console
         console.info("[AUTH_DIAG] email_first.exists", {
@@ -189,24 +151,23 @@ export function EmailFirstModal() {
           // Best-effort; reset failures don't block the handoff.
         }
 
-        // Top banner via HeroUI toast (placement="top end" in
-        // AppProviders → renders as a top-of-viewport banner).
-        toast.info({
-          title: "We found your account",
-          description: "Just a moment…",
-        });
+        const previousDetail = detail;
 
-        // Freeze the button as "Checking…" for the toast window so
-        // the user can't rage-click while the message is up. After
-        // the toast fades we open up the second click by flipping
-        // `awaitingSecondClick` off + storing the probed email —
-        // the next submit branches into the confirm-dispatch above.
-        setConfirmExistingEmail(trimmed);
-        setAwaitingSecondClick(true);
-        setSubmitting(false);
-        window.setTimeout(() => {
-          setAwaitingSecondClick(false);
-        }, EXISTING_ACCOUNT_TOAST_MS);
+        dispatchLoginToDownloadModal({
+          email: trimmed,
+          redirectUrl: detail?.redirectUrl,
+          // Preserve the caller's title/subtitle/submitLabel so the
+          // Back button restores the same modal presentation.
+          emailFirstDetail: previousDetail
+            ? {
+                ...previousDetail,
+                initialEmail: trimmed,
+              }
+            : undefined,
+        });
+        // Unmount this modal on the same tick so the two modals
+        // don't visually overlap.
+        close();
 
         return;
       }
@@ -333,21 +294,8 @@ export function EmailFirstModal() {
                     type="email"
                     value={email}
                     onChange={(e) => {
-                      const next = e.target.value;
-
-                      setEmail(next);
+                      setEmail(e.target.value);
                       if (error) setError(null);
-                      // Editing the email invalidates the previous
-                      // probe result — force a re-probe on next
-                      // submit so we never silently code-send to a
-                      // stale address.
-                      if (
-                        confirmExistingEmail &&
-                        confirmExistingEmail !== next.trim()
-                      ) {
-                        setConfirmExistingEmail(null);
-                        setAwaitingSecondClick(false);
-                      }
                     }}
                   />
                 </div>
@@ -359,14 +307,12 @@ export function EmailFirstModal() {
 
                 <button
                   className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-                  disabled={submitting || awaitingSecondClick || sendingCode}
+                  disabled={submitting}
                   type="submit"
                 >
-                  {sendingCode
-                    ? "Sending verification code…"
-                    : submitting || awaitingSecondClick
-                      ? "Checking…"
-                      : (detail?.submitLabel ?? "Log in with email")}
+                  {submitting
+                    ? "Checking…"
+                    : (detail?.submitLabel ?? "Log in with email")}
                 </button>
                 <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
                   By creating an account, you agree to our{" "}
