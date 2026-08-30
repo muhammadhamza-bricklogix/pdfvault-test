@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
-import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -76,7 +75,6 @@ export function LandingHeader() {
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
-  const entitled = useIsEntitled();
 
   const handleLogOut = () => {
     void usersService.signOutAudit().catch(() => undefined);
