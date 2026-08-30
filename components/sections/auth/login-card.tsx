@@ -16,21 +16,18 @@ import { GoogleIcon, OAUTH_BUTTON_CLASS } from "./auth-oauth";
 
 /**
  * Stable Turnstile mount point for the signin-code flow (email OTP).
- * Same rationale as SignupCard's `TurnstileAnchor` — Clerk's bot
- * protection can apply to `signIn.emailCode.sendCode` if the instance
- * is configured to require it, and the div must be present + stable
- * or Cloudflare Turnstile errors with `300010` (widget destroyed
- * during render). Memoised so React never re-renders it. Uses
- * `flexible` size + explicit min-height so the invisible widget has
- * non-zero mount dimensions (0×0 flex parent hung getCaptchaToken).
+ * Memoised so React never re-renders it (prevents Turnstile 300010).
+ * Kept BARE — no `mt-*` margin, no `min-h-*` reserved height — so
+ * when Clerk's dashboard has bot protection set to invisible mode
+ * the div collapses to 0 height and doesn't visually gap the button
+ * (QA 2026-08-30). When bot protection is visible/managed, Turnstile
+ * injects an iframe and the div grows to fit its content. `w-full`
+ * so the flexible widget has a non-zero WIDTH parent (0-width flex
+ * parent was the earlier `getCaptchaToken` hang).
  */
 const TurnstileAnchor = memo(function TurnstileAnchor() {
   return (
-    <div
-      className="mt-3 min-h-[65px] w-full"
-      data-cl-size="flexible"
-      id="clerk-captcha"
-    />
+    <div className="w-full" data-cl-size="flexible" id="clerk-captcha" />
   );
 });
 

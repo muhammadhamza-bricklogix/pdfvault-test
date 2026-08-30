@@ -81,15 +81,27 @@ export function AuthModal() {
         if (!open) close();
       }}
     >
-      <Modal.Container className="items-center justify-center p-4">
+      {/* items-start on mobile so a tall card scrolls from the top
+          instead of getting clipped at the vertical centre; items-
+          center on sm+ where viewports are usually tall enough to fit
+          the card centred. `overflow-y-auto` on the container is what
+          actually enables the scroll — the outer Backdrop is fixed
+          height (100dvh) and the Container fills it, so setting
+          overflow on the Container gives the ENTIRE modal a scroll
+          track when its child (Dialog) is taller than viewport.
+          `overscroll-contain` stops the scroll chaining into the page
+          behind the backdrop when the user reaches the top/bottom. */}
+      <Modal.Container className="items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
         <Modal.Dialog
           // `w-fit` so the dialog hugs the card's own width — otherwise
           // a fixed 500px dialog would leave the 446/447px card floating
           // inside it and the close X (positioned relative to the
           // wrapper) would sit OUTSIDE the visible card border. Bare
           // dialog: no bg / no shadow / no padding — the card owns all
-          // of that itself.
-          className="!w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
+          // of that itself. `my-auto` so the dialog stays vertically
+          // centred inside the scroll track when the viewport IS tall
+          // enough to fit it (only scrolls when it isn't).
+          className="my-auto !w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
         >
           <div className="relative">
             {/* Close X — INSIDE the card box (top-right corner, inside
