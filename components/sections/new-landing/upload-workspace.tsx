@@ -12,8 +12,8 @@ import {
   useRef,
   useState,
 } from "react";
-import dynamic from "next/dynamic";
 
+import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useClientAuthHint } from "@/lib/client/hooks/auth/use-client-auth-hint";
@@ -35,17 +35,13 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { TrustpilotWidget } from "./trustpilot-widget";
 
-// Lazy-loaded — the duplicate modal only ever renders AFTER a
-// signed-in user drops a file whose name matches an existing doc.
-// Keeping it out of the landing bundle saves the modal's JS from
-// the LCP-zone hydration cost.
-const DuplicateUploadModal = dynamic(
-  () =>
-    import("@/components/sections/dashboard/duplicate-upload-modal").then(
-      (m) => m.DuplicateUploadModal,
-    ),
-  { ssr: false, loading: () => null },
-);
+// DuplicateUploadModal was briefly lazy-loaded via `next/dynamic`
+// (2026-08-30 perf pass) but reverted 2026-08-30 after QA reported
+// the modal not appearing on X→PDF duplicate hits — the async
+// chunk fetch could race with `setConvertDuplicate({...})` on a
+// fast drop, and `loading: () => null` rendered nothing while the
+// chunk was resolving. Sync import is ~55 lines, negligible perf
+// cost vs the correctness win.
 
 const DEFAULT_ACCEPTED_EXTENSIONS = [
   "pdf",
