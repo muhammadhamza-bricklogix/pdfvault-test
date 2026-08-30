@@ -82,14 +82,26 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   ) {
     return "That code doesn't match. Check your inbox or resend a new one.";
   }
-  if (code === "form_password_pwned" || /pwned/i.test(s)) {
-    return "This password appeared in a public data breach. Choose a different one.";
+  // Server-side breach + strength rejections. Only fire when Clerk
+  // dashboard still has "Reject compromised passwords" ON or a
+  // strong-password policy configured. Client schema (2026-08-30
+  // simplification) accepts any 8-char password; these messages
+  // exist for the case where the Clerk dashboard hasn't been
+  // updated to match. Toggle off at:
+  //   Clerk dashboard → Configure → User & Authentication →
+  //   Password → uncheck "Reject compromised passwords" AND clear
+  //   any complexity requirements.
+  if (
+    code === "form_password_pwned" ||
+    /pwned|data breach|compromised/i.test(s)
+  ) {
+    return "Please pick a different password.";
   }
   if (
     code === "form_password_not_strong_enough" ||
     /not strong enough/i.test(s)
   ) {
-    return "Password isn't strong enough. Use at least 8 characters with a mix of upper, lower, number, and symbol.";
+    return "Please pick a different password with at least 8 characters.";
   }
 
   return raw;

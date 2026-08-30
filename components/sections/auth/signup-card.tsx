@@ -82,17 +82,33 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   if (code === "form_password_required" || /password is required/i.test(s)) {
     return "This workspace requires a password. Toggle 'Sign up with password' and try again.";
   }
-  // Server-side "compromised passwords" rejection. Only fires when the
-  // Clerk dashboard still has "Reject compromised passwords" ON — the
-  // client schema (`authSignUpSchema`) doesn't check for breached
-  // passwords, but Clerk enforces it independently. Turn the toggle
-  // off in Clerk dashboard → Configure → User & Authentication →
-  // Password to fully match the 8-char-min-only policy.
+  // Server-side password rejections. These only fire when the Clerk
+  // dashboard still enforces breach detection or complexity rules —
+  // the client schema (`authSignUpSchema`) accepts any 8-char
+  // password (2026-08-30 PM ask: simple alphanumeric, 8 chars). If
+  // users still see "strong password required" style messages,
+  // update the Clerk dashboard to match:
+  //   Clerk dashboard → Configure → User & Authentication →
+  //   Password →
+  //     • uncheck "Reject compromised passwords"
+  //     • clear all complexity requirements (min length only, 8)
   if (
     code === "form_password_pwned" ||
     /pwned|data breach|compromised/i.test(s)
   ) {
     return "Please pick a different password.";
+  }
+  if (
+    code === "form_password_not_strong_enough" ||
+    /not strong enough/i.test(s)
+  ) {
+    return "Please pick a different password with at least 8 characters.";
+  }
+  if (
+    code === "form_password_length_too_short" ||
+    /at least \d+ characters?|too short/i.test(s)
+  ) {
+    return "Password must contain at least 8 characters.";
   }
 
   return raw;
