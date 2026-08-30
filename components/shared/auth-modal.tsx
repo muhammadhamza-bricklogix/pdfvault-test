@@ -81,34 +81,26 @@ export function AuthModal() {
         if (!open) close();
       }}
     >
-      {/* `items-start` universally — do NOT use `sm:items-center`.
-          When the card is TALLER than the viewport, `items-center`
-          pushes the top of the card ABOVE the container's scroll
-          origin (y=0), and scrollTop starts at 0 — so the top of
-          the card is clipped and unreachable (QA 2026-08-30: the
-          "Sign up for PDFVault" heading was cut off + footer legal
-          text was also cut off because both ends overflowed a
-          centred item taller than viewport). `items-start` +
-          `my-auto` on the dialog gives us the best of both: when
-          the viewport IS tall enough the auto margins centre it;
-          when it ISN'T the top pins to the container start and the
-          user scrolls down to reach the bottom.
-          `overflow-y-auto` on the container is what actually
-          enables the scroll. `overscroll-contain` stops chaining
-          into the page behind the backdrop when the user hits the
-          top/bottom of the modal. */}
-      <Modal.Container className="items-start justify-center overflow-y-auto overscroll-contain p-4">
+      {/* Centred + scrollable-when-tall pattern (Tailwind UI / Headless
+          UI convention). `min-h-full` makes the flex container at
+          least as tall as the backdrop, so `items-center` genuinely
+          centres the dialog when it fits. When the dialog is TALLER
+          than the viewport, the min-h-full container grows past
+          viewport height AND `overflow-y-auto` gives the whole modal
+          a scroll track — the user can scroll DOWN to see the
+          bottom; the top pins to the container start because a flex
+          item bigger than its parent aligns to the cross-axis start
+          even with `items-center`. `overscroll-contain` stops the
+          scroll chaining into the page behind the backdrop. */}
+      <Modal.Container className="min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4">
         <Modal.Dialog
           // `w-fit` so the dialog hugs the card's own width — otherwise
           // a fixed 500px dialog would leave the 446/447px card floating
           // inside it and the close X (positioned relative to the
           // wrapper) would sit OUTSIDE the visible card border. Bare
           // dialog: no bg / no shadow / no padding — the card owns all
-          // of that itself. `my-auto` centres vertically when the
-          // viewport has room; collapses to 0 when the card overflows
-          // and top pins to the container start (see comment on the
-          // Container above).
-          className="my-auto !w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
+          // of that itself.
+          className="!w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
         >
           <div className="relative">
             {/* Close X — INSIDE the card box (top-right corner, inside
