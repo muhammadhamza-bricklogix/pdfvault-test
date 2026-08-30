@@ -2,7 +2,7 @@ name: Deploy frontend to ECS
 
 on:
   push:
-    branches: [main]
+    branches: [main, performance/client-handle]
 
 permissions:
   id-token: write
