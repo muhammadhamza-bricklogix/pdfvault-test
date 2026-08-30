@@ -155,7 +155,10 @@ if (
 
   const idle = (
     window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void;
+      requestIdleCallback?: (
+        cb: () => void,
+        opts?: { timeout: number },
+      ) => void;
     }
   ).requestIdleCallback;
 
