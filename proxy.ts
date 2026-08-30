@@ -89,13 +89,38 @@ export default clerkMiddleware(async (auth, req) => {
 });
 
 export const config = {
+  // NARROWED 2026-08-30 (perf): the previous matcher ran clerkMiddleware
+  // on every non-static request — landing, marketing, and legal routes
+  // ate ~100–150 ms of TTFB per visit calling Clerk's session backend for
+  // pages that don't need auth. It also emitted `x-middleware-rewrite: /`
+  // + `x-clerk-*` response headers that some CDNs (and Lighthouse's
+  // redirect audit) misinterpret.
+  //
+  // Only routes that actually depend on the auth state (auth flows,
+  // dashboard/tools/composer/editor, protected APIs) run middleware.
+  // Everything else (`/`, `/edit`, `/compress`, `/privacy`, etc.) skips
+  // Clerk entirely and can be served straight from the edge cache.
+  //
+  // Pixel/behaviour parity: none of the affected routes rely on
+  // middleware — landing components read the client `__client_uat`
+  // cookie via `useClientAuthHint` (see 2026-08-30 refactor) and
+  // Clerk-dependent modals still work because ClerkProvider is mounted
+  // in the root layout.
   matcher: [
-    // `.well-known/**` is excluded so Apple Pay domain verification
-    // (`apple-developer-merchantid-domain-association`) and any future
-    // machine-readable metadata are served straight from `public/`
-    // without a Clerk redirect. The file has no extension, so the
-    // static-file exclusion below doesn't catch it.
-    "/((?!\\.well-known|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/dashboard(.*)",
+    "/tools/(.*)",
+    "/pdf-composer(.*)",
+    "/pdf-editor(.*)",
+    "/w-9-form(.*)",
+    "/w9-form(.*)",
+    "/forms/(.*)",
+    "/sign-in(.*)",
+    "/sign-up(.*)",
+    "/login(.*)",
+    "/signup(.*)",
+    "/forgot-password(.*)",
+    "/sso-callback(.*)",
+    "/oauth-callback(.*)",
     "/(api|trpc)(.*)",
   ],
 };
