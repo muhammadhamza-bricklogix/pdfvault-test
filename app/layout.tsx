@@ -2,25 +2,11 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
-import {
-  Allura,
-  Dancing_Script,
-  Great_Vibes,
-  Pacifico,
-  Playfair_Display,
-  Sacramento,
-} from "next/font/google";
+import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
 import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
-
-const dancingScript = Dancing_Script({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-dancing-script",
-  weight: ["400", "700"],
-});
 
 const playfairDisplay = Playfair_Display({
   display: "swap",
@@ -29,35 +15,14 @@ const playfairDisplay = Playfair_Display({
   weight: ["400", "600", "700"],
 });
 
-// Signature-tab fonts. Loaded here (with display:swap) so the Type signature
-// preview canvas can use them without a runtime fetch.
-const greatVibes = Great_Vibes({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-great-vibes",
-  weight: ["400"],
-});
-
-const allura = Allura({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-allura",
-  weight: ["400"],
-});
-
-const sacramento = Sacramento({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-sacramento",
-  weight: ["400"],
-});
-
-const pacifico = Pacifico({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-pacifico",
-  weight: ["400"],
-});
+// Signature-tab fonts (Dancing_Script, Great_Vibes, Allura,
+// Sacramento, Pacifico) were previously loaded here at root. Moved
+// 2026-08-30 to `app/(tools)/layout.tsx` because they're ONLY used
+// by the signature type-picker inside `SignatureModal` (PDF
+// composer + W-9 form) — landing / marketing pages were fetching
+// 5 unused woff2 files on every visit, adding ~50-80 KB to the
+// critical bandwidth and delaying LCP. Grep for `--font-great-vibes`
+// to see the consumers.
 
 import { Providers } from "./providers";
 
@@ -139,31 +104,32 @@ export default function RootLayout({
   return (
     <html
       suppressHydrationWarning
-      className={`${dancingScript.variable} ${playfairDisplay.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
+      className={playfairDisplay.variable}
       lang="en"
     >
       {/*
-        Preconnect to critical third-party origins so the TCP + TLS handshakes
-        happen in parallel with HTML parsing rather than on demand.
+        Preconnect ONLY to third-party origins that fire during initial
+        landing render — Lighthouse warns above 4 preconnects because
+        each holds a socket in the browser's limited pool. Dropped
+        2026-08-30:
+          - `clerk.pdfvault.ai` — Clerk SDK is lazy-loaded now
+            (AuthModal cards via next/dynamic); the SDK self-preconnects
+            when it finally loads on user interaction, so a landing-time
+            preconnect just wastes a socket.
+          - `cdn.charge-auth.com` — Solidgate payment iframe only
+            appears deep in the paywall flow (user has clicked
+            Download, gone through auth, hit a paywalled export).
+            Wasting a landing socket for it hurt LCP more than the
+            50ms it saved on paywall open.
+        Kept as `dns-prefetch` only (cheaper — resolves DNS but
+        doesn't hold a socket).
       */}
-      <link
-        crossOrigin="anonymous"
-        href="https://clerk.pdfvault.ai"
-        rel="preconnect"
-      />
-      <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
       <link
         crossOrigin="anonymous"
         href="https://cdn.weglot.com"
         rel="preconnect"
       />
       <link href="https://cdn.weglot.com" rel="dns-prefetch" />
-      <link
-        crossOrigin="anonymous"
-        href="https://cdn.charge-auth.com"
-        rel="preconnect"
-      />
-      <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
       <link
         crossOrigin="anonymous"
         href="https://www.googletagmanager.com"
@@ -186,6 +152,11 @@ export default function RootLayout({
           <link href="https://invitejs.trustpilot.com" rel="dns-prefetch" />
         </>
       ) : null}
+      {/* DNS prefetch (no socket) for origins we DID drop from
+          preconnect but still hit later. Cheaper than preconnect;
+          saves ~20-50ms on first Clerk / Solidgate request. */}
+      <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
+      <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
 
       {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
       <Script
