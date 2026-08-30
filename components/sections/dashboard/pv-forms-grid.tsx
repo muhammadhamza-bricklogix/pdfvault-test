@@ -21,7 +21,15 @@ const FORM_CARDS: readonly FormCardEntry[] = [
     title: "IRS Form W-9",
     description:
       "Request for Taxpayer Identification Number and Certification.",
-    href: ROUTES.FORMS.W9_SHORT,
+    // Land on the marketing landing (`/forms/w-9`) so the user sees
+    // the "Fill out W-9 Form Online in {YEAR}" intermediate page with
+    // its "Get Form" CTA, matching the flow QA expects (2026-08-30).
+    // The landing's Get Form button navigates to
+    // `ROUTES.FORMS.W9_EDIT` which loads the composer with the blank
+    // template already bootstrapped. Previously linked
+    // `ROUTES.FORMS.W9_SHORT` (`/w-9-form`) which skipped straight
+    // into the editor.
+    href: ROUTES.FORMS.W9,
     icon: File01Icon,
   },
 ];
