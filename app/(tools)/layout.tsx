@@ -61,14 +61,18 @@ const pacifico = Pacifico({
   weight: ["400"],
 });
 
+import { ClerkAppShell } from "@/components/shared/clerk-app-shell";
+
 export default function ToolsLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div
-      className={`contents ${dancingScript.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
-    >
-      {children}
-    </div>
+    <ClerkAppShell>
+      <div
+        className={`contents ${dancingScript.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
+      >
+        {children}
+      </div>
+    </ClerkAppShell>
   );
 }
