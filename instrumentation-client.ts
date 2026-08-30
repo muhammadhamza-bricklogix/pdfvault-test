@@ -32,16 +32,12 @@ Sentry.init({
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 
-  integrations: [
-    Sentry.replayIntegration({
-      maskAllText: true,
-      maskAllInputs: true,
-      blockAllMedia: true,
-      // Never record request/response bodies — auth tokens, PDF bytes, etc.
-      networkDetailAllowUrls: [],
-    }),
-    Sentry.browserTracingIntegration(),
-  ],
+  // Replay integration is added lazily below (`lazyLoadIntegration`)
+  // AFTER first paint — session replay is the heaviest Sentry sub-bundle
+  // (~100 KiB gzip) and it was blocking landing LCP + TBT. Kept
+  // browserTracing here because router transitions rely on it being
+  // ready during hydration.
+  integrations: [Sentry.browserTracingIntegration()],
 
   debug: false,
 
@@ -131,3 +127,41 @@ Sentry.init({
 // Required export for Next.js 16 App Router — Sentry hooks router transitions
 // so client-side navigations are captured as spans.
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
+// Lazy-load session replay AFTER first paint to keep the initial JS
+// budget lean on landing. Replay adds ~100 KiB gzip and doesn't need
+// to be live during the LCP window — errors are still captured because
+// the core SDK initialised synchronously above. `lazyLoadIntegration`
+// resolves to a dynamic import so the chunk lands only when this fires.
+if (
+  typeof window !== "undefined" &&
+  (process.env.NODE_ENV === "production" ||
+    process.env.NEXT_PUBLIC_SENTRY_ENABLE_DEV === "true")
+) {
+  const loadReplay = () => {
+    void Sentry.lazyLoadIntegration("replayIntegration")
+      .then((replayIntegration) => {
+        Sentry.getClient()?.addIntegration(
+          replayIntegration({
+            maskAllText: true,
+            maskAllInputs: true,
+            blockAllMedia: true,
+            networkDetailAllowUrls: [],
+          }),
+        );
+      })
+      .catch(() => undefined);
+  };
+
+  const idle = (
+    window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void;
+    }
+  ).requestIdleCallback;
+
+  if (typeof idle === "function") {
+    idle(loadReplay, { timeout: 4000 });
+  } else {
+    window.setTimeout(loadReplay, 2500);
+  }
+}

@@ -35,8 +35,21 @@ const nextConfig = {
   // built-in). Directly addresses Lighthouse "Render-blocking requests"
   // for the ~57 KB of globals.css + HeroUI styles that block LCP on
   // landing today. Cuts ~80 ms off first render.
+  //
+  // `optimizePackageImports` tells the compiler to only bundle the
+  // specific exports each file uses instead of the whole barrel — cuts
+  // JS bundle size and hydration cost for landing. Add heavy barrel
+  // libraries here as they're introduced (icons, ui kits, big utility
+  // packages).
   experimental: {
     optimizeCss: true,
+    optimizePackageImports: [
+      "@heroui/react",
+      "@tabler/icons-react",
+      "react-icons",
+      "@hugeicons/react",
+      "@hugeicons/core-free-icons",
+    ],
   },
   async redirects() {
     // 308 (permanent) preserves method + tells crawlers to update the
