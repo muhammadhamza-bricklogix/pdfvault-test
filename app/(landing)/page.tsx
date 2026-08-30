@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 
 import dynamic from "next/dynamic";
 
+import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
 import { LandingHero } from "@/components/sections/new-landing/landing-hero";
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
+// Trustpilot TrustBox widget host — plain Server Component that ships
+// the widget div + bootstrap script; Trustpilot's own CDN populates the
+// reviews client-side on load.
+import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 
 // Below-fold client components — split into separate JS chunks so the browser
 // can prioritise above-fold hydration first. SSR is kept on (default) so
@@ -22,24 +27,9 @@ const LandingBanner = dynamic(() =>
   ),
 );
 
-// LandingTestimonials pulls the TrustpilotWidget + bootstrap script host.
-// It sits below Banner + Tools, so lazy hydration here is safe and cuts
-// initial JS parse cost.
-const LandingTestimonials = dynamic(() =>
-  import("@/components/sections/new-landing/landing-testimonials").then(
-    (m) => m.LandingTestimonials,
-  ),
-);
-
 const LandingFAQ = dynamic(() =>
   import("@/components/sections/new-landing/landing-faq").then(
     (m) => m.LandingFAQ,
-  ),
-);
-
-const LandingFooter = dynamic(() =>
-  import("@/components/sections/new-landing/landing-footer").then(
-    (m) => m.LandingFooter,
   ),
 );
 
