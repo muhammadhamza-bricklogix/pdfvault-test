@@ -9,6 +9,14 @@ import { useCallback, useEffect, useState } from "react";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
+import { toast } from "@/lib/shared/utils/toast";
+
+// Delay between the "We found your account" toast appearing and the
+// AuthModal(login) opening on top — gives the user time to read
+// (2026-08-30 PM ask: "show for 4-5 seconds"). The toast itself
+// auto-dismisses at 5s (DEFAULT_TIMEOUT_MS in toast.ts) so the
+// two land in the same visual window.
+const EXISTING_ACCOUNT_HANDOFF_MS = 4000;
 
 export type EmailFirstModalDetail = {
   /**
@@ -122,12 +130,31 @@ export function EmailFirstModal() {
         } catch {
           // Best-effort; reset failures don't block the handoff.
         }
-        dispatchAuthModal({
-          mode: "login",
-          redirectUrl: detail?.redirectUrl,
-          email: trimmed,
+
+        // Top banner via the existing HeroUI toast system
+        // (placement="top end" in AppProviders → renders as a
+        // top-of-viewport banner). 5s default timeout, matches the
+        // 4s handoff delay below so the toast is still visible when
+        // the login modal appears (2026-08-30 PM ask).
+        toast.info({
+          title: "We found your account",
+          description: "Just a moment…",
         });
+
+        // Close the email modal immediately so the user sees the
+        // banner uncluttered, then dispatch the login modal after a
+        // short pause. The setTimeout runs on `window` (no cleanup
+        // ref) because the modal has already unmounted by the time
+        // it fires — but even if not, `dispatchAuthModal` is
+        // idempotent (event dispatch).
         close();
+        window.setTimeout(() => {
+          dispatchAuthModal({
+            mode: "login",
+            redirectUrl: detail?.redirectUrl,
+            email: trimmed,
+          });
+        }, EXISTING_ACCOUNT_HANDOFF_MS);
 
         return;
       }
