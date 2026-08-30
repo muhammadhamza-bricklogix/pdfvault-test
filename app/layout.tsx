@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
+import { ClerkProvider } from "@clerk/nextjs";
 import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
@@ -245,24 +246,23 @@ gtag('config', 'AW-18226423046');`}
         </noscript>
         <NextTopLoader color="#DF3A38" showSpinner={false} />
         <WeglotLoader />
-        {/* ClerkProvider was here (2026-08-30 removed). It ships
-            `@clerk/clerk-js` (~200 KiB gzip) on every route including
-            landing / marketing / legal — pages that never call an auth
-            hook. Moved into `<ClerkAppShell>` inside each authenticated
-            route group's layout (`(app)`, `(tools)`,
-            `(marketing)/(site)/(auth)`). The lazy `LazyAuthModalHost`
-            mounted inside `<Providers>` handles the modal on landing
-            without pulling Clerk into the initial bundle. */}
-        <Providers
-          themeProps={{
-            attribute: ["data-theme", "class"],
-            defaultTheme: "light",
-            enableSystem: false,
-            forcedTheme: "light",
-          }}
+        <ClerkProvider
+          signInFallbackRedirectUrl="/dashboard"
+          signInUrl="/sign-in"
+          signUpFallbackRedirectUrl="/dashboard"
+          signUpUrl="/sign-up"
         >
-          {children}
-        </Providers>
+          <Providers
+            themeProps={{
+              attribute: ["data-theme", "class"],
+              defaultTheme: "light",
+              enableSystem: false,
+              forcedTheme: "light",
+            }}
+          >
+            {children}
+          </Providers>
+        </ClerkProvider>
       </body>
     </html>
   );
