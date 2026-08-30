@@ -13,7 +13,9 @@ import {
   useRef,
   useState,
 } from "react";
+import dynamic from "next/dynamic";
 
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
@@ -25,8 +27,6 @@ import {
   loadPendingEditorFile,
   savePendingEditorFile,
 } from "@/lib/client/upload/pending-editor-file";
-import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -34,6 +34,18 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { TrustpilotWidget } from "./trustpilot-widget";
+
+// Lazy-loaded — the duplicate modal only ever renders AFTER a
+// signed-in user drops a file whose name matches an existing doc.
+// Keeping it out of the landing bundle saves the modal's JS from
+// the LCP-zone hydration cost.
+const DuplicateUploadModal = dynamic(
+  () =>
+    import("@/components/sections/dashboard/duplicate-upload-modal").then(
+      (m) => m.DuplicateUploadModal,
+    ),
+  { ssr: false, loading: () => null },
+);
 
 const DEFAULT_ACCEPTED_EXTENSIONS = [
   "pdf",

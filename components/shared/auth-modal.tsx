@@ -1,12 +1,31 @@
 "use client";
 
 import { Modal } from "@heroui/react";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
-import { LoginCard } from "@/components/sections/auth/login-card";
-import { SignupCard } from "@/components/sections/auth/signup-card";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
+
+// Lazy-load the heavy card components so they don't ship in the
+// landing / marketing initial JS bundle (2026-08-30 perf ask: LCP
+// on landing was slow — LoginCard + SignupCard combined are ~1700
+// lines of form logic + Clerk hooks + zod schemas). The event
+// listener in this shell stays synchronous so a fast click on
+// Login opens the modal without a race; only when `isOpen` flips
+// true does the card chunk start downloading. First open shows a
+// blank ~50-200ms while the chunk loads; every subsequent open is
+// instant. `ssr: false` — pure client widgets (Clerk hooks).
+const LoginCard = dynamic(
+  () =>
+    import("@/components/sections/auth/login-card").then((m) => m.LoginCard),
+  { ssr: false, loading: () => null },
+);
+const SignupCard = dynamic(
+  () =>
+    import("@/components/sections/auth/signup-card").then((m) => m.SignupCard),
+  { ssr: false, loading: () => null },
+);
 
 export type AuthModalMode = "login" | "signup";
 
@@ -72,6 +91,36 @@ export function AuthModal() {
     window.addEventListener("app:auth-modal", onOpen);
 
     return () => window.removeEventListener("app:auth-modal", onOpen);
+  }, []);
+
+  // Preload the card chunks during browser idle time (after LCP,
+  // after other interactions have settled) so the FIRST modal open
+  // isn't blank while the chunk downloads. Uses `requestIdleCallback`
+  // when available; falls back to a 2s setTimeout on Safari (no
+  // support). Fire-and-forget — the promises resolve into
+  // webpack chunk cache; nothing awaits them.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const preload = () => {
+      void import("@/components/sections/auth/login-card");
+      void import("@/components/sections/auth/signup-card");
+    };
+    const ric = (
+      window as unknown as {
+        requestIdleCallback?: (cb: () => void) => number;
+      }
+    ).requestIdleCallback;
+    const cic = (
+      window as unknown as {
+        cancelIdleCallback?: (handle: number) => void;
+      }
+    ).cancelIdleCallback;
+    const handle = ric ? ric(preload) : window.setTimeout(preload, 2000);
+
+    return () => {
+      if (ric && cic) cic(handle);
+      else window.clearTimeout(handle);
+    };
   }, []);
 
   const close = useCallback(() => {

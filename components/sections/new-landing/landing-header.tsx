@@ -2,20 +2,34 @@
 
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { Modal } from "@heroui/react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
-import { FormsModal } from "@/components/shared/forms-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-import { AllToolsCatalog } from "./all-tools-catalog";
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
+
+// Lazy-loaded: AllToolsCatalog renders only when the user clicks
+// "All PDF Tools" (opens the modal). FormsModal renders only when
+// the user clicks "Forms". Keeping them out of the landing bundle
+// saves the hydration cost for the ~95% of visitors who never open
+// either. First open shows a brief blank while the chunk loads
+// (typically <100ms cached; ~200ms cold).
+const AllToolsCatalog = dynamic(
+  () => import("./all-tools-catalog").then((m) => m.AllToolsCatalog),
+  { ssr: false, loading: () => null },
+);
+const FormsModal = dynamic(
+  () => import("@/components/shared/forms-modal").then((m) => m.FormsModal),
+  { ssr: false, loading: () => null },
+);
 
 type NavLink = { label: string; href: string };
 
