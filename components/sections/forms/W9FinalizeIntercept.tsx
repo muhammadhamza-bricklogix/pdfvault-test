@@ -1488,7 +1488,60 @@ export function W9FinalizeIntercept() {
           detail.onComplete({ ok: true });
         } catch (err) {
           logger.captureError(err, "w9.save_and_continue");
-          detail.onComplete({ ok: false, reason: "error" });
+
+          // Backend rejected the finalize (missing date / TIN /
+          // signature — the partial-form path). Stamp the W-9 client
+          // side with whatever's in the store and upload THAT to My
+          // PDFs so the back-button save still succeeds. Matches the
+          // download + save-button fallbacks so all three paths agree.
+          try {
+            const previewNow =
+              useFormEditorStore.getState().signaturePreview ?? null;
+            const stampedBytes = await stampW9Client(values, previewNow);
+            const partialFile = new File(
+              [stampedBytes.buffer as ArrayBuffer],
+              "w-9.pdf",
+              { type: "application/pdf" },
+            );
+            const partialEditorState = JSON.stringify({
+              v: 1,
+              w9: {
+                values,
+                signatureKey: null,
+                signaturePreview: previewNow,
+              },
+            });
+            const savedDoc = await documentsService.uploadDocument({
+              file: partialFile,
+              documentId: currentDocumentId ?? undefined,
+              editorState: partialEditorState,
+            });
+
+            usePdfEditorStore.getState().setCurrentDocument({
+              id: savedDoc.id,
+              name: savedDoc.filename,
+            });
+            lastSaveRef.current = {
+              key: cacheKey,
+              documentId: savedDoc.id,
+            };
+
+            try {
+              queryClientRef.current?.invalidateQueries({
+                queryKey: documentKeys.lists(),
+              });
+            } catch {
+              /* non-fatal */
+            }
+
+            detail.onComplete({ ok: true });
+          } catch (fallbackErr) {
+            logger.captureError(
+              fallbackErr,
+              "w9.save_and_continue_client_fallback",
+            );
+            detail.onComplete({ ok: false, reason: "error" });
+          }
         }
       })();
     };

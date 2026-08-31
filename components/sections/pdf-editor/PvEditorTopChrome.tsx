@@ -328,18 +328,63 @@ function TopAppBar() {
   // doc — doesn't render the previous PDF while the new load is in flight.
   // Reported 2026-08-18.
   const handleBack = () => {
-    // Save-then-navigate mirrors the Hamburger's "My PDFs" flow so
-    // pressing Back with unsaved edits (text, watermark, signature,
-    // drawings, etc.) doesn't lose them. `useEditorNavigationSave`
-    // handles the "no file / signed out / no unsaved changes" fast
-    // paths, so this dispatch is safe from every state.
-    // `clearFileAfter: true` preserves the 2026-08-18 fix — clearing
-    // the store before re-entry stops the previous PDF flashing on the
-    // next editor load.
+    const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
+
+    if (showW9Save) {
+      // W-9 route: save the partial form THROUGH the finalize path
+      // (`W9FinalizeIntercept.saveAndContinueHandler` — falls back to
+      // a client-side stamp so partial forms still land in My PDFs).
+      // Only navigate when the save resolves `ok`; failures show a
+      // toast and keep the user on the form so nothing is lost. Per
+      // product 2026-09-01: "hit save first, don't go back until the
+      // form is saved."
+      const savingToast = toast.loading({
+        title: "Saving your W-9",
+        description: "Hold on — you'll go back once your progress is saved.",
+      });
+
+      window.dispatchEvent(
+        new CustomEvent("editor:w9-save-and-continue", {
+          detail: {
+            onComplete: (result: { ok: boolean; reason?: string }) => {
+              toast.close(savingToast);
+
+              if (!result.ok) {
+                toast.error({
+                  title: "Couldn't save your W-9",
+                  description:
+                    "Your progress is still on this page — try again in a moment.",
+                });
+
+                return;
+              }
+
+              window.dispatchEvent(
+                new CustomEvent("editor:navigate-after-save", {
+                  detail: {
+                    url: targetUrl,
+                    clearFileAfter: true,
+                  },
+                }),
+              );
+            },
+          },
+        }),
+      );
+
+      return;
+    }
+
+    // Non-W-9 routes: existing save-then-navigate dispatch.
+    // `useEditorNavigationSave` handles the "no file / signed out /
+    // no unsaved changes" fast paths, so this dispatch is safe from
+    // every state. `clearFileAfter: true` preserves the 2026-08-18
+    // fix — clearing the store before re-entry stops the previous PDF
+    // flashing on the next editor load.
     window.dispatchEvent(
       new CustomEvent("editor:navigate-after-save", {
         detail: {
-          url: isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME,
+          url: targetUrl,
           clearFileAfter: true,
         },
       }),
@@ -410,7 +455,11 @@ function TopAppBar() {
         </Tooltip.Content>
       </Tooltip>
 
-      <HamburgerMenu />
+      {/* Hamburger hidden on `/w-9-form` per product 2026-09-01 —
+          the W-9 flow has its own Back → save-and-continue path and
+          the hamburger's tools (Manage Pages, Share, etc.) don't
+          apply to a fill-and-sign form. */}
+      {showW9Save ? null : <HamburgerMenu />}
 
       <Link
         aria-label="Home"
