@@ -425,36 +425,6 @@ export function SignupCard({
         if (passwordError) {
           const errorCode = (passwordError as { errors?: { code?: string }[] })
             ?.errors?.[0]?.code;
-
-          // 2026-08-31: hard-swallow Clerk's server-side password
-          // policy rejections. The user has asked for zero client-
-          // side restrictions beyond the 8-char minimum, so we
-          // don't show a scary "Given password is not strong
-          // enough" / "This password has been leaked" message.
-          //
-          // NOTE — this only hides the message. Clerk still refuses
-          // to create the account until the dashboard toggle is
-          // flipped:
-          //   Clerk dashboard → Configure → User & Authentication →
-          //   Password → uncheck "Reject compromised passwords" and
-          //   clear ALL complexity requirements. Until then, users
-          //   will click Sign Up and see nothing happen. The full
-          //   fix is dashboard-side, not code-side.
-          if (
-            errorCode === "form_password_not_strong_enough" ||
-            errorCode === "form_password_pwned" ||
-            errorCode === "form_password_length_too_short"
-          ) {
-            // eslint-disable-next-line no-console
-            console.info("[AUTH_DIAG] signup.password_restriction_swallowed", {
-              errorCode,
-              hint:
-                "Disable this in Clerk dashboard → User & Authentication → Password",
-            });
-
-            return;
-          }
-
           const msg = readClerkError(
             passwordError,
             "Couldn't create your account.",
