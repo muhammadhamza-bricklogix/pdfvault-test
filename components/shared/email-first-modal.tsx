@@ -63,8 +63,7 @@ export function dispatchEmailFirstModal(detail: EmailFirstModalDetail = {}) {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Email-first modal (2026-08-30 PM ask, matches PDF Guru's download
- * flow):
+ * Email-first modal (2026-08-30 PM ask):
  *
  *   1. Signed-out user clicks Done / Download in the editor
  *   2. This modal opens with just an email input + "Log in with email"

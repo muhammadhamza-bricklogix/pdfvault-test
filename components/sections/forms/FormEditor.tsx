@@ -66,8 +66,8 @@ export function FormEditor({ formId, schema }: FormEditorProps) {
   const [finalizeOpen, setFinalizeOpen] = useState(false);
   // Sidebar collapse toggle. Default open on desktop so accessibility /
   // section grouping stays discoverable; user collapses it when they want
-  // the whole form full-width for inline editing (matches pdfguru's
-  // form-first flow, but preserves the sidebar as an opt-in helper).
+  // the whole form full-width for inline editing (form-first flow, but
+  // preserves the sidebar as an opt-in helper).
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [zoom, setZoom] = useState(1.5);
   const canZoomOut = zoom > ZOOM_MIN + 0.001;

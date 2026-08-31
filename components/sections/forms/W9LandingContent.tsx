@@ -16,9 +16,7 @@ import { W9PreviewScroller } from "@/components/sections/forms/W9PreviewScroller
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 // ---------------------------------------------------------------------------
-// Content — single source of truth for both /w9-form and /forms/w-9. Copy
-// mirrors pdfguru's section order but is written from scratch (no verbatim
-// lifting). Uses our accent color, not their purple.
+// Content — single source of truth for both /w9-form and /forms/w-9.
 // ---------------------------------------------------------------------------
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -261,7 +259,7 @@ export function W9LandingContent() {
         </p>
       </section>
 
-      {/* Get your W-9 form — three cards mirroring pdfguru's 3-step section */}
+      {/* Get your W-9 form — three cards */}
       <section className="mx-auto max-w-5xl px-4 py-12" id="get-form">
         <h2 className="text-center text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl">
           Get your W-9 form
@@ -291,7 +289,7 @@ export function W9LandingContent() {
         </div>
       </section>
 
-      {/* Content — sections match pdfguru's TOC (order + headings) */}
+      {/* Content — sections with TOC (order + headings) */}
       <div className="mx-auto grid max-w-6xl gap-10 px-4 lg:grid-cols-[280px_1fr]">
         {/* Sticky TOC (desktop only). Content sections use scroll-mt so
             anchor links land below the sticky top-bar / header. Font
@@ -423,8 +421,7 @@ export function W9LandingContent() {
             </ol>
           </section>
 
-          {/* Inline CTA banner — matches pdfguru's "Complete your W-9 form now!"
-              placement between how-to and the rest of the reference sections. */}
+          {/* Inline CTA banner — placed between how-to and the rest of the reference sections. */}
           <section
             aria-label="Call to action"
             className="rounded-2xl bg-[color-mix(in_oklab,var(--color-accent)_10%,transparent)] px-6 py-8 text-center"
@@ -505,7 +502,7 @@ export function W9LandingContent() {
               <p>
                 Using our online W-9 Form helps you complete it more quickly
                 because you don&apos;t need to print, scan, or upload anything
-                to start working. Keep in mind that PDF Guru helps you fill out
+                to start working. Keep in mind that PDFVault helps you fill out
                 and save the form, but you&apos;ll still need to submit it
                 independently on your own.
               </p>

@@ -44,8 +44,7 @@ export const ROUTES = {
     W9: "/forms/w-9",
     W9_FORM: "/w9-form",
     W9_EDIT: "/forms/w-9/edit",
-    // Short marketing URL for the W-9 editor. Matches the competitor
-    // slug pattern (pdfguru.com/forms/w-9-form) so users searching for
+    // Short marketing URL for the W-9 editor so users searching for
     // "w-9 form" land here. Old `/w-9` requests 308-redirect to this
     // path via next.config.mjs so pre-rename bookmarks still resolve.
     W9_SHORT: "/w-9-form",

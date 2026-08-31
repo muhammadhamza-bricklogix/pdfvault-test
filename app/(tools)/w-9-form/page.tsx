@@ -12,9 +12,8 @@ export const metadata = {
     "Fill out the IRS Form W-9 online in your browser. Every field is highlighted; type, sign, and export a clean PDF using our full editor toolbox.",
 };
 
-// Short-URL entry point for the W-9 editor at `/w-9-form` — matches the
-// competitor slug pattern (pdfguru.com/forms/w-9-form) so cross-site muscle
-// memory + SEO for "w-9 form" queries lands on the right page.
+// Short-URL entry point for the W-9 editor at `/w-9-form` — chosen for
+// SEO on "w-9 form" queries.
 //
 // The editor UI is the same `<PdfEditorShell />` used by `/pdf-composer` so
 // the W-9 route inherits the full toolbox (Add Text / Highlight / Draw /

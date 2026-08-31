@@ -11,8 +11,8 @@ import { SignatureModal } from "../SignatureModal";
 
 import { pdfRectToCss } from "./types";
 
-// Signature layout — matches pdfguru's convention: the signature (or the
-// "Sign" button) sits at the START of the printed signature line with a
+// Signature layout — the signature (or the "Sign" button) sits at the
+// START of the printed signature line with a
 // margin so it doesn't crash into the "Sign Here" label at the left edge
 // or the divider line at the right. 20% left margin was chosen to visually
 // clear the "Sign Here" label; the rendered signature/button then occupies
