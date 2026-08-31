@@ -5,7 +5,6 @@ import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
-
 import Link from "next/link";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";

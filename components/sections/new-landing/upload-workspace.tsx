@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";

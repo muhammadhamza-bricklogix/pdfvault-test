@@ -32,7 +32,9 @@ export type LoginToDownloadModalDetail = {
 
 const EVENT_NAME = "app:login-to-download-modal";
 
-export function dispatchLoginToDownloadModal(detail: LoginToDownloadModalDetail) {
+export function dispatchLoginToDownloadModal(
+  detail: LoginToDownloadModalDetail,
+) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail }));
 }
@@ -212,7 +214,9 @@ export function LoginToDownloadModal() {
                 onClick={onGoogle}
               >
                 <GoogleIcon />
-                {oauthLoading ? "Connecting to Google…" : "Continue with Google"}
+                {oauthLoading
+                  ? "Connecting to Google…"
+                  : "Continue with Google"}
               </button>
 
               <div className="flex items-center gap-3 text-[13px] text-[#8a8a8a]">
@@ -251,7 +255,9 @@ export function LoginToDownloadModal() {
                 type="button"
                 onClick={onLogInWithEmail}
               >
-                {emailLoading ? "Sending verification code…" : "Log in with email"}
+                {emailLoading
+                  ? "Sending verification code…"
+                  : "Log in with email"}
               </button>
             </div>
 

@@ -371,6 +371,7 @@ export function PendingEditorFileHydrator() {
     if (hasFabricEdits) {
       autoSavedRef.current = true;
       usePdfEditorStore.setState({ pendingCloudSaveAfterReload: true });
+
       // Nothing else to do here — useEditorAutoPersist takes over
       // once pdfDocument is loaded. It calls persistEditorDocument
       // with force: true, which handles the merge + upload + sets

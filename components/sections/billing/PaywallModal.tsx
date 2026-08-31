@@ -1077,6 +1077,23 @@ function SuccessStep({
     }
   }, []);
 
+  // Push a dedicated `trial_started` event to the GTM dataLayer so tags
+  // configured in the container can trigger on a purpose-built event
+  // (with amount, currency, orderId, and plan) instead of piggy-backing
+  // on the raw gtag conversion above. This is the marketing team's
+  // preferred hook for post-payment tracking — see 2026-08-31 request
+  // for "post-payment URL" (there isn't one; the flow is modal-only).
+  useEffect(() => {
+    if (!Array.isArray(window.dataLayer)) window.dataLayer = [];
+    window.dataLayer.push({
+      currency: intent.currency,
+      event: "trial_started",
+      orderId: intent.orderId,
+      plan: selectedPlan,
+      value: intent.amountTodayMinor / 100,
+    });
+  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
+
   // 2026-08-28: auto-dismiss removed. Users asked to stay on the
   // success step so they can download the receipt inline. The user
   // now clicks Continue to fire any pending gated action (download /
