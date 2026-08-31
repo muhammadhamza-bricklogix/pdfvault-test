@@ -9,6 +9,7 @@ import Link from "next/link";
 
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { runAutoSignup } from "@/lib/client/auth/auto-signup";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -201,10 +202,19 @@ export function EmailFirstModal() {
           /* best-effort */
         }
 
+        // Pull the file name straight from the editor store rather
+        // than plumbing it through the modal's detail — the file that
+        // triggered Download is always the store's current file, and
+        // the email-first modal is only ever opened from that path.
+        // Rendered as `{{event.file_name}}` in the CIO template so the
+        // welcome email tells the user what they were editing.
+        const editorFile = usePdfEditorStore.getState().file;
+
         const outcome = await runAutoSignup({
           email: trimmed,
           redirectUrl: returnTo,
           signIn,
+          fileName: editorFile?.name,
         });
 
         if (outcome.kind === "created") {

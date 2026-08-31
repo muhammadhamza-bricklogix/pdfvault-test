@@ -30,8 +30,14 @@ export async function runAutoSignup(params: {
   email: string;
   redirectUrl: string;
   signIn: SignInFutureResource;
+  /**
+   * Original file name the user was editing when they hit Download.
+   * Forwarded to the backend so the Customer.io "New account created"
+   * transactional template renders `{{event.file_name}}` in the body.
+   */
+  fileName?: string;
 }): Promise<AutoSignupOutcome> {
-  const { email, redirectUrl, signIn } = params;
+  const { email, redirectUrl, signIn, fileName } = params;
 
   if (!API_BASE_URL) {
     logger.warn("auto-signup: NEXT_PUBLIC_API_BASE_URL not set");
@@ -46,7 +52,7 @@ export async function runAutoSignup(params: {
 
   try {
     response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, fileName }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
     });
