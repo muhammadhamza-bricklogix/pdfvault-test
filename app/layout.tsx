@@ -221,6 +221,12 @@ gtag('config', 'AW-18226423046');`}
           type="text/javascript"
         />
         <script
+          async
+          id="cookieyes-2"
+          src="https://cdn-cookieyes.com/client_data/98d78886fe30030f1080cdeb0a6c0a25/script.js"
+          type="text/javascript"
+        />
+        <script
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
           }}
