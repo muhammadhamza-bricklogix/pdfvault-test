@@ -4,19 +4,27 @@ import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-nav
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
 export type AutoSignupOutcome =
   | { kind: "created" }
   | { kind: "exists" }
   | { kind: "error"; message: string };
 
 /**
- * Editor Download flow (2026-08-31): call `/api/auth/quick-signup` to
- * create the Clerk user in the background, sign them in via the returned
- * ticket, then hard-navigate to `redirectUrl` so the auth chain
- * (invariants #8–12, #15) restores the pending file and auto-fires the
- * queued export. If the account already exists, the caller falls back
- * to the standard email-first login handoff — this helper only owns the
- * "new user" branch.
+ * Editor Download flow (2026-08-31): hand the email off to the NestJS
+ * backend. Backend does everything blocking:
+ *   - Clerk lookup (409 → we return `exists` and caller falls back to
+ *     the login modal).
+ *   - `users.createUser` with a random password + verified email.
+ *   - Fire the `welcome_auto_signup` Customer.io event so the campaign
+ *     template mails the password to the user.
+ *   - `signInTokens.createSignInToken` and return the ticket.
+ *
+ * Client then `signIn.ticket({ticket})` + `signIn.finalize({navigate})`
+ * with `window.location.assign` per auth invariant #15. The hydrator
+ * (items #8–12) restores the pending file on return and re-fires the
+ * queued export; the paywall opens back in the editor.
  */
 export async function runAutoSignup(params: {
   email: string;
@@ -25,10 +33,19 @@ export async function runAutoSignup(params: {
 }): Promise<AutoSignupOutcome> {
   const { email, redirectUrl, signIn } = params;
 
+  if (!API_BASE_URL) {
+    logger.warn("auto-signup: NEXT_PUBLIC_API_BASE_URL not set");
+
+    return {
+      kind: "error",
+      message: "Sign-up is temporarily unavailable. Please try again later.",
+    };
+  }
+
   let response: Response;
 
   try {
-    response = await fetch("/api/auth/quick-signup", {
+    response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
       body: JSON.stringify({ email }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -57,7 +74,7 @@ export async function runAutoSignup(params: {
   }
 
   if (!response.ok || status !== "created") {
-    logger.warn("auto-signup: server did not return a ticket", {
+    logger.warn("auto-signup: backend did not return a ticket", {
       responseStatus: response.status,
       status,
     });
@@ -99,11 +116,9 @@ export async function runAutoSignup(params: {
       ? redirectUrl
       : ROUTES.APP.DASHBOARD;
 
-  // Same pattern as LoginCard.finalizeAndRedirect — invariant #15: iOS
-  // Safari commits the Clerk session cookie during a full-page nav;
-  // router.push races the cookie and drops the user on middleware that
-  // reads them as signed-out. Also suppressNextUnload so the editor's
-  // beforeunload guard doesn't fire on top of the sign-in redirect.
+  // Invariant #15: iOS Safari commits the Clerk session cookie during a
+  // full-page nav; router.push races the cookie. suppressNextUnload keeps
+  // the editor's beforeunload guard quiet during the redirect.
   const { error: finalizeError } = await signIn.finalize({
     navigate: ({ decorateUrl }) => {
       suppressNextUnload();
