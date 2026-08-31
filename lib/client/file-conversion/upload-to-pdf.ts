@@ -49,6 +49,45 @@ export function isPdf(file: File): boolean {
   return file.type === "application/pdf" || getExtension(file) === "pdf";
 }
 
+/**
+ * Confirm the file's byte content actually starts with a `%PDF-` header
+ * before we hand it to the editor. Extension + MIME can lie (a renamed
+ * .txt is happily accepted by the OS as `application/pdf`), and the
+ * editor's downstream error state is a dead-end — much friendlier to
+ * reject at the dropzone with an inline message.
+ *
+ * PDFs allow up to 1024 leading bytes of garbage before `%PDF-` per the
+ * spec, but the vast majority of real files start with it in the first
+ * few bytes. Reading 1024 keeps the check cheap while covering the
+ * spec-legal window.
+ */
+export async function looksLikePdfBytes(file: File): Promise<boolean> {
+  try {
+    const slice = file.slice(0, 1024);
+    const buffer = await slice.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    // "%PDF-" = 0x25 0x50 0x44 0x46 0x2D
+    const needle = [0x25, 0x50, 0x44, 0x46, 0x2d];
+
+    for (let i = 0; i <= bytes.length - needle.length; i++) {
+      let match = true;
+
+      for (let j = 0; j < needle.length; j++) {
+        if (bytes[i + j] !== needle[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) return true;
+    }
+
+    return false;
+  } catch {
+    // If we can't even read the first bytes, treat as invalid.
+    return false;
+  }
+}
+
 export interface UploadAsPdfOptions {
   /**
    * Skip the client-side paywall pre-flight gate so the conversion

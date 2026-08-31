@@ -7,8 +7,8 @@ import { Modal } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
+import { runAutoSignup } from "@/lib/client/auth/auto-signup";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -62,24 +62,18 @@ export function dispatchEmailFirstModal(detail: EmailFirstModalDetail = {}) {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Email-first modal (2026-08-30 PM ask):
+ * Email-first modal (2026-08-31 update):
  *
  *   1. Signed-out user clicks Done / Download in the editor
- *   2. This modal opens with just an email input + "Log in with email"
+ *   2. This modal opens with just an email input + "Download file"
  *   3. User submits — we probe Clerk with `signIn.create({ identifier })`
- *   4. If Clerk returns success / needs_first_factor → account EXISTS
- *      → close this modal + dispatch AuthModal(mode=login) with the
- *      email pre-filled, so the user just enters password
- *   5. If Clerk returns `form_identifier_not_found` → account is NEW
- *      → close this + dispatch AuthModal(mode=signup) with email
- *      pre-filled, so the user picks a password and continues
- *
- * The full Scenario 2 "background create + guest paywall" flow is
- * NOT implemented here — it needs a backend endpoint that accepts
- * guest checkout via Solidgate + a webhook that creates the Clerk
- * user post-payment. This modal is the graceful-degradation path:
- * new users still land in the signup card and go through the normal
- * signup → verify → paywall chain.
+ *   4. Account EXISTS → hand off to LoginToDownloadModal so the user
+ *      logs in the normal way (Google or email code) before paywall
+ *   5. Account is NEW → auto-signup: `/api/auth/quick-signup` creates
+ *      the Clerk user (verified email + random password emailed by the
+ *      backend), returns a one-time ticket, we `signIn.create({strategy:
+ *      "ticket"})` → `setActive` → `window.location.assign(returnTo)`
+ *      per auth invariant #15. Manual /sign-up card is untouched.
  */
 export function EmailFirstModal() {
   const { signIn } = useSignIn();
@@ -191,32 +185,60 @@ export function EmailFirstModal() {
       });
 
       // New account — Clerk explicitly says "no user for this identifier".
-      // Route to Signup with the email pre-filled.
+      // Auto-create the Clerk user in the background (verified email +
+      // random password emailed by the backend), then sign the user in
+      // via a one-time ticket and hard-navigate to `redirectUrl`. The
+      // hydrator (items #8–12) restores the pending file on return and
+      // re-fires the queued export event; the paywall opens back in the
+      // editor. Manual /sign-up card is unchanged — this is a
+      // download-flow-only shortcut.
       if (code === "form_identifier_not_found") {
-        dispatchAuthModal({
-          mode: "signup",
-          redirectUrl: detail?.redirectUrl,
+        const returnTo = detail?.redirectUrl ?? ROUTES.APP.DASHBOARD;
+
+        try {
+          await signIn.reset();
+        } catch {
+          /* best-effort */
+        }
+
+        const outcome = await runAutoSignup({
           email: trimmed,
+          redirectUrl: returnTo,
+          signIn,
         });
-        close();
+
+        if (outcome.kind === "created") {
+          close();
+
+          return;
+        }
+
+        if (outcome.kind === "exists") {
+          const previousDetail = detail;
+
+          dispatchLoginToDownloadModal({
+            email: trimmed,
+            redirectUrl: detail?.redirectUrl,
+            emailFirstDetail: previousDetail
+              ? { ...previousDetail, initialEmail: trimmed }
+              : undefined,
+          });
+          close();
+
+          return;
+        }
+
+        setError(outcome.message);
 
         return;
       }
 
-      // Any other error from the probe (e.g. rate limit, network) —
-      // fall through to signup on the assumption that a new account
-      // is more likely than an existing one at this modal (the whole
-      // point of this flow is capturing conversions). User can still
-      // switch to Login via the in-card link if we guessed wrong.
-      logger.warn("email_first.probe: unexpected code — routing to signup", {
-        code,
-      });
-      dispatchAuthModal({
-        mode: "signup",
-        redirectUrl: detail?.redirectUrl,
-        email: trimmed,
-      });
-      close();
+      // Any other probe error (rate limit, network hiccup, unknown
+      // code) — surface a retry message. Falling through to auto-signup
+      // would risk creating an account for a user whose probe was
+      // interrupted for an unrelated reason.
+      logger.warn("email_first.probe: unexpected code", { code });
+      setError("Something went wrong. Please try again.");
     } catch (err) {
       logger.captureError(err, "email_first.probe_threw");
       setError("Something went wrong. Please try again.");

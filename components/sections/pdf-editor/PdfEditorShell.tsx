@@ -4,7 +4,12 @@ import type { Canvas } from "fabric";
 import type { ManagePagesDraftSnapshot } from "@/lib/client/hooks/pdf-editor/manage-pages-types";
 
 import { useAuth } from "@clerk/nextjs";
+import { Alert01Icon, CloudUploadIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@heroui/react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -305,11 +310,7 @@ function EditorLayout() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <span className="text-sm text-red-500">{error}</span>
-      </div>
-    );
+    return <EditorLoadFailure message={error} />;
   }
 
   // Once we've rendered at least one doc, keep the editor tree mounted
@@ -620,6 +621,70 @@ export function PdfEditorShell() {
       <PageNumbersModal />
       <FormFieldsModal />
       <ReloadConfirmModal />
+    </div>
+  );
+}
+
+/**
+ * Full-page failure state shown when `usePdfLoader` can't parse the
+ * source document (invalid PDF, corrupt bytes, etc.). Retains the
+ * branded header + gives the user actionable recovery paths (Try
+ * another file, Go home) instead of dead-ending on a bare red string
+ * that only leaves the browser Back button.
+ */
+function EditorLoadFailure({ message }: { message: string }) {
+  const router = useRouter();
+
+  return (
+    <div className="flex min-h-screen flex-col bg-white">
+      <header className="flex h-14 shrink-0 items-center border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4">
+        <Link
+          aria-label="Home"
+          className="flex items-center gap-2"
+          href={ROUTES.PUBLIC.HOME}
+        >
+          <Image
+            alt="PDFVault"
+            className="h-[32px] w-auto object-contain"
+            height={32}
+            src="/landing/logo-with-text.png"
+            width={128}
+          />
+        </Link>
+      </header>
+
+      <main className="flex flex-1 items-center justify-center px-6 py-16">
+        <div className="flex max-w-md flex-col items-center text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
+            <HugeiconsIcon icon={Alert01Icon} size={32} />
+          </div>
+          <h1 className="mt-6 text-xl font-semibold text-[var(--pv-text-strong,#1a1c21)] sm:text-2xl">
+            We couldn&apos;t open this file
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--pv-text-body,#5c5c5c)]">
+            {message}
+          </p>
+          <div className="mt-8 flex flex-col-reverse items-center gap-3 sm:flex-row">
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-full border border-default-200 bg-white px-5 text-[14px] font-semibold text-[var(--pv-text-primary,#1a1c21)] transition-colors hover:bg-default-100"
+              href={ROUTES.PUBLIC.HOME}
+            >
+              Return home
+            </Link>
+            <Button
+              className="!h-10 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-5 !text-[14px] !font-semibold !text-white hover:!opacity-90"
+              onPress={() => router.back()}
+            >
+              <HugeiconsIcon
+                className="text-white"
+                icon={CloudUploadIcon}
+                size={18}
+              />
+              Try another file
+            </Button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
