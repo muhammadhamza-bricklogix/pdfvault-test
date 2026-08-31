@@ -42,7 +42,8 @@ import {
   Toolbar,
   Tooltip,
 } from "@heroui/react";
-import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
@@ -83,6 +84,20 @@ export function EditorInfoBar() {
   const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
 
   const renameDoc = useRenameDocumentMutation();
+
+  // Hide the HamburgerMenu on the W-9 routes (`/w-9-form` and
+  // `/forms/w-9/edit`). Both routes reuse `PdfEditorShell` so the menu
+  // would otherwise render; the W-9 flow has its own dedicated Back and
+  // Download interceptors and doesn't want the pdf-editor menu items
+  // (Create New / Open File / My PDFs / Version History) surfacing.
+  // Back button stays visible.
+  const pathname = usePathname();
+  const isW9Route = useMemo(() => {
+    if (!pathname) return false;
+
+    return pathname === "/w-9-form" || pathname.startsWith("/forms/w-9");
+  }, [pathname]);
+
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
@@ -317,7 +332,7 @@ export function EditorInfoBar() {
                   <p>Back to dashboard</p>
                 </Tooltip.Content>
               </Tooltip>
-              <HamburgerMenu />
+              {isW9Route ? null : <HamburgerMenu />}
             </div>
 
             {/* Undo + Redo — mobile only */}
