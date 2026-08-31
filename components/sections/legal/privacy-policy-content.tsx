@@ -371,7 +371,8 @@ export function PrivacyPolicyContent() {
         </p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
-            <strong>Authentication:</strong> Clerk, Google (Google Auth).
+            <strong>Authentication:</strong> Clerk, Google (Google Auth),
+            Cloudflare (edge delivery via Clerk).
           </li>
           <li>
             <strong>Payment processing:</strong> Adyen.
