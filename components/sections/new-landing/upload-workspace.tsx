@@ -846,8 +846,45 @@ export function UploadWorkspace({
     }
   };
 
+  // Hoisted here so the hero-variant return below (single JSX
+  // expression) can reference them without dragging them into scope
+  // per-branch. Both variants share `convertDuplicate` state, so
+  // both need identical handlers.
+  const handleConvertDuplicateOverwriteHero = () => {
+    if (!convertDuplicate) return;
+    const { file, filename, existingDocId, tempId } = convertDuplicate;
+
+    usePendingConversionsStore.getState().add({
+      tempId,
+      file,
+      filename,
+      sizeBytes: file.size,
+    });
+
+    logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+      filename,
+      documentId: existingDocId,
+      resolution: "overwrite",
+    });
+
+    void runPendingConversion(tempId, file, existingDocId);
+    setConvertDuplicate(null);
+    router.push(ROUTES.APP.DASHBOARD);
+  };
+
+  const handleConvertDuplicateCancelHero = () => {
+    logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
+      filename: convertDuplicate?.filename ?? null,
+      documentId: convertDuplicate?.existingDocId ?? null,
+      resolution: "cancel",
+    });
+    setConvertDuplicate(null);
+    setFile(null);
+  };
+
   if (variant === "hero") {
     return (
+      <>
       <div className="mx-auto w-full max-w-[820px]">
         <div className="rounded-[24px] border border-black/5 bg-white p-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div
@@ -1000,6 +1037,16 @@ export function UploadWorkspace({
           </>
         ) : null}
       </div>
+      {/* Cancel/Overwrite modal — hero variant ships on the landing
+          page, so signed-in users dropping a file whose target
+          name matches an existing library doc need this modal here
+          too (not just in the /convert/* full-variant flow). */}
+      <DuplicateUploadModal
+        filename={convertDuplicate?.filename ?? null}
+        onIgnore={handleConvertDuplicateCancelHero}
+        onOverwrite={handleConvertDuplicateOverwriteHero}
+      />
+      </>
     );
   }
 
