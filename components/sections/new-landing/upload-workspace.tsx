@@ -16,7 +16,11 @@ import {
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
-import { isPdf, uploadAsPdf } from "@/lib/client/file-conversion/upload-to-pdf";
+import {
+  isPdf,
+  looksLikePdfBytes,
+  uploadAsPdf,
+} from "@/lib/client/file-conversion/upload-to-pdf";
 import { useCloudUpload } from "@/lib/client/hooks/upload/use-cloud-upload";
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -718,7 +722,7 @@ export function UploadWorkspace({
     requiresAuth,
   ]);
 
-  const validateAndSet = (candidate: File) => {
+  const validateAndSet = async (candidate: File) => {
     const ext = getExtension(candidate.name);
 
     if (!acceptedExtensions.includes(ext)) {
@@ -739,6 +743,23 @@ export function UploadWorkspace({
 
       return;
     }
+    // Magic-byte check for anything the pipeline will hand straight to
+    // the PDF editor. Extension + MIME can lie (a renamed .txt passes
+    // both), and the editor's error state is a dead-end. Reject at the
+    // dropzone with an inline message instead of shipping the user to
+    // a blank error page.
+    if (ext === "pdf") {
+      const looksLegit = await looksLikePdfBytes(candidate);
+
+      if (!looksLegit) {
+        setError(
+          `"${candidate.name}" isn't a valid PDF. The file appears to be corrupted or is not really a PDF.`,
+        );
+        setFile(null);
+
+        return;
+      }
+    }
     setError(null);
     setFile(candidate);
     void openFileInEditor(candidate);
@@ -747,7 +768,7 @@ export function UploadWorkspace({
   const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0];
 
-    if (selected) validateAndSet(selected);
+    if (selected) void validateAndSet(selected);
   };
 
   const onDrop = (event: React.DragEvent) => {
@@ -755,7 +776,7 @@ export function UploadWorkspace({
     setDragActive(false);
     const dropped = event.dataTransfer.files?.[0];
 
-    if (dropped) validateAndSet(dropped);
+    if (dropped) void validateAndSet(dropped);
   };
 
   const openPicker = () => inputRef.current?.click();
