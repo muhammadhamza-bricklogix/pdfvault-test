@@ -244,11 +244,11 @@ export function W9LandingContent() {
             className="sticky top-24 flex flex-col gap-2 border-l border-default-200 pl-4 text-base dark:border-default-700"
           >
             {[
-              ["What Is Form W-9?", "what-is-w9"],
-              ["Do You Need to Fill One Out?", "need-one"],
-              ["What You'll Need Before You Start", "before-start"],
-              ["How to Fill Out a W-9 in PDFVault", "how-to-fill"],
-              ["Signing and Sending Your Completed Form", "signing"],
+              ["What is Form W-9?", "what-is-w9"],
+              ["Do you need to fill one out?", "need-one"],
+              ["What you'll need before you start", "before-start"],
+              ["How to fill out a W-9 in PDFVault", "how-to-fill"],
+              ["Signing and sending your completed form", "signing"],
               ["FAQ", "faq"],
             ].map(([label, id]) => (
               <Link
@@ -264,7 +264,7 @@ export function W9LandingContent() {
 
         <div className="flex flex-col gap-10">
           <section>
-            <SectionHeading id="what-is-w9">What Is Form W-9?</SectionHeading>
+            <SectionHeading id="what-is-w9">What is Form W-9?</SectionHeading>
             <Prose>
               <p>
                 Form W-9, Request for TIN and Certification, is a short IRS form
@@ -285,12 +285,16 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="need-one">
-              Do You Need to Fill One Out?
+              Do you need to fill one out?
             </SectionHeading>
             <Prose>
-              <p>You probably do if you&apos;re:</p>
+              <p className="font-semibold text-[var(--color-foreground)]">
+                You probably do if you&apos;re:
+              </p>
               <BulletList items={NEEDS_ONE} />
-              <p>You likely don&apos;t if you&apos;re:</p>
+              <p className="font-semibold text-[var(--color-foreground)]">
+                You likely don&apos;t if you&apos;re:
+              </p>
               <BulletList items={DOES_NOT_NEED} />
               <p>
                 There&apos;s no fixed filing deadline for a W-9 — you complete
@@ -302,7 +306,7 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="before-start">
-              What You&apos;ll Need Before You Start
+              What you&apos;ll need before you start
             </SectionHeading>
             <p className="mt-3 text-sm leading-7 text-default-700 dark:text-default-300">
               Gather these details ahead of time so you can fill out the form in
@@ -334,7 +338,7 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="how-to-fill">
-              How to Fill Out a W-9 in PDFVault
+              How to fill out a W-9 in PDFVault
             </SectionHeading>
             <div className="mt-4 overflow-hidden rounded-2xl border border-default-200 dark:border-default-700">
               <Image
@@ -372,7 +376,7 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="signing">
-              Signing and Sending Your Completed Form
+              Signing and sending your completed form
             </SectionHeading>
             <Prose>
               <p>
