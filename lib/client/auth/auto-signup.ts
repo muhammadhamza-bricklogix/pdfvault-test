@@ -67,7 +67,17 @@ export async function runAutoSignup(params: {
     return { kind: "error", message: "Unexpected response from the server." };
   }
 
-  const status = (body as { status?: string }).status;
+  // Backend wraps every response in a global `{success, message, data}`
+  // envelope (see NestJS `ResponseInterceptor` / api-client.ts). Unwrap
+  // `data` before reading our payload; accept the un-enveloped shape
+  // too in case the interceptor is ever removed.
+  const envelope = body as {
+    data?: { status?: string; ticket?: string };
+    status?: string;
+    ticket?: string;
+  };
+  const payload = envelope.data ?? envelope;
+  const status = payload.status;
 
   if (status === "exists") {
     return { kind: "exists" };
@@ -85,7 +95,7 @@ export async function runAutoSignup(params: {
     };
   }
 
-  const ticket = (body as { ticket?: string }).ticket;
+  const ticket = payload.ticket;
 
   if (!ticket) {
     return { kind: "error", message: "Missing sign-in token from the server." };
