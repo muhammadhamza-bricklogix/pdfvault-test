@@ -885,167 +885,167 @@ export function UploadWorkspace({
   if (variant === "hero") {
     return (
       <>
-      <div className="mx-auto w-full max-w-[820px]">
-        <div className="rounded-[24px] border border-black/5 bg-white p-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-          <div
-            aria-describedby={error ? errorId : undefined}
-            aria-label="Upload a file. Drop a file here, or activate to browse."
-            className="relative flex cursor-pointer flex-col items-center justify-center rounded-[16px] px-6 py-14 text-center outline-none sm:py-16"
-            role="button"
-            tabIndex={0}
-            onClick={openPicker}
-            onDragLeave={() => setDragActive(false)}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragActive(true);
-            }}
-            onDrop={onDrop}
-            onKeyDown={onZoneKeyDown}
-          >
-            <DashedBorder active={dragActive} />
-            <input
-              ref={inputRef}
-              accept={acceptAttr}
-              className="sr-only"
-              type="file"
-              onChange={onInputChange}
-            />
+        <div className="mx-auto w-full max-w-[820px]">
+          <div className="rounded-[24px] border border-black/5 bg-white p-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div
+              aria-describedby={error ? errorId : undefined}
+              aria-label="Upload a file. Drop a file here, or activate to browse."
+              className="relative flex cursor-pointer flex-col items-center justify-center rounded-[16px] px-6 py-14 text-center outline-none sm:py-16"
+              role="button"
+              tabIndex={0}
+              onClick={openPicker}
+              onDragLeave={() => setDragActive(false)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActive(true);
+              }}
+              onDrop={onDrop}
+              onKeyDown={onZoneKeyDown}
+            >
+              <DashedBorder active={dragActive} />
+              <input
+                ref={inputRef}
+                accept={acceptAttr}
+                className="sr-only"
+                type="file"
+                onChange={onInputChange}
+              />
 
-            {file ? (
-              <div className="flex flex-col items-center">
-                <HeroFolderIcon />
-                <p className="mt-6 text-[18px] font-semibold text-[#121212]">
-                  {file.name}
-                </p>
-                <p className="mt-1 text-[14px] text-[#818285]">
-                  {formatSize(file.size)}
-                </p>
-                {opening ? (
-                  <p className="mt-4 text-[14px] font-medium text-[var(--pv-brand-primary)]">
-                    Opening editor…
+              {file ? (
+                <div className="flex flex-col items-center">
+                  <HeroFolderIcon />
+                  <p className="mt-6 text-[18px] font-semibold text-[#121212]">
+                    {file.name}
                   </p>
-                ) : (
+                  <p className="mt-1 text-[14px] text-[#818285]">
+                    {formatSize(file.size)}
+                  </p>
+                  {opening ? (
+                    <p className="mt-4 text-[14px] font-medium text-[var(--pv-brand-primary)]">
+                      Opening editor…
+                    </p>
+                  ) : (
+                    <button
+                      className="pv-btn-secondary mt-4 cursor-pointer px-4 py-1.5 text-[14px]"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setFile(null);
+                        if (inputRef.current) inputRef.current.value = "";
+                      }}
+                    >
+                      Remove file
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <HeroFolderIcon />
+                  <h2 className="mt-6 text-[22px] font-semibold leading-[28px] text-[#121212] sm:text-[24px] sm:leading-[30px]">
+                    Drag &amp; drop file to edit
+                  </h2>
+
+                  <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[#B4B4B4]">
+                    <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                    <span>OR</span>
+                    <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                  </div>
+
                   <button
-                    className="pv-btn-secondary mt-4 cursor-pointer px-4 py-1.5 text-[14px]"
+                    className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setFile(null);
-                      if (inputRef.current) inputRef.current.value = "";
+                      openPicker();
                     }}
                   >
-                    Remove file
+                    Upload to Edit
                   </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <HeroFolderIcon />
-                <h2 className="mt-6 text-[22px] font-semibold leading-[28px] text-[#121212] sm:text-[24px] sm:leading-[30px]">
-                  Drag &amp; drop file to edit
-                </h2>
 
-                <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[#B4B4B4]">
-                  <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
-                  <span>OR</span>
-                  <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                  <p className="mt-5 text-[14px] text-[#8A8A8A]">
+                    Size upto 100 MB
+                  </p>
                 </div>
+              )}
 
-                <button
-                  className="mt-6 inline-flex h-11 min-w-[184px] cursor-pointer items-center justify-center rounded-full bg-[#F12C23] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#d91f16] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F12C23]"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openPicker();
-                  }}
-                >
-                  Upload to Edit
-                </button>
-
-                <p className="mt-5 text-[14px] text-[#8A8A8A]">
-                  Size upto 100 MB
-                </p>
-              </div>
-            )}
-
-            <p
-              aria-live="polite"
-              className={`mt-4 text-[14px] ${error ? "text-[var(--pv-error)]" : "sr-only"}`}
-              id={errorId}
-              role={error ? "alert" : undefined}
-            >
-              {error}
-            </p>
+              <p
+                aria-live="polite"
+                className={`mt-4 text-[14px] ${error ? "text-[var(--pv-error)]" : "sr-only"}`}
+                id={errorId}
+                role={error ? "alert" : undefined}
+              >
+                {error}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Trustpilot Micro TrustScore + terms line — landing route only.
+          {/* Trustpilot Micro TrustScore + terms line — landing route only.
             The hero variant of UploadWorkspace ships on `/` (via
             LandingHero) and could theoretically be reused elsewhere; the
             pathname gate keeps social proof + terms copy exclusive to
             the marketing home. Bootstrap script is only injected when
             the widget renders so we don't fetch Trustpilot's CDN on
             routes that never show a widget. */}
-        {pathname === "/" ? (
-          <>
-            <div className="mt-6 flex justify-center">
-              {/* CSS scale enlarges the Micro TrustScore visually — the
+          {pathname === "/" ? (
+            <>
+              <div className="mt-6 flex justify-center">
+                {/* CSS scale enlarges the Micro TrustScore visually — the
                   widget's own layout is fixed at 20px tall, so bumping
                   data-style-height just adds whitespace. Reserved height on
                   the wrapper accounts for the scaled size so the terms line
                   below doesn't overlap. */}
-              <div
-                className="origin-center scale-[1.35] sm:scale-[1.6]"
-                style={{ height: 32, width: "min(360px, 100%)" }}
-              >
-                <TrustpilotWidget
-                  disableLink
-                  businessUnitId="6a5635cc9545fd0a55b8cee6"
-                  locale="en-US"
-                  reviewUrl=""
-                  skeletonHeight={20}
-                  styleHeight="20px"
-                  styleWidth="100%"
-                  templateId="5419b637fa0340045cd0c936"
-                  token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-                />
+                <div
+                  className="origin-center scale-[1.35] sm:scale-[1.6]"
+                  style={{ height: 32, width: "min(360px, 100%)" }}
+                >
+                  <TrustpilotWidget
+                    disableLink
+                    businessUnitId="6a5635cc9545fd0a55b8cee6"
+                    locale="en-US"
+                    reviewUrl=""
+                    skeletonHeight={20}
+                    styleHeight="20px"
+                    styleWidth="100%"
+                    templateId="5419b637fa0340045cd0c936"
+                    token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
+                  />
+                </div>
               </div>
-            </div>
-            <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
-              By uploading a file, you agree to our{" "}
-              <Link
-                className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
-                href={ROUTES.LEGAL.TERMS}
-              >
-                Terms and Conditions
-              </Link>{" "}
-              and acknowledge our{" "}
-              <Link
-                className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
-                href={ROUTES.LEGAL.PRIVACY}
-              >
-                Privacy Policy
-              </Link>
-              .
-            </p>
-            <Script
-              async
-              id="trustpilot-bootstrap"
-              src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
-              strategy="lazyOnload"
-            />
-          </>
-        ) : null}
-      </div>
-      {/* Cancel/Overwrite modal — hero variant ships on the landing
+              <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
+                By uploading a file, you agree to our{" "}
+                <Link
+                  className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+                  href={ROUTES.LEGAL.TERMS}
+                >
+                  Terms and Conditions
+                </Link>{" "}
+                and acknowledge our{" "}
+                <Link
+                  className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+                  href={ROUTES.LEGAL.PRIVACY}
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+              <Script
+                async
+                id="trustpilot-bootstrap"
+                src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
+                strategy="lazyOnload"
+              />
+            </>
+          ) : null}
+        </div>
+        {/* Cancel/Overwrite modal — hero variant ships on the landing
           page, so signed-in users dropping a file whose target
           name matches an existing library doc need this modal here
           too (not just in the /convert/* full-variant flow). */}
-      <DuplicateUploadModal
-        filename={convertDuplicate?.filename ?? null}
-        onIgnore={handleConvertDuplicateCancelHero}
-        onOverwrite={handleConvertDuplicateOverwriteHero}
-      />
+        <DuplicateUploadModal
+          filename={convertDuplicate?.filename ?? null}
+          onIgnore={handleConvertDuplicateCancelHero}
+          onOverwrite={handleConvertDuplicateOverwriteHero}
+        />
       </>
     );
   }

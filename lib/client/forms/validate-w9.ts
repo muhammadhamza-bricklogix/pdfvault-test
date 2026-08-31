@@ -42,37 +42,35 @@ export function validateW9({
 }: ValidationInput): Record<string, string> {
   const errors: Record<string, string> = {};
 
-  // f1_01 — name on tax return
-  if (!values.f1_01 || values.f1_01.trim().length === 0) {
-    errors.f1_01 = "Enter the name shown on your tax return.";
-  }
+  // Every field is OPTIONAL for save + download per product
+  // 2026-08-31 — users must be able to persist and export in any
+  // filling state. Shape-check present values so a typo doesn't get
+  // stamped verbatim, but never block on missing ones.
 
-  // c1_1 — federal tax classification
+  // c1_1 — federal tax classification. If set, must be a known
+  // option so the AcroForm stamp has a target widget to check.
   const classification = values.c1_1;
 
-  if (!classification || !CLASSIFICATION_IDS.has(classification)) {
+  if (classification && !CLASSIFICATION_IDS.has(classification)) {
     errors.c1_1 = "Pick one tax classification.";
   }
 
-  // f1_03 — LLC letter (only when c1_1 === "llc")
+  // f1_03 — LLC letter (only meaningful when classification is LLC).
   if (classification === "llc") {
     const letter = (values.f1_03 ?? "").trim().toUpperCase();
 
-    if (!letter) {
-      errors.f1_03 = "Enter C, S, or P for the LLC classification.";
-    } else if (!LLC_LETTERS.has(letter)) {
+    if (letter && !LLC_LETTERS.has(letter)) {
       errors.f1_03 = "Enter exactly one of C, S, or P.";
     }
   }
 
-  // SSN xor EIN
+  // SSN + EIN — no longer required, and both may be blank. If both
+  // are set, flag the collision (backend rejects, and the printed
+  // form only has one row). Otherwise shape-check whichever is set.
   const ssn = (values.ssn ?? "").trim();
   const ein = (values.ein ?? "").trim();
 
-  if (!ssn && !ein) {
-    errors.ssn = "Enter your SSN or EIN.";
-    errors.ein = "Enter your SSN or EIN.";
-  } else if (ssn && ein) {
+  if (ssn && ein) {
     errors.ssn = "Provide only one — SSN or EIN, not both.";
     errors.ein = "Provide only one — SSN or EIN, not both.";
   } else if (ssn && !SSN_REGEX.test(ssn)) {
@@ -81,35 +79,46 @@ export function validateW9({
     errors.ein = "Enter a valid EIN (e.g. 12-3456789).";
   }
 
-  // Signature date — MM/DD/YYYY with 1900..currentYear range
+  // Signature date — OPTIONAL per product 2026-08-31. Users can save
+  // and download partial W-9s without filling the date. If a value is
+  // present we still validate its shape (MM/DD/YYYY, real calendar
+  // date, 1900..currentYear) so a typo doesn't get stamped as-is.
   const dateStr = (values.signature_date ?? "").trim();
-  const dateMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateStr);
-  const currentYear = new Date().getFullYear();
 
-  if (!dateStr) {
-    errors.signature_date = "Pick a date.";
-  } else if (!dateMatch) {
-    errors.signature_date = "Use MM/DD/YYYY format.";
-  } else {
-    const month = parseInt(dateMatch[1]!, 10);
-    const day = parseInt(dateMatch[2]!, 10);
-    const year = parseInt(dateMatch[3]!, 10);
-    const parsed = new Date(year, month - 1, day);
-    const validParts =
-      parsed.getFullYear() === year &&
-      parsed.getMonth() === month - 1 &&
-      parsed.getDate() === day;
+  if (dateStr) {
+    const dateMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateStr);
+    const currentYear = new Date().getFullYear();
 
-    if (!validParts) {
-      errors.signature_date = "That date doesn't look right.";
-    } else if (year < 1900 || year > currentYear) {
-      errors.signature_date = `Year must be between 1900 and ${currentYear}.`;
+    if (!dateMatch) {
+      errors.signature_date = "Use MM/DD/YYYY format.";
+    } else {
+      const month = parseInt(dateMatch[1]!, 10);
+      const day = parseInt(dateMatch[2]!, 10);
+      const year = parseInt(dateMatch[3]!, 10);
+      const parsed = new Date(year, month - 1, day);
+      const validParts =
+        parsed.getFullYear() === year &&
+        parsed.getMonth() === month - 1 &&
+        parsed.getDate() === day;
+
+      if (!validParts) {
+        errors.signature_date = "That date doesn't look right.";
+      } else if (year < 1900 || year > currentYear) {
+        errors.signature_date = `Year must be between 1900 and ${currentYear}.`;
+      }
     }
   }
 
-  // Signature uploaded
+  // Signature uploaded — kept as a soft nudge (backend `finalize`
+  // enforces this, but the download flow now falls back to a client
+  // stamp when the user hasn't signed, so we don't block pre-flight
+  // either).
   if (!signatureKey) {
-    errors.signature = "Sign before submitting.";
+    // No-op — the fallback path handles unsigned partial saves and
+    // downloads. Left here as a documentation anchor; add back
+    // `errors.signature = …` if we ever require signature at
+    // pre-flight again.
+    void signatureKey;
   }
 
   return errors;

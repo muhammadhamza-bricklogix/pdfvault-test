@@ -1286,14 +1286,71 @@ export function W9FinalizeIntercept() {
         } catch (err) {
           logger.captureError(err, "w9.save");
           const parsed = extractApiFieldErrors(err);
-          const friendly = friendlySignatureError(parsed);
 
-          toast.error(
-            friendly ?? {
-              title: "Couldn't save the W-9",
-              description: parsed.message,
-            },
-          );
+          // Server validators (tin xor, MM/DD/YYYY date, non-empty
+          // signature, etc.) reject partial forms. Rather than dead-
+          // end the user with a raw validator string, stamp the W-9
+          // client-side with whatever they've entered so far and
+          // upload THAT to My PDFs. Same pattern as the download
+          // fallback so both flows behave identically.
+          try {
+            const previewNow =
+              useFormEditorStore.getState().signaturePreview ?? null;
+            const stampedBytes = await stampW9Client(values, previewNow);
+            const partialFile = new File(
+              [stampedBytes.buffer as ArrayBuffer],
+              "w-9.pdf",
+              { type: "application/pdf" },
+            );
+            const partialEditorState = JSON.stringify({
+              v: 1,
+              w9: {
+                values,
+                signatureKey: null,
+                signaturePreview: previewNow,
+              },
+            });
+            const savedDoc = await documentsService.uploadDocument({
+              file: partialFile,
+              documentId: currentDocumentId ?? undefined,
+              editorState: partialEditorState,
+            });
+
+            usePdfEditorStore.getState().setCurrentDocument({
+              id: savedDoc.id,
+              name: savedDoc.filename,
+            });
+            lastSaveRef.current = {
+              key: cacheKey,
+              documentId: savedDoc.id,
+            };
+
+            try {
+              queryClientRef.current?.invalidateQueries({
+                queryKey: documentKeys.lists(),
+              });
+            } catch {
+              /* non-fatal */
+            }
+
+            toast.success({
+              title: "Partial W-9 saved",
+              description:
+                "Your progress is in My PDFs. Fill the remaining fields and Save again for a completed copy.",
+            });
+
+            return;
+          } catch (fallbackErr) {
+            logger.captureError(fallbackErr, "w9.save_client_fallback");
+            const friendly = friendlySignatureError(parsed);
+
+            toast.error(
+              friendly ?? {
+                title: "Couldn't save the W-9",
+                description: parsed.message,
+              },
+            );
+          }
         } finally {
           toast.close(loadingKey);
         }
