@@ -82,28 +82,14 @@ function humaniseClerkMessage(raw: string, code?: string): string {
   ) {
     return "That code doesn't match. Check your inbox or resend a new one.";
   }
-  // Server-side password rejections (breach + complexity). Fires
-  // when the Clerk dashboard still enforces "Reject compromised
-  // passwords" or complexity rules. Client schema (2026-08-30
-  // simplification) accepts any 8-char password; rewrite the raw
-  // copy so users don't see the scary breach language while we
-  // align the dashboard policy.
+  // 2026-08-31: no client-side password restrictions beyond the
+  // 8-char minimum. Old handlers for `form_password_pwned` and
+  // `form_password_not_strong_enough` removed — user wants any
+  // 8-char password to pass without any nag. Turn off the Clerk
+  // dashboard toggles so these codes stop being thrown server-side:
   //   Clerk dashboard → Configure → User & Authentication →
   //   Password → uncheck "Reject compromised passwords" and clear
-  //   complexity requirements.
-  if (
-    code === "form_password_pwned" ||
-    code === "form_password_not_strong_enough" ||
-    /pwned|data breach|compromised|not strong enough/i.test(s)
-  ) {
-    return "Try any other password.";
-  }
-  if (
-    code === "form_password_length_too_short" ||
-    /at least \d+ characters?|too short/i.test(s)
-  ) {
-    return "Password must contain at least 8 characters.";
-  }
+  //   ALL complexity requirements (keep min length = 8 only).
 
   return raw;
 }
