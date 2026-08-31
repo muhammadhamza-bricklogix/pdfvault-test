@@ -4,6 +4,8 @@ import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-nav
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
 export type AutoSignupOutcome =
   | { kind: "created" }
   | { kind: "exists" }
@@ -31,10 +33,19 @@ export async function runAutoSignup(params: {
 }): Promise<AutoSignupOutcome> {
   const { email, redirectUrl, signIn } = params;
 
+  if (!API_BASE_URL) {
+    logger.warn("auto-signup: NEXT_PUBLIC_API_BASE_URL not set");
+
+    return {
+      kind: "error",
+      message: "Sign-up is temporarily unavailable. Please try again later.",
+    };
+  }
+
   let response: Response;
 
   try {
-    response = await fetch("/api/auth/quick-signup", {
+    response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
       body: JSON.stringify({ email }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
