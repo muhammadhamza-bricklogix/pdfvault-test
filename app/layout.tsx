@@ -217,12 +217,6 @@ gtag('config', 'AW-18226423046');`}
         <script
           async
           id="cookieyes"
-          src="https://cdn-cookieyes.com/client_data/58169a75924fda4d5b767aed398b099c/script.js"
-          type="text/javascript"
-        />
-        <script
-          async
-          id="cookieyes-2"
           src="https://cdn-cookieyes.com/client_data/98d78886fe30030f1080cdeb0a6c0a25/script.js"
           type="text/javascript"
         />
