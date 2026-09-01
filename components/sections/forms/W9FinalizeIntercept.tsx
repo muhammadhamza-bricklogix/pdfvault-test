@@ -542,14 +542,25 @@ async function ensureSignatureKeyForSession(
 }
 
 /**
- * Coerce the modal-supplied base name into a valid `<name>.pdf`. Falls
- * back to `w-9.pdf` when the user cleared the field or typed only
- * whitespace so an empty file name never propagates to My PDFs.
+ * 2026-09-01 (QA): W-9 saves must always land on ONE canonical row —
+ * `IRS Form W-9.pdf` — regardless of what the export modal shows.
+ * The old behaviour let the modal's filename field seed the library
+ * name, so a rename in the modal or a fresh session (no seeded
+ * `currentDocumentId`) created a second `W-9.pdf` on every save.
+ * Locking the filename here + seeding `currentDocumentId` from the
+ * existing library row in `W9EditorBootstrap` gives us the upsert
+ * behaviour QA expects: one row per user, updated in-place forever.
  */
-function normalizeLibraryFilename(input: string | undefined): string {
-  const base = (input ?? "").trim().replace(/\.[^./\\]+$/, "");
+export const W9_LIBRARY_FILENAME = "IRS Form W-9.pdf";
 
-  return `${base || "w-9"}.pdf`;
+/**
+ * Return the canonical W-9 filename regardless of user input. Kept as
+ * a function (rather than inlining the constant) so the caller sites
+ * stay wired to the same choke-point — if the product ever needs to
+ * expose renaming, it's one place to un-lock.
+ */
+function normalizeLibraryFilename(_input: string | undefined): string {
+  return W9_LIBRARY_FILENAME;
 }
 
 async function ensureLibrarySave(
@@ -1239,7 +1250,7 @@ export function W9FinalizeIntercept() {
             );
           }
           const blob = await res.blob();
-          const stampedFile = new File([blob], "w-9.pdf", {
+          const stampedFile = new File([blob], W9_LIBRARY_FILENAME, {
             type: "application/pdf",
           });
 
@@ -1299,7 +1310,7 @@ export function W9FinalizeIntercept() {
             const stampedBytes = await stampW9Client(values, previewNow);
             const partialFile = new File(
               [stampedBytes.buffer as ArrayBuffer],
-              "w-9.pdf",
+              W9_LIBRARY_FILENAME,
               { type: "application/pdf" },
             );
             const partialEditorState = JSON.stringify({
@@ -1447,7 +1458,7 @@ export function W9FinalizeIntercept() {
             );
           }
           const blob = await res.blob();
-          const stampedFile = new File([blob], "w-9.pdf", {
+          const stampedFile = new File([blob], W9_LIBRARY_FILENAME, {
             type: "application/pdf",
           });
           const editorState = JSON.stringify({
@@ -1500,7 +1511,7 @@ export function W9FinalizeIntercept() {
             const stampedBytes = await stampW9Client(values, previewNow);
             const partialFile = new File(
               [stampedBytes.buffer as ArrayBuffer],
-              "w-9.pdf",
+              W9_LIBRARY_FILENAME,
               { type: "application/pdf" },
             );
             const partialEditorState = JSON.stringify({

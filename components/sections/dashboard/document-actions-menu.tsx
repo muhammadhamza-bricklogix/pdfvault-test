@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
+import { W9_LIBRARY_FILENAME } from "@/components/sections/forms/W9FinalizeIntercept";
 import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
@@ -35,6 +36,13 @@ export function DocumentActionsMenu({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  // 2026-09-01 (QA): the canonical W-9 row is a "system doc" — the
+  // W-9 flow upserts into it forever, so deletion would strand the
+  // user's saved W-9 (next open re-adopts the row and loses history).
+  // Hide Delete + Rename for this filename; open / download / version
+  // history stay available.
+  const isProtectedSystemDoc =
+    doc.filename.toLowerCase() === W9_LIBRARY_FILENAME.toLowerCase();
 
   const handleOpen = async () => {
     try {
@@ -105,36 +113,40 @@ export function DocumentActionsMenu({
           <p>History</p>
         </Tooltip.Content>
       </Tooltip>
-      <Tooltip delay={300}>
-        <Button
-          isIconOnly
-          aria-label={`Rename ${doc.filename}`}
-          className="text-default-600"
-          size="sm"
-          variant="ghost"
-          onPress={onRename}
-        >
-          <HugeiconsIcon icon={FileEditIcon} size={16} />
-        </Button>
-        <Tooltip.Content>
-          <p>Rename</p>
-        </Tooltip.Content>
-      </Tooltip>
-      <Tooltip delay={300}>
-        <Button
-          isIconOnly
-          aria-label={`Delete ${doc.filename}`}
-          className="text-danger"
-          size="sm"
-          variant="ghost"
-          onPress={onDelete}
-        >
-          <HugeiconsIcon icon={Delete02Icon} size={16} />
-        </Button>
-        <Tooltip.Content>
-          <p className="text-danger">Delete</p>
-        </Tooltip.Content>
-      </Tooltip>
+      {isProtectedSystemDoc ? null : (
+        <Tooltip delay={300}>
+          <Button
+            isIconOnly
+            aria-label={`Rename ${doc.filename}`}
+            className="text-default-600"
+            size="sm"
+            variant="ghost"
+            onPress={onRename}
+          >
+            <HugeiconsIcon icon={FileEditIcon} size={16} />
+          </Button>
+          <Tooltip.Content>
+            <p>Rename</p>
+          </Tooltip.Content>
+        </Tooltip>
+      )}
+      {isProtectedSystemDoc ? null : (
+        <Tooltip delay={300}>
+          <Button
+            isIconOnly
+            aria-label={`Delete ${doc.filename}`}
+            className="text-danger"
+            size="sm"
+            variant="ghost"
+            onPress={onDelete}
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={16} />
+          </Button>
+          <Tooltip.Content>
+            <p className="text-danger">Delete</p>
+          </Tooltip.Content>
+        </Tooltip>
+      )}
       <VersionHistoryModal
         documentId={isHistoryOpen ? doc.id : null}
         isOpen={isHistoryOpen}
