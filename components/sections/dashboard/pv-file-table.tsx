@@ -143,6 +143,11 @@ function RowActions({
   onHistory,
   onDelete,
 }: RowActionsProps) {
+  // 2026-09-01 (QA): "IRS Form W-9.pdf" is a system doc — the W-9
+  // flow upserts into it forever, so delete + rename must be
+  // suppressed. Download / History still make sense.
+  const isProtectedSystemDoc =
+    row.name.toLowerCase() === "irs form w-9.pdf";
   const actions: {
     label: string;
     icon: typeof Download01Icon;
@@ -154,14 +159,26 @@ function RowActions({
       icon: Download01Icon,
       handler: () => onDownload?.(row),
     },
-    { label: "Rename", icon: Edit02Icon, handler: () => onRename?.(row) },
+    ...(isProtectedSystemDoc
+      ? []
+      : [
+          {
+            label: "Rename",
+            icon: Edit02Icon,
+            handler: () => onRename?.(row),
+          },
+        ]),
     { label: "History", icon: Time04Icon, handler: () => onHistory?.(row) },
-    {
-      label: "Delete",
-      icon: Delete02Icon,
-      handler: () => onDelete?.(row),
-      danger: true,
-    },
+    ...(isProtectedSystemDoc
+      ? []
+      : [
+          {
+            label: "Delete",
+            icon: Delete02Icon,
+            handler: () => onDelete?.(row),
+            danger: true,
+          },
+        ]),
   ];
 
   return (
@@ -196,7 +213,12 @@ export function PvFileTable({
   const { sorted, key, dir, cycle } = useSortedRows(rows);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
-  const selectableRows = sorted.filter((r) => !r.pending);
+  // 2026-09-01 (QA): the canonical W-9 row can't be deleted (system
+  // doc — see RowActions below). Exclude it from bulk-select so the
+  // "Delete selected" affordance never targets it.
+  const selectableRows = sorted.filter(
+    (r) => !r.pending && r.name.toLowerCase() !== "irs form w-9.pdf",
+  );
   const allSelected =
     selectableRows.length > 0 && selected.size === selectableRows.length;
   const selectedRows = selectableRows.filter((r) => selected.has(r.id));
