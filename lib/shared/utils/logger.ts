@@ -15,13 +15,30 @@ const isVerbose =
 // PDF-editor diagnostic prefix. Every `logger.info(...)` / `logger.warn(...)`
 // call whose first arg starts with this string is force-printed to the
 // browser console via `console.log` / `console.warn` regardless of
-// environment or `NEXT_PUBLIC_LOG_LEVEL`. Rationale: users debugging the
-// export / conversion pipeline in staging (NODE_ENV=production) need to
-// SEE the boundary logs immediately without flipping a Sentry filter or
-// setting an env var and redeploying.
+// `NEXT_PUBLIC_LOG_LEVEL`. Rationale: users debugging the export /
+// conversion pipeline in staging (NODE_ENV=production, APP_ENV=staging)
+// need to SEE the boundary logs immediately. The production environment
+// (`NEXT_PUBLIC_APP_ENV === "production"`) suppresses even these — the
+// browser console is silenced globally in `instrumentation-client.ts`.
 const FORCE_CONSOLE_PREFIX = "[PDFedits]";
 
+// Match the detection in `instrumentation-client.ts` — production is
+// declared by ANY of these `NEXT_PUBLIC_*` vars resolving to "production"
+// or "prod" (case-insensitive). Lets the same AWS Secrets Manager /
+// Railway env value drive both the console silencer and this fence.
+const rawAppEnv =
+  process.env.NEXT_PUBLIC_APP_ENV ??
+  process.env.NEXT_PUBLIC_ENVIRONMENT ??
+  process.env.NEXT_PUBLIC_ENV ??
+  process.env.NEXT_PUBLIC_STAGE ??
+  process.env.NEXT_PUBLIC_NODE_ENV ??
+  "";
+const normalizedAppEnv = rawAppEnv.trim().toLowerCase();
+const isProductionEnv =
+  normalizedAppEnv === "production" || normalizedAppEnv === "prod";
+
 const shouldForceToConsole = (args: LogInput): boolean => {
+  if (isProductionEnv) return false;
   const first = args[0];
 
   return typeof first === "string" && first.startsWith(FORCE_CONSOLE_PREFIX);

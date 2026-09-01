@@ -22,6 +22,11 @@ SECRET=$(aws secretsmanager get-secret-value \
 API_BASE_URL=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_API_BASE_URL // "https://api.pdfvault.ai"')
 CLERK_KEY=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY // .CLERK_PUBLISHABLE_KEY // empty')
 WEGLOT_KEY=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_WEGLOT_API_KEY // empty')
+# Env label. Silences the browser console when the built bundle runs in
+# a "production" environment. Defaults to "production" for this script
+# since it targets the prod ECR repo; override with `NEXT_PUBLIC_APP_ENV=staging`
+# in the secret (or in the shell) for non-prod builds.
+APP_ENV=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_APP_ENV // "production"')
 
 if [ -z "$CLERK_KEY" ]; then
   echo "ERROR: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY / CLERK_PUBLISHABLE_KEY not found in secret." >&2
@@ -48,6 +53,7 @@ docker buildx build \
   --build-arg "NEXT_PUBLIC_API_BASE_URL=$API_BASE_URL" \
   --build-arg "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$CLERK_KEY" \
   --build-arg "NEXT_PUBLIC_WEGLOT_API_KEY=$WEGLOT_KEY" \
+  --build-arg "NEXT_PUBLIC_APP_ENV=$APP_ENV" \
   -t "$ECR_REPO:latest" \
   --push .
 

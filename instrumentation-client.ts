@@ -3,6 +3,64 @@ import * as Sentry from "@sentry/nextjs";
 import { scrubUrl } from "@/lib/shared/utils/scrub-url";
 
 /**
+ * Silence the browser console in the production environment. Staging /
+ * preview / dev keep full console output for debugging. Runs BEFORE
+ * `Sentry.init` so Sentry's console integration wraps the no-op methods
+ * — breadcrumbs still fire, DevTools stays clean. `logger.captureError`
+ * / `logger.event` continue to ship errors + warnings via explicit
+ * `Sentry.captureException` / `captureMessage` calls (not console).
+ *
+ * Environment detection is intentionally permissive: whichever name your
+ * AWS Secrets Manager (or Railway env, or CI pipeline) uses to identify
+ * production will work as long as it's exposed as a `NEXT_PUBLIC_*` var
+ * at build time. Recognised names, in priority order:
+ *   NEXT_PUBLIC_APP_ENV
+ *   NEXT_PUBLIC_ENVIRONMENT
+ *   NEXT_PUBLIC_ENV
+ *   NEXT_PUBLIC_STAGE
+ *   NEXT_PUBLIC_NODE_ENV
+ * Accepted production values: "production" | "prod" (case-insensitive).
+ */
+const rawAppEnv =
+  process.env.NEXT_PUBLIC_APP_ENV ??
+  process.env.NEXT_PUBLIC_ENVIRONMENT ??
+  process.env.NEXT_PUBLIC_ENV ??
+  process.env.NEXT_PUBLIC_STAGE ??
+  process.env.NEXT_PUBLIC_NODE_ENV ??
+  "";
+const normalizedAppEnv = rawAppEnv.trim().toLowerCase();
+const isProductionEnv =
+  normalizedAppEnv === "production" || normalizedAppEnv === "prod";
+
+if (typeof window !== "undefined" && isProductionEnv) {
+  const noop = () => undefined;
+  const silenced = [
+    "log",
+    "info",
+    "debug",
+    "warn",
+    "error",
+    "trace",
+    "table",
+    "dir",
+    "dirxml",
+    "group",
+    "groupCollapsed",
+    "groupEnd",
+    "time",
+    "timeEnd",
+    "timeLog",
+    "count",
+    "countReset",
+    "assert",
+  ] as const;
+
+  for (const key of silenced) {
+    (window.console as unknown as Record<string, () => void>)[key] = noop;
+  }
+}
+
+/**
  * Client-side Sentry init for Next.js 16 App Router. Replaces the legacy
  * `sentry.client.config.ts` file. Loaded automatically by Next.js before
  * any client bundle runs.

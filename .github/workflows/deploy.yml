@@ -43,6 +43,11 @@ jobs:
           echo "api_base_url=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_API_BASE_URL // "https://api.pdfvault.ai"')" >> "$GITHUB_OUTPUT"
           echo "clerk_publishable_key=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY // .CLERK_PUBLISHABLE_KEY // empty')" >> "$GITHUB_OUTPUT"
           echo "weglot_key=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_WEGLOT_API_KEY // empty')" >> "$GITHUB_OUTPUT"
+          # Env label. Drives Sentry env tag + browser-console silencer.
+          # Falls back to "production" so main-branch builds stay silent
+          # even before the secret is updated. Non-prod builds should set
+          # NEXT_PUBLIC_APP_ENV explicitly in the secret (e.g. "staging").
+          echo "app_env=$(echo "$SECRET" | jq -r '.NEXT_PUBLIC_APP_ENV // "production"')" >> "$GITHUB_OUTPUT"
 
       - name: Build, tag, push
         env:
@@ -53,6 +58,7 @@ jobs:
             --build-arg NEXT_PUBLIC_API_BASE_URL=${{ steps.build-secrets.outputs.api_base_url }} \
             --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ steps.build-secrets.outputs.clerk_publishable_key }} \
             --build-arg NEXT_PUBLIC_WEGLOT_API_KEY=${{ steps.build-secrets.outputs.weglot_key }} \
+            --build-arg NEXT_PUBLIC_APP_ENV=${{ steps.build-secrets.outputs.app_env }} \
             -t $REGISTRY/$ECR_REPOSITORY:latest \
             -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
           docker push $REGISTRY/$ECR_REPOSITORY:latest
