@@ -240,18 +240,31 @@ function geoRedirect(req: NextRequest): NextResponse | null {
 
   // Debug logging — enable with `GEO_REDIRECT_DEBUG=on` to trace the
   // decision inputs in ECS logs WITHOUT actually redirecting. Useful
-  // to verify Weglot forwards `CF-IPCountry` before flipping the
-  // redirect live. Kept behind a separate flag so we're not flooding
-  // logs once redirects are enabled.
+  // to verify what geo signals Weglot's reverse proxy forwards to
+  // origin before flipping the redirect live.
   if (process.env.GEO_REDIRECT_DEBUG === "on") {
     // eslint-disable-next-line no-console
     console.log(
       JSON.stringify({
         source: "geo-redirect",
         path: pathname,
+        // Standard CDN geo headers (Weglot Cloudflare / AWS CloudFront)
         cfIpCountry: req.headers.get("cf-ipcountry"),
         cfViewerCountry: req.headers.get("cloudfront-viewer-country"),
+        // Client-IP forwarding (fallback path if we can install a
+        // server-side geo DB and look up by IP ourselves)
+        xForwardedFor: req.headers.get("x-forwarded-for"),
+        xRealIp: req.headers.get("x-real-ip"),
+        // Other headers that might carry country/geo hints
+        xCountry: req.headers.get("x-country"),
         acceptLanguage: req.headers.get("accept-language")?.slice(0, 60),
+        // Who forwarded us + the current URL
+        host: req.headers.get("host"),
+        forwardedHost: req.headers.get("x-forwarded-host"),
+        via: req.headers.get("via"),
+        // Weglot-specific headers (proxy might tag its own requests)
+        weglotClient: req.headers.get("weglot-client"),
+        // Decision state
         cookieLocale,
         geoLocale,
         targetLocale,
