@@ -1,67 +1,77 @@
-/* eslint-disable no-console */
 "use client";
 
 import { Button, Dropdown, Label } from "@heroui/react";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useTransition } from "react";
 
-import { WEGLOT_LANG_STORAGE_KEY } from "./weglot-loader";
+import {
+  DEFAULT_LOCALE,
+  LANG_PREF_COOKIE,
+  type Locale,
+  parseLocalePrefix,
+  SUPPORTED_LOCALES,
+} from "@/lib/shared/constants/locale-map";
 
-type LangCode = "en" | "es" | "ar" | "fr" | "de" | "pt";
+type Entry = { code: Locale; label: string; short: string };
 
-// Must match `destinationLanguages` in weglot-loader.tsx + hreflang
-// alternates in app/layout.tsx.
-const LANGUAGES = [
-  { code: "en" as LangCode, label: "English", short: "EN" },
-  { code: "es" as LangCode, label: "Español", short: "ES" },
-  { code: "fr" as LangCode, label: "Français", short: "FR" },
-  { code: "de" as LangCode, label: "Deutsch", short: "DE" },
-  { code: "pt" as LangCode, label: "Português", short: "PT" },
-  { code: "ar" as LangCode, label: "العربية", short: "AR" },
-] as const;
+const LANGUAGES: Entry[] = [
+  { code: "en", label: "English", short: "EN" },
+  { code: "es", label: "Español", short: "ES" },
+  { code: "fr", label: "Français", short: "FR" },
+  { code: "de", label: "Deutsch", short: "DE" },
+  { code: "pt", label: "Português", short: "PT" },
+  { code: "ar", label: "العربية", short: "AR" },
+];
+
+function buildLocaleHref(nextLocale: Locale, pathname: string): string {
+  const parsed = parseLocalePrefix(pathname);
+  const strippedPath = parsed ? parsed.rest : pathname;
+  const suffix = strippedPath === "/" ? "" : strippedPath;
+
+  if (nextLocale === DEFAULT_LOCALE) return suffix || "/";
+
+  return `/${nextLocale}${suffix}`;
+}
+
+function persistLangPref(nextLocale: Locale) {
+  try {
+    const attrs = [
+      `${LANG_PREF_COOKIE}=${nextLocale}`,
+      "Path=/",
+      "Max-Age=31536000",
+      "SameSite=Lax",
+    ];
+
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:"
+    ) {
+      attrs.push("Secure");
+    }
+    document.cookie = attrs.join("; ");
+  } catch {
+    // Storage disabled — no-op. The next server response will re-run
+    // geo defaulting, which is safe fallback behaviour.
+  }
+}
+
+function localeFromPathname(pathname: string): Locale {
+  return parseLocalePrefix(pathname)?.locale ?? DEFAULT_LOCALE;
+}
 
 export function LanguageSwitcher() {
-  const [currentLang, setCurrentLang] = useState<LangCode>("en");
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    console.log("[LanguageSwitcher] mounting");
-
-    const onLangChange = (newLang: string) => {
-      console.log("[LanguageSwitcher] languageChanged event:", newLang);
-      setCurrentLang(newLang as LangCode);
-    };
-
-    const init = () => {
-      const wgCurrent = window.Weglot?.getCurrentLang();
-
-      console.log("[LanguageSwitcher] init — Weglot currentLang:", wgCurrent);
-      setCurrentLang((wgCurrent as LangCode) ?? "en");
-      window.Weglot?.on("languageChanged", onLangChange);
-      setReady(true);
-    };
-
-    if (window.Weglot) {
-      init();
-    } else {
-      console.log(
-        "[LanguageSwitcher] Weglot not ready — waiting for weglot:initialized",
-      );
-      window.addEventListener("weglot:initialized", init, { once: true });
-    }
-
-    return () => {
-      window.removeEventListener("weglot:initialized", init);
-      window.Weglot?.off("languageChanged", onLangChange);
-    };
-  }, []);
-
-  const current = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0];
+  const pathname = usePathname() ?? "/";
+  const activeLocale = localeFromPathname(pathname);
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const current =
+    LANGUAGES.find((lang) => lang.code === activeLocale) ?? LANGUAGES[0];
 
   return (
     <Dropdown>
       <Button
         className="gap-1 font-medium text-default-600 dark:text-default-400"
-        isDisabled={!ready}
+        isDisabled={pending}
         size="sm"
         variant="ghost"
       >
@@ -73,7 +83,7 @@ export function LanguageSwitcher() {
       <Dropdown.Popover className="min-w-[140px]" placement="top">
         <Dropdown.Menu
           aria-label="Select language"
-          selectedKeys={new Set([currentLang])}
+          selectedKeys={new Set([activeLocale])}
           selectionMode="single"
         >
           {LANGUAGES.map((lang) => (
@@ -82,34 +92,11 @@ export function LanguageSwitcher() {
               id={lang.code}
               textValue={lang.label}
               onAction={() => {
-                console.log(
-                  "[LanguageSwitcher] user selected language:",
-                  lang.code,
-                );
-                // Persist synchronously so localStorage stays fresh
-                // even if Weglot's `languageChanged` event is delayed
-                // or skipped on same-language switches.
-                try {
-                  window.localStorage.setItem(
-                    WEGLOT_LANG_STORAGE_KEY,
-                    lang.code,
-                  );
-                  console.log(
-                    "[LanguageSwitcher] wrote to localStorage:",
-                    lang.code,
-                  );
-                } catch (err) {
-                  console.error(
-                    "[LanguageSwitcher] localStorage write failed:",
-                    err,
-                  );
-                }
-                console.log(
-                  "[LanguageSwitcher] calling Weglot.switchTo:",
-                  lang.code,
-                );
-                window.Weglot?.switchTo(lang.code);
-                setCurrentLang(lang.code);
+                if (lang.code === activeLocale) return;
+                persistLangPref(lang.code);
+                startTransition(() => {
+                  router.push(buildLocaleHref(lang.code, pathname));
+                });
               }}
             >
               <Label>{lang.label}</Label>
@@ -120,3 +107,11 @@ export function LanguageSwitcher() {
     </Dropdown>
   );
 }
+
+// Re-exported so downstream code that used to compose Weglot-driven
+// state can share the same helpers.
+export {
+  SUPPORTED_LOCALES as LANGUAGE_SWITCHER_LOCALES,
+  buildLocaleHref,
+  persistLangPref,
+};

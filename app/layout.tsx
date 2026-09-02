@@ -2,11 +2,23 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import { headers } from "next/headers";
 import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
-import { WeglotLoader } from "@/components/shared/navigation/weglot-loader";
+import { WeglotBoot } from "@/components/shared/navigation/weglot-boot";
+import {
+  DEFAULT_LOCALE,
+  isSupportedLocale,
+  type Locale,
+  LOCALE_HEADER,
+  OG_LOCALE_TAG,
+  parseLocalePrefix,
+  PATHNAME_HEADER,
+  RTL_LOCALES,
+  SUPPORTED_LOCALES,
+} from "@/lib/shared/constants/locale-map";
 
 const playfairDisplay = Playfair_Display({
   display: "swap",
@@ -31,51 +43,100 @@ const playfairDisplay = Playfair_Display({
 
 import { Providers } from "./providers";
 
-export const metadata: Metadata = {
-  title: {
-    default: "pdfvault.ai",
-    template: "%s | pdfvault.ai",
-  },
-  description:
-    "pdfvault.ai — Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
-  icons: {
-    apple: "/PDFVault_stacked_layers.png",
-    icon: "/PDFVault_stacked_layers.png",
-    shortcut: "/PDFVault_stacked_layers.png",
-  },
-  openGraph: {
-    description:
-      "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
-    images: [{ height: 630, url: "/og.png", width: 1200 }],
-    siteName: "pdfvault.ai",
-    title: "pdfvault.ai — PDF tools that work",
-    type: "website",
-    url: "https://pdfvault.ai",
-  },
-  twitter: {
-    card: "summary_large_image",
-    description:
-      "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
-    images: ["/og.png"],
-    title: "pdfvault.ai — PDF tools that work",
-  },
-  // Weglot serves translated versions at `<lang>.pdfvault.ai` subdomains.
-  // The alternates block emits the `<link rel="alternate" hreflang="...">`
-  // tags Google needs to index each language variant. `x-default` points
-  // at the canonical English origin.
-  alternates: {
-    canonical: "https://pdfvault.ai",
-    languages: {
-      "x-default": "https://pdfvault.ai",
-      en: "https://pdfvault.ai",
-      ar: "https://ar.pdfvault.ai",
-      fr: "https://fr.pdfvault.ai",
-      de: "https://de.pdfvault.ai",
-      pt: "https://pt.pdfvault.ai",
-      es: "https://es.pdfvault.ai",
+const CANONICAL_HOST = "https://pdfvault.ai";
+
+function buildLocaleUrl(locale: Locale, effectivePath: string): string {
+  const path = effectivePath === "/" ? "" : effectivePath;
+
+  if (locale === DEFAULT_LOCALE) return `${CANONICAL_HOST}${path || "/"}`;
+
+  return `${CANONICAL_HOST}/${locale}${path}`;
+}
+
+async function readLocaleContext(): Promise<{
+  locale: Locale;
+  effectivePath: string;
+  originalPathname: string;
+}> {
+  const headerList = await headers();
+  const headerLocale = headerList.get(LOCALE_HEADER);
+  const originalPathname = headerList.get(PATHNAME_HEADER) ?? "/";
+  const locale = isSupportedLocale(headerLocale)
+    ? headerLocale
+    : DEFAULT_LOCALE;
+  const parsed = parseLocalePrefix(originalPathname);
+  const effectivePath = parsed ? parsed.rest : originalPathname;
+
+  return { effectivePath, locale, originalPathname };
+}
+
+/**
+ * Emits per-URL metadata:
+ *   - Self-referencing canonical (never canonical to EN root from a
+ *     non-EN page).
+ *   - Reciprocal + self-referencing hreflang for all 6 locales.
+ *   - `x-default` → EN root at `https://pdfvault.ai/`.
+ *   - `og:locale` matches the current page; `og:locale:alternate`
+ *     lists the other 5.
+ *
+ * This runs on EVERY request through the app because the whole route
+ * tree lives under this layout — the middleware supplies the
+ * `x-pdfvault-locale` and `x-pdfvault-pathname` headers so we can
+ * compute the canonical route path without duplicating routes under a
+ * `[locale]` segment.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale, effectivePath } = await readLocaleContext();
+  const canonical = buildLocaleUrl(locale, effectivePath);
+
+  const languages: Record<string, string> = {
+    "x-default": buildLocaleUrl(DEFAULT_LOCALE, effectivePath),
+  };
+
+  for (const l of SUPPORTED_LOCALES) {
+    languages[l] = buildLocaleUrl(l, effectivePath);
+  }
+
+  const localeAlternates = SUPPORTED_LOCALES.filter((l) => l !== locale).map(
+    (l) => OG_LOCALE_TAG[l],
+  );
+
+  return {
+    title: {
+      default: "pdfvault.ai",
+      template: "%s | pdfvault.ai",
     },
-  },
-};
+    description:
+      "pdfvault.ai — Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
+    icons: {
+      apple: "/PDFVault_stacked_layers.png",
+      icon: "/PDFVault_stacked_layers.png",
+      shortcut: "/PDFVault_stacked_layers.png",
+    },
+    openGraph: {
+      description:
+        "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
+      images: [{ height: 630, url: "/og.png", width: 1200 }],
+      locale: OG_LOCALE_TAG[locale],
+      alternateLocale: localeAlternates,
+      siteName: "pdfvault.ai",
+      title: "pdfvault.ai — PDF tools that work",
+      type: "website",
+      url: canonical,
+    },
+    twitter: {
+      card: "summary_large_image",
+      description:
+        "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
+      images: ["/og.png"],
+      title: "pdfvault.ai — PDF tools that work",
+    },
+    alternates: {
+      canonical,
+      languages,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -84,11 +145,16 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { locale } = await readLocaleContext();
+  const dir = (RTL_LOCALES as readonly Locale[]).includes(locale)
+    ? "rtl"
+    : "ltr";
+
   // Trustpilot AFS invitation register key. Public — safe to bake into
   // the client bundle (it ships to every visitor anyway, so it's not a
   // secret). Hardcoded fallback ensures the loader fires in every
@@ -110,7 +176,8 @@ export default function RootLayout({
     <html
       suppressHydrationWarning
       className={playfairDisplay.variable}
-      lang="en"
+      dir={dir}
+      lang={locale}
     >
       {/*
         Preconnect to critical third-party origins so the TCP + TLS
@@ -170,16 +237,6 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'G-K6PVB4B39T');
 gtag('config', 'AW-18226423046');`}
-      </Script>
-      <Script id="weglot-lang-pref" strategy="beforeInteractive">
-        {`
-          try {
-            const lang = window.localStorage.getItem("pdfvault:weglot-lang");
-            if (lang) window.__WEGLOT_PREFERRED_LANG__ = lang;
-          } catch (e) {
-            // ignore private-mode / storage-disabled
-          }
-        `}
       </Script>
       {/*
         Single explicit <head> block. React errors if <head> is rendered
@@ -245,7 +302,7 @@ gtag('config', 'AW-18226423046');`}
           />
         </noscript>
         <NextTopLoader color="#DF3A38" showSpinner={false} />
-        <WeglotLoader />
+        <WeglotBoot />
         <ClerkProvider
           signInFallbackRedirectUrl="/dashboard"
           signInUrl="/sign-in"

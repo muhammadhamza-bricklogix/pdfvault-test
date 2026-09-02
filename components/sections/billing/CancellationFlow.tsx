@@ -209,7 +209,7 @@ function ConfirmedStep({ onClose }: { onClose: () => void }) {
         </p>
         <div className="mt-3 rounded-xl border border-[var(--pv-hairline)] bg-[#f7f7f7] dark:bg-content2 p-3.5">
           <p className="text-[12px] font-semibold text-[var(--pv-text-strong)]">
-            Your files stay for {RETENTION_DAYS} more days
+            Your files stay until current billing period ends.
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-[var(--pv-text-body)]">
             After that we clear them from our servers. Renew anytime from

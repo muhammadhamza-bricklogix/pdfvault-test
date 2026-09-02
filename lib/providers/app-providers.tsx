@@ -4,7 +4,6 @@ import type { ThemeProviderProps } from "next-themes";
 
 import { Toast } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { Suspense } from "react";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { AuthModal } from "@/components/shared/auth-modal";
@@ -13,7 +12,6 @@ import { LoginToDownloadModal } from "@/components/shared/login-to-download-moda
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
 import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
-import { WeglotRouteSync } from "@/components/shared/navigation/weglot-route-sync";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
 import { SentryUserContext } from "@/components/shared/sentry-user-context";
@@ -52,13 +50,6 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <OfflineBoot />
           <SentryUserContext />
           <EditorEventsLogger />
-          {/* Re-runs Weglot on every client-side route change so the
-              translation applied on `/` carries over when the user
-              navigates into `/convert/*`, `/pdf-composer`, etc. Wrapped
-              in Suspense because `useSearchParams` needs it during SSR. */}
-          <Suspense fallback={null}>
-            <WeglotRouteSync />
-          </Suspense>
         </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>

@@ -146,8 +146,7 @@ function RowActions({
   // 2026-09-01 (QA): "IRS Form W-9.pdf" is a system doc — the W-9
   // flow upserts into it forever, so delete + rename must be
   // suppressed. Download / History still make sense.
-  const isProtectedSystemDoc =
-    row.name.toLowerCase() === "irs form w-9.pdf";
+  const isProtectedSystemDoc = row.name.toLowerCase() === "irs form w-9.pdf";
   const actions: {
     label: string;
     icon: typeof Download01Icon;
@@ -404,7 +403,13 @@ export function PvFileTable({
                       ) : (
                         <TypeBadge type={row.type} />
                       )}
-                      <div className="min-w-0">
+                      {/* data-wg-notranslate: user-uploaded filenames are
+                          PII. Weglot's Reverse Proxy reads authenticated
+                          HTML server-side — this attribute tells it to
+                          skip translation on the filename node so
+                          personal document titles aren't sent through
+                          Weglot's translation pipeline or cached. */}
+                      <div data-wg-notranslate className="min-w-0">
                         <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
                           {row.name}
                         </p>

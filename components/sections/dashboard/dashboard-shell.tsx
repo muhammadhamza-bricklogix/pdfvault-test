@@ -176,7 +176,10 @@ function ProfileRow({ onNavigate }: { onNavigate?: () => void }) {
                 className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[var(--pv-canvas)] bg-[var(--pv-online)]"
               />
             </span>
-            <span className="min-w-0 flex-1 text-left">
+            {/* data-wg-notranslate: sidebar user block shows the signed-in
+                name + email. PII must not enter Weglot's translation
+                pipeline (see infra/cloudfront-weglot-proxy.md). */}
+            <span data-wg-notranslate className="min-w-0 flex-1 text-left">
               <span className="flex items-center gap-1">
                 <span className="truncate text-sm font-semibold text-[var(--pv-text-strong)]">
                   {fullName}
