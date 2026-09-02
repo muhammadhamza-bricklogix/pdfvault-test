@@ -2,11 +2,16 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  BOT_UA_REGEX,
   DEFAULT_LOCALE,
+  isSupportedLocale,
+  LANG_PREF_COOKIE,
+  type Locale,
   LOCALE_HEADER,
   parseLocalePrefix,
   PATHNAME_HEADER,
   PREFIXED_LOCALES,
+  resolveLocaleFromCountry,
 } from "@/lib/shared/constants/locale-map";
 
 const DASHBOARD_PATH = "/dashboard";
@@ -112,6 +117,176 @@ function subdomainRedirect(req: NextRequest): NextResponse | null {
 }
 
 /**
+ * Paths that must NEVER trigger a geo-IP redirect. These fall into
+ * three buckets:
+ *
+ *   - **Auth flow**: sign-in/up + Clerk callbacks. Redirecting these to
+ *     a locale-prefixed variant mid-flow breaks the auth handshake.
+ *   - **Authenticated content**: dashboard, editor, W-9, forms, share
+ *     tokens. Signed-in users expect deterministic URLs; auth-gated
+ *     routes must reach the sign-in bounce cleanly.
+ *   - **SEO/plumbing**: `/api`, `/_next`, `robots.txt`, `sitemap.xml`,
+ *     favicon, manifest. Never redirect crawlers or asset requests.
+ *
+ * Mirrors the exempt list in the (dormant) CloudFront Function at
+ * `infra/cloudfront-functions/geo-redirect.js` — they must agree on the
+ * set of paths so behaviour stays consistent regardless of which edge
+ * the redirect fires from.
+ */
+function isGeoRedirectExempt(pathname: string): boolean {
+  // Static assets + Next.js internals + API
+  if (pathname.startsWith("/api/")) return true;
+  if (pathname.startsWith("/_next/")) return true;
+  if (pathname.startsWith("/.well-known/")) return true;
+
+  // SEO plumbing files
+  if (
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/favicon.ico" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/manifest.json"
+  ) {
+    return true;
+  }
+
+  // Auth entry pages — Clerk needs deterministic URLs during sign-in /
+  // sign-up flows. Once authenticated the user is redirected to a
+  // localised path via `redirect_url`, so preserving the locale isn't
+  // lost by exempting these entries.
+  if (
+    pathname === "/sign-in" ||
+    pathname === "/sign-up" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/oauth-callback" ||
+    pathname === "/sso-callback"
+  ) {
+    return true;
+  }
+
+  // Authenticated content — user PII must not be geo-redirected. These
+  // routes serve the user's own file library, editor content, tax
+  // forms, or private share tokens.
+  if (pathname.startsWith("/dashboard")) return true;
+  if (pathname.startsWith("/pdf-composer")) return true;
+  if (pathname.startsWith("/pdf-editor")) return true;
+  if (pathname.startsWith("/w-9-form")) return true;
+  if (pathname.startsWith("/w9-form")) return true;
+  if (pathname.startsWith("/forms/")) return true;
+  if (pathname.startsWith("/share/")) return true;
+
+  return false;
+}
+
+/**
+ * IP-country geo-redirect on locale-less URLs (Amit's Priority 2).
+ *
+ * Fires only when `GEO_REDIRECT_ENABLED === "on"` in the environment.
+ * Ships dormant so the middleware code can be deployed + tested
+ * (verify header forwarding, verify no unintended side-effects) BEFORE
+ * the redirect logic activates on real traffic.
+ *
+ * Decision order (matches Amit's spec):
+ *   1. `lang_pref` cookie — user's saved choice always wins.
+ *   2. Geo header — `CF-IPCountry` (Weglot's Cloudflare edge) with
+ *      fallback to `CloudFront-Viewer-Country` (AWS CloudFront) in case
+ *      the request path changes.
+ *   3. English fallback for unmapped countries.
+ *
+ * Bot user-agents are exempt so search crawlers can always index every
+ * locale URL directly (they crawl from a single geo, usually US).
+ *
+ * Path exemptions (see `isGeoRedirectExempt`) protect the auth flow,
+ * authenticated content, and SEO plumbing from disruption.
+ *
+ * The 302 response is marked `Cache-Control: no-store` so Weglot's
+ * reverse proxy doesn't cache the redirect — each visitor's decision
+ * must be evaluated per-request against their own cookie + geo.
+ */
+function geoRedirect(req: NextRequest): NextResponse | null {
+  const pathname = req.nextUrl.pathname;
+
+  // Explicit locale in URL always wins — never redirect a
+  // locale-prefixed URL, even from a foreign IP.
+  if (parseLocalePrefix(pathname)) return null;
+
+  if (isGeoRedirectExempt(pathname)) return null;
+
+  // Bots never redirected — they crawl from a single geo (usually US)
+  // and must be able to reach every locale URL directly.
+  const ua = req.headers.get("user-agent");
+
+  if (ua && BOT_UA_REGEX.test(ua)) return null;
+
+  // Cookie beats geo — user's manual choice or a previously-served
+  // locale wins. EN cookie means "stay on root, don't redirect."
+  const cookiePref = req.cookies.get(LANG_PREF_COOKIE)?.value;
+  const cookieLocale: Locale | null = isSupportedLocale(cookiePref)
+    ? cookiePref
+    : null;
+
+  // Country header — Weglot's Cloudflare edge sets `CF-IPCountry` on
+  // every incoming request and forwards it to our origin. Fallback to
+  // AWS CloudFront's `CloudFront-Viewer-Country` in case DNS is ever
+  // routed back through our own CDN.
+  const country =
+    req.headers.get("cf-ipcountry") ??
+    req.headers.get("cloudfront-viewer-country");
+  const geoLocale = resolveLocaleFromCountry(country);
+
+  const targetLocale: Locale = cookieLocale ?? geoLocale;
+
+  // Debug logging — enable with `GEO_REDIRECT_DEBUG=on` to trace the
+  // decision inputs in ECS logs WITHOUT actually redirecting. Useful
+  // to verify Weglot forwards `CF-IPCountry` before flipping the
+  // redirect live. Kept behind a separate flag so we're not flooding
+  // logs once redirects are enabled.
+  if (process.env.GEO_REDIRECT_DEBUG === "on") {
+    // eslint-disable-next-line no-console
+    console.log(
+      JSON.stringify({
+        source: "geo-redirect",
+        path: pathname,
+        cfIpCountry: req.headers.get("cf-ipcountry"),
+        cfViewerCountry: req.headers.get("cloudfront-viewer-country"),
+        acceptLanguage: req.headers.get("accept-language")?.slice(0, 60),
+        cookieLocale,
+        geoLocale,
+        targetLocale,
+        wouldRedirect:
+          targetLocale !== DEFAULT_LOCALE && cookieLocale !== DEFAULT_LOCALE,
+        enabled: process.env.GEO_REDIRECT_ENABLED === "on",
+      }),
+    );
+  }
+
+  if (process.env.GEO_REDIRECT_ENABLED !== "on") return null;
+
+  if (cookieLocale === DEFAULT_LOCALE) return null;
+
+  if (targetLocale === DEFAULT_LOCALE) return null;
+
+  // Build target URL: /<locale>/<original-path>?<original-query>
+  const target = req.nextUrl.clone();
+
+  target.pathname = `/${targetLocale}${pathname === "/" ? "" : pathname}`;
+
+  const response = NextResponse.redirect(target, 302);
+
+  response.headers.set("Cache-Control", "no-store");
+  response.cookies.set(LANG_PREF_COOKIE, targetLocale, {
+    maxAge: 60 * 60 * 24 * 365, // 12 months (matches Amit's spec)
+    path: "/",
+    sameSite: "lax",
+    secure: true,
+  });
+
+  return response;
+}
+
+/**
  * Attaches the locale + original pathname to the outgoing request
  * headers so `app/layout.tsx` can read them for `<html lang dir>` and
  * for per-URL canonical + hreflang generation. Both headers are
@@ -132,10 +307,20 @@ function withLocaleHeaders(
 }
 
 export default clerkMiddleware(async (auth, req) => {
-  // Step 0: retire legacy Weglot subdomains once Phase 3 flips on.
+  // Step 0a: retire legacy Weglot subdomains once Phase 3 flips on.
   const subdomain301 = subdomainRedirect(req);
 
   if (subdomain301) return subdomain301;
+
+  // Step 0b: geo-IP redirect on locale-less URLs (Amit's Priority 2).
+  // Dormant until `GEO_REDIRECT_ENABLED=on` is set in the environment.
+  // Fires before locale parsing so a user in Germany hitting `/edit`
+  // is 302'd to `/de/edit` before Clerk auth checks run — which is
+  // important because the return URL after sign-in would otherwise
+  // point at the wrong locale.
+  const geo = geoRedirect(req);
+
+  if (geo) return geo;
 
   // Step 1: split the URL into locale prefix + effective app path.
   // English is the root default, so pathnames without a prefix stay

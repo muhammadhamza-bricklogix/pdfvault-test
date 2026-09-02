@@ -7,7 +7,6 @@ import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
-import { WeglotBoot } from "@/components/shared/navigation/weglot-boot";
 import {
   DEFAULT_LOCALE,
   isSupportedLocale,
@@ -195,12 +194,9 @@ export default async function RootLayout({
         rel="preconnect"
       />
       <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
-      <link
-        crossOrigin="anonymous"
-        href="https://cdn.weglot.com"
-        rel="preconnect"
-      />
-      <link href="https://cdn.weglot.com" rel="dns-prefetch" />
+      {/* Weglot CDN preconnect removed 2026-09-02 — Weglot's reverse
+          proxy injects the SDK server-side now, so the browser never
+          fetches cdn.weglot.com directly. Preconnect is dead weight. */}
       <link
         crossOrigin="anonymous"
         href="https://www.googletagmanager.com"
@@ -302,7 +298,10 @@ gtag('config', 'AW-18226423046');`}
           />
         </noscript>
         <NextTopLoader color="#DF3A38" showSpinner={false} />
-        <WeglotBoot />
+        {/* Weglot SDK removed 2026-09-02 — Weglot's reverse proxy now
+            injects the Weglot script server-side, so mounting a client
+            component here duplicated the init and caused React #418
+            hydration errors. Do NOT re-add WeglotBoot. */}
         <ClerkProvider
           signInFallbackRedirectUrl="/dashboard"
           signInUrl="/sign-in"
