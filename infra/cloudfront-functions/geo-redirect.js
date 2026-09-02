@@ -133,9 +133,39 @@ function isSupportedPrefixedLocale(value) {
   return false;
 }
 
+// CloudFront Functions JS 2.0 exposes `request.querystring` as an
+// object (`{ key: {value: "val", multiValue: [...] } }`), NOT a
+// string. An empty object is still truthy in JS, so the old
+// `if (querystring)` branch always fired and coerced the object to
+// the string "[object Object]" — producing ugly URLs like
+// `/de?[object+Object]`. Serialize explicitly to guarantee we only
+// append `?a=1&b=2` when there really are params.
+function serializeQuerystring(qs) {
+  if (!qs || typeof qs !== "object") return "";
+  var parts = [];
+  for (var key in qs) {
+    if (!Object.prototype.hasOwnProperty.call(qs, key)) continue;
+    var entry = qs[key];
+    if (entry && typeof entry.value === "string") {
+      parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(entry.value));
+    }
+    if (entry && Array.isArray(entry.multiValue)) {
+      for (var i = 0; i < entry.multiValue.length; i++) {
+        var mv = entry.multiValue[i];
+        if (mv && typeof mv.value === "string") {
+          parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(mv.value));
+        }
+      }
+    }
+  }
+
+  return parts.join("&");
+}
+
 function buildRedirectResponse(locale, uri, querystring) {
   var target = "/" + locale + (uri === "/" ? "" : uri);
-  if (querystring) target = target + "?" + querystring;
+  var qs = serializeQuerystring(querystring);
+  if (qs) target = target + "?" + qs;
 
   return {
     statusCode: 302,

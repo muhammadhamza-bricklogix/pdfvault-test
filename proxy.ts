@@ -275,7 +275,14 @@ function geoRedirect(req: NextRequest): NextResponse | null {
     );
   }
 
-  if (process.env.GEO_REDIRECT_ENABLED !== "on") return null;
+  // Kill switch inverted 2026-09-02: middleware geo-redirect now runs
+  // by default so client-side Next.js navigation (which bypasses the
+  // CloudFront Function on cached RSC prefetches) also gets the locale
+  // prefix applied when a `lang_pref` cookie is present. This is the
+  // fix for the bug where clicking a `<Link href="/edit">` from `/de`
+  // dropped the user back on the English page. To disable, set
+  // `GEO_REDIRECT_DISABLE=on` in the ECS task def.
+  if (process.env.GEO_REDIRECT_DISABLE === "on") return null;
 
   if (cookieLocale === DEFAULT_LOCALE) return null;
 
