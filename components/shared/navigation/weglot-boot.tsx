@@ -54,13 +54,18 @@ export function WeglotBoot() {
 
   if (!WEGLOT_API_KEY) return null;
 
-  // `lazyOnload` waits for window.onload (post-hydration), so Weglot
-  // never mutates the DOM during React hydration — this prevents the
-  // React #418 that hit us when both the proxy AND the SDK ran.
+  // `afterInteractive` emits the <script> in SSR HTML and executes it
+  // after Next.js hydrates. `lazyOnload` skips SSR entirely, so the
+  // Weglot script would never appear in the initial payload — Weglot
+  // then can't translate anything until whatever runtime injection
+  // Next.js decides to run. React #418 (the reason we previously
+  // preferred lazyOnload) only fires when Weglot's proxy ALSO injects
+  // the same script server-side; with the proxy no longer in front,
+  // the SDK is the ONLY loader and there's nothing to race against.
   return (
     <Script
       src="https://cdn.weglot.com/weglot.min.js"
-      strategy="lazyOnload"
+      strategy="afterInteractive"
       onLoad={initWeglotOnce}
     />
   );
