@@ -173,11 +173,18 @@ export function CookiePolicyContent() {
               expiry: "1 year",
             },
             {
-              name: "pdfvault:weglot-lang",
-              provider: "PDFVault (first-party, local storage)",
+              name: "lang_pref",
+              provider: "PDFVault (first-party)",
               purpose:
-                "Stores your selected language so the translation service can restore it across pages.",
-              expiry: "Until cleared",
+                "Remembers your language preference so the site loads in your chosen language on every visit.",
+              expiry: "12 months",
+            },
+            {
+              name: "wglang",
+              provider: "Weglot",
+              purpose:
+                "Stores the language Weglot serves so translations persist across pages.",
+              expiry: "1 year",
             },
             {
               name: "csrf",

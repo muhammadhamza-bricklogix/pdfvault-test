@@ -1,16 +1,21 @@
-/* eslint-disable no-console */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 
-import { WEGLOT_LANG_STORAGE_KEY } from "@/components/shared/navigation/weglot-loader";
+import {
+  buildLocaleHref,
+  persistLangPref,
+} from "@/components/shared/navigation/language-switcher";
+import {
+  DEFAULT_LOCALE,
+  type Locale,
+  parseLocalePrefix,
+} from "@/lib/shared/constants/locale-map";
 
-type LangCode = "en" | "es" | "ar" | "fr" | "de" | "pt";
+type Entry = { code: Locale; label: string; short: string };
 
-// Must match the `destinationLanguages` list in `weglot-loader.tsx` and
-// the hreflang alternates in `app/layout.tsx`. Order shown here is the
-// order the dropdown renders.
-const LANGUAGES: { code: LangCode; label: string; short: string }[] = [
+const LANGUAGES: Entry[] = [
   { code: "en", label: "English", short: "EN" },
   { code: "es", label: "Español", short: "ES" },
   { code: "fr", label: "Français", short: "FR" },
@@ -81,54 +86,25 @@ function CheckIcon() {
 }
 
 /**
- * Landing-page language switcher, wired to the Weglot global loaded by
- * `WeglotLoader`. Styled to match the PDFVault landing header (not the HeroUI
- * app switcher). Reflects the live Weglot language and switches via
- * `window.Weglot.switchTo`. Disabled until Weglot has initialised.
+ * Landing-page language switcher. Derives the current locale from the
+ * URL prefix (`/de/…`, `/fr/…`) and navigates to the equivalent URL
+ * under the chosen locale on click. Writes `lang_pref` so subsequent
+ * visits skip the geo redirect. Weglot's client SDK picks up the URL
+ * change and translates the DOM.
  */
 export function LandingLanguageSwitcher({
   variant = "desktop",
 }: {
   variant?: "desktop" | "mobile";
 }) {
-  const [currentLang, setCurrentLang] = useState<LangCode>("en");
-  const [ready, setReady] = useState(false);
+  const pathname = usePathname() ?? "/";
+  const activeLocale =
+    (parseLocalePrefix(pathname)?.locale as Locale | undefined) ??
+    DEFAULT_LOCALE;
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    console.log("[LandingLanguageSwitcher] mounting");
-
-    const onLangChange = (newLang: string) => {
-      console.log("[LandingLanguageSwitcher] languageChanged event:", newLang);
-      setCurrentLang((newLang as LangCode) ?? "en");
-    };
-    const init = () => {
-      const wgCurrent = window.Weglot?.getCurrentLang();
-
-      console.log(
-        "[LandingLanguageSwitcher] init — Weglot currentLang:",
-        wgCurrent,
-      );
-      setCurrentLang((wgCurrent as LangCode) ?? "en");
-      window.Weglot?.on("languageChanged", onLangChange);
-      setReady(true);
-    };
-
-    if (window.Weglot) {
-      init();
-    } else {
-      console.log(
-        "[LandingLanguageSwitcher] Weglot not ready — waiting for weglot:initialized",
-      );
-      window.addEventListener("weglot:initialized", init, { once: true });
-    }
-
-    return () => {
-      window.removeEventListener("weglot:initialized", init);
-      window.Weglot?.off("languageChanged", onLangChange);
-    };
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -151,30 +127,16 @@ export function LandingLanguageSwitcher({
     };
   }, [open]);
 
-  const current = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0];
+  const current =
+    LANGUAGES.find((lang) => lang.code === activeLocale) ?? LANGUAGES[0];
 
-  const select = (code: LangCode) => {
-    console.log("[LandingLanguageSwitcher] user selected language:", code);
-    // Belt-and-braces: persist to localStorage synchronously here in
-    // addition to the `languageChanged` listener in WeglotLoader. Some
-    // Weglot builds don't fire `languageChanged` when the target
-    // matches the current cookie, so relying on that alone can leave
-    // localStorage stale between page reloads.
-    try {
-      window.localStorage.setItem(WEGLOT_LANG_STORAGE_KEY, code);
-      console.log("[LandingLanguageSwitcher] wrote to localStorage:", code);
-    } catch (err) {
-      console.error(
-        "[LandingLanguageSwitcher] localStorage write failed:",
-        err,
-      );
-    }
-    console.log("[LandingLanguageSwitcher] calling Weglot.switchTo:", code);
-    window.Weglot?.switchTo(code);
-    // Reflect the picked code immediately in local state so the
-    // dropdown label updates even if Weglot's own event is delayed.
-    setCurrentLang(code);
+  const select = (code: Locale) => {
     setOpen(false);
+    if (code === activeLocale) return;
+    persistLangPref(code);
+    startTransition(() => {
+      router.push(buildLocaleHref(code, pathname));
+    });
   };
 
   return (
@@ -184,7 +146,7 @@ export function LandingLanguageSwitcher({
         aria-haspopup="menu"
         aria-label="Select language"
         className="flex items-center gap-1.5 text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)] disabled:opacity-50"
-        disabled={!ready}
+        disabled={pending}
         type="button"
         onClick={() => setOpen((value) => !value)}
       >
@@ -202,18 +164,18 @@ export function LandingLanguageSwitcher({
           {LANGUAGES.map((lang) => (
             <button
               key={lang.code}
-              aria-checked={lang.code === currentLang}
+              aria-checked={lang.code === activeLocale}
               className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-[14px] text-[var(--pv-text-primary)] transition-colors hover:bg-[var(--pv-section-gray)] focus-visible:bg-[var(--pv-section-gray)] focus-visible:outline-none"
               role="menuitemradio"
               type="button"
               onClick={() => select(lang.code)}
             >
               <span
-                className={lang.code === currentLang ? "font-semibold" : ""}
+                className={lang.code === activeLocale ? "font-semibold" : ""}
               >
                 {lang.label}
               </span>
-              {lang.code === currentLang ? <CheckIcon /> : null}
+              {lang.code === activeLocale ? <CheckIcon /> : null}
             </button>
           ))}
         </div>

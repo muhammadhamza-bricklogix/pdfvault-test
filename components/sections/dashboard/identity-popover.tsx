@@ -132,14 +132,19 @@ export function IdentityPopover({
             <p className="text-sm font-semibold text-[var(--color-foreground)]">
               Profile Details
             </p>
-            {fullName !== "User" ? (
-              <p className="mt-0.5 truncate text-xs text-default-700">
-                {fullName}
-              </p>
-            ) : null}
-            {email ? (
-              <p className="truncate text-xs text-default-500">{email}</p>
-            ) : null}
+            {/* data-wg-notranslate: name + email are PII. See
+                infra/cloudfront-weglot-proxy.md for why Weglot's Reverse
+                Proxy must skip these nodes. */}
+            <div data-wg-notranslate>
+              {fullName !== "User" ? (
+                <p className="mt-0.5 truncate text-xs text-default-700">
+                  {fullName}
+                </p>
+              ) : null}
+              {email ? (
+                <p className="truncate text-xs text-default-500">{email}</p>
+              ) : null}
+            </div>
           </div>
 
           <ListBox

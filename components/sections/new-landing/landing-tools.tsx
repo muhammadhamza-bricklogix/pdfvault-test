@@ -1,9 +1,8 @@
-/* eslint-disable no-console */
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -354,90 +353,6 @@ export function LandingTools() {
   };
 
   const visibleTools = TOOLS.filter((tool) => tool.tabs.includes(activeTab));
-
-  // The tab list is re-mounted (`key={activeTab}` on the cards below),
-  // so Weglot needs to walk the fresh DOM to translate the newly-rendered
-  // tool cards. Its own MutationObserver misses the swap because React
-  // commits the whole subtree in one frame and Weglot short-circuits
-  // `switchTo(currentLang)` when target == current (no work to do).
-  //
-  // Trick: call `Weglot.search()` when available (modern builds); it
-  // walks the DOM for untranslated nodes. On older bundles fall back to
-  // a two-step `switchTo("en") → switchTo(current)` which forces a full
-  // re-translation cycle. The two-step causes a brief English flash so
-  // the `search()` path is preferred.
-  useEffect(() => {
-    console.log("[LandingTools] activeTab changed:", activeTab);
-
-    const translateVisibleTab = () => {
-      const w = window.Weglot;
-      const current = w?.getCurrentLang();
-
-      console.log(
-        "[LandingTools] translateVisibleTab — Weglot present?",
-        !!w,
-        "currentLang:",
-        current,
-      );
-
-      if (!w || !current || current === "en") {
-        console.log(
-          "[LandingTools] Skipping translation — Weglot missing, no current lang, or English",
-        );
-
-        return;
-      }
-
-      const runScan = (delayLabel: string) => {
-        console.log(
-          "[LandingTools] Rescanning DOM (",
-          delayLabel,
-          ") for lang:",
-          current,
-          "search available?",
-          typeof w.search === "function",
-        );
-        if (typeof w.search === "function") {
-          w.search();
-        } else {
-          console.log(
-            "[LandingTools] Falling back to switchTo(en) -> switchTo(",
-            current,
-            ")",
-          );
-          w.switchTo("en");
-          w.switchTo(current);
-        }
-      };
-
-      // Run an immediate scan plus delayed scans. React may insert the
-      // new tab content across a few frames, and Weglot's MutationObserver
-      // sometimes misses nodes that land after the first scan.
-      const timeouts = [0, 50, 150, 350].map((delay) =>
-        window.setTimeout(() => runScan(`${delay}ms`), delay),
-      );
-
-      return () => {
-        timeouts.forEach((id) => window.clearTimeout(id));
-      };
-    };
-
-    if (window.Weglot) {
-      return translateVisibleTab();
-    }
-
-    // Weglot may still be loading when the component mounts or when a tab
-    // is clicked. Wait for initialization, then translate the currently
-    // visible panel.
-    console.log(
-      "[LandingTools] Weglot not ready — waiting for weglot:initialized",
-    );
-    const onInit = () => translateVisibleTab();
-
-    window.addEventListener("weglot:initialized", onInit, { once: true });
-
-    return () => window.removeEventListener("weglot:initialized", onInit);
-  }, [activeTab]);
 
   return (
     <section

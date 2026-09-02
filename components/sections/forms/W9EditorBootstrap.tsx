@@ -163,69 +163,66 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     // and rehydrate the last-saved values + signature preview from
     // its `editorState.w9` marker — same restore as the explicit
     // resume path, just triggered implicitly.
-    const autoResumePromise =
-      resumeDocId
-        ? Promise.resolve()
-        : (async () => {
-            try {
-              const existing = await findDuplicateByFilename(
-                W9_LIBRARY_FILENAME,
-              );
+    const autoResumePromise = resumeDocId
+      ? Promise.resolve()
+      : (async () => {
+          try {
+            const existing = await findDuplicateByFilename(W9_LIBRARY_FILENAME);
 
-              if (cancelled || !existing) return;
+            if (cancelled || !existing) return;
 
-              const doc = await documentsService.getDocument(existing.id);
+            const doc = await documentsService.getDocument(existing.id);
 
-              if (cancelled) return;
+            if (cancelled) return;
 
-              type ResumeEnvelope = {
-                w9?: {
-                  values?: Record<string, string>;
-                  signaturePreview?: string | null;
-                };
+            type ResumeEnvelope = {
+              w9?: {
+                values?: Record<string, string>;
+                signaturePreview?: string | null;
               };
-              let parsed: ResumeEnvelope | null = null;
+            };
+            let parsed: ResumeEnvelope | null = null;
 
-              if (doc.editorState) {
-                try {
-                  parsed = JSON.parse(doc.editorState) as ResumeEnvelope;
-                } catch {
-                  parsed = null;
-                }
+            if (doc.editorState) {
+              try {
+                parsed = JSON.parse(doc.editorState) as ResumeEnvelope;
+              } catch {
+                parsed = null;
               }
-
-              // Only adopt the row when the `editorState.w9` marker
-              // is present — that's the signal it was written by the
-              // W-9 flow, not an unrelated PDF a user happened to
-              // name "IRS Form W-9.pdf". Without the marker, leave
-              // the row alone; first save creates a fresh W-9 row
-              // through the normal path.
-              if (!parsed?.w9) return;
-
-              usePdfEditorStore.getState().setCurrentDocument({
-                id: doc.id,
-                name: doc.filename,
-              });
-
-              if (parsed.w9.values && typeof parsed.w9.values === "object") {
-                useFormEditorStore.getState().setValues(parsed.w9.values);
-              }
-              if (
-                parsed.w9.signaturePreview &&
-                typeof parsed.w9.signaturePreview === "string"
-              ) {
-                useFormEditorStore
-                  .getState()
-                  .setSignaturePreview(parsed.w9.signaturePreview);
-              }
-            } catch (err) {
-              // Non-fatal — a flaky list call shouldn't block the
-              // template opening. Fresh session still works; worst
-              // case the first save creates a new row (which the
-              // NEXT open will then find + adopt).
-              logger.captureError(err, "w9.auto_resume_from_library");
             }
-          })();
+
+            // Only adopt the row when the `editorState.w9` marker
+            // is present — that's the signal it was written by the
+            // W-9 flow, not an unrelated PDF a user happened to
+            // name "IRS Form W-9.pdf". Without the marker, leave
+            // the row alone; first save creates a fresh W-9 row
+            // through the normal path.
+            if (!parsed?.w9) return;
+
+            usePdfEditorStore.getState().setCurrentDocument({
+              id: doc.id,
+              name: doc.filename,
+            });
+
+            if (parsed.w9.values && typeof parsed.w9.values === "object") {
+              useFormEditorStore.getState().setValues(parsed.w9.values);
+            }
+            if (
+              parsed.w9.signaturePreview &&
+              typeof parsed.w9.signaturePreview === "string"
+            ) {
+              useFormEditorStore
+                .getState()
+                .setSignaturePreview(parsed.w9.signaturePreview);
+            }
+          } catch (err) {
+            // Non-fatal — a flaky list call shouldn't block the
+            // template opening. Fresh session still works; worst
+            // case the first save creates a new row (which the
+            // NEXT open will then find + adopt).
+            logger.captureError(err, "w9.auto_resume_from_library");
+          }
+        })();
 
     const resumePromise = resumeDocId
       ? (async () => {

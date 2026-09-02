@@ -1,0 +1,92 @@
+{
+  "_comment": "Reference: Weglot Reverse Proxy origin + per-locale cache behaviors. Applied via cloudfront-add-weglot-proxy.sh; do NOT paste this JSON directly into aws cloudfront update-distribution.",
+  "_routing_model": "Option 1 — public-only. Authenticated + PII-sensitive routes stay on ALB. See cloudfront-weglot-proxy.md for the full rationale.",
+
+  "origin": {
+    "Id": "weglot-proxy",
+    "DomainName": "REPLACE_WITH_WEGLOT_ORIGIN_DOMAIN",
+    "OriginPath": "",
+    "CustomOriginConfig": {
+      "HTTPSPort": 443,
+      "HTTPPort": 80,
+      "OriginProtocolPolicy": "https-only",
+      "OriginSslProtocols": {
+        "Quantity": 1,
+        "Items": ["TLSv1.2"]
+      },
+      "OriginReadTimeout": 30,
+      "OriginKeepaliveTimeout": 30
+    },
+    "CustomHeaders": {
+      "Quantity": 2,
+      "Items": [
+        {
+          "HeaderName": "X-Weglot-Key",
+          "HeaderValue": "REPLACE_WITH_WEGLOT_API_KEY"
+        },
+        {
+          "HeaderName": "Host",
+          "HeaderValue": "REPLACE_WITH_ORIGIN_HOST_HEADER"
+        }
+      ]
+    }
+  },
+
+  "alb_first_pattern_suffixes": [
+    "dashboard*",
+    "pdf-composer*",
+    "pdf-editor*",
+    "w-9-form*",
+    "w9-form*",
+    "forms/*",
+    "share/*"
+  ],
+
+  "weglot_catchall_suffix": "*",
+
+  "locales": ["de", "fr", "es", "pt", "ar"],
+
+  "cache_behavior_templates": {
+    "alb_first": {
+      "TargetOriginId": "pdfvault-alb",
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "Compress": true,
+      "AllowedMethods": {
+        "Quantity": 7,
+        "Items": ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"],
+        "CachedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]}
+      },
+      "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+      "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+      "_note": "CachingDisabled + AllViewer origin request policy — same shape as the existing /api/* and /share/* behaviors so Clerk session cookies + query strings pass unchanged."
+    },
+    "weglot_catchall": {
+      "TargetOriginId": "weglot-proxy",
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "Compress": true,
+      "AllowedMethods": {
+        "Quantity": 3,
+        "Items": ["GET", "HEAD", "OPTIONS"],
+        "CachedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]}
+      },
+      "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+      "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+      "_note": "CachingDisabled during rollout; swap to CachingOptimized once Weglot cache invalidation behavior is confirmed."
+    }
+  },
+
+  "_expected_behaviors_added": {
+    "alb_first": "7 suffixes × 5 locales = 35",
+    "weglot_catchall": "1 × 5 locales = 5",
+    "total": 40
+  },
+
+  "_ordering_note": "For each locale, ALB-first behaviors MUST precede the Weglot catchall in the CacheBehaviors.Items array. CloudFront picks the first matching PathPattern in array order.",
+
+  "_notes": [
+    "Origin request policy: AllViewer (b689b0a8-53d0-40ab-baf2-68738e2966ac) forwards viewer cookies including Clerk session tokens. The proxy passes them straight to our ALB origin so /{locale}/dashboard etc. auth flows work.",
+    "The Weglot dashboard 'External Provider' mode is required — if left on 'Weglot managed hosting', Weglot expects apex DNS control and the CloudFront path routing won't reach their proxy.",
+    "If translations return English on /de/edit, check the X-Weglot-Key header value in the CloudFront origin config matches the NEXT_PUBLIC_WEGLOT_API_KEY exactly (case-sensitive).",
+    "AWS CloudFront's default quota is 25 cache behaviors per distribution; this config lands at ~46 total. Request quota increase to 100 before applying (see runbook)."
+  ]
+}

@@ -13,6 +13,12 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Pin off trailing slashes so hreflang, canonical, sitemap, the
+  // CloudFront Function, and the middleware all agree on one form.
+  // Any trailing-slash flip must happen here — do not paper over it
+  // in individual routes.
+  trailingSlash: false,
+
   // Produces a self-contained `.next/standalone` server folder that copies in
   // only the node_modules actually referenced at runtime — the image we ship
   // to ECS Fargate is ~10x smaller than a full node_modules copy.
