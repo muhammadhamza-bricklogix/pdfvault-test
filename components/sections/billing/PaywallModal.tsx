@@ -850,6 +850,13 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // 2026-09-03 (PM): the Solidgate card form starts COLLAPSED behind
+  // a grey "Pay with card" button. Clicking expands the iframe below.
+  // `<PaymentForm>` itself stays mounted whether expanded or not
+  // (it's what mounts Apple Pay / Google Pay into the detached refs
+  // above), so we hide the card iframe wrapper via `hidden` rather
+  // than conditionally rendering the whole PaymentForm.
+  const [cardExpanded, setCardExpanded] = useState(false);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -893,14 +900,26 @@ function PayStep({
               ref={googlePayContainerRef}
               className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
             />
-            {/* Card section header — shows the user we accept every
-                major brand before they start typing (parity with the
-                PDF Guru download flow). */}
-            <PayWithCardHeader />
+            {/* Card section header — grey collapse toggle. Shows the
+                supported card brands so users know their card will
+                work before expanding (parity with PDF Guru). */}
+            <PayWithCardHeader
+              expanded={cardExpanded}
+              onToggle={() => setCardExpanded((v) => !v)}
+            />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
                 remounts — declined intents are terminal on Solidgate's side
-                and won't accept a second attempt on the same key. */}
-            <div className="rounded-xl">
+                and won't accept a second attempt on the same key.
+
+                Wrapper stays mounted whether the section is expanded
+                or not — `hidden` just toggles visibility. Unmounting
+                <PaymentForm> here would tear down the Apple Pay /
+                Google Pay containers along with the card iframe. */}
+            <div
+              className="rounded-xl"
+              hidden={!cardExpanded}
+              id="paywall-card-form"
+            >
               <PaymentForm
                 key={retryKey}
                 applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
@@ -1637,30 +1656,41 @@ const ACCEPTED_CARD_BRANDS = [
 ] as const;
 
 /**
- * "Pay with card" section header rendered above the Solidgate iframe.
- * Left side reads "Pay with card", right side shows a horizontal row
- * of every card brand we accept so users know their card will work
- * before they start typing. Matches the PDF Guru download flow.
+ * "Pay with card" section header — a grey collapse button that shows
+ * the supported card brands on the right, matching PDF Guru's
+ * express-checkout list. Click toggles the Solidgate card iframe
+ * below it (the iframe stays mounted — parent `PayStep` uses the
+ * `hidden` attribute so the wallet containers keep working).
  */
-function PayWithCardHeader() {
+function PayWithCardHeader({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <p className="text-[13px] font-semibold uppercase tracking-wide text-[#1a1c21]">
-        Pay with card
-      </p>
-      <div className="flex items-center gap-1.5">
+    <button
+      aria-controls="paywall-card-form"
+      aria-expanded={expanded}
+      className="flex w-full items-center justify-between gap-3 rounded-xl bg-[#575759] px-4 py-3 text-left transition-colors hover:bg-[#4a4a4c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)]"
+      type="button"
+      onClick={onToggle}
+    >
+      <span className="text-[15px] font-semibold text-white">Pay with card</span>
+      <span className="flex items-center gap-1.5">
         {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
           <span
             key={label}
             aria-label={label}
-            className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-md border border-[#ececec] bg-white px-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+            className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-md border border-white/20 bg-white px-1.5"
             role="img"
           >
             <Mark />
           </span>
         ))}
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }
 
