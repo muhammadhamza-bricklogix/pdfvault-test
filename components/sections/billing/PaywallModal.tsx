@@ -65,17 +65,15 @@ const CREAM_CARD = "#fef5f1";
 // key; without it the button silently never mounts even after the
 // Apple domain is verified.
 //
-// Apple Pay `type` is "subscribe" instead of "plain" so the button
-// renders "Subscribe with " — matches the paywall's actual
-// intent (recurring plan checkout) and reads as a call-to-action
-// rather than a bare logo tile. Google Pay uses the equivalent
-// `subscribe` type so the button reads "Subscribe with G Pay"
-// (Google Pay brand guidelines: use CreateButton's `buttonType`
-// that matches merchant intent — https://developers.google.com/pay/api/web/guides/brand-guidelines#payment-buttons).
+// Google + Apple Pay both render the bare brand tile (2026-09-03
+// PM ask: match PDF Guru's checkout — no "Subscribe with" prefix).
+// Google Pay `type: "plain"` shows just "G Pay" (plus a linked
+// card indicator when Google Pay auto-detects one). Apple Pay
+// stays on `type: "plain"` for the same "Pay" glyph-only render.
 const GOOGLE_PAY_BUTTON_PARAMS = {
   enabled: true,
   color: "black",
-  type: "subscribe",
+  type: "plain",
 } as const;
 const APPLE_PAY_BUTTON_PARAMS = {
   enabled: true,
