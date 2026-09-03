@@ -17,7 +17,7 @@
 // to true after Phase 2 QA. The Node unit-test harness overrides it
 // via `module.exports._internal.setEnabled(true)` — see
 // `tests/geo/locale-decision.spec.ts`.
-var GEO_REDIRECT_ENABLED = true;
+var GEO_REDIRECT_ENABLED = false;
 
 var DEFAULT_LOCALE = "en";
 

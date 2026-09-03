@@ -205,7 +205,16 @@ function isGeoRedirectExempt(pathname: string): boolean {
  * reverse proxy doesn't cache the redirect — each visitor's decision
  * must be evaluated per-request against their own cookie + geo.
  */
+// 2026-09-02 (evening): geo-IP redirect paused per client request.
+// Site defaults to English in every region; users pick language via
+// the dropdown in the navbar. To re-enable, flip `GEO_REDIRECT_PAUSED`
+// to false AND set `GEO_REDIRECT_ENABLED = true` in the CloudFront
+// Function at infra/cloudfront-functions/geo-redirect.js.
+const GEO_REDIRECT_PAUSED = true;
+
 function geoRedirect(req: NextRequest): NextResponse | null {
+  if (GEO_REDIRECT_PAUSED) return null;
+
   const pathname = req.nextUrl.pathname;
 
   // Explicit locale in URL always wins — never redirect a
