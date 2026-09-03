@@ -97,18 +97,17 @@ export const COUNTRY_TO_LOCALE: Record<string, Locale> = {
   AO: "pt",
   MZ: "pt",
 
-  // Arabic (Gulf) — MAPPED TO EN AT LAUNCH per RTL sign-off gate.
-  // Swap back to "ar" after Arabic RTL audit passes.
-  SA: "en",
-  AE: "en",
-  EG: "en",
-  JO: "en",
-  KW: "en",
-  QA: "en",
-  BH: "en",
-  OM: "en",
-  IQ: "en",
-  LB: "en",
+  // Arabic (Gulf).
+  SA: "ar",
+  AE: "ar",
+  EG: "ar",
+  JO: "ar",
+  KW: "ar",
+  QA: "ar",
+  BH: "ar",
+  OM: "ar",
+  IQ: "ar",
+  LB: "ar",
 
   // MA / DZ / TN — pending product decision (AR vs FR). Default EN.
 };

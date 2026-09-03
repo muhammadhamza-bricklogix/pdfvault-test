@@ -166,16 +166,16 @@ function isGeoRedirectExempt(pathname: string): boolean {
     return true;
   }
 
-  // Authenticated content — user PII must not be geo-redirected. These
-  // routes serve the user's own file library, editor content, tax
-  // forms, or private share tokens.
-  if (pathname.startsWith("/dashboard")) return true;
-  if (pathname.startsWith("/pdf-composer")) return true;
-  if (pathname.startsWith("/pdf-editor")) return true;
-  if (pathname.startsWith("/w-9-form")) return true;
-  if (pathname.startsWith("/w9-form")) return true;
-  if (pathname.startsWith("/forms/")) return true;
-  if (pathname.startsWith("/share/")) return true;
+  // 2026-09-02: `/dashboard`, `/pdf-composer`, `/pdf-editor`,
+  // `/w-9-form`, `/w9-form`, `/forms/`, `/share/` were previously
+  // exempt to keep user PII (filenames, SSN, share tokens) out of
+  // Weglot's server-side Reverse Proxy. In Phase A we translate
+  // client-side via the Weglot SDK, so PII never leaves the browser
+  // and geo-redirect is safe. When Phase B (CloudFront Reverse Proxy)
+  // ships, re-add these prefixes to `EXEMPT_PATH_PREFIXES` here AND
+  // in `infra/cloudfront-functions/geo-redirect.js` — the routing
+  // model there is "public locales through Weglot, PII stays on ALB",
+  // so those paths must be locale-aware but never proxied.
 
   return false;
 }
