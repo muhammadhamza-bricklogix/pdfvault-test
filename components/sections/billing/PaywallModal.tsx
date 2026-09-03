@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { SiAmericanexpress, SiVisa } from "react-icons/si";
+import { SiAmericanexpress, SiJcb, SiVisa } from "react-icons/si";
 
 import {
   generateReceiptPdf,
@@ -617,11 +617,7 @@ function PlanStep({
       <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
         <div className="flex flex-col gap-1">
           <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            {hidePreview
-              ? "Choose a plan to unlock full access and download your documents immediately"
-              : preview
-                ? "Choose a plan to unlock full access and download your documents immediately"
-                : "Choose a plan to unlock full access and download your documents immediately"}
+            Your PDF is ready.
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
             Cancel anytime · Secure checkout · Instant access
@@ -686,8 +682,8 @@ function PlanStep({
                 </span>
                 <PreviewFileCard preview={preview} />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                  Subscribe below to download the converted file instantly and
-                  keep unlimited access to every PDFVault tool.
+                  Download this file instantly for {fullAccessPrice}. Cancel
+                  anytime.
                 </p>
               </>
             ) : (
@@ -705,8 +701,8 @@ function PlanStep({
                 </span>
                 <GenericPreviewCard />
                 <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                  Subscribe below to download instantly and keep unlimited
-                  access to every PDFVault tool.
+                  Download this file instantly for {fullAccessPrice}. Cancel
+                  anytime.
                 </p>
               </>
             )}
@@ -734,28 +730,28 @@ function PlanStep({
           and cancellation paths. */}
       <div className="border-t border-[#ececec] px-6 py-5 md:px-8">
         {selectedPlan === "monthly" ? (
-          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
             You are enrolling in a monthly subscription to pdfvault.ai.
             You&apos;ll be charged {fullAccessPrice} today for a 7-day trial,
             then {formatMinor(monthly.amountRenewMinor, monthly.currency)} per
             month until you cancel. Payments will be charged from the card you
             specified below. To cancel, visit your{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/dashboard/settings/billing"
             >
               account settings
             </a>
             , see our{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/subscription-terms"
             >
               Subscription Terms
             </a>
             , or email{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
@@ -763,28 +759,28 @@ function PlanStep({
             .
           </p>
         ) : (
-          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
             You are enrolling in an annual subscription to pdfvault.ai. You
             agree to be billed{" "}
             {formatMinor(annual.amountRenewMinor, annual.currency)} per year
             until you cancel. Payments will be charged from the card you
             specified below. To cancel, visit your{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/dashboard/settings/billing"
             >
               account settings
             </a>
             , see our{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/subscription-terms"
             >
               Subscription Terms
             </a>
             , or email{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
@@ -793,17 +789,17 @@ function PlanStep({
           </p>
         )}
 
-        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
           Charged in {intent.currency}. See our{" "}
           <a
-            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
             href="/terms-and-conditions"
           >
             Terms and Conditions
           </a>{" "}
           for details. We provide refunds in accordance with our{" "}
           <a
-            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
             href="/refund-policy"
           >
             Refund Policy
@@ -899,6 +895,10 @@ function PayStep({
               ref={googlePayContainerRef}
               className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
             />
+            {/* Card section header — shows the user we accept every
+                major brand before they start typing (parity with the
+                PDF Guru download flow). */}
+            <PayWithCardHeader />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
                 remounts — declined intents are terminal on Solidgate's side
                 and won't accept a second attempt on the same key. */}
@@ -965,21 +965,21 @@ function PayStep({
           </div>
 
           {/* Legal small-print */}
-          <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="text-[11px] leading-relaxed text-[#8a8a8a]">
             By continuing you agree to be charged{" "}
             {selectedPlan === "annual"
               ? `${todayDisplay} every 365 days`
               : `${todayDisplay} today for a 7-day trial, then ${renewDisplay} per month`}{" "}
             unless cancelled. See our{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/terms-and-conditions"
             >
               Subscription
             </a>{" "}
             &amp;{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/refund-policy"
             >
               Refund
@@ -1001,6 +1001,18 @@ function PayStep({
         className="flex flex-col gap-3 p-6 md:p-8"
         style={{ backgroundColor: CREAM }}
       >
+        {/* "Your document is ready!" pill — mirrors the PDF Guru
+            payment-details screen so the user sees a positive
+            reinforcement message above the invoice preview. */}
+        <div className="flex items-center gap-2 rounded-xl bg-[#e8f5e9] px-4 py-3 text-[14px] font-semibold text-[#1a4d1e]">
+          <span
+            aria-hidden
+            className="inline-flex size-5 items-center justify-center rounded-full bg-[#2e7d32] text-white"
+          >
+            <HugeiconsIcon icon={Tick01Icon} size={12} strokeWidth={3} />
+          </span>
+          Your document is ready!
+        </div>
         {preview ? (
           <PreviewFileCard preview={preview} />
         ) : (
@@ -1024,15 +1036,21 @@ function PayStep({
           <p className="mt-0.5 text-[12px] text-[#6c6c6c]">
             {selectedPlan === "annual" ? "Billed annually" : "Due today"}
           </p>
-          <div className="my-4 h-px bg-[#ececec]" />
-          <div className="flex items-baseline justify-between">
-            <p className="text-[13px] text-[#5c5c5c]">
-              {selectedPlan === "annual" ? "Renews yearly" : "Renews monthly"}
-            </p>
-            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {renewDisplay} {selectedPlan === "annual" ? "/ year" : "/ month"}
-            </p>
-          </div>
+          {/* Renew reminder only for the annual plan. 7-day trial card
+              intentionally reads plan / price / "Due today" only
+              (2026-09-03 PM ask — the auto-renew wording lives in
+              the legal small-print below the form). */}
+          {selectedPlan === "annual" ? (
+            <>
+              <div className="my-4 h-px bg-[#ececec]" />
+              <div className="flex items-baseline justify-between">
+                <p className="text-[13px] text-[#5c5c5c]">Renews yearly</p>
+                <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
+                  {renewDisplay} / year
+                </p>
+              </div>
+            </>
+          ) : null}
         </div>
 
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
@@ -1577,6 +1595,27 @@ function MastercardMark() {
   );
 }
 
+// Maestro also uses a two-circle mark (blue + red). Simple Icons dropped
+// its Maestro glyph, so inline the brand mark directly.
+function MaestroMark() {
+  return (
+    <svg
+      aria-hidden
+      className="h-4 w-auto"
+      viewBox="0 0 40 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Maestro</title>
+      <circle cx="15" cy="12" fill="#0099DF" r="7" />
+      <circle cx="25" cy="12" fill="#EB001B" r="7" />
+      <path
+        d="M20 6.5c1.72 1.29 2.83 3.35 2.83 5.5s-1.11 4.21-2.83 5.5c-1.72-1.29-2.83-3.35-2.83-5.5s1.11-4.21 2.83-5.5z"
+        fill="#6C6BBD"
+      />
+    </svg>
+  );
+}
+
 const ACCEPTED_CARD_BRANDS = [
   {
     Mark: () => (
@@ -1590,6 +1629,7 @@ const ACCEPTED_CARD_BRANDS = [
     label: "Visa",
   },
   { Mark: MastercardMark, label: "Mastercard" },
+  { Mark: MaestroMark, label: "Maestro" },
   {
     Mark: () => (
       <SiAmericanexpress
@@ -1601,7 +1641,46 @@ const ACCEPTED_CARD_BRANDS = [
     ),
     label: "American Express",
   },
+  {
+    Mark: () => (
+      <SiJcb
+        aria-hidden
+        className="h-4 w-auto"
+        style={{ color: "#0E4C96" }}
+        title="JCB"
+      />
+    ),
+    label: "JCB",
+  },
 ] as const;
+
+/**
+ * "Pay with card" section header rendered above the Solidgate iframe.
+ * Left side reads "Pay with card", right side shows a horizontal row
+ * of every card brand we accept so users know their card will work
+ * before they start typing. Matches the PDF Guru download flow.
+ */
+function PayWithCardHeader() {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wide text-[#1a1c21]">
+        Pay with card
+      </p>
+      <div className="flex items-center gap-1.5">
+        {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
+          <span
+            key={label}
+            aria-label={label}
+            className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-md border border-[#ececec] bg-white px-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+            role="img"
+          >
+            <Mark />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function AcceptedCards() {
   return (
