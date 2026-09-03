@@ -228,6 +228,7 @@ export default async function RootLayout({
       {/* DNS prefetch only — Solidgate payment iframe is deep in the
           paywall flow, not needed at landing time. */}
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
+      <link href="https://www.clarity.ms" rel="dns-prefetch" />
 
       {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
       <Script
@@ -292,6 +293,14 @@ gtag('config', 'AW-18226423046');`}
             }}
           />
         ) : null}
+        {/* Microsoft Clarity — user-behaviour analytics. Raw inline in
+            <head> for parity with GTM/Trustpilot so the snippet ships in
+            the SSR HTML (Clarity's setup checker inspects source). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ych70e11tb");`,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         {/* Google Tag Manager (noscript) */}
