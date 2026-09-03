@@ -68,10 +68,18 @@
   margin-top: 8px;
   color: var(--pv-text-secondary);
 }
+/* Legal-page prose links — neutral grey (2026-09-03 PM ask: legal
+   links across the app should not read as brand-red). Underline
+   stays as the affordance. Hover deepens the shade so the click
+   target still has feedback. */
 .pv-policy-prose a {
-  color: var(--pv-brand-primary);
+  color: #5c5c5c;
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color 120ms ease-out;
+}
+.pv-policy-prose a:hover {
+  color: #1a1c21;
 }
 .pv-policy-prose strong {
   color: #121212;
