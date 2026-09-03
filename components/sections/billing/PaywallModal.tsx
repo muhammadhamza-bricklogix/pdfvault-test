@@ -968,7 +968,6 @@ function PayStep({
               <Feature>Unlimited downloads</Feature>
               <Feature>Unlimited edits</Feature>
               <Feature>Convert to any format</Feature>
-              <Feature>Full access to 30+ tools</Feature>
               <Feature>Password-protect your documents</Feature>
             </ul>
           </div>
