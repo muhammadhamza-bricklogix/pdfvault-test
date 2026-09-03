@@ -679,10 +679,6 @@ function PlanStep({
                   Your document is ready to download
                 </span>
                 <PreviewFileCard preview={preview} />
-                <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                  Download this file instantly for {fullAccessPrice}. Cancel
-                  anytime.
-                </p>
               </>
             ) : (
               <>
@@ -698,10 +694,6 @@ function PlanStep({
                   Your document is ready to download
                 </span>
                 <GenericPreviewCard />
-                <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                  Download this file instantly for {fullAccessPrice}. Cancel
-                  anytime.
-                </p>
               </>
             )}
           </div>
