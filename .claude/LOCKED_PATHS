@@ -71,7 +71,10 @@ app/(marketing)/(site)/w9-form/**
 # See CLAUDE.md "Auth + paywall + export flow" for the full list + WHY.
 components/shared/pending-editor-file-hydrator.tsx
 components/shared/sign-in-prompt-modal.tsx
-components/sections/billing/PaywallModal.tsx
+# Temporarily unlocked 2026-09-03 for pay-step copy trims
+# (plan-name label + order-summary flattening on 7-day trial).
+# User reviewing manually — do NOT commit until they OK.
+# components/sections/billing/PaywallModal.tsx
 components/sections/billing/PaywallProvider.tsx
 lib/client/hooks/billing/use-paywall.ts
 lib/client/hooks/billing/ensure-entitlement.ts

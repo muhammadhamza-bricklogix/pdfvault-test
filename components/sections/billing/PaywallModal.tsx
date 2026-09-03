@@ -951,7 +951,7 @@ function PayStep({
           {/* Plan features */}
           <div className="flex flex-col gap-3">
             <p className="text-[12px] font-bold uppercase tracking-widest text-[#1a1c21]">
-              {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
+              {selectedPlan === "annual" ? "Annual Access" : "7-Day Access"}
             </p>
             <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
               <Feature>Unlimited downloads</Feature>
@@ -1017,38 +1017,21 @@ function PayStep({
           <GenericPreviewCard />
         )}
 
-        {/* Order summary card */}
+        {/* Order summary card — flattened per 2026-09-03 PM ask. Only
+            the "TOTAL DUE TODAY / <price>" line renders now; the plan
+            title, "Due today" / "Billed annually" subtitle, and
+            "Renews yearly / monthly" row are all dropped. The
+            auto-renew wording still lives in the legal small-print
+            below the form. */}
         <div className="rounded-2xl bg-white p-5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-                {selectedPlan === "annual" ? "Annual Plan" : "7-day trial"}
-              </p>
-            </div>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="pv-heading text-[13px] font-bold uppercase tracking-wide text-[#1a1c21]">
+              Total due today
+            </p>
             <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual"
-                ? `${formatMinor(Math.round(intent.amountRenewMinor / 12), intent.currency)} / month`
-                : todayDisplay}
+              {todayDisplay}
             </p>
           </div>
-          <p className="mt-0.5 text-[12px] text-[#6c6c6c]">
-            {selectedPlan === "annual" ? "Billed annually" : "Due today"}
-          </p>
-          {/* Renew reminder only for the annual plan. 7-day trial card
-              intentionally reads plan / price / "Due today" only
-              (2026-09-03 PM ask — the auto-renew wording lives in
-              the legal small-print below the form). */}
-          {selectedPlan === "annual" ? (
-            <>
-              <div className="my-4 h-px bg-[#ececec]" />
-              <div className="flex items-baseline justify-between">
-                <p className="text-[13px] text-[#5c5c5c]">Renews yearly</p>
-                <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-                  {renewDisplay} / year
-                </p>
-              </div>
-            </>
-          ) : null}
         </div>
 
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
