@@ -361,7 +361,7 @@ export function EmailFirstModal() {
                 <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
                   By creating an account, you agree to our{" "}
                   <Link
-                    className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+                    className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
                     href={ROUTES.LEGAL.TERMS}
                     target="_blank"
                   >
@@ -369,7 +369,7 @@ export function EmailFirstModal() {
                   </Link>{" "}
                   and{" "}
                   <Link
-                    className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+                    className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
                     href={ROUTES.LEGAL.PRIVACY}
                     target="_blank"
                   >

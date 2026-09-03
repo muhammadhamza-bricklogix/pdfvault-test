@@ -115,7 +115,7 @@ const GROUPS: FaqGroup[] = [
           <>
             You can cancel anytime in your account settings, or by emailing{" "}
             <a
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
@@ -144,7 +144,7 @@ const GROUPS: FaqGroup[] = [
             unauthorized charges. EU, EEA, and UK residents also have a 14-day
             right of withdrawal. See our{" "}
             <Link
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href={ROUTES.LEGAL.REFUND}
             >
               Refund Policy
@@ -160,7 +160,7 @@ const GROUPS: FaqGroup[] = [
             You have 14 days from the date you subscribe to withdraw from the
             contract without giving a reason, by emailing{" "}
             <a
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
@@ -193,7 +193,7 @@ const GROUPS: FaqGroup[] = [
           <>
             No. We do not sell your personal data. See our{" "}
             <Link
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href={ROUTES.LEGAL.PRIVACY}
             >
               Privacy Policy
@@ -218,14 +218,14 @@ const GROUPS: FaqGroup[] = [
           <>
             Contact us at{" "}
             <a
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
             </a>{" "}
             to request deletion of your account and associated data. See our{" "}
             <Link
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href={ROUTES.LEGAL.PRIVACY}
             >
               Privacy Policy
@@ -402,14 +402,14 @@ export function LandingFAQ() {
           <p className="mx-auto mt-2 max-w-[460px] text-[14px] text-[var(--pv-text-body)] sm:text-[15px]">
             Reach out any time at{" "}
             <a
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
             </a>{" "}
             or visit our{" "}
             <Link
-              className="text-[var(--pv-brand-red)] underline underline-offset-2"
+              className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"
               href={ROUTES.LEGAL.CONTACT}
             >
               Contact Us

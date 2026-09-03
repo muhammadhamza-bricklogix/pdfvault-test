@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { SiAmericanexpress, SiVisa } from "react-icons/si";
+import { SiAmericanexpress, SiJcb, SiVisa } from "react-icons/si";
 
 import {
   generateReceiptPdf,
@@ -65,17 +65,15 @@ const CREAM_CARD = "#fef5f1";
 // key; without it the button silently never mounts even after the
 // Apple domain is verified.
 //
-// Apple Pay `type` is "subscribe" instead of "plain" so the button
-// renders "Subscribe with " — matches the paywall's actual
-// intent (recurring plan checkout) and reads as a call-to-action
-// rather than a bare logo tile. Google Pay uses the equivalent
-// `subscribe` type so the button reads "Subscribe with G Pay"
-// (Google Pay brand guidelines: use CreateButton's `buttonType`
-// that matches merchant intent — https://developers.google.com/pay/api/web/guides/brand-guidelines#payment-buttons).
+// Google + Apple Pay both render the bare brand tile (2026-09-03
+// PM ask: match PDF Guru's checkout — no "Subscribe with" prefix).
+// Google Pay `type: "plain"` shows just "G Pay" (plus a linked
+// card indicator when Google Pay auto-detects one). Apple Pay
+// stays on `type: "plain"` for the same "Pay" glyph-only render.
 const GOOGLE_PAY_BUTTON_PARAMS = {
   enabled: true,
   color: "black",
-  type: "subscribe",
+  type: "plain",
 } as const;
 const APPLE_PAY_BUTTON_PARAMS = {
   enabled: true,
@@ -617,11 +615,7 @@ function PlanStep({
       <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
         <div className="flex flex-col gap-1">
           <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            {hidePreview
-              ? "Choose a plan to unlock full access and download your documents immediately"
-              : preview
-                ? "Choose a plan to unlock full access and download your documents immediately"
-                : "Choose a plan to unlock full access and download your documents immediately"}
+            Your PDF is ready.
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
             Cancel anytime · Secure checkout · Instant access
@@ -685,10 +679,6 @@ function PlanStep({
                   Your document is ready to download
                 </span>
                 <PreviewFileCard preview={preview} />
-                <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                  Subscribe below to download the converted file instantly and
-                  keep unlimited access to every PDFVault tool.
-                </p>
               </>
             ) : (
               <>
@@ -704,10 +694,6 @@ function PlanStep({
                   Your document is ready to download
                 </span>
                 <GenericPreviewCard />
-                <p className="text-[13px] leading-relaxed text-[#5c5c5c]">
-                  Subscribe below to download instantly and keep unlimited
-                  access to every PDFVault tool.
-                </p>
               </>
             )}
           </div>
@@ -734,28 +720,28 @@ function PlanStep({
           and cancellation paths. */}
       <div className="border-t border-[#ececec] px-6 py-5 md:px-8">
         {selectedPlan === "monthly" ? (
-          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
             You are enrolling in a monthly subscription to pdfvault.ai.
             You&apos;ll be charged {fullAccessPrice} today for a 7-day trial,
             then {formatMinor(monthly.amountRenewMinor, monthly.currency)} per
             month until you cancel. Payments will be charged from the card you
             specified below. To cancel, visit your{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/dashboard/settings/billing"
             >
               account settings
             </a>
             , see our{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/subscription-terms"
             >
               Subscription Terms
             </a>
             , or email{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
@@ -763,28 +749,28 @@ function PlanStep({
             .
           </p>
         ) : (
-          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
             You are enrolling in an annual subscription to pdfvault.ai. You
             agree to be billed{" "}
             {formatMinor(annual.amountRenewMinor, annual.currency)} per year
             until you cancel. Payments will be charged from the card you
             specified below. To cancel, visit your{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/dashboard/settings/billing"
             >
               account settings
             </a>
             , see our{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/subscription-terms"
             >
               Subscription Terms
             </a>
             , or email{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="mailto:support@pdfvault.ai"
             >
               support@pdfvault.ai
@@ -793,17 +779,17 @@ function PlanStep({
           </p>
         )}
 
-        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#6c6c6c]">
+        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
           Charged in {intent.currency}. See our{" "}
           <a
-            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
             href="/terms-and-conditions"
           >
             Terms and Conditions
           </a>{" "}
           for details. We provide refunds in accordance with our{" "}
           <a
-            className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+            className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
             href="/refund-policy"
           >
             Refund Policy
@@ -856,17 +842,26 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // 2026-09-03 (PM): the Solidgate card form starts COLLAPSED behind
+  // a grey "Pay with card" button. Clicking expands the iframe below.
+  // `<PaymentForm>` itself stays mounted whether expanded or not
+  // (it's what mounts Apple Pay / Google Pay into the detached refs
+  // above), so we hide the card iframe wrapper via `hidden` rather
+  // than conditionally rendering the whole PaymentForm.
+  const [cardExpanded, setCardExpanded] = useState(false);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ── Left column — payment (white) ── */}
       <div className="flex flex-col gap-0">
-        {/* Total due today header */}
+        {/* Total due today header — matches the right-column order
+            summary so both instances of "Total due today" read at
+            the same weight and size (2026-09-03 PM ask). */}
         <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-5 md:px-8">
-          <span className="text-[14px] font-medium text-[#5c5c5c]">
-            Total due today:
+          <span className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
+            Total due today
           </span>
-          <span className="pv-heading text-[22px] font-bold text-[#1a1c21]">
+          <span className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
             {todayDisplay}
           </span>
         </div>
@@ -899,10 +894,26 @@ function PayStep({
               ref={googlePayContainerRef}
               className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
             />
+            {/* Card section header — grey collapse toggle. Shows the
+                supported card brands so users know their card will
+                work before expanding (parity with PDF Guru). */}
+            <PayWithCardHeader
+              expanded={cardExpanded}
+              onToggle={() => setCardExpanded((v) => !v)}
+            />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
                 remounts — declined intents are terminal on Solidgate's side
-                and won't accept a second attempt on the same key. */}
-            <div className="rounded-xl">
+                and won't accept a second attempt on the same key.
+
+                Wrapper stays mounted whether the section is expanded
+                or not — `hidden` just toggles visibility. Unmounting
+                <PaymentForm> here would tear down the Apple Pay /
+                Google Pay containers along with the card iframe. */}
+            <div
+              className="rounded-xl"
+              hidden={!cardExpanded}
+              id="paywall-card-form"
+            >
               <PaymentForm
                 key={retryKey}
                 applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
@@ -953,33 +964,32 @@ function PayStep({
           {/* Plan features */}
           <div className="flex flex-col gap-3">
             <p className="text-[12px] font-bold uppercase tracking-widest text-[#1a1c21]">
-              {selectedPlan === "annual" ? "Annual Plan" : "Monthly Plan"}
+              {selectedPlan === "annual" ? "Annual Access" : "7-Day Access"}
             </p>
             <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
               <Feature>Unlimited downloads</Feature>
               <Feature>Unlimited edits</Feature>
               <Feature>Convert to any format</Feature>
-              <Feature>Full access to 30+ tools</Feature>
               <Feature>Password-protect your documents</Feature>
             </ul>
           </div>
 
           {/* Legal small-print */}
-          <p className="text-[11px] leading-relaxed text-[#6c6c6c]">
+          <p className="text-[11px] leading-relaxed text-[#8a8a8a]">
             By continuing you agree to be charged{" "}
             {selectedPlan === "annual"
               ? `${todayDisplay} every 365 days`
               : `${todayDisplay} today for a 7-day trial, then ${renewDisplay} per month`}{" "}
             unless cancelled. See our{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/terms-and-conditions"
             >
               Subscription
             </a>{" "}
             &amp;{" "}
             <a
-              className="text-[var(--pv-brand-red,#f12c23)] underline underline-offset-2"
+              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/refund-policy"
             >
               Refund
@@ -1001,36 +1011,37 @@ function PayStep({
         className="flex flex-col gap-3 p-6 md:p-8"
         style={{ backgroundColor: CREAM }}
       >
+        {/* "Your document is ready!" pill — mirrors the PDF Guru
+            payment-details screen so the user sees a positive
+            reinforcement message above the invoice preview. */}
+        <div className="flex items-center gap-2 rounded-xl bg-[#e8f5e9] px-4 py-3 text-[14px] font-semibold text-[#1a4d1e]">
+          <span
+            aria-hidden
+            className="inline-flex size-5 items-center justify-center rounded-full bg-[#2e7d32] text-white"
+          >
+            <HugeiconsIcon icon={Tick01Icon} size={12} strokeWidth={3} />
+          </span>
+          Your document is ready!
+        </div>
         {preview ? (
           <PreviewFileCard preview={preview} />
         ) : (
           <GenericPreviewCard />
         )}
 
-        {/* Order summary card */}
+        {/* Order summary card — flattened per 2026-09-03 PM ask. Only
+            the "TOTAL DUE TODAY / <price>" line renders now; the plan
+            title, "Due today" / "Billed annually" subtitle, and
+            "Renews yearly / monthly" row are all dropped. The
+            auto-renew wording still lives in the legal small-print
+            below the form. */}
         <div className="rounded-2xl bg-white p-5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-                {selectedPlan === "annual" ? "Annual Plan" : "7-day trial"}
-              </p>
-            </div>
-            <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
-              {selectedPlan === "annual"
-                ? `${formatMinor(Math.round(intent.amountRenewMinor / 12), intent.currency)} / month`
-                : todayDisplay}
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
+              Total due today
             </p>
-          </div>
-          <p className="mt-0.5 text-[12px] text-[#6c6c6c]">
-            {selectedPlan === "annual" ? "Billed annually" : "Due today"}
-          </p>
-          <div className="my-4 h-px bg-[#ececec]" />
-          <div className="flex items-baseline justify-between">
-            <p className="text-[13px] text-[#5c5c5c]">
-              {selectedPlan === "annual" ? "Renews yearly" : "Renews monthly"}
-            </p>
-            <p className="pv-heading text-[15px] font-semibold text-[#1a1c21]">
-              {renewDisplay} {selectedPlan === "annual" ? "/ year" : "/ month"}
+            <p className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
+              {todayDisplay}
             </p>
           </div>
         </div>
@@ -1431,11 +1442,9 @@ const PLAN_FEATURES = [
   "Unlimited edits",
   "Unlimited downloads",
   "Multi-format conversion",
-  "No installation required",
   "Edit text and images in PDF files",
   "Organize and reorder PDF pages",
   "Protect PDF with password",
-  "Use PDFVault on mobile",
 ] as const;
 
 function PlanCards({
@@ -1469,7 +1478,10 @@ function PlanCards({
             title: "Annual Plan",
             price: annualPrice,
             priceSuffix: "/ month",
-            note: `Billed as ${annualFullPrice} / year`,
+            // 2026-09-03 (PM): drop the "Billed as X / year" note from
+            // the Annual Plan card. The renew total already lives on the
+            // pay-step's order-summary card, so it's redundant here.
+            note: "",
             badge: undefined as string | undefined,
           },
         ]
@@ -1577,6 +1589,27 @@ function MastercardMark() {
   );
 }
 
+// Maestro also uses a two-circle mark (blue + red). Simple Icons dropped
+// its Maestro glyph, so inline the brand mark directly.
+function MaestroMark() {
+  return (
+    <svg
+      aria-hidden
+      className="h-4 w-auto"
+      viewBox="0 0 40 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Maestro</title>
+      <circle cx="15" cy="12" fill="#0099DF" r="7" />
+      <circle cx="25" cy="12" fill="#EB001B" r="7" />
+      <path
+        d="M20 6.5c1.72 1.29 2.83 3.35 2.83 5.5s-1.11 4.21-2.83 5.5c-1.72-1.29-2.83-3.35-2.83-5.5s1.11-4.21 2.83-5.5z"
+        fill="#6C6BBD"
+      />
+    </svg>
+  );
+}
+
 const ACCEPTED_CARD_BRANDS = [
   {
     Mark: () => (
@@ -1590,6 +1623,7 @@ const ACCEPTED_CARD_BRANDS = [
     label: "Visa",
   },
   { Mark: MastercardMark, label: "Mastercard" },
+  { Mark: MaestroMark, label: "Maestro" },
   {
     Mark: () => (
       <SiAmericanexpress
@@ -1601,7 +1635,57 @@ const ACCEPTED_CARD_BRANDS = [
     ),
     label: "American Express",
   },
+  {
+    Mark: () => (
+      <SiJcb
+        aria-hidden
+        className="h-4 w-auto"
+        style={{ color: "#0E4C96" }}
+        title="JCB"
+      />
+    ),
+    label: "JCB",
+  },
 ] as const;
+
+/**
+ * "Pay with card" section header — a grey collapse button that shows
+ * the supported card brands on the right, matching PDF Guru's
+ * express-checkout list. Click toggles the Solidgate card iframe
+ * below it (the iframe stays mounted — parent `PayStep` uses the
+ * `hidden` attribute so the wallet containers keep working).
+ */
+function PayWithCardHeader({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      aria-controls="paywall-card-form"
+      aria-expanded={expanded}
+      className="flex w-full items-center justify-between gap-3 rounded-xl bg-[#575759] px-4 py-3 text-left transition-colors hover:bg-[#4a4a4c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)]"
+      type="button"
+      onClick={onToggle}
+    >
+      <span className="text-[15px] font-semibold text-white">Pay with card</span>
+      <span className="flex items-center gap-1.5">
+        {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
+          <span
+            key={label}
+            aria-label={label}
+            className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-md border border-white/20 bg-white px-1.5"
+            role="img"
+          >
+            <Mark />
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+}
 
 function AcceptedCards() {
   return (
