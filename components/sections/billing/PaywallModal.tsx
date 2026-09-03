@@ -1035,10 +1035,10 @@ function PayStep({
             below the form. */}
         <div className="rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="pv-heading text-[13px] font-bold uppercase tracking-wide text-[#1a1c21]">
+            <p className="pv-heading text-[16px] font-extrabold uppercase tracking-wide text-[#1a1c21]">
               Total due today
             </p>
-            <p className="pv-heading text-[18px] font-semibold text-[#1a1c21]">
+            <p className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
               {todayDisplay}
             </p>
           </div>
