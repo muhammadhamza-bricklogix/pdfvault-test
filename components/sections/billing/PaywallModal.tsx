@@ -1449,11 +1449,9 @@ const PLAN_FEATURES = [
   "Unlimited edits",
   "Unlimited downloads",
   "Multi-format conversion",
-  "No installation required",
   "Edit text and images in PDF files",
   "Organize and reorder PDF pages",
   "Protect PDF with password",
-  "Use PDFVault on mobile",
 ] as const;
 
 function PlanCards({
