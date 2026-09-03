@@ -1485,7 +1485,10 @@ function PlanCards({
             title: "Annual Plan",
             price: annualPrice,
             priceSuffix: "/ month",
-            note: `Billed as ${annualFullPrice} / year`,
+            // 2026-09-03 (PM): drop the "Billed as X / year" note from
+            // the Annual Plan card. The renew total already lives on the
+            // pay-step's order-summary card, so it's redundant here.
+            note: "",
             badge: undefined as string | undefined,
           },
         ]
