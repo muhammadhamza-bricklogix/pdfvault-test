@@ -854,12 +854,14 @@ function PayStep({
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ── Left column — payment (white) ── */}
       <div className="flex flex-col gap-0">
-        {/* Total due today header */}
+        {/* Total due today header — matches the right-column order
+            summary so both instances of "Total due today" read at
+            the same weight and size (2026-09-03 PM ask). */}
         <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-5 md:px-8">
-          <span className="text-[14px] font-medium text-[#5c5c5c]">
-            Total due today:
+          <span className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
+            Total due today
           </span>
-          <span className="pv-heading text-[22px] font-bold text-[#1a1c21]">
+          <span className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
             {todayDisplay}
           </span>
         </div>
@@ -1035,7 +1037,7 @@ function PayStep({
             below the form. */}
         <div className="rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="pv-heading text-[16px] font-extrabold uppercase tracking-wide text-[#1a1c21]">
+            <p className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
               Total due today
             </p>
             <p className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
