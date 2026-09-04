@@ -50,6 +50,12 @@ app/(tools)/pdf-composer/**
 # ─── W-9 FORM EDITOR (full lock) ─────────────────────────────────────────────
 # UI — FormEditor + FormCanvas + FormSidebar + all field components + W9 wrappers.
 components/sections/forms/**
+# Unlocked 2026-09-04 — auth handoff on W-9 must use the same email-first /
+# auto-signup flow as the pdf-composer editor (see CLAUDE.md item #15). Fix
+# swapped `dispatchAuthModal({mode:"login"})` for `dispatchEmailFirstModal`
+# on the signed-out Download + Save branches; downstream auth chain (items
+# #8–12, #15) is unchanged.
+!components/sections/forms/W9FinalizeIntercept.tsx
 
 # Pure logic — schema, validation, normalization, stamping, pending values, preview render.
 lib/client/forms/**
