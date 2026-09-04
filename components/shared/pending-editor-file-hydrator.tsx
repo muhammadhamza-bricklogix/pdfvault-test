@@ -129,15 +129,35 @@ export function PendingEditorFileHydrator() {
     if ((tool || exportFormat || isFreshEntry) && !docId) {
       const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
-      if (isFreshEntry || !hasSameSessionFile) {
+      // 2026-09-05: skip `clearFile()` on a fresh page load with an empty
+      // store. `clearFile()` in the Zustand store also resets
+      // `isRestoringSession` to false (pdf-editor-store.ts:535, added
+      // 2026-07-18 alongside the shell latch). On a post-auto-signup
+      // return to `/pdf-composer?export=<fmt>`, `PdfEditorShell` has
+      // just latched `isRestoringSession: true` synchronously in its
+      // `useState` initializer to suppress the "no file → redirect
+      // away" effect while Step 2's async IDB restore is in flight.
+      // Calling `clearFile()` here wipes that latch, and once Clerk
+      // hydrates the shell fires `router.replace(DASHBOARD)` before
+      // Step 2 can call `setFile(pendingFile)` — user reports landing
+      // on the dashboard after auto-signup instead of the paywall.
+      // The store is trivially empty on a fresh load, so `clearFile()`
+      // is a no-op for `file` here anyway — only the side effect on
+      // `isRestoringSession` matters.
+      if (isFreshEntry) {
         logger.breadcrumb("hydrator", "reset.tool_tile", {
           tool,
           exportFormat,
           isFreshEntry,
         });
         clearFile();
-      } else {
+      } else if (hasSameSessionFile) {
         logger.breadcrumb("hydrator", "reset.tool_tile.skipped_has_file", {
+          tool,
+          exportFormat,
+        });
+      } else {
+        logger.breadcrumb("hydrator", "reset.tool_tile.skipped_empty_store", {
           tool,
           exportFormat,
         });

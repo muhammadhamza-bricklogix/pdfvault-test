@@ -1,6 +1,13 @@
 "use client";
 
-import { useClerk, useReverification, useUser } from "@clerk/nextjs";
+import type { SessionVerificationLevel } from "@clerk/shared/types";
+
+import {
+  useClerk,
+  useReverification,
+  useSession,
+  useUser,
+} from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -9,6 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import {
   PvFormRow,
   PvSectionHeading,
@@ -73,6 +81,12 @@ function humaniseDeleteError(err: unknown): string {
   return raw || "Failed to delete account. Please try again in a moment.";
 }
 
+type VerificationState = {
+  complete: () => void;
+  cancel: () => void;
+  level: SessionVerificationLevel | undefined;
+};
+
 export default function DangerZonePage() {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -83,6 +97,11 @@ export default function DangerZonePage() {
   const [confirmation, setConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Custom reverification modal state — set by the `onNeedsReverification`
+  // handler below when Clerk demands a step-up. Kept in our own state so
+  // we render our HeroUI modal instead of Clerk's branded one.
+  const [verificationState, setVerificationState] =
+    useState<VerificationState | null>(null);
 
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const canConfirm =
@@ -100,15 +119,21 @@ export default function DangerZonePage() {
   // returns `session_reverification_required` and Clerk expects the
   // client to prompt the user to re-authenticate (password / MFA),
   // then retry. Wrapping `user.delete()` with `useReverification`
-  // gives us that flow for free: on the reverification error it opens
-  // Clerk's own verification modal and, once the user completes it,
-  // reruns the wrapped fetcher. Without this wrap the delete just
-  // errors out with the raw 403 the user pasted.
+  // handles that flow; the `onNeedsReverification` option lets us
+  // render OUR modal instead of Clerk's default one (which leaked the
+  // "Secured by Clerk" branding + "Development mode" chip — QA
+  // 2026-09-05). Once our modal completes, the wrapper reruns the
+  // wrapped fetcher automatically.
   const deleteAccount = useReverification(
     useCallback(async () => {
       if (!user) throw new Error("No signed-in user.");
       await user.delete();
     }, [user]),
+    {
+      onNeedsReverification: ({ complete, cancel, level }) => {
+        setVerificationState({ complete, cancel, level });
+      },
+    },
   );
 
   const handleDelete = async () => {
@@ -244,6 +269,171 @@ export default function DangerZonePage() {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+
+      {verificationState ? (
+        <ReverifyPasswordModal
+          onCancel={() => {
+            verificationState.cancel();
+            setVerificationState(null);
+          }}
+          onComplete={() => {
+            verificationState.complete();
+            setVerificationState(null);
+          }}
+        />
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * In-house step-up modal used by the delete-account flow. Replaces
+ * Clerk's default reverification widget so we don't leak "Secured by
+ * Clerk" / "Development mode" chrome to end users. All of our
+ * signed-in users hold a Clerk password (manual signup requires one,
+ * `runAutoSignup` provisions a random password + emails it) so a
+ * password-only step-up is enough — if a passwordless account ever
+ * shows up we surface the "Use another method" link to fall back to
+ * Clerk's own flow.
+ */
+function ReverifyPasswordModal({
+  onCancel,
+  onComplete,
+}: {
+  onCancel: () => void;
+  onComplete: () => void;
+}) {
+  const { session } = useSession();
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!session || submitting) return;
+    if (!password.trim()) {
+      setError("Enter your password to continue.");
+
+      return;
+    }
+
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      // `first_factor` covers the password reverification path. Clerk
+      // returns a fresh SessionVerificationResource — we don't need to
+      // read it because `attemptFirstFactorVerification` completes the
+      // step-up in-place.
+      await session.startVerification({ level: "first_factor" });
+      await session.attemptFirstFactorVerification({
+        password,
+        strategy: "password",
+      });
+      onComplete();
+    } catch (err) {
+      const first = (err as { errors?: { code?: string; message?: string }[] })
+        ?.errors?.[0];
+      const code = first?.code;
+
+      if (
+        code === "form_password_incorrect" ||
+        code === "form_password_not_matched"
+      ) {
+        setError("That password isn't right. Try again.");
+      } else if (
+        code === "clerk_rate_limit_exceeded" ||
+        code === "too_many_attempts"
+      ) {
+        setError("Too many attempts. Wait a minute and try again.");
+      } else {
+        setError(
+          first?.message ??
+            "Verification failed. Please try again in a moment.",
+        );
+      }
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal.Backdrop
+      isOpen
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
+      <Modal.Container>
+        <Modal.Dialog className="sm:max-w-[400px]">
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading>Verification required</Modal.Heading>
+          </Modal.Header>
+          <form onSubmit={handleSubmit}>
+            <Modal.Body>
+              <p className="text-sm text-default-500">
+                Enter your current password to confirm this is you.
+              </p>
+              <label
+                className="mt-4 block text-[13px] font-medium text-[var(--color-foreground)]"
+                htmlFor="reverify-password"
+              >
+                Password
+              </label>
+              <div className="relative mt-1.5">
+                <input
+                  autoFocus
+                  aria-invalid={error ? true : undefined}
+                  autoComplete="current-password"
+                  className="w-full rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 pr-10 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-danger"
+                  id="reverify-password"
+                  placeholder="Enter your password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
+                />
+                <PasswordRevealToggle
+                  revealed={showPassword}
+                  onToggle={() => setShowPassword((v) => !v)}
+                />
+              </div>
+              {error ? (
+                <p className="mt-2 text-xs text-danger" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <p className="mt-3 text-[12px] text-default-500">
+                <Link
+                  className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+                  href={ROUTES.AUTH.FORGOT_PASSWORD}
+                >
+                  Forgot your password?
+                </Link>
+              </p>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                isDisabled={submitting}
+                variant="secondary"
+                onPress={onCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                isDisabled={submitting || !password.trim()}
+                type="submit"
+                variant="danger"
+              >
+                {submitting ? "Verifying…" : "Continue"}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
