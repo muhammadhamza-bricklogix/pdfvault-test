@@ -975,7 +975,7 @@ export function UploadWorkspace({
                       openPicker();
                     }}
                   >
-                    Upload to Edit
+                    Click to Upload Your File
                   </button>
 
                   <p className="mt-5 text-[14px] text-[#8A8A8A]">
