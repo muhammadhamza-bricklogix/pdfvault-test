@@ -521,6 +521,14 @@ export function PendingEditorFileHydrator() {
           case "split":
             window.dispatchEvent(new CustomEvent("editor:open-split"));
             break;
+          case "merge":
+            // HamburgerMenu's BRIDGE_EVENTS listener picks this up and runs
+            // the same `saveBeforeAction` + `openMergeModal` chain a menu
+            // click would — keeps auth / requireFile / fileToMergeEntry
+            // guards in one place. Dedicated `/merge-pdf` landing page
+            // enters here via `UploadWorkspace` → `?tool=merge`.
+            window.dispatchEvent(new CustomEvent("editor:open-merge"));
+            break;
           case "watermark":
             setActiveTool("watermark");
             break;

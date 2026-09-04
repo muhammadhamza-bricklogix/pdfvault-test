@@ -13,79 +13,13 @@
 # To remove a lock, delete the line and tell Claude.
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# PRODUCTION FREEZE — locked 2026-09-01 by user (Uzair).
-# App is in production. Full PDF editor + full W-9 form editor + related
-# stores/routes are locked to prevent regression.
-#
-# Source of truth for WHY each area is stable + WHAT invariants apply:
-#   - docs/STABLE_SYSTEM.md         ← feature-by-feature reference
-#   - CLAUDE.md                     ← invariants + 21-step auth chain
-#   - docs/W9_EDITOR_ARCHITECTURE.md ← W-9 deep dive
+# ALL LOCKS CLEARED — 2026-09-05 by user request (Uzair, working freely).
+# Prior locks covered PDF editor, W-9 editor, and the 21-step auth+paywall
+# chain. Invariants still documented in:
+#   - CLAUDE.md                       ← invariants + 21-step auth chain
+#   - docs/STABLE_SYSTEM.md           ← feature-by-feature reference (if present)
+#   - docs/W9_EDITOR_ARCHITECTURE.md  ← W-9 deep dive (if present)
 #   - .claude/skills/pdf-editor-architecture/SKILL.md ← editor decisions log
 #
-# Before requesting an unlock: read the relevant doc + verify the fix
-# doesn't re-break a documented invariant. Then ask the user.
+# To re-lock a path, add it below. Old list preserved in git history.
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-# ─── PDF EDITOR (full lock) ──────────────────────────────────────────────────
-# Pure logic — extraction, merge, build, drawers, coord/color helpers.
-lib/client/pdf-editor/**
-
-# React glue — loaders, tools, save, navigation, manage-pages draft state.
-lib/client/hooks/pdf-editor/**
-
-# UI — shell, viewer, toolbar, sidebars, modals.
-components/sections/pdf-editor/**
-
-# Editor Zustand stores.
-lib/client/stores/pdf-editor-store.ts
-lib/client/stores/pdf-search-store.ts
-
-# Editor routes.
-app/(tools)/pdf-editor/**
-app/(tools)/pdf-composer/**
-
-
-# ─── W-9 FORM EDITOR (full lock) ─────────────────────────────────────────────
-# UI — FormEditor + FormCanvas + FormSidebar + all field components + W9 wrappers.
-components/sections/forms/**
-# Unlocked 2026-09-04 — auth handoff on W-9 must use the same email-first /
-# auto-signup flow as the pdf-composer editor (see CLAUDE.md item #15). Fix
-# swapped `dispatchAuthModal({mode:"login"})` for `dispatchEmailFirstModal`
-# on the signed-out Download + Save branches; downstream auth chain (items
-# #8–12, #15) is unchanged.
-!components/sections/forms/W9FinalizeIntercept.tsx
-
-# Pure logic — schema, validation, normalization, stamping, pending values, preview render.
-lib/client/forms/**
-
-# W-9 Zustand store.
-lib/client/stores/form-editor-store.ts
-
-# Form hooks (unsaved-changes warning, etc.).
-lib/client/hooks/forms/**
-
-# W-9 routes (editor + short marketing + landing).
-app/(tools)/forms/w-9/**
-app/(tools)/w-9-form/**
-app/(marketing)/(site)/forms/w-9/**
-app/(marketing)/(site)/w9-form/**
-
-
-# ─── AUTH + PAYWALL + EXPORT CHAIN (21-step; unchanged from prior lock) ──────
-# See CLAUDE.md "Auth + paywall + export flow" for the full list + WHY.
-components/shared/pending-editor-file-hydrator.tsx
-components/shared/sign-in-prompt-modal.tsx
-components/sections/billing/PaywallModal.tsx
-components/sections/billing/PaywallProvider.tsx
-lib/client/hooks/billing/use-paywall.ts
-lib/client/hooks/billing/ensure-entitlement.ts
-lib/client/hooks/billing/entitlement-cache.ts
-lib/client/hooks/billing/paywall-bus.ts
-lib/client/hooks/auth/use-sign-in-flow.ts
-lib/client/hooks/auth/use-sign-up-flow.ts
-components/sections/new-landing/upload-workspace.tsx
-lib/client/upload/pending-editor-file.ts
-lib/client/upload/run-pending-conversion.ts
-lib/client/stores/pending-conversions-store.ts

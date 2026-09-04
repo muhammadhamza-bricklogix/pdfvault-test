@@ -15,7 +15,8 @@ export type EditorToolSlug =
   | "compress"
   | "password" // add password
   | "unlock" // remove password
-  | "manage" // organize / rotate / delete / merge
+  | "manage" // organize / rotate / delete
+  | "merge" // merge multiple PDFs
   | "split"
   | "watermark"
   | "extract-images"
@@ -52,6 +53,7 @@ export const TOOL_ROUTE = {
   password: composer("password"),
   unlock: composer("unlock"),
   managePages: composer("manage"),
+  merge: composer("merge"),
   split: composer("split"),
   watermark: composer("watermark"),
   extractImages: composer("extract-images"),

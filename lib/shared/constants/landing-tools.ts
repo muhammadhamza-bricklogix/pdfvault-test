@@ -24,6 +24,7 @@ export type LineIconId =
   | "editor"
   | "compress"
   | "organize"
+  | "merge"
   | "split"
   | "password"
   | "unlock"
@@ -87,6 +88,11 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         label: "Organize Pages",
         icon: { kind: "line", id: "organize" },
         href: "/organize-pdf",
+      },
+      {
+        label: "Merge PDF",
+        icon: { kind: "line", id: "merge" },
+        href: "/merge-pdf",
       },
       {
         label: "Split & Extract Pages",
