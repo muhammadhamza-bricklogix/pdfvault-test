@@ -102,7 +102,14 @@ function stashPendingCloudUpload(payload: object): void {
  * browser-default tiny dots. `non-scaling-stroke` keeps the dashes uniform at
  * any size; rx/ry are tuned so the corner reads ≈13px at the desktop width.
  */
-function DashedBorder({ active }: { active: boolean }) {
+function DashedBorder({
+  active,
+  color = "#CCCCCC",
+}: {
+  active: boolean;
+  /** Idle-state stroke color. Active state always uses the brand red. */
+  color?: string;
+}) {
   return (
     <svg
       aria-hidden
@@ -115,7 +122,7 @@ function DashedBorder({ active }: { active: boolean }) {
         height="99"
         rx="1.1"
         ry="2.7"
-        stroke={active ? "var(--pv-brand-primary)" : "#CCCCCC"}
+        stroke={active ? "var(--pv-brand-primary)" : color}
         strokeDasharray="10 8"
         strokeWidth="1"
         vectorEffect="non-scaling-stroke"
@@ -902,7 +909,10 @@ export function UploadWorkspace({
               onDrop={onDrop}
               onKeyDown={onZoneKeyDown}
             >
-              <DashedBorder active={dragActive} />
+              <DashedBorder
+                active={dragActive}
+                color="var(--pv-brand-primary)"
+              />
               <input
                 ref={inputRef}
                 accept={acceptAttr}
@@ -945,10 +955,16 @@ export function UploadWorkspace({
                     Drag &amp; drop file to edit
                   </h2>
 
-                  <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[#B4B4B4]">
-                    <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                  <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[var(--pv-brand-primary)]">
+                    <span
+                      aria-hidden
+                      className="h-px flex-1 bg-[var(--pv-brand-primary)]/40"
+                    />
                     <span>OR</span>
-                    <span aria-hidden className="h-px flex-1 bg-[#E5E5E5]" />
+                    <span
+                      aria-hidden
+                      className="h-px flex-1 bg-[var(--pv-brand-primary)]/40"
+                    />
                   </div>
 
                   <button
@@ -1112,7 +1128,10 @@ export function UploadWorkspace({
               onDrop={onDrop}
               onKeyDown={onZoneKeyDown}
             >
-              <DashedBorder active={dragActive} />
+              <DashedBorder
+                active={dragActive}
+                color="var(--pv-brand-primary)"
+              />
               <input
                 ref={inputRef}
                 accept={acceptAttr}

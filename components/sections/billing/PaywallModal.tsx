@@ -1670,7 +1670,9 @@ function PayWithCardHeader({
       type="button"
       onClick={onToggle}
     >
-      <span className="text-[15px] font-semibold text-white">Pay with card</span>
+      <span className="text-[15px] font-semibold text-white">
+        Pay with card
+      </span>
       <span className="flex items-center gap-1.5">
         {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
           <span
