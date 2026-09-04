@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
@@ -101,7 +101,6 @@ export function LandingLanguageSwitcher({
   const activeLocale =
     (parseLocalePrefix(pathname)?.locale as Locale | undefined) ??
     DEFAULT_LOCALE;
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -134,8 +133,13 @@ export function LandingLanguageSwitcher({
     setOpen(false);
     if (code === activeLocale) return;
     persistLangPref(code);
+    const href = buildLocaleHref(code, pathname);
+
     startTransition(() => {
-      router.push(buildLocaleHref(code, pathname));
+      // Hard navigation so Weglot's SDK re-initializes on the new
+      // locale prefix. Soft router.push keeps the same window and
+      // Weglot never re-runs its translation pass.
+      window.location.assign(href);
     });
   };
 
