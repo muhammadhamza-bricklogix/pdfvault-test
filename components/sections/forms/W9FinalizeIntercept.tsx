@@ -14,7 +14,7 @@ import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { conversionService } from "@/lib/shared/api/services/conversion.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -826,9 +826,19 @@ export function W9FinalizeIntercept() {
         // auth chain (items #1–4). Cards still finalize with
         // `window.location.assign` (item #15) so iOS Safari commits
         // the session cookie before the nav.
-        dispatchAuthModal({
-          mode: "login",
+        //
+        // 2026-09-04 (parity with pdf-composer): open the email-first
+        // modal instead of AuthModal(login). The email-first probe
+        // routes existing accounts to LoginToDownloadModal AND auto-
+        // creates a Clerk user (verified email + emailed password) on
+        // `form_identifier_not_found`, then signs the user in via a
+        // one-time ticket. Previously the login card dead-ended new
+        // users at "We couldn't find an account with that email."
+        dispatchEmailFirstModal({
           redirectUrl: buildW9ReturnUrl(requestedFormat, requestedFilename),
+          submitLabel: "Download file",
+          subtitle: "Create an account to download it",
+          title: "Your W-9 is ready",
         });
 
         return;
@@ -1284,9 +1294,15 @@ export function W9FinalizeIntercept() {
         // in the composer with their values restored (no paywall
         // auto-fire, matching the manual-Save intent). See the
         // sibling Download branch above for the full rationale.
-        dispatchAuthModal({
-          mode: "login",
+        //
+        // 2026-09-04 (parity with pdf-composer): email-first modal
+        // handles both existing-account login and auto-signup for
+        // new emails. See the Download branch above for details.
+        dispatchEmailFirstModal({
           redirectUrl: buildW9ReturnUrl(),
+          submitLabel: "Save to your library",
+          subtitle: "Create an account to save your W-9",
+          title: "Save your W-9",
         });
 
         return;
