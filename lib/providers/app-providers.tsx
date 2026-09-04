@@ -12,6 +12,7 @@ import { LoginToDownloadModal } from "@/components/shared/login-to-download-moda
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
 import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
+import { LangPrefHonor } from "@/components/shared/navigation/lang-pref-honor";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
 import { SentryUserContext } from "@/components/shared/sentry-user-context";
@@ -50,6 +51,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <OfflineBoot />
           <SentryUserContext />
           <EditorEventsLogger />
+          <LangPrefHonor />
         </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>

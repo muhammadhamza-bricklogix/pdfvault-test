@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Dropdown, Label } from "@heroui/react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTransition } from "react";
 
 import {
@@ -62,7 +62,6 @@ function localeFromPathname(pathname: string): Locale {
 export function LanguageSwitcher() {
   const pathname = usePathname() ?? "/";
   const activeLocale = localeFromPathname(pathname);
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const current =
     LANGUAGES.find((lang) => lang.code === activeLocale) ?? LANGUAGES[0];
@@ -94,8 +93,13 @@ export function LanguageSwitcher() {
               onAction={() => {
                 if (lang.code === activeLocale) return;
                 persistLangPref(lang.code);
+                const href = buildLocaleHref(lang.code, pathname);
+
                 startTransition(() => {
-                  router.push(buildLocaleHref(lang.code, pathname));
+                  // Hard navigation so Weglot's SDK re-initializes on the
+                  // new locale prefix. Soft router.push keeps the same
+                  // window and Weglot never re-runs its translation pass.
+                  window.location.assign(href);
                 });
               }}
             >
