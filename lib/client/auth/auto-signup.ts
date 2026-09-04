@@ -50,6 +50,18 @@ export async function runAutoSignup(params: {
 
   let response: Response;
 
+  // eslint-disable-next-line no-console
+  console.info("[AUTH_DIAG] auto-signup.begin", {
+    apiBase: API_BASE_URL,
+    hasEmail: Boolean(email),
+    // Only the local part before `@` so the log stays PII-lite.
+    emailLocal: email.split("@")[0]?.slice(0, 3) ?? "",
+    emailDomain: email.split("@")[1] ?? "",
+    hasFileName: Boolean(fileName),
+    clerkPublishableKeyPrefix:
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.slice(0, 8) ?? "unset",
+  });
+
   try {
     response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
       body: JSON.stringify({ email, fileName }),
@@ -85,6 +97,15 @@ export async function runAutoSignup(params: {
   const payload = envelope.data ?? envelope;
   const status = payload.status;
 
+  // eslint-disable-next-line no-console
+  console.info("[AUTH_DIAG] auto-signup.backend_response", {
+    responseStatus: response.status,
+    ok: response.ok,
+    envelopeStatus: status,
+    hasTicket: Boolean(payload.ticket),
+    ticketLength: payload.ticket?.length ?? 0,
+  });
+
   if (status === "exists") {
     return { kind: "exists" };
   }
@@ -108,17 +129,70 @@ export async function runAutoSignup(params: {
   }
 
   try {
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] auto-signup.ticket_call.start", {
+      ticketLength: ticket.length,
+      // Clerk publishable key prefix — if this doesn't match the
+      // Clerk instance the backend minted the ticket against, the
+      // ticket call always rejects with `not_found` /
+      // `invalid_client`. Compare `pk_test_…` vs `pk_live_…` here
+      // against `sk_test_…` vs `sk_live_…` on the backend.
+      clerkPublishableKeyPrefix:
+        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.slice(0, 12) ?? "unset",
+      signInStatusBeforeTicket: (signIn as { status?: string }).status,
+    });
+
     const { error: ticketError } = await signIn.ticket({ ticket });
 
     if (ticketError) {
-      logger.captureError(ticketError, "auto-signup.ticket");
+      // Loud console dump so the exact Clerk code/message shows up
+      // without needing a Sentry lookup. `errors[0]` follows Clerk's
+      // standard ClerkAPIError shape.
+      const clerkErr = ticketError as {
+        errors?: {
+          code?: string;
+          message?: string;
+          longMessage?: string;
+          meta?: unknown;
+        }[];
+        message?: string;
+        status?: number;
+      };
+      const first = clerkErr.errors?.[0];
+
+      // eslint-disable-next-line no-console
+      console.error("[AUTH_DIAG] auto-signup.ticket_call.failed", {
+        clerkStatus: clerkErr.status,
+        clerkErrorCode: first?.code,
+        clerkErrorMessage: first?.message,
+        clerkErrorLongMessage: first?.longMessage,
+        clerkErrorMeta: first?.meta,
+        raw: ticketError,
+      });
+
+      logger.captureError(ticketError, "auto-signup.ticket", {
+        clerkErrorCode: first?.code,
+        clerkErrorMessage: first?.message,
+      });
+
+      // Surface the code in the user-facing message so the QA
+      // screenshot names the exact fault instead of a generic
+      // "please try again". Keep it non-scary but specific.
+      const codeHint = first?.code ? ` (${first.code})` : "";
 
       return {
         kind: "error",
-        message: "We couldn't sign you in with the ticket. Please try again.",
+        message: `We couldn't sign you in with the ticket. Please try again${codeHint}.`,
       };
     }
+
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] auto-signup.ticket_call.ok", {
+      signInStatusAfterTicket: (signIn as { status?: string }).status,
+    });
   } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[AUTH_DIAG] auto-signup.ticket_call.threw", { err });
     logger.captureError(err, "auto-signup.signIn");
 
     return {

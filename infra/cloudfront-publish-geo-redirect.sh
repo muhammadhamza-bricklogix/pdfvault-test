@@ -33,7 +33,7 @@ command -v jq >/dev/null 2>&1 || { echo "jq required — install with: brew inst
 
 FUNCTION_NAME="pdfvault-geo-redirect"
 FUNCTION_FILE="$(dirname "$0")/cloudfront-functions/geo-redirect.js"
-FUNCTION_COMMENT="Geo-IP defaulting for pdfvault.ai — redirects locale-less URLs to /de, /fr, etc. based on CloudFront-Viewer-Country + lang_pref cookie."
+FUNCTION_COMMENT="Geo-IP defaulting for pdfvault.ai"
 FUNCTION_RUNTIME="cloudfront-js-2.0"
 
 if [[ ! -f "$FUNCTION_FILE" ]]; then

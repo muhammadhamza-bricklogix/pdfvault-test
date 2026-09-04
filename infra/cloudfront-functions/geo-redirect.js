@@ -25,8 +25,7 @@ var DEFAULT_LOCALE = "en";
 // SUPPORTED_LOCALES minus DEFAULT_LOCALE in the shared constants file.
 var PREFIXED_LOCALES = ["de", "fr", "es", "pt", "ar"];
 
-// Country → locale. AR-country IPs mapped to "en" until RTL audit
-// signs off. MA/DZ/TN pending product decision.
+// Country → locale.
 var COUNTRY_TO_LOCALE = {
   DE: "de", AT: "de", CH: "de", LI: "de",
   FR: "fr", BE: "fr", LU: "fr", MC: "fr",
@@ -34,8 +33,8 @@ var COUNTRY_TO_LOCALE = {
   EC: "es", UY: "es", PY: "es", BO: "es", VE: "es", GT: "es",
   CR: "es", PA: "es", DO: "es", HN: "es", SV: "es", NI: "es",
   PT: "pt", BR: "pt", AO: "pt", MZ: "pt",
-  SA: "en", AE: "en", EG: "en", JO: "en", KW: "en", QA: "en",
-  BH: "en", OM: "en", IQ: "en", LB: "en",
+  SA: "ar", AE: "ar", EG: "ar", JO: "ar", KW: "ar", QA: "ar",
+  BH: "ar", OM: "ar", IQ: "ar", LB: "ar",
 };
 
 var BOT_UA_REGEX = /(Googlebot|bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|Sogou|Exabot|facebot|ia_archiver|AhrefsBot|SemrushBot|MJ12bot|PetalBot|Applebot|LinkedInBot|WhatsApp|TelegramBot|Twitterbot)/i;
@@ -49,17 +48,17 @@ var LANG_PREF_COOKIE = "lang_pref";
 // pages. Auth entry pages, Clerk callbacks, and any URL that is either
 // authenticated or part of an in-progress auth flow are exempt so we
 // never redirect a signed-in user mid-flow.
+// 2026-09-02: /dashboard, /pdf-composer, /pdf-editor, /w-9-form,
+// /w9-form, /forms/, /share/ were previously exempt to keep user PII
+// out of Weglot's server-side Reverse Proxy. In Phase A translation
+// happens in the browser (Weglot SDK), so PII never leaves the client
+// and geo-redirect on these routes is safe. When Phase B (CloudFront
+// Reverse Proxy) ships, re-add those prefixes here AND in `proxy.ts`
+// so authenticated content stays on the ALB.
 var EXEMPT_PATH_PREFIXES = [
   "/api/",
   "/_next/",
   "/.well-known/",
-  "/dashboard",           // matches /dashboard AND /dashboard/*
-  "/pdf-composer",        // editor entry (public + auth-gated variants)
-  "/pdf-editor",          // legacy editor
-  "/w-9-form",            // W-9 flow
-  "/w9-form",             // legacy W-9 alias
-  "/forms/",              // form flows
-  "/share/",              // share tokens serving user PDFs
   "/oauth-callback",      // Clerk OAuth callback
   "/sso-callback",        // Clerk SSO callback
 ];
@@ -133,9 +132,39 @@ function isSupportedPrefixedLocale(value) {
   return false;
 }
 
+// CloudFront Functions JS 2.0 exposes `request.querystring` as an
+// object (`{ key: {value: "val", multiValue: [...] } }`), NOT a
+// string. An empty object is still truthy in JS, so the old
+// `if (querystring)` branch always fired and coerced the object to
+// the string "[object Object]" — producing ugly URLs like
+// `/de?[object+Object]`. Serialize explicitly to guarantee we only
+// append `?a=1&b=2` when there really are params.
+function serializeQuerystring(qs) {
+  if (!qs || typeof qs !== "object") return "";
+  var parts = [];
+  for (var key in qs) {
+    if (!Object.prototype.hasOwnProperty.call(qs, key)) continue;
+    var entry = qs[key];
+    if (entry && typeof entry.value === "string") {
+      parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(entry.value));
+    }
+    if (entry && Array.isArray(entry.multiValue)) {
+      for (var i = 0; i < entry.multiValue.length; i++) {
+        var mv = entry.multiValue[i];
+        if (mv && typeof mv.value === "string") {
+          parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(mv.value));
+        }
+      }
+    }
+  }
+
+  return parts.join("&");
+}
+
 function buildRedirectResponse(locale, uri, querystring) {
   var target = "/" + locale + (uri === "/" ? "" : uri);
-  if (querystring) target = target + "?" + querystring;
+  var qs = serializeQuerystring(querystring);
+  if (qs) target = target + "?" + qs;
 
   return {
     statusCode: 302,

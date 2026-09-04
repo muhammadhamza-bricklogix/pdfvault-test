@@ -7,6 +7,7 @@ import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
+import { WeglotBoot } from "@/components/shared/navigation/weglot-boot";
 import {
   DEFAULT_LOCALE,
   isSupportedLocale,
@@ -194,9 +195,15 @@ export default async function RootLayout({
         rel="preconnect"
       />
       <link href="https://clerk.pdfvault.ai" rel="dns-prefetch" />
-      {/* Weglot CDN preconnect removed 2026-09-02 — Weglot's reverse
-          proxy injects the SDK server-side now, so the browser never
-          fetches cdn.weglot.com directly. Preconnect is dead weight. */}
+      {/* Weglot CDN preconnect — re-added 2026-09-02 with WeglotBoot.
+          Remove again once CloudFront Reverse Proxy behaviors handle
+          translation server-side. */}
+      <link
+        crossOrigin="anonymous"
+        href="https://cdn.weglot.com"
+        rel="preconnect"
+      />
+      <link href="https://cdn.weglot.com" rel="dns-prefetch" />
       <link
         crossOrigin="anonymous"
         href="https://www.googletagmanager.com"
@@ -221,6 +228,7 @@ export default async function RootLayout({
       {/* DNS prefetch only — Solidgate payment iframe is deep in the
           paywall flow, not needed at landing time. */}
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
+      <link href="https://www.clarity.ms" rel="dns-prefetch" />
 
       {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
       <Script
@@ -285,6 +293,14 @@ gtag('config', 'AW-18226423046');`}
             }}
           />
         ) : null}
+        {/* Microsoft Clarity — user-behaviour analytics. Raw inline in
+            <head> for parity with GTM/Trustpilot so the snippet ships in
+            the SSR HTML (Clarity's setup checker inspects source). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ych70e11tb");`,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
         {/* Google Tag Manager (noscript) */}
@@ -298,10 +314,13 @@ gtag('config', 'AW-18226423046');`}
           />
         </noscript>
         <NextTopLoader color="#DF3A38" showSpinner={false} />
-        {/* Weglot SDK removed 2026-09-02 — Weglot's reverse proxy now
-            injects the Weglot script server-side, so mounting a client
-            component here duplicated the init and caused React #418
-            hydration errors. Do NOT re-add WeglotBoot. */}
+        {/* Re-added 2026-09-02: apex DNS moved off Weglot's Cloudflare
+            proxy to stop 429 quota exhaustion, so the SDK is now the
+            only translation path until the CloudFront Reverse Proxy
+            behaviors ship. Remove again once /de|fr|es|pt|ar/* routes
+            through the Weglot origin at CloudFront to avoid the
+            React #418 double-init. */}
+        <WeglotBoot />
         <ClerkProvider
           signInFallbackRedirectUrl="/dashboard"
           signInUrl="/sign-in"

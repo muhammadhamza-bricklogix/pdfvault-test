@@ -166,16 +166,16 @@ function isGeoRedirectExempt(pathname: string): boolean {
     return true;
   }
 
-  // Authenticated content — user PII must not be geo-redirected. These
-  // routes serve the user's own file library, editor content, tax
-  // forms, or private share tokens.
-  if (pathname.startsWith("/dashboard")) return true;
-  if (pathname.startsWith("/pdf-composer")) return true;
-  if (pathname.startsWith("/pdf-editor")) return true;
-  if (pathname.startsWith("/w-9-form")) return true;
-  if (pathname.startsWith("/w9-form")) return true;
-  if (pathname.startsWith("/forms/")) return true;
-  if (pathname.startsWith("/share/")) return true;
+  // 2026-09-02: `/dashboard`, `/pdf-composer`, `/pdf-editor`,
+  // `/w-9-form`, `/w9-form`, `/forms/`, `/share/` were previously
+  // exempt to keep user PII (filenames, SSN, share tokens) out of
+  // Weglot's server-side Reverse Proxy. In Phase A we translate
+  // client-side via the Weglot SDK, so PII never leaves the browser
+  // and geo-redirect is safe. When Phase B (CloudFront Reverse Proxy)
+  // ships, re-add these prefixes to `EXEMPT_PATH_PREFIXES` here AND
+  // in `infra/cloudfront-functions/geo-redirect.js` — the routing
+  // model there is "public locales through Weglot, PII stays on ALB",
+  // so those paths must be locale-aware but never proxied.
 
   return false;
 }
@@ -205,7 +205,16 @@ function isGeoRedirectExempt(pathname: string): boolean {
  * reverse proxy doesn't cache the redirect — each visitor's decision
  * must be evaluated per-request against their own cookie + geo.
  */
+// 2026-09-02 (evening): geo-IP redirect paused per client request.
+// Site defaults to English in every region; users pick language via
+// the dropdown in the navbar. To re-enable, flip `GEO_REDIRECT_PAUSED`
+// to false AND set `GEO_REDIRECT_ENABLED = true` in the CloudFront
+// Function at infra/cloudfront-functions/geo-redirect.js.
+const GEO_REDIRECT_PAUSED = true;
+
 function geoRedirect(req: NextRequest): NextResponse | null {
+  if (GEO_REDIRECT_PAUSED) return null;
+
   const pathname = req.nextUrl.pathname;
 
   // Explicit locale in URL always wins — never redirect a
@@ -240,18 +249,31 @@ function geoRedirect(req: NextRequest): NextResponse | null {
 
   // Debug logging — enable with `GEO_REDIRECT_DEBUG=on` to trace the
   // decision inputs in ECS logs WITHOUT actually redirecting. Useful
-  // to verify Weglot forwards `CF-IPCountry` before flipping the
-  // redirect live. Kept behind a separate flag so we're not flooding
-  // logs once redirects are enabled.
+  // to verify what geo signals Weglot's reverse proxy forwards to
+  // origin before flipping the redirect live.
   if (process.env.GEO_REDIRECT_DEBUG === "on") {
     // eslint-disable-next-line no-console
     console.log(
       JSON.stringify({
         source: "geo-redirect",
         path: pathname,
+        // Standard CDN geo headers (Weglot Cloudflare / AWS CloudFront)
         cfIpCountry: req.headers.get("cf-ipcountry"),
         cfViewerCountry: req.headers.get("cloudfront-viewer-country"),
+        // Client-IP forwarding (fallback path if we can install a
+        // server-side geo DB and look up by IP ourselves)
+        xForwardedFor: req.headers.get("x-forwarded-for"),
+        xRealIp: req.headers.get("x-real-ip"),
+        // Other headers that might carry country/geo hints
+        xCountry: req.headers.get("x-country"),
         acceptLanguage: req.headers.get("accept-language")?.slice(0, 60),
+        // Who forwarded us + the current URL
+        host: req.headers.get("host"),
+        forwardedHost: req.headers.get("x-forwarded-host"),
+        via: req.headers.get("via"),
+        // Weglot-specific headers (proxy might tag its own requests)
+        weglotClient: req.headers.get("weglot-client"),
+        // Decision state
         cookieLocale,
         geoLocale,
         targetLocale,
@@ -262,7 +284,14 @@ function geoRedirect(req: NextRequest): NextResponse | null {
     );
   }
 
-  if (process.env.GEO_REDIRECT_ENABLED !== "on") return null;
+  // Kill switch inverted 2026-09-02: middleware geo-redirect now runs
+  // by default so client-side Next.js navigation (which bypasses the
+  // CloudFront Function on cached RSC prefetches) also gets the locale
+  // prefix applied when a `lang_pref` cookie is present. This is the
+  // fix for the bug where clicking a `<Link href="/edit">` from `/de`
+  // dropped the user back on the English page. To disable, set
+  // `GEO_REDIRECT_DISABLE=on` in the ECS task def.
+  if (process.env.GEO_REDIRECT_DISABLE === "on") return null;
 
   if (cookieLocale === DEFAULT_LOCALE) return null;
 
