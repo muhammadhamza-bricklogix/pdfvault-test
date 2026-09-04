@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
@@ -13,7 +14,7 @@ import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { conversionService } from "@/lib/shared/api/services/conversion.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -21,6 +22,38 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 const EXPORT_EVENT = "editor:export";
+
+/**
+ * URL params used to survive the sign-in redirect back to `/w-9-form`.
+ * `?export=<format>` tells this component to auto-fire `editor:export`
+ * once the user is signed in + the form session is ready — so the
+ * user lands on the paywall directly instead of needing to click Done
+ * → Download a second time (2026-09-04 QA fix).
+ * `?filename=<encoded>` preserves the modal-supplied filename across
+ * the redirect so the downloaded file keeps whatever name the user
+ * had chosen before signing in.
+ */
+const EXPORT_INTENT_PARAM = "export";
+const EXPORT_FILENAME_PARAM = "filename";
+
+/**
+ * Build the redirect URL we hand to the AuthModal when a signed-out
+ * user hits Download or Save on `/w-9-form`. The URL points at the
+ * composer (`ROUTES.FORMS.W9_SHORT`) — NOT the marketing landing
+ * (`ROUTES.FORMS.W9`) — so the user resumes the editor with their
+ * typed values restored, and the `?export=` param triggers the auto
+ * paywall dispatch immediately after auth (mirrors the pdf-composer
+ * `?export=` pattern in the general auth chain).
+ */
+function buildW9ReturnUrl(format?: string, filename?: string): string {
+  const params = new URLSearchParams();
+
+  if (format) params.set(EXPORT_INTENT_PARAM, format);
+  if (filename) params.set(EXPORT_FILENAME_PARAM, filename);
+  const query = params.toString();
+
+  return query ? `${ROUTES.FORMS.W9_SHORT}?${query}` : ROUTES.FORMS.W9_SHORT;
+}
 const SAVE_EVENT = "editor:save";
 const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
 // Dedicated event for the hamburger Back → My PDFs flow on `/w-9-form`.
@@ -651,12 +684,63 @@ export function W9FinalizeIntercept() {
   const authLoadedRef = useRef(authLoaded);
   const queryClient = useQueryClient();
   const queryClientRef = useRef(queryClient);
+  // Post-signin auto-launch (2026-09-04 QA fix). When the user returns
+  // from auth with `?export=<format>` on the URL, we re-dispatch the
+  // `editor:export` event once the form session is ready so the paywall
+  // opens without a second Done → Download click. See `buildW9ReturnUrl`
+  // above for how the URL is set.
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoLaunchedRef = useRef(false);
+  // Session id lands after `formsService.startFormSession()` resolves in
+  // `W9EditorBootstrap`. We reactively wait for it so the export event
+  // fires only when the finalize handler will actually accept it.
+  const sessionId = useFormEditorStore((s) => s.sessionId);
 
   useEffect(() => {
     isSignedInRef.current = !!isSignedIn;
     authLoadedRef.current = authLoaded;
     queryClientRef.current = queryClient;
   }, [isSignedIn, authLoaded, queryClient]);
+
+  useEffect(() => {
+    if (autoLaunchedRef.current) return;
+    if (!authLoaded || !isSignedIn) return;
+    if (!sessionId) return;
+    const format = searchParams.get(EXPORT_INTENT_PARAM);
+
+    if (!format) return;
+    autoLaunchedRef.current = true;
+
+    const filenameParam = searchParams.get(EXPORT_FILENAME_PARAM);
+
+    // Small delay mirrors the pdf-composer hydrator Step 4 pattern —
+    // gives the render tree a beat to settle before the paywall pops.
+    const timeoutId = window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent(EXPORT_EVENT, {
+          detail: {
+            format,
+            ...(filenameParam ? { filename: filenameParam } : {}),
+          },
+        }),
+      );
+    }, 400);
+
+    // Strip the one-shot params so a refresh mid-paywall doesn't
+    // re-fire the download. Match pdf-composer hydrator's URL-clean
+    // behaviour.
+    const cleaned = new URLSearchParams(searchParams.toString());
+
+    cleaned.delete(EXPORT_INTENT_PARAM);
+    cleaned.delete(EXPORT_FILENAME_PARAM);
+    const nextQuery = cleaned.toString();
+
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [authLoaded, isSignedIn, sessionId, searchParams, pathname, router]);
 
   // Dedup key + last successful downloadUrl. Even though the backend is
   // now idempotent for FINALIZED sessions, the frontend cache saves a
@@ -731,13 +815,30 @@ export function W9FinalizeIntercept() {
         // the new session's S3 namespace won't accept the old key.
         savePendingW9Values(values);
 
-        // AuthModal (2026-08-28 unify). Cards' finalize does
-        // `window.location.assign(ROUTES.FORMS.W9)` (item #15) →
-        // W9EditorBootstrap re-hydrates the persisted values on the
-        // post-signin mount.
-        dispatchAuthModal({
-          mode: "login",
-          redirectUrl: ROUTES.FORMS.W9,
+        // 2026-09-04 (QA fix): redirect goes to the composer
+        // (`ROUTES.FORMS.W9_SHORT`) with `?export=<format>` so the
+        // paywall auto-fires the moment auth completes. Previously
+        // this went to `ROUTES.FORMS.W9` (marketing landing), forcing
+        // the user to click "Get Form" a second time. The auto-launch
+        // effect below picks up the `?export=` param, waits for the
+        // session to be ready, then re-dispatches `editor:export` —
+        // matching the pdf-composer `?export=` pattern in the general
+        // auth chain (items #1–4). Cards still finalize with
+        // `window.location.assign` (item #15) so iOS Safari commits
+        // the session cookie before the nav.
+        //
+        // 2026-09-04 (parity with pdf-composer): open the email-first
+        // modal instead of AuthModal(login). The email-first probe
+        // routes existing accounts to LoginToDownloadModal AND auto-
+        // creates a Clerk user (verified email + emailed password) on
+        // `form_identifier_not_found`, then signs the user in via a
+        // one-time ticket. Previously the login card dead-ended new
+        // users at "We couldn't find an account with that email."
+        dispatchEmailFirstModal({
+          redirectUrl: buildW9ReturnUrl(requestedFormat, requestedFilename),
+          submitLabel: "Download file",
+          subtitle: "Create an account to download it",
+          title: "Your W-9 is ready",
         });
 
         return;
@@ -1186,12 +1287,22 @@ export function W9FinalizeIntercept() {
 
       if (!isSignedInRef.current) {
         savePendingW9Values(values);
-        // AuthModal (2026-08-28 unify) — same rationale as the sibling
-        // download branch above (item #15 finalize + W9EditorBootstrap
-        // rehydrate on return).
-        dispatchAuthModal({
-          mode: "login",
-          redirectUrl: ROUTES.FORMS.W9,
+        // 2026-09-04 (QA fix): redirect to the composer, not the
+        // marketing landing. Save doesn't need a format param — the
+        // auto-launch effect only fires when `?export=` is present,
+        // so signed-in-return-from-Save just lands the user back
+        // in the composer with their values restored (no paywall
+        // auto-fire, matching the manual-Save intent). See the
+        // sibling Download branch above for the full rationale.
+        //
+        // 2026-09-04 (parity with pdf-composer): email-first modal
+        // handles both existing-account login and auto-signup for
+        // new emails. See the Download branch above for details.
+        dispatchEmailFirstModal({
+          redirectUrl: buildW9ReturnUrl(),
+          submitLabel: "Save to your library",
+          subtitle: "Create an account to save your W-9",
+          title: "Save your W-9",
         });
 
         return;
