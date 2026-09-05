@@ -110,5 +110,23 @@ export function useProductTour(key: TourKey) {
     return () => window.clearTimeout(id);
   }, [key, start]);
 
+  // Destroy any active tour instance when the host component unmounts —
+  // the most common trigger is a route change (browser back, in-app
+  // navigation). driver.js paints its overlay onto <body>, so without
+  // this cleanup the popover + backdrop leak onto the destination page
+  // (user report: tour visible on landing after leaving the editor).
+  // `activeInstance` is a module-level singleton, so tearing it down
+  // here doesn't affect other surfaces — the next surface's mount
+  // triggers its own `start()`. `markSeen` still fires via
+  // `onDestroyed` so the tour won't auto-relaunch on the same key.
+  useEffect(() => {
+    return () => {
+      if (activeInstance) {
+        activeInstance.destroy();
+        activeInstance = null;
+      }
+    };
+  }, []);
+
   return { start };
 }

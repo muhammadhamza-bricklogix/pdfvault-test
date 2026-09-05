@@ -582,7 +582,15 @@ function TopAppBar() {
 
       <LanguageSwitcher />
 
-      <TourHelpButton tour="editor" variant="chrome" />
+      {/* Editor product tour is auto-launched on first mount via
+          `useProductTour("editor")` inside <TourHelpButton />. The W-9
+          route reuses <PdfEditorShell />, so mounting this button here
+          would fire the composer tour over the W-9 template on the
+          user's first visit — anchors don't map to the W-9 layout and
+          it distracts from the yellow field overlays. Suppress on
+          `/w-9-form` only; every other editor route keeps the button
+          + the auto-launch. */}
+      {showW9Save ? null : <TourHelpButton tour="editor" variant="chrome" />}
 
       {/* Search — PDF-wide text search with highlight + navigation. */}
       <Tooltip delay={300}>
