@@ -10,7 +10,7 @@ import { Button } from "@heroui/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import "@/app/(landing)/landing-theme.css";
@@ -155,7 +155,18 @@ function EditorLayout() {
 
   const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
 
-  useProductTour("editor");
+  // Suppress the editor product tour on the W-9 route. `/w-9-form`
+  // reuses <PdfEditorShell /> but the tour's anchors + step copy
+  // reference generic composer surfaces (Editor menu, Tools) that
+  // don't apply — QA 2026-09-06: "Editor menu: Open, save, import,
+  // and manage the whole document from one place" popover appeared
+  // over the yellow W-9 field overlays. `TourHelpButton` on this
+  // route is already hidden (PvEditorTopChrome guard), but the shell-
+  // level `useProductTour("editor")` call still fired the auto-launch.
+  const layoutPathname = usePathname();
+  const isW9Layout = layoutPathname === ROUTES.FORMS.W9_SHORT;
+
+  useProductTour("editor", !isW9Layout);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),

@@ -38,7 +38,7 @@ function markSeen(key: TourKey): void {
   }
 }
 
-export function useProductTour(key: TourKey) {
+export function useProductTour(key: TourKey, enabled: boolean = true) {
   const start = useCallback(() => {
     if (typeof window === "undefined") return;
 
@@ -96,7 +96,12 @@ export function useProductTour(key: TourKey) {
   // Auto-launch once per surface, desktop only. Module-level Set makes
   // sure only ONE caller triggers the tour per session even when
   // several components share the same `useProductTour(key)` call.
+  // `enabled=false` short-circuits so a caller can suppress the tour on
+  // specific routes without breaking the rules-of-hooks (e.g. the W-9
+  // form reuses <PdfEditorShell /> but must NOT auto-run the editor
+  // tour — anchors don't map, copy references the wrong surface).
   useEffect(() => {
+    if (!enabled) return;
     if (typeof window === "undefined") return;
     if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return;
     if (alreadySeen(key)) return;
@@ -108,7 +113,7 @@ export function useProductTour(key: TourKey) {
     }, 600);
 
     return () => window.clearTimeout(id);
-  }, [key, start]);
+  }, [key, start, enabled]);
 
   // Destroy any active tour instance when the host component unmounts —
   // the most common trigger is a route change (browser back, in-app
