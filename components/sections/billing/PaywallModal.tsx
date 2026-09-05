@@ -397,20 +397,32 @@ export function PaywallModal({
   }, [isOpen]);
 
   const handleIframeSuccess = async (message?: {
-    order?: { subscription_id?: string };
+    order?: { subscription_id?: string; status?: string };
+    status?: string;
   }) => {
-    // Do NOT flip the entitlement snapshot optimistically on the iframe
-    // callback. Solidgate's `onSuccess` can fire client-side before the
-    // charge is confirmed server-side (declined-after-approval race,
-    // 3DS re-auth failures, etc.), so we'd previously flash "Payment
-    // received" and unlock premium tools for users whose card was never
-    // debited. Instead: sync with the backend, force a fresh
-    // subscription fetch, and only advance to the success step when the
-    // backend confirms `entitled === true`.
+    // Check if the callback payload indicates a declined or failed order
     const subscriptionId = message?.order?.subscription_id;
+    const orderStatus = (
+      message?.order?.status ??
+      message?.status ??
+      ""
+    ).toLowerCase();
+
+    if (
+      orderStatus === "declined" ||
+      orderStatus === "failed" ||
+      orderStatus === "rejected" ||
+      orderStatus === "error"
+    ) {
+      logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning", { orderStatus });
+      handleIframeFail();
+
+      return;
+    }
 
     logger.event(EVENTS.CHECKOUT_IFRAME_SUCCESS, "info", {
       hasSubscriptionId: Boolean(subscriptionId),
+      orderStatus,
     });
 
     try {
@@ -432,9 +444,7 @@ export function PaywallModal({
         logger.event(EVENTS.CHECKOUT_ENTITLEMENT_MISMATCH, "warning", {
           subscriptionId,
         });
-        setError(
-          "Payment couldn't be confirmed. If your card was charged, please refresh in a minute or email payments@pdfvault.ai.",
-        );
+        handleIframeFail();
 
         return;
       }
@@ -462,9 +472,7 @@ export function PaywallModal({
       logger.captureError(err, "checkout.subscription_sync", {
         subscriptionId,
       });
-      setError(
-        "We received your payment attempt but couldn't verify it. Please refresh in a minute or email payments@pdfvault.ai.",
-      );
+      handleIframeFail();
     }
   };
 
