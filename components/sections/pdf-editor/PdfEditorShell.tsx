@@ -39,6 +39,7 @@ import {
 import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -156,15 +157,19 @@ function EditorLayout() {
   const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
 
   // Suppress the editor product tour on the W-9 route. `/w-9-form`
-  // reuses <PdfEditorShell /> but the tour's anchors + step copy
+  // (and its locale-prefixed forms — `/de/w-9-form`, `/fr/w-9-form`, …)
+  // reuse <PdfEditorShell /> but the tour's anchors + step copy
   // reference generic composer surfaces (Editor menu, Tools) that
   // don't apply — QA 2026-09-06: "Editor menu: Open, save, import,
   // and manage the whole document from one place" popover appeared
   // over the yellow W-9 field overlays. `TourHelpButton` on this
   // route is already hidden (PvEditorTopChrome guard), but the shell-
   // level `useProductTour("editor")` call still fired the auto-launch.
+  // Normalise via `stripLocalePrefix` so the guard fires on EVERY
+  // locale — the raw `usePathname()` returns `/de/w-9-form` etc.
   const layoutPathname = usePathname();
-  const isW9Layout = layoutPathname === ROUTES.FORMS.W9_SHORT;
+  const isW9Layout =
+    stripLocalePrefix(layoutPathname) === ROUTES.FORMS.W9_SHORT;
 
   useProductTour("editor", !isW9Layout);
 

@@ -11,6 +11,7 @@ import { createShare } from "@/lib/client/api/shares";
 import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { formsService } from "@/lib/shared/api/services/forms.service";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -46,12 +47,15 @@ export function ShareModal(): React.ReactElement {
   // is where most users land, but `/forms/w-9`, `/forms/w-9/edit` and
   // `/w9-form` all mount the same editor with the same
   // `useFormEditorStore` session, so Share from any of them needs
-  // finalize.
+  // finalize. Strip the locale prefix (`/de/`, `/fr/`, etc.) before
+  // comparing — otherwise Share on `/de/w-9-form` would skip the
+  // finalize step and ship a blank template (QA 2026-09-06 pattern).
+  const strippedPath = stripLocalePrefix(pathname);
   const isW9Route =
-    pathname === ROUTES.FORMS.W9_SHORT ||
-    pathname === ROUTES.FORMS.W9_FORM ||
-    pathname === ROUTES.FORMS.W9 ||
-    (pathname?.startsWith(ROUTES.FORMS.W9_EDIT) ?? false);
+    strippedPath === ROUTES.FORMS.W9_SHORT ||
+    strippedPath === ROUTES.FORMS.W9_FORM ||
+    strippedPath === ROUTES.FORMS.W9 ||
+    strippedPath.startsWith(ROUTES.FORMS.W9_EDIT);
   const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);

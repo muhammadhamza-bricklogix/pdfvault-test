@@ -54,6 +54,7 @@ import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -293,7 +294,13 @@ function TopAppBar() {
   // `/w-9-form` there's no other in-flow save trigger — the user's
   // only path to My PDFs otherwise is Done → Download, which is
   // paid + downloads to disk. QA 2026-08-28.
-  const showW9Save = pathname === ROUTES.FORMS.W9_SHORT;
+  // Normalise via `stripLocalePrefix` so the W-9 guards fire on every
+  // locale variant — `/w-9-form`, `/de/w-9-form`, `/fr/w-9-form`, etc.
+  // The raw `usePathname()` returns the locale-prefixed URL and a
+  // direct `===` comparison would flip false on non-EN locales,
+  // leaving the composer HamburgerMenu + Tool row visible on W-9 in
+  // languages other than English (QA 2026-09-06).
+  const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -710,7 +717,8 @@ function ToolToolbar() {
   const disabled = !file;
   const canManagePages = !!pdfDocument && pageCount > 0;
 
-  const isW9Route = pathname === ROUTES.FORMS.W9_SHORT;
+  // Locale-normalised — see `showW9Save` above for context.
+  const isW9Route = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
 
   const isActionDisabled = (id: string): boolean => {
     if (id === "manage-pages") return !canManagePages;

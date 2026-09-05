@@ -50,6 +50,7 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -95,7 +96,15 @@ export function EditorInfoBar() {
   const isW9Route = useMemo(() => {
     if (!pathname) return false;
 
-    return pathname === "/w-9-form" || pathname.startsWith("/forms/w-9");
+    // Strip `/de/`, `/fr/`, etc. before comparing — otherwise the guard
+    // silently flips false on non-EN locales and the HamburgerMenu +
+    // PDF-tool row surface on `/de/w-9-form`, `/fr/w-9-form`, etc.
+    // (QA 2026-09-06).
+    const stripped = stripLocalePrefix(pathname);
+
+    return (
+      stripped === ROUTES.FORMS.W9_SHORT || stripped.startsWith("/forms/w-9")
+    );
   }, [pathname]);
 
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
