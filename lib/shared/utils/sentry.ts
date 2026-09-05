@@ -1,41 +1,37 @@
-import * as Sentry from "@sentry/nextjs";
-
 /**
- * Sentry helpers specific to user + session context. Everything else
- * (breadcrumbs, spans, event capture, error capture, ambient context)
- * lives on `logger` in `./logger.ts` so there's one call surface.
+ * Compat shim — Sentry has been retired in favour of ECS CloudWatch.
  *
- * The URL scrubber lives in `./scrub-url.ts` so it can be imported from
- * edge runtime configs without pulling the whole Sentry SDK in.
+ * The two exported helpers used to pipe user + session context into
+ * `Sentry.setUser` / `Sentry.setTag`. They now route through
+ * `logger.setContext` so the same information rides on every event
+ * shipped by `cloudwatch-shipper` (backend receives it in the request
+ * body and writes it as a CloudWatch log-record field).
+ *
+ * File kept at its original path so downstream callers
+ * (`app-providers.tsx`, `use-clerk-user-sync.ts`, etc.) don't need to
+ * rewrite imports during the cutover. Once every caller migrates to
+ * `logger.setContext` directly, this shim can be deleted.
  */
 
-type SentryUser = {
+import { logger } from "./logger";
+
+type UserContext = {
   id: string;
   email?: string;
   username?: string;
 };
 
-export function setSentryUser(user: SentryUser | null): void {
-  if (!user) {
-    Sentry.setUser(null);
-
-    return;
-  }
-
-  Sentry.setUser({
-    id: user.id,
-    email: user.email,
-    username: user.username,
-  });
+export function setSentryUser(user: UserContext | null): void {
+  logger.setContext("user", user);
 }
 
-const SESSION_STORAGE_KEY = "pdfvault:sentry-session-id";
+const SESSION_STORAGE_KEY = "pdfvault:client-session-id";
 
 /**
  * Stable per-tab session identifier. Persists across route changes for
  * the life of the browser tab so every event from one visit shares a
- * `session_id` tag — makes "what did this session actually do" queries
- * trivial in the Sentry dashboard.
+ * `session_id` field — makes "what did this session actually do"
+ * queries trivial in CloudWatch Logs Insights.
  */
 export function getOrCreateSessionId(): string {
   if (typeof window === "undefined") {
@@ -56,7 +52,7 @@ export function getOrCreateSessionId(): string {
     return fresh;
   } catch {
     // sessionStorage disabled (private mode / cross-origin iframe) —
-    // fall back to an ephemeral id so tags still populate.
+    // fall back to an ephemeral id so context still populates.
     return crypto.randomUUID();
   }
 }
@@ -65,6 +61,6 @@ export function attachSessionIdTag(): void {
   const id = getOrCreateSessionId();
 
   if (id) {
-    Sentry.setTag("session_id", id);
+    logger.setContext("session", { id });
   }
 }
