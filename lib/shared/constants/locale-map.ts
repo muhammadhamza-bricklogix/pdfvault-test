@@ -176,3 +176,24 @@ export function isSupportedLocale(value: unknown): value is Locale {
     (SUPPORTED_LOCALES as readonly string[]).includes(value)
   );
 }
+
+/**
+ * Strips the locale prefix from a pathname so client-side route
+ * matching (`pathname === ROUTES.X`, `pathname.startsWith(…)`) works
+ * regardless of the active locale. Next.js `usePathname()` returns the
+ * URL-bar path, which keeps the `/de/`, `/fr/`, etc. prefix — the
+ * middleware rewrites internally but the client sees the prefixed
+ * form. Any equality/startsWith check against an un-prefixed route
+ * constant (e.g. `ROUTES.FORMS.W9_SHORT === "/w-9-form"`) needs the
+ * prefix stripped first, otherwise the check silently flips false on
+ * non-EN locales and locale-gated UI (W-9 tool-row hider, editor Save
+ * button, ShareModal branch, etc.) breaks.
+ *
+ * `null`/`undefined` in → `"/"` out, so callers can pass
+ * `usePathname()` directly without an intermediate default.
+ */
+export function stripLocalePrefix(pathname: string | null | undefined): string {
+  if (!pathname) return "/";
+
+  return parseLocalePrefix(pathname)?.rest ?? pathname;
+}
