@@ -459,7 +459,20 @@ function TopAppBar() {
           the W-9 flow has its own Back → save-and-continue path and
           the hamburger's tools (Manage Pages, Share, etc.) don't
           apply to a fill-and-sign form. */}
-      {showW9Save ? null : <HamburgerMenu />}
+      {/*
+        HamburgerMenu is signed-in-only per QA 2026-09-05: every entry
+        under it (My PDFs, Save, Version History, Share, Print,
+        Compress-as-PDF, Extract Images, Flatten, Merge, Split,
+        Password protect, Unlock, Manage Pages, etc.) either uploads to
+        `/documents`, hits a paid backend, or opens a modal that
+        immediately dispatches the sign-in prompt on interaction. Rather
+        than gate each entry a second time, hide the whole menu until
+        the user signs in — the top chrome's Login button + the
+        toolbar's Download flow already give them a path to the paid
+        surface. Also skipped on `/w-9-form` for the same reason as
+        before (W-9 route uses its own top bar).
+      */}
+      {showW9Save || !isSignedIn ? null : <HamburgerMenu />}
 
       <Link
         aria-label="Home"

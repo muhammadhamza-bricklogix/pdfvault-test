@@ -133,7 +133,13 @@ export function LandingLanguageSwitcher({
     setOpen(false);
     if (code === activeLocale) return;
     persistLangPref(code);
-    const href = buildLocaleHref(code, pathname);
+    // Preserve query + hash so marketing UTM / referral params (and
+    // any deep-link state on `/all-tools`, `/pricing`, etc.) survive
+    // the locale change. Matches the composer-side fix in
+    // `LanguageSwitcher`.
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const href = buildLocaleHref(code, pathname, search, hash);
 
     startTransition(() => {
       // Hard navigation so Weglot's SDK re-initializes on the new

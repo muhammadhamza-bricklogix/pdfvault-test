@@ -332,7 +332,14 @@ export function EditorInfoBar() {
                   <p>Back to dashboard</p>
                 </Tooltip.Content>
               </Tooltip>
-              {isW9Route ? null : <HamburgerMenu />}
+              {/*
+                Signed-in-only per QA 2026-09-05 — see the matching
+                guard + rationale in `PvEditorTopChrome.tsx`. Signed-out
+                users get the Download / Login affordances via the top
+                chrome; the menu itself would strand them at a
+                sign-in prompt on every entry.
+              */}
+              {isW9Route || !isSignedIn ? null : <HamburgerMenu />}
             </div>
 
             {/* Undo + Redo — mobile only */}

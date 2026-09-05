@@ -11,6 +11,8 @@ import {
   parseLocalePrefix,
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
+import { ROUTES } from "@/lib/shared/constants/routes";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 
 type Entry = { code: Locale; label: string; short: string };
 
@@ -23,14 +25,47 @@ const LANGUAGES: Entry[] = [
   { code: "ar", label: "العربية", short: "AR" },
 ];
 
-function buildLocaleHref(nextLocale: Locale, pathname: string): string {
+function buildLocaleHref(
+  nextLocale: Locale,
+  pathname: string,
+  search = "",
+  hash = "",
+): string {
   const parsed = parseLocalePrefix(pathname);
   const strippedPath = parsed ? parsed.rest : pathname;
   const suffix = strippedPath === "/" ? "" : strippedPath;
+  // Preserve the current query string + hash so callers on
+  // `/pdf-composer?id=<docId>&tool=<slug>` don't lose their in-flight
+  // context when switching locales. Without this the editor lost its
+  // `?id=` on every language change and either bounced the user to
+  // Dashboard (post-signin path) or fell back to an empty drop-zone —
+  // reported by QA 2026-09-05.
+  const suffixWithQuery = `${suffix}${search ?? ""}${hash ?? ""}`;
 
-  if (nextLocale === DEFAULT_LOCALE) return suffix || "/";
+  if (nextLocale === DEFAULT_LOCALE) return suffixWithQuery || "/";
 
-  return `/${nextLocale}${suffix}`;
+  return `/${nextLocale}${suffixWithQuery}`;
+}
+
+// Composer routes where an unsaved editor session lives in memory. On
+// these routes we snapshot `file + fabricJsonByPage + extractedPages`
+// to IDB BEFORE the locale full-page reload so
+// `PendingEditorFileHydrator` restores the exact state after Weglot
+// re-initialises on the new locale. Every other route restores from
+// the URL alone (marketing pages, dashboard, etc.) so no snapshot is
+// needed. Keep the set minimal — snapshotting on every language click
+// on the marketing landing would just churn IDB for no gain.
+const EDITOR_ROUTES_NEEDING_SNAPSHOT: ReadonlySet<string> = new Set([
+  ROUTES.TOOLS.PDF_EDITOR, // "/pdf-composer"
+  "/pdf-editor",
+  ROUTES.FORMS.W9_SHORT, // "/w-9-form"
+]);
+
+function needsEditorSnapshot(pathname: string): boolean {
+  const parsed = parseLocalePrefix(pathname);
+  const strippedPath = parsed ? parsed.rest : pathname;
+
+  return EDITOR_ROUTES_NEEDING_SNAPSHOT.has(strippedPath);
 }
 
 function persistLangPref(nextLocale: Locale) {
@@ -93,13 +128,42 @@ export function LanguageSwitcher() {
               onAction={() => {
                 if (lang.code === activeLocale) return;
                 persistLangPref(lang.code);
-                const href = buildLocaleHref(lang.code, pathname);
+
+                // Preserve `?id=<docId>&tool=<slug>&export=<fmt>` +
+                // any hash. The composer + W-9 routes rely on those
+                // params to re-hydrate the exact editor state after
+                // Weglot's mandatory full-page reload; stripping them
+                // would strand the user on an empty drop-zone or
+                // bounce them to Dashboard (QA 2026-09-05).
+                const search =
+                  typeof window !== "undefined" ? window.location.search : "";
+                const hash =
+                  typeof window !== "undefined" ? window.location.hash : "";
+                const href = buildLocaleHref(lang.code, pathname, search, hash);
+
+                // Editor routes: snapshot the in-memory file + fabric
+                // overlays + extractedPages to IDB before the reload
+                // so `PendingEditorFileHydrator` restores them on the
+                // fresh page. Signed-in users with a `?id=` in the
+                // URL are already covered by the document loader, but
+                // signed-out users editing locally OR signed-in users
+                // with unsaved fabric edits both lose work without
+                // this snapshot. Fire-and-forget — snapshot failure
+                // shouldn't block the language change.
+                const snapshotPromise = needsEditorSnapshot(pathname)
+                  ? snapshotPendingEditorFile().catch(() => undefined)
+                  : Promise.resolve();
 
                 startTransition(() => {
-                  // Hard navigation so Weglot's SDK re-initializes on the
-                  // new locale prefix. Soft router.push keeps the same
-                  // window and Weglot never re-runs its translation pass.
-                  window.location.assign(href);
+                  // Wait for the snapshot to hit disk (typically < 50 ms)
+                  // before firing the reload; skip on non-editor routes.
+                  void snapshotPromise.then(() => {
+                    // Hard navigation so Weglot's SDK re-initializes on
+                    // the new locale prefix. Soft router.push keeps the
+                    // same window and Weglot never re-runs its
+                    // translation pass.
+                    window.location.assign(href);
+                  });
                 });
               }}
             >
