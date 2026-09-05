@@ -298,7 +298,14 @@ export function ManagePagesModal({
 
   const pageTotal = draft.pages.length;
   const hasSelection = draft.selectedCount > 0;
-  const canDelete = hasSelection && pageTotal - draft.selectedCount >= 1;
+  // Delete is enabled whenever a page is selected. If the selection covers
+  // every page, `deleteSelected()` itself blocks the mutation and surfaces
+  // a "Cannot delete all pages" toast — see `use-manage-pages-draft.ts`.
+  // Previously this ANDed on `pageTotal - selectedCount >= 1`, which left
+  // the Delete button greyed after Select All, so the click produced no
+  // visible response (QA 2026-09-06). Letting the click reach the draft
+  // hook is what surfaces the feedback the user was missing.
+  const canDelete = hasSelection;
   const canZoomOut = gridZoom > 0.2;
   const canZoomIn = gridZoom < 0.5;
 

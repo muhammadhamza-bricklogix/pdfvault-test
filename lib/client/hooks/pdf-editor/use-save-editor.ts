@@ -38,7 +38,8 @@ type SaveBeforeActionDetail = {
       | "no-changes"
       | "no-file"
       | "not-signed-in"
-      | "not-loaded";
+      | "not-loaded"
+      | "cancelled-duplicate";
   }) => void;
 };
 
@@ -92,6 +93,11 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           persistEditorDocument({
             fabricCanvas: fabricRef.current,
             force: true,
+            // QA 2026-09-06: explicit Save on a fresh file must ask the
+            // user "Overwrite or Cancel" if a same-name doc already
+            // exists in their library, rather than silently create a
+            // duplicate row or 400 on backend uniqueness.
+            checkFilenameDuplicate: true,
           }),
         { source: "button" },
       );
@@ -110,9 +116,14 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           });
         } else if (result.reason === "not-signed-in") {
           toast.error({
-            title: "Sign in required",
-            description: "Sign in to save your edits to the cloud.",
+            title: "Login required",
+            description: "Login to save your edits to the cloud.",
           });
+        } else if (result.reason === "cancelled-duplicate") {
+          // User picked "Cancel" on the duplicate-filename prompt.
+          // Nothing to say — leaving the local edits in place is the
+          // intended outcome. The Save button stays enabled so they
+          // can rename + retry.
         } else if (result.reason === "not-loaded") {
           toast.error({
             title: "PDF still loading",
@@ -200,6 +211,10 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           persistEditorDocument({
             fabricCanvas: fabricRef.current,
             force: detail?.force,
+            // Same rationale as the button-Save above — Done/Download
+            // and other save-before-action flows must not silently
+            // duplicate a same-name row.
+            checkFilenameDuplicate: true,
           }),
         { source: "before_action" },
       );

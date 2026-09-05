@@ -1,18 +1,11 @@
-import {
-  Allura,
-  Dancing_Script,
-  Great_Vibes,
-  Pacifico,
-  Sacramento,
-} from "next/font/google";
+import { Dancing_Script, Great_Vibes } from "next/font/google";
 
 /**
- * Route-group layout for `(tools)/*` — loads the five signature-tab
- * fonts consumed by `<SignatureModal />` (Dancing Script, Great
- * Vibes, Allura, Sacramento, Pacifico). Scoped here (not root
- * `app/layout.tsx`) so landing / marketing pages don't fetch these
- * unused woff2 files on every visit — was measurably hurting
- * landing LCP + total bandwidth (2026-08-30).
+ * Route-group layout for `(tools)/*` — loads the signature-tab fonts
+ * consumed by `<SignatureModal />` (Dancing Script, Great Vibes).
+ * Scoped here (not root `app/layout.tsx`) so landing / marketing
+ * pages don't fetch these unused woff2 files on every visit — was
+ * measurably hurting landing LCP + total bandwidth (2026-08-30).
  *
  * `next/font/google` handles the `<link rel="preload">` + inline
  * `@font-face` injection for us; we just need to attach each font's
@@ -40,33 +33,12 @@ const greatVibes = Great_Vibes({
   weight: ["400"],
 });
 
-const allura = Allura({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-allura",
-  weight: ["400"],
-});
-
-const sacramento = Sacramento({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-sacramento",
-  weight: ["400"],
-});
-
-const pacifico = Pacifico({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-pacifico",
-  weight: ["400"],
-});
-
 export default function ToolsLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div
-      className={`contents ${dancingScript.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
+      className={`contents ${dancingScript.variable} ${greatVibes.variable}`}
     >
       {children}
     </div>

@@ -54,15 +54,24 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
       const result = await persistEditorDocument({
         fabricCanvas: fabricRef.current,
         force: true,
+        // Manage Pages / auto-persist paths for signed-in users must
+        // also gate on the "file already exists" prompt — otherwise a
+        // page rearrange on a re-uploaded doc silently creates a
+        // duplicate row in My PDFs (QA 2026-09-06).
+        checkFilenameDuplicate: true,
       });
 
       if (!result.ok) {
         if (result.reason === "not-signed-in") {
+          // QA 2026-09-06 copy: "Sign in" → "Login".
           toast.info({
-            title: "Sign in to save",
+            title: "Login to save",
             description:
-              "Page changes are applied locally. Sign in to save to the cloud.",
+              "Page changes are applied locally. Login to save to the cloud.",
           });
+        } else if (result.reason === "cancelled-duplicate") {
+          // User picked Cancel on the duplicate prompt. Leave the
+          // page changes local; no error toast, no forced navigation.
         } else if (result.reason === "error") {
           toast.error({
             title: "Could not save pages",

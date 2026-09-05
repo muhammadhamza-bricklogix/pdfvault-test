@@ -174,7 +174,7 @@ export function EditorInfoBar() {
   const saveTooltip = !file
     ? "Open a PDF to save"
     : !isSignedIn
-      ? "Sign in to save to your library"
+      ? "Login to save to your library"
       : "Save";
   const onSaveClick = () => {
     if (!isSignedIn) {

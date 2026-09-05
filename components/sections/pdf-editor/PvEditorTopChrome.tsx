@@ -561,7 +561,7 @@ function TopAppBar() {
               {!file
                 ? "Open a PDF to save"
                 : !isSignedIn
-                  ? "Sign in to save to your library"
+                  ? "Login to save to your library"
                   : "Save to My PDFs"}
             </p>
           </Tooltip.Content>

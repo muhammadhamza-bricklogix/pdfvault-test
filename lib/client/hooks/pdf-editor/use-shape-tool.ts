@@ -45,7 +45,6 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
   const shapeFill = usePdfEditorStore((s) => s.shapeFill);
   const shapeStroke = usePdfEditorStore((s) => s.shapeStroke);
   const shapeStrokeWidth = usePdfEditorStore((s) => s.shapeStrokeWidth);
-  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCreatingShape = usePdfEditorStore((s) => s.setIsCreatingShape);
 
   const classesRef = useRef<FabricClasses | null>(null);
@@ -385,7 +384,6 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
     shapeFill,
     shapeStroke,
     shapeStrokeWidth,
-    setActiveTool,
     setIsCreatingShape,
   ]);
 }

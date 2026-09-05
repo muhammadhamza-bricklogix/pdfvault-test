@@ -7,6 +7,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { AuthModal } from "@/components/shared/auth-modal";
+import { DuplicateFilenameModal } from "@/components/shared/duplicate-filename-modal";
 import { EmailFirstModal } from "@/components/shared/email-first-modal";
 import { LoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
@@ -43,6 +44,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <Toast.Provider gap={12} maxVisibleToasts={5} placement="top end" />
           <UploadToastProvider />
           <AuthModal />
+          <DuplicateFilenameModal />
           <EmailFirstModal />
           <LoginToDownloadModal />
           <MobileDebugBoot />
