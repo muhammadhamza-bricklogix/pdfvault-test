@@ -1108,17 +1108,17 @@ function PayStep({
           {payFailed ? (
             <div
               aria-live="polite"
-              className="flex flex-col gap-2 rounded-xl border border-danger-200 bg-danger-50 p-4 text-[13px] text-danger-800 dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
+              className="flex flex-col gap-2.5 rounded-xl border border-danger-200 bg-danger-50 p-5 text-[14px] text-danger-800 sm:p-6 sm:text-[15px] dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
             >
-              <p className="font-semibold">
+              <p className="text-[15px] font-semibold leading-snug sm:text-[17px]">
                 Your card was declined and hasn&apos;t been charged.
               </p>
-              <p>
+              <p className="leading-relaxed">
                 Try another card or contact your bank. You can re-enter details
                 below.
               </p>
               <button
-                className="mt-1 inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 inline-flex h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:text-[16px]"
                 disabled={retryLoading}
                 type="button"
                 onClick={onRetry}

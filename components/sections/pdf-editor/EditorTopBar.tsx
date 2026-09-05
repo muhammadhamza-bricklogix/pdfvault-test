@@ -61,9 +61,9 @@ import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, save
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------
 
 export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
