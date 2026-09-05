@@ -64,6 +64,21 @@ function writeCookie(name: string, value: string) {
   document.cookie = attrs.join("; ");
 }
 
+// Bot / crawler landings sometimes carry `?gclid=<junk>` or oversized /
+// non-URL-safe strings. Google Ads' real click IDs are alphanumeric +
+// `._~%-` in practice; anything else is either garbage or a bot
+// fingerprint. Reject at capture time so a bot-poisoned session can't
+// forward a broken click ID on checkout-intent and get a 400 back.
+const CLICK_ID_MAX_LENGTH = 200;
+const CLICK_ID_ALLOWED_CHARS = /^[A-Za-z0-9._~%-]+$/;
+
+function isValidClickId(raw: string | null): raw is string {
+  if (!raw) return false;
+  if (raw.length > CLICK_ID_MAX_LENGTH) return false;
+
+  return CLICK_ID_ALLOWED_CHARS.test(raw);
+}
+
 /**
  * Reads `gclid` / `gbraid` / `wbraid` from the current URL query string
  * and, for each one present, writes a 1st-party cookie that survives 90
@@ -76,6 +91,10 @@ function writeCookie(name: string, value: string) {
  * IS on the URL and we already have a stored one, we overwrite —
  * assumption is the newer click is the one that should attribute the
  * next conversion.
+ *
+ * Invalid IDs (empty, oversized, or containing chars outside Ads'
+ * observed alphabet) are silently dropped so a bot-crafted landing URL
+ * can't poison the cookie.
  */
 export function captureGoogleClickIds(): void {
   if (typeof window === "undefined") return;
@@ -85,13 +104,17 @@ export function captureGoogleClickIds(): void {
   const gbraid = params.get("gbraid");
   const wbraid = params.get("wbraid");
 
-  if (!gclid && !gbraid && !wbraid) return;
+  const validGclid = isValidClickId(gclid) ? gclid : null;
+  const validGbraid = isValidClickId(gbraid) ? gbraid : null;
+  const validWbraid = isValidClickId(wbraid) ? wbraid : null;
+
+  if (!validGclid && !validGbraid && !validWbraid) return;
 
   const now = new Date().toISOString();
 
-  if (gclid) writeCookie(COOKIE_KEYS.gclid, gclid);
-  if (gbraid) writeCookie(COOKIE_KEYS.gbraid, gbraid);
-  if (wbraid) writeCookie(COOKIE_KEYS.wbraid, wbraid);
+  if (validGclid) writeCookie(COOKIE_KEYS.gclid, validGclid);
+  if (validGbraid) writeCookie(COOKIE_KEYS.gbraid, validGbraid);
+  if (validWbraid) writeCookie(COOKIE_KEYS.wbraid, validWbraid);
   writeCookie(COOKIE_KEYS.clickTimestamp, now);
 }
 

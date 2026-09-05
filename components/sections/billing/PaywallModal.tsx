@@ -213,7 +213,34 @@ export function PaywallModal({
 
     setSelectedPlan("monthly");
 
-    logger.event(EVENTS.CHECKOUT_INTENT_START, "info", { plan: "monthly" });
+    // Modal lifecycle milestone — fires exactly once per open (isOpen
+    // flip). Landmark for the CloudWatch/Sentry trace: any subsequent
+    // failure in this session's paywall chain is a descendant of this
+    // event. Includes preview shape so we can slice failures by
+    // originating export path (pdf / docx / xlsx / no-preview).
+    logger.event(EVENTS.PAYWALL_MODAL_MOUNT, "info", {
+      hasPreview: Boolean(preview),
+      hidePreview,
+      sourceExt: preview?.sourceExt,
+      targetExt: preview?.targetExt,
+      hasPreviewObjectUrl: Boolean(preview?.previewObjectUrl),
+    });
+
+    logger.event(EVENTS.CHECKOUT_INTENT_START, "info", {
+      plan: "monthly",
+      // Diagnostic — Microsoft's automated bots repro a
+      // "Couldn't start checkout / Invalid request." 400 that the team
+      // cannot reproduce manually. Without capturing the payload +
+      // client context at start-of-flight we can't tell if the fault is
+      // an empty fileName, garbage click IDs, an auth-hydration race,
+      // or a Solidgate fraud rule (see /Users/softaims/.claude/plans
+      // for the full triage). Log only shape, not PII.
+      fileNameLength: preview?.filename?.length ?? 0,
+      fileNameEmpty: !preview?.filename,
+      hasPreview: Boolean(preview),
+      sourceExt: preview?.sourceExt,
+      targetExt: preview?.targetExt,
+    });
     createIntent.mutate(
       {
         disclaimerVersion: DISCLAIMER_VERSION,
@@ -235,7 +262,93 @@ export function PaywallModal({
           setIntent(intent);
         },
         onError: (err) => {
-          logger.captureError(err, "checkout.intent");
+          // Enriched forensic log — captures the raw non-enveloped 400
+          // body (`ApiError.rawBody`, populated in `api-error.ts`),
+          // whatever the backend actually said, plus enough client
+          // context to distinguish bot vs. human sessions after the
+          // fact. This is the piece missing today; without it every
+          // future "Invalid request." report is another round of
+          // guessing.
+          //
+          // Structured under `event="checkout_intent_400"` so we can
+          // query Sentry (or console logs) directly for it.
+          const apiErr = err as {
+            statusCode?: number;
+            message?: string;
+            rawBody?: string;
+          };
+          const cioClickIds = (() => {
+            if (typeof document === "undefined") return {};
+            const cookie = document.cookie;
+
+            return {
+              hasGclid: /(?:^|;\s*)pdfvault_gclid=/.test(cookie),
+              hasGbraid: /(?:^|;\s*)pdfvault_gbraid=/.test(cookie),
+              hasWbraid: /(?:^|;\s*)pdfvault_wbraid=/.test(cookie),
+              hasClickTs: /(?:^|;\s*)pdfvault_gclick_ts=/.test(cookie),
+            };
+          })();
+          const clientHints =
+            typeof window !== "undefined"
+              ? {
+                  userAgent: navigator.userAgent?.slice(0, 300),
+                  language: navigator.language,
+                  timezone:
+                    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+                    "unknown",
+                  referrer: document.referrer?.slice(0, 300) ?? "",
+                  innerWidth: window.innerWidth,
+                  innerHeight: window.innerHeight,
+                  path: window.location.pathname + window.location.search,
+                }
+              : {};
+
+          // eslint-disable-next-line no-console
+          console.error("[PaywallModal] checkout_intent_400", {
+            event: "checkout_intent_400",
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            rawBody: apiErr?.rawBody?.slice(0, 2048),
+            payload: {
+              disclaimerVersion: DISCLAIMER_VERSION,
+              fileNameLength: preview?.filename?.length ?? 0,
+              fileNameEmpty: !preview?.filename,
+              fileNameFirstChars: preview?.filename?.slice(0, 40),
+              hasPreview: Boolean(preview),
+              sourceExt: preview?.sourceExt,
+              targetExt: preview?.targetExt,
+            },
+            cookies: cioClickIds,
+            client: clientHints,
+          });
+
+          // Named event so CloudWatch/Sentry has a queryable failure
+          // milestone (search by `event_name:checkout.intent_error`)
+          // in addition to the raw exception. Fired at warning level so
+          // it's captureMessage-promoted rather than a silent breadcrumb.
+          logger.event(EVENTS.CHECKOUT_INTENT_ERROR, "warning", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            fileNameLength: preview?.filename?.length ?? 0,
+            fileNameEmpty: !preview?.filename,
+            sourceExt: preview?.sourceExt,
+            targetExt: preview?.targetExt,
+            ...cioClickIds,
+          });
+
+          logger.captureError(err, "checkout.intent", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            rawBody: apiErr?.rawBody?.slice(0, 2048),
+            fileNameLength: preview?.filename?.length ?? 0,
+            fileNameEmpty: !preview?.filename,
+            sourceExt: preview?.sourceExt,
+            targetExt: preview?.targetExt,
+            ...cioClickIds,
+            userAgent: clientHints.userAgent,
+            timezone: clientHints.timezone,
+            language: clientHints.language,
+          });
           setError(
             err instanceof Error
               ? err.message
@@ -418,7 +531,21 @@ export function PaywallModal({
   // returns the annual amounts before we mount the payment iframe.
   const [continueLoading, setContinueLoading] = useState(false);
   const handleContinue = () => {
+    // Milestone — user committed to a plan and clicked Continue. Slice
+    // paywall funnel by which plan users pick + whether the annual
+    // intent had already resolved by the time they reached Continue
+    // (perf signal for the parallel prefetch at PaywallModal open).
+    logger.event(EVENTS.PAYWALL_PLAN_STEP_CONTINUE, "info", {
+      selectedPlan,
+      annualPrefetchReady: Boolean(annualIntent),
+      annualUnavailable,
+    });
+
     if (selectedPlan === "monthly") {
+      logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+        plan: "monthly",
+        via: "direct",
+      });
       setStep("pay");
 
       return;
@@ -429,6 +556,10 @@ export function PaywallModal({
     // re-fetch when it's still pending or failed.
     if (annualIntent) {
       setIntent(annualIntent);
+      logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+        plan: "annual",
+        via: "prefetch",
+      });
       setStep("pay");
 
       return;
@@ -445,11 +576,26 @@ export function PaywallModal({
         onSuccess: (fresh) => {
           setIntent(fresh);
           setAnnualIntent(fresh);
+          logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+            plan: "annual",
+            via: "fallback_fetch",
+          });
           setStep("pay");
           setContinueLoading(false);
         },
         onError: (err) => {
-          logger.captureError(err, "checkout.annual_intent");
+          const apiErr = err as { statusCode?: number; message?: string };
+
+          logger.event(EVENTS.CHECKOUT_INTENT_ERROR, "warning", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            plan: "annual",
+            path: "handleContinue",
+          });
+          logger.captureError(err, "checkout.annual_intent", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+          });
           setContinueLoading(false);
           toast.error({
             title: "Couldn't start annual checkout",
@@ -471,7 +617,20 @@ export function PaywallModal({
         if (!open) {
           // On the success step, any close gesture (ESC, X) should resolve
           // as success so the pending download/action still fires.
-          step === "success" ? finish() : onClose();
+          if (step === "success") {
+            finish();
+          } else {
+            // Log manual close so we can slice funnel drop-off by
+            // step (plan vs pay) and error presence — helps distinguish
+            // "user changed their mind on plan step" from "user gave up
+            // after a payment decline / checkout-intent failure".
+            logger.event(EVENTS.PAYWALL_MODAL_CLOSED_MANUAL, "info", {
+              step,
+              hadError: Boolean(error),
+              payFailed,
+            });
+            onClose();
+          }
         }
       }}
     >
@@ -1151,7 +1310,17 @@ function SuccessStep({
       link.click();
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      logger.event(EVENTS.PAYWALL_RECEIPT_DOWNLOAD_OK, "info", {
+        orderId: intent.orderId,
+        selectedPlan,
+        currency: intent.currency,
+      });
     } catch (err) {
+      logger.event(EVENTS.PAYWALL_RECEIPT_DOWNLOAD_ERROR, "warning", {
+        orderId: intent.orderId,
+        selectedPlan,
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
       logger.captureError(err, "paywall.receipt_download");
       toast.error({
         title: "Couldn't download receipt",

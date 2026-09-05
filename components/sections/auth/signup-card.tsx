@@ -346,10 +346,10 @@ export function SignupCard({
     setNotice(null);
     setErrors({});
     setSubmitting(true);
-    // eslint-disable-next-line no-console
-    console.info("[AUTH_DIAG] signup.credentials.submit", {
+    const submitCtx = {
       mode,
       hasEmail: Boolean(trimmedEmail),
+      emailDomain: trimmedEmail.split("@")[1] ?? "",
       hasPassword: mode === "password" ? Boolean(password) : null,
       captchaAnchorMounted: Boolean(
         typeof document !== "undefined" &&
@@ -357,7 +357,15 @@ export function SignupCard({
       ),
       clerkOrigin:
         typeof window !== "undefined" ? window.location.origin : "ssr",
-    });
+    };
+
+    // eslint-disable-next-line no-console
+    console.info("[AUTH_DIAG] signup.credentials.submit", submitCtx);
+    // Same info to Sentry as a queryable milestone (info → breadcrumb
+    // attached to next capture in this chain, so any downstream verify
+    // / finalize failure ships with the exact entry-mode + captcha
+    // state visible).
+    logger.event(EVENTS.SIGNUP_START, "info", submitCtx);
     try {
       if (mode === "code") {
         // Passwordless signup: create with just the email address, then
@@ -611,13 +619,25 @@ export function SignupCard({
             sessionId,
             afterSignUpPath,
           });
+          logger.event(EVENTS.SIGNUP_FINALIZE_START, "info", {
+            via,
+            afterSignUpPath,
+          });
           suppressNextUnload();
           await setActiveSession({ session: sessionId });
+          logger.event(EVENTS.SIGNUP_FINALIZE_OK, "info", {
+            via,
+            afterSignUpPath,
+          });
           // Manual full-page nav (item #15 iOS Safari cookie commit).
           window.location.assign(afterSignUpPath);
 
           return true;
         } catch (err) {
+          logger.event(EVENTS.SIGNUP_FINALIZE_ERROR, "error", {
+            via,
+            errorMessage: err instanceof Error ? err.message : String(err),
+          });
           logger.captureError(err, "signup.set_active", { via });
 
           return false;

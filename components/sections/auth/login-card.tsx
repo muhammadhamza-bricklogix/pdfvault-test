@@ -293,11 +293,26 @@ export function LoginCard({
         // standalone `/sign-in` page (no editor mounted, no
         // beforeunload listener).
         suppressNextUnload();
+        // Log AT navigate-callback time (not after `finalize` resolves)
+        // so we capture the exact moment the redirect commits. Sentry
+        // may miss the OK event if the browser leaves before the
+        // resolve microtask runs, but the breadcrumb still ships as
+        // context on any next-page failure.
+        logger.event(EVENTS.SIGNIN_FINALIZE_OK, "info", {
+          redirectPath: afterSignInPath,
+        });
         window.location.assign(decorateUrl(afterSignInPath));
       },
     });
 
     if (finalizeError) {
+      logger.event(EVENTS.SIGNIN_FINALIZE_ERROR, "error", {
+        errorMessage:
+          finalizeError instanceof Error
+            ? finalizeError.message
+            : String(finalizeError),
+        redirectPath: afterSignInPath,
+      });
       logger.captureError(finalizeError, "signin.finalize");
       setErrors({
         form: readClerkError(finalizeError, "Couldn't finish signing you in."),

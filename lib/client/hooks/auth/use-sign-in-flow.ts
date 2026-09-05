@@ -141,7 +141,9 @@ export function useSignInFlow() {
         redirectUrl: afterSignInPath,
       });
     } catch (error) {
-      logger.error("Google sign-in failed", error);
+      logger.captureError(error, "signin.oauth_google", {
+        message: error instanceof Error ? error.message : String(error),
+      });
       showServerError("Something went wrong with Google sign-in.");
       setOauthLoading(false);
     }
@@ -183,7 +185,9 @@ export function useSignInFlow() {
           "The sign-in flow needs another step that is not ready yet.",
         );
       } catch (error) {
-        logger.error("Sign-in submission failed", error);
+        logger.captureError(error, "signin.credentials", {
+          message: error instanceof Error ? error.message : String(error),
+        });
         const parsed = parseClerkError(
           error as Parameters<typeof parseClerkError>[0],
         );
@@ -220,7 +224,9 @@ export function useSignInFlow() {
 
         showServerError("The verification step is not complete yet.");
       } catch (error) {
-        logger.error("Sign-in verification failed", error);
+        logger.captureError(error, "signin.verify", {
+          message: error instanceof Error ? error.message : String(error),
+        });
         const parsed = parseClerkError(
           error as Parameters<typeof parseClerkError>[0],
         );
