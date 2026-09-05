@@ -170,13 +170,13 @@ function DimensionField({
       }}
     >
       <Label className="text-xs text-default-500">{label}</Label>
-      <NumberField.Group>
-        <NumberField.DecrementButton>
-          <HugeiconsIcon icon={decrementIcon} size={16} />
+      <NumberField.Group className="w-full min-w-0">
+        <NumberField.DecrementButton className="px-1 min-w-5 shrink-0">
+          <HugeiconsIcon icon={decrementIcon} size={14} />
         </NumberField.DecrementButton>
-        <NumberField.Input />
-        <NumberField.IncrementButton>
-          <HugeiconsIcon icon={incrementIcon} size={16} />
+        <NumberField.Input className="px-1 text-center text-xs min-w-0 w-full" />
+        <NumberField.IncrementButton className="px-1 min-w-5 shrink-0">
+          <HugeiconsIcon icon={incrementIcon} size={14} />
         </NumberField.IncrementButton>
       </NumberField.Group>
     </NumberField>
@@ -831,7 +831,7 @@ export function ShapePropertiesContent({
       <>
         <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
           <Surface
-            className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
+            className="relative w-fit max-w-full rounded-xl p-4 pr-8 shadow-xl ring-1 ring-default-200/70"
             variant="default"
           >
             <FloatingPanelCloseButton onPress={handleFloatingClose} />
@@ -891,7 +891,7 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     return (
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
+          className="relative w-fit max-w-full rounded-xl p-4 pr-8 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
           <FloatingPanelCloseButton onPress={closePanel} />
@@ -905,7 +905,7 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     return (
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
+          className="relative w-fit max-w-full rounded-xl p-4 pr-8 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
           <FloatingPanelCloseButton onPress={closePanel} />
@@ -919,7 +919,7 @@ export function RightSidebar({ fabricCanvas }: RightSidebarProps) {
     return (
       <aside className="pointer-events-auto absolute right-5 top-5 z-20 max-w-[min(20rem,calc(100vw-2.5rem))]">
         <Surface
-          className="relative w-fit max-w-full rounded-xl p-4 pr-10 shadow-xl ring-1 ring-default-200/70"
+          className="relative w-fit max-w-full rounded-xl p-4 pr-8 shadow-xl ring-1 ring-default-200/70"
           variant="default"
         >
           <FloatingPanelCloseButton onPress={closePanel} />
