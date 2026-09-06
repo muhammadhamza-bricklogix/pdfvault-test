@@ -290,8 +290,13 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
                   </div>
                 </div>
 
+                {/* `mb-2` gives the input's outer border/ring room to
+                    breathe before the footer buttons — otherwise the
+                    input's rounded outline sits right on top of the
+                    Cancel / Split & download row (QA 2026-09-06). */}
                 {mode === "ranges" ? (
                   <TextField
+                    className="mb-2"
                     isInvalid={!!validationError}
                     value={rangesText}
                     onChange={setRangesText}
@@ -304,6 +309,7 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
                   </TextField>
                 ) : (
                   <TextField
+                    className="mb-2"
                     isInvalid={!!validationError}
                     value={chunkSize}
                     onChange={setChunkSize}
