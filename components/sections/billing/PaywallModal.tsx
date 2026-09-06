@@ -1032,6 +1032,42 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // Wallet-button loading state (2026-09-06 QA). Solidgate injects the
+  // real Apple Pay / Google Pay buttons a beat after `<PaymentForm>`
+  // mounts, so the containers were previously blank for that gap
+  // (`empty:hidden` collapsed them). Track when each container gains
+  // children via MutationObserver and swap a skeleton in until then.
+  // On browsers where the wallet is unsupported the SDK never
+  // populates the container — `walletTimedOut` clears the skeletons
+  // after 4 s so we don't leave a permanent placeholder.
+  const [applePayReady, setApplePayReady] = useState(false);
+  const [googlePayReady, setGooglePayReady] = useState(false);
+  const [walletTimedOut, setWalletTimedOut] = useState(false);
+
+  useEffect(() => {
+    const applePayEl = applePayContainerRef.current;
+    const googlePayEl = googlePayContainerRef.current;
+
+    if (!applePayEl || !googlePayEl) return;
+
+    const applyObserver = new MutationObserver(() => {
+      if (applePayEl.childNodes.length > 0) setApplePayReady(true);
+    });
+    const googleObserver = new MutationObserver(() => {
+      if (googlePayEl.childNodes.length > 0) setGooglePayReady(true);
+    });
+
+    applyObserver.observe(applePayEl, { childList: true });
+    googleObserver.observe(googlePayEl, { childList: true });
+
+    const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
+
+    return () => {
+      applyObserver.disconnect();
+      googleObserver.disconnect();
+      window.clearTimeout(timeout);
+    };
+  }, []);
   // 2026-09-03 (PM): the Solidgate card form starts COLLAPSED behind
   // a grey "Pay with card" button. Clicking expands the iframe below.
   // `<PaymentForm>` itself stays mounted whether expanded or not
@@ -1070,20 +1106,30 @@ function PayStep({
               wallet buttons are ready when the user reaches them. */}
           <div className="flex flex-col gap-4">
             {/* Apple Pay — SDK injects here; hidden until mounted */}
-            <div
-              ref={applePayContainerRef}
-              className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
-            />
+            <div className="relative">
+              {!applePayReady && !walletTimedOut ? (
+                <WalletButtonSkeleton />
+              ) : null}
+              <div
+                ref={applePayContainerRef}
+                className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              />
+            </div>
             {/* Google Pay — SDK injects here; hidden until mounted.
                 No shape / height overrides — Google's brand guidelines
                 require the CreateButton API's native pill radius and
                 its own height range (40–60px). The `w-full` passthrough
                 lets Solidgate's SDK size the button to the container
                 width via `buttonSizeMode: "fill"`. */}
-            <div
-              ref={googlePayContainerRef}
-              className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
-            />
+            <div className="relative">
+              {!googlePayReady && !walletTimedOut ? (
+                <WalletButtonSkeleton />
+              ) : null}
+              <div
+                ref={googlePayContainerRef}
+                className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
+              />
+            </div>
             {/* Card section header — grey collapse toggle. Shows the
                 supported card brands so users know their card will
                 work before expanding (parity with PDF Guru). */}
@@ -1899,6 +1945,28 @@ function AcceptedCards() {
           <Mark />
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Placeholder shown in the wallet slots while Solidgate's SDK injects
+ * the real Apple Pay / Google Pay buttons. Sized to match the final
+ * button height so the layout doesn't jump when the real button
+ * arrives. Auto-hides once the container gains children (see the
+ * MutationObserver in `PayStep`) or after the 4-s timeout for
+ * unsupported browsers.
+ */
+function WalletButtonSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[#ececec]/60"
+    >
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#c8c8c8] border-t-[var(--pv-brand-red,#f12c23)]" />
+      <span className="text-[12px] font-medium text-[#5c5c5c]">
+        Loading wallet…
+      </span>
     </div>
   );
 }

@@ -11,7 +11,7 @@ import {
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface PvFileTableProps {
   rows: readonly PvFileRow[];
@@ -218,8 +218,16 @@ export function PvFileTable({
   // 2026-09-01 (QA): the canonical W-9 row can't be deleted (system
   // doc — see RowActions below). Exclude it from bulk-select so the
   // "Delete selected" affordance never targets it.
-  const selectableRows = sorted.filter(
-    (r) => !r.pending && r.name.toLowerCase() !== "irs form w-9.pdf",
+  // Memo'd on `sorted` identity so the sync `useEffect` below only
+  // fires when the row set actually changes (not on every render) —
+  // otherwise a parent re-render for unrelated state runs the stale-
+  // id prune pass needlessly.
+  const selectableRows = useMemo(
+    () =>
+      sorted.filter(
+        (r) => !r.pending && r.name.toLowerCase() !== "irs form w-9.pdf",
+      ),
+    [sorted],
   );
 
   // Sync selected state to remove any stale IDs (e.g. after a file is deleted)
