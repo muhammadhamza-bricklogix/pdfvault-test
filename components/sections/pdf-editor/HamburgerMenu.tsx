@@ -138,25 +138,10 @@ export function HamburgerMenu() {
 
     if (!target) return;
 
-    // Snapshot BEFORE the paywall/auth handoff so signed-out users who
-    // are routed through AuthModal come back with their fabric overlays
-    // intact after signin (item #8-#12 hydrator restore).
-    if (!isSignedIn) {
-      await snapshotPendingEditorFile().catch((err) =>
-        logger.warn("pending editor file save failed", err),
-      );
-    }
-
-    // Paywall gate. Split runs entirely client-side (pdf-lib) so the
-    // axios interceptor's paywall check never fires — without this
-    // explicit call, signed-in-unpaid AND signed-out users could split
-    // + download for free (QA 2026-09-06). `requestPaywall()` covers
-    // both cases: signed-out → dispatches AuthModal + resolves
-    // "cancelled"; signed-in-unpaid → opens paywall modal; entitled →
-    // resolves "success" instantly.
-    const outcome = await requestPaywall();
-
-    if (outcome !== "success") return;
+    // Paywall is gated INSIDE SplitPdfModal at the Split (download)
+    // button — unpaid users should still see the modal, pick ranges,
+    // and hit the wall only when they try to download. Opening the
+    // modal is free; the download is what costs.
 
     // Read the source bytes + page count once on click so the modal can
     // stay a pure controlled view (avoids the cascading-render lint rule
@@ -195,23 +180,9 @@ export function HamburgerMenu() {
 
     if (!target) return;
 
-    // Snapshot BEFORE the paywall/auth handoff so signed-out users who
-    // are routed through AuthModal come back with their fabric overlays
-    // intact after signin (item #8-#12 hydrator restore).
-    if (!isSignedIn) {
-      await snapshotPendingEditorFile().catch((err) =>
-        logger.warn("pending editor file save failed", err),
-      );
-    }
-
-    // Paywall gate. Merge runs entirely client-side (pdf-lib) so the
-    // axios interceptor's paywall check never fires — without this
-    // explicit call, signed-in-unpaid AND signed-out users could merge
-    // + download for free (QA 2026-09-06). Same three-way handling as
-    // `openSplitModal` — see that comment for the state matrix.
-    const outcome = await requestPaywall();
-
-    if (outcome !== "success") return;
+    // Paywall is gated INSIDE MergePdfModal at the Merge (download)
+    // button — unpaid users should still see the modal, add files,
+    // and hit the wall only when they try to download.
 
     const loadingKey = toast.loading({
       title: "Preparing merge",

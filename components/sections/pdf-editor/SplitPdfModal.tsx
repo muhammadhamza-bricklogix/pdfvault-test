@@ -17,6 +17,11 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useCallback, useMemo, useState } from "react";
 
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import {
   buildEveryNRanges,
   buildZip,
@@ -108,6 +113,37 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
 
     setIsSplitting(true);
     try {
+      // QA 2026-09-06: split is 100% client-side (pdf-lib), so no
+      // axios `isGatedRequest` interceptor ever fires — a signed-in
+      // but non-entitled user could split + download freely, bypassing
+      // billing. Mirrors the MergePdfModal entitlement gate: check
+      // fresh entitlement, and if the user isn't entitled, open the
+      // paywall with a preview. User cancels → silent bail (no
+      // download, no error toast). User pays → entitlement flips,
+      // proceed to split. Signed-out users are routed through
+      // AuthModal by `usePaywall`'s bus handler.
+      const entitled = await ensureFreshEntitlement();
+
+      if (!entitled) {
+        const dotForPreview = source.filename.lastIndexOf(".");
+        const baseForPreview =
+          dotForPreview > 0
+            ? source.filename.slice(0, dotForPreview)
+            : source.filename;
+        const previewName = `${baseForPreview}-split.pdf`;
+        const outcome = await requestPaywall({
+          filename: previewName,
+          sourceExt: "pdf",
+          targetExt: "pdf",
+        });
+
+        if (outcome !== "success") {
+          setIsSplitting(false);
+
+          return;
+        }
+      }
+
       const parts = await splitPdf(
         source.bytes,
         source.filename,
@@ -141,6 +177,12 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
       });
       onClose();
     } catch (err) {
+      // Silent on PaywallCancelledError — user chose Cancel on the
+      // paywall (routed here from a signed-out branch or a stale
+      // entitlement retry); no user-facing error, no toast.
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       logger.error("[split-pdf-modal] split failed", err);
       toast.error({
         title: "Couldn't split this PDF",
