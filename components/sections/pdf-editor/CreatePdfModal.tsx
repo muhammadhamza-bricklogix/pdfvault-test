@@ -214,10 +214,14 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const clearDocumentDirty = usePdfEditorStore((s) => s.clearDocumentDirty);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const setFileInStore = usePdfEditorStore((s) => s.setFile);
   const router = useRouter();
-  const { duplicate, start } = useUploadWithDuplicateCheck();
+  // `duplicate` remains wired to `DuplicateUploadModal` below even though
+  // the pre-upload code path was removed (QA 2026-09-06 duplicate-doc
+  // fix). The modal is a no-op unless duplicate resolves — kept mounted
+  // so a future re-introduction of an upload path here doesn't need to
+  // rewire the modal machinery.
+  const { duplicate } = useUploadWithDuplicateCheck();
 
   const [form, setForm] = useState<FormState>(() => buildDefault(++openCount));
   const [isGenerating, setIsGenerating] = useState(false);
