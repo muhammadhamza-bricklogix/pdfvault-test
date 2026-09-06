@@ -12,6 +12,31 @@ import "driver.js/dist/driver.css";
 // mis-anchor. The help button (`?`) still lets a mobile user replay.
 const AUTO_LAUNCH_MIN_WIDTH = 768;
 
+/**
+ * Event name fired when any tour instance is destroyed (completed,
+ * skipped, or route-change cleanup). Listeners can defer their own
+ * work until after the tour finishes — e.g. the composer hydrator
+ * uses this to wait out the first-visit tour before dispatching a
+ * tool-open event (QA 2026-09-06: tool modal + tour opened together
+ * and interfered with each other).
+ */
+export const TOUR_ENDED_EVENT = "editor:tour-ended";
+
+/**
+ * True when `useProductTour(key)` WOULD auto-launch on this visit —
+ * used by out-of-tree callers (hydrator, etc.) to decide whether to
+ * defer their own work behind the tour. Mirrors the exact gates in
+ * the auto-launch effect below (SSR-safe, viewport-gated,
+ * already-seen aware, module-level dedupe).
+ */
+export function willTourAutoLaunch(key: TourKey): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return false;
+  if (alreadySeen(key)) return false;
+
+  return true;
+}
+
 // Module-level singletons so the hook stays safe when multiple
 // components mount it for the same surface (e.g. DashboardHome +
 // TourHelpButton both call useProductTour("dashboard")). Without
@@ -38,7 +63,7 @@ function markSeen(key: TourKey): void {
   }
 }
 
-export function useProductTour(key: TourKey) {
+export function useProductTour(key: TourKey, enabled: boolean = true) {
   const start = useCallback(() => {
     if (typeof window === "undefined") return;
 
@@ -85,6 +110,15 @@ export function useProductTour(key: TourKey) {
         onDestroyed: () => {
           markSeen(key);
           if (activeInstance === instance) activeInstance = null;
+          // Notify deferred consumers (composer hydrator, etc.) that
+          // the tour is done so they can now run their own auto-launch
+          // (tool modal, export, etc.) without fighting the driver.js
+          // overlay for the top layer.
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent(TOUR_ENDED_EVENT, { detail: { key } }),
+            );
+          }
         },
       });
 
@@ -96,7 +130,12 @@ export function useProductTour(key: TourKey) {
   // Auto-launch once per surface, desktop only. Module-level Set makes
   // sure only ONE caller triggers the tour per session even when
   // several components share the same `useProductTour(key)` call.
+  // `enabled=false` short-circuits so a caller can suppress the tour on
+  // specific routes without breaking the rules-of-hooks (e.g. the W-9
+  // form reuses <PdfEditorShell /> but must NOT auto-run the editor
+  // tour — anchors don't map, copy references the wrong surface).
   useEffect(() => {
+    if (!enabled) return;
     if (typeof window === "undefined") return;
     if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return;
     if (alreadySeen(key)) return;
@@ -108,7 +147,25 @@ export function useProductTour(key: TourKey) {
     }, 600);
 
     return () => window.clearTimeout(id);
-  }, [key, start]);
+  }, [key, start, enabled]);
+
+  // Destroy any active tour instance when the host component unmounts —
+  // the most common trigger is a route change (browser back, in-app
+  // navigation). driver.js paints its overlay onto <body>, so without
+  // this cleanup the popover + backdrop leak onto the destination page
+  // (user report: tour visible on landing after leaving the editor).
+  // `activeInstance` is a module-level singleton, so tearing it down
+  // here doesn't affect other surfaces — the next surface's mount
+  // triggers its own `start()`. `markSeen` still fires via
+  // `onDestroyed` so the tour won't auto-relaunch on the same key.
+  useEffect(() => {
+    return () => {
+      if (activeInstance) {
+        activeInstance.destroy();
+        activeInstance = null;
+      }
+    };
+  }, []);
 
   return { start };
 }

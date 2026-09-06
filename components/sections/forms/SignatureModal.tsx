@@ -17,9 +17,6 @@ type Tab = "draw" | "type" | "upload";
 const TYPE_FONTS = [
   { id: "dancing", label: "Dancing Script", css: "var(--font-dancing-script)" },
   { id: "great-vibes", label: "Great Vibes", css: "var(--font-great-vibes)" },
-  { id: "allura", label: "Allura", css: "var(--font-allura)" },
-  { id: "sacramento", label: "Sacramento", css: "var(--font-sacramento)" },
-  { id: "pacifico", label: "Pacifico", css: "var(--font-pacifico)" },
 ] as const;
 
 const CANVAS_WIDTH = 600;

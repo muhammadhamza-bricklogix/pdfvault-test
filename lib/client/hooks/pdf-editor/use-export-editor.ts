@@ -368,6 +368,20 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
           if (!entitled) {
             logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
+            // Diagnostic — feeds into the paywall's `checkout_intent_400`
+            // triage. Bots occasionally reach the paywall with a
+            // pathological `sourceFile.name` (empty, control chars,
+            // oversized). Log the shape here so we can correlate a
+            // downstream 400 back to the exact File that fed the
+            // request.
+            logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", {
+              format,
+              filenameLength: sourceFile.name?.length ?? 0,
+              filenameEmpty: !sourceFile.name,
+              filenameFirstChars: sourceFile.name?.slice(0, 40) ?? "",
+              fileType: sourceFile.type,
+              fileSize: sourceFile.size,
+            });
             const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
               type: "application/pdf",
             });
@@ -545,7 +559,19 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         }
 
         if (!entitled) {
-          logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
+          // Same shape/filename diagnostic as the PDF branch above —
+          // captures the non-PDF export path (docx / xlsx / pptx / etc.)
+          // in the `checkout_intent_400` triage. Log alongside the
+          // standard EXPORT_PAYWALL_SHOWN event so we can correlate
+          // paywall failures back to the source File that produced them.
+          logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", {
+            format,
+            filenameLength: sourceFile.name?.length ?? 0,
+            filenameEmpty: !sourceFile.name,
+            filenameFirstChars: sourceFile.name?.slice(0, 40) ?? "",
+            fileType: sourceFile.type,
+            fileSize: sourceFile.size,
+          });
           const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
             type: "application/pdf",
           });

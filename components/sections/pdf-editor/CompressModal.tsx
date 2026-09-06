@@ -23,7 +23,7 @@ import {
 import { useCompressFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -97,12 +97,16 @@ export function CompressModal() {
 
       const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=compress`;
 
-      // AuthModal (2026-08-28 unify). Cards finalize with
+      // Email-first modal so NEW-email users auto-signup instead of
+      // dead-ending at "We couldn't find an account with that email"
+      // on the login form (QA 2026-09-06). Cards finalize with
       // `window.location.assign(returnTo)`; hydrator re-opens the
       // compress modal via step #4 on return.
-      dispatchAuthModal({
-        mode: "login",
+      dispatchEmailFirstModal({
         redirectUrl: returnTo,
+        title: "Compress your PDF",
+        subtitle: "Create an account to shrink your PDF.",
+        submitLabel: "Compress PDF",
       });
 
       setIsOpen(false);

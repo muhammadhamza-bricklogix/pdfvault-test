@@ -17,6 +17,11 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useCallback, useMemo, useState } from "react";
 
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import {
   buildEveryNRanges,
   buildZip,
@@ -108,6 +113,37 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
 
     setIsSplitting(true);
     try {
+      // QA 2026-09-06: split is 100% client-side (pdf-lib), so no
+      // axios `isGatedRequest` interceptor ever fires — a signed-in
+      // but non-entitled user could split + download freely, bypassing
+      // billing. Mirrors the MergePdfModal entitlement gate: check
+      // fresh entitlement, and if the user isn't entitled, open the
+      // paywall with a preview. User cancels → silent bail (no
+      // download, no error toast). User pays → entitlement flips,
+      // proceed to split. Signed-out users are routed through
+      // AuthModal by `usePaywall`'s bus handler.
+      const entitled = await ensureFreshEntitlement();
+
+      if (!entitled) {
+        const dotForPreview = source.filename.lastIndexOf(".");
+        const baseForPreview =
+          dotForPreview > 0
+            ? source.filename.slice(0, dotForPreview)
+            : source.filename;
+        const previewName = `${baseForPreview}-split.pdf`;
+        const outcome = await requestPaywall({
+          filename: previewName,
+          sourceExt: "pdf",
+          targetExt: "pdf",
+        });
+
+        if (outcome !== "success") {
+          setIsSplitting(false);
+
+          return;
+        }
+      }
+
       const parts = await splitPdf(
         source.bytes,
         source.filename,
@@ -141,6 +177,12 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
       });
       onClose();
     } catch (err) {
+      // Silent on PaywallCancelledError — user chose Cancel on the
+      // paywall (routed here from a signed-out branch or a stale
+      // entitlement retry); no user-facing error, no toast.
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       logger.error("[split-pdf-modal] split failed", err);
       toast.error({
         title: "Couldn't split this PDF",
@@ -163,14 +205,20 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
         if (!open) onClose();
       }}
     >
-      <Modal.Container>
-        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
+      <Modal.Container className="items-start justify-center p-4 sm:items-center">
+        <Modal.Dialog className="!max-h-[calc(100dvh-32px)] !w-[92vw] !max-w-[520px] overflow-y-auto overscroll-contain">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Split PDF</Modal.Heading>
           </Modal.Header>
 
-          <Modal.Body className="space-y-4">
+          {/* QA 2026-09-06: page-range input's rounded border was
+              clipping on the left inside Modal.Body's default padding.
+              Match the CompressModal pattern — explicit `px-4 sm:px-6`
+              on Body + `overflow-y-auto` on Dialog — so the input's
+              full-width border + focus ring have room and the modal
+              scrolls tall content instead of clipping. */}
+          <Modal.Body className="space-y-4 px-4 sm:px-6">
             {hasUnsavedChanges && (
               <div className="rounded-xl border border-warning-200 bg-warning-50 p-3 text-xs text-warning-800">
                 You have unsaved edits. They won&apos;t be included in the split
@@ -242,8 +290,13 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
                   </div>
                 </div>
 
+                {/* `mb-2` gives the input's outer border/ring room to
+                    breathe before the footer buttons — otherwise the
+                    input's rounded outline sits right on top of the
+                    Cancel / Split & download row (QA 2026-09-06). */}
                 {mode === "ranges" ? (
                   <TextField
+                    className="mb-2"
                     isInvalid={!!validationError}
                     value={rangesText}
                     onChange={setRangesText}
@@ -256,6 +309,7 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
                   </TextField>
                 ) : (
                   <TextField
+                    className="mb-2"
                     isInvalid={!!validationError}
                     value={chunkSize}
                     onChange={setChunkSize}

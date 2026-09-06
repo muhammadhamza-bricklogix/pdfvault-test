@@ -88,7 +88,30 @@ function NumberField({
       type="number"
       value={draft}
       onBlur={commit}
-      onChange={(e) => setDraft(e.target.value)}
+      onChange={(e) => {
+        const next = e.target.value;
+
+        // Empty string is allowed as an in-progress edit — commit runs
+        // on blur and falls back to the field's `fallback`. For any
+        // complete numeric value that would drop below `min`, snap up
+        // immediately so the field never visually shows a below-floor
+        // number (e.g. the browser spinner stepping from 1 → 0 on
+        // "Start at" — QA 2026-09-06).
+        if (next === "") {
+          setDraft(next);
+
+          return;
+        }
+        const parsed = Number(next);
+
+        if (Number.isFinite(parsed) && parsed < min) {
+          setDraft(String(min));
+          onCommit(min);
+
+          return;
+        }
+        setDraft(next);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();

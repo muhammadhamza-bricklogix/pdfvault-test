@@ -13,7 +13,7 @@ import {
 import { useExtractImagesMutation } from "@/lib/client/query/mutations/pdf-tools.mutation";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
@@ -126,14 +126,17 @@ export function useExtractImagesEditor(_fabricCanvas: FabricCanvas | null) {
 
         const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=extract-images`;
 
-        // AuthModal (2026-08-28 unify). Fabric-canvas invariant
-        // (shell-level hook must keep the live ref, not the original
-        // upload) is untouched — only the sign-in prompt trigger
-        // changes. Cards' finalize does `window.location.assign(returnTo)`
-        // (item #15) and the hydrator re-opens the tool via step #4.
-        dispatchAuthModal({
-          mode: "login",
+        // Email-first modal so NEW-email users auto-signup (QA
+        // 2026-09-06). Fabric-canvas invariant (shell-level hook must
+        // keep the live ref, not the original upload) is untouched —
+        // only the sign-in prompt trigger changes. Cards' finalize
+        // does `window.location.assign(returnTo)` (item #15) and the
+        // hydrator re-opens the tool via step #4.
+        dispatchEmailFirstModal({
           redirectUrl: returnTo,
+          title: "Extract images",
+          subtitle: "Create an account to pull images out of your PDF.",
+          submitLabel: "Extract images",
         });
 
         isRunningRef.current = false;

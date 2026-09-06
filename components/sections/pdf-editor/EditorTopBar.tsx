@@ -50,6 +50,7 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -60,9 +61,9 @@ import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------
 // Info Bar — filename, page navigation, zoom, save
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------
 
 export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
@@ -95,7 +96,15 @@ export function EditorInfoBar() {
   const isW9Route = useMemo(() => {
     if (!pathname) return false;
 
-    return pathname === "/w-9-form" || pathname.startsWith("/forms/w-9");
+    // Strip `/de/`, `/fr/`, etc. before comparing — otherwise the guard
+    // silently flips false on non-EN locales and the HamburgerMenu +
+    // PDF-tool row surface on `/de/w-9-form`, `/fr/w-9-form`, etc.
+    // (QA 2026-09-06).
+    const stripped = stripLocalePrefix(pathname);
+
+    return (
+      stripped === ROUTES.FORMS.W9_SHORT || stripped.startsWith("/forms/w-9")
+    );
   }, [pathname]);
 
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
@@ -165,7 +174,7 @@ export function EditorInfoBar() {
   const saveTooltip = !file
     ? "Open a PDF to save"
     : !isSignedIn
-      ? "Sign in to save to your library"
+      ? "Login to save to your library"
       : "Save";
   const onSaveClick = () => {
     if (!isSignedIn) {
@@ -332,6 +341,15 @@ export function EditorInfoBar() {
                   <p>Back to dashboard</p>
                 </Tooltip.Content>
               </Tooltip>
+              {/*
+                Guests: HamburgerMenu hides its own dropdown trigger
+                but stays MOUNTED so its bridge event listeners
+                (editor:open-merge / open-split / open-flatten /
+                open-annotations) keep firing for the top toolbar.
+                Unmounting for guests makes those toolbar buttons idle
+                (QA 2026-09-06). Rationale mirrored in
+                `PvEditorTopChrome.tsx`.
+              */}
               {isW9Route ? null : <HamburgerMenu />}
             </div>
 

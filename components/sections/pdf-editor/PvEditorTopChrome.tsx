@@ -54,6 +54,7 @@ import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -293,7 +294,13 @@ function TopAppBar() {
   // `/w-9-form` there's no other in-flow save trigger — the user's
   // only path to My PDFs otherwise is Done → Download, which is
   // paid + downloads to disk. QA 2026-08-28.
-  const showW9Save = pathname === ROUTES.FORMS.W9_SHORT;
+  // Normalise via `stripLocalePrefix` so the W-9 guards fire on every
+  // locale variant — `/w-9-form`, `/de/w-9-form`, `/fr/w-9-form`, etc.
+  // The raw `usePathname()` returns the locale-prefixed URL and a
+  // direct `===` comparison would flip false on non-EN locales,
+  // leaving the composer HamburgerMenu + Tool row visible on W-9 in
+  // languages other than English (QA 2026-09-06).
+  const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -458,7 +465,15 @@ function TopAppBar() {
       {/* Hamburger hidden on `/w-9-form` per product 2026-09-01 —
           the W-9 flow has its own Back → save-and-continue path and
           the hamburger's tools (Manage Pages, Share, etc.) don't
-          apply to a fill-and-sign form. */}
+          apply to a fill-and-sign form.
+
+          For guests: HamburgerMenu itself hides the dropdown trigger
+          (per QA 2026-09-05) but stays MOUNTED so its bridge event
+          listeners (editor:open-merge / open-split / open-flatten /
+          open-annotations) still fire when the top toolbar dispatches
+          them. Unmounting the whole component for guests silently
+          drops those listeners and the toolbar buttons appear idle
+          (QA 2026-09-06). */}
       {showW9Save ? null : <HamburgerMenu />}
 
       <Link
@@ -541,7 +556,7 @@ function TopAppBar() {
               {!file
                 ? "Open a PDF to save"
                 : !isSignedIn
-                  ? "Sign in to save to your library"
+                  ? "Login to save to your library"
                   : "Save to My PDFs"}
             </p>
           </Tooltip.Content>
@@ -582,7 +597,15 @@ function TopAppBar() {
 
       <LanguageSwitcher />
 
-      <TourHelpButton tour="editor" variant="chrome" />
+      {/* Editor product tour is auto-launched on first mount via
+          `useProductTour("editor")` inside <TourHelpButton />. The W-9
+          route reuses <PdfEditorShell />, so mounting this button here
+          would fire the composer tour over the W-9 template on the
+          user's first visit — anchors don't map to the W-9 layout and
+          it distracts from the yellow field overlays. Suppress on
+          `/w-9-form` only; every other editor route keeps the button
+          + the auto-launch. */}
+      {showW9Save ? null : <TourHelpButton tour="editor" variant="chrome" />}
 
       {/* Search — PDF-wide text search with highlight + navigation. */}
       <Tooltip delay={300}>
@@ -689,16 +712,29 @@ function ToolToolbar() {
   const disabled = !file;
   const canManagePages = !!pdfDocument && pageCount > 0;
 
-  const isW9Route = pathname === ROUTES.FORMS.W9_SHORT;
+  // Locale-normalised — see `showW9Save` above for context.
+  const isW9Route = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
 
-  const isActionDisabled = (id: string): boolean => {
-    if (id === "manage-pages") return !canManagePages;
-
-    return disabled;
-  };
+  // QA 2026-09-06: Secure / Split / Flatten / Manage Pages appeared
+  // greyed-out even when a PDF was open, so users thought the tools
+  // were broken. Only truly-unrecoverable states disable the button
+  // now — everything else is clickable and the handler surfaces a
+  // toast if the doc isn't ready yet. Sign-in state is NOT a gate
+  // here; the underlying modals + save-before-action chain already
+  // route signed-out users through the auth flow (see CLAUDE.md
+  // item #4 / #5 / #17).
+  const isActionDisabled = (_id: string): boolean => false;
 
   const handleAction = (id: string) => {
     if (id === "manage-pages") {
+      if (!canManagePages) {
+        toast.info({
+          title: "Open a PDF first",
+          description: "Upload a PDF to manage its pages.",
+        });
+
+        return;
+      }
       // Same save-before-action guard as EditorToolBar / BottomDock so
       // in-progress edits get flushed before the modal opens.
       void (async () => {

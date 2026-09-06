@@ -199,24 +199,26 @@ export function WatermarkPropertiesContent() {
           </Section>
 
           <Section title="Font">
-            <ToggleButtonGroup
-              disallowEmptySelection
-              selectedKeys={new Set([config.fontFamily])}
-              selectionMode="single"
-              size="sm"
-              onSelectionChange={(keys: Set<Key>) => {
-                const key = Array.from(keys)[0] as string | undefined;
+            <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <ToggleButtonGroup
+                disallowEmptySelection
+                selectedKeys={new Set([config.fontFamily])}
+                selectionMode="single"
+                size="sm"
+                onSelectionChange={(keys: Set<Key>) => {
+                  const key = Array.from(keys)[0] as string | undefined;
 
-                if (key) setConfig({ fontFamily: key });
-              }}
-            >
-              {FONT_OPTIONS.map((opt, i) => (
-                <ToggleButton key={opt.value} id={opt.value}>
-                  {i > 0 && <ToggleButtonGroup.Separator />}
-                  {opt.label}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+                  if (key) setConfig({ fontFamily: key });
+                }}
+              >
+                {FONT_OPTIONS.map((opt, i) => (
+                  <ToggleButton key={opt.value} id={opt.value}>
+                    {i > 0 && <ToggleButtonGroup.Separator />}
+                    {opt.label}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </div>
           </Section>
 
           <Section title="Font Size">

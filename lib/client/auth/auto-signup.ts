@@ -2,6 +2,7 @@ import type { SignInFutureResource } from "@clerk/shared/types";
 
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -50,8 +51,7 @@ export async function runAutoSignup(params: {
 
   let response: Response;
 
-  // eslint-disable-next-line no-console
-  console.info("[AUTH_DIAG] auto-signup.begin", {
+  const begin = {
     apiBase: API_BASE_URL,
     hasEmail: Boolean(email),
     // Only the local part before `@` so the log stays PII-lite.
@@ -60,21 +60,52 @@ export async function runAutoSignup(params: {
     hasFileName: Boolean(fileName),
     clerkPublishableKeyPrefix:
       process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.slice(0, 8) ?? "unset",
-  });
+  };
+
+  // eslint-disable-next-line no-console
+  console.info("[AUTH_DIAG] auto-signup.begin", begin);
+  // Same info to Sentry as a structured event so it's queryable outside
+  // the browser console (which is silenced in prod per instrumentation-
+  // client.ts). Info level → attached as breadcrumb to any subsequent
+  // error capture in this chain.
+  logger.event(EVENTS.AUTH_QUICK_SIGNUP_BEGIN, "info", begin);
+
+  // AbortController + 20 s hard timeout — QA 2026-09-06: logged-out
+  // user submits a valid email, EmailFirstModal's "Checking…" button
+  // stays forever and no error surfaces. Root cause was an
+  // unterminated `fetch` (backend cold-start, VPC hiccup, DNS stall)
+  // — the outer promise never resolved so `finally` never ran, and
+  // the button + toast were stuck. The abort surfaces an
+  // `AbortError` that the catch turns into a user-actionable retry
+  // message. 20 s is generous vs. the backend's typical <1 s response
+  // but well under a user's patience budget.
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    abortController.abort();
+  }, 20_000);
 
   try {
     response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
       body: JSON.stringify({ email, fileName }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal: abortController.signal,
     });
   } catch (err) {
-    logger.captureError(err, "auto-signup.fetch");
+    logger.captureError(err, "auto-signup.fetch", {
+      aborted: (err as { name?: string })?.name === "AbortError",
+      timeoutMs: 20_000,
+    });
 
     return {
       kind: "error",
-      message: "Couldn't reach the server. Check your connection and retry.",
+      message:
+        (err as { name?: string })?.name === "AbortError"
+          ? "The request took too long. Please check your connection and try again."
+          : "Couldn't reach the server. Check your connection and retry.",
     };
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 
   let body: unknown;
@@ -97,24 +128,35 @@ export async function runAutoSignup(params: {
   const payload = envelope.data ?? envelope;
   const status = payload.status;
 
-  // eslint-disable-next-line no-console
-  console.info("[AUTH_DIAG] auto-signup.backend_response", {
+  const backendResponse = {
     responseStatus: response.status,
     ok: response.ok,
     envelopeStatus: status,
     hasTicket: Boolean(payload.ticket),
     ticketLength: payload.ticket?.length ?? 0,
-  });
+  };
+
+  // eslint-disable-next-line no-console
+  console.info("[AUTH_DIAG] auto-signup.backend_response", backendResponse);
 
   if (status === "exists") {
+    logger.event(EVENTS.AUTH_QUICK_SIGNUP_BACKEND_EXISTS, "info", {
+      emailDomain: begin.emailDomain,
+    });
+
     return { kind: "exists" };
   }
 
   if (!response.ok || status !== "created") {
-    logger.warn("auto-signup: backend did not return a ticket", {
-      responseStatus: response.status,
-      status,
-    });
+    logger.event(
+      EVENTS.AUTH_QUICK_SIGNUP_BACKEND_ERROR,
+      "error",
+      backendResponse,
+    );
+    logger.warn(
+      "auto-signup: backend did not return a ticket",
+      backendResponse,
+    );
 
     return {
       kind: "error",
@@ -125,8 +167,18 @@ export async function runAutoSignup(params: {
   const ticket = payload.ticket;
 
   if (!ticket) {
+    logger.event(EVENTS.AUTH_QUICK_SIGNUP_BACKEND_ERROR, "error", {
+      ...backendResponse,
+      reason: "missing_ticket",
+    });
+
     return { kind: "error", message: "Missing sign-in token from the server." };
   }
+
+  logger.event(EVENTS.AUTH_QUICK_SIGNUP_BACKEND_OK, "info", {
+    emailDomain: begin.emailDomain,
+    ticketLength: ticket.length,
+  });
 
   try {
     // eslint-disable-next-line no-console
@@ -170,6 +222,11 @@ export async function runAutoSignup(params: {
         raw: ticketError,
       });
 
+      logger.event(EVENTS.AUTH_QUICK_SIGNUP_TICKET_ERROR, "error", {
+        clerkStatus: clerkErr.status,
+        clerkErrorCode: first?.code,
+        clerkErrorMessage: first?.message,
+      });
       logger.captureError(ticketError, "auto-signup.ticket", {
         clerkErrorCode: first?.code,
         clerkErrorMessage: first?.message,
@@ -186,6 +243,9 @@ export async function runAutoSignup(params: {
       };
     }
 
+    logger.event(EVENTS.AUTH_QUICK_SIGNUP_TICKET_OK, "info", {
+      signInStatusAfterTicket: (signIn as { status?: string }).status,
+    });
     // eslint-disable-next-line no-console
     console.info("[AUTH_DIAG] auto-signup.ticket_call.ok", {
       signInStatusAfterTicket: (signIn as { status?: string }).status,
@@ -193,6 +253,10 @@ export async function runAutoSignup(params: {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[AUTH_DIAG] auto-signup.ticket_call.threw", { err });
+    logger.event(EVENTS.AUTH_QUICK_SIGNUP_TICKET_ERROR, "error", {
+      reason: "threw",
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
     logger.captureError(err, "auto-signup.signIn");
 
     return {
@@ -217,6 +281,13 @@ export async function runAutoSignup(params: {
   });
 
   if (finalizeError) {
+    logger.event(EVENTS.AUTH_QUICK_SIGNUP_FINALIZE_ERROR, "error", {
+      errorMessage:
+        finalizeError instanceof Error
+          ? finalizeError.message
+          : String(finalizeError),
+      redirectTo: safeRedirect,
+    });
     logger.captureError(finalizeError, "auto-signup.finalize");
 
     return {
@@ -224,6 +295,10 @@ export async function runAutoSignup(params: {
       message: "We couldn't finish signing you in. Please try again.",
     };
   }
+
+  logger.event(EVENTS.AUTH_QUICK_SIGNUP_FINALIZE_OK, "info", {
+    redirectTo: safeRedirect,
+  });
 
   return { kind: "created" };
 }

@@ -4,6 +4,8 @@ import type { Document } from "@/lib/shared/types/documents.types";
 import type { BuildEditedPdfRemappedState } from "@/lib/client/pdf-editor/save-utils";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { requestDuplicatePrompt } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
@@ -175,7 +177,12 @@ export type PersistEditorResult =
         | "no-changes"
         | "no-file"
         | "not-signed-in"
-        | "not-loaded";
+        | "not-loaded"
+        // The file has a filename twin in the user's library, and the
+        // user picked Cancel on the duplicate-filename prompt. Caller
+        // should treat this as an intentional skip — no error toast,
+        // no navigation blocked.
+        | "cancelled-duplicate";
     };
 
 type PersistEditorDocumentInput = {
@@ -187,6 +194,19 @@ type PersistEditorDocumentInput = {
    * outside the dirty-flag system.
    */
   force?: boolean;
+  /**
+   * Turn on the "file already exists in your library" prompt. Runs
+   * BEFORE the first upload for a signed-in user without a
+   * `currentDocumentId`. Matches the QA 2026-09-06 requirement: any
+   * composer tool that saves a fresh file must ask the user
+   * "Overwrite / Cancel" instead of silently creating a duplicate
+   * row or failing on the backend uniqueness check.
+   *
+   * Callers that already carry a `currentDocumentId` (Save button on
+   * a previously-saved doc, restore-version, etc.) short-circuit past
+   * this check — the caller has explicitly claimed the row.
+   */
+  checkFilenameDuplicate?: boolean;
 };
 
 /**
@@ -196,16 +216,14 @@ type PersistEditorDocumentInput = {
 export async function persistEditorDocument({
   fabricCanvas = null,
   force = false,
+  checkFilenameDuplicate = false,
 }: PersistEditorDocumentInput = {}): Promise<PersistEditorResult> {
   const state = usePdfEditorStore.getState();
-  const {
-    currentDocumentId,
-    currentPage,
-    file,
-    hasUnsavedChanges,
-    isSignedIn,
-    pdfDocument,
-  } = state;
+  const { currentPage, file, hasUnsavedChanges, isSignedIn, pdfDocument } =
+    state;
+  // Reassigned after the duplicate-overwrite branch may stamp the
+  // store, so the downstream upload sees the freshly-adopted id.
+  let currentDocumentId = state.currentDocumentId;
 
   if (!file) {
     return { ok: false, reason: "no-file" };
@@ -226,6 +244,60 @@ export async function persistEditorDocument({
   // yet) always proceeds so a fresh PDF gets uploaded once.
   if (!force && !hasUnsavedChanges && currentDocumentId) {
     return { ok: false, reason: "no-changes" };
+  }
+
+  // Duplicate-filename gate. Only fires for the FIRST save on a fresh
+  // file (no `currentDocumentId` yet). If the user's library already
+  // contains a doc with the same filename, prompt: Overwrite / Cancel.
+  //   - Overwrite → stamp the store's `currentDocumentId` with the
+  //     existing row's id, so the upload below turns into an upsert
+  //     (backend versions the previous bytes as a snapshot).
+  //   - Cancel    → return early with `cancelled-duplicate`. Caller
+  //     leaves the local edits in place and shows no error toast.
+  // Backwards-compatible: `checkFilenameDuplicate` defaults to false,
+  // so existing call sites (Manage Pages auto-persist, page-hide
+  // background save, etc.) keep behaving exactly as before until they
+  // opt in.
+  if (checkFilenameDuplicate && !currentDocumentId) {
+    let existing: Document | null = null;
+
+    try {
+      existing = await findDuplicateByFilename(file.name);
+    } catch (err) {
+      // Silent — a flaky list call must not block the save. Log for
+      // diagnostics; fall through to the standard upload path.
+      logger.captureError(err, "save.duplicate_check");
+    }
+
+    if (existing) {
+      const outcome = await requestDuplicatePrompt({
+        filename: existing.filename,
+        existing,
+      });
+
+      if (outcome === "cancel") {
+        logger.event("save.duplicate_cancelled", "info", {
+          filename: existing.filename,
+        });
+
+        return { ok: false, reason: "cancelled-duplicate" };
+      }
+
+      logger.event("save.duplicate_overwrite", "info", {
+        filename: existing.filename,
+        documentId: existing.id,
+      });
+      // Claim the existing row so the upload below versions it via the
+      // backend's documentId branch. `setCurrentDocument` also updates
+      // any downstream selector that keys off the current doc id.
+      usePdfEditorStore.getState().setCurrentDocument({
+        id: existing.id,
+        name: existing.filename,
+      });
+      // Re-point the local variable so `effectiveDocumentId` further
+      // down picks up the just-claimed id.
+      currentDocumentId = existing.id;
+    }
   }
 
   try {

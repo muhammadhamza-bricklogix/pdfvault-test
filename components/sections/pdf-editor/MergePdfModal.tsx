@@ -12,6 +12,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Modal } from "@heroui/react";
 import { useCallback, useRef, useState } from "react";
 
+import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import {
   fileToMergeEntry,
   mergePdfs,
@@ -82,6 +87,36 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
     setIsMerging(true);
     try {
+      // QA 2026-09-06: merge is 100% client-side (pdf-lib), so no
+      // axios `isGatedRequest` interceptor ever fires — a signed-in
+      // but non-entitled user could merge + download freely, bypassing
+      // billing. Add an explicit entitlement gate here that mirrors
+      // CompressModal / useExportEditor: check fresh entitlement, and
+      // if the user isn't entitled, open the paywall with a preview.
+      // User cancels → silent bail (no download, no error toast).
+      // User pays → entitlement flips, proceed to merge.
+      const entitled = await ensureFreshEntitlement();
+
+      if (!entitled) {
+        const dotForPreview = source.filename.lastIndexOf(".");
+        const baseForPreview =
+          dotForPreview > 0
+            ? source.filename.slice(0, dotForPreview)
+            : source.filename;
+        const previewName = `${baseForPreview}-merged.pdf`;
+        const outcome = await requestPaywall({
+          filename: previewName,
+          sourceExt: "pdf",
+          targetExt: "pdf",
+        });
+
+        if (outcome !== "success") {
+          setIsMerging(false);
+
+          return;
+        }
+      }
+
       const entries = [source, ...extras];
       const bytes = await mergePdfs(entries);
       const dot = source.filename.lastIndexOf(".");
@@ -98,6 +133,12 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       });
       onClose();
     } catch (err) {
+      // Silent on PaywallCancelledError — user chose Cancel on the
+      // paywall (routed here from a signed-out branch or a stale
+      // entitlement retry); no user-facing error, no toast.
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       logger.error("[merge-pdf-modal] merge failed", err);
       toast.error({
         title: "Couldn't merge PDFs",
@@ -120,7 +161,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
+        <Modal.Dialog className="!w-[92vw] !min-h-[540px] !max-w-[520px]">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Merge PDFs</Modal.Heading>
@@ -212,7 +253,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
                 />
 
                 <Button
-                  className="w-full"
+                  className="w-full border-2 border-[#f12c23] text-[#f12c23]"
                   isDisabled={isLoading || isMerging}
                   variant="secondary"
                   onPress={() => fileInputRef.current?.click()}

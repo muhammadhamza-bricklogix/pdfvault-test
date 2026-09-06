@@ -73,9 +73,10 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       }
 
       if (!isSignedIn) {
+        // QA 2026-09-06 copy: "Sign in" → "Login".
         toast.info({
-          title: "Sign in to save",
-          description: "Sign in to keep your edits in your library.",
+          title: "Login to save",
+          description: "Login to keep your edits in your library.",
         });
         navigate();
 
@@ -192,6 +193,11 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         const result = await persistEditorDocument({
           fabricCanvas: fabricRef.current,
           force: true,
+          // Same duplicate gate as the button-Save so a Back click on
+          // a fresh file with a same-name library twin prompts the
+          // user (Overwrite / Cancel) rather than silently duplicating
+          // or failing on backend uniqueness.
+          checkFilenameDuplicate: true,
         });
 
         // Close the loading toast BEFORE surfacing the outcome — otherwise
@@ -224,10 +230,18 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
             // Truly no file → safe to navigate away, nothing to lose.
             navigate();
           } else if (result.reason === "not-signed-in") {
+            // QA 2026-09-06 copy: "Sign in" → "Login".
             toast.info({
-              title: "Sign in to save",
-              description: "Sign in to keep your edits in your library.",
+              title: "Login to save",
+              description: "Login to keep your edits in your library.",
             });
+            navigate();
+          } else if (result.reason === "cancelled-duplicate") {
+            // User cancelled the "file already exists" prompt. Respect
+            // that decision: don't overwrite, don't error — just let
+            // the navigation proceed with local state intact. The
+            // pending-editor-file mirror + hydrator will re-hydrate
+            // on the destination if the user comes back.
             navigate();
           } else if (result.reason === "no-changes") {
             // Store's own dirty flag disagreed with our earlier check

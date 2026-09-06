@@ -1,13 +1,12 @@
 "use client";
 
-import { useClerk, useReverification, useUser } from "@clerk/nextjs";
-import { isReverificationCancelledError } from "@clerk/nextjs/errors";
-import { Alert01Icon } from "@hugeicons/core-free-icons";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { Alert01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Modal } from "@heroui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   PvFormRow,
@@ -58,10 +57,12 @@ function humaniseDeleteError(err: unknown): string {
     return "Account deletion is disabled for this workspace. Email support@pdfvault.ai and we'll remove your account for you.";
   }
   if (code === "session_reverification_required") {
-    // Should never surface — `useReverification` wraps the delete call
-    // and opens Clerk's own verification modal automatically. Kept as
-    // a fallback in case the wrapper is bypassed.
-    return "For your security we need to verify it's you. A verification prompt should appear — if it didn't, try again.";
+    // Clerk requires the session to be recently reverified before a
+    // delete can proceed. The custom password step-up was removed
+    // (QA 2026-09-06 — user asked for a friction-free flow); if this
+    // ever fires the user must sign out and back in, or we need to
+    // reintroduce the step-up.
+    return "For your security we need you to sign in again before deleting. Sign out, sign back in, and retry the deletion.";
   }
   if (code === "form_password_incorrect") {
     return "Password check failed. Sign out and back in, then try again.";
@@ -83,7 +84,17 @@ export default function DangerZonePage() {
   const [confirmation, setConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  // Second-stage confirmation modal shown AFTER the email-match step.
+  // Surfaces the full data-loss + subscription-refund + logout copy so
+  // the user has an explicit "Yes, delete my data" moment before the
+  // irreversible Clerk call fires.
+  const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false);
+  // Post-delete success confirmation. Shown after `user.delete()` resolves
+  // and BEFORE `signOut()` fires — gives the user a clear "your account
+  // has been permanently deleted" moment instead of a silent bounce to
+  // the marketing home. Continue button (or the 6-second safety timer)
+  // triggers the sign-out + redirect.
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const canConfirm =
     confirmation.trim().toLowerCase() === email.toLowerCase() && email !== "";
@@ -95,44 +106,67 @@ export default function DangerZonePage() {
   // Billing so the fix is one click away.
   const billingActive = isBillingActive(subscription);
 
-  // QA 2026-08-28: Clerk now enforces "session reverification" for
-  // sensitive actions (delete account, remove MFA, etc.) — first hit
-  // returns `session_reverification_required` and Clerk expects the
-  // client to prompt the user to re-authenticate (password / MFA),
-  // then retry. Wrapping `user.delete()` with `useReverification`
-  // gives us that flow for free: on the reverification error it opens
-  // Clerk's own verification modal and, once the user completes it,
-  // reruns the wrapped fetcher. Without this wrap the delete just
-  // errors out with the raw 403 the user pasted.
-  const deleteAccount = useReverification(
-    useCallback(async () => {
-      if (!user) throw new Error("No signed-in user.");
-      await user.delete();
-    }, [user]),
-  );
-
-  const handleDelete = async () => {
+  // Step 1 — user typed their email; hand off to the "Are you sure?"
+  // modal. No API call yet: the actual delete happens only after they
+  // click "Yes, delete my data" on the next modal.
+  const handleEmailConfirmed = () => {
     if (!user || !canConfirm) return;
+    setError(null);
+    setIsOpen(false);
+    setIsFinalConfirmOpen(true);
+  };
+
+  // Step 2 — user clicked "Yes, delete my data" on the final
+  // confirmation modal. Runs the Clerk delete directly (no password
+  // reverification step-up — removed 2026-09-06 per user request to
+  // reduce friction). Errors surface back on the email modal
+  // (re-opened) so the user has full context of what failed and can
+  // retry. If Clerk's instance settings still enforce reverification
+  // server-side, the humanised error message directs the user to
+  // sign out + back in.
+  const handleFinalDelete = async () => {
+    if (!user) return;
 
     setIsDeleting(true);
     setError(null);
 
     try {
-      await deleteAccount();
-      await signOut();
-      router.push(ROUTES.PUBLIC.HOME);
-    } catch (err) {
-      // User closed the reverification modal without completing it —
-      // silent bail, keep the confirm dialog open so they can retry.
-      if (isReverificationCancelledError(err)) {
-        setIsDeleting(false);
+      await user.delete();
+      // Delete succeeded — surface a success confirmation before signing
+      // out. `signOut()` fires when the user clicks Continue on the
+      // success modal (or the safety timer inside that modal expires).
+      setIsDeleting(false);
+      setIsFinalConfirmOpen(false);
+      setIsSuccessOpen(true);
 
-        return;
-      }
+      return;
+    } catch (err) {
       setError(humaniseDeleteError(err));
       setIsDeleting(false);
+      setIsFinalConfirmOpen(false);
+      setIsOpen(true);
     }
   };
+
+  // Success modal → sign out and land on the marketing home. Wrapped in
+  // useCallback so the auto-timer effect below has a stable reference.
+  const finishSignOut = useCallback(async () => {
+    setIsSuccessOpen(false);
+    await signOut();
+    router.push(ROUTES.PUBLIC.HOME);
+  }, [signOut, router]);
+
+  // Safety net — if the user leaves the success modal open (walked away,
+  // hit an ad, etc.) auto-finalize after 6s so the Clerk session doesn't
+  // linger on a deleted user id.
+  useEffect(() => {
+    if (!isSuccessOpen) return;
+    const t = window.setTimeout(() => {
+      void finishSignOut();
+    }, 6000);
+
+    return () => window.clearTimeout(t);
+  }, [isSuccessOpen, finishSignOut]);
 
   return (
     <section>
@@ -236,11 +270,107 @@ export default function DangerZonePage() {
               <Button
                 isDisabled={!canConfirm || isDeleting}
                 variant="danger"
-                onPress={handleDelete}
+                onPress={handleEmailConfirmed}
               >
                 {isDeleting ? "Deleting…" : "Delete my account"}
               </Button>
             </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+
+      <Modal.Backdrop
+        isOpen={isFinalConfirmOpen}
+        onOpenChange={(open) => {
+          // Disallow dismiss while the delete is in flight so the user
+          // can't accidentally close the modal mid-request and lose
+          // track of state. Cancel button + the X handle explicit exits.
+          if (!open && !isDeleting) setIsFinalConfirmOpen(false);
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-[460px]">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading className="text-danger">
+                Delete your account and data?
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="space-y-4">
+              <p className="text-sm text-[var(--color-foreground)]">
+                Please note that all files you have stored or edited in PDFVault
+                will be permanently lost and cannot be recovered. Your
+                subscription will be cancelled and refund won&apos;t be issued.
+              </p>
+              <p className="text-sm text-[var(--color-foreground)]">
+                Once you confirm, you will be logged out immediately. We will
+                start deleting your account and personal data right away. Your
+                information will also be forwarded to our service providers for
+                deletion — this process may take them a bit longer to complete.
+              </p>
+              <p className="text-sm font-medium text-[var(--color-foreground)]">
+                Are you sure you want to continue?
+              </p>
+              {error ? <p className="text-xs text-danger">{error}</p> : null}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                isDisabled={isDeleting}
+                variant="secondary"
+                onPress={() => setIsFinalConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                isDisabled={isDeleting}
+                variant="danger"
+                onPress={handleFinalDelete}
+              >
+                {isDeleting ? "Deleting…" : "Yes, delete my data"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+
+      <Modal.Backdrop
+        isOpen={isSuccessOpen}
+        onOpenChange={(open) => {
+          // Any dismiss action (X, backdrop click, esc) counts as the
+          // user acknowledging — sign them out and redirect. Prevents the
+          // "modal closed but I'm still on /dashboard/settings/danger
+          // with an invalid session" limbo state.
+          if (!open) void finishSignOut();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-[420px]">
+            <Modal.Body className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+              <span className="flex size-14 items-center justify-center rounded-full bg-green-100">
+                <HugeiconsIcon
+                  className="text-green-600"
+                  icon={Tick01Icon}
+                  size={28}
+                  strokeWidth={2.5}
+                />
+              </span>
+              <div className="space-y-1.5">
+                <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Account deleted
+                </h2>
+                <p className="text-sm text-default-500">
+                  Your account and all associated data have been permanently
+                  deleted. We&apos;re sorry to see you go.
+                </p>
+              </div>
+              <Button
+                className="mt-2 w-full"
+                variant="primary"
+                onPress={() => void finishSignOut()}
+              >
+                Continue
+              </Button>
+            </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>

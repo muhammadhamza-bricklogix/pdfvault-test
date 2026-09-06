@@ -16,7 +16,6 @@ export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
   const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
-  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
 
   useEffect(() => {
     if (!fabricCanvas || activeTool !== "draw") return;
@@ -52,7 +51,10 @@ export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
         saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
         markDocumentDirty();
       }
-      setActiveTool("select");
+      // Draw tool intentionally stays active per QA 2026-09-06 — the
+      // user can keep drawing strokes without re-picking the tool.
+      // Select on the toolbar is the explicit exit. Same rationale as
+      // `use-shape-tool.ts`.
     };
 
     setup();
@@ -66,5 +68,11 @@ export function useDrawTool({ fabricCanvas }: UseDrawToolParams) {
         fabricCanvas.isDrawingMode = false;
       }
     };
-  }, [activeTool, fabricCanvas, setActiveTool]);
+  }, [
+    activeTool,
+    currentPage,
+    fabricCanvas,
+    markDocumentDirty,
+    saveFabricJson,
+  ]);
 }

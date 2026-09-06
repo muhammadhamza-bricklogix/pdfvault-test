@@ -14,8 +14,8 @@ export function LandingHero() {
           Edit Any PDF in Seconds
         </h1>
         <p className="mt-6 max-w-[600px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
-          Everything you need to edit, sign and protect PDFs — fast, secure, and
-          all in one place.
+          Everything you need to edit, sign, and protect PDFs — fast, secure,
+          and all in one place
         </p>
       </div>
 

@@ -12,6 +12,10 @@ import {
   savePendingEditorFile,
 } from "@/lib/client/upload/pending-editor-file";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import {
+  TOUR_ENDED_EVENT,
+  willTourAutoLaunch,
+} from "@/lib/client/tour/use-product-tour";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -129,15 +133,35 @@ export function PendingEditorFileHydrator() {
     if ((tool || exportFormat || isFreshEntry) && !docId) {
       const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
-      if (isFreshEntry || !hasSameSessionFile) {
+      // 2026-09-05: skip `clearFile()` on a fresh page load with an empty
+      // store. `clearFile()` in the Zustand store also resets
+      // `isRestoringSession` to false (pdf-editor-store.ts:535, added
+      // 2026-07-18 alongside the shell latch). On a post-auto-signup
+      // return to `/pdf-composer?export=<fmt>`, `PdfEditorShell` has
+      // just latched `isRestoringSession: true` synchronously in its
+      // `useState` initializer to suppress the "no file → redirect
+      // away" effect while Step 2's async IDB restore is in flight.
+      // Calling `clearFile()` here wipes that latch, and once Clerk
+      // hydrates the shell fires `router.replace(DASHBOARD)` before
+      // Step 2 can call `setFile(pendingFile)` — user reports landing
+      // on the dashboard after auto-signup instead of the paywall.
+      // The store is trivially empty on a fresh load, so `clearFile()`
+      // is a no-op for `file` here anyway — only the side effect on
+      // `isRestoringSession` matters.
+      if (isFreshEntry) {
         logger.breadcrumb("hydrator", "reset.tool_tile", {
           tool,
           exportFormat,
           isFreshEntry,
         });
         clearFile();
-      } else {
+      } else if (hasSameSessionFile) {
         logger.breadcrumb("hydrator", "reset.tool_tile.skipped_has_file", {
+          tool,
+          exportFormat,
+        });
+      } else {
+        logger.breadcrumb("hydrator", "reset.tool_tile.skipped_empty_store", {
           tool,
           exportFormat,
         });
@@ -170,9 +194,18 @@ export function PendingEditorFileHydrator() {
     // land them on an unrelated screen. Save-first-then-open lives in
     // UploadWorkspace; if that upload failed the user still expects to
     // continue with the file in-memory, not lose it to a picker.
+    // QA 2026-09-06: ALSO require `?fresh=1` so post-signin restores
+    // (returnTo = `/pdf-composer?tool=<slug>` with no fresh) don't
+    // race Step 2's async IDB restore and bounce the user to the
+    // dashboard. Dashboard tool tiles all use `TOOL_ROUTE.*` which
+    // adds `?fresh=1`, so the picker redirect still fires for that
+    // legitimate case. Post-signin returnTo strings from PasswordModal
+    // / CompressModal / use-extract-images-editor deliberately OMIT
+    // `?fresh=1` — the file lives in IDB and Step 2 will restore it
+    // within tens of ms of Step 1b's decision.
     const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
-    if (tool && !docId && isSignedIn && !hasSameSessionFile) {
+    if (tool && !docId && isSignedIn && !hasSameSessionFile && isFreshEntry) {
       logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
         tool,
       });
@@ -200,7 +233,7 @@ export function PendingEditorFileHydrator() {
         `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
       );
     }
-  }, [authLoaded, docId, isSignedIn, tool]);
+  }, [authLoaded, docId, isFreshEntry, isSignedIn, tool]);
 
   // Step 2 — one-shot IDB rehydrate.
   //
@@ -465,6 +498,16 @@ export function PendingEditorFileHydrator() {
   // infinite bounce. Waiting for `authLoaded` guarantees the store's
   // `isSignedIn` (synced from Clerk in PdfEditorShell) reflects reality
   // by the time the event fires.
+  //
+  // Tour-aware ordering (QA 2026-09-06 revised): on a FIRST visit the
+  // editor tour auto-launches too — if the tool modal opens at the
+  // same time, driver.js's overlay + HeroUI backdrop fight for the
+  // top layer and any click tears both down together. Product ask:
+  // show the tour first, then open the tool modal after the tour
+  // ends. When `willTourAutoLaunch("editor")` is true at fire time,
+  // wait for the `TOUR_ENDED_EVENT` (with a generous fallback cap)
+  // before dispatching the auto-launch. Return visitors (tour
+  // already seen) get the instant launch as before.
   useEffect(() => {
     if (launchedRef.current) return;
     if (!currentFile) return;
@@ -474,95 +517,175 @@ export function PendingEditorFileHydrator() {
     launchedRef.current = true;
     logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", { tool, exportFormat });
 
-    // Small delay so the editor's own file-load pipeline (Fabric mount +
-    // pdf.js hydrate) settles before we open a modal on top of it. The
-    // modals are cheap; the risk is that a modal opens over a still-blank
-    // canvas and looks jarring.
-    const timeoutId = window.setTimeout(() => {
-      if (tool) {
-        switch (tool) {
-          case "compress":
-            setIsCompressModalOpen(true);
-            break;
-          case "password":
-            usePdfEditorStore.getState().setPasswordModalVariant("both");
-            setIsPasswordModalOpen(true);
-            break;
-          case "unlock":
-            // Dedicated Unlock PDF flow — hide the Add password tab so
-            // the modal reads as a single-purpose remove-password
-            // screen. Variant resets to "both" on close.
-            usePdfEditorStore.getState().setPasswordModalVariant("unlock-only");
-            setIsPasswordModalOpen(true);
-            break;
-          case "manage":
-            setIsManagePagesOpen(true);
-            break;
-          case "split":
-            window.dispatchEvent(new CustomEvent("editor:open-split"));
-            break;
-          case "watermark":
-            setActiveTool("watermark");
-            break;
-          case "edit":
-            // PRD §5/§6 — dashboard "Edit PDF" tile lands the user
-            // directly in the edit-text tool instead of the generic
-            // composer with no tool selected.
-            setActiveTool("editText");
-            break;
-          case "sign":
-            // PRD §5/§6 — dashboard "Sign & Watermark" tile lands the
-            // user in the signature tool. Watermark stays reachable via
-            // the toolbar.
-            setActiveTool("signature");
-            break;
-          case "extract-images":
-            window.dispatchEvent(new CustomEvent("editor:extract-images"));
-            break;
-          case "flatten":
-            window.dispatchEvent(new CustomEvent("editor:open-flatten"));
-            break;
-          default:
-            logger.warn(`unknown auto-launch tool: ${tool}`);
+    const willTourRun = willTourAutoLaunch("editor");
+
+    let toolTimeoutId: number | undefined;
+    let fallbackTimeoutId: number | undefined;
+    let tourEndedHandler: (() => void) | undefined;
+
+    const runAutoLaunch = () => {
+      // 400 ms lead-in so the file-load pipeline (Fabric mount +
+      // pdf.js hydrate) settles before the tool modal opens on top.
+      toolTimeoutId = window.setTimeout(() => {
+        if (tool) {
+          switch (tool) {
+            case "compress":
+              setIsCompressModalOpen(true);
+              break;
+            case "password":
+              usePdfEditorStore.getState().setPasswordModalVariant("both");
+              setIsPasswordModalOpen(true);
+              break;
+            case "unlock":
+              // Dedicated Unlock PDF flow — hide the Add password tab so
+              // the modal reads as a single-purpose remove-password
+              // screen. Variant resets to "both" on close.
+              usePdfEditorStore
+                .getState()
+                .setPasswordModalVariant("unlock-only");
+              setIsPasswordModalOpen(true);
+              break;
+            case "manage":
+              setIsManagePagesOpen(true);
+              break;
+            case "split":
+              window.dispatchEvent(new CustomEvent("editor:open-split"));
+              break;
+            case "merge": {
+              // Open the merge modal DIRECTLY via store state instead of
+              // dispatching `editor:open-merge` through the HamburgerMenu
+              // bridge. The bridge path depended on HamburgerMenu being
+              // mounted + its `useEffect` having attached its listener
+              // by the 400 ms fire mark; a slow first-paint or a
+              // conditional render (guests, W-9 route) could drop the
+              // event on the floor. Reading store setters here and
+              // handing the file to `fileToMergeEntry` mirrors what
+              // `openMergeModal` does — the MergeModalHost renders the
+              // modal from store state, so this works for guests +
+              // signed-in users alike. Skip the pre-merge cloud-save
+              // for guests same as `HamburgerMenu`'s case "merge"
+              // (QA 2026-09-06: unpaid users get the modal, hit paywall
+              // at download).
+              const store = usePdfEditorStore.getState();
+              const target = store.file;
+
+              if (!target) {
+                logger.warn(
+                  "auto-launch merge: no file on the store when firing",
+                );
+                break;
+              }
+
+              void (async () => {
+                try {
+                  const { fileToMergeEntry } = await import(
+                    "@/lib/client/pdf-tools/merge-pdfs"
+                  );
+                  const entry = await fileToMergeEntry(target);
+
+                  store.setMergeModalSource(entry);
+                  store.setIsMergeModalOpen(true);
+                } catch (err) {
+                  logger.error("auto-launch merge: failed to open", err);
+                }
+              })();
+              break;
+            }
+            case "watermark":
+              setActiveTool("watermark");
+              break;
+            case "edit":
+              // PRD §5/§6 — dashboard "Edit PDF" tile lands the user
+              // directly in the edit-text tool instead of the generic
+              // composer with no tool selected.
+              setActiveTool("editText");
+              break;
+            case "sign":
+              // PRD §5/§6 — dashboard "Sign & Watermark" tile lands the
+              // user in the signature tool. Watermark stays reachable via
+              // the toolbar.
+              setActiveTool("signature");
+              break;
+            case "extract-images":
+              window.dispatchEvent(new CustomEvent("editor:extract-images"));
+              break;
+            case "flatten":
+              window.dispatchEvent(new CustomEvent("editor:open-flatten"));
+              break;
+            default:
+              logger.warn(`unknown auto-launch tool: ${tool}`);
+          }
         }
-      }
-      if (exportFormat) {
-        window.dispatchEvent(
-          new CustomEvent("editor:export", {
-            detail: { format: exportFormat },
-          }),
-        );
-      }
+        if (exportFormat) {
+          window.dispatchEvent(
+            new CustomEvent("editor:export", {
+              detail: { format: exportFormat },
+            }),
+          );
+        }
 
-      // Strip the one-shot auto-launch params from the URL so a browser
-      // refresh doesn't re-fire the action. Without this, a user who
-      // landed on `/pdf-editor?id=X&export=docx` and hit F5 mid-edit
-      // would be dragged through the download flow again. `?id=` is kept
-      // so the document loader can still hydrate on refresh.
-      // Reported 2026-08-19 (QA: "refresh triggers unwanted download").
-      const cleaned = new URLSearchParams(searchParams.toString());
-      let mutated = false;
+        // Strip the one-shot auto-launch params from the URL so a browser
+        // refresh doesn't re-fire the action. Without this, a user who
+        // landed on `/pdf-editor?id=X&export=docx` and hit F5 mid-edit
+        // would be dragged through the download flow again. `?id=` is kept
+        // so the document loader can still hydrate on refresh.
+        // Reported 2026-08-19 (QA: "refresh triggers unwanted download").
+        const cleaned = new URLSearchParams(searchParams.toString());
+        let mutated = false;
 
-      if (cleaned.has("tool")) {
-        cleaned.delete("tool");
-        mutated = true;
-      }
-      if (cleaned.has("export")) {
-        cleaned.delete("export");
-        mutated = true;
-      }
-      if (cleaned.has("fresh")) {
-        cleaned.delete("fresh");
-        mutated = true;
-      }
-      if (mutated) {
-        const q = cleaned.toString();
+        if (cleaned.has("tool")) {
+          cleaned.delete("tool");
+          mutated = true;
+        }
+        if (cleaned.has("export")) {
+          cleaned.delete("export");
+          mutated = true;
+        }
+        if (cleaned.has("fresh")) {
+          cleaned.delete("fresh");
+          mutated = true;
+        }
+        if (mutated) {
+          const q = cleaned.toString();
 
-        router.replace(q ? `${pathname}?${q}` : pathname);
-      }
-    }, 400);
+          router.replace(q ? `${pathname}?${q}` : pathname);
+        }
+      }, 400);
+    };
 
-    return () => window.clearTimeout(timeoutId);
+    if (willTourRun) {
+      // Wait for the tour to finish before opening the tool. Add a
+      // 60 s hard cap so a stuck tour (user closed the tab mid-tour
+      // in an earlier session and cleanup didn't fire) doesn't
+      // strand the user without the tool they asked for.
+      tourEndedHandler = () => {
+        if (fallbackTimeoutId !== undefined) {
+          window.clearTimeout(fallbackTimeoutId);
+        }
+        runAutoLaunch();
+      };
+      window.addEventListener(TOUR_ENDED_EVENT, tourEndedHandler, {
+        once: true,
+      });
+      fallbackTimeoutId = window.setTimeout(() => {
+        if (tourEndedHandler) {
+          window.removeEventListener(TOUR_ENDED_EVENT, tourEndedHandler);
+        }
+        runAutoLaunch();
+      }, 60_000);
+    } else {
+      runAutoLaunch();
+    }
+
+    return () => {
+      if (toolTimeoutId !== undefined) window.clearTimeout(toolTimeoutId);
+      if (fallbackTimeoutId !== undefined) {
+        window.clearTimeout(fallbackTimeoutId);
+      }
+      if (tourEndedHandler) {
+        window.removeEventListener(TOUR_ENDED_EVENT, tourEndedHandler);
+      }
+    };
   }, [
     authLoaded,
     currentFile,

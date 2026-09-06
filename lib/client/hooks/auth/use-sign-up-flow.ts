@@ -103,7 +103,9 @@ export function useSignUpFlow() {
         redirectUrl: ROUTES.APP.DASHBOARD,
       });
     } catch (error) {
-      logger.error("Google sign-up failed", error);
+      logger.captureError(error, "signup.oauth_google", {
+        message: error instanceof Error ? error.message : String(error),
+      });
       showServerError("Something went wrong with Google sign-up.");
       setOauthLoading(false);
     }
@@ -137,7 +139,9 @@ export function useSignUpFlow() {
         setStep("verification");
         verificationForm.reset({ code: "" });
       } catch (error) {
-        logger.error("Sign-up submission failed", error);
+        logger.captureError(error, "signup.credentials", {
+          message: error instanceof Error ? error.message : String(error),
+        });
         showServerError("Something went wrong while creating your account.");
       }
     },
@@ -166,7 +170,9 @@ export function useSignUpFlow() {
 
         showServerError("Your account is not verified yet.");
       } catch (error) {
-        logger.error("Sign-up verification failed", error);
+        logger.captureError(error, "signup.verify", {
+          message: error instanceof Error ? error.message : String(error),
+        });
         showServerError("Something went wrong while verifying your email.");
       }
     },

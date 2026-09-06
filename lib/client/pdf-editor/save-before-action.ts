@@ -8,7 +8,8 @@ type SaveBeforeActionReason =
   | "no-changes"
   | "no-file"
   | "not-signed-in"
-  | "not-loaded";
+  | "not-loaded"
+  | "cancelled-duplicate";
 
 /**
  * Persists the live editor state before running a destructive action (Create
@@ -73,6 +74,11 @@ export async function saveBeforeAction(
           mode: "login",
           redirectUrl: returnTo,
         });
+      } else if (reason === "cancelled-duplicate") {
+        // User picked Cancel on the "file already exists" prompt.
+        // Deliberate skip — no error toast. The follow-up action
+        // (export, share, etc.) still proceeds against the local
+        // in-memory file, matching the "keep editing locally" intent.
       } else {
         toast.error({
           title: "Could not save",

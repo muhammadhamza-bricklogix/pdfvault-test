@@ -73,6 +73,15 @@ function LineIcon({ id }: { id: LineIconId }) {
           <path d="M9 3v12M2.5 6.5H5M2.5 11.5H5" />
         </svg>
       );
+    case "merge":
+      return (
+        <svg {...common}>
+          <rect height="7" rx="1.2" width="6" x="2.5" y="2.5" />
+          <rect height="7" rx="1.2" width="6" x="9.5" y="2.5" />
+          <path d="M5.5 9.5v3.5a1.2 1.2 0 0 0 1.2 1.2h4.6a1.2 1.2 0 0 0 1.2-1.2V9.5" />
+          <path d="M6.5 13.5h5M9 12v3.5M7.5 14l1.5 1.5 1.5-1.5" />
+        </svg>
+      );
     case "password":
       return (
         <svg {...common}>

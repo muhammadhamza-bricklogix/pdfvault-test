@@ -26,6 +26,7 @@ import {
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -105,26 +106,23 @@ export function HamburgerMenu() {
 
     if (!f) return;
 
-    // Same guest flow as CompressModal / useExportEditor — persist the
-    // working file to IDB, pop the sign-in confirm modal, and route the
-    // user back to `?tool=flatten` so the hydrator re-fires the flatten
-    // event after sign-in. Without this the mutation 401s and the user
-    // hits the paywall "couldn't start checkout" dead-end.
+    // Snapshot BEFORE the paywall/auth handoff so signed-out users who
+    // are routed through AuthModal come back with their fabric overlays
+    // + extractedPages intact (item #8-#12 hydrator restore path).
     if (!isSignedIn) {
-      // Snapshot file + fabric edits + extractedPages so the hydrator
-      // restores the full editor state (not just the raw file) after
-      // sign-in. Passing (file) only would drop overlays and the
-      // user's "first-time login lost my edits" bug returns.
       await snapshotPendingEditorFile().catch((err) =>
         logger.warn("pending editor file save failed", err),
       );
-      requireSignIn(
-        "Sign in and we'll bring you back here to finish.",
-        `${ROUTES.TOOLS.PDF_EDITOR}?tool=flatten`,
-      );
-
-      return;
     }
+
+    // Paywall gate. `requestPaywall()` handles all three states in one
+    // call: entitled → immediate success; signed-in but unpaid → paywall
+    // modal; signed-out → dispatches AuthModal + resolves "cancelled"
+    // (usePaywall.useEffect handles that branch — see item #5). So we
+    // don't need the old manual `!isSignedIn` fork here.
+    const outcome = await requestPaywall();
+
+    if (outcome !== "success") return;
 
     try {
       const result = await flatten.mutateAsync({ file: f });
@@ -139,6 +137,11 @@ export function HamburgerMenu() {
     const target = requireFile("splitting");
 
     if (!target) return;
+
+    // Paywall is gated INSIDE SplitPdfModal at the Split (download)
+    // button — unpaid users should still see the modal, pick ranges,
+    // and hit the wall only when they try to download. Opening the
+    // modal is free; the download is what costs.
 
     // Read the source bytes + page count once on click so the modal can
     // stay a pure controlled view (avoids the cascading-render lint rule
@@ -176,6 +179,10 @@ export function HamburgerMenu() {
     const target = requireFile("merging");
 
     if (!target) return;
+
+    // Paywall is gated INSIDE MergePdfModal at the Merge (download)
+    // button — unpaid users should still see the modal, add files,
+    // and hit the wall only when they try to download.
 
     const loadingKey = toast.loading({
       title: "Preparing merge",
@@ -259,10 +266,25 @@ export function HamburgerMenu() {
         break;
       case "merge": {
         if (!requireFile("merging")) return;
-        // Bake current edits into the cloud-saved PDF FIRST. Without
-        // this the merge modal reads `store.file` — the pre-edit source
-        // — and the merged output is missing the user's shapes,
-        // drawings, images, signatures, etc. Same pattern as Share.
+        // Guests: skip the pre-merge cloud-save. `saveBeforeAction`
+        // routes signed-out callers through AuthModal and resolves
+        // false, so `openMergeModal` never runs and the modal never
+        // appears (QA 2026-09-06: main-actions Merge button appeared
+        // idle for signed-out users). Open the modal directly against
+        // `store.file`. Overlays that only live in Fabric aren't baked
+        // into the merged output on this first attempt, but paywall
+        // fires at the Merge (download) button → AuthModal → post-
+        // signin hydrator restores the full session → user re-runs
+        // merge → the signed-in branch below bakes cleanly.
+        if (!isSignedIn) {
+          void openMergeModal();
+          break;
+        }
+        // Signed-in: bake current edits into the cloud-saved PDF FIRST.
+        // Without this the merge modal reads `store.file` — the pre-
+        // edit source — and the merged output is missing the user's
+        // shapes, drawings, images, signatures, etc. Same pattern as
+        // Share.
         //
         // `force: true`: several edit paths (page-numbers, annotations,
         // restore-from-version) don't flip `hasUnsavedChanges`, so the
@@ -441,64 +463,77 @@ export function HamburgerMenu() {
     setTimeout(() => setFile(file), 0);
   };
 
+  // Guests: hide the visible dropdown per QA 2026-09-05 (menu entries
+  // all require signin), but KEEP the rest of this component mounted —
+  // the bridge `useEffect` above installs the `editor:open-merge` /
+  // `editor:open-split` / `editor:open-flatten` / `editor:open-annotations`
+  // listeners that the top toolbar dispatches to. Unmounting HamburgerMenu
+  // for guests silently drops those listeners, so Merge / Split / Flatten /
+  // Annotate buttons appear idle (QA 2026-09-06). The modal portals below
+  // (SplitPdfModal, AnnotationsModal, DuplicateUploadModal) also stay
+  // mounted so the paywall-gated handlers can open them.
   return (
     <>
-      <Dropdown>
-        <Button
-          isIconOnly
-          aria-label="Editor menu"
-          data-tour="editor-menu"
-          size="sm"
-          variant="tertiary"
-        >
-          <HugeiconsIcon icon={Menu01Icon} size={16} />
-        </Button>
-        <Dropdown.Popover className="min-w-[200px]">
-          <Dropdown.Menu aria-label="Editor menu" onAction={handleAction}>
-            <Dropdown.Item id="new" textValue="Create New">
-              <HugeiconsIcon icon={Add01Icon} size={14} />
-              <Label>Create New</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="open" textValue="Open File">
-              <HugeiconsIcon icon={FolderOpenIcon} size={14} />
-              <Label>Open File</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="my-pdfs" textValue="My PDFs">
-              <HugeiconsIcon icon={NoteIcon} size={14} />
-              <Label>My PDFs</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="find-replace" textValue="Find and Replace">
-              <HugeiconsIcon icon={Search01Icon} size={14} />
-              <Label>Find and Replace</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="compress" textValue="Compress PDF">
-              <HugeiconsIcon icon={FileMinusIcon} size={14} />
-              <Label>Compress PDF</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="split" textValue="Split PDF">
-              <HugeiconsIcon icon={SplitIcon} size={14} />
-              <Label>Split PDF</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="extract-images" textValue="Extract Images">
-              <HugeiconsIcon icon={FileExportIcon} size={14} />
-              <Label>Extract Images</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="flatten" textValue="Flatten PDF">
-              <HugeiconsIcon icon={Layers01Icon} size={14} />
-              <Label>Flatten PDF</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="share" textValue="Share via link">
-              <HugeiconsIcon icon={Link01Icon} size={14} />
-              <Label>Share via link</Label>
-            </Dropdown.Item>
-            <Dropdown.Item id="versions" textValue="Version History">
-              <HugeiconsIcon icon={Clock01Icon} size={14} />
-              <Label>Version History</Label>
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
-      <Separator className="!h-4" orientation="vertical" />
+      {isSignedIn && (
+        <>
+          <Dropdown>
+            <Button
+              isIconOnly
+              aria-label="Editor menu"
+              data-tour="editor-menu"
+              size="sm"
+              variant="tertiary"
+            >
+              <HugeiconsIcon icon={Menu01Icon} size={16} />
+            </Button>
+            <Dropdown.Popover className="min-w-[200px]">
+              <Dropdown.Menu aria-label="Editor menu" onAction={handleAction}>
+                <Dropdown.Item id="new" textValue="Create New">
+                  <HugeiconsIcon icon={Add01Icon} size={14} />
+                  <Label>Create New</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="open" textValue="Open File">
+                  <HugeiconsIcon icon={FolderOpenIcon} size={14} />
+                  <Label>Open File</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="my-pdfs" textValue="My PDFs">
+                  <HugeiconsIcon icon={NoteIcon} size={14} />
+                  <Label>My PDFs</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="find-replace" textValue="Find and Replace">
+                  <HugeiconsIcon icon={Search01Icon} size={14} />
+                  <Label>Find and Replace</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="compress" textValue="Compress PDF">
+                  <HugeiconsIcon icon={FileMinusIcon} size={14} />
+                  <Label>Compress PDF</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="split" textValue="Split PDF">
+                  <HugeiconsIcon icon={SplitIcon} size={14} />
+                  <Label>Split PDF</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="extract-images" textValue="Extract Images">
+                  <HugeiconsIcon icon={FileExportIcon} size={14} />
+                  <Label>Extract Images</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="flatten" textValue="Flatten PDF">
+                  <HugeiconsIcon icon={Layers01Icon} size={14} />
+                  <Label>Flatten PDF</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="share" textValue="Share via link">
+                  <HugeiconsIcon icon={Link01Icon} size={14} />
+                  <Label>Share via link</Label>
+                </Dropdown.Item>
+                <Dropdown.Item id="versions" textValue="Version History">
+                  <HugeiconsIcon icon={Clock01Icon} size={14} />
+                  <Label>Version History</Label>
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown>
+          <Separator className="!h-4" orientation="vertical" />
+        </>
+      )}
       <input
         ref={fileInputRef}
         accept={UPLOAD_ACCEPT_MIME.join(",")}

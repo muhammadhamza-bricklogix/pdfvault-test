@@ -6,16 +6,33 @@ import { isAxiosError } from "axios";
 /**
  * Normalized API error thrown by the axios client.
  * Use this instead of inspecting raw AxiosError objects in callers.
+ *
+ * `rawBody` carries a truncated string of the original response body so
+ * error handlers can log the exact payload without re-walking the
+ * `cause` chain. Populated only when the response body doesn't fit the
+ * standard `{success:false, message}` envelope — the fallback path is
+ * where forensic evidence lives (raw NestJS ValidationError arrays,
+ * Solidgate rejections, WAF HTML pages, etc.). Prod uses this to
+ * diagnose the "Couldn't start checkout / Invalid request." bots-only
+ * bug where the fallback "Invalid request." message hides the actual
+ * failure reason.
  */
 export class ApiError extends Error {
   readonly statusCode: number;
   readonly cause?: unknown;
+  readonly rawBody?: string;
 
-  constructor(message: string, statusCode: number, cause?: unknown) {
+  constructor(
+    message: string,
+    statusCode: number,
+    cause?: unknown,
+    rawBody?: string,
+  ) {
     super(message);
     this.name = "ApiError";
     this.statusCode = statusCode;
     this.cause = cause;
+    this.rawBody = rawBody;
   }
 }
 
@@ -73,7 +90,23 @@ function fromAxiosError(error: AxiosError): ApiError {
   const fallback =
     STATUS_FALLBACK_MESSAGES[status] ?? "Request failed. Please try again.";
 
-  return new ApiError(fallback, status, error);
+  // Non-enveloped body — stash a truncated string of it on the ApiError
+  // so callers (paywall's onError, etc.) can log the real payload without
+  // manually walking `error.response.data`. Truncate to 2 KB to stay
+  // within Sentry's log limits + strip PII risk from oversized bodies.
+  let rawBody: string | undefined;
+
+  try {
+    if (typeof data === "string") {
+      rawBody = data.slice(0, 2048);
+    } else if (data !== null && data !== undefined) {
+      rawBody = JSON.stringify(data).slice(0, 2048);
+    }
+  } catch {
+    rawBody = "<unserialisable>";
+  }
+
+  return new ApiError(fallback, status, error, rawBody);
 }
 
 /** Convenience: extract a user-facing message from any thrown value. */

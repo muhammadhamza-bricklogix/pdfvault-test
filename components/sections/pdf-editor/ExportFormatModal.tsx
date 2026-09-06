@@ -258,53 +258,12 @@ function ExportFormatModalBody({
       </Modal.Header>
 
       <Modal.Body className="space-y-5">
-        {/* Editable file name — inline title style so users immediately
-            see it's the output filename and can click to rename it.
-            W-9 route also runs a debounced duplicate-name check against
-            the user's My PDFs library (see effect above). */}
-        <div>
-          <div
-            className={`flex items-center gap-2 rounded-xl border bg-default-50 px-3 py-2.5 ${
-              duplicateExists
-                ? "border-danger-500 bg-danger-50"
-                : "border-default-200"
-            }`}
-          >
-            <TextField
-              className="min-w-0 flex-1"
-              value={fileName}
-              onChange={setFileName}
-            >
-              <Input
-                aria-invalid={duplicateExists}
-                aria-label="File name"
-                className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
-                id="export-file-name"
-                placeholder="document"
-              />
-            </TextField>
-            <HugeiconsIcon
-              className="shrink-0 text-default-400"
-              icon={PencilEdit01Icon}
-              size={15}
-            />
-          </div>
-          {isW9Route && duplicateExists ? (
-            <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
-              A file named <span className="font-semibold">{fullFilename}</span>{" "}
-              already exists in My PDFs. Rename to keep both copies.
-            </p>
-          ) : isW9Route && checkingDuplicate ? (
-            <p className="mt-1.5 px-1 text-[12px] text-default-400">
-              Checking name…
-            </p>
-          ) : null}
-        </div>
-
         {/* Format tiles — grid width adapts to the number of visible
             options. 1 tile → full width; exactly 3 tiles (W-9: PDF /
             JPG / PNG) → one row of 3 per 2026-08-29 late-PM request;
-            everything else uses 2-across. */}
+            everything else uses 2-across. Moved above the File name
+            input per QA 2026-09-05 so the modal reads top-to-bottom as
+            "pick format → confirm name → Download". */}
         <div
           aria-label="Export format"
           className={`grid gap-3 ${
@@ -347,11 +306,71 @@ function ExportFormatModalBody({
             );
           })}
         </div>
+
+        {/* Editable file name — moved BELOW the format tiles + given an
+            explicit "File name" title per the QA 2026-09-05 design
+            reference. W-9 route also runs a debounced duplicate-name
+            check against the user's My PDFs library (see effect above). */}
+        <div>
+          <label
+            className="mb-1.5 block px-1 text-[13px] font-medium text-default-600"
+            htmlFor="export-file-name"
+          >
+            File name
+          </label>
+          <div
+            className={`flex items-center gap-2 rounded-xl border bg-default-50 px-3 py-2.5 ${
+              duplicateExists
+                ? "border-danger-500 bg-danger-50"
+                : "border-default-200"
+            }`}
+          >
+            <TextField
+              className="min-w-0 flex-1"
+              value={fileName}
+              onChange={setFileName}
+            >
+              <Input
+                aria-invalid={duplicateExists}
+                aria-label="File name"
+                className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
+                id="export-file-name"
+                placeholder="document"
+              />
+            </TextField>
+            <HugeiconsIcon
+              className="shrink-0 text-default-400"
+              icon={PencilEdit01Icon}
+              size={15}
+            />
+          </div>
+          {isW9Route && duplicateExists ? (
+            <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
+              A file named <span className="font-semibold">{fullFilename}</span>{" "}
+              already exists in My PDFs. Rename to keep both copies.
+            </p>
+          ) : isW9Route && checkingDuplicate ? (
+            <p className="mt-1.5 px-1 text-[12px] text-default-400">
+              Checking name…
+            </p>
+          ) : null}
+        </div>
       </Modal.Body>
 
-      <Modal.Footer className="justify-center">
+      {/* Cancel + Download side-by-side per QA 2026-09-05 design ref.
+          Cancel simply dismisses the modal (no side effects) — matches
+          the reference image; download flow is unchanged. */}
+      <Modal.Footer className="!flex-row !gap-3 !px-6 !pt-2">
         <Button
-          className="w-[90%]"
+          className="flex-1"
+          isDisabled={isSaving}
+          variant="secondary"
+          onPress={onClose}
+        >
+          Cancel
+        </Button>
+        <Button
+          className="flex-1"
           isDisabled={!file || isSaving || duplicateExists}
           onPress={handleDownload}
         >

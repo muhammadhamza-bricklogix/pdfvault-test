@@ -45,7 +45,6 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
   const shapeFill = usePdfEditorStore((s) => s.shapeFill);
   const shapeStroke = usePdfEditorStore((s) => s.shapeStroke);
   const shapeStrokeWidth = usePdfEditorStore((s) => s.shapeStrokeWidth);
-  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCreatingShape = usePdfEditorStore((s) => s.setIsCreatingShape);
 
   const classesRef = useRef<FabricClasses | null>(null);
@@ -314,9 +313,19 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
         finalShape = tempShapeRef.current;
       }
 
-      // Recalculate bounding box so the object is immediately grabbable
+      // Recalculate bounding box so the object is registered with Fabric
+      // at its final position — needed for hit-testing later when the
+      // user switches to Select and clicks the shape.
       finalShape.setCoords();
-      fabricCanvas.setActiveObject(finalShape);
+      // Deliberately do NOT `setActiveObject(finalShape)` here. QA
+      // 2026-09-06: tool stays active for repeat draws (Shape /
+      // Whiteout / Redact), so leaving the just-drawn shape as active
+      // would show its selection handles during the NEXT drag —
+      // `skipTargetFind` is on and Fabric can't discover the new
+      // pointer target, so the old handles linger until the next
+      // shape lands. Discarding here keeps the canvas visually clean
+      // between draws.
+      fabricCanvas.discardActiveObject();
       tempShapeRef.current = null;
 
       // Arrow gets history from object:added (isCreatingShape is already false).
@@ -335,7 +344,11 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
 
       fabricCanvas.renderAll();
-      setActiveTool("select");
+      // Tool intentionally NOT reset to "select" per QA 2026-09-06 —
+      // Shape / Whiteout / Redact stay active so the user can draw
+      // multiple shapes in a row without re-selecting the tool. The
+      // Select tool on the toolbar is the explicit exit. Same rationale
+      // applied to `use-draw-tool.ts`.
     };
 
     preload();
@@ -371,7 +384,6 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
     shapeFill,
     shapeStroke,
     shapeStrokeWidth,
-    setActiveTool,
     setIsCreatingShape,
   ]);
 }

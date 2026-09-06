@@ -11,7 +11,7 @@ import {
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface PvFileTableProps {
   rows: readonly PvFileRow[];
@@ -130,6 +130,7 @@ function getSortValue(row: PvFileRow, key: SortKey): string | number {
 
 interface RowActionsProps {
   row: PvFileRow;
+  disabled?: boolean;
   onDownload?: (row: PvFileRow) => void;
   onRename?: (row: PvFileRow) => void;
   onHistory?: (row: PvFileRow) => void;
@@ -138,6 +139,7 @@ interface RowActionsProps {
 
 function RowActions({
   row,
+  disabled = false,
   onDownload,
   onRename,
   onHistory,
@@ -186,9 +188,10 @@ function RowActions({
         <button
           key={label}
           aria-label={`${label} ${row.name}`}
-          className={`flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] ${
+          className={`flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--pv-text-muted)] ${
             danger ? "hover:!text-[var(--pv-file-pdf)]" : ""
           }`}
+          disabled={disabled}
           type="button"
           onClick={handler}
         >
@@ -215,12 +218,47 @@ export function PvFileTable({
   // 2026-09-01 (QA): the canonical W-9 row can't be deleted (system
   // doc — see RowActions below). Exclude it from bulk-select so the
   // "Delete selected" affordance never targets it.
-  const selectableRows = sorted.filter(
-    (r) => !r.pending && r.name.toLowerCase() !== "irs form w-9.pdf",
+  // Memo'd on `sorted` identity so the sync `useEffect` below only
+  // fires when the row set actually changes (not on every render) —
+  // otherwise a parent re-render for unrelated state runs the stale-
+  // id prune pass needlessly.
+  const selectableRows = useMemo(
+    () =>
+      sorted.filter(
+        (r) => !r.pending && r.name.toLowerCase() !== "irs form w-9.pdf",
+      ),
+    [sorted],
   );
-  const allSelected =
-    selectableRows.length > 0 && selected.size === selectableRows.length;
+
+  // Sync selected state to remove any stale IDs (e.g. after a file is deleted)
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const currentIds = new Set(selectableRows.map((r) => r.id));
+      let hasOrphan = false;
+
+      for (const id of prev) {
+        if (!currentIds.has(id)) {
+          hasOrphan = true;
+          break;
+        }
+      }
+      if (!hasOrphan) return prev;
+      const next = new Set<string>();
+
+      for (const id of prev) {
+        if (currentIds.has(id)) {
+          next.add(id);
+        }
+      }
+
+      return next;
+    });
+  }, [selectableRows]);
+
   const selectedRows = selectableRows.filter((r) => selected.has(r.id));
+  const allSelected =
+    selectableRows.length > 0 && selectedRows.length === selectableRows.length;
   const handleBulkDelete = () => {
     if (!onBulkDelete || selectedRows.length === 0) return;
     onBulkDelete(selectedRows);
@@ -466,6 +504,7 @@ export function PvFileTable({
                       </span>
                     ) : (
                       <RowActions
+                        disabled={selectedRows.length > 1}
                         row={row}
                         onDelete={onDelete}
                         onDownload={onDownload}

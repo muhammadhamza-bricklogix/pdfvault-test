@@ -21,7 +21,7 @@ import {
   Tooltip,
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
@@ -214,10 +214,14 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const clearDocumentDirty = usePdfEditorStore((s) => s.clearDocumentDirty);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const setFileInStore = usePdfEditorStore((s) => s.setFile);
   const router = useRouter();
-  const { duplicate, start } = useUploadWithDuplicateCheck();
+  // `duplicate` remains wired to `DuplicateUploadModal` below even though
+  // the pre-upload code path was removed (QA 2026-09-06 duplicate-doc
+  // fix). The modal is a no-op unless duplicate resolves — kept mounted
+  // so a future re-introduction of an upload path here doesn't need to
+  // rewire the modal machinery.
+  const { duplicate } = useUploadWithDuplicateCheck();
 
   const [form, setForm] = useState<FormState>(() => buildDefault(++openCount));
   const [isGenerating, setIsGenerating] = useState(false);
@@ -225,6 +229,37 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   const [unsavedAction, setUnsavedAction] = useState<
     null | "saving" | "discarding"
   >(null);
+  // Ref mirror of the latest form state. `generateNewDocument` reads from
+  // this instead of the closed-over `form` because React 18 batches the
+  // NumberField's blur→onChange→setState with the Create-button click,
+  // leaving the closure one render behind (QA 2026-09-06: user typed 50
+  // pages, only a few landed — the click fired before the commit was
+  // flushed). Updated synchronously inside `patch()` below AND mirrored
+  // via effect so both onChange (fast path) and rerender (safety net)
+  // keep it fresh.
+  const formRef = useRef(form);
+  // Stable DOM id for the page-count `<NumberField.Input>`. At Create
+  // time we read the LIVE input value via `document.getElementById`
+  // so the generated PDF matches exactly what the user sees on the
+  // screen. Rationale: React Aria's NumberField commits its typed
+  // value on blur / Enter / step-button, not per keystroke — so a
+  // user who types "50" and clicks Create without blurring first
+  // leaves `formRef.current.pageCount` at whatever last committed
+  // ("5" during typing). Reading the DOM bypasses commit timing.
+  //
+  // Why NOT a React ref on `<NumberField.Input>`: HeroUI v3.0.3's
+  // wrapper is a plain function component (not `forwardRef`); in
+  // React 19 the ref becomes a regular prop and gets spread onto
+  // react-aria-components' `<Input>`, which has its own ref merging
+  // — the two collide and jam the field's internal state after the
+  // first two-digit commit. QA 2026-09-06 (v2): "increment to 9,
+  // next click jumps to 1 and locks". Using an id avoids the ref
+  // path entirely.
+  const PAGE_COUNT_INPUT_ID = "create-pdf-page-count-input";
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -251,8 +286,16 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     minimumFractionDigits: fractionDigits,
   };
 
-  const patch = (updates: Partial<FormState>) =>
-    setForm((prev) => ({ ...prev, ...updates }));
+  const patch = (updates: Partial<FormState>) => {
+    // Compute next off the ref (which is always current) so `formRef` is
+    // updated fully synchronously — the updater-function form of setState
+    // can run lazily at render time in React 18, which would defeat the
+    // batching workaround this ref exists for.
+    const next = { ...formRef.current, ...updates };
+
+    formRef.current = next;
+    setForm(next);
+  };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -312,9 +355,38 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   };
 
   const generateNewDocument = async () => {
-    const trimmed = documentName.trim() || `Untitled-${openCount}`;
+    // Read from the ref, not the closed-over destructured values. The
+    // NumberField for page count commits on blur, and that blur-driven
+    // setState is batched with the Create button's click in React 18 —
+    // the closure sees the pre-blur value. `formRef.current` is updated
+    // synchronously inside `patch()` so it always reflects the latest
+    // committed input, including the just-committed page count.
+    const latest = formRef.current;
+    const trimmed = latest.documentName.trim() || `Untitled-${openCount}`;
     const fileName = trimmed.endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
-    const clampedPages = Math.min(Math.max(1, pageCount), PAGE_COUNT_MAX);
+    // Prefer the LIVE DOM value on the page-count input over
+    // `latest.pageCount` — see comment on PAGE_COUNT_INPUT_ID above
+    // for the full rationale. We look the element up by id instead
+    // of a ref because HeroUI's NumberField.Input wrapper doesn't
+    // forward refs cleanly on React 19.
+    const domInputEl =
+      typeof document !== "undefined"
+        ? (document.getElementById(
+            PAGE_COUNT_INPUT_ID,
+          ) as HTMLInputElement | null)
+        : null;
+    const domRawPageCount = domInputEl?.value ?? "";
+    const domParsedPageCount = Number.parseInt(domRawPageCount, 10);
+    const effectivePageCount = Number.isFinite(domParsedPageCount)
+      ? domParsedPageCount
+      : latest.pageCount;
+    const clampedPages = Math.min(
+      Math.max(1, effectivePageCount),
+      PAGE_COUNT_MAX,
+    );
+    const genWidthPt = latest.widthPt;
+    const genHeightPt = latest.heightPt;
+    const genPageColor = latest.pageColor;
 
     setIsGenerating(true);
 
@@ -323,16 +395,16 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       const pdfDoc = await PDFDocument.create();
 
       for (let i = 0; i < clampedPages; i++) {
-        const page = pdfDoc.addPage([widthPt, heightPt]);
+        const page = pdfDoc.addPage([genWidthPt, genHeightPt]);
 
-        if (pageColor !== "#FFFFFF") {
-          const { b, g, r } = hexToRgb(pageColor);
+        if (genPageColor !== "#FFFFFF") {
+          const { b, g, r } = hexToRgb(genPageColor);
 
           page.drawRectangle({
             borderWidth: 0,
             color: rgb(r / 255, g / 255, b / 255),
-            height: heightPt,
-            width: widthPt,
+            height: genHeightPt,
+            width: genWidthPt,
             x: 0,
             y: 0,
           });
@@ -357,20 +429,21 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       onClose();
       setTimeout(() => setFileInStore(file), 0);
 
-      if (isSignedIn) {
-        // Upload to the cloud in the background. When the new id is known,
-        // associate it with the already-loaded file and sync the URL — the
-        // loader skips re-fetching because the file+currentDocumentId match.
-        void start({
-          file,
-          onOpen: (id) => {
-            setCurrentDocument({ id, name: fileName });
-            router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`, {
-              scroll: false,
-            });
-          },
-        });
-      }
+      // QA 2026-09-06: DO NOT kick off a background upload of the blank
+      // PDF here. Previously we called `start({ file, onOpen: (id) => …
+      // setCurrentDocument(id) })` right after creation so the doc
+      // showed up in the dashboard immediately. Race: the upload +
+      // `onOpen` callback runs asynchronously; if the user edits and
+      // clicks "My PDFs" / Back / Dashboard before `onOpen` fires,
+      // save-before-action fires with `currentDocumentId === null` →
+      // backend creates a SECOND document row (blank one from the
+      // background upload + edited one from nav-save). User ended up
+      // with two rows: one blank, one with changes. Skipping the
+      // pre-upload defers creation to the first real save (nav-save,
+      // Save button, or any editor:save-before-action caller), which
+      // now uploads once with all edits — one document, all changes,
+      // as expected. The IDB pending-file snapshot still covers
+      // refresh-mid-edit.
     } finally {
       setIsGenerating(false);
     }
@@ -684,6 +757,20 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                     </p>
                     <NumberField
                       aria-label="Number of pages"
+                      // QA 2026-09-06 (v3): explicit integer format
+                      // options. Without this react-aria falls back to
+                      // `Intl.NumberFormat(locale)` defaults, which on
+                      // many locales inject a grouping separator once
+                      // the value hits 4 digits and add fraction
+                      // digits for others. Both variants then fail
+                      // NumberField's own parser and the field
+                      // silently rejects further updates. Forcing
+                      // integer-only, no-grouping formatting keeps
+                      // 1..50 round-tripping cleanly.
+                      formatOptions={{
+                        useGrouping: false,
+                        maximumFractionDigits: 0,
+                      }}
                       maxValue={PAGE_COUNT_MAX}
                       minValue={1}
                       step={1}
@@ -692,11 +779,19 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                         if (Number.isFinite(v)) patch({ pageCount: v });
                       }}
                     >
-                      <NumberField.Group className="w-28">
+                      {/*
+                        QA 2026-09-06 (v3): widened from `w-28` (112px)
+                        to `w-32` (128px) so a 2-digit value like "50"
+                        or "10" has clear space between the ▼/▲ chevron
+                        buttons without visual overflow. Prior width
+                        caused the input to appear stuck at 10 because
+                        subsequent keystrokes rendered off-screen.
+                      */}
+                      <NumberField.Group className="w-32">
                         <NumberField.DecrementButton>
                           <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
                         </NumberField.DecrementButton>
-                        <NumberField.Input />
+                        <NumberField.Input id={PAGE_COUNT_INPUT_ID} />
                         <NumberField.IncrementButton>
                           <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
                         </NumberField.IncrementButton>

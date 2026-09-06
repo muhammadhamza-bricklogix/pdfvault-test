@@ -44,7 +44,7 @@ export function ViewerClient({
   const docRef = useRef<PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [loadState, setLoadState] = useState<
-    "loading" | "ready" | "error" | "forbidden"
+    "loading" | "ready" | "error" | "forbidden" | "expired" | "not-found"
   >("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -73,6 +73,22 @@ export function ViewerClient({
 
         if (res.status === 401) {
           if (!cancelled) setLoadState("forbidden");
+
+          return;
+        }
+        // 410 Gone = token expired OR share revoked by owner. `bytesStore`
+        // sidecar auto-deletes on read past `exp`, and the resolve/deny-list
+        // check maps both cases to 410 here. Surface the expiry message
+        // rather than the raw status so recipients understand what happened
+        // (QA 2026-09-06: "appropriate message when an expired link is
+        // accessed").
+        if (res.status === 410) {
+          if (!cancelled) setLoadState("expired");
+
+          return;
+        }
+        if (res.status === 404) {
+          if (!cancelled) setLoadState("not-found");
 
           return;
         }
@@ -135,6 +151,26 @@ export function ViewerClient({
         <p className="text-default-600">
           Your session for this link has expired or never authorized. Reload the
           page and re-enter the password.
+        </p>
+      </main>
+    );
+  }
+  if (loadState === "expired") {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-6 text-center">
+        <h1 className="text-2xl font-semibold">Link unavailable</h1>
+        <p className="text-default-600">
+          This share link has expired. Ask the sender to generate a new one.
+        </p>
+      </main>
+    );
+  }
+  if (loadState === "not-found") {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-6 text-center">
+        <h1 className="text-2xl font-semibold">Link unavailable</h1>
+        <p className="text-default-600">
+          This shared document is no longer available.
         </p>
       </main>
     );

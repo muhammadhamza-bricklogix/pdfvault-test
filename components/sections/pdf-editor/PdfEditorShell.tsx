@@ -10,7 +10,7 @@ import { Button } from "@heroui/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import "@/app/(landing)/landing-theme.css";
@@ -39,6 +39,7 @@ import {
 import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -155,7 +156,30 @@ function EditorLayout() {
 
   const { goToNext: searchGoToNext, goToPrev: searchGoToPrev } = usePdfSearch();
 
-  useProductTour("editor");
+  // Suppress the editor product tour on the W-9 route. `/w-9-form`
+  // (and its locale-prefixed forms — `/de/w-9-form`, `/fr/w-9-form`, …)
+  // reuse <PdfEditorShell /> but the tour's anchors + step copy
+  // reference generic composer surfaces (Editor menu, Tools) that
+  // don't apply — QA 2026-09-06: "Editor menu: Open, save, import,
+  // and manage the whole document from one place" popover appeared
+  // over the yellow W-9 field overlays. `TourHelpButton` on this
+  // route is already hidden (PvEditorTopChrome guard), but the shell-
+  // level `useProductTour("editor")` call still fired the auto-launch.
+  // Normalise via `stripLocalePrefix` so the guard fires on EVERY
+  // locale — the raw `usePathname()` returns `/de/w-9-form` etc.
+  const layoutPathname = usePathname();
+  const isW9Layout =
+    stripLocalePrefix(layoutPathname) === ROUTES.FORMS.W9_SHORT;
+
+  // QA 2026-09-06 (revised): show the tour FIRST on a first-time
+  // visit, then open the tool modal AFTER the tour finishes. The
+  // hydrator's Step 4 owns the deferral logic — it checks
+  // `willTourAutoLaunch("editor")` at fire time and, when true,
+  // waits for the `TOUR_ENDED_EVENT` before dispatching the tool
+  // auto-launch. Return visitors (tour already seen) get the
+  // straight-through experience with no delay. Nothing to gate here
+  // — the tour hook is safe to run alongside the auto-launching URL.
+  useProductTour("editor", !isW9Layout);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),

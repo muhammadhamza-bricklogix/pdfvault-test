@@ -213,7 +213,34 @@ export function PaywallModal({
 
     setSelectedPlan("monthly");
 
-    logger.event(EVENTS.CHECKOUT_INTENT_START, "info", { plan: "monthly" });
+    // Modal lifecycle milestone — fires exactly once per open (isOpen
+    // flip). Landmark for the CloudWatch/Sentry trace: any subsequent
+    // failure in this session's paywall chain is a descendant of this
+    // event. Includes preview shape so we can slice failures by
+    // originating export path (pdf / docx / xlsx / no-preview).
+    logger.event(EVENTS.PAYWALL_MODAL_MOUNT, "info", {
+      hasPreview: Boolean(preview),
+      hidePreview,
+      sourceExt: preview?.sourceExt,
+      targetExt: preview?.targetExt,
+      hasPreviewObjectUrl: Boolean(preview?.previewObjectUrl),
+    });
+
+    logger.event(EVENTS.CHECKOUT_INTENT_START, "info", {
+      plan: "monthly",
+      // Diagnostic — Microsoft's automated bots repro a
+      // "Couldn't start checkout / Invalid request." 400 that the team
+      // cannot reproduce manually. Without capturing the payload +
+      // client context at start-of-flight we can't tell if the fault is
+      // an empty fileName, garbage click IDs, an auth-hydration race,
+      // or a Solidgate fraud rule (see /Users/softaims/.claude/plans
+      // for the full triage). Log only shape, not PII.
+      fileNameLength: preview?.filename?.length ?? 0,
+      fileNameEmpty: !preview?.filename,
+      hasPreview: Boolean(preview),
+      sourceExt: preview?.sourceExt,
+      targetExt: preview?.targetExt,
+    });
     createIntent.mutate(
       {
         disclaimerVersion: DISCLAIMER_VERSION,
@@ -235,7 +262,93 @@ export function PaywallModal({
           setIntent(intent);
         },
         onError: (err) => {
-          logger.captureError(err, "checkout.intent");
+          // Enriched forensic log — captures the raw non-enveloped 400
+          // body (`ApiError.rawBody`, populated in `api-error.ts`),
+          // whatever the backend actually said, plus enough client
+          // context to distinguish bot vs. human sessions after the
+          // fact. This is the piece missing today; without it every
+          // future "Invalid request." report is another round of
+          // guessing.
+          //
+          // Structured under `event="checkout_intent_400"` so we can
+          // query Sentry (or console logs) directly for it.
+          const apiErr = err as {
+            statusCode?: number;
+            message?: string;
+            rawBody?: string;
+          };
+          const cioClickIds = (() => {
+            if (typeof document === "undefined") return {};
+            const cookie = document.cookie;
+
+            return {
+              hasGclid: /(?:^|;\s*)pdfvault_gclid=/.test(cookie),
+              hasGbraid: /(?:^|;\s*)pdfvault_gbraid=/.test(cookie),
+              hasWbraid: /(?:^|;\s*)pdfvault_wbraid=/.test(cookie),
+              hasClickTs: /(?:^|;\s*)pdfvault_gclick_ts=/.test(cookie),
+            };
+          })();
+          const clientHints =
+            typeof window !== "undefined"
+              ? {
+                  userAgent: navigator.userAgent?.slice(0, 300),
+                  language: navigator.language,
+                  timezone:
+                    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+                    "unknown",
+                  referrer: document.referrer?.slice(0, 300) ?? "",
+                  innerWidth: window.innerWidth,
+                  innerHeight: window.innerHeight,
+                  path: window.location.pathname + window.location.search,
+                }
+              : {};
+
+          // eslint-disable-next-line no-console
+          console.error("[PaywallModal] checkout_intent_400", {
+            event: "checkout_intent_400",
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            rawBody: apiErr?.rawBody?.slice(0, 2048),
+            payload: {
+              disclaimerVersion: DISCLAIMER_VERSION,
+              fileNameLength: preview?.filename?.length ?? 0,
+              fileNameEmpty: !preview?.filename,
+              fileNameFirstChars: preview?.filename?.slice(0, 40),
+              hasPreview: Boolean(preview),
+              sourceExt: preview?.sourceExt,
+              targetExt: preview?.targetExt,
+            },
+            cookies: cioClickIds,
+            client: clientHints,
+          });
+
+          // Named event so CloudWatch/Sentry has a queryable failure
+          // milestone (search by `event_name:checkout.intent_error`)
+          // in addition to the raw exception. Fired at warning level so
+          // it's captureMessage-promoted rather than a silent breadcrumb.
+          logger.event(EVENTS.CHECKOUT_INTENT_ERROR, "warning", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            fileNameLength: preview?.filename?.length ?? 0,
+            fileNameEmpty: !preview?.filename,
+            sourceExt: preview?.sourceExt,
+            targetExt: preview?.targetExt,
+            ...cioClickIds,
+          });
+
+          logger.captureError(err, "checkout.intent", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            rawBody: apiErr?.rawBody?.slice(0, 2048),
+            fileNameLength: preview?.filename?.length ?? 0,
+            fileNameEmpty: !preview?.filename,
+            sourceExt: preview?.sourceExt,
+            targetExt: preview?.targetExt,
+            ...cioClickIds,
+            userAgent: clientHints.userAgent,
+            timezone: clientHints.timezone,
+            language: clientHints.language,
+          });
           setError(
             err instanceof Error
               ? err.message
@@ -284,20 +397,32 @@ export function PaywallModal({
   }, [isOpen]);
 
   const handleIframeSuccess = async (message?: {
-    order?: { subscription_id?: string };
+    order?: { subscription_id?: string; status?: string };
+    status?: string;
   }) => {
-    // Do NOT flip the entitlement snapshot optimistically on the iframe
-    // callback. Solidgate's `onSuccess` can fire client-side before the
-    // charge is confirmed server-side (declined-after-approval race,
-    // 3DS re-auth failures, etc.), so we'd previously flash "Payment
-    // received" and unlock premium tools for users whose card was never
-    // debited. Instead: sync with the backend, force a fresh
-    // subscription fetch, and only advance to the success step when the
-    // backend confirms `entitled === true`.
+    // Check if the callback payload indicates a declined or failed order
     const subscriptionId = message?.order?.subscription_id;
+    const orderStatus = (
+      message?.order?.status ??
+      message?.status ??
+      ""
+    ).toLowerCase();
+
+    if (
+      orderStatus === "declined" ||
+      orderStatus === "failed" ||
+      orderStatus === "rejected" ||
+      orderStatus === "error"
+    ) {
+      logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning", { orderStatus });
+      handleIframeFail();
+
+      return;
+    }
 
     logger.event(EVENTS.CHECKOUT_IFRAME_SUCCESS, "info", {
       hasSubscriptionId: Boolean(subscriptionId),
+      orderStatus,
     });
 
     try {
@@ -319,9 +444,7 @@ export function PaywallModal({
         logger.event(EVENTS.CHECKOUT_ENTITLEMENT_MISMATCH, "warning", {
           subscriptionId,
         });
-        setError(
-          "Payment couldn't be confirmed. If your card was charged, please refresh in a minute or email payments@pdfvault.ai.",
-        );
+        handleIframeFail();
 
         return;
       }
@@ -349,9 +472,7 @@ export function PaywallModal({
       logger.captureError(err, "checkout.subscription_sync", {
         subscriptionId,
       });
-      setError(
-        "We received your payment attempt but couldn't verify it. Please refresh in a minute or email payments@pdfvault.ai.",
-      );
+      handleIframeFail();
     }
   };
 
@@ -418,7 +539,21 @@ export function PaywallModal({
   // returns the annual amounts before we mount the payment iframe.
   const [continueLoading, setContinueLoading] = useState(false);
   const handleContinue = () => {
+    // Milestone — user committed to a plan and clicked Continue. Slice
+    // paywall funnel by which plan users pick + whether the annual
+    // intent had already resolved by the time they reached Continue
+    // (perf signal for the parallel prefetch at PaywallModal open).
+    logger.event(EVENTS.PAYWALL_PLAN_STEP_CONTINUE, "info", {
+      selectedPlan,
+      annualPrefetchReady: Boolean(annualIntent),
+      annualUnavailable,
+    });
+
     if (selectedPlan === "monthly") {
+      logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+        plan: "monthly",
+        via: "direct",
+      });
       setStep("pay");
 
       return;
@@ -429,6 +564,10 @@ export function PaywallModal({
     // re-fetch when it's still pending or failed.
     if (annualIntent) {
       setIntent(annualIntent);
+      logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+        plan: "annual",
+        via: "prefetch",
+      });
       setStep("pay");
 
       return;
@@ -445,11 +584,26 @@ export function PaywallModal({
         onSuccess: (fresh) => {
           setIntent(fresh);
           setAnnualIntent(fresh);
+          logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+            plan: "annual",
+            via: "fallback_fetch",
+          });
           setStep("pay");
           setContinueLoading(false);
         },
         onError: (err) => {
-          logger.captureError(err, "checkout.annual_intent");
+          const apiErr = err as { statusCode?: number; message?: string };
+
+          logger.event(EVENTS.CHECKOUT_INTENT_ERROR, "warning", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+            plan: "annual",
+            path: "handleContinue",
+          });
+          logger.captureError(err, "checkout.annual_intent", {
+            statusCode: apiErr?.statusCode,
+            errorMessage: apiErr?.message,
+          });
           setContinueLoading(false);
           toast.error({
             title: "Couldn't start annual checkout",
@@ -469,9 +623,19 @@ export function PaywallModal({
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          // On the success step, any close gesture (ESC, X) should resolve
-          // as success so the pending download/action still fires.
-          step === "success" ? finish() : onClose();
+          // Success step: `onPaymentSuccess` already fired on mount and
+          // resolved the bus. `onClose` (from usePaywall) is now
+          // idempotent — it detects the bus was already settled and
+          // skips the cancel path, so we can call it here safely for
+          // both branches. Only the analytics event differs.
+          if (step !== "success") {
+            logger.event(EVENTS.PAYWALL_MODAL_CLOSED_MANUAL, "info", {
+              step,
+              hadError: Boolean(error),
+              payFailed,
+            });
+          }
+          onClose();
         }
       }}
     >
@@ -487,9 +651,11 @@ export function PaywallModal({
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
-          {/* Hide X on SuccessStep — clicking it would resolve the bus promise
-              with "cancelled" and cancel the pending download. */}
-          {step !== "success" && <Modal.CloseTrigger />}
+          {/* CloseTrigger visible on all steps. On SuccessStep the bus
+              was already resolved via `onPaymentSuccess` at mount time,
+              so closing here is safe — `usePaywall.close` no-ops the
+              cancel branch when the resolver ref is already cleared. */}
+          <Modal.CloseTrigger />
           {error ? (
             <ErrorState error={error} />
           ) : !intent ? (
@@ -522,7 +688,8 @@ export function PaywallModal({
             <SuccessStep
               intent={intent}
               selectedPlan={selectedPlan}
-              onFinish={finish}
+              onClose={onClose}
+              onFireQueuedAction={finish}
             />
           )}
         </Modal.Dialog>
@@ -608,6 +775,29 @@ function PlanStep({
       : formatMinor(monthly.amountTodayMinor, monthly.currency);
 
   const continueDisabled = continueLoading;
+  const readyHeading = (() => {
+    if (!preview) return "Your PDF is ready.";
+    const ext = (
+      preview.targetExt ||
+      preview.sourceExt ||
+      preview.filename?.split(".").pop() ||
+      ""
+    )
+      .toLowerCase()
+      .trim();
+
+    if (["jpg", "jpeg"].includes(ext)) return "Your JPG is ready.";
+    if (ext === "png") return "Your PNG is ready.";
+    if (["doc", "docx", "word"].includes(ext))
+      return "Your Word document is ready.";
+    if (["xls", "xlsx", "excel"].includes(ext))
+      return "Your Excel document is ready.";
+    if (["ppt", "pptx", "powerpoint"].includes(ext))
+      return "Your PowerPoint presentation is ready.";
+    if (ext === "txt") return "Your Text document is ready.";
+
+    return "Your PDF is ready.";
+  })();
 
   return (
     <div className="flex flex-col">
@@ -615,7 +805,7 @@ function PlanStep({
       <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
         <div className="flex flex-col gap-1">
           <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            Your PDF is ready.
+            {readyHeading}
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
             Cancel anytime · Secure checkout · Instant access
@@ -668,9 +858,9 @@ function PlanStep({
             {preview ? (
               <>
                 <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
-                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
+                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-white">
                     <HugeiconsIcon
-                      color="white"
+                      color="#22c55e"
                       icon={Tick01Icon}
                       size={15}
                       strokeWidth={3}
@@ -682,10 +872,10 @@ function PlanStep({
               </>
             ) : (
               <>
-                <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
-                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
+                <span className="flex w-fit items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[13px] font-semibold text-[#111827] shadow-sm ring-1 ring-default-200">
+                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-white">
                     <HugeiconsIcon
-                      color="white"
+                      color="#22c55e"
                       icon={Tick01Icon}
                       size={15}
                       strokeWidth={3}
@@ -842,6 +1032,42 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // Wallet-button loading state (2026-09-06 QA). Solidgate injects the
+  // real Apple Pay / Google Pay buttons a beat after `<PaymentForm>`
+  // mounts, so the containers were previously blank for that gap
+  // (`empty:hidden` collapsed them). Track when each container gains
+  // children via MutationObserver and swap a skeleton in until then.
+  // On browsers where the wallet is unsupported the SDK never
+  // populates the container — `walletTimedOut` clears the skeletons
+  // after 4 s so we don't leave a permanent placeholder.
+  const [applePayReady, setApplePayReady] = useState(false);
+  const [googlePayReady, setGooglePayReady] = useState(false);
+  const [walletTimedOut, setWalletTimedOut] = useState(false);
+
+  useEffect(() => {
+    const applePayEl = applePayContainerRef.current;
+    const googlePayEl = googlePayContainerRef.current;
+
+    if (!applePayEl || !googlePayEl) return;
+
+    const applyObserver = new MutationObserver(() => {
+      if (applePayEl.childNodes.length > 0) setApplePayReady(true);
+    });
+    const googleObserver = new MutationObserver(() => {
+      if (googlePayEl.childNodes.length > 0) setGooglePayReady(true);
+    });
+
+    applyObserver.observe(applePayEl, { childList: true });
+    googleObserver.observe(googlePayEl, { childList: true });
+
+    const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
+
+    return () => {
+      applyObserver.disconnect();
+      googleObserver.disconnect();
+      window.clearTimeout(timeout);
+    };
+  }, []);
   // 2026-09-03 (PM): the Solidgate card form starts COLLAPSED behind
   // a grey "Pay with card" button. Clicking expands the iframe below.
   // `<PaymentForm>` itself stays mounted whether expanded or not
@@ -880,20 +1106,30 @@ function PayStep({
               wallet buttons are ready when the user reaches them. */}
           <div className="flex flex-col gap-4">
             {/* Apple Pay — SDK injects here; hidden until mounted */}
-            <div
-              ref={applePayContainerRef}
-              className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
-            />
+            <div className="relative">
+              {!applePayReady && !walletTimedOut ? (
+                <WalletButtonSkeleton />
+              ) : null}
+              <div
+                ref={applePayContainerRef}
+                className="empty:hidden h-[42px] overflow-hidden rounded-xl [&>*]:!h-[42px] [&>*]:!max-h-[42px] [&>*]:!w-full [&_iframe]:!h-[42px] [&_iframe]:!max-h-[42px] [&_iframe]:!w-full [&_iframe]:!rounded-xl"
+              />
+            </div>
             {/* Google Pay — SDK injects here; hidden until mounted.
                 No shape / height overrides — Google's brand guidelines
                 require the CreateButton API's native pill radius and
                 its own height range (40–60px). The `w-full` passthrough
                 lets Solidgate's SDK size the button to the container
                 width via `buttonSizeMode: "fill"`. */}
-            <div
-              ref={googlePayContainerRef}
-              className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
-            />
+            <div className="relative">
+              {!googlePayReady && !walletTimedOut ? (
+                <WalletButtonSkeleton />
+              ) : null}
+              <div
+                ref={googlePayContainerRef}
+                className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
+              />
+            </div>
             {/* Card section header — grey collapse toggle. Shows the
                 supported card brands so users know their card will
                 work before expanding (parity with PDF Guru). */}
@@ -914,8 +1150,20 @@ function PayStep({
               hidden={!cardExpanded}
               id="paywall-card-form"
             >
+              {/*
+                Key on `paymentIntent` in addition to `retryKey` so a
+                plan switch (monthly → annual) forces a full remount
+                of the Solidgate SDK. Without this, the SDK caches
+                the wallet-button state against the original intent's
+                paymentIntent id and silently refuses to re-inject
+                Apple Pay / Google Pay for the new annual amount —
+                users see the wallets on monthly but a blank space
+                on annual (QA 2026-09-06). `retryKey` stays in the
+                composite so an in-plan decline+retry still cleanly
+                remounts the iframe.
+              */}
               <PaymentForm
-                key={retryKey}
+                key={`${retryKey}-${intent.paymentIntent}`}
                 applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
                 applePayContainerRef={applePayContainerRef}
                 googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
@@ -941,17 +1189,17 @@ function PayStep({
           {payFailed ? (
             <div
               aria-live="polite"
-              className="flex flex-col gap-2 rounded-xl border border-danger-200 bg-danger-50 p-4 text-[13px] text-danger-800 dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
+              className="flex flex-col gap-2.5 rounded-xl border border-danger-200 bg-danger-50 p-5 text-[14px] text-danger-800 sm:p-6 sm:text-[15px] dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
             >
-              <p className="font-semibold">
+              <p className="text-[15px] font-semibold leading-snug sm:text-[17px]">
                 Your card was declined and hasn&apos;t been charged.
               </p>
-              <p>
+              <p className="leading-relaxed">
                 Try another card or contact your bank. You can re-enter details
                 below.
               </p>
               <button
-                className="mt-1 inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 inline-flex h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:text-[16px]"
                 disabled={retryLoading}
                 type="button"
                 onClick={onRetry}
@@ -1062,21 +1310,32 @@ function PayStep({
 function SuccessStep({
   intent,
   selectedPlan,
-  onFinish,
+  onClose,
+  onFireQueuedAction,
 }: {
   intent: CheckoutIntent;
   selectedPlan: PlanId;
-  onFinish: () => void;
+  onClose: () => void;
+  onFireQueuedAction: () => void;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  const renew = formatMinor(intent.amountRenewMinor, intent.currency);
-  const nextDate = formatFullRenewalDate();
-  const onFinishRef = useRef(onFinish);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
+  // Fire the queued gated action (encrypt / decrypt / compress /
+  // convert / etc.) as soon as the success step mounts, WITHOUT closing
+  // the modal. QA 2026-09-06 (updated): user asked that the receipt-
+  // download modal stay open until they click X or Continue, but the
+  // queued download still needs to trigger immediately — no manual
+  // gate. `onFireQueuedAction` (= usePaywall's `onPaymentSuccess`)
+  // resolves the bus + runs pending; it deliberately doesn't touch
+  // modal open state.
+  const firedRef = useRef(false);
+
   useEffect(() => {
-    onFinishRef.current = onFinish;
-  }, [onFinish]);
+    if (firedRef.current) return;
+    firedRef.current = true;
+    onFireQueuedAction();
+  }, [onFireQueuedAction]);
 
   // Fire Google Ads "Trial Start Signal" conversion on payment success.
   useEffect(() => {
@@ -1104,14 +1363,6 @@ function SuccessStep({
       value: intent.amountTodayMinor / 100,
     });
   }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
-
-  // 2026-08-28: auto-dismiss removed. Users asked to stay on the
-  // success step so they can download the receipt inline. The user
-  // now clicks Continue to fire any pending gated action (download /
-  // conversion) — the paywall bus resolves either way when the modal
-  // closes, so nothing is silently dropped. The previous 1.5 s auto-
-  // proceed feedback (`Download auto-start`) is superseded by this
-  // more explicit flow.
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to
@@ -1151,7 +1402,17 @@ function SuccessStep({
       link.click();
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      logger.event(EVENTS.PAYWALL_RECEIPT_DOWNLOAD_OK, "info", {
+        orderId: intent.orderId,
+        selectedPlan,
+        currency: intent.currency,
+      });
     } catch (err) {
+      logger.event(EVENTS.PAYWALL_RECEIPT_DOWNLOAD_ERROR, "warning", {
+        orderId: intent.orderId,
+        selectedPlan,
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
       logger.captureError(err, "paywall.receipt_download");
       toast.error({
         title: "Couldn't download receipt",
@@ -1192,8 +1453,7 @@ function SuccessStep({
           You&apos;re all set!
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#5c5c5c]">
-          Your subscription is active. You now have full access to every
-          PDFVault tool.
+          Your plan is active. You now have full access to every PDFVault tool.
         </p>
       </div>
 
@@ -1204,25 +1464,19 @@ function SuccessStep({
         <div className="flex items-center justify-between">
           <span className="text-[#5c5c5c]">Plan</span>
           <span className="font-semibold text-[#1a1c21]">
-            Full Access · {selectedPlan === "annual" ? "Annual" : "Monthly"}
+            {selectedPlan === "annual" ? "Annual plan" : "7-day trial"}
           </span>
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[#5c5c5c]">Charged today</span>
           <span className="font-semibold text-[#1a1c21]">{today}</span>
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[#5c5c5c]">Next charge</span>
-          <span className="font-semibold text-[#1a1c21]">
-            {renew} · {nextDate}
-          </span>
-        </div>
       </div>
 
       <button
         className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] text-[15px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c]"
         type="button"
-        onClick={onFinish}
+        onClick={onClose}
       >
         Continue
         <span aria-hidden>→</span>
@@ -1703,6 +1957,28 @@ function AcceptedCards() {
           <Mark />
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Placeholder shown in the wallet slots while Solidgate's SDK injects
+ * the real Apple Pay / Google Pay buttons. Sized to match the final
+ * button height so the layout doesn't jump when the real button
+ * arrives. Auto-hides once the container gains children (see the
+ * MutationObserver in `PayStep`) or after the 4-s timeout for
+ * unsupported browsers.
+ */
+function WalletButtonSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[#ececec]/60"
+    >
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#c8c8c8] border-t-[var(--pv-brand-red,#f12c23)]" />
+      <span className="text-[12px] font-medium text-[#5c5c5c]">
+        Loading wallet…
+      </span>
     </div>
   );
 }
