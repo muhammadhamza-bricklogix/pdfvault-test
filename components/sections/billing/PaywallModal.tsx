@@ -858,7 +858,7 @@ function PlanStep({
             {preview ? (
               <>
                 <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
-                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
+                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-white">
                     <HugeiconsIcon
                       color="#22c55e"
                       icon={Tick01Icon}
@@ -872,8 +872,8 @@ function PlanStep({
               </>
             ) : (
               <>
-                <span className="flex w-fit items-center gap-2 rounded-full bg-[#f12c23] px-4 py-1.5 text-[13px] font-semibold text-white">
-                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#c9201a]">
+                <span className="flex w-fit items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[13px] font-semibold text-[#111827] shadow-sm ring-1 ring-default-200">
+                  <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-white">
                     <HugeiconsIcon
                       color="#22c55e"
                       icon={Tick01Icon}
