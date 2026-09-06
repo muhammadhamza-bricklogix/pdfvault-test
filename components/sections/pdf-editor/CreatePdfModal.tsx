@@ -752,6 +752,20 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                     </p>
                     <NumberField
                       aria-label="Number of pages"
+                      // QA 2026-09-06 (v3): explicit integer format
+                      // options. Without this react-aria falls back to
+                      // `Intl.NumberFormat(locale)` defaults, which on
+                      // many locales inject a grouping separator once
+                      // the value hits 4 digits and add fraction
+                      // digits for others. Both variants then fail
+                      // NumberField's own parser and the field
+                      // silently rejects further updates. Forcing
+                      // integer-only, no-grouping formatting keeps
+                      // 1..50 round-tripping cleanly.
+                      formatOptions={{
+                        useGrouping: false,
+                        maximumFractionDigits: 0,
+                      }}
                       maxValue={PAGE_COUNT_MAX}
                       minValue={1}
                       step={1}
@@ -760,7 +774,15 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                         if (Number.isFinite(v)) patch({ pageCount: v });
                       }}
                     >
-                      <NumberField.Group className="w-28">
+                      {/*
+                        QA 2026-09-06 (v3): widened from `w-28` (112px)
+                        to `w-32` (128px) so a 2-digit value like "50"
+                        or "10" has clear space between the ▼/▲ chevron
+                        buttons without visual overflow. Prior width
+                        caused the input to appear stuck at 10 because
+                        subsequent keystrokes rendered off-screen.
+                      */}
+                      <NumberField.Group className="w-32">
                         <NumberField.DecrementButton>
                           <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
                         </NumberField.DecrementButton>
