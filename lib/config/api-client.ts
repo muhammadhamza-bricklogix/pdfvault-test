@@ -160,6 +160,20 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
+    // QA 2026-09-06: `PaywallCancelledError` thrown by the REQUEST
+    // interceptor (line ~126) or the RESPONSE paywall retry (line
+    // ~248) MUST pass through unwrapped — otherwise `toApiError`
+    // below buries it under a fresh `ApiError { name: "ApiError" }`,
+    // and the global mutation retry predicate in `tanstack.config.ts`
+    // (which identifies user-cancellations via `error.name`) fails
+    // to recognize it. Result: TanStack Query treats the cancel like
+    // a network hiccup and retries — the pre-flight gate re-fires
+    // the paywall, twice more (3 opens total). Passthrough here fixes
+    // it at the source; the predicate's `cause`-chain walk is
+    // belt-and-braces.
+    if (error instanceof PaywallCancelledError) {
+      return Promise.reject(error);
+    }
     const status = error.response?.status;
     const original = error.config as RetriableConfig | undefined;
     const durationMs = original?._sentryStart

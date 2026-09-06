@@ -24,11 +24,29 @@ function exponentialBackoff(attempt: number): number {
  * (AbortError, PaymentRequiredError, etc.) so a user's "no thanks"
  * click can never be re-interpreted as "try harder".
  */
+function isPaywallCancelledError(error: unknown): boolean {
+  // Walk both the error itself and its `cause` chain — some paths
+  // wrap it in an `ApiError { cause: PaywallCancelledError }`, e.g.
+  // an interceptor variant that pre-dates the passthrough guard in
+  // `api-client.ts`. Walking the chain keeps the retry predicate
+  // robust to future wrapping without touching this file again.
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 4 && current; depth++) {
+    const name = (current as { name?: string })?.name;
+
+    if (name === PAYWALL_CANCELLED_ERR_NAME) return true;
+    current = (current as { cause?: unknown })?.cause;
+  }
+
+  return false;
+}
+
 function shouldRetryMutation(failureCount: number, error: unknown): boolean {
   if (failureCount >= 2) return false;
+  if (isPaywallCancelledError(error)) return false;
   const name = (error as { name?: string })?.name;
 
-  if (name === PAYWALL_CANCELLED_ERR_NAME) return false;
   if (name === "AbortError") return false;
 
   return true;
