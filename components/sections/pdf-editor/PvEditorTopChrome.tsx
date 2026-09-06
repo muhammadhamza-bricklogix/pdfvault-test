@@ -465,21 +465,16 @@ function TopAppBar() {
       {/* Hamburger hidden on `/w-9-form` per product 2026-09-01 —
           the W-9 flow has its own Back → save-and-continue path and
           the hamburger's tools (Manage Pages, Share, etc.) don't
-          apply to a fill-and-sign form. */}
-      {/*
-        HamburgerMenu is signed-in-only per QA 2026-09-05: every entry
-        under it (My PDFs, Save, Version History, Share, Print,
-        Compress-as-PDF, Extract Images, Flatten, Merge, Split,
-        Password protect, Unlock, Manage Pages, etc.) either uploads to
-        `/documents`, hits a paid backend, or opens a modal that
-        immediately dispatches the sign-in prompt on interaction. Rather
-        than gate each entry a second time, hide the whole menu until
-        the user signs in — the top chrome's Login button + the
-        toolbar's Download flow already give them a path to the paid
-        surface. Also skipped on `/w-9-form` for the same reason as
-        before (W-9 route uses its own top bar).
-      */}
-      {showW9Save || !isSignedIn ? null : <HamburgerMenu />}
+          apply to a fill-and-sign form.
+
+          For guests: HamburgerMenu itself hides the dropdown trigger
+          (per QA 2026-09-05) but stays MOUNTED so its bridge event
+          listeners (editor:open-merge / open-split / open-flatten /
+          open-annotations) still fire when the top toolbar dispatches
+          them. Unmounting the whole component for guests silently
+          drops those listeners and the toolbar buttons appear idle
+          (QA 2026-09-06). */}
+      {showW9Save ? null : <HamburgerMenu />}
 
       <Link
         aria-label="Home"
@@ -720,14 +715,26 @@ function ToolToolbar() {
   // Locale-normalised — see `showW9Save` above for context.
   const isW9Route = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
 
-  const isActionDisabled = (id: string): boolean => {
-    if (id === "manage-pages") return !canManagePages;
-
-    return disabled;
-  };
+  // QA 2026-09-06: Secure / Split / Flatten / Manage Pages appeared
+  // greyed-out even when a PDF was open, so users thought the tools
+  // were broken. Only truly-unrecoverable states disable the button
+  // now — everything else is clickable and the handler surfaces a
+  // toast if the doc isn't ready yet. Sign-in state is NOT a gate
+  // here; the underlying modals + save-before-action chain already
+  // route signed-out users through the auth flow (see CLAUDE.md
+  // item #4 / #5 / #17).
+  const isActionDisabled = (_id: string): boolean => false;
 
   const handleAction = (id: string) => {
     if (id === "manage-pages") {
+      if (!canManagePages) {
+        toast.info({
+          title: "Open a PDF first",
+          description: "Upload a PDF to manage its pages.",
+        });
+
+        return;
+      }
       // Same save-before-action guard as EditorToolBar / BottomDock so
       // in-progress edits get flushed before the modal opens.
       void (async () => {

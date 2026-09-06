@@ -234,6 +234,19 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   // via effect so both onChange (fast path) and rerender (safety net)
   // keep it fresh.
   const formRef = useRef(form);
+  // DOM ref onto the page-count input. React Aria's NumberField commits
+  // the typed value on blur/Enter, not on every keystroke — so a user
+  // who types "50" and directly clicks Create (without blurring the
+  // input first) leaves the committed React state at "5" (the last
+  // integer that fit the maxValue during typing) while the visible
+  // input reads "50". The ref pattern above only helps once `patch()`
+  // fires; if the commit never fires, `formRef.current.pageCount`
+  // stays stale. Reading `pageCountInputRef.current.value` at generate
+  // time bypasses commit timing entirely — we always trust what the
+  // user sees on the screen. QA 2026-09-06: fix for "configured 50
+  // pages, got 5". Falls back to the ref if the DOM read is
+  // unavailable (SSR / ref not yet attached).
+  const pageCountInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     formRef.current = form;
@@ -342,8 +355,19 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     const latest = formRef.current;
     const trimmed = latest.documentName.trim() || `Untitled-${openCount}`;
     const fileName = trimmed.endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
+    // Prefer the LIVE DOM value on the page-count input over
+    // `latest.pageCount` — the React state can lag behind if the user
+    // typed "50" and clicked Create without blurring the field (React
+    // Aria's NumberField commits on blur/Enter, not per keystroke).
+    // The DOM's `input.value` reflects exactly what the user sees, so
+    // we treat that as the source of truth when it parses cleanly.
+    const domRawPageCount = pageCountInputRef.current?.value ?? "";
+    const domParsedPageCount = Number.parseInt(domRawPageCount, 10);
+    const effectivePageCount = Number.isFinite(domParsedPageCount)
+      ? domParsedPageCount
+      : latest.pageCount;
     const clampedPages = Math.min(
-      Math.max(1, latest.pageCount),
+      Math.max(1, effectivePageCount),
       PAGE_COUNT_MAX,
     );
     const genWidthPt = latest.widthPt;
@@ -730,7 +754,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                         <NumberField.DecrementButton>
                           <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
                         </NumberField.DecrementButton>
-                        <NumberField.Input />
+                        <NumberField.Input ref={pageCountInputRef} />
                         <NumberField.IncrementButton>
                           <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
                         </NumberField.IncrementButton>

@@ -99,8 +99,7 @@ export function PasswordModal() {
     // full-page nav lands.
     dispatchEmailFirstModal({
       redirectUrl: returnTo,
-      title:
-        m === "protect" ? "Secure your PDF" : "Unlock your PDF",
+      title: m === "protect" ? "Secure your PDF" : "Unlock your PDF",
       subtitle:
         m === "protect"
           ? "Create an account to add password protection."

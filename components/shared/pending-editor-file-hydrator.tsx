@@ -205,13 +205,7 @@ export function PendingEditorFileHydrator() {
     // within tens of ms of Step 1b's decision.
     const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
-    if (
-      tool &&
-      !docId &&
-      isSignedIn &&
-      !hasSameSessionFile &&
-      isFreshEntry
-    ) {
+    if (tool && !docId && isSignedIn && !hasSameSessionFile && isFreshEntry) {
       logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
         tool,
       });

@@ -342,13 +342,15 @@ export function EditorInfoBar() {
                 </Tooltip.Content>
               </Tooltip>
               {/*
-                Signed-in-only per QA 2026-09-05 — see the matching
-                guard + rationale in `PvEditorTopChrome.tsx`. Signed-out
-                users get the Download / Login affordances via the top
-                chrome; the menu itself would strand them at a
-                sign-in prompt on every entry.
+                Guests: HamburgerMenu hides its own dropdown trigger
+                but stays MOUNTED so its bridge event listeners
+                (editor:open-merge / open-split / open-flatten /
+                open-annotations) keep firing for the top toolbar.
+                Unmounting for guests makes those toolbar buttons idle
+                (QA 2026-09-06). Rationale mirrored in
+                `PvEditorTopChrome.tsx`.
               */}
-              {isW9Route || !isSignedIn ? null : <HamburgerMenu />}
+              {isW9Route ? null : <HamburgerMenu />}
             </div>
 
             {/* Undo + Redo — mobile only */}
