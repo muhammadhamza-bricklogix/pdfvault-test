@@ -4,9 +4,10 @@ import { ArrowRight02Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 interface FormEntry {
@@ -35,6 +36,10 @@ interface FormsModalProps {
 
 export function FormsModal({ isOpen, onOpenChange }: FormsModalProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  // Locale-normalised path so `/de/forms/w-9` compares equal to
+  // `/forms/w-9` when checking "am I already on this form".
+  const strippedPath = stripLocalePrefix(pathname);
 
   useEffect(() => {
     // Auto-dismiss on route change — same pattern as AllTools modal so a
@@ -104,11 +109,30 @@ export function FormsModal({ isOpen, onOpenChange }: FormsModalProps) {
                   );
                 }
 
+                // QA 2026-09-06: user is already on the target form's
+                // route — the `<Link>` short-circuits (no pathname
+                // change → auto-dismiss effect above never fires),
+                // so the modal appears frozen and "nothing happens".
+                // Intercept the click, close the modal, and
+                // `router.refresh()` so the user gets an obvious
+                // reset back to a fresh W-9 workspace. Compares
+                // against the LOCALE-STRIPPED path so `/de/forms/w-9`
+                // still recognises `form.href = "/forms/w-9"` as the
+                // current route.
+                const isCurrentRoute = strippedPath === form.href;
+
                 return (
                   <li key={form.slug}>
                     <Link
                       className="group flex items-center gap-3 rounded-[12px] border border-[var(--pv-hairline,#EAEAEA)] bg-white p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong,#D6D6D6)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)]"
                       href={form.href}
+                      onClick={(e) => {
+                        if (isCurrentRoute) {
+                          e.preventDefault();
+                          onOpenChange(false);
+                          router.refresh();
+                        }
+                      }}
                     >
                       {inner}
                     </Link>

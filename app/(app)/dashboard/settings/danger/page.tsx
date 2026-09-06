@@ -97,6 +97,11 @@ export default function DangerZonePage() {
   const [confirmation, setConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Second-stage confirmation modal shown AFTER the email-match step.
+  // Surfaces the full data-loss + subscription-refund + logout copy so
+  // the user has an explicit "Yes, delete my data" moment before the
+  // irreversible Clerk call fires.
+  const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false);
   // Custom reverification modal state — set by the `onNeedsReverification`
   // handler below when Clerk demands a step-up. Kept in our own state so
   // we render our HeroUI modal instead of Clerk's branded one.
@@ -136,8 +141,22 @@ export default function DangerZonePage() {
     },
   );
 
-  const handleDelete = async () => {
+  // Step 1 — user typed their email; hand off to the "Are you sure?"
+  // modal. No API call yet: the actual delete happens only after they
+  // click "Yes, delete my data" on the next modal.
+  const handleEmailConfirmed = () => {
     if (!user || !canConfirm) return;
+    setError(null);
+    setIsOpen(false);
+    setIsFinalConfirmOpen(true);
+  };
+
+  // Step 2 — user clicked "Yes, delete my data" on the final
+  // confirmation modal. Runs the Clerk reverification + delete + sign
+  // out + redirect. Errors surface back on the email modal (re-opened)
+  // so the user has full context of what failed and can retry.
+  const handleFinalDelete = async () => {
+    if (!user) return;
 
     setIsDeleting(true);
     setError(null);
@@ -148,14 +167,18 @@ export default function DangerZonePage() {
       router.push(ROUTES.PUBLIC.HOME);
     } catch (err) {
       // User closed the reverification modal without completing it —
-      // silent bail, keep the confirm dialog open so they can retry.
+      // silent bail, reopen the email dialog so they can retry.
       if (isReverificationCancelledError(err)) {
         setIsDeleting(false);
+        setIsFinalConfirmOpen(false);
+        setIsOpen(true);
 
         return;
       }
       setError(humaniseDeleteError(err));
       setIsDeleting(false);
+      setIsFinalConfirmOpen(false);
+      setIsOpen(true);
     }
   };
 
@@ -261,9 +284,68 @@ export default function DangerZonePage() {
               <Button
                 isDisabled={!canConfirm || isDeleting}
                 variant="danger"
-                onPress={handleDelete}
+                onPress={handleEmailConfirmed}
               >
                 {isDeleting ? "Deleting…" : "Delete my account"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+
+      <Modal.Backdrop
+        isOpen={isFinalConfirmOpen}
+        onOpenChange={(open) => {
+          // Disallow dismiss while the delete is in flight so the user
+          // can't accidentally close the modal mid-request and lose
+          // track of state. Cancel button + the X handle explicit exits.
+          if (!open && !isDeleting) setIsFinalConfirmOpen(false);
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-[460px]">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading className="text-danger">
+                Delete your account and data?
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="space-y-4">
+              <p className="text-sm text-[var(--color-foreground)]">
+                Please note that all files you have stored or edited in PDFVault
+                will be permanently lost and cannot be recovered. Your
+                subscription will be cancelled and refund won&apos;t be issued.
+              </p>
+              <p className="text-sm text-[var(--color-foreground)]">
+                If you&apos;ve requested a copy of your data, please wait until
+                it&apos;s ready before deleting your account — otherwise, your
+                access request won&apos;t be completed.
+              </p>
+              <p className="text-sm text-[var(--color-foreground)]">
+                Once you confirm, you will be logged out immediately. We will
+                start deleting your account and personal data right away. Your
+                information will also be forwarded to our service providers for
+                deletion — this process may take them a bit longer to complete.
+              </p>
+              <p className="text-sm font-medium text-[var(--color-foreground)]">
+                Are you sure you want to continue?
+              </p>
+              {error ? <p className="text-xs text-danger">{error}</p> : null}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                isDisabled={isDeleting}
+                variant="secondary"
+                onPress={() => setIsFinalConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                isDisabled={isDeleting}
+                variant="danger"
+                onPress={handleFinalDelete}
+              >
+                {isDeleting ? "Deleting…" : "Yes, delete my data"}
               </Button>
             </Modal.Footer>
           </Modal.Dialog>

@@ -227,7 +227,7 @@ function Thumbnail({
       aria-selected={highlighted}
       className={`${rootClass} ${layout === "grid" ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${isDragging ? "opacity-50" : ""} ${
         highlighted
-          ? "bg-accent/10 ring-2 ring-[var(--color-accent)]"
+          ? "bg-accent/10 ring-2 ring-inset ring-[var(--color-accent)]"
           : layout === "grid"
             ? "bg-white hover:shadow-md"
             : "hover:bg-default-100"
