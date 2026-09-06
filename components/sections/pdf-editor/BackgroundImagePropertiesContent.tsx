@@ -144,7 +144,7 @@ export function BackgroundImagePropertiesContent() {
           )}
           <div className="flex gap-2">
             <Button
-              className="flex-1"
+              className="flex-1 ml-1 mr-1"
               size="sm"
               variant="ghost"
               onPress={() => imageInputRef.current?.click()}
