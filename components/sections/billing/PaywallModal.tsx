@@ -1150,8 +1150,20 @@ function PayStep({
               hidden={!cardExpanded}
               id="paywall-card-form"
             >
+              {/*
+                Key on `paymentIntent` in addition to `retryKey` so a
+                plan switch (monthly → annual) forces a full remount
+                of the Solidgate SDK. Without this, the SDK caches
+                the wallet-button state against the original intent's
+                paymentIntent id and silently refuses to re-inject
+                Apple Pay / Google Pay for the new annual amount —
+                users see the wallets on monthly but a blank space
+                on annual (QA 2026-09-06). `retryKey` stays in the
+                composite so an in-plan decline+retry still cleanly
+                remounts the iframe.
+              */}
               <PaymentForm
-                key={retryKey}
+                key={`${retryKey}-${intent.paymentIntent}`}
                 applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
                 applePayContainerRef={applePayContainerRef}
                 googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
