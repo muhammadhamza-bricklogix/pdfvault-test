@@ -234,19 +234,24 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   // via effect so both onChange (fast path) and rerender (safety net)
   // keep it fresh.
   const formRef = useRef(form);
-  // DOM ref onto the page-count input. React Aria's NumberField commits
-  // the typed value on blur/Enter, not on every keystroke — so a user
-  // who types "50" and directly clicks Create (without blurring the
-  // input first) leaves the committed React state at "5" (the last
-  // integer that fit the maxValue during typing) while the visible
-  // input reads "50". The ref pattern above only helps once `patch()`
-  // fires; if the commit never fires, `formRef.current.pageCount`
-  // stays stale. Reading `pageCountInputRef.current.value` at generate
-  // time bypasses commit timing entirely — we always trust what the
-  // user sees on the screen. QA 2026-09-06: fix for "configured 50
-  // pages, got 5". Falls back to the ref if the DOM read is
-  // unavailable (SSR / ref not yet attached).
-  const pageCountInputRef = useRef<HTMLInputElement>(null);
+  // Stable DOM id for the page-count `<NumberField.Input>`. At Create
+  // time we read the LIVE input value via `document.getElementById`
+  // so the generated PDF matches exactly what the user sees on the
+  // screen. Rationale: React Aria's NumberField commits its typed
+  // value on blur / Enter / step-button, not per keystroke — so a
+  // user who types "50" and clicks Create without blurring first
+  // leaves `formRef.current.pageCount` at whatever last committed
+  // ("5" during typing). Reading the DOM bypasses commit timing.
+  //
+  // Why NOT a React ref on `<NumberField.Input>`: HeroUI v3.0.3's
+  // wrapper is a plain function component (not `forwardRef`); in
+  // React 19 the ref becomes a regular prop and gets spread onto
+  // react-aria-components' `<Input>`, which has its own ref merging
+  // — the two collide and jam the field's internal state after the
+  // first two-digit commit. QA 2026-09-06 (v2): "increment to 9,
+  // next click jumps to 1 and locks". Using an id avoids the ref
+  // path entirely.
+  const PAGE_COUNT_INPUT_ID = "create-pdf-page-count-input";
 
   useEffect(() => {
     formRef.current = form;
@@ -356,12 +361,17 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     const trimmed = latest.documentName.trim() || `Untitled-${openCount}`;
     const fileName = trimmed.endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
     // Prefer the LIVE DOM value on the page-count input over
-    // `latest.pageCount` — the React state can lag behind if the user
-    // typed "50" and clicked Create without blurring the field (React
-    // Aria's NumberField commits on blur/Enter, not per keystroke).
-    // The DOM's `input.value` reflects exactly what the user sees, so
-    // we treat that as the source of truth when it parses cleanly.
-    const domRawPageCount = pageCountInputRef.current?.value ?? "";
+    // `latest.pageCount` — see comment on PAGE_COUNT_INPUT_ID above
+    // for the full rationale. We look the element up by id instead
+    // of a ref because HeroUI's NumberField.Input wrapper doesn't
+    // forward refs cleanly on React 19.
+    const domInputEl =
+      typeof document !== "undefined"
+        ? (document.getElementById(
+            PAGE_COUNT_INPUT_ID,
+          ) as HTMLInputElement | null)
+        : null;
+    const domRawPageCount = domInputEl?.value ?? "";
     const domParsedPageCount = Number.parseInt(domRawPageCount, 10);
     const effectivePageCount = Number.isFinite(domParsedPageCount)
       ? domParsedPageCount
@@ -754,7 +764,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                         <NumberField.DecrementButton>
                           <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
                         </NumberField.DecrementButton>
-                        <NumberField.Input ref={pageCountInputRef} />
+                        <NumberField.Input id={PAGE_COUNT_INPUT_ID} />
                         <NumberField.IncrementButton>
                           <HugeiconsIcon icon={ArrowUp01Icon} size={14} />
                         </NumberField.IncrementButton>
