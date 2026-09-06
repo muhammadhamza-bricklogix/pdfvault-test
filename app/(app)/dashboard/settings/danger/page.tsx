@@ -349,11 +349,6 @@ export default function DangerZonePage() {
                 subscription will be cancelled and refund won&apos;t be issued.
               </p>
               <p className="text-sm text-[var(--color-foreground)]">
-                If you&apos;ve requested a copy of your data, please wait until
-                it&apos;s ready before deleting your account — otherwise, your
-                access request won&apos;t be completed.
-              </p>
-              <p className="text-sm text-[var(--color-foreground)]">
                 Once you confirm, you will be logged out immediately. We will
                 start deleting your account and personal data right away. Your
                 information will also be forwarded to our service providers for
