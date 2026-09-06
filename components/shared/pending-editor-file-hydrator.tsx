@@ -551,14 +551,46 @@ export function PendingEditorFileHydrator() {
             case "split":
               window.dispatchEvent(new CustomEvent("editor:open-split"));
               break;
-            case "merge":
-              // HamburgerMenu's BRIDGE_EVENTS listener picks this up and runs
-              // the same `saveBeforeAction` + `openMergeModal` chain a menu
-              // click would — keeps auth / requireFile / fileToMergeEntry
-              // guards in one place. Dedicated `/merge-pdf` landing page
-              // enters here via `UploadWorkspace` → `?tool=merge`.
-              window.dispatchEvent(new CustomEvent("editor:open-merge"));
+            case "merge": {
+              // Open the merge modal DIRECTLY via store state instead of
+              // dispatching `editor:open-merge` through the HamburgerMenu
+              // bridge. The bridge path depended on HamburgerMenu being
+              // mounted + its `useEffect` having attached its listener
+              // by the 400 ms fire mark; a slow first-paint or a
+              // conditional render (guests, W-9 route) could drop the
+              // event on the floor. Reading store setters here and
+              // handing the file to `fileToMergeEntry` mirrors what
+              // `openMergeModal` does — the MergeModalHost renders the
+              // modal from store state, so this works for guests +
+              // signed-in users alike. Skip the pre-merge cloud-save
+              // for guests same as `HamburgerMenu`'s case "merge"
+              // (QA 2026-09-06: unpaid users get the modal, hit paywall
+              // at download).
+              const store = usePdfEditorStore.getState();
+              const target = store.file;
+
+              if (!target) {
+                logger.warn(
+                  "auto-launch merge: no file on the store when firing",
+                );
+                break;
+              }
+
+              void (async () => {
+                try {
+                  const { fileToMergeEntry } = await import(
+                    "@/lib/client/pdf-tools/merge-pdfs"
+                  );
+                  const entry = await fileToMergeEntry(target);
+
+                  store.setMergeModalSource(entry);
+                  store.setIsMergeModalOpen(true);
+                } catch (err) {
+                  logger.error("auto-launch merge: failed to open", err);
+                }
+              })();
               break;
+            }
             case "watermark":
               setActiveTool("watermark");
               break;
