@@ -1,14 +1,6 @@
 "use client";
 
-import type { SessionVerificationLevel } from "@clerk/shared/types";
-
-import {
-  useClerk,
-  useReverification,
-  useSession,
-  useUser,
-} from "@clerk/nextjs";
-import { isReverificationCancelledError } from "@clerk/nextjs/errors";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { Alert01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Modal } from "@heroui/react";
@@ -16,7 +8,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import {
   PvFormRow,
   PvSectionHeading,
@@ -66,10 +57,12 @@ function humaniseDeleteError(err: unknown): string {
     return "Account deletion is disabled for this workspace. Email support@pdfvault.ai and we'll remove your account for you.";
   }
   if (code === "session_reverification_required") {
-    // Should never surface — `useReverification` wraps the delete call
-    // and opens Clerk's own verification modal automatically. Kept as
-    // a fallback in case the wrapper is bypassed.
-    return "For your security we need to verify it's you. A verification prompt should appear — if it didn't, try again.";
+    // Clerk requires the session to be recently reverified before a
+    // delete can proceed. The custom password step-up was removed
+    // (QA 2026-09-06 — user asked for a friction-free flow); if this
+    // ever fires the user must sign out and back in, or we need to
+    // reintroduce the step-up.
+    return "For your security we need you to sign in again before deleting. Sign out, sign back in, and retry the deletion.";
   }
   if (code === "form_password_incorrect") {
     return "Password check failed. Sign out and back in, then try again.";
@@ -80,12 +73,6 @@ function humaniseDeleteError(err: unknown): string {
 
   return raw || "Failed to delete account. Please try again in a moment.";
 }
-
-type VerificationState = {
-  complete: () => void;
-  cancel: () => void;
-  level: SessionVerificationLevel | undefined;
-};
 
 export default function DangerZonePage() {
   const { user } = useUser();
@@ -108,12 +95,6 @@ export default function DangerZonePage() {
   // the marketing home. Continue button (or the 6-second safety timer)
   // triggers the sign-out + redirect.
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  // Custom reverification modal state — set by the `onNeedsReverification`
-  // handler below when Clerk demands a step-up. Kept in our own state so
-  // we render our HeroUI modal instead of Clerk's branded one.
-  const [verificationState, setVerificationState] =
-    useState<VerificationState | null>(null);
-
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const canConfirm =
     confirmation.trim().toLowerCase() === email.toLowerCase() && email !== "";
@@ -124,28 +105,6 @@ export default function DangerZonePage() {
   // the `cancelledButActive` grace period). Show a direct link to
   // Billing so the fix is one click away.
   const billingActive = isBillingActive(subscription);
-
-  // QA 2026-08-28: Clerk now enforces "session reverification" for
-  // sensitive actions (delete account, remove MFA, etc.) — first hit
-  // returns `session_reverification_required` and Clerk expects the
-  // client to prompt the user to re-authenticate (password / MFA),
-  // then retry. Wrapping `user.delete()` with `useReverification`
-  // handles that flow; the `onNeedsReverification` option lets us
-  // render OUR modal instead of Clerk's default one (which leaked the
-  // "Secured by Clerk" branding + "Development mode" chip — QA
-  // 2026-09-05). Once our modal completes, the wrapper reruns the
-  // wrapped fetcher automatically.
-  const deleteAccount = useReverification(
-    useCallback(async () => {
-      if (!user) throw new Error("No signed-in user.");
-      await user.delete();
-    }, [user]),
-    {
-      onNeedsReverification: ({ complete, cancel, level }) => {
-        setVerificationState({ complete, cancel, level });
-      },
-    },
-  );
 
   // Step 1 — user typed their email; hand off to the "Are you sure?"
   // modal. No API call yet: the actual delete happens only after they
@@ -158,9 +117,13 @@ export default function DangerZonePage() {
   };
 
   // Step 2 — user clicked "Yes, delete my data" on the final
-  // confirmation modal. Runs the Clerk reverification + delete + sign
-  // out + redirect. Errors surface back on the email modal (re-opened)
-  // so the user has full context of what failed and can retry.
+  // confirmation modal. Runs the Clerk delete directly (no password
+  // reverification step-up — removed 2026-09-06 per user request to
+  // reduce friction). Errors surface back on the email modal
+  // (re-opened) so the user has full context of what failed and can
+  // retry. If Clerk's instance settings still enforce reverification
+  // server-side, the humanised error message directs the user to
+  // sign out + back in.
   const handleFinalDelete = async () => {
     if (!user) return;
 
@@ -168,7 +131,7 @@ export default function DangerZonePage() {
     setError(null);
 
     try {
-      await deleteAccount();
+      await user.delete();
       // Delete succeeded — surface a success confirmation before signing
       // out. `signOut()` fires when the user clicks Continue on the
       // success modal (or the safety timer inside that modal expires).
@@ -178,15 +141,6 @@ export default function DangerZonePage() {
 
       return;
     } catch (err) {
-      // User closed the reverification modal without completing it —
-      // silent bail, reopen the email dialog so they can retry.
-      if (isReverificationCancelledError(err)) {
-        setIsDeleting(false);
-        setIsFinalConfirmOpen(false);
-        setIsOpen(true);
-
-        return;
-      }
       setError(humaniseDeleteError(err));
       setIsDeleting(false);
       setIsFinalConfirmOpen(false);
@@ -420,171 +374,6 @@ export default function DangerZonePage() {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
-
-      {verificationState ? (
-        <ReverifyPasswordModal
-          onCancel={() => {
-            verificationState.cancel();
-            setVerificationState(null);
-          }}
-          onComplete={() => {
-            verificationState.complete();
-            setVerificationState(null);
-          }}
-        />
-      ) : null}
     </section>
-  );
-}
-
-/**
- * In-house step-up modal used by the delete-account flow. Replaces
- * Clerk's default reverification widget so we don't leak "Secured by
- * Clerk" / "Development mode" chrome to end users. All of our
- * signed-in users hold a Clerk password (manual signup requires one,
- * `runAutoSignup` provisions a random password + emails it) so a
- * password-only step-up is enough — if a passwordless account ever
- * shows up we surface the "Use another method" link to fall back to
- * Clerk's own flow.
- */
-function ReverifyPasswordModal({
-  onCancel,
-  onComplete,
-}: {
-  onCancel: () => void;
-  onComplete: () => void;
-}) {
-  const { session } = useSession();
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!session || submitting) return;
-    if (!password.trim()) {
-      setError("Enter your password to continue.");
-
-      return;
-    }
-
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      // `first_factor` covers the password reverification path. Clerk
-      // returns a fresh SessionVerificationResource — we don't need to
-      // read it because `attemptFirstFactorVerification` completes the
-      // step-up in-place.
-      await session.startVerification({ level: "first_factor" });
-      await session.attemptFirstFactorVerification({
-        password,
-        strategy: "password",
-      });
-      onComplete();
-    } catch (err) {
-      const first = (err as { errors?: { code?: string; message?: string }[] })
-        ?.errors?.[0];
-      const code = first?.code;
-
-      if (
-        code === "form_password_incorrect" ||
-        code === "form_password_not_matched"
-      ) {
-        setError("That password isn't right. Try again.");
-      } else if (
-        code === "clerk_rate_limit_exceeded" ||
-        code === "too_many_attempts"
-      ) {
-        setError("Too many attempts. Wait a minute and try again.");
-      } else {
-        setError(
-          first?.message ??
-            "Verification failed. Please try again in a moment.",
-        );
-      }
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Modal.Backdrop
-      isOpen
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
-    >
-      <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[400px]">
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>Verification required</Modal.Heading>
-          </Modal.Header>
-          <form onSubmit={handleSubmit}>
-            <Modal.Body>
-              <p className="text-sm text-default-500">
-                Enter your current password to confirm this is you.
-              </p>
-              <label
-                className="mt-4 block text-[13px] font-medium text-[var(--color-foreground)]"
-                htmlFor="reverify-password"
-              >
-                Password
-              </label>
-              <div className="relative mt-1.5">
-                <input
-                  autoFocus
-                  aria-invalid={error ? true : undefined}
-                  autoComplete="current-password"
-                  className="w-full rounded-md border border-default-200 bg-[var(--color-background)] px-3 py-2 pr-10 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-danger"
-                  id="reverify-password"
-                  placeholder="Enter your password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error) setError(null);
-                  }}
-                />
-                <PasswordRevealToggle
-                  revealed={showPassword}
-                  onToggle={() => setShowPassword((v) => !v)}
-                />
-              </div>
-              {error ? (
-                <p className="mt-2 text-xs text-danger" role="alert">
-                  {error}
-                </p>
-              ) : null}
-              <p className="mt-3 text-[12px] text-default-500">
-                <Link
-                  className="text-[#f12c23] underline underline-offset-2 hover:opacity-80"
-                  href={ROUTES.AUTH.FORGOT_PASSWORD}
-                >
-                  Forgot your password?
-                </Link>
-              </p>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                isDisabled={submitting}
-                variant="secondary"
-                onPress={onCancel}
-              >
-                Cancel
-              </Button>
-              <Button
-                isDisabled={submitting || !password.trim()}
-                type="submit"
-                variant="danger"
-              >
-                {submitting ? "Verifying…" : "Continue"}
-              </Button>
-            </Modal.Footer>
-          </form>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
   );
 }
