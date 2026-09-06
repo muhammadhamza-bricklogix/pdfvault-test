@@ -425,20 +425,21 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       onClose();
       setTimeout(() => setFileInStore(file), 0);
 
-      if (isSignedIn) {
-        // Upload to the cloud in the background. When the new id is known,
-        // associate it with the already-loaded file and sync the URL — the
-        // loader skips re-fetching because the file+currentDocumentId match.
-        void start({
-          file,
-          onOpen: (id) => {
-            setCurrentDocument({ id, name: fileName });
-            router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?id=${id}`, {
-              scroll: false,
-            });
-          },
-        });
-      }
+      // QA 2026-09-06: DO NOT kick off a background upload of the blank
+      // PDF here. Previously we called `start({ file, onOpen: (id) => …
+      // setCurrentDocument(id) })` right after creation so the doc
+      // showed up in the dashboard immediately. Race: the upload +
+      // `onOpen` callback runs asynchronously; if the user edits and
+      // clicks "My PDFs" / Back / Dashboard before `onOpen` fires,
+      // save-before-action fires with `currentDocumentId === null` →
+      // backend creates a SECOND document row (blank one from the
+      // background upload + edited one from nav-save). User ended up
+      // with two rows: one blank, one with changes. Skipping the
+      // pre-upload defers creation to the first real save (nav-save,
+      // Save button, or any editor:save-before-action caller), which
+      // now uploads once with all edits — one document, all changes,
+      // as expected. The IDB pending-file snapshot still covers
+      // refresh-mid-edit.
     } finally {
       setIsGenerating(false);
     }
