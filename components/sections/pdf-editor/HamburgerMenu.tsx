@@ -266,10 +266,25 @@ export function HamburgerMenu() {
         break;
       case "merge": {
         if (!requireFile("merging")) return;
-        // Bake current edits into the cloud-saved PDF FIRST. Without
-        // this the merge modal reads `store.file` — the pre-edit source
-        // — and the merged output is missing the user's shapes,
-        // drawings, images, signatures, etc. Same pattern as Share.
+        // Guests: skip the pre-merge cloud-save. `saveBeforeAction`
+        // routes signed-out callers through AuthModal and resolves
+        // false, so `openMergeModal` never runs and the modal never
+        // appears (QA 2026-09-06: main-actions Merge button appeared
+        // idle for signed-out users). Open the modal directly against
+        // `store.file`. Overlays that only live in Fabric aren't baked
+        // into the merged output on this first attempt, but paywall
+        // fires at the Merge (download) button → AuthModal → post-
+        // signin hydrator restores the full session → user re-runs
+        // merge → the signed-in branch below bakes cleanly.
+        if (!isSignedIn) {
+          void openMergeModal();
+          break;
+        }
+        // Signed-in: bake current edits into the cloud-saved PDF FIRST.
+        // Without this the merge modal reads `store.file` — the pre-
+        // edit source — and the merged output is missing the user's
+        // shapes, drawings, images, signatures, etc. Same pattern as
+        // Share.
         //
         // `force: true`: several edit paths (page-numbers, annotations,
         // restore-from-version) don't flip `hasUnsavedChanges`, so the
