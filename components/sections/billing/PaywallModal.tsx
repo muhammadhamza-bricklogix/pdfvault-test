@@ -775,6 +775,29 @@ function PlanStep({
       : formatMinor(monthly.amountTodayMinor, monthly.currency);
 
   const continueDisabled = continueLoading;
+  const readyHeading = (() => {
+    if (!preview) return "Your PDF is ready.";
+    const ext = (
+      preview.targetExt ||
+      preview.sourceExt ||
+      preview.filename?.split(".").pop() ||
+      ""
+    )
+      .toLowerCase()
+      .trim();
+
+    if (["jpg", "jpeg"].includes(ext)) return "Your JPG is ready.";
+    if (ext === "png") return "Your PNG is ready.";
+    if (["doc", "docx", "word"].includes(ext))
+      return "Your Word document is ready.";
+    if (["xls", "xlsx", "excel"].includes(ext))
+      return "Your Excel document is ready.";
+    if (["ppt", "pptx", "powerpoint"].includes(ext))
+      return "Your PowerPoint presentation is ready.";
+    if (ext === "txt") return "Your Text document is ready.";
+
+    return "Your PDF is ready.";
+  })();
 
   return (
     <div className="flex flex-col">
@@ -782,7 +805,7 @@ function PlanStep({
       <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
         <div className="flex flex-col gap-1">
           <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            Your PDF is ready.
+            {readyHeading}
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
             Cancel anytime · Secure checkout · Instant access
