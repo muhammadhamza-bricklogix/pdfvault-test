@@ -194,9 +194,24 @@ export function PendingEditorFileHydrator() {
     // land them on an unrelated screen. Save-first-then-open lives in
     // UploadWorkspace; if that upload failed the user still expects to
     // continue with the file in-memory, not lose it to a picker.
+    // QA 2026-09-06: ALSO require `?fresh=1` so post-signin restores
+    // (returnTo = `/pdf-composer?tool=<slug>` with no fresh) don't
+    // race Step 2's async IDB restore and bounce the user to the
+    // dashboard. Dashboard tool tiles all use `TOOL_ROUTE.*` which
+    // adds `?fresh=1`, so the picker redirect still fires for that
+    // legitimate case. Post-signin returnTo strings from PasswordModal
+    // / CompressModal / use-extract-images-editor deliberately OMIT
+    // `?fresh=1` — the file lives in IDB and Step 2 will restore it
+    // within tens of ms of Step 1b's decision.
     const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
-    if (tool && !docId && isSignedIn && !hasSameSessionFile) {
+    if (
+      tool &&
+      !docId &&
+      isSignedIn &&
+      !hasSameSessionFile &&
+      isFreshEntry
+    ) {
       logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
         tool,
       });
@@ -224,7 +239,7 @@ export function PendingEditorFileHydrator() {
         `${ROUTES.AUTH.SIGN_IN}?redirect_url=${encodeURIComponent(returnTo)}`,
       );
     }
-  }, [authLoaded, docId, isSignedIn, tool]);
+  }, [authLoaded, docId, isFreshEntry, isSignedIn, tool]);
 
   // Step 2 — one-shot IDB rehydrate.
   //
