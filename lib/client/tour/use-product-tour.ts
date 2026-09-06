@@ -33,7 +33,6 @@ export function willTourAutoLaunch(key: TourKey): boolean {
   if (typeof window === "undefined") return false;
   if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return false;
   if (alreadySeen(key)) return false;
-  if (autoLaunchedKeys.has(key)) return false;
 
   return true;
 }
