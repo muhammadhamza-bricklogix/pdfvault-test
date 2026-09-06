@@ -73,20 +73,25 @@ export function usePaywall() {
   );
 
   const close = useCallback(() => {
-    logger.event(EVENTS.PAYWALL_CANCELLED, "info", {
-      hasBusResolver: Boolean(busResolverRef.current),
-      hasPendingAction: Boolean(pending),
-    });
+    // Distinguish a genuine cancel (user bails before the payment
+    // succeeds) from a post-success modal close (X button / Continue
+    // on SuccessStep, fired AFTER `onPaymentSuccess` already resolved
+    // the bus + cleared the resolver ref). Analytics reflect the real
+    // intent and the bus caller never sees a stray "cancelled" after
+    // payment.
+    const wasBeforeSuccess = Boolean(busResolverRef.current);
+
+    if (wasBeforeSuccess) {
+      logger.event(EVENTS.PAYWALL_CANCELLED, "info", {
+        hasBusResolver: true,
+        hasPendingAction: Boolean(pending),
+      });
+      busResolverRef.current?.("cancelled");
+      busResolverRef.current = null;
+    }
     setIsOpen(false);
     setPending(null);
     setPreview(null);
-    // Notify the bus-side promise that the user bailed so the axios
-    // interceptor can reject with PaywallCancelledError instead of
-    // hanging forever.
-    if (busResolverRef.current) {
-      busResolverRef.current("cancelled");
-      busResolverRef.current = null;
-    }
   }, [pending]);
 
   const onPaymentSuccess = useCallback(async () => {
@@ -94,11 +99,12 @@ export function usePaywall() {
       hasPendingAction: Boolean(pending),
       hasBusResolver: Boolean(busResolverRef.current),
     });
-    setIsOpen(false);
+    // Deliberately NOT closing the modal here anymore (QA 2026-09-06:
+    // users want the receipt-download modal to stay open until they
+    // click X or Continue). Bus + pending action still fire so the
+    // queued download / conversion runs immediately.
     setPreview(null);
-    // Give React one microtask to unmount the modal cleanly before
-    // firing the queued action — otherwise a download or router-push
-    // can race the modal teardown.
+    // Give React one microtask so the resolve + pending fire cleanly.
     await Promise.resolve();
     if (busResolverRef.current) {
       busResolverRef.current("success");

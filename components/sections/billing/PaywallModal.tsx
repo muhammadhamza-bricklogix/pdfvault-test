@@ -623,22 +623,19 @@ export function PaywallModal({
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          // On the success step, any close gesture (ESC, X) should resolve
-          // as success so the pending download/action still fires.
-          if (step === "success") {
-            finish();
-          } else {
-            // Log manual close so we can slice funnel drop-off by
-            // step (plan vs pay) and error presence — helps distinguish
-            // "user changed their mind on plan step" from "user gave up
-            // after a payment decline / checkout-intent failure".
+          // Success step: `onPaymentSuccess` already fired on mount and
+          // resolved the bus. `onClose` (from usePaywall) is now
+          // idempotent — it detects the bus was already settled and
+          // skips the cancel path, so we can call it here safely for
+          // both branches. Only the analytics event differs.
+          if (step !== "success") {
             logger.event(EVENTS.PAYWALL_MODAL_CLOSED_MANUAL, "info", {
               step,
               hadError: Boolean(error),
               payFailed,
             });
-            onClose();
           }
+          onClose();
         }
       }}
     >
@@ -654,9 +651,11 @@ export function PaywallModal({
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
-          {/* Hide X on SuccessStep — clicking it would resolve the bus promise
-              with "cancelled" and cancel the pending download. */}
-          {step !== "success" && <Modal.CloseTrigger />}
+          {/* CloseTrigger visible on all steps. On SuccessStep the bus
+              was already resolved via `onPaymentSuccess` at mount time,
+              so closing here is safe — `usePaywall.close` no-ops the
+              cancel branch when the resolver ref is already cleared. */}
+          <Modal.CloseTrigger />
           {error ? (
             <ErrorState error={error} />
           ) : !intent ? (
@@ -689,7 +688,8 @@ export function PaywallModal({
             <SuccessStep
               intent={intent}
               selectedPlan={selectedPlan}
-              onFinish={finish}
+              onClose={onClose}
+              onFireQueuedAction={finish}
             />
           )}
         </Modal.Dialog>
@@ -1252,45 +1252,32 @@ function PayStep({
 function SuccessStep({
   intent,
   selectedPlan,
-  onFinish,
+  onClose,
+  onFireQueuedAction,
 }: {
   intent: CheckoutIntent;
   selectedPlan: PlanId;
-  onFinish: () => void;
+  onClose: () => void;
+  onFireQueuedAction: () => void;
 }) {
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
-  const renew = formatMinor(intent.amountRenewMinor, intent.currency);
-  const nextDate = formatFullRenewalDate();
-  const onFinishRef = useRef(onFinish);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
-  // Tracks whether the user clicked "Download receipt" so we can hold
-  // the modal open until that async flow settles instead of racing the
-  // auto-dismiss.
-  const receiptClickedRef = useRef(false);
-  const autoDismissedRef = useRef(false);
+
+  // Fire the queued gated action (encrypt / decrypt / compress /
+  // convert / etc.) as soon as the success step mounts, WITHOUT closing
+  // the modal. QA 2026-09-06 (updated): user asked that the receipt-
+  // download modal stay open until they click X or Continue, but the
+  // queued download still needs to trigger immediately — no manual
+  // gate. `onFireQueuedAction` (= usePaywall's `onPaymentSuccess`)
+  // resolves the bus + runs pending; it deliberately doesn't touch
+  // modal open state.
+  const firedRef = useRef(false);
 
   useEffect(() => {
-    onFinishRef.current = onFinish;
-  }, [onFinish]);
-
-  // Auto-dismiss the success step after 2 s so the queued gated action
-  // (encrypt / decrypt / compress / convert / etc.) fires without the
-  // user having to click Continue. QA 2026-09-06: users hitting Save
-  // with a secure password had to click "Continue" ~3 times before the
-  // encrypt POST fired — the manual gate here was the culprit. Receipt
-  // download is still one click, and its own handler cancels the
-  // auto-dismiss so the receipt flow can finish before the modal
-  // unmounts. Matches the pre-2026-08-28 behavior recorded in
-  // `feedback_download_auto_start.md`.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (receiptClickedRef.current) return;
-      autoDismissedRef.current = true;
-      onFinishRef.current();
-    }, 2000);
-
-    return () => clearTimeout(t);
-  }, []);
+    if (firedRef.current) return;
+    firedRef.current = true;
+    onFireQueuedAction();
+  }, [onFireQueuedAction]);
 
   // Fire Google Ads "Trial Start Signal" conversion on payment success.
   useEffect(() => {
@@ -1327,10 +1314,6 @@ function SuccessStep({
   // the same receipt via the existing InvoicesTable flow.
   const handleDownloadReceipt = async () => {
     if (isGeneratingReceipt) return;
-    // Flag the receipt click so the 2 s auto-dismiss holds off. We fire
-    // `onFinishRef.current()` in the finally block below so the queued
-    // gated action still runs after the receipt download completes.
-    receiptClickedRef.current = true;
     setIsGeneratingReceipt(true);
     try {
       const invoice: Invoice = {
@@ -1382,14 +1365,6 @@ function SuccessStep({
       });
     } finally {
       setIsGeneratingReceipt(false);
-      // Receipt flow finished — fire the queued gated action now,
-      // unless the 2 s auto-dismiss already fired (rare: user clicked
-      // receipt after the timer landed but before the click handler
-      // ran the check, which can happen if the browser was mid-frame).
-      if (!autoDismissedRef.current) {
-        autoDismissedRef.current = true;
-        onFinishRef.current();
-      }
     }
   };
 
@@ -1420,8 +1395,7 @@ function SuccessStep({
           You&apos;re all set!
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#5c5c5c]">
-          Your subscription is active. You now have full access to every
-          PDFVault tool.
+          Your plan is active. You now have full access to every PDFVault tool.
         </p>
       </div>
 
@@ -1432,25 +1406,19 @@ function SuccessStep({
         <div className="flex items-center justify-between">
           <span className="text-[#5c5c5c]">Plan</span>
           <span className="font-semibold text-[#1a1c21]">
-            Full Access · {selectedPlan === "annual" ? "Annual" : "Monthly"}
+            {selectedPlan === "annual" ? "Annual plan" : "7-day trial"}
           </span>
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[#5c5c5c]">Charged today</span>
           <span className="font-semibold text-[#1a1c21]">{today}</span>
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[#5c5c5c]">Next charge</span>
-          <span className="font-semibold text-[#1a1c21]">
-            {renew} · {nextDate}
-          </span>
-        </div>
       </div>
 
       <button
         className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] text-[15px] font-semibold text-white shadow-[0_10px_20px_-8px_rgba(241,44,35,0.55)] transition-colors hover:bg-[#d8241c]"
         type="button"
-        onClick={onFinish}
+        onClick={onClose}
       >
         Continue
         <span aria-hidden>→</span>

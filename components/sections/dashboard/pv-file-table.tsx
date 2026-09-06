@@ -71,8 +71,9 @@ function SortHeader({
     >
       {label}
       <HugeiconsIcon
-        className={`transition-transform ${active && dir === "asc" ? "rotate-180" : ""
-          } ${active ? "text-[var(--pv-text-strong)]" : "text-[var(--pv-text-muted)]"}`}
+        className={`transition-transform ${
+          active && dir === "asc" ? "rotate-180" : ""
+        } ${active ? "text-[var(--pv-text-strong)]" : "text-[var(--pv-text-muted)]"}`}
         icon={ArrowDown01Icon}
         size={12}
       />
@@ -154,24 +155,24 @@ function RowActions({
     handler?: () => void;
     danger?: boolean;
   }[] = [
-      {
-        label: "Download",
-        icon: Download01Icon,
-        handler: () => onDownload?.(row),
-      },
-      ...(isProtectedSystemDoc
-        ? []
-        : [
+    {
+      label: "Download",
+      icon: Download01Icon,
+      handler: () => onDownload?.(row),
+    },
+    ...(isProtectedSystemDoc
+      ? []
+      : [
           {
             label: "Rename",
             icon: Edit02Icon,
             handler: () => onRename?.(row),
           },
         ]),
-      { label: "History", icon: Time04Icon, handler: () => onHistory?.(row) },
-      ...(isProtectedSystemDoc
-        ? []
-        : [
+    { label: "History", icon: Time04Icon, handler: () => onHistory?.(row) },
+    ...(isProtectedSystemDoc
+      ? []
+      : [
           {
             label: "Delete",
             icon: Delete02Icon,
@@ -179,7 +180,7 @@ function RowActions({
             danger: true,
           },
         ]),
-    ];
+  ];
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -187,8 +188,9 @@ function RowActions({
         <button
           key={label}
           aria-label={`${label} ${row.name}`}
-          className={`flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--pv-text-muted)] ${danger ? "hover:!text-[var(--pv-file-pdf)]" : ""
-            }`}
+          className={`flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--pv-text-muted)] ${
+            danger ? "hover:!text-[var(--pv-file-pdf)]" : ""
+          }`}
           disabled={disabled}
           type="button"
           onClick={handler}
@@ -226,6 +228,7 @@ export function PvFileTable({
       if (prev.size === 0) return prev;
       const currentIds = new Set(selectableRows.map((r) => r.id));
       let hasOrphan = false;
+
       for (const id of prev) {
         if (!currentIds.has(id)) {
           hasOrphan = true;
@@ -234,6 +237,7 @@ export function PvFileTable({
       }
       if (!hasOrphan) return prev;
       const next = new Set<string>();
+
       for (const id of prev) {
         if (currentIds.has(id)) {
           next.add(id);
@@ -370,17 +374,17 @@ export function PvFileTable({
               // without swallowing the checkbox or action-icon clicks.
               const openTd = openable
                 ? {
-                  className: "px-3 py-3 align-middle cursor-pointer",
-                  onClick: () => onOpen?.(row),
-                  onKeyDown: (e: React.KeyboardEvent) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onOpen?.(row);
-                    }
-                  },
-                  role: "link",
-                  tabIndex: 0,
-                }
+                    className: "px-3 py-3 align-middle cursor-pointer",
+                    onClick: () => onOpen?.(row),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onOpen?.(row);
+                      }
+                    },
+                    role: "link",
+                    tabIndex: 0,
+                  }
                 : { className: "px-3 py-3 align-middle" };
               const pendingSubtitle =
                 row.pending?.status === "error"
@@ -392,8 +396,9 @@ export function PvFileTable({
               return (
                 <tr
                   key={row.id}
-                  className={`border-b border-[var(--pv-hairline)] transition-colors last:border-b-0 hover:bg-[var(--pv-fill-subtle)] ${isChecked ? "bg-[var(--pv-nav-active)]/60" : ""
-                    } ${isPending ? "opacity-90" : ""}`}
+                  className={`border-b border-[var(--pv-hairline)] transition-colors last:border-b-0 hover:bg-[var(--pv-fill-subtle)] ${
+                    isChecked ? "bg-[var(--pv-nav-active)]/60" : ""
+                  } ${isPending ? "opacity-90" : ""}`}
                 >
                   <td className="px-4 py-3 align-middle">
                     <input
@@ -413,10 +418,11 @@ export function PvFileTable({
                       {isPending ? (
                         <span
                           aria-hidden
-                          className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${row.pending?.status === "error"
+                          className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
+                            row.pending?.status === "error"
                               ? "bg-[var(--pv-file-pdf)]/15 text-[var(--pv-file-pdf)]"
                               : "bg-[var(--pv-brand-red)]/12 text-[var(--pv-brand-red)]"
-                            }`}
+                          }`}
                         >
                           {row.pending?.status === "error" ? (
                             <span className="text-[12px] font-bold">!</span>
