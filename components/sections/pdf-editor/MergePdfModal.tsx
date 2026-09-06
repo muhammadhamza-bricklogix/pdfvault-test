@@ -161,7 +161,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
+        <Modal.Dialog className="!w-[92vw] !min-h-[540px] !max-w-[520px]">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Merge PDFs</Modal.Heading>
@@ -253,7 +253,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
                 />
 
                 <Button
-                  className="w-full"
+                  className="w-full border-2 border-[#f12c23] text-[#f12c23]"
                   isDisabled={isLoading || isMerging}
                   variant="secondary"
                   onPress={() => fileInputRef.current?.click()}
