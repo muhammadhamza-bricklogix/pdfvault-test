@@ -205,14 +205,20 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
         if (!open) onClose();
       }}
     >
-      <Modal.Container>
-        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
+      <Modal.Container className="items-start justify-center p-4 sm:items-center">
+        <Modal.Dialog className="!max-h-[calc(100dvh-32px)] !w-[92vw] !max-w-[520px] overflow-y-auto overscroll-contain">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Split PDF</Modal.Heading>
           </Modal.Header>
 
-          <Modal.Body className="space-y-4">
+          {/* QA 2026-09-06: page-range input's rounded border was
+              clipping on the left inside Modal.Body's default padding.
+              Match the CompressModal pattern — explicit `px-4 sm:px-6`
+              on Body + `overflow-y-auto` on Dialog — so the input's
+              full-width border + focus ring have room and the modal
+              scrolls tall content instead of clipping. */}
+          <Modal.Body className="space-y-4 px-4 sm:px-6">
             {hasUnsavedChanges && (
               <div className="rounded-xl border border-warning-200 bg-warning-50 p-3 text-xs text-warning-800">
                 You have unsaved edits. They won&apos;t be included in the split
