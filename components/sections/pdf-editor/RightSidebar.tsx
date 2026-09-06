@@ -11,12 +11,7 @@ import {
   ArrowUp01Icon,
   Cancel01Icon,
   CircleIcon,
-  LayerBringForwardIcon,
-  LayerBringToFrontIcon,
-  LayerSendBackwardIcon,
-  LayerSendToBackIcon,
   LinerIcon,
-  Link01Icon,
   SquareIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -49,7 +44,6 @@ import {
   isShapeObject,
   type ShapeFabricObject,
 } from "./shape-object-utils";
-import { ShapeLinkModal } from "./ShapeLinkModal";
 import { WatermarkPropertiesContent } from "./WatermarkPropertiesContent";
 
 type SelectedObjectProps = {
@@ -78,8 +72,6 @@ type ShapePropertiesContentProps = {
 type RightSidebarProps = {
   fabricCanvas: FabricCanvas | null;
 };
-
-type LayerAction = "back" | "backward" | "forward" | "front";
 
 const SHAPE_OPTIONS = [
   { icon: SquareIcon, label: "Rectangle", value: "rect" },
@@ -243,7 +235,6 @@ export function ShapePropertiesContent({
   // shift it a noticeable amount. Bump the step on mobile so each tap is
   // ~one finger-tip's worth of movement; keep desktop at 1 for precision.
   const positionStep = isMobile ? 10 : 1;
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [selectedProps, setSelectedProps] =
     useState<SelectedObjectProps | null>(null);
 
@@ -334,20 +325,6 @@ export function ShapePropertiesContent({
     };
   }, [fabricCanvas, syncProps, commitProps, computeProps]);
 
-  useEffect(() => {
-    const openLinkModal = () => {
-      if (fabricCanvas?.getActiveObject()) {
-        setIsLinkModalOpen(true);
-      }
-    };
-
-    window.addEventListener("editor:open-shape-link", openLinkModal);
-
-    return () => {
-      window.removeEventListener("editor:open-shape-link", openLinkModal);
-    };
-  }, [fabricCanvas]);
-
   const getSelectedShape = () => {
     const obj = fabricCanvas?.getActiveObject();
 
@@ -414,23 +391,6 @@ export function ShapePropertiesContent({
     setActiveTool("shape");
   };
 
-  const moveLayer = (action: LayerAction) => {
-    const shape = getSelectedShape();
-
-    if (!shape || !fabricCanvas) return;
-    const actions = {
-      back: () => fabricCanvas.sendObjectToBack(shape),
-      backward: () => fabricCanvas.sendObjectBackwards(shape),
-      forward: () => fabricCanvas.bringObjectForward(shape),
-      front: () => fabricCanvas.bringObjectToFront(shape),
-    };
-
-    actions[action]();
-    fabricCanvas.setActiveObject(shape);
-    fabricCanvas.renderAll();
-    syncProps();
-  };
-
   const hasSelectedShape = !!selectedProps?.isShape;
   const showShapePanel = activeTool === "shape" || hasSelectedShape;
   const currentFill = hasSelectedShape ? selectedProps.fill : shapeFill;
@@ -438,10 +398,6 @@ export function ShapePropertiesContent({
   const currentStrokeWidth = hasSelectedShape
     ? selectedProps.strokeWidth
     : shapeStrokeWidth;
-
-  const saveLink = (value: string) => {
-    applyToSelectedObject({ linkUrl: value });
-  };
 
   if (!showShapePanel && !selectedProps) {
     return null;
@@ -615,94 +571,6 @@ export function ShapePropertiesContent({
               </div>
             </Section>
           </div>
-
-          <div className={sectionWrapperClass}>
-            <Section title="Link">
-              <div className="flex items-center justify-between gap-2">
-                <HugeiconsIcon
-                  className="text-default-500"
-                  icon={Link01Icon}
-                  size={16}
-                />
-                <Button
-                  isDisabled={!selectedProps}
-                  size="sm"
-                  variant={selectedProps?.linkUrl ? "secondary" : "ghost"}
-                  onPress={() => setIsLinkModalOpen(true)}
-                >
-                  {selectedProps?.linkUrl ? "Edit" : "Add"}
-                  <span className="text-base leading-none">+</span>
-                </Button>
-              </div>
-            </Section>
-          </div>
-
-          <div className={sectionWrapperClass}>
-            <Section title="Layers">
-              <div className="flex flex-wrap gap-2">
-                <Tooltip delay={300}>
-                  <Button
-                    isIconOnly
-                    aria-label="Send to back"
-                    isDisabled={!hasSelectedShape}
-                    size="sm"
-                    variant="ghost"
-                    onPress={() => moveLayer("back")}
-                  >
-                    <HugeiconsIcon icon={LayerSendToBackIcon} size={16} />
-                  </Button>
-                  <Tooltip.Content>
-                    <p>Send to back</p>
-                  </Tooltip.Content>
-                </Tooltip>
-                <Tooltip delay={300}>
-                  <Button
-                    isIconOnly
-                    aria-label="Send backward"
-                    isDisabled={!hasSelectedShape}
-                    size="sm"
-                    variant="ghost"
-                    onPress={() => moveLayer("backward")}
-                  >
-                    <HugeiconsIcon icon={LayerSendBackwardIcon} size={16} />
-                  </Button>
-                  <Tooltip.Content>
-                    <p>Send backward</p>
-                  </Tooltip.Content>
-                </Tooltip>
-                <Tooltip delay={300}>
-                  <Button
-                    isIconOnly
-                    aria-label="Bring forward"
-                    isDisabled={!hasSelectedShape}
-                    size="sm"
-                    variant="ghost"
-                    onPress={() => moveLayer("forward")}
-                  >
-                    <HugeiconsIcon icon={LayerBringForwardIcon} size={16} />
-                  </Button>
-                  <Tooltip.Content>
-                    <p>Bring forward</p>
-                  </Tooltip.Content>
-                </Tooltip>
-                <Tooltip delay={300}>
-                  <Button
-                    isIconOnly
-                    aria-label="Bring to front"
-                    isDisabled={!hasSelectedShape}
-                    size="sm"
-                    variant="ghost"
-                    onPress={() => moveLayer("front")}
-                  >
-                    <HugeiconsIcon icon={LayerBringToFrontIcon} size={16} />
-                  </Button>
-                  <Tooltip.Content>
-                    <p>Bring to front</p>
-                  </Tooltip.Content>
-                </Tooltip>
-              </div>
-            </Section>
-          </div>
         </>
       )}
 
@@ -798,15 +666,6 @@ export function ShapePropertiesContent({
     </div>
   );
 
-  const shapeLinkModal = (
-    <ShapeLinkModal
-      initialValue={selectedProps?.linkUrl ?? ""}
-      isOpen={isLinkModalOpen}
-      onClose={() => setIsLinkModalOpen(false)}
-      onSave={saveLink}
-    />
-  );
-
   if (variant === "floating") {
     // Only show the floating panel when a shape tool is active or a shape
     // object is selected. Text/image selections have their own toolbars
@@ -838,7 +697,6 @@ export function ShapePropertiesContent({
             {body}
           </Surface>
         </aside>
-        {shapeLinkModal}
       </>
     );
   }
@@ -850,21 +708,13 @@ export function ShapePropertiesContent({
     if (!showShapePanel) return null;
 
     return (
-      <>
-        <div className="border-b border-default-200/70 bg-default-50/70 px-3 py-2">
-          {body}
-        </div>
-        {shapeLinkModal}
-      </>
+      <div className="border-b border-default-200/70 bg-default-50/70 px-3 py-2">
+        {body}
+      </div>
     );
   }
 
-  return (
-    <>
-      {body}
-      {shapeLinkModal}
-    </>
-  );
+  return body;
 }
 
 function FloatingPanelCloseButton({ onPress }: { onPress: () => void }) {
