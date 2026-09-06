@@ -9,12 +9,12 @@ import {
   useUser,
 } from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
-import { Alert01Icon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Modal } from "@heroui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import {
@@ -102,6 +102,12 @@ export default function DangerZonePage() {
   // the user has an explicit "Yes, delete my data" moment before the
   // irreversible Clerk call fires.
   const [isFinalConfirmOpen, setIsFinalConfirmOpen] = useState(false);
+  // Post-delete success confirmation. Shown after `user.delete()` resolves
+  // and BEFORE `signOut()` fires — gives the user a clear "your account
+  // has been permanently deleted" moment instead of a silent bounce to
+  // the marketing home. Continue button (or the 6-second safety timer)
+  // triggers the sign-out + redirect.
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   // Custom reverification modal state — set by the `onNeedsReverification`
   // handler below when Clerk demands a step-up. Kept in our own state so
   // we render our HeroUI modal instead of Clerk's branded one.
@@ -163,8 +169,14 @@ export default function DangerZonePage() {
 
     try {
       await deleteAccount();
-      await signOut();
-      router.push(ROUTES.PUBLIC.HOME);
+      // Delete succeeded — surface a success confirmation before signing
+      // out. `signOut()` fires when the user clicks Continue on the
+      // success modal (or the safety timer inside that modal expires).
+      setIsDeleting(false);
+      setIsFinalConfirmOpen(false);
+      setIsSuccessOpen(true);
+
+      return;
     } catch (err) {
       // User closed the reverification modal without completing it —
       // silent bail, reopen the email dialog so they can retry.
@@ -181,6 +193,26 @@ export default function DangerZonePage() {
       setIsOpen(true);
     }
   };
+
+  // Success modal → sign out and land on the marketing home. Wrapped in
+  // useCallback so the auto-timer effect below has a stable reference.
+  const finishSignOut = useCallback(async () => {
+    setIsSuccessOpen(false);
+    await signOut();
+    router.push(ROUTES.PUBLIC.HOME);
+  }, [signOut, router]);
+
+  // Safety net — if the user leaves the success modal open (walked away,
+  // hit an ad, etc.) auto-finalize after 6s so the Clerk session doesn't
+  // linger on a deleted user id.
+  useEffect(() => {
+    if (!isSuccessOpen) return;
+    const t = window.setTimeout(() => {
+      void finishSignOut();
+    }, 6000);
+
+    return () => window.clearTimeout(t);
+  }, [isSuccessOpen, finishSignOut]);
 
   return (
     <section>
@@ -348,6 +380,48 @@ export default function DangerZonePage() {
                 {isDeleting ? "Deleting…" : "Yes, delete my data"}
               </Button>
             </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+
+      <Modal.Backdrop
+        isOpen={isSuccessOpen}
+        onOpenChange={(open) => {
+          // Any dismiss action (X, backdrop click, esc) counts as the
+          // user acknowledging — sign them out and redirect. Prevents the
+          // "modal closed but I'm still on /dashboard/settings/danger
+          // with an invalid session" limbo state.
+          if (!open) void finishSignOut();
+        }}
+      >
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-[420px]">
+            <Modal.Body className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+              <span className="flex size-14 items-center justify-center rounded-full bg-green-100">
+                <HugeiconsIcon
+                  className="text-green-600"
+                  icon={Tick01Icon}
+                  size={28}
+                  strokeWidth={2.5}
+                />
+              </span>
+              <div className="space-y-1.5">
+                <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Account deleted
+                </h2>
+                <p className="text-sm text-default-500">
+                  Your account and all associated data have been permanently
+                  deleted. We&apos;re sorry to see you go.
+                </p>
+              </div>
+              <Button
+                className="mt-2 w-full"
+                variant="primary"
+                onPress={() => void finishSignOut()}
+              >
+                Continue
+              </Button>
+            </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
