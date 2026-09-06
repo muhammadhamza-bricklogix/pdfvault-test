@@ -348,10 +348,10 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
             !extractedPages.has(liveSourcePage) ? (
               <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                 <p>
-                  Find &amp; Replace only searches text you&apos;ve
-                  prepared for editing. Click{" "}
-                  <span className="font-semibold">Edit Text</span> on the
-                  page you want to search, then try again.
+                  Find &amp; Replace only searches text you&apos;ve prepared for
+                  editing. Click{" "}
+                  <span className="font-semibold">Edit Text</span> on the page
+                  you want to search, then try again.
                 </p>
                 <Button
                   className="w-full"

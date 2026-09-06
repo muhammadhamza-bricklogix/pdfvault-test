@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { Button, Label, Modal } from "@heroui/react";
 import { useState } from "react";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { verifyPdfPassword } from "@/lib/client/pdf-editor/verify-pdf-password";
 import {
@@ -88,14 +88,24 @@ export function PasswordModal() {
     const slug = m === "protect" ? "password" : "unlock";
     const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${slug}`;
 
-    // Open the shared AuthModal directly (2026-08-28 unify). Cards'
-    // finalize `window.location.assign(returnTo)` (item #15) drops the
-    // user back on the composer with `?tool=<slug>`, so the hydrator
-    // re-opens THIS PasswordModal via step #4 after signin — same
-    // effective flow as the old SignInPromptModal, one fewer click.
-    dispatchAuthModal({
-      mode: "login",
+    // Email-first modal so a NEW-email user gets auto-signed-up
+    // (backend creates the Clerk account + emails a password) instead
+    // of hitting "We couldn't find an account with that email" on the
+    // login form (QA 2026-09-06). Downstream chain is identical to
+    // useExportEditor's Download flow — probe → LoginToDownloadModal
+    // (existing) or runAutoSignup → ticket → finalize →
+    // window.location.assign(returnTo). The hydrator's Step 4
+    // re-opens THIS PasswordModal via `?tool=<slug>` after the
+    // full-page nav lands.
+    dispatchEmailFirstModal({
       redirectUrl: returnTo,
+      title:
+        m === "protect" ? "Secure your PDF" : "Unlock your PDF",
+      subtitle:
+        m === "protect"
+          ? "Create an account to add password protection."
+          : "Create an account to remove the password.",
+      submitLabel: m === "protect" ? "Protect PDF" : "Unlock PDF",
     });
     setIsOpen(false);
 

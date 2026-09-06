@@ -12,6 +12,32 @@ import "driver.js/dist/driver.css";
 // mis-anchor. The help button (`?`) still lets a mobile user replay.
 const AUTO_LAUNCH_MIN_WIDTH = 768;
 
+/**
+ * Event name fired when any tour instance is destroyed (completed,
+ * skipped, or route-change cleanup). Listeners can defer their own
+ * work until after the tour finishes — e.g. the composer hydrator
+ * uses this to wait out the first-visit tour before dispatching a
+ * tool-open event (QA 2026-09-06: tool modal + tour opened together
+ * and interfered with each other).
+ */
+export const TOUR_ENDED_EVENT = "editor:tour-ended";
+
+/**
+ * True when `useProductTour(key)` WOULD auto-launch on this visit —
+ * used by out-of-tree callers (hydrator, etc.) to decide whether to
+ * defer their own work behind the tour. Mirrors the exact gates in
+ * the auto-launch effect below (SSR-safe, viewport-gated,
+ * already-seen aware, module-level dedupe).
+ */
+export function willTourAutoLaunch(key: TourKey): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return false;
+  if (alreadySeen(key)) return false;
+  if (autoLaunchedKeys.has(key)) return false;
+
+  return true;
+}
+
 // Module-level singletons so the hook stays safe when multiple
 // components mount it for the same surface (e.g. DashboardHome +
 // TourHelpButton both call useProductTour("dashboard")). Without
@@ -85,6 +111,15 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
         onDestroyed: () => {
           markSeen(key);
           if (activeInstance === instance) activeInstance = null;
+          // Notify deferred consumers (composer hydrator, etc.) that
+          // the tour is done so they can now run their own auto-launch
+          // (tool modal, export, etc.) without fighting the driver.js
+          // overlay for the top layer.
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent(TOUR_ENDED_EVENT, { detail: { key } }),
+            );
+          }
         },
       });
 
