@@ -1240,10 +1240,34 @@ function SuccessStep({
   const nextDate = formatFullRenewalDate();
   const onFinishRef = useRef(onFinish);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+  // Tracks whether the user clicked "Download receipt" so we can hold
+  // the modal open until that async flow settles instead of racing the
+  // auto-dismiss.
+  const receiptClickedRef = useRef(false);
+  const autoDismissedRef = useRef(false);
 
   useEffect(() => {
     onFinishRef.current = onFinish;
   }, [onFinish]);
+
+  // Auto-dismiss the success step after 2 s so the queued gated action
+  // (encrypt / decrypt / compress / convert / etc.) fires without the
+  // user having to click Continue. QA 2026-09-06: users hitting Save
+  // with a secure password had to click "Continue" ~3 times before the
+  // encrypt POST fired — the manual gate here was the culprit. Receipt
+  // download is still one click, and its own handler cancels the
+  // auto-dismiss so the receipt flow can finish before the modal
+  // unmounts. Matches the pre-2026-08-28 behavior recorded in
+  // `feedback_download_auto_start.md`.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (receiptClickedRef.current) return;
+      autoDismissedRef.current = true;
+      onFinishRef.current();
+    }, 2000);
+
+    return () => clearTimeout(t);
+  }, []);
 
   // Fire Google Ads "Trial Start Signal" conversion on payment success.
   useEffect(() => {
@@ -1272,14 +1296,6 @@ function SuccessStep({
     });
   }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
 
-  // 2026-08-28: auto-dismiss removed. Users asked to stay on the
-  // success step so they can download the receipt inline. The user
-  // now clicks Continue to fire any pending gated action (download /
-  // conversion) — the paywall bus resolves either way when the modal
-  // closes, so nothing is silently dropped. The previous 1.5 s auto-
-  // proceed feedback (`Download auto-start`) is superseded by this
-  // more explicit flow.
-
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to
   // materialize the real invoice row (that arrives on the next
@@ -1288,6 +1304,10 @@ function SuccessStep({
   // the same receipt via the existing InvoicesTable flow.
   const handleDownloadReceipt = async () => {
     if (isGeneratingReceipt) return;
+    // Flag the receipt click so the 2 s auto-dismiss holds off. We fire
+    // `onFinishRef.current()` in the finally block below so the queued
+    // gated action still runs after the receipt download completes.
+    receiptClickedRef.current = true;
     setIsGeneratingReceipt(true);
     try {
       const invoice: Invoice = {
@@ -1339,6 +1359,14 @@ function SuccessStep({
       });
     } finally {
       setIsGeneratingReceipt(false);
+      // Receipt flow finished — fire the queued gated action now,
+      // unless the 2 s auto-dismiss already fired (rare: user clicked
+      // receipt after the timer landed but before the click handler
+      // ran the check, which can happen if the browser was mid-frame).
+      if (!autoDismissedRef.current) {
+        autoDismissedRef.current = true;
+        onFinishRef.current();
+      }
     }
   };
 

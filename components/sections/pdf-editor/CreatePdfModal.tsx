@@ -21,7 +21,7 @@ import {
   Tooltip,
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
@@ -225,6 +225,19 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   const [unsavedAction, setUnsavedAction] = useState<
     null | "saving" | "discarding"
   >(null);
+  // Ref mirror of the latest form state. `generateNewDocument` reads from
+  // this instead of the closed-over `form` because React 18 batches the
+  // NumberField's blur→onChange→setState with the Create-button click,
+  // leaving the closure one render behind (QA 2026-09-06: user typed 50
+  // pages, only a few landed — the click fired before the commit was
+  // flushed). Updated synchronously inside `patch()` below AND mirrored
+  // via effect so both onChange (fast path) and rerender (safety net)
+  // keep it fresh.
+  const formRef = useRef(form);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -251,8 +264,16 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     minimumFractionDigits: fractionDigits,
   };
 
-  const patch = (updates: Partial<FormState>) =>
-    setForm((prev) => ({ ...prev, ...updates }));
+  const patch = (updates: Partial<FormState>) => {
+    // Compute next off the ref (which is always current) so `formRef` is
+    // updated fully synchronously — the updater-function form of setState
+    // can run lazily at render time in React 18, which would defeat the
+    // batching workaround this ref exists for.
+    const next = { ...formRef.current, ...updates };
+
+    formRef.current = next;
+    setForm(next);
+  };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -312,9 +333,22 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
   };
 
   const generateNewDocument = async () => {
-    const trimmed = documentName.trim() || `Untitled-${openCount}`;
+    // Read from the ref, not the closed-over destructured values. The
+    // NumberField for page count commits on blur, and that blur-driven
+    // setState is batched with the Create button's click in React 18 —
+    // the closure sees the pre-blur value. `formRef.current` is updated
+    // synchronously inside `patch()` so it always reflects the latest
+    // committed input, including the just-committed page count.
+    const latest = formRef.current;
+    const trimmed = latest.documentName.trim() || `Untitled-${openCount}`;
     const fileName = trimmed.endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
-    const clampedPages = Math.min(Math.max(1, pageCount), PAGE_COUNT_MAX);
+    const clampedPages = Math.min(
+      Math.max(1, latest.pageCount),
+      PAGE_COUNT_MAX,
+    );
+    const genWidthPt = latest.widthPt;
+    const genHeightPt = latest.heightPt;
+    const genPageColor = latest.pageColor;
 
     setIsGenerating(true);
 
@@ -323,16 +357,16 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
       const pdfDoc = await PDFDocument.create();
 
       for (let i = 0; i < clampedPages; i++) {
-        const page = pdfDoc.addPage([widthPt, heightPt]);
+        const page = pdfDoc.addPage([genWidthPt, genHeightPt]);
 
-        if (pageColor !== "#FFFFFF") {
-          const { b, g, r } = hexToRgb(pageColor);
+        if (genPageColor !== "#FFFFFF") {
+          const { b, g, r } = hexToRgb(genPageColor);
 
           page.drawRectangle({
             borderWidth: 0,
             color: rgb(r / 255, g / 255, b / 255),
-            height: heightPt,
-            width: widthPt,
+            height: genHeightPt,
+            width: genWidthPt,
             x: 0,
             y: 0,
           });

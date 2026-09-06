@@ -106,18 +106,37 @@ export function EmailFirstModal() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!signIn || submitting) return;
+    if (submitting) return;
+
+    // QA 2026-09-06: valid email submitted → modal stuck at
+    // "Checking…" forever, no error surfaces. `signIn` from
+    // `useSignIn()` can be transiently null right after the modal
+    // opens (Clerk client is still hydrating). The pre-existing
+    // guard `if (!signIn || submitting) return` silently early-
+    // returned without resetting `submitting`, so a rapid click
+    // in that window bricked the button. Now we set `submitting=true`
+    // FIRST so the guard below can clear it on the null branch and
+    // the user isn't stranded.
+    setError(null);
+    setSubmitting(true);
 
     const trimmed = email.trim();
 
     if (!EMAIL_REGEX.test(trimmed)) {
       setError("Enter a valid email address.");
+      setSubmitting(false);
 
       return;
     }
 
-    setError(null);
-    setSubmitting(true);
+    if (!signIn) {
+      setError(
+        "Sign-in service is still loading. Please try again in a moment.",
+      );
+      setSubmitting(false);
+
+      return;
+    }
 
     // "Just a moment…" toast (top banner via HeroUI toast provider)
     // gives the user feedback that the check is in flight while the

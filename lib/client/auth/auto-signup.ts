@@ -70,19 +70,42 @@ export async function runAutoSignup(params: {
   // error capture in this chain.
   logger.event(EVENTS.AUTH_QUICK_SIGNUP_BEGIN, "info", begin);
 
+  // AbortController + 20 s hard timeout — QA 2026-09-06: logged-out
+  // user submits a valid email, EmailFirstModal's "Checking…" button
+  // stays forever and no error surfaces. Root cause was an
+  // unterminated `fetch` (backend cold-start, VPC hiccup, DNS stall)
+  // — the outer promise never resolved so `finally` never ran, and
+  // the button + toast were stuck. The abort surfaces an
+  // `AbortError` that the catch turns into a user-actionable retry
+  // message. 20 s is generous vs. the backend's typical <1 s response
+  // but well under a user's patience budget.
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    abortController.abort();
+  }, 20_000);
+
   try {
     response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
       body: JSON.stringify({ email, fileName }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal: abortController.signal,
     });
   } catch (err) {
-    logger.captureError(err, "auto-signup.fetch");
+    logger.captureError(err, "auto-signup.fetch", {
+      aborted: (err as { name?: string })?.name === "AbortError",
+      timeoutMs: 20_000,
+    });
 
     return {
       kind: "error",
-      message: "Couldn't reach the server. Check your connection and retry.",
+      message:
+        (err as { name?: string })?.name === "AbortError"
+          ? "The request took too long. Please check your connection and try again."
+          : "Couldn't reach the server. Check your connection and retry.",
     };
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 
   let body: unknown;

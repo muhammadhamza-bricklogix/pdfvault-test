@@ -31,6 +31,21 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
   const saveFabricJsonBySourcePage = usePdfEditorStore(
     (s) => s.saveFabricJsonBySourcePage,
   );
+  // Find & Replace only sees IText overlays that `useEditTextMode` has
+  // materialized on a page — pdf.js paints native text raster into the
+  // canvas backing store, which the IText search can't index. QA
+  // 2026-09-06: users search for visible words and get "No matches"
+  // because they haven't hit the Edit Text tool yet. `extractedPages`
+  // tracks which pages have been extracted, so we can detect that
+  // state and surface a helpful hint instead of an unhelpful zero.
+  // Auto-extracting on modal open is deliberately NOT done here — the
+  // 2026-06-24 skill-log revert documents that auto-extract-on-load
+  // drops white-on-coloured-background text to black on some PDFs
+  // (colour extractor limitation). Users opt in per page via the
+  // Edit Text tool.
+  const extractedPages = usePdfEditorStore((s) => s.extractedPages);
+  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
 
   const [needle, setNeedle] = useState("");
   const [replacement, setReplacement] = useState("");
@@ -320,6 +335,51 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
                 </div>
               ) : null}
             </div>
+
+            {/* Guidance — QA 2026-09-06: users hit "No matches" on
+                text they can see in the PDF because Find & Replace
+                only searches text that has been prepared for editing.
+                Show the hint whenever a needle has been typed AND
+                zero matches exist AND the current page hasn't been
+                extracted. Offer a one-click way to arm Edit Text for
+                the current page so the next search covers it. */}
+            {needle.length > 0 &&
+            matches.length === 0 &&
+            !extractedPages.has(liveSourcePage) ? (
+              <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <p>
+                  Find &amp; Replace only searches text you&apos;ve
+                  prepared for editing. Click{" "}
+                  <span className="font-semibold">Edit Text</span> on the
+                  page you want to search, then try again.
+                </p>
+                <Button
+                  className="w-full"
+                  isDisabled={activeTool === "editText"}
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => {
+                    // Trigger extraction of the current page by
+                    // switching the tool. `useEditTextMode` picks up
+                    // the flip and runs `extractTextBlocks` — same
+                    // pipeline as clicking Edit Text from the toolbar.
+                    // Modal stays open; once extraction lands, the
+                    // memoised `matches` recomputes and the hint
+                    // hides.
+                    setActiveTool("editText");
+                    toast.info({
+                      title: "Preparing text",
+                      description:
+                        "Extracting text on this page — search results will appear in a moment.",
+                    });
+                  }}
+                >
+                  {activeTool === "editText"
+                    ? "Preparing text…"
+                    : "Enable text search on this page"}
+                </Button>
+              </div>
+            ) : null}
           </Modal.Body>
 
           <Modal.Footer>
@@ -353,6 +413,14 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
               onPress={handleReplaceAll}
             >
               Replace all
+            </Button>
+            {/* Explicit Close button — QA 2026-09-06: users report the
+                modal doesn't close after Replace All. `Modal.CloseTrigger`
+                (X icon top-right) + backdrop + Escape all work, but
+                without a footer Close button after a completed action
+                users don't know where to click. Adding it explicitly. */}
+            <Button size="sm" variant="secondary" onPress={handleClose}>
+              Close
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

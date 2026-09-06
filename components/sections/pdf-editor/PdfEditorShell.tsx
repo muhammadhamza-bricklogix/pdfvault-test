@@ -171,7 +171,24 @@ function EditorLayout() {
   const isW9Layout =
     stripLocalePrefix(layoutPathname) === ROUTES.FORMS.W9_SHORT;
 
-  useProductTour("editor", !isW9Layout);
+  // Also suppress when a tool is auto-launching (`?tool=<slug>`) or an
+  // export is queued (`?export=<fmt>`) — QA 2026-09-06: entering the
+  // composer via `/compress`, `/split-pdf`, `/rotate-pdf`, etc. opened
+  // the target tool's modal (CompressModal, SplitPdfModal, …) at the
+  // SAME time the editor tour auto-launched, and any interaction
+  // (Next / Back / clicking anywhere) tore both down together. The
+  // driver.js overlay + HeroUI backdrop fought for the top layer, and
+  // driver.js's `allowClose: true` treated a click on the modal as
+  // "outside the tour target" → destroyed the tour → HeroUI dismissed
+  // in the same event. Skip the tour when the URL declares a tool /
+  // export intent so the user's actual task runs unobstructed. The
+  // tour still fires on a plain `/pdf-composer` entry (first visit).
+  const layoutSearchParams = useSearchParams();
+  const hasAutoLaunchingTool = Boolean(
+    layoutSearchParams.get("tool") || layoutSearchParams.get("export"),
+  );
+
+  useProductTour("editor", !isW9Layout && !hasAutoLaunchingTool);
 
   const handleFabricCanvasReady = useCallback(
     (canvas: Canvas | null) => setFabricCanvas(canvas),
