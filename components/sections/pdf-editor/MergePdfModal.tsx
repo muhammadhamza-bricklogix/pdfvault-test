@@ -55,17 +55,103 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       try {
         const loaded = await Promise.all(files.map(fileToMergeEntry));
 
+        // Track display list so the modal shows what was added.
         setExtras((prev) => [...prev, ...loaded]);
+
+        // QA 2026-09-08: inline-merge into the editor's live source so
+        // the newly-added pages appear in the editor's page sidebar as
+        // ONE unified list. Sequence:
+        //   1. Bake current edits into fresh PDF bytes (via the
+        //      `editor:build-current-bytes` event — same handler used
+        //      by Merge & Download so we don't double-implement).
+        //   2. Merge the baked source + newly-loaded files via
+        //      `mergePdfs`. pdf-lib copyPages preserves everything.
+        //   3. Wrap the merged bytes in a File keyed on the current
+        //      filename, swap into `store.file`. `usePdfLoader`
+        //      detects the swap → reloads pdf.js → `setPdfDocument`
+        //      resets `pageOrder = [1..N+M]` → sidebar re-renders
+        //      with the appended pages.
+        //   4. `applyPostSaveReset(mergedFile)` preserves the source
+        //      pages' fabric state (they're still slot 1..N in the
+        //      merged doc). New pages have no fabric state — they
+        //      render clean.
+        //   5. Flip `hasUnsavedChanges: true` after the reset because
+        //      the merged bytes aren't cloud-saved yet — user must
+        //      hit Save to persist.
+        let bakedSourceBytes: Uint8Array | null = null;
+
+        await new Promise<void>((resolve) => {
+          window.dispatchEvent(
+            new CustomEvent("editor:build-current-bytes", {
+              detail: {
+                onComplete: (r: {
+                  ok: boolean;
+                  bytes?: Uint8Array;
+                  error?: string;
+                }) => {
+                  if (r.ok && r.bytes) {
+                    bakedSourceBytes = r.bytes;
+                  } else {
+                    logger.warn(
+                      "[merge-pdf-modal] inline-merge: bake failed, using captured source",
+                      { error: r.error },
+                    );
+                  }
+                  resolve();
+                },
+              },
+            }),
+          );
+        });
+
+        const store = usePdfEditorStore.getState();
+        const liveFile = store.file;
+        const sourceBytesForMerge: Uint8Array =
+          bakedSourceBytes ?? (source ? source.bytes : new Uint8Array());
+
+        if (!sourceBytesForMerge.byteLength) {
+          throw new Error("No source PDF to merge into.");
+        }
+
+        const sourceEntry: MergeEntry = {
+          filename: liveFile?.name ?? source?.filename ?? "document.pdf",
+          bytes: sourceBytesForMerge,
+          pageCount: source?.pageCount ?? 0,
+        };
+        const mergedBytes = await mergePdfs([sourceEntry, ...loaded]);
+        const mergedFile = new File(
+          [mergedBytes as BlobPart],
+          sourceEntry.filename,
+          { type: "application/pdf" },
+        );
+
+        // Preserve fabric state for existing source pages (same slots
+        // 1..N in merged doc) via the applyPostSaveReset path. Then
+        // flip unsaved-changes back on — the merged bytes aren't
+        // cloud-persisted yet.
+        usePdfEditorStore.getState().applyPostSaveReset(mergedFile);
+        usePdfEditorStore.getState().markDocumentDirty();
+
+        const totalAddedPages = loaded.reduce((n, e) => n + e.pageCount, 0);
+
+        toast.success({
+          title: "Pages added",
+          description:
+            totalAddedPages === 1
+              ? "1 page appended to your document."
+              : `${totalAddedPages} pages appended to your document.`,
+        });
       } catch (err) {
+        logger.error("[merge-pdf-modal] inline-merge failed", err);
         toast.error({
-          title: "Couldn't read file",
+          title: "Couldn't add file",
           description: err instanceof Error ? err.message : String(err),
         });
       } finally {
         setIsLoading(false);
       }
     },
-    [],
+    [source],
   );
 
   const removeExtra = (index: number) =>
