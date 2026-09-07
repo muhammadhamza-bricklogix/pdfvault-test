@@ -94,9 +94,27 @@ function SignatureDrawPanel({ onSignatureReady }: PanelProps) {
 // ---------------------------------------------------------------------------
 // Type Tab
 // ---------------------------------------------------------------------------
+// Fonts loaded in `app/(tools)/layout.tsx` via next/font/google. Each
+// row's `css` value must match the CSS variable that layout attaches to
+// the wrapper `<div>` \u2014 the preview reads it via `getComputedStyle`
+// and the canvas render uses the resolved font-family to paint the PNG.
+const TYPE_FONTS = [
+  { id: "dancing", label: "Dancing Script", css: "var(--font-dancing-script)" },
+  { id: "great-vibes", label: "Great Vibes", css: "var(--font-great-vibes)" },
+  { id: "allura", label: "Allura", css: "var(--font-allura)" },
+  { id: "sacramento", label: "Sacramento", css: "var(--font-sacramento)" },
+  { id: "pacifico", label: "Pacifico", css: "var(--font-pacifico)" },
+] as const;
+
+type TypeFontId = (typeof TYPE_FONTS)[number]["id"];
+
 function SignatureTypePanel({ onSignatureReady }: PanelProps) {
   const [text, setText] = useState("");
+  const [fontId, setFontId] = useState<TypeFontId>("dancing");
   const previewRef = useRef<HTMLDivElement>(null);
+
+  const selectedFontCss =
+    TYPE_FONTS.find((f) => f.id === fontId)?.css ?? "cursive";
 
   useEffect(() => {
     if (!text.trim()) {
@@ -142,7 +160,10 @@ function SignatureTypePanel({ onSignatureReady }: PanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [text, onSignatureReady]);
+    // `fontId` is a dep because `previewRef`'s computed font-family
+    // changes when the user picks a different style \u2014 the canvas
+    // needs to re-render with the new font.
+  }, [text, fontId, onSignatureReady]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -156,9 +177,31 @@ function SignatureTypePanel({ onSignatureReady }: PanelProps) {
       <div
         ref={previewRef}
         className="flex min-h-20 items-center justify-center rounded-lg border border-default-200 bg-white p-4"
-        style={{ fontFamily: "var(--font-dancing-script)", fontSize: "48px" }}
+        style={{ fontFamily: selectedFontCss, fontSize: "48px" }}
       >
         <span className="text-black">{text || "\u00A0"}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {TYPE_FONTS.map((f) => {
+          const isActive = f.id === fontId;
+
+          return (
+            <button
+              key={f.id}
+              aria-pressed={isActive}
+              className={`rounded-lg border px-3 py-1.5 text-[14px] transition-colors ${
+                isActive
+                  ? "border-[var(--color-primary,#f12c23)] bg-[var(--color-primary,#f12c23)]/5 text-[var(--color-primary,#f12c23)]"
+                  : "border-default-200 text-default-700 hover:border-default-400"
+              }`}
+              style={{ fontFamily: f.css }}
+              type="button"
+              onClick={() => setFontId(f.id)}
+            >
+              {f.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -240,6 +240,17 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const saved = state.fabricJsonByPage.get(source);
 
       void (async () => {
+        // `loadFromJSON` fires `object:added` per restored object. Those
+        // events reach `use-editor-history.ts`'s `snapshot` +
+        // `markDirtyOnAdd` handlers, which call `saveFabricJson` +
+        // `markDocumentDirty` — both flip `hasUnsavedChanges` back to
+        // true immediately after the save just cleared it, so the
+        // "Unsaved edits" chip persists even though the file is saved
+        // (QA 2026-09-07). Gate the reload with `isRestoringHistory` so
+        // those listeners bail. Cleared in `finally` even if
+        // `loadFromJSON` throws, so a bad-JSON page doesn't leave the
+        // flag stuck on and mask future user edits.
+        state.setIsRestoringHistory(true);
         try {
           if (saved) {
             await fc.loadFromJSON(JSON.parse(saved));
@@ -253,6 +264,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           // rather than clearing to blank. The dispose-on-page-change
           // path will normalize state on next navigation.
         } finally {
+          state.setIsRestoringHistory(false);
           state.clearPostSaveReloadPending();
         }
       })();
