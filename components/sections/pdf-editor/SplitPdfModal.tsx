@@ -190,12 +190,36 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
         triggerDownload(zip, zipName);
       }
 
+      // Load the FIRST split part back into the composer so the
+      // editor updates to reflect the split (QA 2026-09-07 — user
+      // asked: "the merge, the splitted, the attached document
+      // [should show] to my PDF composer as well"). For the multi-
+      // part case we pick the first part as the natural next
+      // document to view; the zip download still contains all
+      // parts. Clearing the doc id decouples from the pre-split
+      // cloud row so the loader treats this as a new document.
+      const firstPart = parts[0];
+
+      if (firstPart) {
+        const partBytes = new Uint8Array(firstPart.bytes);
+        const newFile = new File(
+          [partBytes.buffer as ArrayBuffer],
+          firstPart.filename,
+          { type: "application/pdf" },
+        );
+        const storeAfter = usePdfEditorStore.getState();
+
+        storeAfter.setCurrentDocument(null);
+        storeAfter.clearFile();
+        setTimeout(() => usePdfEditorStore.getState().setFile(newFile), 0);
+      }
+
       toast.success({
         title: "Split complete",
         description:
           parts.length === 1
-            ? `Downloaded ${parts[0]!.filename}.`
-            : `Downloaded ${parts.length} files as a zip.`,
+            ? `Downloaded ${parts[0]!.filename}. Editor updated.`
+            : `Downloaded ${parts.length} files as a zip. Editor updated to the first part.`,
       });
       onClose();
     } catch (err) {

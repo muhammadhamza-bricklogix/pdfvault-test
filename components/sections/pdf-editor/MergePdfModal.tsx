@@ -118,19 +118,55 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
+      // Bake live Fabric edits (draw / sign / shapes / highlights)
+      // into `store.file` RIGHT BEFORE the merge fires — regardless
+      // of how the modal was opened (toolbar click, hamburger,
+      // `?tool=merge` deep-link auto-launch). The pre-open
+      // `saveBeforeAction` in HamburgerMenu covers the toolbar/menu
+      // path, but the auto-launch path (hydrator directly opens the
+      // modal) skips it, so users hitting Merge & Download after
+      // drawing on a `?tool=merge` deep-link were shipping unedited
+      // bytes (QA 2026-09-07). Doing the save here — always — means
+      // ANY entry point results in the current edits being baked
+      // before the merge reads the source.
+      //
+      // Only fire for signed-in users; guests have no cloud account
+      // to save to. `useSaveEditor` handles the `not-signed-in` case
+      // by dispatching the auth modal — we shouldn't route through
+      // that here because the user is already committed to the merge
+      // flow and paywall/auth was gated above.
+      const { isSignedIn: signedIn } = usePdfEditorStore.getState();
+
+      if (signedIn) {
+        const saveOk = await new Promise<boolean>((resolve) => {
+          window.dispatchEvent(
+            new CustomEvent("editor:save-before-action", {
+              detail: {
+                force: true,
+                skipWait: true,
+                onComplete: (r: { ok: boolean }) => resolve(r.ok),
+              },
+            }),
+          );
+        });
+
+        // If the save fails (e.g. `pdfDocument` momentarily null),
+        // fall through anyway — better to ship the last-known bytes
+        // than block the user. The re-read below picks up whatever
+        // is current.
+        if (!saveOk) {
+          logger.warn(
+            "[merge-pdf-modal] pre-merge save-before-action failed; merging with current store.file",
+          );
+        }
+      }
+
       // Re-read the source at merge time from the LIVE store.file
-      // instead of trusting `source.bytes` captured at modal-open. If
-      // a save happened after the modal opened (or if
-      // `applyPostSaveReset` swapped `store.file` to the freshly-baked
-      // bytes while the modal was already visible), those baked edits
-      // MUST be in the merged output. Falling back to `source` when
-      // the store is unexpectedly empty is a safety net — should
-      // never fire in practice. QA 2026-09-07: "changes are gone"
-      // after merge & download traced to stale source bytes.
+      // instead of trusting `source.bytes` captured at modal-open.
+      // After the save above, `store.file` should be the freshly-
+      // baked bytes.
       const liveFile = usePdfEditorStore.getState().file;
-      const freshSource = liveFile
-        ? await fileToMergeEntry(liveFile)
-        : source;
+      const freshSource = liveFile ? await fileToMergeEntry(liveFile) : source;
       const entries = [freshSource, ...extras];
       const bytes = await mergePdfs(entries);
       const dot = freshSource.filename.lastIndexOf(".");
@@ -138,13 +174,36 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         dot > 0 ? freshSource.filename.slice(0, dot) : freshSource.filename;
       const outName = `${base}-merged.pdf`;
 
-      triggerDownload(
-        new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }),
-        outName,
-      );
+      const mergedBlob = new Blob([bytes.buffer as ArrayBuffer], {
+        type: "application/pdf",
+      });
+
+      triggerDownload(mergedBlob, outName);
+
+      // Also load the merged PDF back into the composer so the editor
+      // shows the just-attached document(s) right after the modal
+      // closes (QA 2026-09-07 — user asked: "the merge, the splitted,
+      // the attached document [should show] to my PDF composer as
+      // well"). Wrap in a File so pdf.js + Fabric treat it as a fresh
+      // upload. Clearing the doc id first prevents the loader from
+      // trying to reconcile the merged bytes with the previous cloud
+      // document — this is a NEW document from the user's perspective,
+      // not a version of the old one.
+      const mergedFile = new File([bytes.buffer as ArrayBuffer], outName, {
+        type: "application/pdf",
+      });
+      const store = usePdfEditorStore.getState();
+
+      store.setCurrentDocument(null);
+      store.clearFile();
+      // Micro-delay so `clearFile`'s reset unmounts pdf.js cleanly
+      // before the new file mounts — matches CreatePdfModal's
+      // `setTimeout(setFile, 0)` pattern.
+      setTimeout(() => usePdfEditorStore.getState().setFile(mergedFile), 0);
+
       toast.success({
         title: "Merge complete",
-        description: `Downloaded ${outName}.`,
+        description: `Downloaded ${outName}. Editor updated with the merged PDF.`,
       });
       onClose();
     } catch (err) {
