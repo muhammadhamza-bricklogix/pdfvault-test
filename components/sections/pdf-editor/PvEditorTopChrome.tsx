@@ -436,6 +436,63 @@ function TopAppBar() {
     );
   };
 
+  // QA 2026-09-07: logo click must save current edits BEFORE navigating
+  // home. Same shape as the back button (`handleBack`) — dispatch the
+  // navigate-after-save event (or the W-9 save-and-continue variant on
+  // /w-9-form) and cancel the Link's default navigation. Signed-out
+  // users have no cloud doc to persist, so let the Link navigate
+  // normally (returns `undefined` → `<Link>` proceeds).
+  const handleLogoClick = (
+    e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
+  ) => {
+    if (!file || !isSignedIn) return;
+
+    e.preventDefault();
+
+    const targetUrl = ROUTES.PUBLIC.HOME;
+
+    if (showW9Save) {
+      const savingToast = toast.loading({
+        title: "Saving your W-9",
+        description: "Hold on — you'll go home once your progress is saved.",
+      });
+
+      window.dispatchEvent(
+        new CustomEvent("editor:w9-save-and-continue", {
+          detail: {
+            onComplete: (result: { ok: boolean; reason?: string }) => {
+              toast.close(savingToast);
+
+              if (!result.ok) {
+                toast.error({
+                  title: "Couldn't save your W-9",
+                  description:
+                    "Your progress is still on this page — try again in a moment.",
+                });
+
+                return;
+              }
+
+              window.dispatchEvent(
+                new CustomEvent("editor:navigate-after-save", {
+                  detail: { url: targetUrl, clearFileAfter: true },
+                }),
+              );
+            },
+          },
+        }),
+      );
+
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("editor:navigate-after-save", {
+        detail: { url: targetUrl, clearFileAfter: true },
+      }),
+    );
+  };
+
   const commitRename = () => {
     if (!file || !nameInputRef.current) return;
     const trimmed = nameInputRef.current.value.trim();
@@ -518,6 +575,7 @@ function TopAppBar() {
         aria-label="Home"
         className="flex shrink-0 items-center gap-2"
         href={ROUTES.PUBLIC.HOME}
+        onClick={handleLogoClick}
       >
         <Image
           alt="PDFVault"
