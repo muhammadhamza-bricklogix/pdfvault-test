@@ -8,15 +8,19 @@ import {
 import { isConvertedDocument } from "@/lib/shared/types/documents.types";
 
 /**
- * Returns true if the caller is allowed to proceed. Two escapes:
+ * DOWNLOAD-time gate. Returns true if the caller is allowed to proceed.
+ * Two escapes:
  *   1. The document isn't gated at all (native PDF upload —
- *      `originalContentType == null`). Free to Open / Download.
+ *      `originalContentType == null`). Free to Download.
  *   2. The user is entitled OR completed the paywall. Otherwise false
  *      (paywall cancelled or network read failed).
  *
- * Wraps `ensureFreshEntitlement + requestPaywall` so dashboard actions
- * (Open, Download) share one gate. Only converted PDFs (X→PDF via the
- * pending-conversion flow) carry `originalContentType`.
+ * QA 2026-09-08: OPEN is no longer gated — `openDocumentInEditor` bypasses
+ * this helper entirely. Every document (native or converted) opens freely.
+ * The paywall belongs at Download only. Callers to this helper should be
+ * download-related (see `trigger-document-download.ts`); do NOT re-add it
+ * to `openDocumentInEditor` or the "unable to review converted output"
+ * regression comes back.
  */
 export async function gateEntitledAction(
   doc?: Pick<Document, "originalContentType"> | null,

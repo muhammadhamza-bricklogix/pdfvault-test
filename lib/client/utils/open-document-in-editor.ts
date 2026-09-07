@@ -4,8 +4,6 @@ import type { Document } from "@/lib/shared/types/documents.types";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-import { gateEntitledAction } from "./gate-entitled-action";
-
 /**
  * True when the document's `editorState` carries a `w9` marker — i.e. it
  * was saved from `/w-9-form` and the raw form values are stashed on the
@@ -28,12 +26,20 @@ function isW9Document(doc: Pick<Document, "editorState">): boolean {
 }
 
 /**
- * Opens a saved document in the editor. Gates on entitlement ONLY when
- * the document is a converted PDF (`originalContentType != null`) —
- * native PDF uploads are free to open. On success routes to
- * `/pdf-composer?id=<docId>`, or — when the doc is a saved W-9 — to
- * `/w-9-form?resumeDocId=<docId>` so the user re-enters the yellow-
- * overlay editor with their previous values restored.
+ * Opens a saved document in the editor.
+ *
+ * QA 2026-09-08 (partial reversal of CLAUDE.md auth-chain item #17): Open
+ * is now FREE for every user regardless of doc type or entitlement. The
+ * previous rule (converted PDFs gated on Open for non-entitled users)
+ * blocked signed-in-non-entitled users and guests from ever reviewing
+ * the converted output before deciding whether to pay. Product decision:
+ * paywall belongs at Download, not at Open — users see the value first,
+ * then hit the wall at the export moment. `triggerDocumentDownload` still
+ * gates via `gateEntitledAction`; only `openDocumentInEditor` is now free.
+ *
+ * On success routes to `/pdf-composer?id=<docId>`, or — when the doc is
+ * a saved W-9 — to `/w-9-form?resumeDocId=<docId>` so the user re-enters
+ * the yellow-overlay editor with their previous values restored.
  *
  * Extra `queryParams` are forwarded verbatim — e.g. `{ tool: "split" }`
  * for the doc-picker-modal tool-launch flow. Ignored on the W-9 path
@@ -44,10 +50,6 @@ export async function openDocumentInEditor(
   doc: Document,
   queryParams?: Record<string, string | undefined>,
 ): Promise<void> {
-  const allowed = await gateEntitledAction(doc);
-
-  if (!allowed) return;
-
   // Detect W-9 for the dashboard→W-9-editor round trip. The list
   // endpoint trims payload size and often omits `editorState`, so a
   // list row's `editorState` may be `undefined` on a saved W-9 that

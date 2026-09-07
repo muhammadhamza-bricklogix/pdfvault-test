@@ -206,6 +206,33 @@ export function LoginToDownloadModal() {
               Log in to download your file
             </h1>
 
+            {/* QA 2026-09-08 (product spec): green success banner reassures
+                the returning user that we recognised their email — reduces
+                the "why does this want a password" friction and increases
+                completion vs. a plain header. */}
+            <div
+              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[#16a34a]/25 bg-[#16a34a]/10 px-3 py-2 text-[13px] font-medium text-[#15803d]"
+              role="status"
+            >
+              <svg
+                aria-hidden
+                fill="none"
+                height="16"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="16"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span>
+                We found your account! Log in to continue downloading your file.
+              </span>
+            </div>
+
             <div className="mt-6 space-y-4">
               <button
                 className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] border border-[#e1ebed] bg-white text-[15px] font-medium text-[#1a1c21] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
