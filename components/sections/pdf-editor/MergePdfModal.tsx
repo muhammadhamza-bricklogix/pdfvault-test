@@ -22,6 +22,7 @@ import {
   mergePdfs,
   type MergeEntry,
 } from "@/lib/client/pdf-tools/merge-pdfs";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import { triggerDownload } from "@/lib/client/pdf-tools/split-pdf";
@@ -117,16 +118,118 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
-      const entries = [source, ...extras];
+      // QA 2026-09-07: cloud-save current edits BEFORE the in-memory
+      // bake, so the user's library stays in sync with what they're
+      // about to download. `skipReset: true` keeps `store.file` and the
+      // live Fabric canvas untouched — no reload, no lost overlays —
+      // which is what the 2026-09-07 comment history flagged as the
+      // regression to avoid. If the user is signed-out, this is a
+      // no-op and we proceed straight to the bake (they can still
+      // download locally; the cloud save is best-effort).
+      const isSignedInNow = usePdfEditorStore.getState().isSignedIn;
+
+      if (isSignedInNow) {
+        await new Promise<void>((resolve) => {
+          window.dispatchEvent(
+            new CustomEvent("editor:save-before-action", {
+              detail: {
+                force: true,
+                skipReset: true,
+                onComplete: () => resolve(),
+              },
+            }),
+          );
+        });
+      }
+
+      // Bake the live Fabric edits into an IN-MEMORY buffer — no cloud
+      // upload (the save above handled that), no `store.file` swap, no
+      // pdf.js reload. Editor session state (Fabric overlays, live
+      // canvas) stays exactly as-is so the user's visible edits don't
+      // vanish after the merge finishes. The `editor:build-current-bytes`
+      // event reads live `fabricCanvas` via `useSaveEditor`'s ref and
+      // returns baked bytes via callback — no side effects on the store.
+      let sourceBytes: Uint8Array | null = null;
+
+      await new Promise<void>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:build-current-bytes", {
+            detail: {
+              onComplete: (r: {
+                ok: boolean;
+                bytes?: Uint8Array;
+                error?: string;
+              }) => {
+                if (r.ok && r.bytes) {
+                  sourceBytes = r.bytes;
+                } else {
+                  logger.warn(
+                    "[merge-pdf-modal] in-memory bake failed; falling back to captured source.bytes",
+                    { error: r.error },
+                  );
+                  toast.error({
+                    title: "Could not include latest edits",
+                    description:
+                      "Merging with the last saved copy. Save your edits first so the latest changes are included.",
+                  });
+                }
+                resolve();
+              },
+            },
+          }),
+        );
+      });
+
+      const liveFile = usePdfEditorStore.getState().file;
+      // Prefer the freshly-baked in-memory bytes. Fall back to the
+      // pre-captured `source` if the bake failed for any reason —
+      // still better than blocking the user.
+      const freshSource: MergeEntry = sourceBytes
+        ? {
+            filename: liveFile?.name ?? source.filename,
+            bytes: sourceBytes,
+            pageCount: source.pageCount,
+          }
+        : source;
+      const entries = [freshSource, ...extras];
       const bytes = await mergePdfs(entries);
-      const dot = source.filename.lastIndexOf(".");
-      const base = dot > 0 ? source.filename.slice(0, dot) : source.filename;
+      const dot = freshSource.filename.lastIndexOf(".");
+      const base =
+        dot > 0 ? freshSource.filename.slice(0, dot) : freshSource.filename;
       const outName = `${base}-merged.pdf`;
 
-      triggerDownload(
-        new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }),
-        outName,
-      );
+      // QA 2026-09-07 (post-118b177): passing `bytes.buffer` sends the ENTIRE
+      // underlying ArrayBuffer to Blob — if `bytes` is a view (byteOffset > 0
+      // OR byteLength < buffer.byteLength), the Blob is corrupt (extra bytes
+      // before/after the PDF stream), and readers fall back to displaying
+      // only the source-copied page — the exact "edits missing" symptom.
+      // Pass the Uint8Array view directly; Blob accepts ArrayBufferView.
+      logger.info("[PDFedits] MERGE-DIAG: download bytes", {
+        freshBakeUsed: !!sourceBytes,
+        freshSourceLen: freshSource.bytes.byteLength,
+        freshSourceOffset: freshSource.bytes.byteOffset,
+        freshSourceBufferLen: freshSource.bytes.buffer.byteLength,
+        extrasCount: extras.length,
+        mergedLen: bytes.byteLength,
+        mergedOffset: bytes.byteOffset,
+        mergedBufferLen: bytes.buffer.byteLength,
+      });
+
+      const mergedBlob = new Blob([bytes as BlobPart], {
+        type: "application/pdf",
+      });
+
+      triggerDownload(mergedBlob, outName);
+
+      // QA 2026-09-07 (revised): the earlier auto-load-into-composer
+      // step (setCurrentDocument(null) + clearFile + setFile(mergedFile))
+      // wiped `fabricJsonByPage` and forced a full pdf.js reload —
+      // users reported "my edits are lost after refresh" because
+      // the reload clobbered the in-session Fabric state before they
+      // had a chance to keep working on the SAME editor. Reverted:
+      // just download and close the modal. Editor keeps its current
+      // file + all Fabric overlays intact. The user's merged copy
+      // lives in their downloads folder if they want to re-open it.
       toast.success({
         title: "Merge complete",
         description: `Downloaded ${outName}.`,

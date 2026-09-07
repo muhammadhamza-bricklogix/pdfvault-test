@@ -321,4 +321,72 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       );
     };
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // In-memory bake — for callers that need the flattened PDF bytes RIGHT NOW
+  // without any cloud upload, without swapping `store.file`, without triggering
+  // a pdf.js reload. Merge & Split use this so their download includes the
+  // live Fabric edits (draw / highlight / signature / shapes) but the editor
+  // keeps its current session state — no reload, no lost overlays.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const onBuildCurrentBytes = async (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          onComplete: (r: {
+            ok: boolean;
+            bytes?: Uint8Array;
+            error?: string;
+          }) => void;
+        }>
+      ).detail;
+      const onComplete = detail?.onComplete;
+
+      if (!onComplete) return;
+
+      const state = usePdfEditorStore.getState();
+
+      if (!state.file) {
+        onComplete({ ok: false, error: "no-file" });
+
+        return;
+      }
+      if (!state.pdfDocument) {
+        onComplete({ ok: false, error: "not-loaded" });
+
+        return;
+      }
+
+      try {
+        const { buildEditedPdfBytes } = await import(
+          "@/lib/client/pdf-editor/save-utils"
+        );
+        const { bytes } = await buildEditedPdfBytes({
+          currentPage: state.currentPage,
+          fabricCanvas: fabricRef.current,
+          file: state.file,
+        });
+
+        onComplete({ ok: true, bytes });
+      } catch (err) {
+        logger.captureError(err, "editor.build_current_bytes");
+        onComplete({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    };
+
+    window.addEventListener(
+      "editor:build-current-bytes",
+      onBuildCurrentBytes as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "editor:build-current-bytes",
+        onBuildCurrentBytes as EventListener,
+      );
+    };
+  }, []);
 }

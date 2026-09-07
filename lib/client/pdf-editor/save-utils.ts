@@ -132,9 +132,11 @@ export async function renderFabricJsonToPng(
   const { Canvas } = await import("fabric");
 
   const el = document.createElement("canvas");
+  const canvasW = Math.max(1, Math.round(parsed.width));
+  const canvasH = Math.max(1, Math.round(parsed.height));
 
-  el.width = Math.round(parsed.width);
-  el.height = Math.round(parsed.height);
+  el.width = canvasW;
+  el.height = canvasH;
   el.style.position = "fixed";
   el.style.left = "-9999px";
   el.style.top = "-9999px";
@@ -143,15 +145,120 @@ export async function renderFabricJsonToPng(
   const fc = new Canvas(el, {
     backgroundColor: "transparent",
     enableRetinaScaling: false,
-    height: el.height,
-    width: el.width,
+    height: canvasH,
+    width: canvasW,
   });
 
   try {
+    // Wait for webfonts to be ready BEFORE loadFromJSON — text objects
+    // measure themselves against the resolved font, and a not-yet-loaded
+    // font produces zero-width glyphs / mis-positioned bboxes that
+    // render as blank in the PNG.
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
     await fc.loadFromJSON(parsed);
+
+    // QA 2026-09-07: Fabric v7 `loadFromJSON` resolves before object
+    // caches are populated for freehand `path` objects (PencilBrush
+    // strokes from highlight + draw tools). The subsequent `renderAll`
+    // paints them into their EMPTY object caches instead of the main
+    // canvas → PNG is transparent → downloaded PDF is missing the
+    // highlight/draw layers even though `bytesDelta` grew from the
+    // PNG being embedded. Fixes:
+    //   1. Disable object caching so every render goes straight to the
+    //      main canvas (no cache indirection).
+    //   2. Mark every object `dirty` so Fabric re-computes bboxes +
+    //      re-runs render for each one on the next paint pass.
+    //   3. Call `setCoords()` so hit-test / bbox helpers use the
+    //      just-loaded coordinates rather than defaults from the JSON
+    //      constructor path.
+    for (const obj of fc.getObjects()) {
+      try {
+        (obj as { objectCaching?: boolean }).objectCaching = false;
+        (obj as { dirty?: boolean }).dirty = true;
+        if (
+          typeof (obj as { setCoords?: () => void }).setCoords === "function"
+        ) {
+          (obj as { setCoords: () => void }).setCoords();
+        }
+      } catch {
+        // Best-effort — don't let one malformed object block the render.
+      }
+    }
+
+    // Yield to the browser once so any queued microtask / image load
+    // finishes before we snapshot the pixels. Cheap belt-and-braces
+    // against Fabric's async internals settling AFTER renderAll.
+    await new Promise<void>((resolve) => {
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => resolve());
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+
     fc.renderAll();
 
-    return fc.toDataURL({ format: "png", multiplier: 3 });
+    const dataUrl = fc.toDataURL({ format: "png", multiplier: 3 });
+
+    // Diagnostic — sample the canvas pixel buffer to check whether the render
+    // actually painted visible content. `likelyBlank` from data-URL size alone
+    // is a poor signal because a 612×792×3-multiplier alpha PNG has ~100 KB
+    // of PNG-header + zlib-baseline overhead even when fully transparent.
+    // Read the actual alpha channel: if EVERY pixel has alpha === 0, the
+    // canvas is truly blank and the raster we embed into the PDF will be
+    // invisible. This is the exact "bytes grow but nothing is visible in
+    // downloaded PDF" failure mode we've been chasing since 2026-09-07.
+    let nonTransparentPixels = 0;
+    let sampledPixels = 0;
+    let alphaSampleFailed = false;
+
+    try {
+      const ctx = /** @type any */ el.getContext("2d");
+
+      if (ctx) {
+        // Sample every 8th row/column so we don't pull megabytes of image
+        // data — this is a diagnostic, not a full scan. 8× subsampling on
+        // a 612×792 canvas = ~7.5k pixel samples, plenty to detect content.
+        const sample = ctx.getImageData(0, 0, canvasW, canvasH);
+        const data = sample.data;
+
+        for (let y = 0; y < canvasH; y += 8) {
+          for (let x = 0; x < canvasW; x += 8) {
+            const idx = (y * canvasW + x) * 4;
+            const alpha = data[idx + 3];
+
+            sampledPixels++;
+            if (alpha > 0) nonTransparentPixels++;
+          }
+        }
+      } else {
+        alphaSampleFailed = true;
+      }
+    } catch (err) {
+      alphaSampleFailed = true;
+      logger.warn("[PDFedits] EXPORT-DIAG: alpha sample threw", { err });
+    }
+
+    logger.info("[PDFedits] EXPORT-DIAG: renderFabricJsonToPng", {
+      canvasW,
+      canvasH,
+      objectCount: fc.getObjects().length,
+      dataUrlChars: dataUrl.length,
+      likelyBlank: dataUrl.length < 2000,
+      nonTransparentPixels,
+      sampledPixels,
+      pixelFillRatio:
+        sampledPixels > 0
+          ? Math.round((nonTransparentPixels / sampledPixels) * 10000) / 100
+          : null,
+      alphaSampleFailed,
+      trulyBlank: !alphaSampleFailed && nonTransparentPixels === 0,
+    });
+
+    return dataUrl;
   } finally {
     fc.dispose();
 
@@ -166,11 +273,29 @@ export async function renderFabricJsonToPng(
  * to a PNG data URL. Used by the hybrid merge pipeline to rasterize the
  * subset of objects that cannot be drawn as vectors (e.g. images).
  * Returns `null` if no objects pass the filter.
+ *
+ * When `liveCanvas` is provided AND its object count matches the parsed JSON,
+ * we render the subset from the LIVE canvas by temporarily hiding the
+ * non-target objects and calling `toDataURL`. This bypasses the Fabric v7
+ * `loadFromJSON` → fresh-canvas rendering bug that produces a nearly-blank
+ * PNG for freehand `path` objects (draw + highlight tools) — the objectCaching
+ * workaround alone was insufficient. The live canvas has already painted the
+ * strokes correctly (that's what the user sees on screen), so `toDataURL`
+ * captures the same pixels. See QA 2026-09-07 log: pixelFillRatio: 0.39 on
+ * offscreen render vs. clearly-visible strokes on live canvas.
  */
 export async function renderFabricSubsetToPng(
   parsed: ParsedFabricJson,
   objectIndices: number[],
+  liveCanvas?: FabricCanvas | null,
 ): Promise<string | null> {
+  logger.info("[PDFedits] EXPORT-DIAG: renderFabricSubsetToPng ENTRY v2", {
+    indices: objectIndices,
+    hasLiveCanvas: !!liveCanvas,
+    liveObjectCount: liveCanvas?.getObjects?.().length ?? -1,
+    parsedObjectCount: parsed.objects?.length ?? -1,
+  });
+
   if (!objectIndices.length || !parsed.objects?.length) return null;
 
   const filteredObjects = objectIndices
@@ -179,12 +304,147 @@ export async function renderFabricSubsetToPng(
 
   if (!filteredObjects.length) return null;
 
+  if (liveCanvas) {
+    const liveResult = renderSubsetFromLiveCanvas(
+      liveCanvas,
+      objectIndices,
+      parsed,
+    );
+
+    if (liveResult) return liveResult;
+    // fall through to offscreen render if live-canvas path bailed
+  }
+
   const subset: ParsedFabricJson = {
     ...parsed,
     objects: filteredObjects,
   };
 
   return renderFabricJsonToPng(subset);
+}
+
+/**
+ * Renders a subset of the LIVE fabric canvas by hiding non-target objects,
+ * calling toDataURL, and restoring visibility. Only usable when the live
+ * canvas is 1:1 aligned with the parsed JSON (same object order + count).
+ * Returns null if alignment can't be verified; caller falls back to the
+ * offscreen JSON-based render.
+ */
+function renderSubsetFromLiveCanvas(
+  liveCanvas: FabricCanvas,
+  objectIndices: number[],
+  parsed: ParsedFabricJson,
+): string | null {
+  logger.info("[PDFedits] EXPORT-DIAG: renderSubsetFromLiveCanvas ENTRY v2", {
+    hasLiveCanvas: !!liveCanvas,
+    indices: objectIndices,
+    parsedW: parsed.width,
+    parsedH: parsed.height,
+    liveObjectCount: liveCanvas?.getObjects?.().length ?? -1,
+  });
+
+  try {
+    const liveObjects = liveCanvas.getObjects();
+    const parsedObjects = parsed.objects ?? [];
+
+    if (liveObjects.length !== parsedObjects.length) {
+      logger.warn(
+        "[PDFedits] EXPORT-DIAG: live/parsed object count mismatch; falling back to offscreen render",
+        {
+          liveCount: liveObjects.length,
+          parsedCount: parsedObjects.length,
+        },
+      );
+
+      return null;
+    }
+
+    const canvasW = Math.max(1, Math.round(parsed.width));
+    const canvasH = Math.max(1, Math.round(parsed.height));
+
+    const targetSet = new Set(objectIndices);
+    const originalVisibility = liveObjects.map(
+      (o) => (o as { visible?: boolean }).visible ?? true,
+    );
+    const originalZoom = liveCanvas.getZoom();
+    const originalViewport = liveCanvas.viewportTransform
+      ? [...liveCanvas.viewportTransform]
+      : null;
+    // Capture physical canvas dims BEFORE we mutate anything so we can
+    // fully restore. Fabric's `setDimensions` writes to both the CSS and
+    // the backing store; setting them BOTH is critical because zoom-out
+    // in the editor leaves the physical canvas smaller than the base-
+    // coord scene → `toDataURL(width, height)` would clip to the
+    // physical dimensions and the exported PNG would only capture the
+    // top-left corner of the strokes, appearing nearly blank.
+    const originalWidth = liveCanvas.getWidth();
+    const originalHeight = liveCanvas.getHeight();
+
+    // Hide non-target objects
+    for (let i = 0; i < liveObjects.length; i++) {
+      (liveObjects[i] as { visible: boolean }).visible = targetSet.has(i);
+    }
+
+    // Force the live canvas to base-coord dimensions + identity zoom +
+    // identity viewport so `toDataURL` captures the full 612×792 (or
+    // whatever base) scene. Restored below in a finally-shape.
+    if (
+      originalWidth !== canvasW ||
+      originalHeight !== canvasH ||
+      originalZoom !== 1
+    ) {
+      liveCanvas.setDimensions({ width: canvasW, height: canvasH });
+    }
+    if (originalZoom !== 1) liveCanvas.setZoom(1);
+    if (originalViewport) {
+      liveCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    }
+
+    liveCanvas.renderAll();
+
+    const dataUrl = liveCanvas.toDataURL({
+      format: "png",
+      multiplier: 3,
+    });
+
+    // Restore in reverse order: viewport → zoom → dimensions → visibility.
+    if (originalViewport) {
+      liveCanvas.setViewportTransform(
+        originalViewport as [number, number, number, number, number, number],
+      );
+    }
+    if (originalZoom !== 1) liveCanvas.setZoom(originalZoom);
+    if (originalWidth !== canvasW || originalHeight !== canvasH) {
+      liveCanvas.setDimensions({
+        width: originalWidth,
+        height: originalHeight,
+      });
+    }
+    for (let i = 0; i < liveObjects.length; i++) {
+      (liveObjects[i] as { visible: boolean }).visible = originalVisibility[i]!;
+    }
+    liveCanvas.renderAll();
+
+    logger.info("[PDFedits] EXPORT-DIAG: rendered subset from LIVE canvas", {
+      canvasW,
+      canvasH,
+      originalWidth,
+      originalHeight,
+      originalZoom,
+      subsetCount: objectIndices.length,
+      totalObjects: liveObjects.length,
+      dataUrlChars: dataUrl.length,
+    });
+
+    return dataUrl;
+  } catch (err) {
+    logger.warn(
+      "[PDFedits] EXPORT-DIAG: live-canvas subset render threw; falling back",
+      { err },
+    );
+
+    return null;
+  }
 }
 
 /** Decodes a `data:image/png;base64,...` URL into raw PNG bytes. */
@@ -463,6 +723,14 @@ export async function buildEditedPdfBytes({
     backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
     fabricJsonByPage: mergeJsonForBake,
     fontDataMap: fontDataByLoadedName,
+    // QA 2026-09-07: pass the live fabric canvas + its current page so the
+    // merge can raster the current page's freehand path objects directly
+    // from the live canvas (already correctly painted) instead of the
+    // Fabric v7 offscreen `loadFromJSON` path (which produces a nearly-
+    // blank PNG — pixelFillRatio 0.39%). Only applies to the page the
+    // live canvas currently shows; other pages fall back to offscreen.
+    liveFabricCanvas: fabricCanvas,
+    liveCanvasPage: currentPage,
     pageOrder: mergePageOrder,
     pdfDocument,
     sourceBytes: mergeSourceBytes,
