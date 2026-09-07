@@ -431,8 +431,32 @@ async function flushRasterBatch(
   const pngBytes = dataUrlToBytes(pngDataUrl);
   const pngImage = await pdfDoc.embedPng(pngBytes);
   const { height, width } = page.getSize();
+  // QA 2026-09-07: some PDFs have a MediaBox that doesn't start at
+  // (0, 0) — generated invoices / receipts (e.g. Solidgate) frequently
+  // set MediaBox = `[Xoffset, Yoffset, Xoffset+width, Yoffset+height]`.
+  // Drawing at absolute PDF (0, 0) then puts the image OUTSIDE the
+  // visible page, so bytes grow (PNG is embedded) but no highlight /
+  // draw layer is visible in the download. `getMediaBox()` returns the
+  // real origin — use those coords so the raster lands on the page.
+  const mediaBox = page.getMediaBox();
 
-  page.drawImage(pngImage, { height, width, x: 0, y: 0 });
+  logger.info("[PDFedits] EXPORT-DIAG: flushRasterBatch", {
+    pageWidth: width,
+    pageHeight: height,
+    mediaBoxX: mediaBox.x,
+    mediaBoxY: mediaBox.y,
+    mediaBoxWidth: mediaBox.width,
+    mediaBoxHeight: mediaBox.height,
+    pngByteLen: pngBytes.byteLength,
+    mediaBoxIsOffset: mediaBox.x !== 0 || mediaBox.y !== 0,
+  });
+
+  page.drawImage(pngImage, {
+    height,
+    width,
+    x: mediaBox.x,
+    y: mediaBox.y,
+  });
 }
 
 // ---------------------------------------------------------------------------
