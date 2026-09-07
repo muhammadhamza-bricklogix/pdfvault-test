@@ -289,6 +289,13 @@ export async function renderFabricSubsetToPng(
   objectIndices: number[],
   liveCanvas?: FabricCanvas | null,
 ): Promise<string | null> {
+  logger.info("[PDFedits] EXPORT-DIAG: renderFabricSubsetToPng ENTRY v2", {
+    indices: objectIndices,
+    hasLiveCanvas: !!liveCanvas,
+    liveObjectCount: liveCanvas?.getObjects?.().length ?? -1,
+    parsedObjectCount: parsed.objects?.length ?? -1,
+  });
+
   if (!objectIndices.length || !parsed.objects?.length) return null;
 
   const filteredObjects = objectIndices
@@ -328,6 +335,14 @@ function renderSubsetFromLiveCanvas(
   objectIndices: number[],
   parsed: ParsedFabricJson,
 ): string | null {
+  logger.info("[PDFedits] EXPORT-DIAG: renderSubsetFromLiveCanvas ENTRY v2", {
+    hasLiveCanvas: !!liveCanvas,
+    indices: objectIndices,
+    parsedW: parsed.width,
+    parsedH: parsed.height,
+    liveObjectCount: liveCanvas?.getObjects?.().length ?? -1,
+  });
+
   try {
     const liveObjects = liveCanvas.getObjects();
     const parsedObjects = parsed.objects ?? [];
@@ -344,6 +359,9 @@ function renderSubsetFromLiveCanvas(
       return null;
     }
 
+    const canvasW = Math.max(1, Math.round(parsed.width));
+    const canvasH = Math.max(1, Math.round(parsed.height));
+
     const targetSet = new Set(objectIndices);
     const originalVisibility = liveObjects.map(
       (o) => (o as { visible?: boolean }).visible ?? true,
@@ -352,14 +370,31 @@ function renderSubsetFromLiveCanvas(
     const originalViewport = liveCanvas.viewportTransform
       ? [...liveCanvas.viewportTransform]
       : null;
+    // Capture physical canvas dims BEFORE we mutate anything so we can
+    // fully restore. Fabric's `setDimensions` writes to both the CSS and
+    // the backing store; setting them BOTH is critical because zoom-out
+    // in the editor leaves the physical canvas smaller than the base-
+    // coord scene → `toDataURL(width, height)` would clip to the
+    // physical dimensions and the exported PNG would only capture the
+    // top-left corner of the strokes, appearing nearly blank.
+    const originalWidth = liveCanvas.getWidth();
+    const originalHeight = liveCanvas.getHeight();
 
     // Hide non-target objects
     for (let i = 0; i < liveObjects.length; i++) {
       (liveObjects[i] as { visible: boolean }).visible = targetSet.has(i);
     }
 
-    // Reset zoom + viewport to identity so the exported PNG is at base
-    // coords (matches how the offscreen render sizes the canvas).
+    // Force the live canvas to base-coord dimensions + identity zoom +
+    // identity viewport so `toDataURL` captures the full 612×792 (or
+    // whatever base) scene. Restored below in a finally-shape.
+    if (
+      originalWidth !== canvasW ||
+      originalHeight !== canvasH ||
+      originalZoom !== 1
+    ) {
+      liveCanvas.setDimensions({ width: canvasW, height: canvasH });
+    }
     if (originalZoom !== 1) liveCanvas.setZoom(1);
     if (originalViewport) {
       liveCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
@@ -367,32 +402,35 @@ function renderSubsetFromLiveCanvas(
 
     liveCanvas.renderAll();
 
-    const canvasW = Math.max(1, Math.round(parsed.width));
-    const canvasH = Math.max(1, Math.round(parsed.height));
     const dataUrl = liveCanvas.toDataURL({
       format: "png",
       multiplier: 3,
-      width: canvasW,
-      height: canvasH,
-      left: 0,
-      top: 0,
     });
 
-    // Restore visibility + viewport + zoom
-    for (let i = 0; i < liveObjects.length; i++) {
-      (liveObjects[i] as { visible: boolean }).visible = originalVisibility[i]!;
-    }
+    // Restore in reverse order: viewport → zoom → dimensions → visibility.
     if (originalViewport) {
       liveCanvas.setViewportTransform(
         originalViewport as [number, number, number, number, number, number],
       );
     }
     if (originalZoom !== 1) liveCanvas.setZoom(originalZoom);
+    if (originalWidth !== canvasW || originalHeight !== canvasH) {
+      liveCanvas.setDimensions({
+        width: originalWidth,
+        height: originalHeight,
+      });
+    }
+    for (let i = 0; i < liveObjects.length; i++) {
+      (liveObjects[i] as { visible: boolean }).visible = originalVisibility[i]!;
+    }
     liveCanvas.renderAll();
 
     logger.info("[PDFedits] EXPORT-DIAG: rendered subset from LIVE canvas", {
       canvasW,
       canvasH,
+      originalWidth,
+      originalHeight,
+      originalZoom,
       subsetCount: objectIndices.length,
       totalObjects: liveObjects.length,
       dataUrlChars: dataUrl.length,
