@@ -214,12 +214,15 @@ export function HamburgerMenu() {
     // Paywall is gated INSIDE MergePdfModal at the Merge (download)
     // button — unpaid users should still see the modal, add files,
     // and hit the wall only when they try to download.
-
-    const loadingKey = toast.loading({
-      title: "Preparing merge",
-      description: "Reading the PDF…",
-    });
-
+    //
+    // QA 2026-09-08: "Preparing merge" loading toast removed. The
+    // `fileToMergeEntry(target)` call is a synchronous-feeling
+    // ArrayBuffer read + pdf-lib load; on a typical browser it
+    // resolves in <100ms. The toast would flash on-screen and vanish
+    // before the user could read it (user report: "a popup appears
+    // and then suddenly disappears"). If a future path adds a slow
+    // step here (e.g. large-file network fetch), re-add the toast
+    // with a minimum display time.
     try {
       const entry = await fileToMergeEntry(target);
 
@@ -230,8 +233,6 @@ export function HamburgerMenu() {
         title: "Couldn't read this PDF",
         description: err instanceof Error ? err.message : String(err),
       });
-    } finally {
-      toast.close(loadingKey);
     }
   };
 

@@ -228,6 +228,15 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           // `savedFile` here, pdf.js would reload and Fabric would remount
           // mid-flight, racing the export's `buildEditedPdfBytes` against a
           // moving `store.file` — producing double-baked / dropped edits.
+          //
+          // QA 2026-09-08: still flip `hasUnsavedChanges: false` because the
+          // save DID succeed — the cloud has the latest bytes. Without this
+          // the `SaveStatusChip` keeps reading "Unsaved edits" even though
+          // there's nothing left to save (user report: "Unsaved edits at the
+          // top after Merge completes"). `applyPostSaveReset` normally does
+          // both the file swap AND the dirty flip; we skip the file swap
+          // here but still want the dirty flip.
+          usePdfEditorStore.setState({ hasUnsavedChanges: false });
           logger.event(EVENTS.SAVE_BEFORE_ACTION_OK, "info", {
             documentId: result.document.id,
           });

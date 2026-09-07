@@ -82,6 +82,22 @@ const APPLE_PAY_BUTTON_PARAMS = {
   color: "black",
 } as const;
 
+// QA 2026-09-08: card expiry field inside Solidgate's iframe accepts
+// more than 2 digits for the year part (user report: "22/2222 is
+// accepted even though expected is MM/YY"). The SDK's `InitConfig.
+// formParams` doesn't expose a maxlength config for the expiry
+// input — only labels + placeholders — so the digit cap has to be
+// fixed inside `@solidgate/react-sdk` itself. Interim: set an
+// explicit `cardExpiryDatePlaceholder: "MM/YY"` so the format
+// expectation is visible in the field, and let the SDK's submit-
+// time validation reject 4-digit years. File a Solidgate support
+// ticket to enforce maxlength on their end. Documented in
+// .claude/specs/2026-09-08-guest-convert-flow.md → "Known 3rd-party
+// UI issues" section for future sessions.
+const SOLIDGATE_FORM_PARAMS = {
+  cardExpiryDatePlaceholder: "MM/YY",
+} as const;
+
 type Step = "plan" | "pay" | "success";
 type PlanId = "monthly" | "annual";
 
@@ -138,6 +154,7 @@ const StablePaymentForm = memo(function StablePaymentForm({
       key={`${retryKey}-${paymentIntent}`}
       applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
       applePayContainerRef={applePayContainerRef}
+      formParams={SOLIDGATE_FORM_PARAMS}
       googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
       googlePayContainerRef={googlePayContainerRef}
       merchantData={merchantData}
