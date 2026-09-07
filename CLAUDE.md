@@ -229,6 +229,7 @@ Current specs:
 | [`2026-07-31-solidgate-audit.md`](./.claude/specs/2026-07-31-solidgate-audit.md) | Client Solidgate audit — charge-auth SDK migration, React Aria dismiss fix, hard-cancel webhook |
 | [`2026-08-03-apple-pay-diagnostic.md`](./.claude/specs/2026-08-03-apple-pay-diagnostic.md) | Apple Pay button not rendering — full stack green, blocked on Solidgate-side Apple verification |
 | [`2026-09-02-locale-urls-geo-defaulting.md`](./.claude/specs/2026-09-02-locale-urls-geo-defaulting.md) | Subdirectory locale URLs (`/de/…`) + geo-IP defaulting Phase 1 — middleware-rewrite pattern, CloudFront Function, next-intl scaffolding, Weglot client SDK removed |
+| [`2026-09-08-guest-convert-flow.md`](./.claude/specs/2026-09-08-guest-convert-flow.md) | Guest convert + edit flow, paywall-at-download-only — Phase 1 (Open free) shipped; Phase 3A-3G (backend guest upload + guest→account migration) planned, needs `POST /documents/upload` `@OptionalAuth` + guest cleanup cron + guest doc migration endpoint |
 
 Add new specs as `YYYY-MM-DD-<slug>.md` and append a row to this table.
 

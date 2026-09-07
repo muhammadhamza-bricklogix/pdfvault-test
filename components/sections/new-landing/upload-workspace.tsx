@@ -15,7 +15,7 @@ import {
 } from "react";
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
-import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
+import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import {
   isPdf,
   looksLikePdfBytes,
@@ -429,24 +429,23 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        // QA 2026-09-08 (Flow 1 spec — End-to-End Conversion & Auth):
-        // guest drops a file on a convert route → use the email-first
-        // modal instead of the raw sign-in modal. Single email input
-        // routes intelligently: existing account → LoginToDownloadModal
-        // with green "we found your account" banner; new email →
-        // auto-signup via /api/auth/quick-signup. Either way the user
-        // returns to the same /convert/[slug] route with the file
-        // waiting in IDB, and `runPendingConversion` fires post-auth.
-        // Downstream auth-chain items #15 (`window.location.assign`)
-        // and #8-12 (hydrator) unchanged. Backend guest-upload not yet
-        // supported, so processing runs post-auth — the "Processing
-        // your document" progress modal ships in Phase 2b once the
-        // backend `@Public()` upload endpoint lands.
-        dispatchEmailFirstModal({
+        // AuthModal fallback (2026-09-08 spec revision): the target
+        // guest-friendly flow — anyone uploads + converts + edits
+        // freely, paywall gates only at Download — requires backend
+        // support for anonymous uploads (POST /documents/upload is
+        // currently `@User("sub") userId`-guarded). Until the backend
+        // ships the guest-upload endpoint + orphan cleanup + guest-to-
+        // account doc migration, keep the auth-first behaviour: file
+        // is stashed in IDB, user is prompted to sign in, hydrator +
+        // runPendingConversion pick up after return. Downstream auth
+        // chain (items #8-12, #15, #17) unchanged.
+        //
+        // Track the guest-upload backend spec in `.claude/specs/2026-09-08-
+        // guest-convert-flow.md` (see roadmap section for the endpoint
+        // + schema changes required).
+        dispatchAuthModal({
+          mode: "login",
           redirectUrl: returnPath,
-          title: "Your file is ready to convert",
-          subtitle: "Enter your email to continue",
-          submitLabel: "Continue",
         });
 
         return;
