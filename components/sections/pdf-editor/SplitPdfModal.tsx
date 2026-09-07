@@ -144,9 +144,30 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
+      // Re-read the source bytes at split time from the LIVE
+      // store.file. If a save happened after the modal opened (or if
+      // `applyPostSaveReset` swapped in the freshly-baked bytes),
+      // the split parts MUST include those edits. Falling back to
+      // `source.bytes` when the store is unexpectedly empty is a
+      // safety net — should never fire in practice.
+      // QA 2026-09-07: parallel of the merge fix.
+      const liveFile = usePdfEditorStore.getState().file;
+      let bytesForSplit: Uint8Array;
+      let filenameForSplit: string;
+
+      if (liveFile) {
+        const buf = await liveFile.arrayBuffer();
+
+        bytesForSplit = new Uint8Array(buf);
+        filenameForSplit = liveFile.name;
+      } else {
+        bytesForSplit = source.bytes;
+        filenameForSplit = source.filename;
+      }
+
       const parts = await splitPdf(
-        source.bytes,
-        source.filename,
+        bytesForSplit,
+        filenameForSplit,
         parsed.ranges,
       );
 
@@ -160,10 +181,11 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
           only.filename,
         );
       } else {
-        const dot = source.filename.lastIndexOf(".");
-        const base = dot > 0 ? source.filename.slice(0, dot) : source.filename;
+        const dot = filenameForSplit.lastIndexOf(".");
+        const base =
+          dot > 0 ? filenameForSplit.slice(0, dot) : filenameForSplit;
         const zipName = `${base || "document"}-split.zip`;
-        const zip = await buildZip(parts, source.filename);
+        const zip = await buildZip(parts, filenameForSplit);
 
         triggerDownload(zip, zipName);
       }

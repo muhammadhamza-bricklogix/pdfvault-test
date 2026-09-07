@@ -134,9 +134,22 @@ export function HamburgerMenu() {
   };
 
   const openSplitModal = async () => {
-    const target = requireFile("splitting");
+    // Read the LIVE file from the store — same stale-closure guard as
+    // `openMergeModal`. After a `saveBeforeAction` awaits the bake +
+    // `applyPostSaveReset`, the outer `handleAction` closure still
+    // holds the pre-edit `file`; reading via `getState()` here picks
+    // up the freshly-baked bytes so the split output includes the
+    // user's latest edits (draw / highlight / signature / etc.).
+    const target = usePdfEditorStore.getState().file;
 
-    if (!target) return;
+    if (!target) {
+      toast.info({
+        title: "No PDF open",
+        description: "Open or create a PDF before splitting.",
+      });
+
+      return;
+    }
 
     // Paywall is gated INSIDE SplitPdfModal at the Split (download)
     // button — unpaid users should still see the modal, pick ranges,
@@ -176,9 +189,27 @@ export function HamburgerMenu() {
   };
 
   const openMergeModal = async () => {
-    const target = requireFile("merging");
+    // Read the LIVE file from the store, not the closed-over `file`.
+    // The signed-in merge path awaits `saveBeforeAction(force,
+    // skipWait)` first, which calls `applyPostSaveReset` and swaps
+    // `store.file` to the freshly-baked (edits-included) bytes. The
+    // outer `handleAction` closure still has the pre-edit `file`
+    // reference, so `requireFile()` here would hand `fileToMergeEntry`
+    // the ORIGINAL source and the merged download would ship without
+    // the user's draw / highlight / signature edits (QA 2026-09-07:
+    // "PDF edits are not reflected in merged and downloaded PDF").
+    // Reading from `getState()` at call time picks up the post-save
+    // file regardless of the closure age.
+    const target = usePdfEditorStore.getState().file;
 
-    if (!target) return;
+    if (!target) {
+      toast.info({
+        title: "No PDF open",
+        description: "Open or create a PDF before merging.",
+      });
+
+      return;
+    }
 
     // Paywall is gated INSIDE MergePdfModal at the Merge (download)
     // button — unpaid users should still see the modal, add files,
@@ -308,9 +339,35 @@ export function HamburgerMenu() {
         })();
         break;
       }
-      case "split":
-        void openSplitModal();
+      case "split": {
+        if (!requireFile("splitting")) return;
+        // Guests: skip pre-split cloud-save (they have no cloud
+        // account; `saveBeforeAction` would route them through
+        // AuthModal and the split modal would never open). Open
+        // directly; paywall at the download button routes them
+        // through signin, and the post-signin re-run bakes cleanly.
+        if (!isSignedIn) {
+          void openSplitModal();
+          break;
+        }
+        // Signed-in: bake current edits into the cloud-saved PDF
+        // FIRST so the split output includes them. Without this, the
+        // split modal reads `store.file` — the pre-edit source — and
+        // the split PDFs are missing the user's draw / highlight /
+        // signature edits (QA 2026-09-07, same class of bug as the
+        // merge fix). `force: true` + `skipWait: true` mirror the
+        // merge case for the same reasons (see below).
+        void (async () => {
+          const ok = await saveBeforeAction(
+            "Saving your edits before splitting.",
+            true,
+            true,
+          );
+
+          if (ok) void openSplitModal();
+        })();
         break;
+      }
       case "versions": {
         if (!requireFile("viewing version history")) return;
         if (!isSignedIn) {

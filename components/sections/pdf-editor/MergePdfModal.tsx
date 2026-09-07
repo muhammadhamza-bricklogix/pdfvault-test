@@ -22,6 +22,7 @@ import {
   mergePdfs,
   type MergeEntry,
 } from "@/lib/client/pdf-tools/merge-pdfs";
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import { triggerDownload } from "@/lib/client/pdf-tools/split-pdf";
@@ -117,10 +118,24 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
-      const entries = [source, ...extras];
+      // Re-read the source at merge time from the LIVE store.file
+      // instead of trusting `source.bytes` captured at modal-open. If
+      // a save happened after the modal opened (or if
+      // `applyPostSaveReset` swapped `store.file` to the freshly-baked
+      // bytes while the modal was already visible), those baked edits
+      // MUST be in the merged output. Falling back to `source` when
+      // the store is unexpectedly empty is a safety net — should
+      // never fire in practice. QA 2026-09-07: "changes are gone"
+      // after merge & download traced to stale source bytes.
+      const liveFile = usePdfEditorStore.getState().file;
+      const freshSource = liveFile
+        ? await fileToMergeEntry(liveFile)
+        : source;
+      const entries = [freshSource, ...extras];
       const bytes = await mergePdfs(entries);
-      const dot = source.filename.lastIndexOf(".");
-      const base = dot > 0 ? source.filename.slice(0, dot) : source.filename;
+      const dot = freshSource.filename.lastIndexOf(".");
+      const base =
+        dot > 0 ? freshSource.filename.slice(0, dot) : freshSource.filename;
       const outName = `${base}-merged.pdf`;
 
       triggerDownload(
