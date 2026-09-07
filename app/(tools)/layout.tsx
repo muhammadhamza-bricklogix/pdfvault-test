@@ -6,6 +6,8 @@ import {
   Sacramento,
 } from "next/font/google";
 
+import { ToolsFontBodyEffect } from "./tools-font-body-effect";
+
 /**
  * Route-group layout for `(tools)/*` — loads the five signature-tab
  * fonts consumed by `<SignatureModal />` (Dancing Script, Great Vibes,
@@ -64,10 +66,17 @@ const pacifico = Pacifico({
 export default function ToolsLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const variableClasses = `${dancingScript.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`;
+
   return (
-    <div
-      className={`contents ${dancingScript.variable} ${greatVibes.variable} ${allura.variable} ${sacramento.variable} ${pacifico.variable}`}
-    >
+    <div className={`contents ${variableClasses}`}>
+      {/* Mirror the same variable classes onto document.body so HeroUI
+          / React Aria portals (SignatureModal, etc.) can resolve the
+          `--font-*` custom properties. Portals render outside the
+          wrapper `<div>` and would otherwise fall back to the default
+          sans (QA 2026-09-07: only Dancing Script rendered because
+          it's the only value the `:root` global fallback covers). */}
+      <ToolsFontBodyEffect classNames={variableClasses} />
       {children}
     </div>
   );
