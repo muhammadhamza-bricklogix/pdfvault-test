@@ -15,7 +15,7 @@ import {
 } from "react";
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import {
   isPdf,
   looksLikePdfBytes,
@@ -429,14 +429,24 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        // AuthModal (2026-08-28 unify). Invariant #17: post-signin
-        // return by direction still runs unchanged — the cards'
-        // `window.location.assign(returnPath)` (item #15) lands the
-        // user back on the same /convert/[slug] route with the saved
-        // file waiting in IDB.
-        dispatchAuthModal({
-          mode: "login",
+        // QA 2026-09-08 (Flow 1 spec — End-to-End Conversion & Auth):
+        // guest drops a file on a convert route → use the email-first
+        // modal instead of the raw sign-in modal. Single email input
+        // routes intelligently: existing account → LoginToDownloadModal
+        // with green "we found your account" banner; new email →
+        // auto-signup via /api/auth/quick-signup. Either way the user
+        // returns to the same /convert/[slug] route with the file
+        // waiting in IDB, and `runPendingConversion` fires post-auth.
+        // Downstream auth-chain items #15 (`window.location.assign`)
+        // and #8-12 (hydrator) unchanged. Backend guest-upload not yet
+        // supported, so processing runs post-auth — the "Processing
+        // your document" progress modal ships in Phase 2b once the
+        // backend `@Public()` upload endpoint lands.
+        dispatchEmailFirstModal({
           redirectUrl: returnPath,
+          title: "Your file is ready to convert",
+          subtitle: "Enter your email to continue",
+          submitLabel: "Continue",
         });
 
         return;
