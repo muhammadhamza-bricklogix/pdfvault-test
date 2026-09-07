@@ -416,7 +416,26 @@ export function UploadWorkspace({
       // user shouldn't have to drop the same file twice. The
       // auto-resume effect below reads IDB when the user returns
       // signed-in.
-      if (requiresAuth && authLoaded && !isSignedIn) {
+      // QA 2026-09-08: guest access on convert routes is now split by
+      // direction — X→PDF is FREE for guests (backend `/conversion` is
+      // `@Public()`, so the browser can hit it without auth and get a
+      // PDF blob back; no cloud persistence). PDF→X still requires
+      // sign-in at upload because it's effectively a Download operation
+      // (user starts with a PDF, gets a Word/Image file out) and the
+      // paywall + auth belong before the conversion cost is spent.
+      //
+      // For X→PDF guest: fall through to `uploadAsPdf` below (line
+      // ~563) which converts client-side via `conversionService.
+      // convertPreview` (paywall pre-flight bypassed since Sept 2026,
+      // see upload-to-pdf.ts comment). Then the file opens in the
+      // editor as a local in-memory File (no docId, no save to cloud).
+      // Guest edits freely. On Done → Download the editor's
+      // `useExportEditor` fires the email-first modal per auth-chain
+      // items 3-4 → auto-signup → paywall → download.
+      const isGuestPdfExport =
+        requiresAuth && authLoaded && !isSignedIn && Boolean(exportFormat);
+
+      if (isGuestPdfExport) {
         logger.event(EVENTS.UPLOAD_SIGNIN_REQUIRED, "info", {
           pathname,
           filename: picked.name,
@@ -429,20 +448,6 @@ export function UploadWorkspace({
 
         const returnPath = pathname ?? ROUTES.PUBLIC.HOME;
 
-        // AuthModal fallback (2026-09-08 spec revision): the target
-        // guest-friendly flow — anyone uploads + converts + edits
-        // freely, paywall gates only at Download — requires backend
-        // support for anonymous uploads (POST /documents/upload is
-        // currently `@User("sub") userId`-guarded). Until the backend
-        // ships the guest-upload endpoint + orphan cleanup + guest-to-
-        // account doc migration, keep the auth-first behaviour: file
-        // is stashed in IDB, user is prompted to sign in, hydrator +
-        // runPendingConversion pick up after return. Downstream auth
-        // chain (items #8-12, #15, #17) unchanged.
-        //
-        // Track the guest-upload backend spec in `.claude/specs/2026-09-08-
-        // guest-convert-flow.md` (see roadmap section for the endpoint
-        // + schema changes required).
         dispatchAuthModal({
           mode: "login",
           redirectUrl: returnPath,
