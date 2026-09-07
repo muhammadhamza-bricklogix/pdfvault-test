@@ -118,16 +118,37 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
+      // QA 2026-09-07: cloud-save current edits BEFORE the in-memory
+      // bake, so the user's library stays in sync with what they're
+      // about to download. `skipReset: true` keeps `store.file` and the
+      // live Fabric canvas untouched — no reload, no lost overlays —
+      // which is what the 2026-09-07 comment history flagged as the
+      // regression to avoid. If the user is signed-out, this is a
+      // no-op and we proceed straight to the bake (they can still
+      // download locally; the cloud save is best-effort).
+      const isSignedInNow = usePdfEditorStore.getState().isSignedIn;
+
+      if (isSignedInNow) {
+        await new Promise<void>((resolve) => {
+          window.dispatchEvent(
+            new CustomEvent("editor:save-before-action", {
+              detail: {
+                force: true,
+                skipReset: true,
+                onComplete: () => resolve(),
+              },
+            }),
+          );
+        });
+      }
+
       // Bake the live Fabric edits into an IN-MEMORY buffer — no cloud
-      // upload, no `store.file` swap, no pdf.js reload. Editor session
-      // state (Fabric overlays, live canvas) stays exactly as-is so the
-      // user's visible edits don't vanish after the merge finishes.
-      // QA 2026-09-07: the previous `editor:save-before-action` fired
-      // here caused two full reload cycles per Merge & Download click
-      // and users reported their edits disappearing from the editor
-      // after the modal closed. The `editor:build-current-bytes` event
-      // reads live `fabricCanvas` via `useSaveEditor`'s ref and returns
-      // baked bytes via callback — no side effects on the store.
+      // upload (the save above handled that), no `store.file` swap, no
+      // pdf.js reload. Editor session state (Fabric overlays, live
+      // canvas) stays exactly as-is so the user's visible edits don't
+      // vanish after the merge finishes. The `editor:build-current-bytes`
+      // event reads live `fabricCanvas` via `useSaveEditor`'s ref and
+      // returns baked bytes via callback — no side effects on the store.
       let sourceBytes: Uint8Array | null = null;
 
       await new Promise<void>((resolve) => {

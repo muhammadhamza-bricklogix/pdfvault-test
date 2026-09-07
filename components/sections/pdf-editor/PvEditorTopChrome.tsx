@@ -321,6 +321,44 @@ function TopAppBar() {
   const canShare = !!file && isSignedIn;
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
+
+  // QA 2026-09-07: Done click now saves the current edits to cloud FIRST,
+  // then opens the export modal. User was reporting that clicking Done →
+  // Download shipped a PDF without their latest edits — one cause is that
+  // the previous flow only saved as part of the Download click, and if the
+  // save flow flaked (or if the export bake ran off stale bytes), the
+  // download landed with missing overlays. Saving upfront guarantees the
+  // cloud has the latest baked bytes before any subsequent action.
+  // Signed-out users skip the save (they don't have a cloud doc yet — the
+  // export flow itself routes them through email-first signin).
+  const openExportModalAfterSave = () => {
+    if (!file) return;
+    if (!isSignedIn) {
+      setIsExportModalOpen(true);
+
+      return;
+    }
+    setIsSavingBeforeExport(true);
+    const toastKey = toast.loading({
+      title: "Saving your edits",
+      description: "Hold on — we'll open the download options once saved.",
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("editor:save-before-action", {
+        detail: {
+          force: true,
+          skipReset: true,
+          onComplete: () => {
+            toast.close(toastKey);
+            setIsSavingBeforeExport(false);
+            setIsExportModalOpen(true);
+          },
+        },
+      }),
+    );
+  };
 
   // Editable filename — Canva-style inline edit. Uncontrolled input
   // keyed on `fileName` so external renames (post-save, restore-version)
@@ -664,12 +702,14 @@ function TopAppBar() {
         aria-label="Download"
         className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
         data-tour="editor-download"
-        isDisabled={!canDownload}
-        onPress={() => setIsExportModalOpen(true)}
+        isDisabled={!canDownload || isSavingBeforeExport}
+        onPress={openExportModalAfterSave}
       >
         <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
 
-        <span className="hidden sm:inline">Done</span>
+        <span className="hidden sm:inline">
+          {isSavingBeforeExport ? "Saving…" : "Done"}
+        </span>
       </Button>
 
       <ExportFormatModal

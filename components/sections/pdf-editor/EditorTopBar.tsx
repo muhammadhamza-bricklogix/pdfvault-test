@@ -52,6 +52,7 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { ExportFormatModal } from "./ExportFormatModal";
@@ -109,6 +110,7 @@ export function EditorInfoBar() {
 
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
 
   useEffect(() => {
@@ -229,9 +231,37 @@ export function EditorInfoBar() {
   // PRD §7.3: Print / Download / Done all open the same format modal.
   // Behavioral parity across the trio matches the reference; the modal
   // itself is what dispatches editor:export with the chosen format.
+  //
+  // QA 2026-09-07: save the current edits to cloud FIRST, then open the
+  // modal. Guarantees the cloud has the latest baked bytes before the
+  // subsequent Download click runs. Signed-out users skip the save (the
+  // export flow itself routes them through email-first signin).
   const openExportModal = () => {
     if (!file) return;
-    setIsExportModalOpen(true);
+    if (!isSignedIn) {
+      setIsExportModalOpen(true);
+
+      return;
+    }
+    setIsSavingBeforeExport(true);
+    const toastKey = toast.loading({
+      title: "Saving your edits",
+      description: "Hold on — we'll open the download options once saved.",
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("editor:save-before-action", {
+        detail: {
+          force: true,
+          skipReset: true,
+          onComplete: () => {
+            toast.close(toastKey);
+            setIsSavingBeforeExport(false);
+            setIsExportModalOpen(true);
+          },
+        },
+      }),
+    );
   };
 
   const pageNav = (
@@ -521,13 +551,15 @@ export function EditorInfoBar() {
             </Button>
             <Button
               aria-label="Done"
-              isDisabled={!file}
+              isDisabled={!file || isSavingBeforeExport}
               size="sm"
               variant="primary"
               onPress={openExportModal}
             >
               <HugeiconsIcon icon={Tick01Icon} size={14} />
-              <span className="ml-1 hidden sm:inline">Done</span>
+              <span className="ml-1 hidden sm:inline">
+                {isSavingBeforeExport ? "Saving…" : "Done"}
+              </span>
             </Button>
 
             <Separator
