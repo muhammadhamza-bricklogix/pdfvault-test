@@ -1,5 +1,6 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+import type { Canvas as FabricCanvas } from "fabric";
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
 import type { FontData } from "./text-extraction";
@@ -56,6 +57,17 @@ export type MergePdfInput = {
   watermarkConfig?: WatermarkConfig | null;
   /** Background image configuration — null means no background image. */
   backgroundImageConfig?: BackgroundImageConfig | null;
+  /**
+   * The LIVE fabric canvas for the currently-visible page. When present + when
+   * `liveCanvasPage` matches the pageNum being processed, the raster batch
+   * renders directly from the live canvas (which has the strokes correctly
+   * painted). This works around a Fabric v7 bug where `loadFromJSON` on a
+   * fresh offscreen Canvas produces a nearly-blank PNG for freehand path
+   * objects (draw + highlight strokes). See save-utils.ts / QA 2026-09-07.
+   */
+  liveFabricCanvas?: FabricCanvas | null;
+  /** 1-indexed page number that `liveFabricCanvas` currently displays. */
+  liveCanvasPage?: number;
 };
 
 // pdf.js OPS constants for text rendering operations (31–49)
@@ -421,10 +433,11 @@ async function flushRasterBatch(
   parsed: ParsedFabricJson,
   page: PDFPage,
   pdfDoc: PDFDocument,
+  liveCanvas?: FabricCanvas | null,
 ): Promise<void> {
   if (!indices.length) return;
 
-  const pngDataUrl = await renderFabricSubsetToPng(parsed, indices);
+  const pngDataUrl = await renderFabricSubsetToPng(parsed, indices, liveCanvas);
 
   if (!pngDataUrl) return;
 
@@ -552,6 +565,7 @@ async function processPageObjects(
   pdfDoc: PDFDocument,
   ctx: CoordinateContext,
   fontCache: FontCache,
+  liveCanvas?: FabricCanvas | null,
 ): Promise<void> {
   let rasterBatch: number[] = [];
   // EXPORT-DIAG: accumulators for per-page breakdown of what actually gets
@@ -578,7 +592,7 @@ async function processPageObjects(
     if (isVectorizable(obj)) {
       // Flush any accumulated raster objects first (preserves z-order)
       if (rasterBatch.length) {
-        await flushRasterBatch(rasterBatch, parsed, page, pdfDoc);
+        await flushRasterBatch(rasterBatch, parsed, page, pdfDoc, liveCanvas);
         rasterBatch = [];
       }
 
@@ -650,6 +664,8 @@ export async function mergeFabricEditsIntoPdf({
   sourceBytes,
   watermarkConfig,
   backgroundImageConfig,
+  liveFabricCanvas,
+  liveCanvasPage,
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
 
@@ -884,6 +900,9 @@ export async function mergeFabricEditsIntoPdf({
               outputPdf,
               ctx,
               fontCache,
+              liveFabricCanvas && liveCanvasPage === pageNum
+                ? liveFabricCanvas
+                : null,
             );
           }
         }
@@ -1034,6 +1053,9 @@ export async function mergeFabricEditsIntoPdf({
           outputPdf,
           ctx,
           fontCache,
+          liveFabricCanvas && liveCanvasPage === pageNum
+            ? liveFabricCanvas
+            : null,
         );
       }
     }

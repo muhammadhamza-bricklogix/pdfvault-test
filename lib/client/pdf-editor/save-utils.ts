@@ -273,10 +273,21 @@ export async function renderFabricJsonToPng(
  * to a PNG data URL. Used by the hybrid merge pipeline to rasterize the
  * subset of objects that cannot be drawn as vectors (e.g. images).
  * Returns `null` if no objects pass the filter.
+ *
+ * When `liveCanvas` is provided AND its object count matches the parsed JSON,
+ * we render the subset from the LIVE canvas by temporarily hiding the
+ * non-target objects and calling `toDataURL`. This bypasses the Fabric v7
+ * `loadFromJSON` → fresh-canvas rendering bug that produces a nearly-blank
+ * PNG for freehand `path` objects (draw + highlight tools) — the objectCaching
+ * workaround alone was insufficient. The live canvas has already painted the
+ * strokes correctly (that's what the user sees on screen), so `toDataURL`
+ * captures the same pixels. See QA 2026-09-07 log: pixelFillRatio: 0.39 on
+ * offscreen render vs. clearly-visible strokes on live canvas.
  */
 export async function renderFabricSubsetToPng(
   parsed: ParsedFabricJson,
   objectIndices: number[],
+  liveCanvas?: FabricCanvas | null,
 ): Promise<string | null> {
   if (!objectIndices.length || !parsed.objects?.length) return null;
 
@@ -286,12 +297,116 @@ export async function renderFabricSubsetToPng(
 
   if (!filteredObjects.length) return null;
 
+  if (liveCanvas) {
+    const liveResult = renderSubsetFromLiveCanvas(
+      liveCanvas,
+      objectIndices,
+      parsed,
+    );
+
+    if (liveResult) return liveResult;
+    // fall through to offscreen render if live-canvas path bailed
+  }
+
   const subset: ParsedFabricJson = {
     ...parsed,
     objects: filteredObjects,
   };
 
   return renderFabricJsonToPng(subset);
+}
+
+/**
+ * Renders a subset of the LIVE fabric canvas by hiding non-target objects,
+ * calling toDataURL, and restoring visibility. Only usable when the live
+ * canvas is 1:1 aligned with the parsed JSON (same object order + count).
+ * Returns null if alignment can't be verified; caller falls back to the
+ * offscreen JSON-based render.
+ */
+function renderSubsetFromLiveCanvas(
+  liveCanvas: FabricCanvas,
+  objectIndices: number[],
+  parsed: ParsedFabricJson,
+): string | null {
+  try {
+    const liveObjects = liveCanvas.getObjects();
+    const parsedObjects = parsed.objects ?? [];
+
+    if (liveObjects.length !== parsedObjects.length) {
+      logger.warn(
+        "[PDFedits] EXPORT-DIAG: live/parsed object count mismatch; falling back to offscreen render",
+        {
+          liveCount: liveObjects.length,
+          parsedCount: parsedObjects.length,
+        },
+      );
+
+      return null;
+    }
+
+    const targetSet = new Set(objectIndices);
+    const originalVisibility = liveObjects.map(
+      (o) => (o as { visible?: boolean }).visible ?? true,
+    );
+    const originalZoom = liveCanvas.getZoom();
+    const originalViewport = liveCanvas.viewportTransform
+      ? [...liveCanvas.viewportTransform]
+      : null;
+
+    // Hide non-target objects
+    for (let i = 0; i < liveObjects.length; i++) {
+      (liveObjects[i] as { visible: boolean }).visible = targetSet.has(i);
+    }
+
+    // Reset zoom + viewport to identity so the exported PNG is at base
+    // coords (matches how the offscreen render sizes the canvas).
+    if (originalZoom !== 1) liveCanvas.setZoom(1);
+    if (originalViewport) {
+      liveCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    }
+
+    liveCanvas.renderAll();
+
+    const canvasW = Math.max(1, Math.round(parsed.width));
+    const canvasH = Math.max(1, Math.round(parsed.height));
+    const dataUrl = liveCanvas.toDataURL({
+      format: "png",
+      multiplier: 3,
+      width: canvasW,
+      height: canvasH,
+      left: 0,
+      top: 0,
+    });
+
+    // Restore visibility + viewport + zoom
+    for (let i = 0; i < liveObjects.length; i++) {
+      (liveObjects[i] as { visible: boolean }).visible = originalVisibility[i]!;
+    }
+    if (originalViewport) {
+      liveCanvas.setViewportTransform(
+        originalViewport as [number, number, number, number, number, number],
+      );
+    }
+    if (originalZoom !== 1) liveCanvas.setZoom(originalZoom);
+    liveCanvas.renderAll();
+
+    logger.info("[PDFedits] EXPORT-DIAG: rendered subset from LIVE canvas", {
+      canvasW,
+      canvasH,
+      subsetCount: objectIndices.length,
+      totalObjects: liveObjects.length,
+      dataUrlChars: dataUrl.length,
+    });
+
+    return dataUrl;
+  } catch (err) {
+    logger.warn(
+      "[PDFedits] EXPORT-DIAG: live-canvas subset render threw; falling back",
+      { err },
+    );
+
+    return null;
+  }
 }
 
 /** Decodes a `data:image/png;base64,...` URL into raw PNG bytes. */
@@ -570,6 +685,14 @@ export async function buildEditedPdfBytes({
     backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
     fabricJsonByPage: mergeJsonForBake,
     fontDataMap: fontDataByLoadedName,
+    // QA 2026-09-07: pass the live fabric canvas + its current page so the
+    // merge can raster the current page's freehand path objects directly
+    // from the live canvas (already correctly painted) instead of the
+    // Fabric v7 offscreen `loadFromJSON` path (which produces a nearly-
+    // blank PNG — pixelFillRatio 0.39%). Only applies to the page the
+    // live canvas currently shows; other pages fall back to offscreen.
+    liveFabricCanvas: fabricCanvas,
+    liveCanvasPage: currentPage,
     pageOrder: mergePageOrder,
     pdfDocument,
     sourceBytes: mergeSourceBytes,
