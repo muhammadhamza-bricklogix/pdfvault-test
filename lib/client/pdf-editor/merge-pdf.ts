@@ -439,6 +439,18 @@ async function flushRasterBatch(
   // draw layer is visible in the download. `getMediaBox()` returns the
   // real origin — use those coords so the raster lands on the page.
   const mediaBox = page.getMediaBox();
+  // QA 2026-09-07 (round 2): also check CropBox. If a page's CropBox is
+  // smaller than its MediaBox — again common for Solidgate receipts and
+  // some scanned PDFs — PDF viewers clip content to the CropBox. Drawing
+  // 612×792 at MediaBox origin puts the raster on the full media area,
+  // but only the CropBox portion is visible. If drawings happen to fall
+  // in the trimmed strip they're invisible even though embedded. Use
+  // CropBox coords so the raster lands inside the visible area.
+  const cropBox = page.getCropBox();
+  const cropIsSmaller =
+    cropBox.width < mediaBox.width || cropBox.height < mediaBox.height;
+  const cropOriginDiffers =
+    cropBox.x !== mediaBox.x || cropBox.y !== mediaBox.y;
 
   logger.info("[PDFedits] EXPORT-DIAG: flushRasterBatch", {
     pageWidth: width,
@@ -447,15 +459,24 @@ async function flushRasterBatch(
     mediaBoxY: mediaBox.y,
     mediaBoxWidth: mediaBox.width,
     mediaBoxHeight: mediaBox.height,
+    cropBoxX: cropBox.x,
+    cropBoxY: cropBox.y,
+    cropBoxWidth: cropBox.width,
+    cropBoxHeight: cropBox.height,
+    cropIsSmaller,
+    cropOriginDiffers,
     pngByteLen: pngBytes.byteLength,
     mediaBoxIsOffset: mediaBox.x !== 0 || mediaBox.y !== 0,
   });
 
+  // Draw to the CropBox rectangle when it's smaller than MediaBox, so the
+  // raster lands entirely inside the visible area. When CropBox == MediaBox
+  // the two expressions are identical, so no change for standard PDFs.
   page.drawImage(pngImage, {
-    height,
-    width,
-    x: mediaBox.x,
-    y: mediaBox.y,
+    height: cropIsSmaller ? cropBox.height : height,
+    width: cropIsSmaller ? cropBox.width : width,
+    x: cropBox.x,
+    y: cropBox.y,
   });
 }
 

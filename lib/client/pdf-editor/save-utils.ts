@@ -203,16 +203,59 @@ export async function renderFabricJsonToPng(
 
     const dataUrl = fc.toDataURL({ format: "png", multiplier: 3 });
 
-    // Diagnostic — if the PNG is suspiciously small (<= header-only,
-    // typically < 500 chars for a 1px transparent PNG) log it so we
-    // can correlate a subsequent "layers missing from download" report
-    // back to a specific render failure.
+    // Diagnostic — sample the canvas pixel buffer to check whether the render
+    // actually painted visible content. `likelyBlank` from data-URL size alone
+    // is a poor signal because a 612×792×3-multiplier alpha PNG has ~100 KB
+    // of PNG-header + zlib-baseline overhead even when fully transparent.
+    // Read the actual alpha channel: if EVERY pixel has alpha === 0, the
+    // canvas is truly blank and the raster we embed into the PDF will be
+    // invisible. This is the exact "bytes grow but nothing is visible in
+    // downloaded PDF" failure mode we've been chasing since 2026-09-07.
+    let nonTransparentPixels = 0;
+    let sampledPixels = 0;
+    let alphaSampleFailed = false;
+
+    try {
+      const ctx = /** @type any */ el.getContext("2d");
+
+      if (ctx) {
+        // Sample every 8th row/column so we don't pull megabytes of image
+        // data — this is a diagnostic, not a full scan. 8× subsampling on
+        // a 612×792 canvas = ~7.5k pixel samples, plenty to detect content.
+        const sample = ctx.getImageData(0, 0, canvasW, canvasH);
+        const data = sample.data;
+
+        for (let y = 0; y < canvasH; y += 8) {
+          for (let x = 0; x < canvasW; x += 8) {
+            const idx = (y * canvasW + x) * 4;
+            const alpha = data[idx + 3];
+
+            sampledPixels++;
+            if (alpha > 0) nonTransparentPixels++;
+          }
+        }
+      } else {
+        alphaSampleFailed = true;
+      }
+    } catch (err) {
+      alphaSampleFailed = true;
+      logger.warn("[PDFedits] EXPORT-DIAG: alpha sample threw", { err });
+    }
+
     logger.info("[PDFedits] EXPORT-DIAG: renderFabricJsonToPng", {
       canvasW,
       canvasH,
       objectCount: fc.getObjects().length,
       dataUrlChars: dataUrl.length,
       likelyBlank: dataUrl.length < 2000,
+      nonTransparentPixels,
+      sampledPixels,
+      pixelFillRatio:
+        sampledPixels > 0
+          ? Math.round((nonTransparentPixels / sampledPixels) * 10000) / 100
+          : null,
+      alphaSampleFailed,
+      trulyBlank: !alphaSampleFailed && nonTransparentPixels === 0,
     });
 
     return dataUrl;
