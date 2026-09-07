@@ -180,30 +180,18 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
       triggerDownload(mergedBlob, outName);
 
-      // Also load the merged PDF back into the composer so the editor
-      // shows the just-attached document(s) right after the modal
-      // closes (QA 2026-09-07 — user asked: "the merge, the splitted,
-      // the attached document [should show] to my PDF composer as
-      // well"). Wrap in a File so pdf.js + Fabric treat it as a fresh
-      // upload. Clearing the doc id first prevents the loader from
-      // trying to reconcile the merged bytes with the previous cloud
-      // document — this is a NEW document from the user's perspective,
-      // not a version of the old one.
-      const mergedFile = new File([bytes.buffer as ArrayBuffer], outName, {
-        type: "application/pdf",
-      });
-      const store = usePdfEditorStore.getState();
-
-      store.setCurrentDocument(null);
-      store.clearFile();
-      // Micro-delay so `clearFile`'s reset unmounts pdf.js cleanly
-      // before the new file mounts — matches CreatePdfModal's
-      // `setTimeout(setFile, 0)` pattern.
-      setTimeout(() => usePdfEditorStore.getState().setFile(mergedFile), 0);
-
+      // QA 2026-09-07 (revised): the earlier auto-load-into-composer
+      // step (setCurrentDocument(null) + clearFile + setFile(mergedFile))
+      // wiped `fabricJsonByPage` and forced a full pdf.js reload —
+      // users reported "my edits are lost after refresh" because
+      // the reload clobbered the in-session Fabric state before they
+      // had a chance to keep working on the SAME editor. Reverted:
+      // just download and close the modal. Editor keeps its current
+      // file + all Fabric overlays intact. The user's merged copy
+      // lives in their downloads folder if they want to re-open it.
       toast.success({
         title: "Merge complete",
-        description: `Downloaded ${outName}. Editor updated with the merged PDF.`,
+        description: `Downloaded ${outName}.`,
       });
       onClose();
     } catch (err) {
