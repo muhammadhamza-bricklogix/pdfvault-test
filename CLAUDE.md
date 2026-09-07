@@ -202,11 +202,12 @@ Known mobile failure modes to watch for (these have all bitten us before):
 
 ## Project skills (load proactively)
 
-Beyond `pdf-editor-architecture`, this repo ships four project-specific skills at `.claude/skills/`. Load them by name via `Skill({ skill: "…" })` — they are the primary defense against the regression classes this app has been burned by. Descriptions live in each skill's frontmatter; a Claude session should load them without being asked when the trigger applies.
+Beyond `pdf-editor-architecture`, this repo ships project-specific skills at `.claude/skills/`. Load them by name via `Skill({ skill: "…" })` — they are the primary defense against the regression classes this app has been burned by. Descriptions live in each skill's frontmatter; a Claude session should load them without being asked when the trigger applies.
 
 | Skill | Load when |
 |---|---|
 | `pdf-editor-architecture` | Editing anything under `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, `components/sections/pdf-editor/**` |
+| `pdf-composer-render-fix` | User reports "edits missing from downloaded PDF", "drawings not in merged PDF", or any variant of "save works but download is unedited" — covers the 2026-09-07 Fabric-v7 `loadFromJSON` blank-PNG bug + live-canvas raster fix |
 | `auth-flow-guardian` | Editing any file in the 21-item "Auth + paywall + export flow" chain (see section above) |
 | `regression-forensics` | User reports a bug that used to work, mentions a fix reverting, or says "broken again" |
 | `pre-push-guardian` | About to push, open a PR, merge, or claim work is ready to ship |
