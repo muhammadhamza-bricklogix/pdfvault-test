@@ -144,26 +144,40 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
-      // Re-read the source bytes at split time from the LIVE
-      // store.file. If a save happened after the modal opened (or if
-      // `applyPostSaveReset` swapped in the freshly-baked bytes),
-      // the split parts MUST include those edits. Falling back to
-      // `source.bytes` when the store is unexpectedly empty is a
-      // safety net — should never fire in practice.
-      // QA 2026-09-07: parallel of the merge fix.
+      // In-memory bake — same rationale as MergePdfModal: no cloud
+      // upload, no `store.file` swap, no pdf.js reload, so the
+      // editor keeps its live Fabric overlays after the modal closes.
+      // The event's `onComplete` returns the baked bytes; fall back
+      // to the captured `source.bytes` on failure.
+      let bakedBytes: Uint8Array | null = null;
+
+      await new Promise<void>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:build-current-bytes", {
+            detail: {
+              onComplete: (r: {
+                ok: boolean;
+                bytes?: Uint8Array;
+                error?: string;
+              }) => {
+                if (r.ok && r.bytes) {
+                  bakedBytes = r.bytes;
+                } else {
+                  logger.warn(
+                    "[split-pdf-modal] in-memory bake failed; falling back to captured source.bytes",
+                    { error: r.error },
+                  );
+                }
+                resolve();
+              },
+            },
+          }),
+        );
+      });
+
       const liveFile = usePdfEditorStore.getState().file;
-      let bytesForSplit: Uint8Array;
-      let filenameForSplit: string;
-
-      if (liveFile) {
-        const buf = await liveFile.arrayBuffer();
-
-        bytesForSplit = new Uint8Array(buf);
-        filenameForSplit = liveFile.name;
-      } else {
-        bytesForSplit = source.bytes;
-        filenameForSplit = source.filename;
-      }
+      const bytesForSplit: Uint8Array = bakedBytes ?? source.bytes;
+      const filenameForSplit: string = liveFile?.name ?? source.filename;
 
       const parts = await splitPdf(
         bytesForSplit,

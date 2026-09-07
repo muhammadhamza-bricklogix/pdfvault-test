@@ -132,9 +132,11 @@ export async function renderFabricJsonToPng(
   const { Canvas } = await import("fabric");
 
   const el = document.createElement("canvas");
+  const canvasW = Math.max(1, Math.round(parsed.width));
+  const canvasH = Math.max(1, Math.round(parsed.height));
 
-  el.width = Math.round(parsed.width);
-  el.height = Math.round(parsed.height);
+  el.width = canvasW;
+  el.height = canvasH;
   el.style.position = "fixed";
   el.style.left = "-9999px";
   el.style.top = "-9999px";
@@ -143,15 +145,75 @@ export async function renderFabricJsonToPng(
   const fc = new Canvas(el, {
     backgroundColor: "transparent",
     enableRetinaScaling: false,
-    height: el.height,
-    width: el.width,
+    height: canvasH,
+    width: canvasW,
   });
 
   try {
+    // Wait for webfonts to be ready BEFORE loadFromJSON — text objects
+    // measure themselves against the resolved font, and a not-yet-loaded
+    // font produces zero-width glyphs / mis-positioned bboxes that
+    // render as blank in the PNG.
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
     await fc.loadFromJSON(parsed);
+
+    // QA 2026-09-07: Fabric v7 `loadFromJSON` resolves before object
+    // caches are populated for freehand `path` objects (PencilBrush
+    // strokes from highlight + draw tools). The subsequent `renderAll`
+    // paints them into their EMPTY object caches instead of the main
+    // canvas → PNG is transparent → downloaded PDF is missing the
+    // highlight/draw layers even though `bytesDelta` grew from the
+    // PNG being embedded. Fixes:
+    //   1. Disable object caching so every render goes straight to the
+    //      main canvas (no cache indirection).
+    //   2. Mark every object `dirty` so Fabric re-computes bboxes +
+    //      re-runs render for each one on the next paint pass.
+    //   3. Call `setCoords()` so hit-test / bbox helpers use the
+    //      just-loaded coordinates rather than defaults from the JSON
+    //      constructor path.
+    for (const obj of fc.getObjects()) {
+      try {
+        (obj as { objectCaching?: boolean }).objectCaching = false;
+        (obj as { dirty?: boolean }).dirty = true;
+        if (typeof (obj as { setCoords?: () => void }).setCoords === "function") {
+          (obj as { setCoords: () => void }).setCoords();
+        }
+      } catch {
+        // Best-effort — don't let one malformed object block the render.
+      }
+    }
+
+    // Yield to the browser once so any queued microtask / image load
+    // finishes before we snapshot the pixels. Cheap belt-and-braces
+    // against Fabric's async internals settling AFTER renderAll.
+    await new Promise<void>((resolve) => {
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => resolve());
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+
     fc.renderAll();
 
-    return fc.toDataURL({ format: "png", multiplier: 3 });
+    const dataUrl = fc.toDataURL({ format: "png", multiplier: 3 });
+
+    // Diagnostic — if the PNG is suspiciously small (<= header-only,
+    // typically < 500 chars for a 1px transparent PNG) log it so we
+    // can correlate a subsequent "layers missing from download" report
+    // back to a specific render failure.
+    logger.info("[PDFedits] EXPORT-DIAG: renderFabricJsonToPng", {
+      canvasW,
+      canvasH,
+      objectCount: fc.getObjects().length,
+      dataUrlChars: dataUrl.length,
+      likelyBlank: dataUrl.length < 2000,
+    });
+
+    return dataUrl;
   } finally {
     fc.dispose();
 

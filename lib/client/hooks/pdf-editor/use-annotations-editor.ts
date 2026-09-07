@@ -195,7 +195,15 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
       } as any) as IText;
 
       liveCanvas.add(obj);
-      liveCanvas.setActiveObject(obj);
+      // Deliberately NOT calling `setActiveObject(obj)` here — auto-
+      // selecting the fresh annotation fires `selection:created`, which
+      // pops the FloatingTextToolbar (font/size/color controls). QA
+      // 2026-09-07 flagged the toolbar appearing immediately after
+      // picking an annotation as unexpected. Users can still tap the
+      // annotation on the canvas later to summon the toolbar for font
+      // adjustments. The success toast below tells them the annotation
+      // was placed.
+      liveCanvas.discardActiveObject();
       liveCanvas.renderAll();
 
       // Mark dirty so `hasUnsavedChanges` flips and the next Save

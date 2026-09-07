@@ -118,55 +118,53 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
-      // Bake live Fabric edits (draw / sign / shapes / highlights)
-      // into `store.file` RIGHT BEFORE the merge fires — regardless
-      // of how the modal was opened (toolbar click, hamburger,
-      // `?tool=merge` deep-link auto-launch). The pre-open
-      // `saveBeforeAction` in HamburgerMenu covers the toolbar/menu
-      // path, but the auto-launch path (hydrator directly opens the
-      // modal) skips it, so users hitting Merge & Download after
-      // drawing on a `?tool=merge` deep-link were shipping unedited
-      // bytes (QA 2026-09-07). Doing the save here — always — means
-      // ANY entry point results in the current edits being baked
-      // before the merge reads the source.
-      //
-      // Only fire for signed-in users; guests have no cloud account
-      // to save to. `useSaveEditor` handles the `not-signed-in` case
-      // by dispatching the auth modal — we shouldn't route through
-      // that here because the user is already committed to the merge
-      // flow and paywall/auth was gated above.
-      const { isSignedIn: signedIn } = usePdfEditorStore.getState();
+      // Bake the live Fabric edits into an IN-MEMORY buffer — no cloud
+      // upload, no `store.file` swap, no pdf.js reload. Editor session
+      // state (Fabric overlays, live canvas) stays exactly as-is so the
+      // user's visible edits don't vanish after the merge finishes.
+      // QA 2026-09-07: the previous `editor:save-before-action` fired
+      // here caused two full reload cycles per Merge & Download click
+      // and users reported their edits disappearing from the editor
+      // after the modal closed. The `editor:build-current-bytes` event
+      // reads live `fabricCanvas` via `useSaveEditor`'s ref and returns
+      // baked bytes via callback — no side effects on the store.
+      let sourceBytes: Uint8Array | null = null;
 
-      if (signedIn) {
-        const saveOk = await new Promise<boolean>((resolve) => {
-          window.dispatchEvent(
-            new CustomEvent("editor:save-before-action", {
-              detail: {
-                force: true,
-                skipWait: true,
-                onComplete: (r: { ok: boolean }) => resolve(r.ok),
+      await new Promise<void>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:build-current-bytes", {
+            detail: {
+              onComplete: (r: {
+                ok: boolean;
+                bytes?: Uint8Array;
+                error?: string;
+              }) => {
+                if (r.ok && r.bytes) {
+                  sourceBytes = r.bytes;
+                } else {
+                  logger.warn(
+                    "[merge-pdf-modal] in-memory bake failed; falling back to captured source.bytes",
+                    { error: r.error },
+                  );
+                }
+                resolve();
               },
-            }),
-          );
-        });
+            },
+          }),
+        );
+      });
 
-        // If the save fails (e.g. `pdfDocument` momentarily null),
-        // fall through anyway — better to ship the last-known bytes
-        // than block the user. The re-read below picks up whatever
-        // is current.
-        if (!saveOk) {
-          logger.warn(
-            "[merge-pdf-modal] pre-merge save-before-action failed; merging with current store.file",
-          );
-        }
-      }
-
-      // Re-read the source at merge time from the LIVE store.file
-      // instead of trusting `source.bytes` captured at modal-open.
-      // After the save above, `store.file` should be the freshly-
-      // baked bytes.
       const liveFile = usePdfEditorStore.getState().file;
-      const freshSource = liveFile ? await fileToMergeEntry(liveFile) : source;
+      // Prefer the freshly-baked in-memory bytes. Fall back to the
+      // pre-captured `source` if the bake failed for any reason —
+      // still better than blocking the user.
+      const freshSource: MergeEntry = sourceBytes
+        ? {
+            filename: liveFile?.name ?? source.filename,
+            bytes: sourceBytes,
+            pageCount: source.pageCount,
+          }
+        : source;
       const entries = [freshSource, ...extras];
       const bytes = await mergePdfs(entries);
       const dot = freshSource.filename.lastIndexOf(".");
