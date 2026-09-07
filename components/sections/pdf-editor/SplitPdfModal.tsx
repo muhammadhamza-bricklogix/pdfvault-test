@@ -167,6 +167,11 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
                     "[split-pdf-modal] in-memory bake failed; falling back to captured source.bytes",
                     { error: r.error },
                   );
+                  toast.error({
+                    title: "Could not include latest edits",
+                    description:
+                      "Splitting the last saved copy. Save your edits first so the latest changes are included.",
+                  });
                 }
                 resolve();
               },
@@ -188,10 +193,11 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
       if (parts.length === 1) {
         const only = parts[0]!;
 
+        // QA 2026-09-07: pass Uint8Array view directly; `new Uint8Array(only.bytes)`
+        // re-viewed the same buffer and did nothing beyond re-triggering the
+        // buffer-view corruption class. See MergePdfModal for the full note.
         triggerDownload(
-          new Blob([new Uint8Array(only.bytes)], {
-            type: "application/pdf",
-          }),
+          new Blob([only.bytes as BlobPart], { type: "application/pdf" }),
           only.filename,
         );
       } else {

@@ -178,7 +178,9 @@ export async function renderFabricJsonToPng(
       try {
         (obj as { objectCaching?: boolean }).objectCaching = false;
         (obj as { dirty?: boolean }).dirty = true;
-        if (typeof (obj as { setCoords?: () => void }).setCoords === "function") {
+        if (
+          typeof (obj as { setCoords?: () => void }).setCoords === "function"
+        ) {
           (obj as { setCoords: () => void }).setCoords();
         }
       } catch {

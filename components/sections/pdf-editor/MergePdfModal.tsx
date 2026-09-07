@@ -146,6 +146,11 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
                     "[merge-pdf-modal] in-memory bake failed; falling back to captured source.bytes",
                     { error: r.error },
                   );
+                  toast.error({
+                    title: "Could not include latest edits",
+                    description:
+                      "Merging with the last saved copy. Save your edits first so the latest changes are included.",
+                  });
                 }
                 resolve();
               },
@@ -172,7 +177,24 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         dot > 0 ? freshSource.filename.slice(0, dot) : freshSource.filename;
       const outName = `${base}-merged.pdf`;
 
-      const mergedBlob = new Blob([bytes.buffer as ArrayBuffer], {
+      // QA 2026-09-07 (post-118b177): passing `bytes.buffer` sends the ENTIRE
+      // underlying ArrayBuffer to Blob — if `bytes` is a view (byteOffset > 0
+      // OR byteLength < buffer.byteLength), the Blob is corrupt (extra bytes
+      // before/after the PDF stream), and readers fall back to displaying
+      // only the source-copied page — the exact "edits missing" symptom.
+      // Pass the Uint8Array view directly; Blob accepts ArrayBufferView.
+      logger.info("[PDFedits] MERGE-DIAG: download bytes", {
+        freshBakeUsed: !!sourceBytes,
+        freshSourceLen: freshSource.bytes.byteLength,
+        freshSourceOffset: freshSource.bytes.byteOffset,
+        freshSourceBufferLen: freshSource.bytes.buffer.byteLength,
+        extrasCount: extras.length,
+        mergedLen: bytes.byteLength,
+        mergedOffset: bytes.byteOffset,
+        mergedBufferLen: bytes.buffer.byteLength,
+      });
+
+      const mergedBlob = new Blob([bytes as BlobPart], {
         type: "application/pdf",
       });
 
