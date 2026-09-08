@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -204,6 +205,34 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       logger.event(EVENTS.SAVE_BEFORE_ACTION_START, "info", {
         force: Boolean(detail?.force),
       });
+
+      // Belt-and-braces state sync BEFORE the save chain begins. QA
+      // 2026-09-08: "before saving and download we just have to make
+      // sure that the states of updated file must be updated to avoid
+      // any kind of inconsistency." `flushLiveFabricPage` synchronously
+      // serializes the current live canvas into `fabricJsonByPage[
+      // currentPage]` via a Zustand `set`, so anything mid-stroke,
+      // mid-drag, mid-edit is captured in the store BEFORE
+      // `persistEditorDocument` reads it. `persistEditorDocument`
+      // internally does the same flush too — this one is intentional
+      // redundancy so the state is committed the moment the user
+      // clicks Done, not after the async save pipeline unwinds a few
+      // ticks later. Safe to call with `fabricRef.current === null`
+      // — the helper guards for it.
+      if (fabricRef.current) {
+        try {
+          flushLiveFabricPage(
+            usePdfEditorStore.getState().currentPage,
+            fabricRef.current,
+          );
+        } catch (flushErr) {
+          logger.warn(
+            "[PDFedits] save-before-action: pre-save flush threw (ignored)",
+            flushErr,
+          );
+        }
+      }
+
       const result = await logger.span(
         "save.persist_before_action",
         "editor.save",
@@ -215,6 +244,16 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
             // and other save-before-action flows must not silently
             // duplicate a same-name row.
             checkFilenameDuplicate: true,
+            // Done → Download uses `skipReset: true` so `store.file`
+            // stays on the pre-save source bytes for the follow-up
+            // export merge. That also means the store's overlay map
+            // must keep every shape / drawing / highlight / image so
+            // the NEXT save cycle can re-bake them. Without this the
+            // sweep committed a stripped map (editModeText +
+            // pageNumber only) and the second Done → Download shipped
+            // a PDF missing everything the user drew before (QA
+            // 2026-09-08).
+            preserveStoreOverlays: Boolean(detail?.skipReset),
           }),
         { source: "before_action" },
       );
