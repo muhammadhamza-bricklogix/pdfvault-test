@@ -60,7 +60,6 @@ import { toast } from "@/lib/shared/utils/toast";
 
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
-import { SaveStatusChip } from "./SaveStatusChip";
 
 // ---------------------------------------------------------------------------
 // Icon type alias (matches the hugeicons SVG type).
@@ -513,7 +512,12 @@ function TopAppBar() {
         }}
       />
 
-      <SaveStatusChip />
+      {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
+          "Unsaved edits" / "Saved to My PDFs" label added visual noise
+          and was confusing users. Save state is still tracked in the
+          store (`hasUnsavedChanges`); other UI (Save button, navigation
+          prompts, ExportFormatModal auto-save) still uses it. Restore
+          by re-inserting `<SaveStatusChip />` here. */}
       <ZoomPill />
 
       {/* Save button — HIDDEN for now per product decision. Restore by

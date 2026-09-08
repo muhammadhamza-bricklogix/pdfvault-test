@@ -42,6 +42,16 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   const [extras, setExtras] = useState<MergeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
+  // QA 2026-09-08: `isMerging` is React state — updates are async, so a
+  // fast second click on "Merge & download" can slip through the
+  // `isDisabled={!canMerge}` gate before the state re-render lands.
+  // That fires `mergePdfs` twice and the second run merges [source,
+  // ...extras] again on top of the first result → downloaded PDF has
+  // the merged content duplicated (user report 2026-09-08: "downloaded
+  // PDF file shows the merged file twice"). A ref-based lock is
+  // synchronous — the second click hits the guard before touching
+  // React state and returns immediately.
+  const mergeInFlightRef = useRef(false);
 
   const handleAddFiles = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +94,10 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
   const handleMerge = useCallback(async () => {
     if (!source) return;
+    // Synchronous double-click guard — see `mergeInFlightRef`
+    // declaration above for the full rationale.
+    if (mergeInFlightRef.current) return;
+    mergeInFlightRef.current = true;
 
     setIsMerging(true);
     try {
@@ -146,6 +160,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       });
     } finally {
       setIsMerging(false);
+      mergeInFlightRef.current = false;
     }
   }, [source, extras, onClose]);
 
