@@ -552,11 +552,22 @@ export function drawRect(
     fillColor = hexToPdfColor(obj.fill as string);
   } else {
     fillColor = hexToPdfColor(obj.fill as string);
-    borderColor = hexToPdfColor(obj.stroke as string);
-    borderWidth = toPdfDim(
-      (obj.strokeWidth as number) || 0,
-      (ctx.scaleX + ctx.scaleY) / 2,
-    );
+    // Only carry a stroke through to pdf-lib when the user actually
+    // asked for one. pdf-lib's `drawRectangle` treats "borderColor set
+    // + borderWidth undefined" as "draw a border, use the default
+    // width (1pt)" — so leaving `borderColor` populated while
+    // squashing `borderWidth` to undefined produces a visible hairline
+    // in the download even though the composer preview showed no
+    // stroke (QA 2026-09-08: "stroke thickness 0 in composer, stroke
+    // still appears on downloaded PDF"). Save + reload masked the bug
+    // because the reload rendered the already-baked bytes and skipped
+    // this drawer.
+    const rawStrokeWidth = (obj.strokeWidth as number) || 0;
+
+    if (rawStrokeWidth > 0) {
+      borderColor = hexToPdfColor(obj.stroke as string);
+      borderWidth = toPdfDim(rawStrokeWidth, (ctx.scaleX + ctx.scaleY) / 2);
+    }
   }
 
   page.drawRectangle({
@@ -600,11 +611,16 @@ export function drawEllipse(
   const pdfRy = toPdfDim(ry, ctx.scaleY);
 
   const fillColor = hexToPdfColor(obj.fill as string);
-  const borderColor = hexToPdfColor(obj.stroke as string);
-  const borderWidth = toPdfDim(
-    (obj.strokeWidth as number) || 0,
-    (ctx.scaleX + ctx.scaleY) / 2,
-  );
+  // Same "borderColor without borderWidth defaults to hairline" gotcha
+  // as `drawRect` — skip both when the user asked for no stroke. See
+  // the long comment in `drawRect` above.
+  const rawStrokeWidth = (obj.strokeWidth as number) || 0;
+  const borderColor =
+    rawStrokeWidth > 0 ? hexToPdfColor(obj.stroke as string) : null;
+  const borderWidth =
+    rawStrokeWidth > 0
+      ? toPdfDim(rawStrokeWidth, (ctx.scaleX + ctx.scaleY) / 2)
+      : 0;
 
   page.drawEllipse({
     borderColor: borderColor ?? undefined,
@@ -882,11 +898,16 @@ export function drawTriangle(
   const pdfY = ctx.pdfHeight - toPdfDim(centerY, ctx.scaleY);
 
   const fillColor = hexToPdfColor(obj.fill as string);
-  const borderColor = hexToPdfColor(obj.stroke as string);
-  const borderWidth = toPdfDim(
-    (obj.strokeWidth as number) || 0,
-    (ctx.scaleX + ctx.scaleY) / 2,
-  );
+  // Same "borderColor without borderWidth defaults to hairline" gotcha
+  // as `drawRect` — skip both when the user asked for no stroke. See
+  // the long comment in `drawRect` above.
+  const rawStrokeWidth = (obj.strokeWidth as number) || 0;
+  const borderColor =
+    rawStrokeWidth > 0 ? hexToPdfColor(obj.stroke as string) : null;
+  const borderWidth =
+    rawStrokeWidth > 0
+      ? toPdfDim(rawStrokeWidth, (ctx.scaleX + ctx.scaleY) / 2)
+      : 0;
 
   page.drawSvgPath(svgPath, {
     borderColor: borderColor ?? undefined,
