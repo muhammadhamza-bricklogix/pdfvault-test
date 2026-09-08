@@ -428,27 +428,44 @@ export function EditorInfoBar() {
               Filename itself is hidden below md so the row doesn't get
               squeezed between save/tools/zoom on tablets. */}
           <div className="hidden min-w-0 items-center gap-2 sm:flex lg:gap-3">
-            <input
-              key={fileName}
-              ref={nameInputRef}
-              aria-label="Document name"
-              className="hidden max-w-24 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white md:inline-block lg:max-w-40"
-              defaultValue={displayName}
-              disabled={!file}
-              title="Click to rename"
-              type="text"
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  nameInputRef.current?.blur();
-                } else if (e.key === "Escape") {
-                  if (nameInputRef.current)
-                    nameInputRef.current.value = displayName;
-                  nameInputRef.current?.blur();
-                }
-              }}
-            />
+            {/* QA 2026-09-08: filename input wrapped in a persistently-
+                bordered container + pencil icon adornment so the edit
+                affordance is visible without hovering. Matches the
+                PvEditorTopChrome treatment. */}
+            <div
+              className={`hidden max-w-24 items-center gap-1.5 rounded-md border border-default-300 bg-white px-2 py-1 transition-colors focus-within:border-[#f12c23] md:inline-flex lg:max-w-40 ${
+                file ? "" : "opacity-50"
+              }`}
+            >
+              <input
+                key={fileName}
+                ref={nameInputRef}
+                aria-label="Document name"
+                className="min-w-0 flex-1 truncate bg-transparent text-sm font-medium text-[var(--color-foreground)] outline-none disabled:cursor-not-allowed"
+                defaultValue={displayName}
+                disabled={!file}
+                title="Click to rename"
+                type="text"
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    nameInputRef.current?.blur();
+                  } else if (e.key === "Escape") {
+                    if (nameInputRef.current)
+                      nameInputRef.current.value = displayName;
+                    nameInputRef.current?.blur();
+                  }
+                }}
+              />
+              <HugeiconsIcon
+                aria-hidden
+                className="shrink-0 text-default-400"
+                icon={PencilEdit01Icon}
+                size={14}
+                strokeWidth={1.8}
+              />
+            </div>
 
             {/* QA 2026-09-08: SaveStatusChip removed per product decision.
                 See PvEditorTopChrome for the same removal + full rationale. */}

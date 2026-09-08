@@ -599,26 +599,46 @@ function TopAppBar() {
 
       <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
 
-      <input
-        key={fileName}
-        ref={nameInputRef}
-        aria-label="Document name"
-        className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-[14px] font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white"
-        defaultValue={displayName}
-        disabled={!file}
-        title="Click to rename"
-        type="text"
-        onBlur={commitRename}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            nameInputRef.current?.blur();
-          } else if (e.key === "Escape") {
-            if (nameInputRef.current) nameInputRef.current.value = displayName;
-            nameInputRef.current?.blur();
-          }
-        }}
-      />
+      {/* QA 2026-09-08: filename input wrapped in a persistently-bordered
+          container + pencil icon adornment so users can see at a glance
+          that the field is editable. Previously the border was
+          `transparent` by default (only appearing on hover) which
+          hid the affordance entirely for keyboard/tap users. Focus
+          state still highlights in red. */}
+      <div
+        className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-default-300 bg-white px-2 py-1 transition-colors focus-within:border-[#f12c23] ${
+          file ? "" : "opacity-50"
+        }`}
+      >
+        <input
+          key={fileName}
+          ref={nameInputRef}
+          aria-label="Document name"
+          className="min-w-0 flex-1 truncate bg-transparent text-[14px] font-medium text-[var(--color-foreground)] outline-none disabled:cursor-not-allowed"
+          defaultValue={displayName}
+          disabled={!file}
+          title="Click to rename"
+          type="text"
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              nameInputRef.current?.blur();
+            } else if (e.key === "Escape") {
+              if (nameInputRef.current)
+                nameInputRef.current.value = displayName;
+              nameInputRef.current?.blur();
+            }
+          }}
+        />
+        <HugeiconsIcon
+          aria-hidden
+          className="shrink-0 text-default-400"
+          icon={PencilEdit01Icon}
+          size={14}
+          strokeWidth={1.8}
+        />
+      </div>
 
       {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
           "Unsaved edits" / "Saved to My PDFs" label added visual noise

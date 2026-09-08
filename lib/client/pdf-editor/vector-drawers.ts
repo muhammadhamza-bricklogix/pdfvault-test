@@ -290,7 +290,21 @@ export async function drawIText(
   // instead of space characters), so rendering the full string collapses spaces to
   // zero width. Instead, we measure each word with fontkit, compute the leftover
   // width (fabricWidth - totalWordWidth) and distribute it evenly as inter-word gaps.
-  if (editorType === "editModeText" && targetWidth > 0) {
+  //
+  // BUT only for PRISTINE editModeText (text === originalText). Once the user
+  // has typed a replacement, the new string has no relationship to the source
+  // PDF's advance-operator spacing — distributing across `targetWidth` (which
+  // is still the ORIGINAL fragment width) stretches the shorter modified text
+  // and produces obviously wrong gaps: e.g., "1st edit" spread across 240 pt
+  // shows as "1st        edit" in the downloaded PDF (QA 2026-09-08). Modified
+  // editModeText already uses StandardFonts (via `getStandardFallback`),
+  // which are WinAnsi and DO include the space glyph, so plain `drawText`
+  // renders spacing correctly. Fall through to the ELSE branch below.
+  const isPristineEditModeText =
+    editorType === "editModeText" &&
+    (obj as { pristine?: boolean }).pristine === true;
+
+  if (isPristineEditModeText && targetWidth > 0) {
     const fontKey = page.node.newFontDictionary(font.name, font.ref);
 
     // Text matrix factory: identity rotation for angle 0, rotation matrix
