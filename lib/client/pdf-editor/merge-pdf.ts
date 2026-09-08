@@ -1,5 +1,6 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+import type { Canvas as FabricCanvas } from "fabric";
 import type { CoordinateContext } from "./coordinate-transform";
 import type { ParsedFabricJson } from "./save-utils";
 import type { FontData } from "./text-extraction";
@@ -56,6 +57,17 @@ export type MergePdfInput = {
   watermarkConfig?: WatermarkConfig | null;
   /** Background image configuration — null means no background image. */
   backgroundImageConfig?: BackgroundImageConfig | null;
+  /**
+   * The LIVE fabric canvas for the currently-visible page. When present + when
+   * `liveCanvasPage` matches the pageNum being processed, the raster batch
+   * renders directly from the live canvas (which has the strokes correctly
+   * painted). This works around a Fabric v7 bug where `loadFromJSON` on a
+   * fresh offscreen Canvas produces a nearly-blank PNG for freehand path
+   * objects (draw + highlight strokes). See save-utils.ts / QA 2026-09-07.
+   */
+  liveFabricCanvas?: FabricCanvas | null;
+  /** 1-indexed page number that `liveFabricCanvas` currently displays. */
+  liveCanvasPage?: number;
 };
 
 // pdf.js OPS constants for text rendering operations (31–49)
@@ -421,18 +433,64 @@ async function flushRasterBatch(
   parsed: ParsedFabricJson,
   page: PDFPage,
   pdfDoc: PDFDocument,
+  liveCanvas?: FabricCanvas | null,
 ): Promise<void> {
   if (!indices.length) return;
 
-  const pngDataUrl = await renderFabricSubsetToPng(parsed, indices);
+  const pngDataUrl = await renderFabricSubsetToPng(parsed, indices, liveCanvas);
 
   if (!pngDataUrl) return;
 
   const pngBytes = dataUrlToBytes(pngDataUrl);
   const pngImage = await pdfDoc.embedPng(pngBytes);
   const { height, width } = page.getSize();
+  // QA 2026-09-07: some PDFs have a MediaBox that doesn't start at
+  // (0, 0) — generated invoices / receipts (e.g. Solidgate) frequently
+  // set MediaBox = `[Xoffset, Yoffset, Xoffset+width, Yoffset+height]`.
+  // Drawing at absolute PDF (0, 0) then puts the image OUTSIDE the
+  // visible page, so bytes grow (PNG is embedded) but no highlight /
+  // draw layer is visible in the download. `getMediaBox()` returns the
+  // real origin — use those coords so the raster lands on the page.
+  const mediaBox = page.getMediaBox();
+  // QA 2026-09-07 (round 2): also check CropBox. If a page's CropBox is
+  // smaller than its MediaBox — again common for Solidgate receipts and
+  // some scanned PDFs — PDF viewers clip content to the CropBox. Drawing
+  // 612×792 at MediaBox origin puts the raster on the full media area,
+  // but only the CropBox portion is visible. If drawings happen to fall
+  // in the trimmed strip they're invisible even though embedded. Use
+  // CropBox coords so the raster lands inside the visible area.
+  const cropBox = page.getCropBox();
+  const cropIsSmaller =
+    cropBox.width < mediaBox.width || cropBox.height < mediaBox.height;
+  const cropOriginDiffers =
+    cropBox.x !== mediaBox.x || cropBox.y !== mediaBox.y;
 
-  page.drawImage(pngImage, { height, width, x: 0, y: 0 });
+  logger.info("[PDFedits] EXPORT-DIAG: flushRasterBatch", {
+    pageWidth: width,
+    pageHeight: height,
+    mediaBoxX: mediaBox.x,
+    mediaBoxY: mediaBox.y,
+    mediaBoxWidth: mediaBox.width,
+    mediaBoxHeight: mediaBox.height,
+    cropBoxX: cropBox.x,
+    cropBoxY: cropBox.y,
+    cropBoxWidth: cropBox.width,
+    cropBoxHeight: cropBox.height,
+    cropIsSmaller,
+    cropOriginDiffers,
+    pngByteLen: pngBytes.byteLength,
+    mediaBoxIsOffset: mediaBox.x !== 0 || mediaBox.y !== 0,
+  });
+
+  // Draw to the CropBox rectangle when it's smaller than MediaBox, so the
+  // raster lands entirely inside the visible area. When CropBox == MediaBox
+  // the two expressions are identical, so no change for standard PDFs.
+  page.drawImage(pngImage, {
+    height: cropIsSmaller ? cropBox.height : height,
+    width: cropIsSmaller ? cropBox.width : width,
+    x: cropBox.x,
+    y: cropBox.y,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +565,7 @@ async function processPageObjects(
   pdfDoc: PDFDocument,
   ctx: CoordinateContext,
   fontCache: FontCache,
+  liveCanvas?: FabricCanvas | null,
 ): Promise<void> {
   let rasterBatch: number[] = [];
   // EXPORT-DIAG: accumulators for per-page breakdown of what actually gets
@@ -533,7 +592,7 @@ async function processPageObjects(
     if (isVectorizable(obj)) {
       // Flush any accumulated raster objects first (preserves z-order)
       if (rasterBatch.length) {
-        await flushRasterBatch(rasterBatch, parsed, page, pdfDoc);
+        await flushRasterBatch(rasterBatch, parsed, page, pdfDoc, liveCanvas);
         rasterBatch = [];
       }
 
@@ -605,6 +664,8 @@ export async function mergeFabricEditsIntoPdf({
   sourceBytes,
   watermarkConfig,
   backgroundImageConfig,
+  liveFabricCanvas,
+  liveCanvasPage,
 }: MergePdfInput): Promise<Uint8Array> {
   const { PDFDocument: PdfDoc } = await import("pdf-lib");
 
@@ -839,6 +900,9 @@ export async function mergeFabricEditsIntoPdf({
               outputPdf,
               ctx,
               fontCache,
+              liveFabricCanvas && liveCanvasPage === pageNum
+                ? liveFabricCanvas
+                : null,
             );
           }
         }
@@ -989,6 +1053,9 @@ export async function mergeFabricEditsIntoPdf({
           outputPdf,
           ctx,
           fontCache,
+          liveFabricCanvas && liveCanvasPage === pageNum
+            ? liveFabricCanvas
+            : null,
         );
       }
     }

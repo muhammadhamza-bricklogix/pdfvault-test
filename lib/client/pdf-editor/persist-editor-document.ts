@@ -207,6 +207,21 @@ type PersistEditorDocumentInput = {
    * this check — the caller has explicitly claimed the row.
    */
   checkFilenameDuplicate?: boolean;
+  /**
+   * Skip writing the (stripped) swept map back to the store's
+   * `fabricJsonByPage`. Set by callers that use `skipReset: true`
+   * (Done → Download flow) where `store.file` stays on the ORIGINAL
+   * source bytes — the store map still needs to carry every overlay
+   * (shapes / drawings / highlights / images / signatures / arrows)
+   * so the NEXT save cycle can re-bake them onto that same original
+   * source. Without this, an editModeText pristine flip would trigger
+   * `setState({ fabricJsonByPage: swept.map })` and drop those
+   * overlays, so the second Done → Download cycle would ship a PDF
+   * missing everything the user drew before (QA 2026-09-08). The
+   * swept map is still computed and threaded into the cloud
+   * `editorState` upload — only the local store write is skipped.
+   */
+  preserveStoreOverlays?: boolean;
 };
 
 /**
@@ -217,6 +232,7 @@ export async function persistEditorDocument({
   fabricCanvas = null,
   force = false,
   checkFilenameDuplicate = false,
+  preserveStoreOverlays = false,
 }: PersistEditorDocumentInput = {}): Promise<PersistEditorResult> {
   const state = usePdfEditorStore.getState();
   const { currentPage, file, hasUnsavedChanges, isSignedIn, pdfDocument } =
@@ -382,8 +398,14 @@ export async function persistEditorDocument({
       if (swept.mutated) {
         logger.info("[PDFedits] save: post-merge fabricJsonByPage cleanup", {
           pristinedEditModeText: swept.mutatedCount,
+          preserveStoreOverlays,
         });
-        usePdfEditorStore.setState({ fabricJsonByPage: swept.map });
+        // Skip when caller keeps `store.file` on the pre-save source
+        // (skipReset flow — Done → Download). See
+        // `preserveStoreOverlays` doc on `PersistEditorDocumentInput`.
+        if (!preserveStoreOverlays) {
+          usePdfEditorStore.setState({ fabricJsonByPage: swept.map });
+        }
       }
       editorStateMap = swept.map;
     }

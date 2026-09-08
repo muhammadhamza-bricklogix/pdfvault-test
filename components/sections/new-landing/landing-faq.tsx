@@ -399,7 +399,7 @@ export function LandingFAQ() {
           <h3 className="text-[18px] font-bold text-[var(--pv-text-strong)] sm:text-[20px]">
             Still have questions?
           </h3>
-          <p className="mx-auto mt-2 max-w-[460px] text-[14px] text-[var(--pv-text-body)] sm:text-[15px]">
+          <p className="mx-auto mt-2 max-w-[460px] text-[14px] text-[var(--pv-text-body)] sm:text-[15px] md:max-w-none md:whitespace-nowrap">
             Reach out any time at{" "}
             <a
               className="text-[#5c5c5c] underline underline-offset-2 hover:text-[#1a1c21]"

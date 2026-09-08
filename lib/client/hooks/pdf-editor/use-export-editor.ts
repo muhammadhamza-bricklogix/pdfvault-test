@@ -80,9 +80,16 @@ function ensureExtension(base: string, ext: string): string {
 }
 
 function downloadBytes(bytes: Uint8Array, filename: string) {
-  const blob = new Blob([bytes.buffer as ArrayBuffer], {
-    type: "application/pdf",
-  });
+  // QA 2026-09-07: pass the Uint8Array view directly. Passing `bytes.buffer`
+  // sends the ENTIRE underlying ArrayBuffer to Blob — if `bytes` is a view
+  // (byteOffset > 0 OR byteLength < buffer.byteLength), the Blob is corrupt
+  // (extra bytes before/after the PDF stream) and PDF readers fall back to
+  // displaying only what they can parse before the corruption — the exact
+  // "download is missing my edits" symptom.
+  // The `as BlobPart` cast is because lib.dom.d.ts types `Uint8Array<ArrayBufferLike>`
+  // (which allows SharedArrayBuffer), while Blob wants `ArrayBufferView<ArrayBuffer>`.
+  // pdf-lib's `save()` output is always plain ArrayBuffer-backed at runtime.
+  const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
 
@@ -382,7 +389,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               fileType: sourceFile.type,
               fileSize: sourceFile.size,
             });
-            const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
+            const pdfBlob = new Blob([bytes as BlobPart], {
               type: "application/pdf",
             });
             const objectUrl = URL.createObjectURL(pdfBlob);
@@ -409,7 +416,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           }
 
           if (shouldPrint) {
-            const blob = new Blob([bytes.buffer as ArrayBuffer], {
+            const blob = new Blob([bytes as BlobPart], {
               type: "application/pdf",
             });
             const url = URL.createObjectURL(blob);
@@ -503,11 +510,14 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         const conversionType = FORMAT_TO_CONVERSION_TYPE[format];
         const baseName =
           userBase ?? (sourceFile.name.replace(/\.[^.]+$/, "") || "document");
-        const pdfFile = new File(
-          [bytes.buffer as ArrayBuffer],
-          `${baseName}.pdf`,
-          { type: "application/pdf" },
-        );
+        // QA 2026-09-07: pass Uint8Array view directly — see downloadBytes
+        // for the buffer-view corruption class this avoids. Same bug shape:
+        // `bytes.buffer` includes bytes outside the view range, which for
+        // CloudConvert uploads would submit a corrupt PDF and yield empty /
+        // stripped-content DOCX/XLSX output.
+        const pdfFile = new File([bytes as BlobPart], `${baseName}.pdf`, {
+          type: "application/pdf",
+        });
 
         // DEBUG mode: also download the intermediate BAKED PDF that the
         // browser is about to POST to CloudConvert. Lets you open BOTH
@@ -572,7 +582,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             fileType: sourceFile.type,
             fileSize: sourceFile.size,
           });
-          const pdfBlob = new Blob([bytes.buffer as ArrayBuffer], {
+          const pdfBlob = new Blob([bytes as BlobPart], {
             type: "application/pdf",
           });
           const objectUrl = URL.createObjectURL(pdfBlob);
@@ -628,9 +638,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
           try {
             if (globalThis.crypto?.subtle) {
+              // Hash the view range only — passing `.buffer` would hash bytes
+              // outside the view and produce a hash that doesn't match what
+              // was actually shipped.
               const hashBuf = await globalThis.crypto.subtle.digest(
                 "SHA-256",
-                bytes.buffer as ArrayBuffer,
+                bytes as BufferSource,
               );
 
               bytesSha256 = Array.from(new Uint8Array(hashBuf))

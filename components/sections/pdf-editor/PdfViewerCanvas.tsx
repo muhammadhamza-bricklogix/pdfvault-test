@@ -240,6 +240,17 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const saved = state.fabricJsonByPage.get(source);
 
       void (async () => {
+        // `loadFromJSON` fires `object:added` per restored object. Those
+        // events reach `use-editor-history.ts`'s `snapshot` +
+        // `markDirtyOnAdd` handlers, which call `saveFabricJson` +
+        // `markDocumentDirty` — both flip `hasUnsavedChanges` back to
+        // true immediately after the save just cleared it, so the
+        // "Unsaved edits" chip persists even though the file is saved
+        // (QA 2026-09-07). Gate the reload with `isRestoringHistory` so
+        // those listeners bail. Cleared in `finally` even if
+        // `loadFromJSON` throws, so a bad-JSON page doesn't leave the
+        // flag stuck on and mask future user edits.
+        state.setIsRestoringHistory(true);
         try {
           if (saved) {
             await fc.loadFromJSON(JSON.parse(saved));
@@ -253,6 +264,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           // rather than clearing to blank. The dispose-on-page-change
           // path will normalize state on next navigation.
         } finally {
+          state.setIsRestoringHistory(false);
           state.clearPostSaveReloadPending();
         }
       })();
@@ -407,12 +419,25 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
             editable.initDelayedCursor?.(true);
             fc.renderAll();
           }
+
+          return;
         }
 
+        // Clicked on some other object (shape / drawing / signature /
+        // image / etc.) while Edit Text is active — leave that object
+        // alone. Creating a new text box on top of it would be
+        // surprising. Only empty-space clicks fall through to the
+        // Textbox-creation path below.
+        if (target) return;
+
+        // Empty space in Edit Text mode → fall through to the Textbox
+        // creation logic normally reserved for the Text tool. QA
+        // 2026-09-08: user was clicking empty space with Edit selected
+        // and expected an empty box to type in — same intuition as
+        // clicking with the Text tool.
+      } else if (activeTool !== "text") {
         return;
       }
-
-      if (activeTool !== "text") return;
 
       // If clicking on an existing object, let Fabric handle it
       const activeObj = fc.getActiveObject();

@@ -90,12 +90,10 @@ export async function looksLikePdfBytes(file: File): Promise<boolean> {
 
 export interface UploadAsPdfOptions {
   /**
-   * Skip the client-side paywall pre-flight gate so the conversion
-   * attempt reaches the backend even when the entitlement snapshot is
-   * unset / false. The backend still validates and may return 402 —
-   * callers are responsible for handling that outcome. Used by the
-   * pending-conversion runner where we want the converted PDF to land
-   * in the user's library BEFORE any paywall interaction.
+   * @deprecated 2026-09-08 — kept for callsite compatibility but no
+   * longer read. X→PDF conversion is now always paywall-free per the
+   * "convert + edit are free, pay only at download" product rule.
+   * `uploadAsPdf` always uses `convertPreview` internally.
    */
   bypassPaywallGate?: boolean;
 }
@@ -105,10 +103,23 @@ export interface UploadAsPdfOptions {
  * a PDF File ready to load into the editor. PDFs pass straight through.
  * Throws a user-facing Error for formats that don't have a backend converter
  * yet — callers should surface the message via toast.
+ *
+ * QA 2026-09-08: always uses `convertPreview` (bypasses the client-side
+ * `/conversion` paywall pre-flight gate) because X→PDF conversion is a
+ * FREE operation for every user tier — guest, signed-in-non-entitled,
+ * and signed-in-entitled. The paywall for X→PDF flows fires later in
+ * the user journey at Download-time via `useExportEditor` (Done →
+ * Download in the editor). Backend `/conversion` is `@Public()` so
+ * neither auth nor entitlement is enforced server-side either — the
+ * whole X→PDF path is anonymous-friendly.
+ *
+ * PDF→X conversions go through the same backend endpoint but ARE gated
+ * at the Download trigger by `useExportEditor` (auth-chain items 1-4),
+ * NOT by this helper.
  */
 export async function uploadAsPdf(
   file: File,
-  options?: UploadAsPdfOptions,
+  _options?: UploadAsPdfOptions,
 ): Promise<File> {
   if (isPdf(file)) return file;
 
@@ -125,9 +136,7 @@ export async function uploadAsPdf(
     throw new Error("File type not supported.");
   }
 
-  const result = options?.bypassPaywallGate
-    ? await conversionService.convertPreview({ file, type })
-    : await conversionService.convert({ file, type });
+  const result = await conversionService.convertPreview({ file, type });
   const baseName = file.name.replace(/\.[^.]+$/, "") || "document";
   const arrayBuffer = await result.blob.arrayBuffer();
 

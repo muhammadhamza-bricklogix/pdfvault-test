@@ -13,7 +13,7 @@ export function LandingHero() {
         <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
           Edit Any PDF in Seconds
         </h1>
-        <p className="mt-6 max-w-[600px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
+        <p className="mt-6 max-w-[600px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)] md:max-w-none md:whitespace-nowrap">
           Everything you need to edit, sign, and protect PDFs — fast, secure,
           and all in one place
         </p>

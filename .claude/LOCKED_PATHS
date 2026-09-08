@@ -23,3 +23,23 @@
 #
 # To re-lock a path, add it below. Old list preserved in git history.
 # ─────────────────────────────────────────────────────────────────────────────
+
+# 2026-09-09 — Text-fidelity guardrails (baseline math + pristine event flip).
+# Both files carry rules where reverting a small edit produces the exact QA
+# regression the user reported this session ("font family missing on
+# download", "text placement 15pt off at fontSize 96"). Full evidence in
+# `.claude/skills/pdf-editor-architecture/SKILL.md` entries 2026-09-09 (a) + (b)
+# and `.claude/specs/2026-09-09-editor-text-fidelity.md`.
+#
+# `vector-drawers.ts` — baseline placement in drawIText MUST use
+#   `fontSize * FABRIC_BASELINE_MULT` (0.87914). Do NOT switch back to
+#   `font.heightAtSize(size, {descender:false})` — that under-shoots by
+#   ~16% of fontSize and re-introduces the visible upward drift on export.
+#
+# `FloatingTextToolbar.tsx` — applyStyle MUST end with
+#   `fabricCanvas.fire("object:modified", { target: obj })`. Without it,
+#   pristine editModeText stays flagged unchanged and merge-pdf.ts
+#   copies the source page byte-for-byte, silently discarding the user's
+#   font/size/bold/italic/color/align pick on download.
+lib/client/pdf-editor/vector-drawers.ts
+components/sections/pdf-editor/FloatingTextToolbar.tsx

@@ -202,11 +202,12 @@ Known mobile failure modes to watch for (these have all bitten us before):
 
 ## Project skills (load proactively)
 
-Beyond `pdf-editor-architecture`, this repo ships four project-specific skills at `.claude/skills/`. Load them by name via `Skill({ skill: "…" })` — they are the primary defense against the regression classes this app has been burned by. Descriptions live in each skill's frontmatter; a Claude session should load them without being asked when the trigger applies.
+Beyond `pdf-editor-architecture`, this repo ships project-specific skills at `.claude/skills/`. Load them by name via `Skill({ skill: "…" })` — they are the primary defense against the regression classes this app has been burned by. Descriptions live in each skill's frontmatter; a Claude session should load them without being asked when the trigger applies.
 
 | Skill | Load when |
 |---|---|
 | `pdf-editor-architecture` | Editing anything under `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, `components/sections/pdf-editor/**` |
+| `pdf-composer-render-fix` | User reports "edits missing from downloaded PDF", "drawings not in merged PDF", or any variant of "save works but download is unedited" — covers the 2026-09-07 Fabric-v7 `loadFromJSON` blank-PNG bug + live-canvas raster fix |
 | `auth-flow-guardian` | Editing any file in the 21-item "Auth + paywall + export flow" chain (see section above) |
 | `regression-forensics` | User reports a bug that used to work, mentions a fix reverting, or says "broken again" |
 | `pre-push-guardian` | About to push, open a PR, merge, or claim work is ready to ship |
@@ -228,6 +229,7 @@ Current specs:
 | [`2026-07-31-solidgate-audit.md`](./.claude/specs/2026-07-31-solidgate-audit.md) | Client Solidgate audit — charge-auth SDK migration, React Aria dismiss fix, hard-cancel webhook |
 | [`2026-08-03-apple-pay-diagnostic.md`](./.claude/specs/2026-08-03-apple-pay-diagnostic.md) | Apple Pay button not rendering — full stack green, blocked on Solidgate-side Apple verification |
 | [`2026-09-02-locale-urls-geo-defaulting.md`](./.claude/specs/2026-09-02-locale-urls-geo-defaulting.md) | Subdirectory locale URLs (`/de/…`) + geo-IP defaulting Phase 1 — middleware-rewrite pattern, CloudFront Function, next-intl scaffolding, Weglot client SDK removed |
+| [`2026-09-08-guest-convert-flow.md`](./.claude/specs/2026-09-08-guest-convert-flow.md) | Guest convert + edit flow, paywall-at-download-only — Phase 1 (Open free) shipped; Phase 3A-3G (backend guest upload + guest→account migration) planned, needs `POST /documents/upload` `@OptionalAuth` + guest cleanup cron + guest doc migration endpoint |
 
 Add new specs as `YYYY-MM-DD-<slug>.md` and append a row to this table.
 

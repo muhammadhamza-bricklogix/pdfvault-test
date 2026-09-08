@@ -9,7 +9,7 @@ import { Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SiAmericanexpress, SiJcb, SiVisa } from "react-icons/si";
 
 import {
@@ -82,8 +82,90 @@ const APPLE_PAY_BUTTON_PARAMS = {
   color: "black",
 } as const;
 
+// QA 2026-09-08: card expiry field inside Solidgate's iframe accepts
+// more than 2 digits for the year part (user report: "22/2222 is
+// accepted even though expected is MM/YY"). The SDK's `InitConfig.
+// formParams` doesn't expose a maxlength config for the expiry
+// input — only labels + placeholders — so the digit cap has to be
+// fixed inside `@solidgate/react-sdk` itself. Interim: set an
+// explicit `cardExpiryDatePlaceholder: "MM/YY"` so the format
+// expectation is visible in the field, and let the SDK's submit-
+// time validation reject 4-digit years. File a Solidgate support
+// ticket to enforce maxlength on their end. Documented in
+// .claude/specs/2026-09-08-guest-convert-flow.md → "Known 3rd-party
+// UI issues" section for future sessions.
+const SOLIDGATE_FORM_PARAMS = {
+  cardExpiryDatePlaceholder: "MM/YY",
+} as const;
+
 type Step = "plan" | "pay" | "success";
 type PlanId = "monthly" | "annual";
+
+// Stable, memoised wrapper around Solidgate's <PaymentForm>. PayStep
+// re-renders each time a wallet MutationObserver fires
+// (`applePayReady`, `googlePayReady`, `walletTimedOut`) — three
+// re-renders that all fall within the window when the user is typing
+// their card. When the parent re-renders <PaymentForm>, the SDK's
+// internal useIsomorphicLayoutEffect re-runs `getInitConfig()` and
+// re-checks a JSON.stringify key. Any subtle instability in that key
+// re-invokes `SdkLoader.init(config)`, which re-mounts the iframe and
+// resets focus to the card number field — the QA-reported "cursor
+// jumps back to card number while typing expiry" (2026-09-07).
+//
+// Memoising with primitive-only props (merchant / signature /
+// paymentIntent) + stable ref objects + parent-owned callbacks makes
+// PayStep re-renders inert for the Solidgate iframe: React.memo skips
+// the render entirely, so the SDK layout effect doesn't fire and can't
+// steal focus. Isolated to the iframe subtree — no auth-chain impact.
+interface StablePaymentFormProps {
+  applePayContainerRef: React.RefObject<HTMLDivElement | null>;
+  googlePayContainerRef: React.RefObject<HTMLDivElement | null>;
+  merchant: string;
+  signature: string;
+  paymentIntent: string;
+  retryKey: number;
+  onFail: () => void;
+  onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
+}
+
+const StablePaymentForm = memo(function StablePaymentForm({
+  applePayContainerRef,
+  googlePayContainerRef,
+  merchant,
+  signature,
+  paymentIntent,
+  retryKey,
+  onFail,
+  onSuccess,
+}: StablePaymentFormProps) {
+  const merchantData = useMemo(
+    () => ({ merchant, signature, paymentIntent }),
+    [merchant, signature, paymentIntent],
+  );
+  const handleError = useCallback((error: unknown) => {
+    logger.captureError(error, "checkout.iframe_error");
+  }, []);
+  const handleMounted = useCallback(() => {
+    logger.info("[paywall] Solidgate iframe mounted");
+  }, []);
+
+  return (
+    <PaymentForm
+      key={`${retryKey}-${paymentIntent}`}
+      applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+      applePayContainerRef={applePayContainerRef}
+      formParams={SOLIDGATE_FORM_PARAMS}
+      googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
+      googlePayContainerRef={googlePayContainerRef}
+      merchantData={merchantData}
+      width="100%"
+      onError={handleError}
+      onFail={onFail}
+      onMounted={handleMounted}
+      onSuccess={onSuccess}
+    />
+  );
+});
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -1162,25 +1244,14 @@ function PayStep({
                 composite so an in-plan decline+retry still cleanly
                 remounts the iframe.
               */}
-              <PaymentForm
-                key={`${retryKey}-${intent.paymentIntent}`}
-                applePayButtonParams={APPLE_PAY_BUTTON_PARAMS}
+              <StablePaymentForm
                 applePayContainerRef={applePayContainerRef}
-                googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
                 googlePayContainerRef={googlePayContainerRef}
-                merchantData={{
-                  merchant: intent.merchant,
-                  signature: intent.signature,
-                  paymentIntent: intent.paymentIntent,
-                }}
-                width="100%"
-                onError={(error) => {
-                  logger.captureError(error, "checkout.iframe_error");
-                }}
+                merchant={intent.merchant}
+                paymentIntent={intent.paymentIntent}
+                retryKey={retryKey}
+                signature={intent.signature}
                 onFail={onFail}
-                onMounted={() => {
-                  logger.info("[paywall] Solidgate iframe mounted");
-                }}
                 onSuccess={onSuccess}
               />
             </div>

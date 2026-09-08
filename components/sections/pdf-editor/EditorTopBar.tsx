@@ -43,7 +43,7 @@ import {
   Tooltip,
 } from "@heroui/react";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
@@ -52,8 +52,10 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { ToolsModal } from "./ToolsModal";
@@ -108,6 +110,7 @@ export function EditorInfoBar() {
 
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
 
   useEffect(() => {
@@ -131,28 +134,21 @@ export function EditorInfoBar() {
   };
 
   const fileName = file?.name ?? "PDF Editor";
-  // Uncontrolled input keyed on `fileName` so external renames reset
-  // it without a setState-in-effect anti-pattern. Display strips `.pdf`
-  // — commit re-appends it before saving.
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  // Display name strips `.pdf` because the extension is redundant in
+  // an editor that only handles PDFs — commit re-appends it before
+  // saving. Input state is fully owned by <EditableFilenameField/>.
   const displayName = fileName.replace(/\.pdf$/i, "");
 
-  const commitRename = () => {
-    if (!file || !nameInputRef.current) return;
-    const trimmed = nameInputRef.current.value.trim();
+  // Called from EditableFilenameField with the trimmed new name.
+  // Empty guard runs inside the component so we only see non-empty
+  // values here.
+  const commitRename = (trimmed: string) => {
+    if (!file) return;
 
-    if (!trimmed) {
-      nameInputRef.current.value = displayName;
-
-      return;
-    }
     const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
 
-    if (withExt === file.name) {
-      nameInputRef.current.value = displayName;
+    if (withExt === file.name) return;
 
-      return;
-    }
     const renamed = new File([file], withExt, {
       lastModified: file.lastModified,
       type: file.type,
@@ -228,9 +224,37 @@ export function EditorInfoBar() {
   // PRD §7.3: Print / Download / Done all open the same format modal.
   // Behavioral parity across the trio matches the reference; the modal
   // itself is what dispatches editor:export with the chosen format.
+  //
+  // QA 2026-09-07: save the current edits to cloud FIRST, then open the
+  // modal. Guarantees the cloud has the latest baked bytes before the
+  // subsequent Download click runs. Signed-out users skip the save (the
+  // export flow itself routes them through email-first signin).
   const openExportModal = () => {
     if (!file) return;
-    setIsExportModalOpen(true);
+    if (!isSignedIn) {
+      setIsExportModalOpen(true);
+
+      return;
+    }
+    setIsSavingBeforeExport(true);
+    const toastKey = toast.loading({
+      title: "Saving your edits",
+      description: "Hold on — we'll open the download options once saved.",
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("editor:save-before-action", {
+        detail: {
+          force: true,
+          skipReset: true,
+          onComplete: () => {
+            toast.close(toastKey);
+            setIsSavingBeforeExport(false);
+            setIsExportModalOpen(true);
+          },
+        },
+      }),
+    );
   };
 
   const pageNav = (
@@ -398,27 +422,20 @@ export function EditorInfoBar() {
               Filename itself is hidden below md so the row doesn't get
               squeezed between save/tools/zoom on tablets. */}
           <div className="hidden min-w-0 items-center gap-2 sm:flex lg:gap-3">
-            <input
-              key={fileName}
-              ref={nameInputRef}
-              aria-label="Document name"
-              className="hidden max-w-24 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white md:inline-block lg:max-w-40"
-              defaultValue={displayName}
-              disabled={!file}
-              title="Click to rename"
-              type="text"
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  nameInputRef.current?.blur();
-                } else if (e.key === "Escape") {
-                  if (nameInputRef.current)
-                    nameInputRef.current.value = displayName;
-                  nameInputRef.current?.blur();
-                }
-              }}
-            />
+            {/* QA 2026-09-08: filename input wrapped in a persistently-
+                bordered container + pencil icon adornment so the edit
+                affordance is visible without hovering. Matches the
+                PvEditorTopChrome treatment. */}
+            <div className="hidden md:inline-flex">
+              <EditableFilenameField
+                ariaLabel="Document name"
+                className="max-w-24 lg:max-w-40"
+                disabled={!file}
+                fontSizeClass="text-sm"
+                value={displayName}
+                onCommit={commitRename}
+              />
+            </div>
 
             {/* QA 2026-09-08: SaveStatusChip removed per product decision.
                 See PvEditorTopChrome for the same removal + full rationale. */}
@@ -521,13 +538,15 @@ export function EditorInfoBar() {
             </Button>
             <Button
               aria-label="Done"
-              isDisabled={!file}
+              isDisabled={!file || isSavingBeforeExport}
               size="sm"
               variant="primary"
               onPress={openExportModal}
             >
               <HugeiconsIcon icon={Tick01Icon} size={14} />
-              <span className="ml-1 hidden sm:inline">Done</span>
+              <span className="ml-1 hidden sm:inline">
+                {isSavingBeforeExport ? "Saving…" : "Done"}
+              </span>
             </Button>
 
             <Separator

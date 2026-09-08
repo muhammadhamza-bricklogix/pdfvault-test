@@ -134,9 +134,22 @@ export function HamburgerMenu() {
   };
 
   const openSplitModal = async () => {
-    const target = requireFile("splitting");
+    // Read the LIVE file from the store — same stale-closure guard as
+    // `openMergeModal`. After a `saveBeforeAction` awaits the bake +
+    // `applyPostSaveReset`, the outer `handleAction` closure still
+    // holds the pre-edit `file`; reading via `getState()` here picks
+    // up the freshly-baked bytes so the split output includes the
+    // user's latest edits (draw / highlight / signature / etc.).
+    const target = usePdfEditorStore.getState().file;
 
-    if (!target) return;
+    if (!target) {
+      toast.info({
+        title: "No PDF open",
+        description: "Open or create a PDF before splitting.",
+      });
+
+      return;
+    }
 
     // Paywall is gated INSIDE SplitPdfModal at the Split (download)
     // button — unpaid users should still see the modal, pick ranges,
@@ -176,19 +189,40 @@ export function HamburgerMenu() {
   };
 
   const openMergeModal = async () => {
-    const target = requireFile("merging");
+    // Read the LIVE file from the store, not the closed-over `file`.
+    // The signed-in merge path awaits `saveBeforeAction(force,
+    // skipWait)` first, which calls `applyPostSaveReset` and swaps
+    // `store.file` to the freshly-baked (edits-included) bytes. The
+    // outer `handleAction` closure still has the pre-edit `file`
+    // reference, so `requireFile()` here would hand `fileToMergeEntry`
+    // the ORIGINAL source and the merged download would ship without
+    // the user's draw / highlight / signature edits (QA 2026-09-07:
+    // "PDF edits are not reflected in merged and downloaded PDF").
+    // Reading from `getState()` at call time picks up the post-save
+    // file regardless of the closure age.
+    const target = usePdfEditorStore.getState().file;
 
-    if (!target) return;
+    if (!target) {
+      toast.info({
+        title: "No PDF open",
+        description: "Open or create a PDF before merging.",
+      });
+
+      return;
+    }
 
     // Paywall is gated INSIDE MergePdfModal at the Merge (download)
     // button — unpaid users should still see the modal, add files,
     // and hit the wall only when they try to download.
-
-    const loadingKey = toast.loading({
-      title: "Preparing merge",
-      description: "Reading the PDF…",
-    });
-
+    //
+    // QA 2026-09-08: "Preparing merge" loading toast removed. The
+    // `fileToMergeEntry(target)` call is a synchronous-feeling
+    // ArrayBuffer read + pdf-lib load; on a typical browser it
+    // resolves in <100ms. The toast would flash on-screen and vanish
+    // before the user could read it (user report: "a popup appears
+    // and then suddenly disappears"). If a future path adds a slow
+    // step here (e.g. large-file network fetch), re-add the toast
+    // with a minimum display time.
     try {
       const entry = await fileToMergeEntry(target);
 
@@ -199,8 +233,6 @@ export function HamburgerMenu() {
         title: "Couldn't read this PDF",
         description: err instanceof Error ? err.message : String(err),
       });
-    } finally {
-      toast.close(loadingKey);
     }
   };
 
@@ -266,51 +298,23 @@ export function HamburgerMenu() {
         break;
       case "merge": {
         if (!requireFile("merging")) return;
-        // Guests: skip the pre-merge cloud-save. `saveBeforeAction`
-        // routes signed-out callers through AuthModal and resolves
-        // false, so `openMergeModal` never runs and the modal never
-        // appears (QA 2026-09-06: main-actions Merge button appeared
-        // idle for signed-out users). Open the modal directly against
-        // `store.file`. Overlays that only live in Fabric aren't baked
-        // into the merged output on this first attempt, but paywall
-        // fires at the Merge (download) button → AuthModal → post-
-        // signin hydrator restores the full session → user re-runs
-        // merge → the signed-in branch below bakes cleanly.
-        if (!isSignedIn) {
-          void openMergeModal();
-          break;
-        }
-        // Signed-in: bake current edits into the cloud-saved PDF FIRST.
-        // Without this the merge modal reads `store.file` — the pre-
-        // edit source — and the merged output is missing the user's
-        // shapes, drawings, images, signatures, etc. Same pattern as
-        // Share.
-        //
-        // `force: true`: several edit paths (page-numbers, annotations,
-        // restore-from-version) don't flip `hasUnsavedChanges`, so the
-        // default short-circuit would skip the upload and merge stale
-        // bytes.
-        //
-        // `skipWait: true`: `openMergeModal` reads `store.file` (the
-        // fresh baked bytes are already committed by
-        // `applyPostSaveReset` inside the save handler) and doesn't
-        // touch `pdfDocument`. Waiting for pdf.js to reload would stall
-        // the modal open on slow devices — same class of bug as the
-        // Share flow fixed 2026-08-21.
-        void (async () => {
-          const ok = await saveBeforeAction(
-            "Saving your edits before merging.",
-            true,
-            true,
-          );
-
-          if (ok) void openMergeModal();
-        })();
+        // QA 2026-09-07: pre-merge `saveBeforeAction` removed. The
+        // save-and-reset cycle triggered `applyPostSaveReset` →
+        // pdf.js reload → the editor visibly lost the user's live
+        // Fabric overlays. MergePdfModal now does an IN-MEMORY bake
+        // at the Merge & Download click (via
+        // `editor:build-current-bytes`) so the downloaded PDF
+        // includes edits, but the editor session stays intact.
+        void openMergeModal();
         break;
       }
-      case "split":
+      case "split": {
+        if (!requireFile("splitting")) return;
+        // Same as merge above — SplitPdfModal handles the in-memory
+        // bake at download time so the editor doesn't reload.
         void openSplitModal();
         break;
+      }
       case "versions": {
         if (!requireFile("viewing version history")) return;
         if (!isSignedIn) {
@@ -352,6 +356,14 @@ export function HamburgerMenu() {
       }
       case "annotations":
         if (!requireFile("adding annotations")) return;
+        // Reset the active tool BEFORE opening the modal so any
+        // floating tool panel that's tied to `activeTool` closes.
+        // The highlight/watermark/backgroundImage panels in
+        // RightSidebar are all conditional on `activeTool === "…"`,
+        // and staying on (e.g.) "highlight" leaves the floating
+        // panel + tool selection visible behind the Annotations
+        // modal (QA 2026-09-07).
+        usePdfEditorStore.getState().setActiveTool("select");
         setIsAnnotationsOpen(true);
         break;
       case "share": {

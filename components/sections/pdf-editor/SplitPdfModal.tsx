@@ -144,30 +144,77 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
         }
       }
 
+      // In-memory bake — same rationale as MergePdfModal: no cloud
+      // upload, no `store.file` swap, no pdf.js reload, so the
+      // editor keeps its live Fabric overlays after the modal closes.
+      // The event's `onComplete` returns the baked bytes; fall back
+      // to the captured `source.bytes` on failure.
+      let bakedBytes: Uint8Array | null = null;
+
+      await new Promise<void>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:build-current-bytes", {
+            detail: {
+              onComplete: (r: {
+                ok: boolean;
+                bytes?: Uint8Array;
+                error?: string;
+              }) => {
+                if (r.ok && r.bytes) {
+                  bakedBytes = r.bytes;
+                } else {
+                  logger.warn(
+                    "[split-pdf-modal] in-memory bake failed; falling back to captured source.bytes",
+                    { error: r.error },
+                  );
+                  toast.error({
+                    title: "Could not include latest edits",
+                    description:
+                      "Splitting the last saved copy. Save your edits first so the latest changes are included.",
+                  });
+                }
+                resolve();
+              },
+            },
+          }),
+        );
+      });
+
+      const liveFile = usePdfEditorStore.getState().file;
+      const bytesForSplit: Uint8Array = bakedBytes ?? source.bytes;
+      const filenameForSplit: string = liveFile?.name ?? source.filename;
+
       const parts = await splitPdf(
-        source.bytes,
-        source.filename,
+        bytesForSplit,
+        filenameForSplit,
         parsed.ranges,
       );
 
       if (parts.length === 1) {
         const only = parts[0]!;
 
+        // QA 2026-09-07: pass Uint8Array view directly; `new Uint8Array(only.bytes)`
+        // re-viewed the same buffer and did nothing beyond re-triggering the
+        // buffer-view corruption class. See MergePdfModal for the full note.
         triggerDownload(
-          new Blob([new Uint8Array(only.bytes)], {
-            type: "application/pdf",
-          }),
+          new Blob([only.bytes as BlobPart], { type: "application/pdf" }),
           only.filename,
         );
       } else {
-        const dot = source.filename.lastIndexOf(".");
-        const base = dot > 0 ? source.filename.slice(0, dot) : source.filename;
+        const dot = filenameForSplit.lastIndexOf(".");
+        const base =
+          dot > 0 ? filenameForSplit.slice(0, dot) : filenameForSplit;
         const zipName = `${base || "document"}-split.zip`;
-        const zip = await buildZip(parts, source.filename);
+        const zip = await buildZip(parts, filenameForSplit);
 
         triggerDownload(zip, zipName);
       }
 
+      // QA 2026-09-07 (revised): the earlier auto-load-first-part step
+      // reloaded pdf.js and wiped `fabricJsonByPage` — users lost
+      // Fabric overlays after the modal closed. Reverted: just
+      // download and close. Editor keeps the pre-split file + all
+      // in-session edits.
       toast.success({
         title: "Split complete",
         description:
