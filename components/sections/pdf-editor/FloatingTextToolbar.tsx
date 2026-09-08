@@ -279,7 +279,16 @@ export function FloatingTextToolbar({
       const { textAlign: _textAlign, ...perChar } = fabricPatch;
 
       iText.setSelectionStyles!(perChar);
-      obj.set({ textAlign: next.textAlign });
+      // Also mirror onto the object-level. Fabric's canvas paint order
+      // is per-character > object-level, so the editor still shows
+      // exactly what the user selected. But the export merge drawer
+      // (`drawIText`) reads ONLY the object-level fontFamily /
+      // fontSize / fontWeight / fontStyle / fill — without this
+      // mirror, a range-selection font change would show correctly in
+      // the editor and then fall back to whatever the object was
+      // created with (Helvetica / 16) in the downloaded PDF (QA
+      // 2026-09-08: "font and/or font size differs from Composer").
+      obj.set(fabricPatch);
     } else {
       obj.set(fabricPatch);
 
@@ -299,7 +308,31 @@ export function FloatingTextToolbar({
       }
     }
 
-    fabricCanvas.renderAll();
+    // Invalidate Fabric's object cache + re-run Textbox layout so paint
+    // reflects the new styles. Without this, changes like `textAlign`
+    // (paragraph-level, requires re-layout to reposition each line) and
+    // `fontSize` (Textbox needs `initDimensions` to recompute its wrapped
+    // lines) can appear unchanged in the editor even though the object's
+    // properties updated. Fabric's default `objectCaching: true` on
+    // Textbox / IText caches the painted bitmap; setting `dirty = true`
+    // forces the next `renderAll` to redraw from scratch. QA 2026-09-08:
+    // "text alignment (Left/Center/Right) buttons have no visible effect
+    // in Composer."
+    const dirtyObj = obj as {
+      dirty?: boolean;
+      initDimensions?: () => void;
+      setCoords?: () => void;
+    };
+
+    dirtyObj.dirty = true;
+    try {
+      dirtyObj.initDimensions?.();
+    } catch {
+      // initDimensions can throw during a mid-edit style change on some
+      // Fabric versions — the subsequent renderAll still repaints.
+    }
+    dirtyObj.setCoords?.();
+    fabricCanvas.requestRenderAll();
   };
 
   const close = () => {

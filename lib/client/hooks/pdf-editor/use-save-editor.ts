@@ -209,22 +209,53 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       // Belt-and-braces state sync BEFORE the save chain begins. QA
       // 2026-09-08: "before saving and download we just have to make
       // sure that the states of updated file must be updated to avoid
-      // any kind of inconsistency." `flushLiveFabricPage` synchronously
-      // serializes the current live canvas into `fabricJsonByPage[
-      // currentPage]` via a Zustand `set`, so anything mid-stroke,
-      // mid-drag, mid-edit is captured in the store BEFORE
-      // `persistEditorDocument` reads it. `persistEditorDocument`
-      // internally does the same flush too — this one is intentional
-      // redundancy so the state is committed the moment the user
-      // clicks Done, not after the async save pipeline unwinds a few
-      // ticks later. Safe to call with `fabricRef.current === null`
-      // — the helper guards for it.
+      // any kind of inconsistency." Two-step commit so nothing
+      // mid-stroke / mid-typing / mid-drag slips past:
+      //
+      //   1. Force-exit any active IText / Textbox that's still in
+      //      editing mode. When the user is typing in a text overlay
+      //      and clicks Done, Fabric normally routes the click through
+      //      its own document listener → `editing:exited` fires →
+      //      overlay commits. But that path can miss the click if the
+      //      Done button lives outside the canvas root (as it does in
+      //      the top chrome), so the textbox stays in editing mode
+      //      and the just-typed characters aren't in
+      //      `fabricJsonByPage` yet. Explicit `exitEditing()` here
+      //      fires `editing:exited` synchronously, which the
+      //      `PdfViewerCanvas` / `use-edit-text-mode` handlers turn
+      //      into a `saveFabricJson` call.
+      //
+      //   2. `flushLiveFabricPage` synchronously serializes the
+      //      current live canvas into
+      //      `fabricJsonByPage[currentPage]` via a Zustand `set`, so
+      //      anything mid-drag or a modification the tool hooks
+      //      already committed is guaranteed to be in the store
+      //      before `persistEditorDocument` reads it.
+      //
+      // `persistEditorDocument` internally does the same flush later
+      // — this one is intentional redundancy so the state is committed
+      // the moment the user clicks Done, not after the async save
+      // pipeline unwinds a few ticks later. Safe to call with
+      // `fabricRef.current === null` — the helpers guard for it.
       if (fabricRef.current) {
         try {
-          flushLiveFabricPage(
-            usePdfEditorStore.getState().currentPage,
-            fabricRef.current,
-          );
+          const fc = fabricRef.current;
+          const active = fc.getActiveObject() as
+            | (typeof fc extends FabricCanvas ? object : never)
+            | undefined;
+
+          if (
+            active &&
+            typeof (active as { isEditing?: boolean }).isEditing ===
+              "boolean" &&
+            (active as { isEditing?: boolean }).isEditing === true &&
+            typeof (active as { exitEditing?: () => void }).exitEditing ===
+              "function"
+          ) {
+            (active as { exitEditing: () => void }).exitEditing();
+            fc.renderAll();
+          }
+          flushLiveFabricPage(usePdfEditorStore.getState().currentPage, fc);
         } catch (flushErr) {
           logger.warn(
             "[PDFedits] save-before-action: pre-save flush threw (ignored)",

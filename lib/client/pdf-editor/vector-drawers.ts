@@ -255,12 +255,31 @@ export async function drawIText(
   // representation when present; fall back to the \n split for IText
   // (annotations, page numbers, watermark, text tool) so their behaviour
   // is unchanged.
+  //
+  // Two sources for wrapped lines:
+  //   1. `wrappedTextLines` — a plain string[] injected by
+  //      `serializeFabricCanvas` at save time by reading the live
+  //      Textbox's `_textLines`. Survives the JSON round-trip and is
+  //      the reliable path for the merge pipeline reading
+  //      `fabricJsonByPage[page]`.
+  //   2. `_textLines` — Fabric's private cached field. Only present
+  //      when the object is a live Fabric Textbox instance (i.e.,
+  //      when the drawer is called with an object that came directly
+  //      from the live canvas rather than via a JSON round-trip).
+  //      Kept as a fallback so live-canvas paths still work.
   const wrapped = obj as {
     _textLines?: ReadonlyArray<ReadonlyArray<string> | string>;
+    wrappedTextLines?: ReadonlyArray<string>;
   };
-  const visualLines: string[] | undefined = Array.isArray(wrapped._textLines)
+  const persistedLines: string[] | undefined = Array.isArray(
+    wrapped.wrappedTextLines,
+  )
+    ? wrapped.wrappedTextLines.map((l) => String(l))
+    : undefined;
+  const cachedLines: string[] | undefined = Array.isArray(wrapped._textLines)
     ? wrapped._textLines.map((l) => (Array.isArray(l) ? l.join("") : String(l)))
     : undefined;
+  const visualLines = persistedLines ?? cachedLines;
   const lines =
     visualLines && visualLines.length > 0 ? visualLines : text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;

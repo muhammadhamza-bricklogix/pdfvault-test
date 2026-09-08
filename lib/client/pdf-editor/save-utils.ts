@@ -78,6 +78,35 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
       ]) {
         if (live[k] !== undefined) objs[i][k] = live[k];
       }
+
+      // Textbox visually wraps text when it's wider than the box width.
+      // Fabric stores those wrapped lines on the private `_textLines`
+      // (an array of grapheme-cluster arrays). `toJSON()` doesn't
+      // serialize private fields, so the merge downstream would fall
+      // back to `text.split("\n")` and lose every wrapped-but-not-
+      // Enter-broken line — the user's text ends up on a single
+      // overflowing line in the downloaded PDF (QA 2026-09-08:
+      // "increased text size, line breaks not captured"). Flatten
+      // the wrapped lines to a plain `string[]` and copy as a
+      // custom `wrappedTextLines` field so `drawIText` can prefer
+      // it. Only fires for `textbox` — plain IText (annotations,
+      // page numbers, watermark, plain text tool) is single-line
+      // and doesn't need this.
+      const liveType = (live.type as string | undefined)?.toLowerCase();
+
+      if (liveType === "textbox") {
+        const liveLines = (
+          live as {
+            _textLines?: ReadonlyArray<ReadonlyArray<string> | string>;
+          }
+        )._textLines;
+
+        if (Array.isArray(liveLines) && liveLines.length > 0) {
+          objs[i].wrappedTextLines = liveLines.map((line) =>
+            Array.isArray(line) ? line.join("") : String(line),
+          );
+        }
+      }
     }
 
     // DEBUG: serialized editModeText summary — used to confirm `pristine`
