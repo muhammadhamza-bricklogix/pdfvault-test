@@ -42,15 +42,25 @@ type FloatingTextToolbarProps = {
   fabricCanvas: Canvas | null;
 };
 
-const FONT_FAMILIES = [
-  "Helvetica",
-  "Times New Roman",
-  "Courier New",
-  "Georgia",
-  "Verdana",
-  "Arial",
-  "Trebuchet MS",
-];
+// Only fonts that map exactly to pdf-lib's built-in StandardFonts.
+// pdf-lib has 14 StandardFonts (Adobe Type 1) — Helvetica, Times-Roman,
+// Courier, and their bold/italic variants. Any font outside that set gets
+// silently substituted by `resolveStandardFont` at render time:
+//   Georgia → Times-Roman   (visible mismatch — distinct typefaces)
+//   Verdana → Helvetica     (visible mismatch)
+//   Trebuchet MS → Helvetica (visible mismatch)
+//   Arial → Helvetica       (close but not exact)
+// QA 2026-09-08: users picking Georgia / Verdana / Trebuchet MS / Arial in
+// the composer saw the browser's real system font in the preview but got
+// the substitute in the downloaded PDF. Pruning the list to only the three
+// direct equivalents guarantees composer = download. Existing documents
+// that still carry `fontFamily: "Georgia"` (etc.) in their Fabric JSON keep
+// rendering through the same fallback path — nothing about the render
+// pipeline changes. Only the picker options are restricted.
+// Matches the Watermark toolbar's font list. To add more families later,
+// bundle a real font file and embed it via `pdfDoc.embedFont(bytes)` in
+// `FontCache` instead of the StandardFont branch.
+const FONT_FAMILIES = ["Helvetica", "Times New Roman", "Courier New"];
 
 // Standard font-size presets. Extracted text can have arbitrary sizes
 // (e.g. 11.3, 13.7) — the current value is spliced into the list if
@@ -279,7 +289,16 @@ export function FloatingTextToolbar({
       const { textAlign: _textAlign, ...perChar } = fabricPatch;
 
       iText.setSelectionStyles!(perChar);
-      obj.set({ textAlign: next.textAlign });
+      // Also mirror onto the object-level. Fabric's canvas paint order
+      // is per-character > object-level, so the editor still shows
+      // exactly what the user selected. But the export merge drawer
+      // (`drawIText`) reads ONLY the object-level fontFamily /
+      // fontSize / fontWeight / fontStyle / fill — without this
+      // mirror, a range-selection font change would show correctly in
+      // the editor and then fall back to whatever the object was
+      // created with (Helvetica / 16) in the downloaded PDF (QA
+      // 2026-09-08: "font and/or font size differs from Composer").
+      obj.set(fabricPatch);
     } else {
       obj.set(fabricPatch);
 
@@ -299,7 +318,54 @@ export function FloatingTextToolbar({
       }
     }
 
-    fabricCanvas.renderAll();
+    // Invalidate Fabric's object cache + re-run Textbox layout so paint
+    // reflects the new styles. Without this, changes like `textAlign`
+    // (paragraph-level, requires re-layout to reposition each line) and
+    // `fontSize` (Textbox needs `initDimensions` to recompute its wrapped
+    // lines) can appear unchanged in the editor even though the object's
+    // properties updated. Fabric's default `objectCaching: true` on
+    // Textbox / IText caches the painted bitmap; setting `dirty = true`
+    // forces the next `renderAll` to redraw from scratch. QA 2026-09-08:
+    // "text alignment (Left/Center/Right) buttons have no visible effect
+    // in Composer."
+    const dirtyObj = obj as {
+      dirty?: boolean;
+      initDimensions?: () => void;
+      setCoords?: () => void;
+    };
+
+    dirtyObj.dirty = true;
+    try {
+      dirtyObj.initDimensions?.();
+    } catch {
+      // initDimensions can throw during a mid-edit style change on some
+      // Fabric versions — the subsequent renderAll still repaints.
+    }
+    dirtyObj.setCoords?.();
+    fabricCanvas.requestRenderAll();
+
+    // QA 2026-09-09: font-family (and size/bold/italic/color/alignment) picks
+    // in this toolbar showed correctly in the composer but were silently
+    // dropped on save/download. Root cause: `obj.set(fabricPatch)` is a pure
+    // Fabric setter — it does NOT emit `object:modified`. The extracted
+    // source-text pipeline in `use-editor-history.ts` relies on that event to
+    // flip `editModeText.pristine → false`, which is what
+    // `merge-pdf.ts:isModifiedEditModeText` reads to decide whether the page
+    // needs the modified-editModeText branch (whiteout + vector `drawIText`
+    // with the user's chosen font) vs. copying the source page byte-for-byte
+    // (which preserves the ORIGINAL embedded font, not our override).
+    //
+    // Firing the event here also runs `snapshot` (pushes history +
+    // serializes to `fabricJsonByPage` so the change survives reload) and
+    // `markDirtyOnEdit` (flips `hasUnsavedChanges` so the save button /
+    // reload guard know there's work to persist). All three listeners
+    // early-return for irrelevant cases (`isCreatingShape /
+    // isRestoringHistory` guards; `dirtySourceText` short-circuits on
+    // non-editModeText objects), so non-extracted text overlays
+    // (annotations, signatures, page numbers, watermark, text tool) are
+    // unaffected — this only "unlocks" export-fidelity for extracted PDF
+    // text, which is exactly the surface QA reported.
+    fabricCanvas.fire("object:modified", { target: obj });
   };
 
   const close = () => {

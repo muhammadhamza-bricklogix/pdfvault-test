@@ -97,6 +97,32 @@ function resolveTopLeft(obj: FabricObj): { left: number; top: number } {
 // Text
 // ---------------------------------------------------------------------------
 
+/**
+ * Fabric v6/v7 renders a Text/Textbox's line-0 baseline at
+ *   `top + fontSize * _fontSizeMult * (1 − _fontSizeFraction)`
+ * with the defaults `_fontSizeMult = 1.13` and `_fontSizeFraction = 0.222`
+ * (see `node_modules/fabric/dist/src/shapes/Text/constants.min.mjs` +
+ * `Text.mjs:520-528, 561-575`). That's `1.13 × 0.778 = 0.87914`.
+ *
+ * We need to match this at export so any text object — Fabric-native
+ * (text tool, annotations, page numbers, signature text) OR modified
+ * editModeText (extracted PDF text the user typed / restyled) — lands
+ * at the same vertical position in the downloaded PDF that Fabric
+ * painted in the composer. pdf-lib's `drawText` places `y` on the
+ * baseline, so this constant IS the baseline-from-top offset.
+ *
+ * Pristine editModeText (`editorType === "editModeText" && pristine`)
+ * never reaches this drawer — `merge-pdf.ts:isModifiedEditModeText`
+ * filters it out and the source PDF page is copied byte-for-byte, so
+ * its baseline stays pdf.js-authoritative. Only user-modified overlays
+ * flow through here, and every one of them is painted by Fabric in the
+ * composer — matching Fabric's math guarantees composer == download.
+ *
+ * If Fabric ever changes its defaults, update this constant to match
+ * the new values in `constants.min.mjs`.
+ */
+const FABRIC_BASELINE_MULT = 1.13 * (1 - 0.222); // 0.87914
+
 export async function drawIText(
   obj: FabricObj,
   page: PDFPage,
@@ -193,7 +219,6 @@ export async function drawIText(
   const color = hexToPdfColor(obj.fill as string) ?? rgb(0, 0, 0);
 
   const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
-  const fontHeight = font.heightAtSize(pdfFontSize, { descender: false });
 
   // For extracted PDF text items, skip maxWidth — their position is controlled
   // by precise x/y coordinates, not text wrapping. maxWidth would cause pdf-lib
@@ -205,13 +230,25 @@ export async function drawIText(
         ? toPdfDim(objWidth, ctx.scaleX)
         : undefined;
 
-  // For angle == 0 the original formula puts pdfY at fontHeight (font ascend
-  // height, NOT fontSize) below the top — preserving that for upright text
-  // avoids drift. For rotated text we apply the same ascend shift but along
-  // the rotated axis. `ascendFabric` is the ascend in Fabric units so that
-  // (top + ascendFabric) → top + fontHeight at PDF scale, matching the
-  // upright formula exactly when angle == 0.
-  const ascendFabric = fontHeight / ctx.scaleY;
+  // QA 2026-09-09: baseline distance from `top`, in Fabric units. The
+  // old formula (`fontHeight = font.heightAtSize(size, {descender:false})`
+  // ≈ 0.718 × fontSize for Helvetica) under-shot the true composer
+  // baseline by `(0.87914 − 0.718) × fontSize ≈ 0.161 × fontSize`. At
+  // small sizes (12-16 pt) this was 2-3 pt — no one noticed. At 96 pt
+  // Bold+Italic it drifted ~15.5 pt upward on the download vs. the
+  // composer (QA report). Fabric's own baseline math (see the
+  // `FABRIC_BASELINE_MULT` block above) is used for ALL text overlays
+  // that reach this drawer — Fabric-native (text tool, annotations,
+  // page numbers, signature text) AND modified editModeText — because
+  // every one of them is painted by Fabric in the composer.
+  //
+  // Pristine editModeText never reaches this drawer (filtered out
+  // upstream in `merge-pdf.ts`), so its pdf.js-authoritative baseline
+  // is preserved via the byte-for-byte page copy path.
+  //
+  // Rotated text (angle 90/180/270) below uses the same value along the
+  // rotated axis; the branch structure stays as-is.
+  const ascendFabric = fontSize * FABRIC_BASELINE_MULT;
   let fabricBaselineX = left;
   let fabricBaselineY = top + ascendFabric;
 
@@ -255,12 +292,31 @@ export async function drawIText(
   // representation when present; fall back to the \n split for IText
   // (annotations, page numbers, watermark, text tool) so their behaviour
   // is unchanged.
+  //
+  // Two sources for wrapped lines:
+  //   1. `wrappedTextLines` — a plain string[] injected by
+  //      `serializeFabricCanvas` at save time by reading the live
+  //      Textbox's `_textLines`. Survives the JSON round-trip and is
+  //      the reliable path for the merge pipeline reading
+  //      `fabricJsonByPage[page]`.
+  //   2. `_textLines` — Fabric's private cached field. Only present
+  //      when the object is a live Fabric Textbox instance (i.e.,
+  //      when the drawer is called with an object that came directly
+  //      from the live canvas rather than via a JSON round-trip).
+  //      Kept as a fallback so live-canvas paths still work.
   const wrapped = obj as {
     _textLines?: ReadonlyArray<ReadonlyArray<string> | string>;
+    wrappedTextLines?: ReadonlyArray<string>;
   };
-  const visualLines: string[] | undefined = Array.isArray(wrapped._textLines)
+  const persistedLines: string[] | undefined = Array.isArray(
+    wrapped.wrappedTextLines,
+  )
+    ? wrapped.wrappedTextLines.map((l) => String(l))
+    : undefined;
+  const cachedLines: string[] | undefined = Array.isArray(wrapped._textLines)
     ? wrapped._textLines.map((l) => (Array.isArray(l) ? l.join("") : String(l)))
     : undefined;
+  const visualLines = persistedLines ?? cachedLines;
   const lines =
     visualLines && visualLines.length > 0 ? visualLines : text.split("\n");
   const lineHeight = (obj.lineHeight as number) ?? 1.16;
@@ -271,7 +327,21 @@ export async function drawIText(
   // instead of space characters), so rendering the full string collapses spaces to
   // zero width. Instead, we measure each word with fontkit, compute the leftover
   // width (fabricWidth - totalWordWidth) and distribute it evenly as inter-word gaps.
-  if (editorType === "editModeText" && targetWidth > 0) {
+  //
+  // BUT only for PRISTINE editModeText (text === originalText). Once the user
+  // has typed a replacement, the new string has no relationship to the source
+  // PDF's advance-operator spacing — distributing across `targetWidth` (which
+  // is still the ORIGINAL fragment width) stretches the shorter modified text
+  // and produces obviously wrong gaps: e.g., "1st edit" spread across 240 pt
+  // shows as "1st        edit" in the downloaded PDF (QA 2026-09-08). Modified
+  // editModeText already uses StandardFonts (via `getStandardFallback`),
+  // which are WinAnsi and DO include the space glyph, so plain `drawText`
+  // renders spacing correctly. Fall through to the ELSE branch below.
+  const isPristineEditModeText =
+    editorType === "editModeText" &&
+    (obj as { pristine?: boolean }).pristine === true;
+
+  if (isPristineEditModeText && targetWidth > 0) {
     const fontKey = page.node.newFontDictionary(font.name, font.ref);
 
     // Text matrix factory: identity rotation for angle 0, rotation matrix
@@ -387,10 +457,62 @@ export async function drawIText(
       }
     }
   } else {
+    // Read the paragraph-level alignment. Fabric's Textbox and IText both
+    // store this as `textAlign`. Default (undefined / "left") keeps the
+    // pre-existing behavior so unaligned callers (annotations, page
+    // numbers, watermarks, plain single-line text) render exactly as
+    // before — no regression risk on those paths.
+    // QA 2026-09-08: user picks Center or Right in the FloatingTextToolbar,
+    // the composer shows the alignment correctly, but the downloaded PDF
+    // renders every line at the LEFT edge of the Textbox because pdf-lib's
+    // `drawText` doesn't accept a `textAlign` option — we have to
+    // compute the per-line x offset ourselves.
+    const rawAlign =
+      typeof obj.textAlign === "string" ? obj.textAlign : undefined;
+    const alignment: "left" | "center" | "right" =
+      rawAlign === "center" || rawAlign === "right" ? rawAlign : "left";
+    const boxWidth = typeof pdfMaxWidth === "number" ? pdfMaxWidth : 0;
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
       if (!line) continue; // skip blank lines (Y still advances via index)
+
+      // Only compute a per-line offset when the caller wants center or
+      // right alignment AND we actually know the box width (`maxWidth`).
+      // For default left alignment we short-circuit to `offset = 0`, so
+      // `x = pdfX` — identical to the old behavior, no chance of
+      // pushing left-aligned text off position.
+      let offset = 0;
+
+      if (alignment !== "left" && boxWidth > 0) {
+        // Measure the rendered width of THIS line in the resolved font +
+        // size. `widthOfTextAtSize` can throw for characters the font
+        // can't encode; if it does, we fall back to zero offset
+        // (left-alignment) so a bad char can't corrupt the render.
+        let lineWidth = 0;
+
+        try {
+          lineWidth = font.widthOfTextAtSize(line, pdfFontSize);
+        } catch {
+          lineWidth = 0;
+        }
+
+        if (lineWidth > 0 && lineWidth < boxWidth) {
+          const slack = boxWidth - lineWidth;
+
+          offset = alignment === "center" ? slack / 2 : slack;
+        }
+      }
+
+      // Advance the offset along the text-flow direction. For angle 0
+      // this collapses to `x = pdfX + offset`, `y` unchanged — the
+      // common case and identical to the original layout for
+      // left-aligned text (offset = 0). For rotated text the offset
+      // rides along `advanceX` / `advanceY` so a rotated line still
+      // aligns correctly within the box's rotated frame.
+      const drawX = pdfX + offset * advanceX;
+      const drawY = pdfY - i * pdfLineHeight + offset * advanceY;
 
       page.drawText(line, {
         color,
@@ -399,8 +521,8 @@ export async function drawIText(
         opacity,
         rotate: angle ? degrees(-angle) : undefined,
         size: pdfFontSize,
-        x: pdfX,
-        y: pdfY - i * pdfLineHeight,
+        x: drawX,
+        y: drawY,
       });
     }
   }
@@ -467,11 +589,22 @@ export function drawRect(
     fillColor = hexToPdfColor(obj.fill as string);
   } else {
     fillColor = hexToPdfColor(obj.fill as string);
-    borderColor = hexToPdfColor(obj.stroke as string);
-    borderWidth = toPdfDim(
-      (obj.strokeWidth as number) || 0,
-      (ctx.scaleX + ctx.scaleY) / 2,
-    );
+    // Only carry a stroke through to pdf-lib when the user actually
+    // asked for one. pdf-lib's `drawRectangle` treats "borderColor set
+    // + borderWidth undefined" as "draw a border, use the default
+    // width (1pt)" — so leaving `borderColor` populated while
+    // squashing `borderWidth` to undefined produces a visible hairline
+    // in the download even though the composer preview showed no
+    // stroke (QA 2026-09-08: "stroke thickness 0 in composer, stroke
+    // still appears on downloaded PDF"). Save + reload masked the bug
+    // because the reload rendered the already-baked bytes and skipped
+    // this drawer.
+    const rawStrokeWidth = (obj.strokeWidth as number) || 0;
+
+    if (rawStrokeWidth > 0) {
+      borderColor = hexToPdfColor(obj.stroke as string);
+      borderWidth = toPdfDim(rawStrokeWidth, (ctx.scaleX + ctx.scaleY) / 2);
+    }
   }
 
   page.drawRectangle({
@@ -515,11 +648,16 @@ export function drawEllipse(
   const pdfRy = toPdfDim(ry, ctx.scaleY);
 
   const fillColor = hexToPdfColor(obj.fill as string);
-  const borderColor = hexToPdfColor(obj.stroke as string);
-  const borderWidth = toPdfDim(
-    (obj.strokeWidth as number) || 0,
-    (ctx.scaleX + ctx.scaleY) / 2,
-  );
+  // Same "borderColor without borderWidth defaults to hairline" gotcha
+  // as `drawRect` — skip both when the user asked for no stroke. See
+  // the long comment in `drawRect` above.
+  const rawStrokeWidth = (obj.strokeWidth as number) || 0;
+  const borderColor =
+    rawStrokeWidth > 0 ? hexToPdfColor(obj.stroke as string) : null;
+  const borderWidth =
+    rawStrokeWidth > 0
+      ? toPdfDim(rawStrokeWidth, (ctx.scaleX + ctx.scaleY) / 2)
+      : 0;
 
   page.drawEllipse({
     borderColor: borderColor ?? undefined,
@@ -797,11 +935,16 @@ export function drawTriangle(
   const pdfY = ctx.pdfHeight - toPdfDim(centerY, ctx.scaleY);
 
   const fillColor = hexToPdfColor(obj.fill as string);
-  const borderColor = hexToPdfColor(obj.stroke as string);
-  const borderWidth = toPdfDim(
-    (obj.strokeWidth as number) || 0,
-    (ctx.scaleX + ctx.scaleY) / 2,
-  );
+  // Same "borderColor without borderWidth defaults to hairline" gotcha
+  // as `drawRect` — skip both when the user asked for no stroke. See
+  // the long comment in `drawRect` above.
+  const rawStrokeWidth = (obj.strokeWidth as number) || 0;
+  const borderColor =
+    rawStrokeWidth > 0 ? hexToPdfColor(obj.stroke as string) : null;
+  const borderWidth =
+    rawStrokeWidth > 0
+      ? toPdfDim(rawStrokeWidth, (ctx.scaleX + ctx.scaleY) / 2)
+      : 0;
 
   page.drawSvgPath(svgPath, {
     borderColor: borderColor ?? undefined,

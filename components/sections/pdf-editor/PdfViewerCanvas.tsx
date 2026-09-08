@@ -419,12 +419,25 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
             editable.initDelayedCursor?.(true);
             fc.renderAll();
           }
+
+          return;
         }
 
+        // Clicked on some other object (shape / drawing / signature /
+        // image / etc.) while Edit Text is active — leave that object
+        // alone. Creating a new text box on top of it would be
+        // surprising. Only empty-space clicks fall through to the
+        // Textbox-creation path below.
+        if (target) return;
+
+        // Empty space in Edit Text mode → fall through to the Textbox
+        // creation logic normally reserved for the Text tool. QA
+        // 2026-09-08: user was clicking empty space with Edit selected
+        // and expected an empty box to type in — same intuition as
+        // clicking with the Text tool.
+      } else if (activeTool !== "text") {
         return;
       }
-
-      if (activeTool !== "text") return;
 
       // If clicking on an existing object, let Fabric handle it
       const activeObj = fc.getActiveObject();

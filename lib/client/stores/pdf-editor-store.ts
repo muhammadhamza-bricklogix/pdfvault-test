@@ -480,6 +480,18 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       hasUnsavedChanges: true,
       // The new page has no extracted text / overlays yet.
       extractedPages: new Set(),
+      // Clear the presigned-URL source key. `usePdfLoader` derives its
+      // `sourceKey` from `pdfSourceUrl` FIRST — if we leave it set, the
+      // key stays the same after the `file` swap, the effect never
+      // re-runs, and pdf.js keeps serving the pre-add-page document.
+      // The main viewer paints the old page at `currentPage = N+1`
+      // (which pdf.js can't resolve on the old N-page doc, so it falls
+      // back to the last-rendered frame — visually a duplicate of the
+      // previous page), while the sidebar thumbnails render nothing
+      // for the new page (no snapshot + stale getPage failing). QA
+      // 2026-09-08: "new page shows the previous page's content in the
+      // composer but is blank in the sidebar."
+      pdfSourceUrl: null,
     });
   },
 

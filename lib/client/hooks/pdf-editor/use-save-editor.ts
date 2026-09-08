@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -204,6 +205,65 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       logger.event(EVENTS.SAVE_BEFORE_ACTION_START, "info", {
         force: Boolean(detail?.force),
       });
+
+      // Belt-and-braces state sync BEFORE the save chain begins. QA
+      // 2026-09-08: "before saving and download we just have to make
+      // sure that the states of updated file must be updated to avoid
+      // any kind of inconsistency." Two-step commit so nothing
+      // mid-stroke / mid-typing / mid-drag slips past:
+      //
+      //   1. Force-exit any active IText / Textbox that's still in
+      //      editing mode. When the user is typing in a text overlay
+      //      and clicks Done, Fabric normally routes the click through
+      //      its own document listener → `editing:exited` fires →
+      //      overlay commits. But that path can miss the click if the
+      //      Done button lives outside the canvas root (as it does in
+      //      the top chrome), so the textbox stays in editing mode
+      //      and the just-typed characters aren't in
+      //      `fabricJsonByPage` yet. Explicit `exitEditing()` here
+      //      fires `editing:exited` synchronously, which the
+      //      `PdfViewerCanvas` / `use-edit-text-mode` handlers turn
+      //      into a `saveFabricJson` call.
+      //
+      //   2. `flushLiveFabricPage` synchronously serializes the
+      //      current live canvas into
+      //      `fabricJsonByPage[currentPage]` via a Zustand `set`, so
+      //      anything mid-drag or a modification the tool hooks
+      //      already committed is guaranteed to be in the store
+      //      before `persistEditorDocument` reads it.
+      //
+      // `persistEditorDocument` internally does the same flush later
+      // — this one is intentional redundancy so the state is committed
+      // the moment the user clicks Done, not after the async save
+      // pipeline unwinds a few ticks later. Safe to call with
+      // `fabricRef.current === null` — the helpers guard for it.
+      if (fabricRef.current) {
+        try {
+          const fc = fabricRef.current;
+          const active = fc.getActiveObject() as
+            | (typeof fc extends FabricCanvas ? object : never)
+            | undefined;
+
+          if (
+            active &&
+            typeof (active as { isEditing?: boolean }).isEditing ===
+              "boolean" &&
+            (active as { isEditing?: boolean }).isEditing === true &&
+            typeof (active as { exitEditing?: () => void }).exitEditing ===
+              "function"
+          ) {
+            (active as { exitEditing: () => void }).exitEditing();
+            fc.renderAll();
+          }
+          flushLiveFabricPage(usePdfEditorStore.getState().currentPage, fc);
+        } catch (flushErr) {
+          logger.warn(
+            "[PDFedits] save-before-action: pre-save flush threw (ignored)",
+            flushErr,
+          );
+        }
+      }
+
       const result = await logger.span(
         "save.persist_before_action",
         "editor.save",
@@ -215,6 +275,16 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
             // and other save-before-action flows must not silently
             // duplicate a same-name row.
             checkFilenameDuplicate: true,
+            // Done → Download uses `skipReset: true` so `store.file`
+            // stays on the pre-save source bytes for the follow-up
+            // export merge. That also means the store's overlay map
+            // must keep every shape / drawing / highlight / image so
+            // the NEXT save cycle can re-bake them. Without this the
+            // sweep committed a stripped map (editModeText +
+            // pageNumber only) and the second Done → Download shipped
+            // a PDF missing everything the user drew before (QA
+            // 2026-09-08).
+            preserveStoreOverlays: Boolean(detail?.skipReset),
           }),
         { source: "before_action" },
       );

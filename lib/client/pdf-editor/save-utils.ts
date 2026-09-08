@@ -75,8 +75,58 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
         "originalWidth",
         "originalHeight",
         "pdfTextWidth",
+        // Paragraph-level text props. Fabric v6+'s `toJSON()` skips
+        // properties that equal the class default, so `textAlign:
+        // "left"` (the default) is omitted from the serialized JSON —
+        // that's fine, `drawIText` treats missing textAlign as left.
+        // But `toJSON()` has also been observed to omit `textAlign`
+        // for Textbox instances whose alignment was set via
+        // `obj.set()` at runtime (some Fabric v7 builds require the
+        // property to be in `stateProperties` to survive the round
+        // trip). Explicitly overlay it here so a user-picked Center /
+        // Right alignment always makes it into the JSON that
+        // `drawIText` reads (QA 2026-09-08: "alignment changes not
+        // visible in downloaded file"). Same reasoning for
+        // `fontFamily` / `fontSize` / `fontWeight` / `fontStyle` /
+        // `fill` — belt-and-braces against any prop that Fabric
+        // decides to skip.
+        "textAlign",
+        "fontFamily",
+        "fontSize",
+        "fontWeight",
+        "fontStyle",
+        "fill",
       ]) {
         if (live[k] !== undefined) objs[i][k] = live[k];
+      }
+
+      // Textbox visually wraps text when it's wider than the box width.
+      // Fabric stores those wrapped lines on the private `_textLines`
+      // (an array of grapheme-cluster arrays). `toJSON()` doesn't
+      // serialize private fields, so the merge downstream would fall
+      // back to `text.split("\n")` and lose every wrapped-but-not-
+      // Enter-broken line — the user's text ends up on a single
+      // overflowing line in the downloaded PDF (QA 2026-09-08:
+      // "increased text size, line breaks not captured"). Flatten
+      // the wrapped lines to a plain `string[]` and copy as a
+      // custom `wrappedTextLines` field so `drawIText` can prefer
+      // it. Only fires for `textbox` — plain IText (annotations,
+      // page numbers, watermark, plain text tool) is single-line
+      // and doesn't need this.
+      const liveType = (live.type as string | undefined)?.toLowerCase();
+
+      if (liveType === "textbox") {
+        const liveLines = (
+          live as {
+            _textLines?: ReadonlyArray<ReadonlyArray<string> | string>;
+          }
+        )._textLines;
+
+        if (Array.isArray(liveLines) && liveLines.length > 0) {
+          objs[i].wrappedTextLines = liveLines.map((line) =>
+            Array.isArray(line) ? line.join("") : String(line),
+          );
+        }
       }
     }
 
@@ -343,43 +393,55 @@ function renderSubsetFromLiveCanvas(
     liveObjectCount: liveCanvas?.getObjects?.().length ?? -1,
   });
 
-  try {
-    const liveObjects = liveCanvas.getObjects();
-    const parsedObjects = parsed.objects ?? [];
+  const liveObjects = liveCanvas.getObjects();
+  const parsedObjects = parsed.objects ?? [];
 
-    if (liveObjects.length !== parsedObjects.length) {
-      logger.warn(
-        "[PDFedits] EXPORT-DIAG: live/parsed object count mismatch; falling back to offscreen render",
-        {
-          liveCount: liveObjects.length,
-          parsedCount: parsedObjects.length,
-        },
-      );
-
-      return null;
-    }
-
-    const canvasW = Math.max(1, Math.round(parsed.width));
-    const canvasH = Math.max(1, Math.round(parsed.height));
-
-    const targetSet = new Set(objectIndices);
-    const originalVisibility = liveObjects.map(
-      (o) => (o as { visible?: boolean }).visible ?? true,
+  if (liveObjects.length !== parsedObjects.length) {
+    logger.warn(
+      "[PDFedits] EXPORT-DIAG: live/parsed object count mismatch; falling back to offscreen render",
+      {
+        liveCount: liveObjects.length,
+        parsedCount: parsedObjects.length,
+      },
     );
-    const originalZoom = liveCanvas.getZoom();
-    const originalViewport = liveCanvas.viewportTransform
-      ? [...liveCanvas.viewportTransform]
-      : null;
-    // Capture physical canvas dims BEFORE we mutate anything so we can
-    // fully restore. Fabric's `setDimensions` writes to both the CSS and
-    // the backing store; setting them BOTH is critical because zoom-out
-    // in the editor leaves the physical canvas smaller than the base-
-    // coord scene → `toDataURL(width, height)` would clip to the
-    // physical dimensions and the exported PNG would only capture the
-    // top-left corner of the strokes, appearing nearly blank.
-    const originalWidth = liveCanvas.getWidth();
-    const originalHeight = liveCanvas.getHeight();
 
+    return null;
+  }
+
+  const canvasW = Math.max(1, Math.round(parsed.width));
+  const canvasH = Math.max(1, Math.round(parsed.height));
+
+  // Capture originals BEFORE any mutation so the finally block below can
+  // ALWAYS put the live canvas back exactly the way we found it — even
+  // if `renderAll` / `toDataURL` throws mid-flight. QA 2026-09-08:
+  // "sidebar preview shows my edits but the main viewer is blank." The
+  // symptom was every live object stuck at `visible: false` on the live
+  // canvas because the previous version restored visibility only on the
+  // success branch of the try. Any throw between the hide loop and the
+  // restore loop left the objects invisible until a full canvas
+  // remount (page nav / save-reset). Sidebar thumbnails come from a
+  // pre-hide snapshot so they still showed the edits.
+  const targetSet = new Set(objectIndices);
+  const originalVisibility = liveObjects.map(
+    (o) => (o as { visible?: boolean }).visible ?? true,
+  );
+  const originalZoom = liveCanvas.getZoom();
+  const originalViewport = liveCanvas.viewportTransform
+    ? [...liveCanvas.viewportTransform]
+    : null;
+  // Capture physical canvas dims BEFORE we mutate anything so we can
+  // fully restore. Fabric's `setDimensions` writes to both the CSS and
+  // the backing store; setting them BOTH is critical because zoom-out
+  // in the editor leaves the physical canvas smaller than the base-
+  // coord scene → `toDataURL(width, height)` would clip to the
+  // physical dimensions and the exported PNG would only capture the
+  // top-left corner of the strokes, appearing nearly blank.
+  const originalWidth = liveCanvas.getWidth();
+  const originalHeight = liveCanvas.getHeight();
+
+  let dataUrl: string | null = null;
+
+  try {
     // Hide non-target objects
     for (let i = 0; i < liveObjects.length; i++) {
       (liveObjects[i] as { visible: boolean }).visible = targetSet.has(i);
@@ -387,7 +449,7 @@ function renderSubsetFromLiveCanvas(
 
     // Force the live canvas to base-coord dimensions + identity zoom +
     // identity viewport so `toDataURL` captures the full 612×792 (or
-    // whatever base) scene. Restored below in a finally-shape.
+    // whatever base) scene. Restored in the finally block below.
     if (
       originalWidth !== canvasW ||
       originalHeight !== canvasH ||
@@ -402,28 +464,10 @@ function renderSubsetFromLiveCanvas(
 
     liveCanvas.renderAll();
 
-    const dataUrl = liveCanvas.toDataURL({
+    dataUrl = liveCanvas.toDataURL({
       format: "png",
       multiplier: 3,
     });
-
-    // Restore in reverse order: viewport → zoom → dimensions → visibility.
-    if (originalViewport) {
-      liveCanvas.setViewportTransform(
-        originalViewport as [number, number, number, number, number, number],
-      );
-    }
-    if (originalZoom !== 1) liveCanvas.setZoom(originalZoom);
-    if (originalWidth !== canvasW || originalHeight !== canvasH) {
-      liveCanvas.setDimensions({
-        width: originalWidth,
-        height: originalHeight,
-      });
-    }
-    for (let i = 0; i < liveObjects.length; i++) {
-      (liveObjects[i] as { visible: boolean }).visible = originalVisibility[i]!;
-    }
-    liveCanvas.renderAll();
 
     logger.info("[PDFedits] EXPORT-DIAG: rendered subset from LIVE canvas", {
       canvasW,
@@ -435,16 +479,69 @@ function renderSubsetFromLiveCanvas(
       totalObjects: liveObjects.length,
       dataUrlChars: dataUrl.length,
     });
-
-    return dataUrl;
   } catch (err) {
     logger.warn(
       "[PDFedits] EXPORT-DIAG: live-canvas subset render threw; falling back",
       { err },
     );
-
-    return null;
+    dataUrl = null;
+  } finally {
+    // ALWAYS restore in reverse order: viewport → zoom → dimensions →
+    // visibility. Wrapped in individual try/catches so one setter
+    // failing can't skip the others. The visibility restore is the
+    // most important — leaving `visible = false` on live objects makes
+    // the main viewer paint a blank overlay while the sidebar (using
+    // pre-hide snapshots) shows edits (QA 2026-09-08).
+    try {
+      if (originalViewport) {
+        liveCanvas.setViewportTransform(
+          originalViewport as [number, number, number, number, number, number],
+        );
+      }
+    } catch (restoreErr) {
+      logger.warn(
+        "[PDFedits] EXPORT-DIAG: viewport restore failed",
+        restoreErr,
+      );
+    }
+    try {
+      if (originalZoom !== 1) liveCanvas.setZoom(originalZoom);
+    } catch (restoreErr) {
+      logger.warn("[PDFedits] EXPORT-DIAG: zoom restore failed", restoreErr);
+    }
+    try {
+      if (originalWidth !== canvasW || originalHeight !== canvasH) {
+        liveCanvas.setDimensions({
+          width: originalWidth,
+          height: originalHeight,
+        });
+      }
+    } catch (restoreErr) {
+      logger.warn(
+        "[PDFedits] EXPORT-DIAG: dimensions restore failed",
+        restoreErr,
+      );
+    }
+    for (let i = 0; i < liveObjects.length; i++) {
+      try {
+        (liveObjects[i] as { visible: boolean }).visible =
+          originalVisibility[i]!;
+      } catch {
+        // per-object restore should never throw, but harden anyway so a
+        // rogue object can't leave the rest hidden.
+      }
+    }
+    try {
+      liveCanvas.renderAll();
+    } catch (restoreErr) {
+      logger.warn(
+        "[PDFedits] EXPORT-DIAG: post-restore renderAll failed",
+        restoreErr,
+      );
+    }
   }
+
+  return dataUrl;
 }
 
 /** Decodes a `data:image/png;base64,...` URL into raw PNG bytes. */

@@ -97,7 +97,13 @@ const STROKE_SWATCHES = [
   { color: "#2563EB", label: "Blue" },
 ] as const;
 
-const STROKE_WIDTHS = [1, 2, 4, 0] as const;
+// "0" (no-stroke) removed per QA 2026-09-08 — the download pipeline
+// couldn't reliably render a border-less rect via pdf-lib (the drawer
+// still needed a fallback), and users preferred a stable minimum stroke
+// over the confusing "composer looks fine, download has a hairline"
+// mismatch. If we want to bring back a "no border" option later, do it
+// alongside a real fix in `vector-drawers.ts` + a save/reload verification.
+const STROKE_WIDTHS = [1, 2, 4] as const;
 
 function Section({
   children,
@@ -550,7 +556,7 @@ export function ShapePropertiesContent({
                   <Button
                     key={width}
                     isIconOnly
-                    aria-label={width === 0 ? "No stroke" : `${width}px stroke`}
+                    aria-label={`${width}px stroke`}
                     size="sm"
                     variant={
                       currentStrokeWidth === width ? "secondary" : "ghost"
@@ -560,12 +566,9 @@ export function ShapePropertiesContent({
                     <span
                       className="block w-4 rounded-full bg-[var(--color-foreground)]"
                       style={{
-                        height: width === 0 ? 1 : Math.max(width, 1),
+                        height: Math.max(width, 1),
                       }}
                     />
-                    {width === 0 && (
-                      <span className="absolute h-5 w-px rotate-45 bg-danger" />
-                    )}
                   </Button>
                 ))}
               </div>
