@@ -420,10 +420,62 @@ export async function drawIText(
       }
     }
   } else {
+    // Read the paragraph-level alignment. Fabric's Textbox and IText both
+    // store this as `textAlign`. Default (undefined / "left") keeps the
+    // pre-existing behavior so unaligned callers (annotations, page
+    // numbers, watermarks, plain single-line text) render exactly as
+    // before — no regression risk on those paths.
+    // QA 2026-09-08: user picks Center or Right in the FloatingTextToolbar,
+    // the composer shows the alignment correctly, but the downloaded PDF
+    // renders every line at the LEFT edge of the Textbox because pdf-lib's
+    // `drawText` doesn't accept a `textAlign` option — we have to
+    // compute the per-line x offset ourselves.
+    const rawAlign =
+      typeof obj.textAlign === "string" ? obj.textAlign : undefined;
+    const alignment: "left" | "center" | "right" =
+      rawAlign === "center" || rawAlign === "right" ? rawAlign : "left";
+    const boxWidth = typeof pdfMaxWidth === "number" ? pdfMaxWidth : 0;
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
       if (!line) continue; // skip blank lines (Y still advances via index)
+
+      // Only compute a per-line offset when the caller wants center or
+      // right alignment AND we actually know the box width (`maxWidth`).
+      // For default left alignment we short-circuit to `offset = 0`, so
+      // `x = pdfX` — identical to the old behavior, no chance of
+      // pushing left-aligned text off position.
+      let offset = 0;
+
+      if (alignment !== "left" && boxWidth > 0) {
+        // Measure the rendered width of THIS line in the resolved font +
+        // size. `widthOfTextAtSize` can throw for characters the font
+        // can't encode; if it does, we fall back to zero offset
+        // (left-alignment) so a bad char can't corrupt the render.
+        let lineWidth = 0;
+
+        try {
+          lineWidth = font.widthOfTextAtSize(line, pdfFontSize);
+        } catch {
+          lineWidth = 0;
+        }
+
+        if (lineWidth > 0 && lineWidth < boxWidth) {
+          const slack = boxWidth - lineWidth;
+
+          offset = alignment === "center" ? slack / 2 : slack;
+        }
+      }
+
+      // Advance the offset along the text-flow direction. For angle 0
+      // this collapses to `x = pdfX + offset`, `y` unchanged — the
+      // common case and identical to the original layout for
+      // left-aligned text (offset = 0). For rotated text the offset
+      // rides along `advanceX` / `advanceY` so a rotated line still
+      // aligns correctly within the box's rotated frame.
+      const drawX = pdfX + offset * advanceX;
+      const drawY = pdfY - i * pdfLineHeight + offset * advanceY;
 
       page.drawText(line, {
         color,
@@ -432,8 +484,8 @@ export async function drawIText(
         opacity,
         rotate: angle ? degrees(-angle) : undefined,
         size: pdfFontSize,
-        x: pdfX,
-        y: pdfY - i * pdfLineHeight,
+        x: drawX,
+        y: drawY,
       });
     }
   }
