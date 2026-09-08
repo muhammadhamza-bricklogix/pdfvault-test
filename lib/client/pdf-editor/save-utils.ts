@@ -75,6 +75,27 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
         "originalWidth",
         "originalHeight",
         "pdfTextWidth",
+        // Paragraph-level text props. Fabric v6+'s `toJSON()` skips
+        // properties that equal the class default, so `textAlign:
+        // "left"` (the default) is omitted from the serialized JSON —
+        // that's fine, `drawIText` treats missing textAlign as left.
+        // But `toJSON()` has also been observed to omit `textAlign`
+        // for Textbox instances whose alignment was set via
+        // `obj.set()` at runtime (some Fabric v7 builds require the
+        // property to be in `stateProperties` to survive the round
+        // trip). Explicitly overlay it here so a user-picked Center /
+        // Right alignment always makes it into the JSON that
+        // `drawIText` reads (QA 2026-09-08: "alignment changes not
+        // visible in downloaded file"). Same reasoning for
+        // `fontFamily` / `fontSize` / `fontWeight` / `fontStyle` /
+        // `fill` — belt-and-braces against any prop that Fabric
+        // decides to skip.
+        "textAlign",
+        "fontFamily",
+        "fontSize",
+        "fontWeight",
+        "fontStyle",
+        "fill",
       ]) {
         if (live[k] !== undefined) objs[i][k] = live[k];
       }

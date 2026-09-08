@@ -42,15 +42,25 @@ type FloatingTextToolbarProps = {
   fabricCanvas: Canvas | null;
 };
 
-const FONT_FAMILIES = [
-  "Helvetica",
-  "Times New Roman",
-  "Courier New",
-  "Georgia",
-  "Verdana",
-  "Arial",
-  "Trebuchet MS",
-];
+// Only fonts that map exactly to pdf-lib's built-in StandardFonts.
+// pdf-lib has 14 StandardFonts (Adobe Type 1) — Helvetica, Times-Roman,
+// Courier, and their bold/italic variants. Any font outside that set gets
+// silently substituted by `resolveStandardFont` at render time:
+//   Georgia → Times-Roman   (visible mismatch — distinct typefaces)
+//   Verdana → Helvetica     (visible mismatch)
+//   Trebuchet MS → Helvetica (visible mismatch)
+//   Arial → Helvetica       (close but not exact)
+// QA 2026-09-08: users picking Georgia / Verdana / Trebuchet MS / Arial in
+// the composer saw the browser's real system font in the preview but got
+// the substitute in the downloaded PDF. Pruning the list to only the three
+// direct equivalents guarantees composer = download. Existing documents
+// that still carry `fontFamily: "Georgia"` (etc.) in their Fabric JSON keep
+// rendering through the same fallback path — nothing about the render
+// pipeline changes. Only the picker options are restricted.
+// Matches the Watermark toolbar's font list. To add more families later,
+// bundle a real font file and embed it via `pdfDoc.embedFont(bytes)` in
+// `FontCache` instead of the StandardFont branch.
+const FONT_FAMILIES = ["Helvetica", "Times New Roman", "Courier New"];
 
 // Standard font-size presets. Extracted text can have arbitrary sizes
 // (e.g. 11.3, 13.7) — the current value is spliced into the list if
