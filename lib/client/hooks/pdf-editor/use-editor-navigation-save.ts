@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { toast } from "@/lib/shared/utils/toast";
 
 type NavigateAfterSaveDetail = {
@@ -20,6 +21,15 @@ type NavigateAfterSaveDetail = {
    * library opens in a fresh route.
    */
   clearFileAfter?: boolean;
+  /**
+   * Bypass the `!hasUnsavedChanges` short-circuit and always run the
+   * cloud save (via `persistEditorDocument({ force: true })`). Set by
+   * the logo click so a "quick draw → click logo" sequence, where the
+   * live canvas has new strokes but `hasUnsavedChanges` may not have
+   * propagated yet due to a listener race, still uploads the latest
+   * state instead of navigating away silently (QA 2026-09-08).
+   */
+  force?: boolean;
 };
 
 // Module-level flag flipped by callers (e.g. ReloadConfirmModal) that
@@ -73,6 +83,21 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       }
 
       if (!isSignedIn) {
+        // Signed-out caller: no cloud doc to persist, but we still owe
+        // the user their in-progress edits — snapshot the live canvas
+        // into IDB via the pending-editor-file mirror so
+        // `PendingEditorFileHydrator` can restore it if they come back
+        // (QA 2026-09-08: clicked logo after drawing → lost edits).
+        // Fire-and-forget with a short timeout so a slow IDB write
+        // can't strand the user on the editor.
+        try {
+          await Promise.race([
+            snapshotPendingEditorFile(fabricRef.current).catch(() => undefined),
+            new Promise((r) => window.setTimeout(r, 2000)),
+          ]);
+        } catch {
+          // best-effort — proceed with navigation regardless
+        }
         // QA 2026-09-06 copy: "Sign in" → "Login".
         toast.info({
           title: "Login to save",
@@ -86,7 +111,11 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       // Nothing to persist → skip the whole "Saving…" toast + upload roundtrip
       // and navigate immediately. Avoids the misleading flash users were
       // seeing on every back-to-library click even with no edits.
-      if (!usePdfEditorStore.getState().hasUnsavedChanges) {
+      // `force: true` bypasses this so the logo-click (and any other
+      // caller that sets force) always runs the save — protects against
+      // a race where the last stroke's `path:created` listener hasn't
+      // flipped `hasUnsavedChanges` yet when the user clicks away.
+      if (!detail.force && !usePdfEditorStore.getState().hasUnsavedChanges) {
         navigate();
 
         return;

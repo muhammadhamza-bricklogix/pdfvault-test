@@ -444,7 +444,12 @@ function TopAppBar() {
   const handleLogoClick = (
     e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
   ) => {
-    if (!file || !isSignedIn) return;
+    // No file open → let the Link navigate normally. If a file IS open,
+    // ALWAYS intercept — signed-out users still deserve an IDB snapshot
+    // of their in-progress edits (handled inside
+    // `use-editor-navigation-save.ts`'s signed-out branch, QA
+    // 2026-09-08) so they can pick up where they left off on return.
+    if (!file) return;
 
     e.preventDefault();
 
@@ -485,9 +490,16 @@ function TopAppBar() {
       return;
     }
 
+    // `force: true` — a quick "draw stroke → click logo" sequence can
+    // race the `path:created` → `markDocumentDirty` listener, so the
+    // store's `hasUnsavedChanges` may still be false at click time even
+    // though the live canvas has new strokes. Forcing the save
+    // bypasses the "no changes → skip upload" short-circuit and lets
+    // `persistEditorDocument` (which internally re-serializes the live
+    // canvas) capture the latest state before navigation.
     window.dispatchEvent(
       new CustomEvent("editor:navigate-after-save", {
-        detail: { url: targetUrl, clearFileAfter: true },
+        detail: { url: targetUrl, clearFileAfter: true, force: true },
       }),
     );
   };
