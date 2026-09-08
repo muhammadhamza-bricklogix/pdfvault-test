@@ -246,18 +246,36 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
       triggerDownload(mergedBlob, outName);
 
-      // QA 2026-09-07 (revised): the earlier auto-load-into-composer
-      // step (setCurrentDocument(null) + clearFile + setFile(mergedFile))
-      // wiped `fabricJsonByPage` and forced a full pdf.js reload —
-      // users reported "my edits are lost after refresh" because
-      // the reload clobbered the in-session Fabric state before they
-      // had a chance to keep working on the SAME editor. Reverted:
-      // just download and close the modal. Editor keeps its current
-      // file + all Fabric overlays intact. The user's merged copy
-      // lives in their downloads folder if they want to re-open it.
+      // QA 2026-09-09: also swap the composer's source to the merged
+      // file so the user's next edit session runs against the combined
+      // document. The download above ships the same bytes to disk;
+      // we're wiring the SAME bytes into `store.file` via
+      // `applyPostSaveReset` so pdf.js reloads with the merged pages
+      // and the sidebar shows [source pages + attached pages] as one
+      // unified list. Fabric state on source pages 1..N is preserved
+      // by `applyPostSaveReset` (see the KEEP fabricJsonByPage comment
+      // in `pdf-editor-store.ts`); new pages N+1..N+M come in clean.
+      //
+      // `markDocumentDirty()` after because the merged bytes aren't
+      // cloud-saved yet — user must hit Save to persist to their
+      // library.
+      //
+      // Only runs when the user clicks Merge & Download. The Add PDFs
+      // click does NOT touch the composer (per 2026-09-09 revert),
+      // so opening the modal + adding files + closing without clicking
+      // Merge & Download is a no-op on the editor session.
+      const mergedFile = new File(
+        [bytes as BlobPart],
+        liveFile?.name ?? source.filename,
+        { type: "application/pdf" },
+      );
+
+      usePdfEditorStore.getState().applyPostSaveReset(mergedFile);
+      usePdfEditorStore.getState().markDocumentDirty();
+
       toast.success({
         title: "Merge complete",
-        description: `Downloaded ${outName}.`,
+        description: `Downloaded ${outName}. Composer now shows the merged pages.`,
       });
       onClose();
     } catch (err) {
