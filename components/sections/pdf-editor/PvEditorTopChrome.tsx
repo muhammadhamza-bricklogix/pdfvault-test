@@ -602,6 +602,13 @@ function TopAppBar() {
         onCommit={commitRename}
       />
 
+      {/* QA 2026-09-08: visual spacer between the filename field and the
+          zoom pill. The container's `gap-x-3` (12px) leaves them too
+          close together — this pushes the zoom + action row further
+          right so the filename has its own breathing room. Hidden on
+          narrow viewports where the row wraps to a new line anyway. */}
+      <span aria-hidden className="hidden md:block md:w-6 lg:w-10" />
+
       {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
           "Unsaved edits" / "Saved to My PDFs" label added visual noise
           and was confusing users. Save state is still tracked in the
