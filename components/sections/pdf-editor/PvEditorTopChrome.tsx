@@ -602,12 +602,15 @@ function TopAppBar() {
         onCommit={commitRename}
       />
 
-      {/* QA 2026-09-08: visual spacer between the filename field and the
-          zoom pill. The container's `gap-x-3` (12px) leaves them too
-          close together — this pushes the zoom + action row further
-          right so the filename has its own breathing room. Hidden on
-          narrow viewports where the row wraps to a new line anyway. */}
-      <span aria-hidden className="hidden md:block md:w-6 lg:w-10" />
+      {/* QA 2026-09-09: bumped from `md:w-6 lg:w-10` (24 / 40 px) to
+          `md:w-12 lg:w-20 xl:w-24` (48 / 80 / 96 px) after a follow-up
+          screenshot showed the filename input still sitting flush
+          against the zoom pill's minus icon on wide viewports. Added
+          to the container's `gap-x-3` (12 px) this now yields ~60–108
+          px of breathing room depending on breakpoint. Hidden on
+          narrow viewports where the row wraps to a new line anyway
+          — mobile fit is unchanged. */}
+      <span aria-hidden className="hidden md:block md:w-12 lg:w-20 xl:w-24" />
 
       {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
           "Unsaved edits" / "Saved to My PDFs" label added visual noise
