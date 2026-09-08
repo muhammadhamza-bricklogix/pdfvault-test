@@ -42,7 +42,7 @@ import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
@@ -58,6 +58,7 @@ import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
+import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
 
@@ -359,12 +360,9 @@ function TopAppBar() {
     );
   };
 
-  // Editable filename — Canva-style inline edit. Uncontrolled input
-  // keyed on `fileName` so external renames (post-save, restore-version)
-  // reset the input without needing a setState-in-effect sync. Display
-  // strips `.pdf` because the extension is redundant in an editor that
-  // only handles PDFs — commit re-appends it before saving.
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  // Display name strips `.pdf` because the extension is redundant in
+  // an editor that only handles PDFs — commit re-appends it before
+  // saving. Input state is fully owned by <EditableFilenameField/>.
   const displayName = fileName.replace(/\.pdf$/i, "");
 
   // Clear the store BEFORE navigating so re-entry via any path — bare
@@ -504,22 +502,16 @@ function TopAppBar() {
     );
   };
 
-  const commitRename = () => {
-    if (!file || !nameInputRef.current) return;
-    const trimmed = nameInputRef.current.value.trim();
+  // Called from EditableFilenameField with the trimmed new name.
+  // Blank-name guard already runs inside the component (tick button
+  // disabled + Enter path cancels), so we only see non-empty values.
+  const commitRename = (trimmed: string) => {
+    if (!file) return;
 
-    if (!trimmed) {
-      nameInputRef.current.value = displayName;
-
-      return;
-    }
     const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
 
-    if (withExt === file.name) {
-      nameInputRef.current.value = displayName;
+    if (withExt === file.name) return;
 
-      return;
-    }
     const renamed = new File([file], withExt, {
       lastModified: file.lastModified,
       type: file.type,
@@ -599,46 +591,16 @@ function TopAppBar() {
 
       <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
 
-      {/* QA 2026-09-08: filename input wrapped in a persistently-bordered
-          container + pencil icon adornment so users can see at a glance
-          that the field is editable. Previously the border was
-          `transparent` by default (only appearing on hover) which
-          hid the affordance entirely for keyboard/tap users. Focus
-          state still highlights in red. */}
-      <div
-        className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-default-300 bg-white px-2 py-1 transition-colors focus-within:border-[#f12c23] ${
-          file ? "" : "opacity-50"
-        }`}
-      >
-        <input
-          key={fileName}
-          ref={nameInputRef}
-          aria-label="Document name"
-          className="min-w-0 flex-1 truncate bg-transparent text-[14px] font-medium text-[var(--color-foreground)] outline-none disabled:cursor-not-allowed"
-          defaultValue={displayName}
-          disabled={!file}
-          title="Click to rename"
-          type="text"
-          onBlur={commitRename}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              nameInputRef.current?.blur();
-            } else if (e.key === "Escape") {
-              if (nameInputRef.current)
-                nameInputRef.current.value = displayName;
-              nameInputRef.current?.blur();
-            }
-          }}
-        />
-        <HugeiconsIcon
-          aria-hidden
-          className="shrink-0 text-default-400"
-          icon={PencilEdit01Icon}
-          size={14}
-          strokeWidth={1.8}
-        />
-      </div>
+      {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
+          fit-to-text sizing (no more `flex-1` stretch), click-to-edit
+          via pencil icon, tick button to save, blank-name guarded. */}
+      <EditableFilenameField
+        className="min-w-0 max-w-[50vw] flex-shrink"
+        disabled={!file}
+        fontSizeClass="text-[14px]"
+        value={displayName}
+        onCommit={commitRename}
+      />
 
       {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
           "Unsaved edits" / "Saved to My PDFs" label added visual noise
