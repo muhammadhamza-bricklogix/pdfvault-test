@@ -57,7 +57,6 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
-import { SaveStatusChip } from "./SaveStatusChip";
 import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -451,7 +450,8 @@ export function EditorInfoBar() {
               }}
             />
 
-            <SaveStatusChip />
+            {/* QA 2026-09-08: SaveStatusChip removed per product decision.
+                See PvEditorTopChrome for the same removal + full rationale. */}
 
             <Separator
               className="!h-4 hidden self-center md:block"

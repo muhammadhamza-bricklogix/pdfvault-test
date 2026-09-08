@@ -20,6 +20,7 @@ export const ENTITLEMENT_ALLOWLIST: ReadonlySet<string> = new Set([
   "julleerizz@pdfvault.ai",
   "jasper@pdfvault.ai",
   "eisha.fatima@brickslogix.com",
+  "nazia.ali@brickslogix.com",
 ]);
 
 export function isAllowlistedEmail(email: string | null | undefined): boolean {
