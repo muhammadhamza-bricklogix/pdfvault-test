@@ -97,6 +97,32 @@ function resolveTopLeft(obj: FabricObj): { left: number; top: number } {
 // Text
 // ---------------------------------------------------------------------------
 
+/**
+ * Fabric v6/v7 renders a Text/Textbox's line-0 baseline at
+ *   `top + fontSize * _fontSizeMult * (1 − _fontSizeFraction)`
+ * with the defaults `_fontSizeMult = 1.13` and `_fontSizeFraction = 0.222`
+ * (see `node_modules/fabric/dist/src/shapes/Text/constants.min.mjs` +
+ * `Text.mjs:520-528, 561-575`). That's `1.13 × 0.778 = 0.87914`.
+ *
+ * We need to match this at export so any text object — Fabric-native
+ * (text tool, annotations, page numbers, signature text) OR modified
+ * editModeText (extracted PDF text the user typed / restyled) — lands
+ * at the same vertical position in the downloaded PDF that Fabric
+ * painted in the composer. pdf-lib's `drawText` places `y` on the
+ * baseline, so this constant IS the baseline-from-top offset.
+ *
+ * Pristine editModeText (`editorType === "editModeText" && pristine`)
+ * never reaches this drawer — `merge-pdf.ts:isModifiedEditModeText`
+ * filters it out and the source PDF page is copied byte-for-byte, so
+ * its baseline stays pdf.js-authoritative. Only user-modified overlays
+ * flow through here, and every one of them is painted by Fabric in the
+ * composer — matching Fabric's math guarantees composer == download.
+ *
+ * If Fabric ever changes its defaults, update this constant to match
+ * the new values in `constants.min.mjs`.
+ */
+const FABRIC_BASELINE_MULT = 1.13 * (1 - 0.222); // 0.87914
+
 export async function drawIText(
   obj: FabricObj,
   page: PDFPage,
@@ -193,7 +219,6 @@ export async function drawIText(
   const color = hexToPdfColor(obj.fill as string) ?? rgb(0, 0, 0);
 
   const pdfFontSize = toPdfDim(fontSize, ctx.scaleY);
-  const fontHeight = font.heightAtSize(pdfFontSize, { descender: false });
 
   // For extracted PDF text items, skip maxWidth — their position is controlled
   // by precise x/y coordinates, not text wrapping. maxWidth would cause pdf-lib
@@ -205,13 +230,25 @@ export async function drawIText(
         ? toPdfDim(objWidth, ctx.scaleX)
         : undefined;
 
-  // For angle == 0 the original formula puts pdfY at fontHeight (font ascend
-  // height, NOT fontSize) below the top — preserving that for upright text
-  // avoids drift. For rotated text we apply the same ascend shift but along
-  // the rotated axis. `ascendFabric` is the ascend in Fabric units so that
-  // (top + ascendFabric) → top + fontHeight at PDF scale, matching the
-  // upright formula exactly when angle == 0.
-  const ascendFabric = fontHeight / ctx.scaleY;
+  // QA 2026-09-09: baseline distance from `top`, in Fabric units. The
+  // old formula (`fontHeight = font.heightAtSize(size, {descender:false})`
+  // ≈ 0.718 × fontSize for Helvetica) under-shot the true composer
+  // baseline by `(0.87914 − 0.718) × fontSize ≈ 0.161 × fontSize`. At
+  // small sizes (12-16 pt) this was 2-3 pt — no one noticed. At 96 pt
+  // Bold+Italic it drifted ~15.5 pt upward on the download vs. the
+  // composer (QA report). Fabric's own baseline math (see the
+  // `FABRIC_BASELINE_MULT` block above) is used for ALL text overlays
+  // that reach this drawer — Fabric-native (text tool, annotations,
+  // page numbers, signature text) AND modified editModeText — because
+  // every one of them is painted by Fabric in the composer.
+  //
+  // Pristine editModeText never reaches this drawer (filtered out
+  // upstream in `merge-pdf.ts`), so its pdf.js-authoritative baseline
+  // is preserved via the byte-for-byte page copy path.
+  //
+  // Rotated text (angle 90/180/270) below uses the same value along the
+  // rotated axis; the branch structure stays as-is.
+  const ascendFabric = fontSize * FABRIC_BASELINE_MULT;
   let fabricBaselineX = left;
   let fabricBaselineY = top + ascendFabric;
 

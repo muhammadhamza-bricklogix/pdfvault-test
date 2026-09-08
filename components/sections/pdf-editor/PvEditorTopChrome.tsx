@@ -545,238 +545,243 @@ function TopAppBar() {
   };
 
   return (
-    <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4 py-2">
-      <Tooltip delay={300}>
-        <button
-          aria-label="Back to dashboard"
-          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
-          type="button"
-          onClick={handleBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
-        </button>
-        <Tooltip.Content>
-          <p>Back to dashboard</p>
-        </Tooltip.Content>
-      </Tooltip>
-
-      {/* Hamburger hidden on `/w-9-form` per product 2026-09-01 —
-          the W-9 flow has its own Back → save-and-continue path and
-          the hamburger's tools (Manage Pages, Share, etc.) don't
-          apply to a fill-and-sign form.
-
-          For guests: HamburgerMenu itself hides the dropdown trigger
-          (per QA 2026-09-05) but stays MOUNTED so its bridge event
-          listeners (editor:open-merge / open-split / open-flatten /
-          open-annotations) still fire when the top toolbar dispatches
-          them. Unmounting the whole component for guests silently
-          drops those listeners and the toolbar buttons appear idle
-          (QA 2026-09-06). */}
-      {showW9Save ? null : <HamburgerMenu />}
-
-      <Link
-        aria-label="Home"
-        className="flex shrink-0 items-center gap-2"
-        href={ROUTES.PUBLIC.HOME}
-        onClick={handleLogoClick}
-      >
-        <Image
-          alt="PDFVault"
-          className="h-[32px] w-auto object-contain"
-          height={32}
-          src="/landing/logo-with-text.png"
-          width={128}
-        />
-      </Link>
-
-      <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
-
-      {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
-          fit-to-text sizing (no more `flex-1` stretch), click-to-edit
-          via pencil icon, tick button to save, blank-name guarded. */}
-      <EditableFilenameField
-        className="min-w-0 max-w-[50vw] flex-shrink"
-        disabled={!file}
-        fontSizeClass="text-[14px]"
-        value={displayName}
-        onCommit={commitRename}
-      />
-
-      {/* QA 2026-09-09: bumped from `md:w-6 lg:w-10` (24 / 40 px) to
-          `md:w-12 lg:w-20 xl:w-24` (48 / 80 / 96 px) after a follow-up
-          screenshot showed the filename input still sitting flush
-          against the zoom pill's minus icon on wide viewports. Added
-          to the container's `gap-x-3` (12 px) this now yields ~60–108
-          px of breathing room depending on breakpoint. Hidden on
-          narrow viewports where the row wraps to a new line anyway
-          — mobile fit is unchanged. */}
-      <span aria-hidden className="hidden md:block md:w-12 lg:w-20 xl:w-24" />
-
-      {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
-          "Unsaved edits" / "Saved to My PDFs" label added visual noise
-          and was confusing users. Save state is still tracked in the
-          store (`hasUnsavedChanges`); other UI (Save button, navigation
-          prompts, ExportFormatModal auto-save) still uses it. Restore
-          by re-inserting `<SaveStatusChip />` here. */}
-      <ZoomPill />
-
-      {/* Save button — HIDDEN for now per product decision. Restore by
-          removing the surrounding `{showW9Save && (…)}` wrapper. Handler +
-          auth flow (items 4, 12, 17) preserved intact so re-enabling
-          is a one-line change. Currently enabled ONLY on the W-9 route
-          (`/w-9-form`) where the user needs an explicit save affordance
-          that doesn't force a paid download. */}
-      {showW9Save && (
+    // QA 2026-09-09: split into two aligned sections. The parent uses
+    // `justify-between` so the left cluster (back / hamburger / logo /
+    // filename) hugs the left edge and the right cluster (zoom / undo /
+    // language / help / search / print / share / done) hugs the right
+    // edge. Retains `flex-wrap` so on narrow viewports the right cluster
+    // wraps below the left one instead of overflowing horizontally.
+    // Prior layout had every item as a direct flex child with a fixed
+    // `md:w-12 lg:w-20 xl:w-24` visual spacer between filename and zoom
+    // pill; that's now redundant and removed.
+    <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4 py-2">
+      {/* ── LEFT SECTION: navigation + document identity ────────────── */}
+      <div className="flex min-w-0 items-center gap-3">
         <Tooltip delay={300}>
           <button
-            aria-label="Save"
+            aria-label="Back to dashboard"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
+            type="button"
+            onClick={handleBack}
+          >
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
+          </button>
+          <Tooltip.Content>
+            <p>Back to dashboard</p>
+          </Tooltip.Content>
+        </Tooltip>
+
+        {/* Hamburger hidden on `/w-9-form` per product 2026-09-01 —
+            the W-9 flow has its own Back → save-and-continue path and
+            the hamburger's tools (Manage Pages, Share, etc.) don't
+            apply to a fill-and-sign form.
+
+            For guests: HamburgerMenu itself hides the dropdown trigger
+            (per QA 2026-09-05) but stays MOUNTED so its bridge event
+            listeners (editor:open-merge / open-split / open-flatten /
+            open-annotations) still fire when the top toolbar dispatches
+            them. Unmounting the whole component for guests silently
+            drops those listeners and the toolbar buttons appear idle
+            (QA 2026-09-06). */}
+        {showW9Save ? null : <HamburgerMenu />}
+
+        <Link
+          aria-label="Home"
+          className="flex shrink-0 items-center gap-2"
+          href={ROUTES.PUBLIC.HOME}
+          onClick={handleLogoClick}
+        >
+          <Image
+            alt="PDFVault"
+            className="h-[32px] w-auto object-contain"
+            height={32}
+            src="/landing/logo-with-text.png"
+            width={128}
+          />
+        </Link>
+
+        <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
+
+        {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
+            fit-to-text sizing (no more `flex-1` stretch), click-to-edit
+            via pencil icon, tick button to save, blank-name guarded. */}
+        <EditableFilenameField
+          className="min-w-0 max-w-[50vw] flex-shrink"
+          disabled={!file}
+          fontSizeClass="text-[14px]"
+          value={displayName}
+          onCommit={commitRename}
+        />
+      </div>
+
+      {/* ── RIGHT SECTION: view controls + actions ──────────────────── */}
+      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+        {/* QA 2026-09-08: SaveStatusChip removed per product decision — the
+            "Unsaved edits" / "Saved to My PDFs" label added visual noise
+            and was confusing users. Save state is still tracked in the
+            store (`hasUnsavedChanges`); other UI (Save button, navigation
+            prompts, ExportFormatModal auto-save) still uses it. Restore
+            by re-inserting `<SaveStatusChip />` here. */}
+        <ZoomPill />
+
+        {/* Save button — HIDDEN for now per product decision. Restore by
+            removing the surrounding `{showW9Save && (…)}` wrapper. Handler +
+            auth flow (items 4, 12, 17) preserved intact so re-enabling
+            is a one-line change. Currently enabled ONLY on the W-9 route
+            (`/w-9-form`) where the user needs an explicit save affordance
+            that doesn't force a paid download. */}
+        {showW9Save && (
+          <Tooltip delay={300}>
+            <button
+              aria-label="Save"
+              className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+              disabled={!file}
+              type="button"
+              onClick={() => {
+                if (!isSignedIn) {
+                  // Persist file + fabric edits + extractedPages before the
+                  // full-page sign-in redirect so the hydrator restores the
+                  // full editor state on return.
+                  void snapshotPendingEditorFile().catch(() => undefined);
+                  // AuthModal (2026-08-28 unify). Cards' finalize does
+                  // the item #15 `window.location.assign` — hydrator
+                  // restores the snapshotted file on return.
+                  dispatchAuthModal({
+                    mode: "signup",
+                    redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
+                  });
+
+                  return;
+                }
+                window.dispatchEvent(new CustomEvent("editor:save"));
+              }}
+            >
+              <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
+              <span className="hidden sm:inline">Save</span>
+            </button>
+            <Tooltip.Content>
+              <p>
+                {!file
+                  ? "Open a PDF to save"
+                  : !isSignedIn
+                    ? "Login to save to your library"
+                    : "Save to My PDFs"}
+              </p>
+            </Tooltip.Content>
+          </Tooltip>
+        )}
+
+        <div className="flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
+          <Tooltip delay={300}>
+            <button
+              aria-label="Undo"
+              className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!canUndo}
+              type="button"
+              onClick={() => fireEditorEvent("editor:undo")}
+            >
+              <HugeiconsIcon icon={UndoIcon} size={18} />
+            </button>
+            <Tooltip.Content>
+              <p>Undo</p>
+            </Tooltip.Content>
+          </Tooltip>
+          <span aria-hidden className="h-4 w-px bg-default-200" />
+          <Tooltip delay={300}>
+            <button
+              aria-label="Redo"
+              className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!canRedo}
+              type="button"
+              onClick={() => fireEditorEvent("editor:redo")}
+            >
+              <HugeiconsIcon icon={RedoIcon} size={18} />
+            </button>
+            <Tooltip.Content>
+              <p>Redo</p>
+            </Tooltip.Content>
+          </Tooltip>
+        </div>
+
+        <LanguageSwitcher />
+
+        {/* Editor product tour is auto-launched on first mount via
+            `useProductTour("editor")` inside <TourHelpButton />. The W-9
+            route reuses <PdfEditorShell />, so mounting this button here
+            would fire the composer tour over the W-9 template on the
+            user's first visit — anchors don't map to the W-9 layout and
+            it distracts from the yellow field overlays. Suppress on
+            `/w-9-form` only; every other editor route keeps the button
+            + the auto-launch. */}
+        {showW9Save ? null : <TourHelpButton tour="editor" variant="chrome" />}
+
+        {/* Search — PDF-wide text search with highlight + navigation. */}
+        <Tooltip delay={300}>
+          <button
+            aria-label="Search in PDF"
+            aria-pressed={isSearchOpen}
+            className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
+              isSearchOpen
+                ? "border-[#f12c23] bg-red-50 text-[#f12c23]"
+                : "border-default-200 bg-white text-[var(--color-foreground)] hover:bg-default-100"
+            }`}
+            disabled={!file}
+            type="button"
+            onClick={() => (isSearchOpen ? closeSearch() : openSearch())}
+          >
+            <HugeiconsIcon icon={Search01Icon} size={14} />
+            <span className="hidden sm:inline">Search</span>
+          </button>
+          <Tooltip.Content>
+            <p>Search in PDF</p>
+          </Tooltip.Content>
+        </Tooltip>
+
+        {/* Print — paid users only; builds the final edited PDF then opens
+            the browser print dialog via a hidden iframe. */}
+        <Tooltip delay={300}>
+          <button
+            aria-label="Print"
             className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
             disabled={!file}
             type="button"
-            onClick={() => {
-              if (!isSignedIn) {
-                // Persist file + fabric edits + extractedPages before the
-                // full-page sign-in redirect so the hydrator restores the
-                // full editor state on return.
-                void snapshotPendingEditorFile().catch(() => undefined);
-                // AuthModal (2026-08-28 unify). Cards' finalize does
-                // the item #15 `window.location.assign` — hydrator
-                // restores the snapshotted file on return.
-                dispatchAuthModal({
-                  mode: "signup",
-                  redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
-                });
-
-                return;
-              }
-              window.dispatchEvent(new CustomEvent("editor:save"));
-            }}
+            onClick={() => void handlePrint()}
           >
-            <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
-            <span className="hidden sm:inline">Save</span>
+            <HugeiconsIcon icon={PrinterIcon} size={14} />
+            <span className="hidden sm:inline">Print</span>
           </button>
           <Tooltip.Content>
-            <p>
-              {!file
-                ? "Open a PDF to save"
-                : !isSignedIn
-                  ? "Login to save to your library"
-                  : "Save to My PDFs"}
-            </p>
+            <p>Print</p>
           </Tooltip.Content>
         </Tooltip>
-      )}
 
-      <div className="ml-3 flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
-        <Tooltip delay={300}>
-          <button
-            aria-label="Undo"
-            className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!canUndo}
-            type="button"
-            onClick={() => fireEditorEvent("editor:undo")}
-          >
-            <HugeiconsIcon icon={UndoIcon} size={18} />
-          </button>
-          <Tooltip.Content>
-            <p>Undo</p>
-          </Tooltip.Content>
-        </Tooltip>
-        <span aria-hidden className="h-4 w-px bg-default-200" />
-        <Tooltip delay={300}>
-          <button
-            aria-label="Redo"
-            className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!canRedo}
-            type="button"
-            onClick={() => fireEditorEvent("editor:redo")}
-          >
-            <HugeiconsIcon icon={RedoIcon} size={18} />
-          </button>
-          <Tooltip.Content>
-            <p>Redo</p>
-          </Tooltip.Content>
-        </Tooltip>
-      </div>
-
-      <LanguageSwitcher />
-
-      {/* Editor product tour is auto-launched on first mount via
-          `useProductTour("editor")` inside <TourHelpButton />. The W-9
-          route reuses <PdfEditorShell />, so mounting this button here
-          would fire the composer tour over the W-9 template on the
-          user's first visit — anchors don't map to the W-9 layout and
-          it distracts from the yellow field overlays. Suppress on
-          `/w-9-form` only; every other editor route keeps the button
-          + the auto-launch. */}
-      {showW9Save ? null : <TourHelpButton tour="editor" variant="chrome" />}
-
-      {/* Search — PDF-wide text search with highlight + navigation. */}
-      <Tooltip delay={300}>
+        {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
         <button
-          aria-label="Search in PDF"
-          aria-pressed={isSearchOpen}
-          className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
-            isSearchOpen
-              ? "border-[#f12c23] bg-red-50 text-[#f12c23]"
-              : "border-default-200 bg-white text-[var(--color-foreground)] hover:bg-default-100"
-          }`}
-          disabled={!file}
-          type="button"
-          onClick={() => (isSearchOpen ? closeSearch() : openSearch())}
-        >
-          <HugeiconsIcon icon={Search01Icon} size={14} />
-          <span className="hidden sm:inline">Search</span>
-        </button>
-        <Tooltip.Content>
-          <p>Search in PDF</p>
-        </Tooltip.Content>
-      </Tooltip>
-
-      {/* Print — paid users only; builds the final edited PDF then opens
-          the browser print dialog via a hidden iframe. */}
-      <Tooltip delay={300}>
-        <button
-          aria-label="Print"
+          aria-label="Share via link"
           className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
-          disabled={!file}
+          data-tour="editor-share"
+          disabled={!canShare}
           type="button"
-          onClick={() => void handlePrint()}
+          onClick={() => fireEditorEvent("editor:open-share")}
         >
-          <HugeiconsIcon icon={PrinterIcon} size={14} />
-          <span className="hidden sm:inline">Print</span>
+          <HugeiconsIcon icon={Link01Icon} size={14} />
+          <span className="hidden sm:inline">Share via link</span>
         </button>
-        <Tooltip.Content>
-          <p>Print</p>
-        </Tooltip.Content>
-      </Tooltip>
 
-      {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
-      <button
-        aria-label="Share via link"
-        className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
-        data-tour="editor-share"
-        disabled={!canShare}
-        type="button"
-        onClick={() => fireEditorEvent("editor:open-share")}
-      >
-        <HugeiconsIcon icon={Link01Icon} size={14} />
-        <span className="hidden sm:inline">Share via link</span>
-      </button>
+        <Button
+          aria-label="Download"
+          className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
+          data-tour="editor-download"
+          isDisabled={!canDownload || isSavingBeforeExport}
+          onPress={openExportModalAfterSave}
+        >
+          <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
 
-      <Button
-        aria-label="Download"
-        className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
-        data-tour="editor-download"
-        isDisabled={!canDownload || isSavingBeforeExport}
-        onPress={openExportModalAfterSave}
-      >
-        <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
-
-        <span className="hidden sm:inline">
-          {isSavingBeforeExport ? "Saving…" : "Done"}
-        </span>
-      </Button>
+          <span className="hidden sm:inline">
+            {isSavingBeforeExport ? "Saving…" : "Done"}
+          </span>
+        </Button>
+      </div>
 
       <ExportFormatModal
         isOpen={isExportModalOpen}

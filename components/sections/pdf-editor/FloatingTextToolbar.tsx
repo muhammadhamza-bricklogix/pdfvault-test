@@ -343,6 +343,29 @@ export function FloatingTextToolbar({
     }
     dirtyObj.setCoords?.();
     fabricCanvas.requestRenderAll();
+
+    // QA 2026-09-09: font-family (and size/bold/italic/color/alignment) picks
+    // in this toolbar showed correctly in the composer but were silently
+    // dropped on save/download. Root cause: `obj.set(fabricPatch)` is a pure
+    // Fabric setter — it does NOT emit `object:modified`. The extracted
+    // source-text pipeline in `use-editor-history.ts` relies on that event to
+    // flip `editModeText.pristine → false`, which is what
+    // `merge-pdf.ts:isModifiedEditModeText` reads to decide whether the page
+    // needs the modified-editModeText branch (whiteout + vector `drawIText`
+    // with the user's chosen font) vs. copying the source page byte-for-byte
+    // (which preserves the ORIGINAL embedded font, not our override).
+    //
+    // Firing the event here also runs `snapshot` (pushes history +
+    // serializes to `fabricJsonByPage` so the change survives reload) and
+    // `markDirtyOnEdit` (flips `hasUnsavedChanges` so the save button /
+    // reload guard know there's work to persist). All three listeners
+    // early-return for irrelevant cases (`isCreatingShape /
+    // isRestoringHistory` guards; `dirtySourceText` short-circuits on
+    // non-editModeText objects), so non-extracted text overlays
+    // (annotations, signatures, page numbers, watermark, text tool) are
+    // unaffected — this only "unlocks" export-fidelity for extracted PDF
+    // text, which is exactly the surface QA reported.
+    fabricCanvas.fire("object:modified", { target: obj });
   };
 
   const close = () => {
