@@ -19,6 +19,7 @@ import { useAnnotationsEditor } from "@/lib/client/hooks/pdf-editor/use-annotati
 import { useEditorDocumentLoader } from "@/lib/client/hooks/pdf-editor/use-editor-document-loader";
 import { useExportEditor } from "@/lib/client/hooks/pdf-editor/use-export-editor";
 import { useExtractImagesEditor } from "@/lib/client/hooks/pdf-editor/use-extract-images-editor";
+import { useShareBaker } from "@/lib/client/hooks/pdf-editor/use-share-baker";
 import { useFormFieldsEditor } from "@/lib/client/hooks/pdf-editor/use-form-fields-editor";
 import { usePageNumbersEditor } from "@/lib/client/hooks/pdf-editor/use-page-numbers-editor";
 import { usePdfLoader } from "@/lib/client/hooks/pdf-editor/use-pdf-loader";
@@ -149,6 +150,7 @@ function EditorLayout() {
   useEditorNavigationSave(fabricCanvas);
   useExportEditor(fabricCanvas);
   useExtractImagesEditor(fabricCanvas);
+  useShareBaker(fabricCanvas);
   usePageNumbersEditor(fabricCanvas);
   useFormFieldsEditor(fabricCanvas);
   useAnnotationsEditor(fabricCanvas);
