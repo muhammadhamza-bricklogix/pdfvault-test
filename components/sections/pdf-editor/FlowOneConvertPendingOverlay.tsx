@@ -52,8 +52,36 @@ export function FlowOneConvertPendingOverlay() {
   const [statusMessage, setStatusMessage] = useState(
     "Preparing your document…",
   );
+  const [progress, setProgress] = useState(5);
   const [visible, setVisible] = useState(convertPending === "1");
   const consumedRef = useRef(false);
+
+  // Smoothly march the progress bar towards its stage target while
+  // the actual work runs. The backend doesn't stream progress on the
+  // /documents/upload endpoint, so we simulate motion between stage
+  // milestones set inside the effect below. Simulation clamps at 95%
+  // so it never displays "100%" before the redirect actually fires.
+  const stageTargetRef = useRef(20);
+
+  useEffect(() => {
+    if (!visible) return;
+    const interval = window.setInterval(() => {
+      setProgress((current) => {
+        const target = stageTargetRef.current;
+
+        if (current >= target) return current;
+
+        // Slow down as we approach the target so it feels weighty
+        // instead of hitting the wall.
+        const gap = target - current;
+        const step = Math.max(0.3, gap / 12);
+
+        return Math.min(target, current + step);
+      });
+    }, 60);
+
+    return () => window.clearInterval(interval);
+  }, [visible]);
 
   useEffect(() => {
     if (convertPending !== "1") return;
@@ -65,11 +93,10 @@ export function FlowOneConvertPendingOverlay() {
     void (async () => {
       try {
         setStatusMessage("Preparing your document…");
+        stageTargetRef.current = 25;
         const result = await loadPendingEditorFile();
 
         if (!result?.file) {
-          // No file to convert — strip the marker and let the
-          // regular editor path take over.
           logger.warn(
             "[FlowOneConvertPendingOverlay] convert-pending=1 with no IDB file",
           );
@@ -84,7 +111,8 @@ export function FlowOneConvertPendingOverlay() {
           return;
         }
 
-        setStatusMessage("Converting to PDF…");
+        setStatusMessage("Uploading your file…");
+        stageTargetRef.current = 55;
 
         const tempId =
           typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -94,15 +122,15 @@ export function FlowOneConvertPendingOverlay() {
           ? result.file.name
           : result.file.name.replace(/\.[^.]+$/, "") + ".pdf";
 
-        // Register the pending row in the store so the dashboard (if
-        // the user navigates back mid-conversion) shows the placeholder
-        // too. Backend does the conversion, we just upload the source.
         usePendingConversionsStore.getState().add({
           tempId,
           file: result.file,
           filename: pdfName,
           sizeBytes: result.file.size,
         });
+
+        setStatusMessage("Converting to PDF…");
+        stageTargetRef.current = 90;
 
         const created = await runPendingConversion(tempId, result.file);
 
@@ -120,10 +148,12 @@ export function FlowOneConvertPendingOverlay() {
         }
 
         setStatusMessage("Opening your document…");
+        setProgress(100);
+        stageTargetRef.current = 100;
 
         // Replace URL with `?id=<docId>`. `useEditorDocumentLoader`
         // fetches the doc metadata, sees `originalContentType != null`,
-        // and fires `gateEntitledAction` → paywall.
+        // and fires the MANDATORY paywall via `gateEntitledAction`.
         router.replace(
           `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(created.id)}`,
         );
@@ -152,21 +182,56 @@ export function FlowOneConvertPendingOverlay() {
   return (
     <div
       aria-live="polite"
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white/90 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white/95 backdrop-blur-sm"
       role="status"
     >
-      <div className="flex flex-col items-center gap-3">
-        <div className="relative h-14 w-14">
-          <div className="absolute inset-0 rounded-full border-4 border-default-200" />
-          <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-[#f12c23]" />
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-[15px] font-semibold text-[var(--color-foreground)]">
-            {statusMessage}
-          </p>
-          <p className="text-[13px] text-default-500">
-            This usually takes a few seconds.
-          </p>
+      <div className="w-[min(420px,calc(100vw-48px))] rounded-2xl border border-default-200 bg-white p-6 shadow-[0_24px_60px_-30px_rgba(23,23,23,0.25)]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f12c23]/10">
+            <svg
+              aria-hidden
+              fill="none"
+              height="24"
+              stroke="#f12c23"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              viewBox="0 0 24 24"
+              width="24"
+            >
+              <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+              <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z" />
+              <path d="M9 12h6" />
+              <path d="M9 16h6" />
+            </svg>
+          </div>
+
+          <div className="flex flex-col items-center gap-1 text-center">
+            <p className="text-[16px] font-semibold text-[var(--color-foreground)]">
+              {statusMessage}
+            </p>
+            <p className="text-[13px] text-default-500">
+              This usually takes a few seconds. Please don&apos;t close this
+              window.
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-1">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-default-100">
+              <div
+                aria-label="Conversion progress"
+                aria-valuemax={100}
+                aria-valuemin={0}
+                aria-valuenow={Math.round(progress)}
+                className="h-full rounded-full bg-[#f12c23] transition-[width] duration-200 ease-out"
+                role="progressbar"
+                style={{ width: `${Math.round(progress)}%` }}
+              />
+            </div>
+            <p className="text-right text-[11px] font-medium text-default-500 tabular-nums">
+              {Math.round(progress)}%
+            </p>
+          </div>
         </div>
       </div>
     </div>
