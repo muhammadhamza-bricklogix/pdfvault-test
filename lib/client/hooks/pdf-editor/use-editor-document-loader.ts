@@ -361,7 +361,12 @@ export function useEditorDocumentLoader() {
 
         setFile(loaded.file);
         setCurrentDocument({ id: loaded.id, name: loaded.name });
-        usePdfEditorStore.setState({ hasUnsavedChanges: false });
+        // Clear the restore-session latch. The normal hydrator paths do this
+        // in their `finally` block; Flow 1 (`?convert-pending=1`) short-
+        // circuits the hydrator early (ranRef stays true) and leaves the
+        // flag set. Clearing it here — once the file is in store — is safe:
+        // `!file` is about to become false, so shouldRedirectAway stays off.
+        usePdfEditorStore.setState({ hasUnsavedChanges: false, isRestoringSession: false });
         lastHydratedDocumentId.current = id;
         logger.event(EVENTS.DOCUMENT_LOADER_LOAD_OK, "info", {
           id,
