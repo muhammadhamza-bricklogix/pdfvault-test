@@ -228,20 +228,38 @@ function ExportFormatModalBody({
     // ORIGINAL file, so `editor:export` runs a single clean merge:
     // original file + all overlays (live-canvas + store) → baked bytes →
     // download. No double-bake, no race with pdf.js reload.
-    await new Promise<void>((resolve) => {
+    //
+    // Gate the export on save.ok: if the pre-save fails (e.g. Firefox
+    // AbortError inside merge-pdf), dispatching editor:export re-runs the
+    // exact same failing pipeline and the user sees a misleading "Export
+    // failed" toast on top of the real "Could not save" one. `saveBeforeAction`
+    // already surfaces the correct error toast on failure — short-circuit
+    // here and let onClose fall through so the user isn't stuck in the modal.
+    const saveResult = await new Promise<{
+      ok: boolean;
+      reason?: string;
+    }>((resolve) => {
       window.dispatchEvent(
         new CustomEvent("editor:save-before-action", {
-          detail: { force: true, skipReset: true, onComplete: () => resolve() },
+          detail: {
+            force: true,
+            skipReset: true,
+            onComplete: (result: { ok: boolean; reason?: string }) =>
+              resolve(result),
+          },
         }),
       );
     });
 
-    window.dispatchEvent(
-      new CustomEvent("editor:export", {
-        detail: { filename: fileName, format: selected },
-      }),
-    );
+    if (saveResult.ok) {
+      window.dispatchEvent(
+        new CustomEvent("editor:export", {
+          detail: { filename: fileName, format: selected },
+        }),
+      );
+    }
 
+    setIsSaving(false);
     onClose();
   };
 

@@ -7,6 +7,7 @@ import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 
+import { ClerkBlockDiagnostics } from "@/components/shared/clerk-block-diagnostics";
 import { WeglotBoot } from "@/components/shared/navigation/weglot-boot";
 import {
   DEFAULT_LOCALE,
@@ -281,25 +282,39 @@ gtag('config', 'AW-18226423046');`}
           src="https://cdn-cookieyes.com/client_data/98d78886fe30030f1080cdeb0a6c0a25/script.js"
           type="text/javascript"
         />
+        {/* GTM loader — marked cookieyes-necessary so CookieYes' auto-blocker
+            does NOT wrap the tag in `type="text/plain"` when the user rejects
+            cookies. This is compliance-safe ONLY IF the GTM container has
+            Consent Mode v2 configured (analytics_storage/ad_storage gated on
+            granted consent). Without Consent Mode, GTM will fire GA + Ads
+            tags regardless of user choice → GDPR/ePrivacy violation. Audit
+            in Tag Assistant before assuming this is compliant. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
           }}
+          data-cookieyes="cookieyes-necessary"
         />
         {trustpilotInviteId ? (
           <script
             dangerouslySetInnerHTML={{
               __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
             }}
+            data-cookieyes="cookieyes-functional"
           />
         ) : null}
         {/* Microsoft Clarity — user-behaviour analytics. Raw inline in
             <head> for parity with GTM/Trustpilot so the snippet ships in
-            the SSR HTML (Clarity's setup checker inspects source). */}
+            the SSR HTML (Clarity's setup checker inspects source).
+            Marked cookieyes-necessary per user request 2026-09-09 — this is
+            NOT strictly compliant (Clarity always tracks on load). Safer
+            categorization is `cookieyes-performance`; switch if Consent
+            Mode / dedicated Clarity consent wiring is not in place. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ych70e11tb");`,
           }}
+          data-cookieyes="cookieyes-necessary"
         />
       </head>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
@@ -314,6 +329,10 @@ gtag('config', 'AW-18226423046');`}
           />
         </noscript>
         <NextTopLoader color="#DF3A38" showSpinner={false} />
+        {/* CookieYes/Clerk block diagnostic — ships one CloudWatch event
+            per page load with clerk script + cookie survival state. Grep
+            `diag.cookie_gate` to see which users are cookie-gated. */}
+        <ClerkBlockDiagnostics />
         {/* Re-added 2026-09-02: apex DNS moved off Weglot's Cloudflare
             proxy to stop 429 quota exhaustion, so the SDK is now the
             only translation path until the CloudFront Reverse Proxy
