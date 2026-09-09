@@ -16,6 +16,7 @@ import {
 
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import {
   isPdf,
   looksLikePdfBytes,
@@ -434,6 +435,46 @@ export function UploadWorkspace({
       // items 3-4 → auto-signup → paywall → download.
       const isGuestPdfExport =
         requiresAuth && authLoaded && !isSignedIn && Boolean(exportFormat);
+      const isGuestXToPdf =
+        requiresAuth && authLoaded && !isSignedIn && !exportFormat;
+
+      // Flow 1 per product spec 2026-09-09 — guest drops a non-PDF on a
+      // convert-to-PDF route (word-to-pdf, jpg-to-pdf, etc.):
+      //   1. Save the ORIGINAL picked file to IDB. Backend handles the
+      //      X→PDF conversion at /documents/upload time (per
+      //      `runPendingConversion`), so we don't need to convert
+      //      client-side — just get the user through signup quickly.
+      //   2. Dispatch the email-first modal with Flow 1 copy. Auto-
+      //      signup lands the user at /dashboard?convert-pending=1
+      //      where a mount effect picks up the pending file, fires
+      //      `runPendingConversion`, and the "Preparing your document…"
+      //      placeholder row appears while the backend converts.
+      //   3. User never enters the editor for Flow 1 — they land on
+      //      dashboard with the converted PDF ready. Open + Edit is
+      //      free per the Phase 1 gate reversal (2026-09-08); Download
+      //      still fires the paywall via `triggerDocumentDownload`.
+      if (isGuestXToPdf) {
+        logger.event(EVENTS.UPLOAD_SIGNIN_REQUIRED, "info", {
+          pathname,
+          filename: picked.name,
+          variant: "flow1-x-to-pdf",
+        });
+
+        try {
+          await savePendingEditorFile(picked);
+        } catch (idbErr) {
+          logger.captureError(idbErr, "upload.pending_file_save");
+        }
+
+        dispatchEmailFirstModal({
+          redirectUrl: `${ROUTES.APP.DASHBOARD}?convert-pending=1`,
+          title: "Your file is ready",
+          subtitle: "Enter your email to save it to your account",
+          submitLabel: "Continue",
+        });
+
+        return;
+      }
 
       if (isGuestPdfExport) {
         logger.event(EVENTS.UPLOAD_SIGNIN_REQUIRED, "info", {

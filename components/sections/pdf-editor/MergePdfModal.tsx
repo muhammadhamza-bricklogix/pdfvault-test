@@ -65,94 +65,19 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       try {
         const loaded = await Promise.all(files.map(fileToMergeEntry));
 
-        // Track display list so the modal shows what was added.
+        // QA 2026-09-09: Add PDFs must NOT touch `store.file`. Attached
+        // files live only in the modal's `extras` state until the user
+        // clicks Merge & Download. The prior inline-merge implementation
+        // (via `applyPostSaveReset`) was replacing the editor's source
+        // with the concatenated PDF the moment a file was picked, so the
+        // composer lost its "actual PDF" view and there was no way to
+        // undo the append short of closing the doc. The download flow
+        // in `handleMerge` below already bakes the CURRENT source + the
+        // extras list at click time, so the final downloaded file has
+        // the merged content — no side effects until then.
         setExtras((prev) => [...prev, ...loaded]);
-
-        // QA 2026-09-08: inline-merge into the editor's live source so
-        // the newly-added pages appear in the editor's page sidebar as
-        // ONE unified list. Sequence:
-        //   1. Bake current edits into fresh PDF bytes (via the
-        //      `editor:build-current-bytes` event — same handler used
-        //      by Merge & Download so we don't double-implement).
-        //   2. Merge the baked source + newly-loaded files via
-        //      `mergePdfs`. pdf-lib copyPages preserves everything.
-        //   3. Wrap the merged bytes in a File keyed on the current
-        //      filename, swap into `store.file`. `usePdfLoader`
-        //      detects the swap → reloads pdf.js → `setPdfDocument`
-        //      resets `pageOrder = [1..N+M]` → sidebar re-renders
-        //      with the appended pages.
-        //   4. `applyPostSaveReset(mergedFile)` preserves the source
-        //      pages' fabric state (they're still slot 1..N in the
-        //      merged doc). New pages have no fabric state — they
-        //      render clean.
-        //   5. Flip `hasUnsavedChanges: true` after the reset because
-        //      the merged bytes aren't cloud-saved yet — user must
-        //      hit Save to persist.
-        let bakedSourceBytes: Uint8Array | null = null;
-
-        await new Promise<void>((resolve) => {
-          window.dispatchEvent(
-            new CustomEvent("editor:build-current-bytes", {
-              detail: {
-                onComplete: (r: {
-                  ok: boolean;
-                  bytes?: Uint8Array;
-                  error?: string;
-                }) => {
-                  if (r.ok && r.bytes) {
-                    bakedSourceBytes = r.bytes;
-                  } else {
-                    logger.warn(
-                      "[merge-pdf-modal] inline-merge: bake failed, using captured source",
-                      { error: r.error },
-                    );
-                  }
-                  resolve();
-                },
-              },
-            }),
-          );
-        });
-
-        const store = usePdfEditorStore.getState();
-        const liveFile = store.file;
-        const sourceBytesForMerge: Uint8Array =
-          bakedSourceBytes ?? (source ? source.bytes : new Uint8Array());
-
-        if (!sourceBytesForMerge.byteLength) {
-          throw new Error("No source PDF to merge into.");
-        }
-
-        const sourceEntry: MergeEntry = {
-          filename: liveFile?.name ?? source?.filename ?? "document.pdf",
-          bytes: sourceBytesForMerge,
-          pageCount: source?.pageCount ?? 0,
-        };
-        const mergedBytes = await mergePdfs([sourceEntry, ...loaded]);
-        const mergedFile = new File(
-          [mergedBytes as BlobPart],
-          sourceEntry.filename,
-          { type: "application/pdf" },
-        );
-
-        // Preserve fabric state for existing source pages (same slots
-        // 1..N in merged doc) via the applyPostSaveReset path. Then
-        // flip unsaved-changes back on — the merged bytes aren't
-        // cloud-persisted yet.
-        usePdfEditorStore.getState().applyPostSaveReset(mergedFile);
-        usePdfEditorStore.getState().markDocumentDirty();
-
-        const totalAddedPages = loaded.reduce((n, e) => n + e.pageCount, 0);
-
-        toast.success({
-          title: "Pages added",
-          description:
-            totalAddedPages === 1
-              ? "1 page appended to your document."
-              : `${totalAddedPages} pages appended to your document.`,
-        });
       } catch (err) {
-        logger.error("[merge-pdf-modal] inline-merge failed", err);
+        logger.error("[merge-pdf-modal] add-file failed", err);
         toast.error({
           title: "Couldn't add file",
           description: err instanceof Error ? err.message : String(err),
@@ -161,7 +86,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
         setIsLoading(false);
       }
     },
-    [source],
+    [],
   );
 
   const removeExtra = (index: number) =>
@@ -321,18 +246,36 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
       triggerDownload(mergedBlob, outName);
 
-      // QA 2026-09-07 (revised): the earlier auto-load-into-composer
-      // step (setCurrentDocument(null) + clearFile + setFile(mergedFile))
-      // wiped `fabricJsonByPage` and forced a full pdf.js reload —
-      // users reported "my edits are lost after refresh" because
-      // the reload clobbered the in-session Fabric state before they
-      // had a chance to keep working on the SAME editor. Reverted:
-      // just download and close the modal. Editor keeps its current
-      // file + all Fabric overlays intact. The user's merged copy
-      // lives in their downloads folder if they want to re-open it.
+      // QA 2026-09-09: also swap the composer's source to the merged
+      // file so the user's next edit session runs against the combined
+      // document. The download above ships the same bytes to disk;
+      // we're wiring the SAME bytes into `store.file` via
+      // `applyPostSaveReset` so pdf.js reloads with the merged pages
+      // and the sidebar shows [source pages + attached pages] as one
+      // unified list. Fabric state on source pages 1..N is preserved
+      // by `applyPostSaveReset` (see the KEEP fabricJsonByPage comment
+      // in `pdf-editor-store.ts`); new pages N+1..N+M come in clean.
+      //
+      // `markDocumentDirty()` after because the merged bytes aren't
+      // cloud-saved yet — user must hit Save to persist to their
+      // library.
+      //
+      // Only runs when the user clicks Merge & Download. The Add PDFs
+      // click does NOT touch the composer (per 2026-09-09 revert),
+      // so opening the modal + adding files + closing without clicking
+      // Merge & Download is a no-op on the editor session.
+      const mergedFile = new File(
+        [bytes as BlobPart],
+        liveFile?.name ?? source.filename,
+        { type: "application/pdf" },
+      );
+
+      usePdfEditorStore.getState().applyPostSaveReset(mergedFile);
+      usePdfEditorStore.getState().markDocumentDirty();
+
       toast.success({
         title: "Merge complete",
-        description: `Downloaded ${outName}.`,
+        description: `Downloaded ${outName}. Composer now shows the merged pages.`,
       });
       onClose();
     } catch (err) {

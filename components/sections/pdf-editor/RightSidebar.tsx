@@ -97,13 +97,14 @@ const STROKE_SWATCHES = [
   { color: "#2563EB", label: "Blue" },
 ] as const;
 
-// "0" (no-stroke) removed per QA 2026-09-08 — the download pipeline
-// couldn't reliably render a border-less rect via pdf-lib (the drawer
-// still needed a fallback), and users preferred a stable minimum stroke
-// over the confusing "composer looks fine, download has a hairline"
-// mismatch. If we want to bring back a "no border" option later, do it
-// alongside a real fix in `vector-drawers.ts` + a save/reload verification.
-const STROKE_WIDTHS = [1, 2, 4] as const;
+// "0" (no-stroke) restored 2026-09-09 — the drawer fix landed in
+// `vector-drawers.ts` for `drawRect` / `drawEllipse` / `drawTriangle`
+// (rawStrokeWidth > 0 gate skips borderColor + borderWidth, which pdf-
+// lib requires to render a truly border-less shape). Preview + download
+// + save/reload now all show the same "no stroke" result. If the
+// hairline-on-download regression comes back on any shape, first check
+// the corresponding drawer's `rawStrokeWidth > 0` guard is still there.
+const STROKE_WIDTHS = [0, 1, 2, 4] as const;
 
 function Section({
   children,
@@ -556,19 +557,31 @@ export function ShapePropertiesContent({
                   <Button
                     key={width}
                     isIconOnly
-                    aria-label={`${width}px stroke`}
+                    aria-label={width === 0 ? "No stroke" : `${width}px stroke`}
                     size="sm"
                     variant={
                       currentStrokeWidth === width ? "secondary" : "ghost"
                     }
                     onPress={() => setStrokeWidth(width)}
                   >
-                    <span
-                      className="block w-4 rounded-full bg-[var(--color-foreground)]"
-                      style={{
-                        height: Math.max(width, 1),
-                      }}
-                    />
+                    {width === 0 ? (
+                      // "No stroke" — distinct from the 1px preview so
+                      // users can visually tell 0 apart from 1 in the
+                      // picker. Slash-through-circle reads as "none".
+                      <span
+                        aria-hidden
+                        className="relative block h-4 w-4 rounded-full border border-default-400"
+                      >
+                        <span className="absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 rotate-45 bg-default-400" />
+                      </span>
+                    ) : (
+                      <span
+                        className="block w-4 rounded-full bg-[var(--color-foreground)]"
+                        style={{
+                          height: width,
+                        }}
+                      />
+                    )}
                   </Button>
                 ))}
               </div>

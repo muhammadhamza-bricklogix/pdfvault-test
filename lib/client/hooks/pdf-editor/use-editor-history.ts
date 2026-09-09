@@ -92,6 +92,34 @@ export function useEditorHistory({
       markDocumentDirty();
     };
 
+    // Persist the current live canvas to `fabricJsonByPage` on every
+    // `text:changed` event. Without this, in-place text editing
+    // (typing or backspacing inside an IText / Textbox) only mutates
+    // the live Fabric object — the store's snapshot for the page
+    // stays at whatever the last `snapshot()` handler saw, which is
+    // usually the pre-edit content (snapshot only fires on
+    // object:added / object:modified / object:removed, not on
+    // text:changed). If ANY code path later reloads the canvas from
+    // the store (e.g. the `editor:post-save-render-done` handler in
+    // `PdfViewerCanvas.tsx`, the mount effect on a page revisit, or a
+    // flushLiveFabricPage-then-loadFromJSON cycle) the user's most
+    // recent typing / deletion is silently reverted — the QA
+    // 2026-09-09 "delete text with backspace, then wait / save-reload
+    // and the deleted text comes back" bug.
+    //
+    // Deliberately NOT calling `pushHistory` here: firing history per
+    // keystroke would flood the undo stack with one entry per
+    // character. History still fires on the coarser
+    // object:added/modified/removed events (which cover
+    // enter-editing / exit-editing / drag / resize). Persistence and
+    // history intentionally split.
+    const persistTextChange = () => {
+      const state = usePdfEditorStore.getState();
+
+      if (state.isCreatingShape || state.isRestoringHistory) return;
+      saveFabricJson(currentPage, serializeFabricCanvas(fc));
+    };
+
     // Clears the `pristine` flag on auto-extracted source-text IText
     // when the user actually modifies it. Source-text IText starts
     // with `pristine: true` (see `use-edit-text-mode.ts`). The merge
@@ -124,6 +152,7 @@ export function useEditorHistory({
     fc.on("object:modified", markDirtyOnEdit);
     fc.on("object:removed", markDirtyOnEdit);
     fc.on("text:changed", markDirtyOnEdit);
+    fc.on("text:changed", persistTextChange);
     fc.on("object:modified", dirtySourceText);
     fc.on("text:changed", dirtySourceText);
 
@@ -135,6 +164,7 @@ export function useEditorHistory({
       fc.off("object:modified", markDirtyOnEdit);
       fc.off("object:removed", markDirtyOnEdit);
       fc.off("text:changed", markDirtyOnEdit);
+      fc.off("text:changed", persistTextChange);
       fc.off("object:modified", dirtySourceText);
       fc.off("text:changed", dirtySourceText);
     };
