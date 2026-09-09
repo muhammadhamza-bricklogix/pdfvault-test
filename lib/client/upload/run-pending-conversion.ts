@@ -44,16 +44,17 @@ export async function runPendingConversion(
    * silently created a second row).
    */
   documentId?: string,
-): Promise<void> {
+): Promise<{ id: string; filename: string } | null> {
   const store = usePendingConversionsStore.getState();
 
   try {
     store.setStatus(tempId, "uploading");
-    await documentsService.uploadDocument({ file, documentId });
+    const doc = await documentsService.uploadDocument({ file, documentId });
 
     logger.event("upload.pending_conversion_ok", "info", {
       tempId,
       sizeBytes: file.size,
+      documentId: doc.id,
     });
 
     store.remove(tempId);
@@ -63,6 +64,12 @@ export async function runPendingConversion(
         queryKey: documentKeys.lists(),
       });
     }
+
+    // QA 2026-09-09: return the created doc so the Flow 1 caller
+    // (dashboard-home mount effect) can navigate to the editor with
+    // the new docId. Fire-and-forget callers can ignore the return
+    // value; existing signed-in convert-route callers do exactly that.
+    return { id: doc.id, filename: doc.filename };
   } catch (err) {
     logger.captureError(err, "upload.pending_conversion", { tempId });
     store.setStatus(
@@ -70,5 +77,7 @@ export async function runPendingConversion(
       "error",
       err instanceof Error ? err.message : "Conversion failed",
     );
+
+    return null;
   }
 }

@@ -448,9 +448,28 @@ export function PvFileTable({
                           personal document titles aren't sent through
                           Weglot's translation pipeline or cached. */}
                       <div data-wg-notranslate className="min-w-0">
-                        <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
-                          {row.name}
-                        </p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="truncate text-[14px] font-medium text-[var(--pv-text-strong)]">
+                            {row.name}
+                          </p>
+                          {/* QA 2026-09-09: "Converted" badge on X→PDF rows.
+                              `originalContentType != null` means the backend
+                              converted a Word/Image/etc. into this PDF via
+                              the pending-conversion flow. Signals to the
+                              user that Open/Download/Share on this row will
+                              hit the paywall until they subscribe. Native
+                              PDF uploads (originalContentType == null) get
+                              no badge and are free. */}
+                          {row.doc?.originalContentType ? (
+                            <span
+                              aria-label="Converted document"
+                              className="inline-flex shrink-0 items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-amber-700"
+                              title="Converted from another format. Subscription required to open."
+                            >
+                              Converted
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="text-[12px] text-[var(--pv-text-muted)]">
                           {isPending ? pendingSubtitle : row.displaySize}
                         </p>

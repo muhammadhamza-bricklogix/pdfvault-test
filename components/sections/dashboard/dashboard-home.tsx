@@ -15,6 +15,7 @@ import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
@@ -151,15 +152,31 @@ export function DashboardHome() {
         sizeBytes: result.file.size,
       });
 
-      void runPendingConversion(tempId, result.file);
-      await clearPendingEditorFile();
+      // Strip the URL marker BEFORE the conversion resolves so a
+      // slow-network user's refresh mid-upload doesn't retrigger.
+      // We await runPendingConversion below to get the docId, then
+      // navigate straight to the editor (spec Flow 1: "redirect the
+      // user to the document not the dashboard").
+      const stripped = new URLSearchParams(searchParams.toString());
 
-      const next = new URLSearchParams(searchParams.toString());
-
-      next.delete("convert-pending");
-      const suffix = next.toString();
+      stripped.delete("convert-pending");
+      const suffix = stripped.toString();
 
       router.replace(suffix ? `${pathname}?${suffix}` : pathname);
+
+      const created = await runPendingConversion(tempId, result.file);
+
+      await clearPendingEditorFile();
+
+      if (created) {
+        // Spec Flow 1: land on the document (editor), not dashboard.
+        // Converted doc → the editor's `useEditorDocumentLoader` fires
+        // `gateEntitledAction` (via the Phase 1 restore) which pops
+        // the paywall for the freshly-signed-up non-entitled user.
+        router.push(
+          `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(created.id)}`,
+        );
+      }
     })();
   }, [convertPendingParam, user, searchParams, router, pathname]);
 
