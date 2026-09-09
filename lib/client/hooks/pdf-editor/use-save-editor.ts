@@ -402,6 +402,11 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       logger.event(EVENTS.SAVE_BEFORE_ACTION_BLOCKED, "warning", {
         reason: result.reason,
       });
+      // eslint-disable-next-line no-console
+      console.log("[PDFedits] useSaveEditor: save-before-action blocked", {
+        reason: result.reason,
+        okValue: result.reason === "no-changes",
+      });
       // `no-changes` is a benign short-circuit (dirty flag was already clean
       // by the time the save ran). Treat as success — nothing to commit and
       // nothing to lose by proceeding. Every other failure reason is
