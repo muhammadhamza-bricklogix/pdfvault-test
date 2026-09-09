@@ -172,6 +172,14 @@ export function FlowOneConvertPendingOverlay() {
         setProgress(100);
         stageTargetRef.current = 100;
 
+        // Hide the overlay BEFORE navigating. `visible` is React state
+        // and does not reset on soft navigation (the component stays
+        // mounted across router.replace on the same route). Without this
+        // the overlay stays fixed on screen even after the paywall opens
+        // + the user pays, leaving them permanently stuck on
+        // "Opening your document…" (QA 2026-09-10).
+        setVisible(false);
+
         // Replace URL with `?id=<docId>`. `useEditorDocumentLoader`
         // fetches the doc metadata, sees `originalContentType != null`,
         // and fires the MANDATORY paywall via `gateEntitledAction`.
