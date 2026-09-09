@@ -207,6 +207,12 @@ function ExportFormatModalBody({
 
   const handleDownload = async () => {
     setIsSaving(true);
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits] ExportModal: handleDownload start", {
+      isSignedIn: !!file,
+      hasFile: !!file,
+      format: selected,
+    });
 
     // Two-step: cloud save FIRST (uploads current edits to the user's
     // library so nothing is lost), then export (bakes the same edits into
@@ -251,11 +257,53 @@ function ExportFormatModalBody({
       );
     });
 
-    if (saveResult.ok) {
+    // Allow the export to fire when save.ok, OR when save was skipped
+    // for the benign "not-signed-in" reason. Rationale:
+    //
+    //   • ok = true → normal signed-in path, edits uploaded, safe to
+    //     bake + download.
+    //   • reason = "not-signed-in" → guest user; `onSaveBeforeAction`
+    //     correctly skipped the cloud save (they have no library
+    //     row). We MUST still dispatch `editor:export` because
+    //     `useExportEditor` is the code that fires the email-first /
+    //     sign-in prompt (auth-chain items 3-4). Without this branch
+    //     the guest clicks Done → picks format → clicks Download →
+    //     modal closes silently and nothing happens (QA 2026-09-10).
+    //
+    // All other failure reasons (error, not-loaded, cancelled-
+    // duplicate) stay gated — `onSaveBeforeAction` has already
+    // surfaced the correct error toast; re-running the same pipeline
+    // via `editor:export` would either double-toast or repeat the
+    // exact same failure (Firefox AbortError inside merge-pdf, etc.
+    // — the original reason this gate exists).
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits] ExportModal: saveResult", saveResult);
+
+    const shouldFireExport =
+      saveResult.ok || saveResult.reason === "not-signed-in";
+
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits] ExportModal: shouldFireExport", shouldFireExport, {
+      ok: saveResult.ok,
+      reason: saveResult.reason,
+    });
+
+    if (shouldFireExport) {
+      // eslint-disable-next-line no-console
+      console.log("[PDFedits] ExportModal: dispatching editor:export", {
+        filename: fileName,
+        format: selected,
+      });
       window.dispatchEvent(
         new CustomEvent("editor:export", {
           detail: { filename: fileName, format: selected },
         }),
+      );
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[PDFedits] ExportModal: export BLOCKED — unexpected reason",
+        saveResult.reason,
       );
     }
 
