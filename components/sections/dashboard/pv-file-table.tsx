@@ -11,7 +11,7 @@ import {
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 interface PvFileTableProps {
   rows: readonly PvFileRow[];
@@ -218,10 +218,6 @@ export function PvFileTable({
   // 2026-09-01 (QA): the canonical W-9 row can't be deleted (system
   // doc — see RowActions below). Exclude it from bulk-select so the
   // "Delete selected" affordance never targets it.
-  // Memo'd on `sorted` identity so the sync `useEffect` below only
-  // fires when the row set actually changes (not on every render) —
-  // otherwise a parent re-render for unrelated state runs the stale-
-  // id prune pass needlessly.
   const selectableRows = useMemo(
     () =>
       sorted.filter(
@@ -230,31 +226,16 @@ export function PvFileTable({
     [sorted],
   );
 
-  // Sync selected state to remove any stale IDs (e.g. after a file is deleted)
-  useEffect(() => {
-    setSelected((prev) => {
-      if (prev.size === 0) return prev;
-      const currentIds = new Set(selectableRows.map((r) => r.id));
-      let hasOrphan = false;
-
-      for (const id of prev) {
-        if (!currentIds.has(id)) {
-          hasOrphan = true;
-          break;
-        }
-      }
-      if (!hasOrphan) return prev;
-      const next = new Set<string>();
-
-      for (const id of prev) {
-        if (currentIds.has(id)) {
-          next.add(id);
-        }
-      }
-
-      return next;
-    });
-  }, [selectableRows]);
+  // No stale-id prune pass. Every consumer of `selected` already
+  // filters through `selectableRows`: `selectedRows` derives via
+  // `selectableRows.filter(r => selected.has(r.id))`, the count uses
+  // `selectedRows.length`, bulk delete iterates `selectedRows`, and
+  // per-row checkboxes read `selected.has(row.id)` where `row` is
+  // always a current `selectableRows` entry. Ghost IDs in `selected`
+  // never surface in the UI or in outbound calls, so a sync effect
+  // that pruned them was pure state churn (and lints as
+  // react-hooks/set-state-in-effect on Next 16's flat-config
+  // ESLint 9 setup — QA 2026-09-09 CI failure on main).
 
   const selectedRows = selectableRows.filter((r) => selected.has(r.id));
   const allSelected =
