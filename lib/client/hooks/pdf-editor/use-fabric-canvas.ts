@@ -262,6 +262,36 @@ export function useFabricCanvas({
     if (wrapper) wrapper.style.touchAction = action;
   }, [activeTool, fabricCanvas]);
 
+  // --- Select-tool defensive restore (2026-09-09) ---
+  //
+  // Since commit 1685a03 (2026-09-06) the Shape / Whiteout / Redact
+  // tools stay active for repeat draws — the user has to explicitly
+  // click Select to exit. Each of those tools sets
+  // `skipTargetFind = true` on mount; the Eraser tool sets
+  // `selection = false`. Their cleanup effects restore the defaults
+  // when `activeTool` changes away — but if any one of them
+  // (StrictMode double-invoke, Fabric canvas remount mid-transition,
+  // an effect that returned early before its own body ran and
+  // therefore has no cleanup to run) leaves either flag in the "off"
+  // state, Select breaks silently: clicking an object doesn't
+  // hit-test, and by extension the Eraser tool — which uses
+  // `findTarget` under the hood — can't resolve the pointer target
+  // either. User report 2026-09-09.
+  //
+  // This effect runs strictly when `activeTool === "select"` and
+  // asserts the two canvas-level invariants Select needs. Zero-op
+  // in every other tool mode, so it can never interfere with a
+  // drawing tool's own state setup.
+  useEffect(() => {
+    const fc = fabricRef.current;
+
+    if (!fc) return;
+    if (activeTool !== "select") return;
+
+    fc.selection = true;
+    (fc as unknown as { skipTargetFind: boolean }).skipTargetFind = false;
+  }, [activeTool, fabricCanvas]);
+
   // --- Mobile drag of selected objects ---
   // On non-draw tools we keep `touch-action: pan-x pan-y` so the user
   // can 1-finger swipe to pan a zoomed-in page on iOS Safari (see the

@@ -62,6 +62,36 @@ const FORMAT_TO_CONVERSION_TYPE: Record<
   xlsx: "pdf_to_xlsx",
 };
 
+/**
+ * True when the user has actively rejected non-necessary CookieYes categories.
+ * CookieYes stores its consent state in `cookieyes-consent`; when the user
+ * rejects, that cookie carries `consent:no` for functional / analytics /
+ * performance / advertisement / other. If any of those are `no`, CookieYes'
+ * auto-blocker is actively intercepting fetch / XHR / script tags — the
+ * likely cause of a bare AbortError in the export pipeline.
+ * Client-only (reads `document.cookie`); returns false in SSR.
+ */
+function hasCookieYesRejection(): boolean {
+  if (typeof document === "undefined") return false;
+  try {
+    const raw = document.cookie
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith("cookieyes-consent="));
+
+    if (!raw) return false;
+    // Value format is a URL-encoded, colon/comma-delimited string like
+    // `consentid:...,consent:{necessary:yes,functional:no,analytics:no,...}`
+    // — a simple substring match on any `:no` inside the consent map is
+    // enough to detect a rejection without parsing the whole thing.
+    const decoded = decodeURIComponent(raw.slice("cookieyes-consent=".length));
+
+    return /:no\b/.test(decoded);
+  } catch {
+    return false;
+  }
+}
+
 function buildPdfExportFilename(name: string): string {
   const dot = name.lastIndexOf(".");
   const base = dot > 0 ? name.slice(0, dot) : name;
@@ -733,10 +763,33 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
         logger.captureError(err, "export.build", { format });
-        toast.error({
-          title: "Export failed",
-          description: "We couldn't export your edits. Please try again.",
-        });
+
+        // AbortError with an empty / step-tagged stack is almost always
+        // CookieYes' auto-blocker aborting a fetch / XHR / dynamic script
+        // when the user has rejected non-necessary cookies (Clerk auth
+        // + pdf.js worker load both get caught). Detect that case and
+        // route the user to the consent banner instead of the generic
+        // "please try again" toast, which is a dead-end. See CloudWatch
+        // `diag.cookie_gate` for the shape of the block.
+        const errName = (err as { name?: string })?.name;
+        const errMessage = (err as { message?: string })?.message ?? "";
+        const isCookieGated =
+          errName === "AbortError" ||
+          /aborted/i.test(errMessage) ||
+          hasCookieYesRejection();
+
+        if (isCookieGated) {
+          toast.error({
+            description:
+              "Your cookie preferences are blocking downloads. Open the cookie banner and enable Necessary cookies, then try again.",
+            title: "Cookies blocking download",
+          });
+        } else {
+          toast.error({
+            description: "We couldn't export your edits. Please try again.",
+            title: "Export failed",
+          });
+        }
       } finally {
         isExportingRef.current = false;
       }
