@@ -448,25 +448,55 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const { Textbox: FabricTextbox } = await import("fabric");
 
       // Default new text boxes to ~240pt wide (a comfortable paragraph
-      // width on US Letter / A4), but clamp so the box never starts
-      // wider than the remaining space on the page from the click point.
-      // Wrap is grapheme-based so typed content can never overflow
-      // horizontally, regardless of whether the text contains
-      // whitespace (the page's right edge always wins). Textbox's
-      // built-in Y-scaling lock keeps fontSize stable while still
-      // allowing the user to drag the right-side handle to widen the
-      // box; height auto-grows to fit wrapped lines.
+      // width on US Letter / A4), but ensure the box always fits
+      // horizontally on the page — QA 2026-09-10: "if I am adding the
+      // text box then it's going under the page on left and right".
+      //
+      // Previous version used `Math.max(80, Math.min(240, pageW -
+      // pointer.x - 16))` — the `Math.max(80, …)` floor meant a click
+      // 20pt from the right edge still produced an 80-wide box that
+      // overflowed the page by ~60pt. Same overflow was possible on
+      // the left when `pointer.x` was very close to (or beyond) 0.
+      //
+      // Fix: pick a preferred width, then clamp the box's left origin
+      // so `left + width + rightMargin <= pageW` AND `left >= 0`. If
+      // the horizontal budget can't fit the min width (extremely
+      // narrow window or malformed pointer), shrink the box to
+      // whatever WILL fit — better a thin box that's on-page than a
+      // "normal" box hanging off it. Wrap is grapheme-based so typed
+      // content can never overflow horizontally, regardless of
+      // whether the text contains whitespace.
       const pageW = fc.getWidth();
-      const widthBudget = Math.max(80, Math.min(240, pageW - pointer.x - 16));
+      const rightMargin = 16;
+      const minWidth = 80;
+      const preferredWidth = 240;
+      const usableWidth = Math.max(0, pageW - rightMargin);
+
+      // Width: as much as fits, capped at preferredWidth. If usable
+      // space is smaller than minWidth (edge case), width collapses
+      // to usableWidth rather than overflowing.
+      const boxWidth = Math.min(
+        preferredWidth,
+        Math.max(Math.min(minWidth, usableWidth), 1),
+      );
+
+      // Left origin: clamp so the box's right edge sits at or before
+      // `pageW - rightMargin`. If pointer.x itself is negative
+      // (shouldn't happen with getScenePoint on a well-formed canvas
+      // but guard anyway), snap to 0.
+      const clampedLeft = Math.max(
+        0,
+        Math.min(pointer.x, pageW - rightMargin - boxWidth),
+      );
 
       const textObj = new FabricTextbox("", {
         fill: "#000000",
         fontFamily: "Helvetica",
         fontSize: 16,
-        left: pointer.x,
+        left: clampedLeft,
         splitByGrapheme: true,
         top: pointer.y,
-        width: widthBudget,
+        width: boxWidth,
       }) as Textbox;
 
       // Remove the text object on exit if the user left it empty — otherwise
