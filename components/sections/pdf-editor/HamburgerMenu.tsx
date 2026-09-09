@@ -26,15 +26,11 @@ import {
 } from "@/lib/client/file-conversion/upload-to-pdf";
 import { DuplicateUploadModal } from "@/components/sections/dashboard/duplicate-upload-modal";
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
-import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
-import { useFlattenFileMutation } from "@/lib/client/query/mutations";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { useUploadWithDuplicateCheck } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { triggerBlobDownload } from "@/lib/shared/utils/download";
-import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import { fileToMergeEntry } from "@/lib/client/pdf-tools/merge-pdfs";
 
@@ -86,8 +82,6 @@ export function HamburgerMenu() {
   const setMergeSource = usePdfEditorStore((s) => s.setMergeModalSource);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
-  const flatten = useFlattenFileMutation();
-
   const requireFile = (action: string): File | null => {
     if (!file) {
       toast.info({
@@ -101,36 +95,11 @@ export function HamburgerMenu() {
     return file;
   };
 
-  const runFlatten = async () => {
-    const f = requireFile("flattening");
-
-    if (!f) return;
-
-    // Snapshot BEFORE the paywall/auth handoff so signed-out users who
-    // are routed through AuthModal come back with their fabric overlays
-    // + extractedPages intact (item #8-#12 hydrator restore path).
-    if (!isSignedIn) {
-      await snapshotPendingEditorFile().catch((err) =>
-        logger.warn("pending editor file save failed", err),
-      );
-    }
-
-    // Paywall gate. `requestPaywall()` handles all three states in one
-    // call: entitled → immediate success; signed-in but unpaid → paywall
-    // modal; signed-out → dispatches AuthModal + resolves "cancelled"
-    // (usePaywall.useEffect handles that branch — see item #5). So we
-    // don't need the old manual `!isSignedIn` fork here.
-    const outcome = await requestPaywall();
-
-    if (outcome !== "success") return;
-
-    try {
-      const result = await flatten.mutateAsync({ file: f });
-
-      triggerBlobDownload(result.blob, result.fileName);
-    } catch {
-      // toast already shown by the mutation
-    }
+  const runFlatten = () => {
+    if (!requireFile("flattening")) return;
+    // Auth + paywall + bake all handled in useFlattenEditor (PdfEditorShell)
+    // which has the live fabricCanvas ref needed to bake Fabric overlays.
+    window.dispatchEvent(new CustomEvent("editor:flatten"));
   };
 
   const openSplitModal = async () => {
