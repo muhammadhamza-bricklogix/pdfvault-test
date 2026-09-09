@@ -290,6 +290,33 @@ export function useFabricCanvas({
 
     fc.selection = true;
     (fc as unknown as { skipTargetFind: boolean }).skipTargetFind = false;
+
+    // Per-object sweep (2026-09-10): if any tool / loadFromJSON / stale
+    // JSON left an object with `selectable: false` or `evented: false`,
+    // clicks skip over it silently — user perceives "select tool
+    // doesn't work" and the eraser (which uses `findTarget` under the
+    // hood) can't grab targets either. QA report 2026-09-10:
+    // "unable to select any of the objects of my PDF, eraser is not
+    // working right now."
+    //
+    // Sweep every object and force `selectable / evented = true`,
+    // EXCEPT the watermark preview (`editorType === "watermarkPreview"`)
+    // which is intentionally locked out — the user configures it via
+    // the sidebar panel, not by clicking it on the canvas.
+    for (const obj of fc.getObjects()) {
+      const editorType = (obj as unknown as { editorType?: string }).editorType;
+
+      if (editorType === "watermarkPreview") continue;
+
+      const target = obj as unknown as {
+        selectable?: boolean;
+        evented?: boolean;
+      };
+
+      if (target.selectable !== true) target.selectable = true;
+      if (target.evented !== true) target.evented = true;
+    }
+    fc.requestRenderAll();
   }, [activeTool, fabricCanvas]);
 
   // --- Mobile drag of selected objects ---
