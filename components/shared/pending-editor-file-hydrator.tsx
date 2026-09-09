@@ -106,6 +106,17 @@ export function PendingEditorFileHydrator() {
   const exportFormat = searchParams.get("export");
   const docId = searchParams.get("id");
   const isFreshEntry = searchParams.get("fresh") === "1";
+  // Flow 1 (spec 2026-09-09) post-signup landing: guest dropped a
+  // non-PDF on /convert/*, silent-signed-up, was routed to
+  // `/pdf-composer?convert-pending=1`. `<FlowOneConvertPendingOverlay/>`
+  // owns the lifecycle from here — probes IDB, uploads the ORIGINAL
+  // file for backend conversion, then `router.replace(?id=<newId>)`.
+  // Skip Step 2's rehydrate entirely and (critically) do NOT clear
+  // `isRestoringSession`; the shell's synchronous latch stays true so
+  // the "no file → redirect to dashboard" effect can't fire mid-
+  // conversion. Overlay releases the flag when it navigates to the
+  // real doc URL (or on error path).
+  const isConvertPending = searchParams.get("convert-pending") === "1";
 
   // Step 1a — synchronous tool-tile reset. Fires ASAP (no authLoaded gate)
   // so a stale file from the previous session is out of the store BEFORE
@@ -257,6 +268,13 @@ export function PendingEditorFileHydrator() {
   useEffect(() => {
     if (ranRef.current) return;
     if (!authLoaded) return; // wait so we can pick the right branch
+    // Flow 1 overlay owns lifecycle when ?convert-pending=1 is set —
+    // don't rehydrate + don't clear the restoring latch here.
+    if (isConvertPending) {
+      ranRef.current = true;
+
+      return;
+    }
     ranRef.current = true;
 
     let cancelled = false;
@@ -360,6 +378,7 @@ export function PendingEditorFileHydrator() {
     currentFile,
     docId,
     exportFormat,
+    isConvertPending,
     isFreshEntry,
     isSignedIn,
     setCurrentDocument,

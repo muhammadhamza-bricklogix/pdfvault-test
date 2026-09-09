@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { usePdfEditorStore } from "@/lib/client/stores";
 import { usePendingConversionsStore } from "@/lib/client/stores/pending-conversions-store";
 import {
   clearPendingEditorFile,
@@ -83,6 +84,15 @@ export function FlowOneConvertPendingOverlay() {
     return () => window.clearInterval(interval);
   }, [visible]);
 
+  // Shell latch: `PdfEditorShell` synchronously sets
+  // `isRestoringSession=true` in a `useState` initializer when the URL
+  // has no `?id=` (line ~485). `PendingEditorFileHydrator` short-
+  // circuits Step 2 on `?convert-pending=1` so it never clears that
+  // flag, and this overlay owns the release path — success navigates
+  // to `?id=<docId>` (doc loader picks up), errors flip the flag off
+  // + navigate to /dashboard. Together this keeps `shouldRedirectAway`
+  // false the entire time the conversion is running.
+
   useEffect(() => {
     if (convertPending !== "1") return;
     if (!authLoaded) return;
@@ -100,6 +110,9 @@ export function FlowOneConvertPendingOverlay() {
           logger.warn(
             "[FlowOneConvertPendingOverlay] convert-pending=1 with no IDB file",
           );
+          // No file to convert — drop the shell latch so it can decide
+          // its own fate (likely redirect to dashboard since !file).
+          usePdfEditorStore.setState({ isRestoringSession: false });
           const next = new URLSearchParams(searchParams.toString());
 
           next.delete("convert-pending");
@@ -110,6 +123,11 @@ export function FlowOneConvertPendingOverlay() {
 
           return;
         }
+
+        // Clear IDB immediately so no other hydrator / mirror /
+        // auto-resume can pick up the same file while we're uploading
+        // it. We already hold the File in memory via `result.file`.
+        await clearPendingEditorFile().catch(() => undefined);
 
         setStatusMessage("Uploading your file…");
         stageTargetRef.current = 55;
@@ -142,6 +160,9 @@ export function FlowOneConvertPendingOverlay() {
             description:
               "We couldn't convert your document. Please try again from the dashboard.",
           });
+          // Release the shell latch so its redirect-to-dashboard useEffect
+          // can fire (safety net if `router.replace` below no-ops).
+          usePdfEditorStore.setState({ isRestoringSession: false });
           router.replace(ROUTES.APP.DASHBOARD);
 
           return;
@@ -164,6 +185,7 @@ export function FlowOneConvertPendingOverlay() {
           description:
             "We couldn't finish converting your document. Redirecting you to the dashboard.",
         });
+        usePdfEditorStore.setState({ isRestoringSession: false });
         router.replace(ROUTES.APP.DASHBOARD);
       }
     })();
