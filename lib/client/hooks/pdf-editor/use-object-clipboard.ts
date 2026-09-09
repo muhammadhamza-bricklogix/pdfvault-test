@@ -77,14 +77,8 @@ export function useObjectClipboard(fabricCanvas: FabricCanvas | null): void {
 
         if (!active) return;
 
-        // Skip auto-extracted source text — copying an extracted
-        // sentence to another page would be more surprising than
-        // useful, and it lacks the base coordinates a page-to-page
-        // paste needs.
         const editorType = (active as unknown as { editorType?: string })
           .editorType;
-
-        if (editorType === "editModeText") return;
 
         try {
           const objJson = (
@@ -107,6 +101,27 @@ export function useObjectClipboard(fabricCanvas: FabricCanvas | null): void {
             "fontStyle",
             "fill",
           ]);
+
+          // Extracted source-text runs (`editModeText`) carry a set of
+          // "original*" fields that the merge pipeline uses to detect
+          // modifications relative to the source PDF page they were
+          // extracted from. Copying such a run to another location /
+          // page and keeping those fields would make merge treat the
+          // copy as "a modification of source-page-N's text at
+          // (origLeft, origTop)" — which is wrong: the copy is a fresh
+          // overlay, unrelated to the source page. Strip the fields
+          // and drop the editorType so the paste behaves like a plain
+          // Text-tool insert. QA 2026-09-10.
+          if (editorType === "editModeText") {
+            delete objJson.editorType;
+            delete objJson.pristine;
+            delete objJson.originalText;
+            delete objJson.originalLeft;
+            delete objJson.originalTop;
+            delete objJson.originalWidth;
+            delete objJson.originalHeight;
+            delete objJson.pdfTextWidth;
+          }
 
           clipboardRef.current = {
             json: objJson,
