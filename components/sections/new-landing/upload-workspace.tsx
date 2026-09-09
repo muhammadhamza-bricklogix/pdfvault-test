@@ -332,12 +332,12 @@ export function UploadWorkspace({
   // flow), the editor falls back to the in-memory file set on the
   // Zustand store.
   const buildComposerHref = useCallback(
-    (documentId: string | null) => {
+    (documentId: string | null, opts?: { skipExport?: boolean }) => {
       const query = new URLSearchParams();
 
       if (documentId) query.set("id", documentId);
       if (tool) query.set("tool", tool);
-      if (exportFormat) query.set("export", exportFormat);
+      if (exportFormat && !opts?.skipExport) query.set("export", exportFormat);
       const q = query.toString();
 
       return q ? `${ROUTES.TOOLS.PDF_EDITOR}?${q}` : ROUTES.TOOLS.PDF_EDITOR;
@@ -433,10 +433,30 @@ export function UploadWorkspace({
       // Guest edits freely. On Done → Download the editor's
       // `useExportEditor` fires the email-first modal per auth-chain
       // items 3-4 → auto-signup → paywall → download.
+      // Product rule 2026-09-09: gate by INPUT TYPE, not route.
+      // A PDF in has no conversion cost — every convert route with a
+      // PDF input is really "open in editor" — so the guest is
+      // allowed through and `useExportEditor` (auth-chain items 3-4)
+      // fires email-first + paywall at Done→Download.
+      // A non-PDF in on a convert route still costs backend tokens
+      // (X→PDF or PDF→X, either direction has a server- or client-side
+      // conversion step) — keep the upload-time gate for those. The
+      // gate itself is unchanged; only the entry condition adds an
+      // `!inputIsPdf` guard. See CLAUDE.md items 17 + spec
+      // .claude/specs/2026-09-08-guest-convert-flow.md.
+      const inputIsPdf = isPdf(picked);
       const isGuestPdfExport =
-        requiresAuth && authLoaded && !isSignedIn && Boolean(exportFormat);
+        requiresAuth &&
+        authLoaded &&
+        !isSignedIn &&
+        Boolean(exportFormat) &&
+        !inputIsPdf;
       const isGuestXToPdf =
-        requiresAuth && authLoaded && !isSignedIn && !exportFormat;
+        requiresAuth &&
+        authLoaded &&
+        !isSignedIn &&
+        !exportFormat &&
+        !inputIsPdf;
 
       // Flow 1 per product spec 2026-09-09 — guest drops a non-PDF on a
       // convert-to-PDF route (word-to-pdf, jpg-to-pdf, etc.):
@@ -698,7 +718,21 @@ export function UploadWorkspace({
           tool,
           exportFormat,
         });
-        router.push(buildComposerHref(savedDoc?.id ?? null));
+        // Guest with a PDF on a PDF→X convert route (e.g. dropping a
+        // PDF on /convert/pdf-to-word) — drop the `?export=<format>`
+        // param so `useExportEditor` doesn't auto-fire the email-first
+        // prompt on editor load. Guest edits freely; the paywall fires
+        // when they click Done → pick a non-PDF format. Signed-in users
+        // and guests on any other route keep the export param so their
+        // conversion intent is preserved end-to-end.
+        const isGuestPdfOnConvertRoute =
+          requiresAuth && authLoaded && !isSignedIn && isPdf(pdfFile);
+
+        router.push(
+          buildComposerHref(savedDoc?.id ?? null, {
+            skipExport: isGuestPdfOnConvertRoute,
+          }),
+        );
       } catch (err) {
         logger.captureError(err, "upload.open_editor", {
           filename: picked.name,
