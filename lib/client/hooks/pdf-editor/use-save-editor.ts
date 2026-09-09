@@ -325,6 +325,33 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           .getState()
           .applyPostSaveReset(targetFile, result.remappedState);
 
+        // Mirror `handleSave`'s URL sync: after the cloud upload the
+        // editor is bound to `result.document.id`, so the URL should
+        // reflect that. Callers that follow with a full-page reload
+        // (e.g. `ReloadConfirmModal` "Save & reload") need the current
+        // URL to carry `?id=<docId>` so the fresh page-load routes
+        // through `useEditorDocumentLoader` with the saved doc — not
+        // through the empty-hydrator drop-zone flow (QA 2026-09-09:
+        // "Save & reload button not correctly saving"). Uses
+        // `window.location`/`window.history.replaceState` for a fully
+        // synchronous URL swap so an immediately-following
+        // `window.location.reload()` picks up the new URL.
+        if (typeof window !== "undefined") {
+          try {
+            const url = new URL(window.location.href);
+
+            if (url.searchParams.get("id") !== result.document.id) {
+              url.searchParams.set("id", result.document.id);
+              window.history.replaceState(null, "", url.toString());
+            }
+          } catch {
+            // URL construction failed (should never happen with a real
+            // href) — fall back to no-op; the wait-for-reload below
+            // still resolves and the user's edits are already committed
+            // in the store via applyPostSaveReset.
+          }
+        }
+
         // Share opts out via `skipWait`: it only needs the fresh `File`
         // blob (already committed above) and never reads `pdfDocument`.
         // The wait would otherwise stall the share modal open when pdf.js
