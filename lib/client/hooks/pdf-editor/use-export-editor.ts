@@ -182,15 +182,6 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       customFilename?: string,
       shouldPrint?: boolean,
     ) => {
-      // eslint-disable-next-line no-console
-      console.log("[PDFedits] useExportEditor: handleExport called", {
-        format,
-        isExportingRef: isExportingRef.current,
-        authLoaded: stateRef.current.authLoaded,
-        signedIn: stateRef.current.clerkIsSignedIn,
-        hasFile: !!stateRef.current.file,
-      });
-
       if (isExportingRef.current) return;
 
       // Read `file` and `currentPage` directly from the Zustand store rather
@@ -346,13 +337,6 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         // to the same editor with `?export=<fmt>` set, so the export
         // re-fires automatically.
         if (!signedIn) {
-          // eslint-disable-next-line no-console
-          console.log("[PDFedits] useExportEditor: guest path — dispatching email-first modal", {
-            format,
-            authReady,
-            signedIn,
-            hasFile: !!sourceFile,
-          });
           logger.event(EVENTS.EXPORT_SIGNIN_REQUIRED, "info", { format });
           try {
             // Persist file + per-page Fabric edits + extractedPages across

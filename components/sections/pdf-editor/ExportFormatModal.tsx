@@ -207,12 +207,6 @@ function ExportFormatModalBody({
 
   const handleDownload = async () => {
     setIsSaving(true);
-    // eslint-disable-next-line no-console
-    console.log("[PDFedits] ExportModal: handleDownload start", {
-      isSignedIn: !!file,
-      hasFile: !!file,
-      format: selected,
-    });
 
     // Two-step: cloud save FIRST (uploads current edits to the user's
     // library so nothing is lost), then export (bakes the same edits into
@@ -276,34 +270,14 @@ function ExportFormatModalBody({
     // via `editor:export` would either double-toast or repeat the
     // exact same failure (Firefox AbortError inside merge-pdf, etc.
     // — the original reason this gate exists).
-    // eslint-disable-next-line no-console
-    console.log("[PDFedits] ExportModal: saveResult", saveResult);
-
     const shouldFireExport =
       saveResult.ok || saveResult.reason === "not-signed-in";
 
-    // eslint-disable-next-line no-console
-    console.log("[PDFedits] ExportModal: shouldFireExport", shouldFireExport, {
-      ok: saveResult.ok,
-      reason: saveResult.reason,
-    });
-
     if (shouldFireExport) {
-      // eslint-disable-next-line no-console
-      console.log("[PDFedits] ExportModal: dispatching editor:export", {
-        filename: fileName,
-        format: selected,
-      });
       window.dispatchEvent(
         new CustomEvent("editor:export", {
           detail: { filename: fileName, format: selected },
         }),
-      );
-    } else {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[PDFedits] ExportModal: export BLOCKED — unexpected reason",
-        saveResult.reason,
       );
     }
 
