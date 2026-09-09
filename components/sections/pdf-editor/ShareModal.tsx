@@ -112,8 +112,54 @@ export function ShareModal(): React.ReactElement {
     // save pipeline doesn't run here because form values live in
     // `useFormEditorStore` (backend stamps them at finalize time), not
     // in `fabricJsonByPage`.
+    //
+    // Standard editor flow: `store.file` is the cloud-Save output,
+    // which uses `bakeOverlays: false` — watermark + background image
+    // intentionally NOT baked in (they'd stack on every save). To
+    // include them in the share, dispatch `editor:share-bake` and let
+    // `useShareBaker` (shell-level, has live fabricCanvas ref) run
+    // `buildEditedPdfBytes({ bakeOverlays: true })`. QA 2026-09-09:
+    // recipients were seeing text/shape edits but no watermark or bg
+    // image.
     let fileToShare = file;
     let shareName = file.name;
+
+    if (!isW9Route) {
+      // Standard-editor path — bake overlays via the shell-level hook.
+      // On any failure, fall back to `store.file` (the unbaked cloud
+      // save) so the share still generates rather than blocking the
+      // user; toast tells them what's missing.
+      try {
+        const bakeResult = await new Promise<
+          | { ok: true; bytes: Uint8Array }
+          | { ok: false; reason: string; message?: string }
+        >((resolve) => {
+          window.dispatchEvent(
+            new CustomEvent("editor:share-bake", {
+              detail: { onComplete: resolve },
+            }),
+          );
+        });
+
+        if (bakeResult.ok) {
+          fileToShare = new File([bakeResult.bytes as BlobPart], file.name, {
+            type: "application/pdf",
+          });
+        } else {
+          logger.warn("[share] overlay bake failed; sharing unbaked bytes", {
+            reason: bakeResult.reason,
+            message: bakeResult.message,
+          });
+          toast.info({
+            title: "Sharing without overlay bake",
+            description:
+              "Couldn't include the watermark / background image right now; text and shape edits will still be in the shared PDF.",
+          });
+        }
+      } catch (err) {
+        logger.captureError(err, "share.bake_dispatch");
+      }
+    }
 
     if (isW9Route) {
       const formState = useFormEditorStore.getState();
