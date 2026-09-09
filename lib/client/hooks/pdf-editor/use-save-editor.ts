@@ -444,9 +444,11 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
             bytes?: Uint8Array;
             error?: string;
           }) => void;
+          bakeOverlays?: boolean;
         }>
       ).detail;
       const onComplete = detail?.onComplete;
+      const bakeOverlays = detail?.bakeOverlays ?? false;
 
       if (!onComplete) return;
 
@@ -471,6 +473,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           currentPage: state.currentPage,
           fabricCanvas: fabricRef.current,
           file: state.file,
+          bakeOverlays,
         });
 
         onComplete({ ok: true, bytes });

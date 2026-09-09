@@ -132,8 +132,34 @@ export function CompressModal() {
     }
 
     try {
+      // Bake Fabric overlays into the PDF bytes before compressing so
+      // any edits (draw, highlight, text, signature, etc.) are included
+      // in the compressed output. Uses `editor:build-current-bytes` with
+      // `bakeOverlays: true` so the shell's useSaveEditor (which holds
+      // the live fabricCanvas ref) does the bake — CompressModal has no
+      // canvas access. Falls back to `store.file` if the bake event is
+      // unhandled (e.g. editor not mounted).
+      const bakedBytes = await new Promise<Uint8Array | null>((resolve) => {
+        window.dispatchEvent(
+          new CustomEvent("editor:build-current-bytes", {
+            detail: {
+              bakeOverlays: true,
+              onComplete: (r: { ok: boolean; bytes?: Uint8Array }) => {
+                resolve(r.ok && r.bytes ? r.bytes : null);
+              },
+            },
+          }),
+        );
+      });
+
+      const fileToCompress = bakedBytes
+        ? new File([bakedBytes as BlobPart], file.name, {
+            type: "application/pdf",
+          })
+        : file;
+
       const result = await compress.mutateAsync({
-        file,
+        file: fileToCompress,
         preset,
         ...(preset === "custom" ? { quality, maxImageDpi, grayscale } : {}),
       });
