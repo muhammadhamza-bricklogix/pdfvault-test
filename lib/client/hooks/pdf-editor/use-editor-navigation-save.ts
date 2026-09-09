@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
+import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 type NavigateAfterSaveDetail = {
@@ -202,6 +204,50 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         title: "Saving…",
         description: "Saving your edits before you leave.",
       });
+
+      // Belt-and-braces flush of the live canvas BEFORE the save
+      // chain starts — mirrors the identical block in
+      // `useSaveEditor.onSaveBeforeAction`. Without this, a logo /
+      // Back / My PDFs click while the user is mid-typing an IText
+      // (Fabric hasn't fired `editing:exited` because focus went to
+      // the header button, not the canvas), mid-drag, or immediately
+      // after a shape/drawing that hasn't yet propagated to
+      // `fabricJsonByPage` ships stale content to the backend — the
+      // exact user report 2026-09-09: "when I click on logo while
+      // editing, the editing must be saved properly just like all
+      // the layers and editing in other operations." Two-step
+      // commit:
+      //
+      //   1. Force-exit any IText/Textbox still in editing mode.
+      //      `editing:exited` fires synchronously, which
+      //      `use-edit-text-mode` turns into a `saveFabricJson`.
+      //   2. `flushLiveFabricPage` synchronously serializes the
+      //      current live canvas into
+      //      `fabricJsonByPage[currentPage]` so anything mid-drag /
+      //      already committed by the tool hooks is guaranteed to
+      //      be in the store before `persistEditorDocument` reads
+      //      it. Safe with a null `fabricRef.current` — the helper
+      //      guards for it.
+      if (fabricRef.current) {
+        try {
+          const fc = fabricRef.current;
+          const active = fc.getActiveObject() as {
+            isEditing?: boolean;
+            exitEditing?: () => void;
+          } | null;
+
+          if (active?.isEditing && typeof active.exitEditing === "function") {
+            active.exitEditing();
+            fc.renderAll();
+          }
+          flushLiveFabricPage(usePdfEditorStore.getState().currentPage, fc);
+        } catch (flushErr) {
+          logger.warn(
+            "[PDFedits] navigate-after-save: pre-save flush threw (ignored)",
+            flushErr,
+          );
+        }
+      }
 
       try {
         // Match the Save-button flow (`useSaveEditor`): `force: true` so
