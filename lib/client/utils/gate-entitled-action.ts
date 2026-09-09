@@ -29,8 +29,20 @@ export async function gateEntitledAction(
 
   if (entitled) return true;
 
+  // QA 2026-09-09 — converted documents force the paywall open. Product
+  // decision: signed-up-but-non-entitled users cannot dismiss and get
+  // free access to the converted file. Native PDFs never reach this
+  // branch (short-circuit above), so `mandatory` only ever applies when
+  // the doc is truly converted-and-gated. Other callers (download,
+  // share, ad-hoc button clicks) go through their own request paths
+  // that don't force `mandatory` unless they choose to.
+  const isMandatory = doc !== undefined && isConvertedDocument(doc);
+
   try {
-    const outcome = await requestPaywall(undefined, { hidePreview: true });
+    const outcome = await requestPaywall(undefined, {
+      hidePreview: true,
+      mandatory: isMandatory,
+    });
 
     return outcome === "success";
   } catch (err) {

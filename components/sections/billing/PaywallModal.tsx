@@ -184,6 +184,15 @@ interface PaywallModalProps {
    * there is no document context to preview.
    */
   hidePreview?: boolean;
+  /**
+   * QA 2026-09-09 — force-open mode. Hides the X close button, disables
+   * Escape-to-close, and disables backdrop-click-to-close so the user
+   * is blocked from bypassing the paywall. Used for converted-doc
+   * gating (Flow 1 X→PDF post-signup). `usePaywall.close()` also
+   * short-circuits while `mandatory` is set so any programmatic close
+   * before payment is a no-op.
+   */
+  mandatory?: boolean;
   onClose: () => void;
   onPaymentSuccess: () => void;
 }
@@ -208,6 +217,7 @@ export function PaywallModal({
   isOpen,
   preview,
   hidePreview = false,
+  mandatory = false,
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
@@ -699,12 +709,23 @@ export function PaywallModal({
     );
   };
 
+  // QA 2026-09-09 — `mandatory` refuses close paths BEFORE the success
+  // step. Once the user reaches `success` the bus resolver has already
+  // settled to "success" so `onClose` there is safe regardless.
+  const canDismiss = !mandatory || step === "success";
+
   return (
     <Modal.Backdrop
       isDismissable={false}
+      isKeyboardDismissDisabled={!canDismiss}
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) {
+          // Mandatory + not yet on success → refuse. `usePaywall.close`
+          // also guards this but we skip the analytics event when the
+          // close was blocked so telemetry stays clean.
+          if (!canDismiss) return;
+
           // Success step: `onPaymentSuccess` already fired on mount and
           // resolved the bus. `onClose` (from usePaywall) is now
           // idempotent — it detects the bus was already settled and
@@ -733,11 +754,10 @@ export function PaywallModal({
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
-          {/* CloseTrigger visible on all steps. On SuccessStep the bus
-              was already resolved via `onPaymentSuccess` at mount time,
-              so closing here is safe — `usePaywall.close` no-ops the
-              cancel branch when the resolver ref is already cleared. */}
-          <Modal.CloseTrigger />
+          {/* CloseTrigger visible on all steps EXCEPT when mandatory-and-
+              pre-success. Hides the X button so the user can't bail out
+              of a converted-doc paywall before paying (Flow 1 spec). */}
+          {canDismiss ? <Modal.CloseTrigger /> : null}
           {error ? (
             <ErrorState error={error} />
           ) : !intent ? (
