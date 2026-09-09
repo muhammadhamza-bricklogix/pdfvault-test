@@ -6,7 +6,7 @@ import type { Document } from "@/lib/shared/types/documents.types";
 import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
@@ -15,7 +15,6 @@ import { useProductTour } from "@/lib/client/tour/use-product-tour";
 import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
-import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
@@ -91,94 +90,13 @@ export function DashboardHome() {
     if (openPickerParam) setPickerTool(openPickerParam);
   }
 
-  // Flow 1 (spec 2026-09-09) post-signup hydration. Guest dropped a
-  // non-PDF on a `/convert/*` route, went through the email-first modal
-  // + silent signup, and landed here with `?convert-pending=1`. Their
-  // ORIGINAL file is waiting in IDB (see upload-workspace guest
-  // X→PDF branch). Fire `runPendingConversion` — same runner the
-  // signed-in convert branch uses — so the file gets uploaded to
-  // `/documents/upload`, the backend does the X→PDF conversion, and
-  // the "Preparing your document…" placeholder row appears here until
-  // the real row lands via query invalidation.
-  //
-  // Gated on `user` so we only fire once Clerk has resolved the session
-  // — before that, the axios request to /documents/upload would 401.
-  // Ref-latched so React StrictMode's double-invoke doesn't double-fire.
-  const convertPendingParam = searchParams.get("convert-pending");
-  const convertPendingConsumedRef = useRef(false);
-
-  useEffect(() => {
-    if (convertPendingParam !== "1") return;
-    if (!user) return;
-    if (convertPendingConsumedRef.current) return;
-    convertPendingConsumedRef.current = true;
-
-    void (async () => {
-      const { loadPendingEditorFile, clearPendingEditorFile } = await import(
-        "@/lib/client/upload/pending-editor-file"
-      );
-      const { runPendingConversion } = await import(
-        "@/lib/client/upload/run-pending-conversion"
-      );
-
-      const result = await loadPendingEditorFile();
-
-      if (!result?.file) {
-        // Strip the marker even if there's nothing to convert — no
-        // point leaving a param that will retrigger this branch on
-        // navigation.
-        const next = new URLSearchParams(searchParams.toString());
-
-        next.delete("convert-pending");
-        const suffix = next.toString();
-
-        router.replace(suffix ? `${pathname}?${suffix}` : pathname);
-
-        return;
-      }
-
-      const tempId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const pdfName = /\.pdf$/i.test(result.file.name)
-        ? result.file.name
-        : result.file.name.replace(/\.[^.]+$/, "") + ".pdf";
-
-      usePendingConversionsStore.getState().add({
-        tempId,
-        file: result.file,
-        filename: pdfName,
-        sizeBytes: result.file.size,
-      });
-
-      // Strip the URL marker BEFORE the conversion resolves so a
-      // slow-network user's refresh mid-upload doesn't retrigger.
-      // We await runPendingConversion below to get the docId, then
-      // navigate straight to the editor (spec Flow 1: "redirect the
-      // user to the document not the dashboard").
-      const stripped = new URLSearchParams(searchParams.toString());
-
-      stripped.delete("convert-pending");
-      const suffix = stripped.toString();
-
-      router.replace(suffix ? `${pathname}?${suffix}` : pathname);
-
-      const created = await runPendingConversion(tempId, result.file);
-
-      await clearPendingEditorFile();
-
-      if (created) {
-        // Spec Flow 1: land on the document (editor), not dashboard.
-        // Converted doc → the editor's `useEditorDocumentLoader` fires
-        // `gateEntitledAction` (via the Phase 1 restore) which pops
-        // the paywall for the freshly-signed-up non-entitled user.
-        router.push(
-          `${ROUTES.TOOLS.PDF_EDITOR}?id=${encodeURIComponent(created.id)}`,
-        );
-      }
-    })();
-  }, [convertPendingParam, user, searchParams, router, pathname]);
+  // Flow 1 (spec 2026-09-09) post-signup landing moved OUT of the
+  // dashboard 2026-09-09: the overlay is now on `/pdf-composer`
+  // (`<FlowOneConvertPendingOverlay/>`) so the user lands directly
+  // on the editor and sees a "Converting…" spinner while the
+  // backend runs the X→PDF conversion. The paywall then fires from
+  // `useEditorDocumentLoader` on the converted doc. See
+  // `components/sections/pdf-editor/FlowOneConvertPendingOverlay.tsx`.
 
   useEffect(() => {
     if (!openPickerParam) return;
