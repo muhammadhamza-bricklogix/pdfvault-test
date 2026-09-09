@@ -465,14 +465,16 @@ export function UploadWorkspace({
       //      `runPendingConversion`), so we don't need to convert
       //      client-side — just get the user through signup quickly.
       //   2. Dispatch the email-first modal with Flow 1 copy. Auto-
-      //      signup lands the user at /dashboard?convert-pending=1
-      //      where a mount effect picks up the pending file, fires
-      //      `runPendingConversion`, and the "Preparing your document…"
-      //      placeholder row appears while the backend converts.
-      //   3. User never enters the editor for Flow 1 — they land on
-      //      dashboard with the converted PDF ready. Open + Edit is
-      //      free per the Phase 1 gate reversal (2026-09-08); Download
-      //      still fires the paywall via `triggerDocumentDownload`.
+      //      signup lands the user at `/pdf-composer?convert-pending=1`
+      //      where `<FlowOneConvertPendingOverlay/>` shows a loader,
+      //      reads the IDB file, fires `runPendingConversion`, and
+      //      swaps the URL to `?id=<docId>` on success.
+      //   3. `useEditorDocumentLoader` then fetches the doc metadata,
+      //      sees `originalContentType != null` (converted), and calls
+      //      `gateEntitledAction(doc)` → paywall opens for the freshly-
+      //      signed-up non-entitled user. Native PDFs skip the paywall.
+      //   4. On conversion failure the overlay bounces the user to
+      //      /dashboard with a toast — no blank editor dead-end.
       if (isGuestXToPdf) {
         logger.event(EVENTS.UPLOAD_SIGNIN_REQUIRED, "info", {
           pathname,
@@ -487,7 +489,7 @@ export function UploadWorkspace({
         }
 
         dispatchEmailFirstModal({
-          redirectUrl: `${ROUTES.APP.DASHBOARD}?convert-pending=1`,
+          redirectUrl: `${ROUTES.TOOLS.PDF_EDITOR}?convert-pending=1`,
           title: "Your file is ready",
           subtitle: "Enter your email to save it to your account",
           submitLabel: "Continue",

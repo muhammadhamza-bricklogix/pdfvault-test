@@ -39,6 +39,11 @@ export function usePaywall() {
   const [pending, setPending] = useState<(() => void | Promise<void>) | null>(
     null,
   );
+  // QA 2026-09-09 — when the bus caller sets `options.mandatory`, the
+  // paywall drops its close affordances (X button, Escape, backdrop
+  // click). Used for converted-doc gating where the product rule is
+  // "user must subscribe before touching the file". Reset every close.
+  const [mandatory, setMandatory] = useState(false);
   // Always render the full two-column modal. When there is no doc
   // context (dashboard "Upgrade" buttons, billing settings, axios
   // interceptor) the left column falls back to `<GenericPreviewCard />`
@@ -81,6 +86,21 @@ export function usePaywall() {
     // payment.
     const wasBeforeSuccess = Boolean(busResolverRef.current);
 
+    // QA 2026-09-09 — mandatory paywall (converted docs) refuses to
+    // close before payment. Guard here so ANY close attempt (X, Esc,
+    // backdrop click, PaywallModal.finish's onClose) becomes a no-op
+    // until `onPaymentSuccess` clears the bus resolver. After payment
+    // the resolver is null so we fall through and dismiss normally.
+    if (mandatory && wasBeforeSuccess) {
+      logger.event(EVENTS.PAYWALL_CANCELLED, "warning", {
+        hasBusResolver: true,
+        hasPendingAction: Boolean(pending),
+        blockedByMandatory: true,
+      });
+
+      return;
+    }
+
     if (wasBeforeSuccess) {
       logger.event(EVENTS.PAYWALL_CANCELLED, "info", {
         hasBusResolver: true,
@@ -92,7 +112,8 @@ export function usePaywall() {
     setIsOpen(false);
     setPending(null);
     setPreview(null);
-  }, [pending]);
+    setMandatory(false);
+  }, [pending, mandatory]);
 
   const onPaymentSuccess = useCallback(async () => {
     logger.event(EVENTS.PAYWALL_PAYMENT_SUCCESS, "info", {
@@ -169,9 +190,11 @@ export function usePaywall() {
             hasPreview: Boolean(incomingPreview),
             // Caller hint retained for telemetry; route decides display.
             callerHidePreview: options?.hidePreview ?? false,
+            mandatory: options?.mandatory ?? false,
           });
           busResolverRef.current = resolve;
           setPreview(incomingPreview ?? null);
+          setMandatory(Boolean(options?.mandatory));
           setIsOpen(true);
         }),
     );
@@ -186,6 +209,7 @@ export function usePaywall() {
     guard,
     preview,
     hidePreview,
+    mandatory,
     close,
     onPaymentSuccess,
   };

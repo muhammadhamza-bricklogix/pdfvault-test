@@ -50,6 +50,16 @@ export interface PaywallRequestOptions {
    * blurred card would just be confusing there.
    */
   hidePreview?: boolean;
+  /**
+   * QA 2026-09-09: force the paywall open — hide the close button,
+   * disable Escape-to-close, disable backdrop-click-to-close. Used for
+   * converted PDFs (Flow 1 X→PDF post-signup) where product decision
+   * is "user must subscribe before touching the converted document,
+   * cannot dismiss". Handler exposes this as `mandatory` on the
+   * PaywallModal so the render layer can drop the X button + trap
+   * dismissal attempts.
+   */
+  mandatory?: boolean;
 }
 
 type PaywallHandler = (
