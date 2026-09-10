@@ -82,11 +82,28 @@ export function DateField({ field, mode, page }: FieldProps) {
         <input
           aria-invalid={Boolean(error)}
           aria-label={field.label}
-          className="pointer-events-auto absolute inset-0 h-full w-full rounded-[2px] border border-yellow-500/40 bg-yellow-100/50 px-1 text-transparent caret-[var(--color-accent)] outline-none transition-colors hover:bg-yellow-100/70 focus:border-[var(--color-accent)] focus:bg-yellow-100/80 aria-[invalid=true]:border-danger-500 [&::-webkit-calendar-picker-indicator]:pointer-events-auto [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+          className="pointer-events-auto absolute inset-0 h-full w-full cursor-pointer rounded-[2px] border border-yellow-500/40 bg-yellow-100/50 px-1 text-transparent caret-[var(--color-accent)] outline-none transition-colors hover:bg-yellow-100/70 focus:border-[var(--color-accent)] focus:bg-yellow-100/80 aria-[invalid=true]:border-danger-500 [&::-webkit-calendar-picker-indicator]:pointer-events-auto [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
           style={{ fontSize }}
           type="date"
           value={isoValue}
           onChange={(e) => handleIsoChange(e.target.value)}
+          onClick={(e) => {
+            // WebKit browsers open the picker because the
+            // `::-webkit-calendar-picker-indicator` hit-target is stretched
+            // over the whole input. Firefox has no equivalent — its
+            // native chevron is invisible under `text-transparent`, so
+            // the click merely focuses the field. Force the picker open
+            // via HTMLInputElement.showPicker() (Firefox 101+, Chrome
+            // 99+, Safari 16+). Wrap in try/catch because showPicker()
+            // throws InvalidStateError if the input isn't currently
+            // interactable or was called without a user gesture.
+            try {
+              e.currentTarget.showPicker?.();
+            } catch {
+              /* no-op — WebKit already opened the picker, or the
+                 browser refused to open it (offscreen / disabled). */
+            }
+          }}
         />
         <span
           className={`pointer-events-none absolute inset-0 flex items-center justify-center px-1 leading-none tabular-nums ${
