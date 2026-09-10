@@ -208,25 +208,14 @@ export async function materializeSidebarReorder({
 
   const remapped = remapFabricAfterPageOps({
     newPages: draftPages,
+    oldExtractedPages: extractedPages,
     oldFabricJsonByPage: fabricJsonByPage,
     oldHistoryByPage: historyByPage,
     oldHistoryIndexByPage: historyIndexByPage,
   });
 
-  // extractedPages is keyed by source page index. After rebuild, the source
-  // page that was at display slot i+1 becomes the new source page i+1 — so
-  // remap by walking pageOrder and recording the new slot for any old source
-  // page that was in `extractedPages`.
-  const remappedExtractedPages = new Set<number>();
-
-  pageOrder.forEach((oldSourcePageIndex, i) => {
-    if (extractedPages.has(oldSourcePageIndex)) {
-      remappedExtractedPages.add(i + 1);
-    }
-  });
-
   return {
-    extractedPages: remappedExtractedPages,
+    extractedPages: remapped.extractedPages,
     fabricJsonByPage: remapped.fabricJsonByPage,
     historyByPage: remapped.historyByPage,
     historyIndexByPage: remapped.historyIndexByPage,
