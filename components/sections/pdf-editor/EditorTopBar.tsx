@@ -619,6 +619,11 @@ export function ToolsContent({
 
     if (!key) return;
 
+    // See `PvEditorTopChrome.tsx` for the desktop counterpart + reasoning.
+    // Only user toolbar clicks fire this; programmatic `setActiveTool`
+    // calls stay silent so newly-added objects (image tool, etc.) keep
+    // their selection.
+    window.dispatchEvent(new CustomEvent("editor:toolbar-tool-picked"));
     setActiveTool(key);
   };
 

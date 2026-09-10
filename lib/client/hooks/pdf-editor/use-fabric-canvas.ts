@@ -262,6 +262,52 @@ export function useFabricCanvas({
     if (wrapper) wrapper.style.touchAction = action;
   }, [activeTool, fabricCanvas]);
 
+  // --- Discard live selection when user picks a tool from the toolbar ---
+  //
+  // The floating toolbars are selection-driven: FloatingTextToolbar shows
+  // while a text object is selected (or Edit Text mode is active), and
+  // FloatingShapeToolbar shows while a shape is selected. If the user is
+  // editing an annotation (text object with an active IText cursor) and
+  // then clicks Highlight (or any other tool) from the composer toolbar,
+  // the tool switch alone doesn't clear the Fabric selection — so the
+  // text toolbar keeps rendering on top of the new tool's own panel and
+  // the two overlap on the right side. QA 2026-09-10.
+  //
+  // Listening for a discrete `editor:toolbar-tool-picked` event (not on
+  // every `activeTool` change) is deliberate: programmatic setActiveTool
+  // calls — `use-image-tool.ts` returning to "select" after landing an
+  // image, `use-signature-tool.ts` after closing the signature modal —
+  // MUST NOT discard, or the freshly-added object loses its selection.
+  useEffect(() => {
+    const onToolbarPicked = () => {
+      const fc = fabricRef.current;
+
+      if (!fc) return;
+      const active = fc.getActiveObject();
+
+      if (!active) return;
+      const iText = active as {
+        exitEditing?: () => void;
+        isEditing?: boolean;
+      };
+
+      // Exit IText cursor mode first — `discardActiveObject` alone doesn't
+      // always exit editing in Fabric v7, so the caret can linger and
+      // consume keystrokes for the previous text after tool switch.
+      if (iText.isEditing && typeof iText.exitEditing === "function") {
+        iText.exitEditing();
+      }
+      fc.discardActiveObject();
+      fc.requestRenderAll();
+    };
+
+    window.addEventListener("editor:toolbar-tool-picked", onToolbarPicked);
+
+    return () => {
+      window.removeEventListener("editor:toolbar-tool-picked", onToolbarPicked);
+    };
+  }, []);
+
   // --- Select-tool defensive restore (2026-09-09) ---
   //
   // Since commit 1685a03 (2026-09-06) the Shape / Whiteout / Redact
