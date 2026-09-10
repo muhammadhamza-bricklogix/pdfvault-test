@@ -90,6 +90,86 @@ export function stripPageNumberOverlays(
 }
 
 /**
+ * Strips all Fabric overlay objects EXCEPT `editModeText` from the merge
+ * input on the cloud Save path.
+ *
+ * WHY: after aa89240 shapes/drawings/highlights/signatures/annotations are
+ * kept in `fabricJsonByPage` post-save so they stay selectable in the editor.
+ * But `mergeFabricEditsIntoPdf` (Case 3) also bakes those objects into the
+ * saved PDF bytes via `copyPages + processPageObjects`. On reload the PDF
+ * canvas renders the baked copies AND Fabric reloads them from
+ * `fabricJsonByPage` — the user sees two identical overlapping layers; only
+ * the top (Fabric) one is selectable, the bottom (PDF-baked) one is stuck.
+ *
+ * Fix: pass ONLY `editModeText` objects to the merge on Save. Modified
+ * editModeText still gets whiteout + vector drawIText (its normal path);
+ * everything else is NOT drawn into the PDF content stream. On reload the
+ * source page is copied as-is (no baked shapes), and Fabric renders all
+ * overlays from `fabricJsonByPage` — one layer, all selectable.
+ *
+ * Trade-off: the cloud-saved PDF opened in a third-party reader won't show
+ * shapes/drawings/highlights etc. (same trade-off as `pageNumber`). The
+ * Download / Export path bypasses this strip (`bakeOverlays: true`) so
+ * exported PDFs carry everything baked in.
+ *
+ * Pages whose only objects are non-editModeText overlays are removed from
+ * the returned map entirely so `merge-pdf.ts` takes the cheaper Case 1
+ * (copyPages with no overlay pass) instead of Case 3 with an empty object
+ * list.
+ */
+export function stripBakedOverlaysForSave(
+  fabricJsonByPage: Map<number, string>,
+): Map<number, string> {
+  if (fabricJsonByPage.size === 0) return fabricJsonByPage;
+
+  const next = new Map<number, string>();
+  let mutated = false;
+
+  fabricJsonByPage.forEach((json, page) => {
+    try {
+      const parsed = JSON.parse(json) as {
+        objects?: { editorType?: string }[];
+        [k: string]: unknown;
+      };
+
+      if (!Array.isArray(parsed.objects)) {
+        next.set(page, json);
+
+        return;
+      }
+
+      // Keep only editModeText — those may still need whiteout + vector
+      // drawIText in the merge when the user modified source text.
+      const editModeOnly = parsed.objects.filter(
+        (obj) => obj.editorType === "editModeText",
+      );
+
+      if (editModeOnly.length === parsed.objects.length) {
+        // Nothing to strip for this page.
+        next.set(page, json);
+
+        return;
+      }
+
+      mutated = true;
+
+      if (editModeOnly.length === 0) {
+        // No editModeText either — omit the page entirely so Case 1 fires
+        // (copyPages, no overlay pass) instead of Case 3 with empty objects.
+        return;
+      }
+
+      next.set(page, JSON.stringify({ ...parsed, objects: editModeOnly }));
+    } catch {
+      // Bad JSON — leave untouched; merge will handle via parseFabricJson.
+      next.set(page, json);
+    }
+  });
+
+  return mutated ? next : fabricJsonByPage;
+}
+
+/**
  * Bakes a non-identity `pageOrder` (set by sidebar drag-drop) into a rebuilt
  * source PDF so the downstream merge can run with identity ordering. Reuses
  * the proven Manage Pages rebuild pipeline (`buildPdfFromDraft` +
@@ -128,25 +208,14 @@ export async function materializeSidebarReorder({
 
   const remapped = remapFabricAfterPageOps({
     newPages: draftPages,
+    oldExtractedPages: extractedPages,
     oldFabricJsonByPage: fabricJsonByPage,
     oldHistoryByPage: historyByPage,
     oldHistoryIndexByPage: historyIndexByPage,
   });
 
-  // extractedPages is keyed by source page index. After rebuild, the source
-  // page that was at display slot i+1 becomes the new source page i+1 — so
-  // remap by walking pageOrder and recording the new slot for any old source
-  // page that was in `extractedPages`.
-  const remappedExtractedPages = new Set<number>();
-
-  pageOrder.forEach((oldSourcePageIndex, i) => {
-    if (extractedPages.has(oldSourcePageIndex)) {
-      remappedExtractedPages.add(i + 1);
-    }
-  });
-
   return {
-    extractedPages: remappedExtractedPages,
+    extractedPages: remapped.extractedPages,
     fabricJsonByPage: remapped.fabricJsonByPage,
     historyByPage: remapped.historyByPage,
     historyIndexByPage: remapped.historyIndexByPage,

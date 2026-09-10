@@ -150,7 +150,7 @@ export function BackgroundImagePropertiesContent() {
               for the ring outline. */}
           <div className="flex gap-2 px-1 py-0.5">
             <Button
-              className="flex-1"
+              className="mx-1 my-1 flex-1"
               size="sm"
               variant="ghost"
               onPress={() => imageInputRef.current?.click()}

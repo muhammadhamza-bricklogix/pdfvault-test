@@ -110,38 +110,30 @@ function applyPristineSweep(
       mutatedCount++;
     }
 
-    // Strip overlays that the merge just baked into the saved bytes.
-    // Keeping them here would cause a visible double-render on reload:
-    // pdf.js paints them from the baked PDF AND Fabric re-draws them on
-    // top of that. Highlights compound their 40% alpha and appear
-    // noticeably darker; shapes ghost from anti-aliasing mismatch
-    // between pdf.js and Fabric. Only two overlay types are kept:
+    // Preserve every overlay type post-save so the user's shapes /
+    // drawings / highlights / user-added-images / signatures / arrows
+    // remain interactive after Save. Previously (2026-06-09 design)
+    // these were STRIPPED from `fabricJsonByPage` on the assumption
+    // that the saved bytes already carried them from `merge-pdf`'s
+    // Case 3 rasterization — but that made them non-selectable + non-
+    // erasable in the editor after any save (QA 2026-09-10: "my
+    // edited objects are not clickable and choosable after saving").
     //
-    //   • editModeText — 2026-06-17 fix requires preserving these
-    //     (with the pristine flag set above) so pdf.js text extraction
-    //     doesn't re-surface source words under whiteouts. The `pristine`
-    //     flag also makes them no-ops in the next Case 3 merge.
+    // Trade-off (minimal-risk fix): on the NEXT save the merge will
+    // re-bake these overlays onto bytes that already have them. If
+    // the user didn't move the object, both bakes land at the same
+    // pixels and there's no visible artifact. If they did move the
+    // object, the OLD position stays baked in the bytes until a
+    // follow-up whiteout-on-modify path lands (planned).
     //
-    //   • pageNumber — never baked at all (stripped pre-merge in
-    //     `buildEditedPdfBytes`, per 2026-06-19 (d)). Must survive so
-    //     the editor renders the labels via Fabric on reload.
-    //
-    // Trade-off: shapes / highlights / watermarks / arrows / signatures
-    // / drawings / user-added images live in the baked PDF but are no
-    // longer interactive Fabric objects. Matches the original 2026-06-09
-    // design intent — the user re-draws to modify, otherwise the baked
-    // copy is the source of truth. Undo also stops at the save point;
-    // history is cleared in `applyPostSaveReset` for the same reason.
-    const filteredObjs = objsArr.filter((obj) => {
-      const editorType = obj.editorType;
-
-      return editorType === "editModeText" || editorType === "pageNumber";
-    });
-
-    if (filteredObjs.length !== objsArr.length) {
-      parsed.objects = filteredObjs;
-      changed = true;
-    } else if (changed) {
+    // Two overlay types still get special treatment ABOVE this line:
+    //   • editModeText — pristined + originalText/original* snapped so
+    //     merge-pdf.isModifiedEditModeText treats them as no-ops next
+    //     save (preserves selectable source text on export/share).
+    //   • pageNumber — never baked into bytes (stripped pre-merge in
+    //     buildEditedPdfBytes per 2026-06-19 (d)).
+    // No changes below — we simply STOP filtering the rest out.
+    if (changed) {
       parsed.objects = objsArr;
     }
 

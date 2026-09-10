@@ -327,6 +327,34 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
       isExportingRef.current = true;
 
+      // "Preparing your file…" toast — visible while the export
+      // pipeline runs so the subscribed user has feedback while the
+      // bake + (optional) backend convert + download does its work.
+      // QA 2026-09-10: "when Download / Convert pressed we should get
+      // a toast of preparing file for export if the user is subscribed
+      // already." Opened right before we start doing anything the user
+      // can't perceive on their own, closed unconditionally in the
+      // top-level finally so it can't leak on any exit path.
+      // Format-aware label so PDF says "PDF", DOCX says "Word", etc.
+      const readableFormat =
+        format === "docx"
+          ? "Word"
+          : format === "xlsx"
+            ? "Excel"
+            : format === "pptx"
+              ? "PowerPoint"
+              : format.toUpperCase();
+      let preparingToastKey: string | null = null;
+      const openPreparingToast = () => {
+        if (preparingToastKey) return;
+        preparingToastKey = toast.loading({
+          title: `Preparing your ${readableFormat} file…`,
+          description: shouldPrint
+            ? "Baking your edits before opening print."
+            : "Baking your edits and getting the download ready.",
+        });
+      };
+
       try {
         // ALL downloads (including plain PDF) require sign-in + subscription.
         // Guests can open a PDF and edit it locally, but downloading —
@@ -382,6 +410,15 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
+        // Now that the auth + hydration checks are behind us, open the
+        // "Preparing your <format> file…" toast. This is the point at
+        // which the user is committed to a real bake/convert. Signed-
+        // out users hit the email-first modal above (line ~340) and
+        // never reach here, so they don't see this toast. Closed
+        // explicitly before every paywall entry point and again in
+        // the top-level finally so it can never leak.
+        openPreparingToast();
+
         // Build PDF bytes client-side first — no network call, always fast.
         const { bytes } = await buildEditedPdfBytes({
           currentPage: page,
@@ -404,6 +441,14 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           });
 
           if (!entitled) {
+            // Close the "Preparing…" toast — the paywall is about to
+            // take over the user's attention and the toast underneath
+            // reads as noise. Reopened in the paywall-success branch
+            // below if the user pays and we continue to the download.
+            if (preparingToastKey) {
+              toast.close(preparingToastKey);
+              preparingToastKey = null;
+            }
             logger.event(EVENTS.EXPORT_PAYWALL_SHOWN, "info", { format });
             // Diagnostic — feeds into the paywall's `checkout_intent_400`
             // triage. Bots occasionally reach the paywall with a
@@ -443,6 +488,10 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             } finally {
               URL.revokeObjectURL(objectUrl);
             }
+            // Paywall succeeded — reopen the preparing toast for the
+            // rest of the download work so the user knows the file is
+            // still being prepared post-payment.
+            openPreparingToast();
           }
 
           if (shouldPrint) {
@@ -599,6 +648,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         }
 
         if (!entitled) {
+          // Close the preparing toast — paywall about to take over.
+          // Reopened below on success so post-payment convert work
+          // still surfaces the toast.
+          if (preparingToastKey) {
+            toast.close(preparingToastKey);
+            preparingToastKey = null;
+          }
           // Same shape/filename diagnostic as the PDF branch above —
           // captures the non-PDF export path (docx / xlsx / pptx / etc.)
           // in the `checkout_intent_400` triage. Log alongside the
@@ -634,6 +690,9 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           } finally {
             URL.revokeObjectURL(objectUrl);
           }
+          // Paywall paid — reopen the preparing toast for the backend
+          // convert + download that follows.
+          openPreparingToast();
         }
 
         // Entitled (or just paid) — convert and download.
@@ -792,6 +851,10 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         }
       } finally {
         isExportingRef.current = false;
+        if (preparingToastKey) {
+          toast.close(preparingToastKey);
+          preparingToastKey = null;
+        }
       }
     },
     [],

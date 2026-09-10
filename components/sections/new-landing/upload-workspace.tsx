@@ -268,11 +268,18 @@ export function UploadWorkspace({
 }: UploadWorkspaceProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   // Holds a File dropped before Clerk hydrated. `openFileInEditor`
-  // stashes here + returns early when `authLoaded === false` on a
-  // convert route, and the effect below re-fires the drop once Clerk
-  // finishes loading. Without this, a fast drop on a slow network
-  // slips past both the sign-in and paywall gates and quietly kicks
-  // off a backend conversion for a signed-out visitor.
+  // stashes here + returns early when `authLoaded === false`, and the
+  // effect below re-fires the drop once Clerk finishes loading. Two
+  // classes of bug this guards against:
+  //   1. Convert routes: a fast drop on a slow network slips past both
+  //      the sign-in and paywall gates and silently kicks off a backend
+  //      conversion for a signed-out visitor.
+  //   2. Tool landing routes (e.g. `/password-protect-pdf`): the
+  //      cross-route duplicate-name check at line ~376 is gated on
+  //      `authLoaded && isSignedIn`. If a signed-in user picks a file
+  //      before Clerk hydrates, the check gets skipped and the
+  //      Overwrite/Ignore modal never appears — user then creates a
+  //      second library row with the same filename (QA 2026-09-10).
   const pendingDropRef = useRef<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -347,11 +354,17 @@ export function UploadWorkspace({
 
   const openFileInEditor = useCallback(
     async (picked: File) => {
-      // Auth still hydrating — defer. The effect below re-fires with
-      // the pending file once `authLoaded` flips true. Without this,
-      // a fast drop on a slow network slips past both gates and
-      // silently starts a backend conversion for a signed-out visitor.
-      if (requiresAuth && !authLoaded) {
+      // Auth still hydrating — defer on EVERY route (not just
+      // `/convert/*`). The effect below re-fires the drop once
+      // `authLoaded` flips true. Rationale on non-convert routes: the
+      // duplicate-name check at the top of this function is gated on
+      // `authLoaded && isSignedIn` — a signed-in user who picks a file
+      // before Clerk hydrates would silently bypass that check and end
+      // up with a second library row + no Overwrite/Ignore modal (QA
+      // 2026-09-10 report on `/password-protect-pdf`). On convert
+      // routes this also prevents the sign-in + paywall gates from
+      // being skipped for a signed-out visitor.
+      if (!authLoaded) {
         logger.breadcrumb("upload", "drop.deferred_pre_auth", {
           filename: picked.name,
           size: picked.size,

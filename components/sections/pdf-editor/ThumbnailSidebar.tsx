@@ -269,7 +269,7 @@ function Thumbnail({
           ⋮⋮
         </span>
       ) : null}
-      <div className={frameClass} style={frameStyle}>
+      <div className={`relative ${frameClass}`} style={frameStyle}>
         {isBlank ? (
           <span
             className="text-[10px]"
@@ -279,33 +279,47 @@ function Thumbnail({
           >
             Blank page
           </span>
-        ) : snapshot ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- data URL, not optimizable */
-          <img
-            alt={`Page ${displayPageNumber} preview`}
-            className="max-h-full max-w-full object-contain"
-            src={snapshot}
-          />
         ) : (
-          <canvas
-            ref={canvasRef}
-            // For grid layout, `usePageRenderer` skips setting canvas CSS
-            // dims (fitContainer=true) so the aspect-ratio'd frame controls
-            // display size — the bitmap stays at full pdf.js resolution.
-            style={{
-              ...(useAspectFit
-                ? {
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    width: "100%",
-                    height: "100%",
-                  }
-                : {}),
-              ...(draftPage?.backgroundColor
-                ? { mixBlendMode: "multiply" }
-                : {}),
-            }}
-          />
+          <>
+            {/*
+             * The canvas is ALWAYS mounted so `canvasRef.current` is never
+             * null and `usePageRenderer` can always render to it. Previously
+             * the canvas was conditionally replaced by the snapshot <img>,
+             * which caused a blank-page bug in Manage Pages: after a page
+             * reorder, the snapshot keyed on displayPageNumber disappears for
+             * the new position → canvas remounts fresh → usePageRenderer
+             * doesn't re-run (canvasRef ref-object is stable) → blank page.
+             * Keeping the canvas alive and overlaying the snapshot img on top
+             * (absolute, full-frame) avoids the remount entirely.
+             */}
+            <canvas
+              ref={canvasRef}
+              // For grid layout, `usePageRenderer` skips setting canvas CSS
+              // dims (fitContainer=true) so the aspect-ratio'd frame controls
+              // display size — the bitmap stays at full pdf.js resolution.
+              style={{
+                ...(useAspectFit
+                  ? {
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      width: "100%",
+                      height: "100%",
+                    }
+                  : {}),
+                ...(draftPage?.backgroundColor
+                  ? { mixBlendMode: "multiply" }
+                  : {}),
+              }}
+            />
+            {snapshot ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- data URL, not optimizable */
+              <img
+                alt={`Page ${displayPageNumber} preview`}
+                className="absolute inset-0 h-full w-full object-contain"
+                src={snapshot}
+              />
+            ) : null}
+          </>
         )}
       </div>
       {showPageLabel ? (

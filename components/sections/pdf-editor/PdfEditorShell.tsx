@@ -135,6 +135,7 @@ function EditorLayout() {
   const isManagePagesOpen = usePdfEditorStore((s) => s.isManagePagesOpen);
   const applyManagePagesSave = usePdfEditorStore((s) => s.applyManagePagesSave);
   const file = usePdfEditorStore((s) => s.file);
+  const extractedPages = usePdfEditorStore((s) => s.extractedPages);
   const fabricJsonByPage = usePdfEditorStore((s) => s.fabricJsonByPage);
   const historyByPage = usePdfEditorStore((s) => s.historyByPage);
   const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
@@ -290,6 +291,7 @@ function EditorLayout() {
         });
         const remapped = remapFabricAfterPageOps({
           newPages: snapshot.pages,
+          oldExtractedPages: extractedPages,
           oldFabricJsonByPage: fabricJsonByPage,
           oldHistoryByPage: historyByPage,
           oldHistoryIndexByPage: historyIndexByPage,
@@ -307,6 +309,7 @@ function EditorLayout() {
 
         applyManagePagesSave({
           currentPage: clampedPage,
+          extractedPages: remapped.extractedPages,
           fabricJsonByPage: renumberedFabricJson,
           file: newFile,
           historyByPage: remapped.historyByPage,
@@ -322,6 +325,7 @@ function EditorLayout() {
     [
       applyManagePagesSave,
       currentPage,
+      extractedPages,
       fabricCanvas,
       fabricJsonByPage,
       file,

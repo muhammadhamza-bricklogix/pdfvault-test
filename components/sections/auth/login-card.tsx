@@ -180,6 +180,12 @@ type LoginCardProps = {
    */
   onSwitchToSignup?: () => void;
   /**
+   * When rendered inside a modal, calling this switches the modal to
+   * the forgot-password view instead of navigating to `/forgot-password`.
+   * When omitted (standalone page), the link falls back to a `<Link>`.
+   */
+  onForgotPassword?: () => void;
+  /**
    * Pre-fill the email field on first render. Used by the email-first
    * modal (2026-08-30) so the user doesn't have to retype an email
    * they already entered in the previous step. Falls back to "" so
@@ -202,6 +208,7 @@ type LoginCardProps = {
 export function LoginCard({
   redirectUrl,
   onSwitchToSignup,
+  onForgotPassword,
   initialEmail,
   autoSendCode,
 }: LoginCardProps = {}) {
@@ -1043,12 +1050,22 @@ export function LoginCard({
                     />
                     Remember me
                   </label>
-                  <Link
-                    className="text-[#5f5f5f] underline-offset-2 hover:text-[#f12c23] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-                    href={forgotPasswordHref}
-                  >
-                    Forgot password?
-                  </Link>
+                  {onForgotPassword ? (
+                    <button
+                      className="text-[#5f5f5f] underline-offset-2 hover:text-[#f12c23] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+                      type="button"
+                      onClick={onForgotPassword}
+                    >
+                      Forgot password?
+                    </button>
+                  ) : (
+                    <Link
+                      className="text-[#5f5f5f] underline-offset-2 hover:text-[#f12c23] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+                      href={forgotPasswordHref}
+                    >
+                      Forgot password?
+                    </Link>
+                  )}
                 </div>
               </>
             ) : null}

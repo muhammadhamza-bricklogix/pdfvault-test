@@ -471,7 +471,23 @@ export async function drawIText(
       typeof obj.textAlign === "string" ? obj.textAlign : undefined;
     const alignment: "left" | "center" | "right" =
       rawAlign === "center" || rawAlign === "right" ? rawAlign : "left";
-    const boxWidth = typeof pdfMaxWidth === "number" ? pdfMaxWidth : 0;
+    // Alignment offset needs a container width, but `pdfMaxWidth` is
+    // deliberately `undefined` for `editModeText` (see the block above:
+    // passing a maxWidth to `drawText` makes pdf-lib compress the run
+    // when its font metrics differ from the source's — visible baseline
+    // drift). Fall back to the Fabric Textbox's own width (`objWidth` in
+    // Fabric units → PDF points) so the user's center/right pick still
+    // has a box to align WITHIN. QA 2026-09-11: user deletes a long
+    // sentence in an editModeText run, types a short word, picks Center
+    // — the composer paints Center correctly but the download reverted
+    // to left because `boxWidth = 0` short-circuited the per-line offset
+    // calculation below.
+    const boxWidth =
+      typeof pdfMaxWidth === "number" && pdfMaxWidth > 0
+        ? pdfMaxWidth
+        : editorType === "editModeText" && objWidth > 0
+          ? toPdfDim(objWidth, ctx.scaleX)
+          : 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];

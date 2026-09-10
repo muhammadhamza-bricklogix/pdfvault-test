@@ -26,8 +26,15 @@ const SignupCard = dynamic(
     import("@/components/sections/auth/signup-card").then((m) => m.SignupCard),
   { ssr: false, loading: () => null },
 );
+const ForgotPasswordCard = dynamic(
+  () =>
+    import("@/components/sections/auth/forgot-password-card").then(
+      (m) => m.ForgotPasswordCard,
+    ),
+  { ssr: false, loading: () => null },
+);
 
-export type AuthModalMode = "login" | "signup";
+export type AuthModalMode = "login" | "signup" | "forgotPassword";
 
 export type AuthModalDetail = {
   /** Which card to open first. Users can switch via the in-card link. */
@@ -199,13 +206,19 @@ export function AuthModal() {
                 autoSendCode={detail?.autoSendCode}
                 initialEmail={detail?.email}
                 redirectUrl={detail?.redirectUrl}
+                onForgotPassword={() => setMode("forgotPassword")}
                 onSwitchToSignup={() => setMode("signup")}
               />
-            ) : (
+            ) : mode === "signup" ? (
               <SignupCard
                 initialEmail={detail?.email}
                 redirectUrl={detail?.redirectUrl}
                 onSwitchToLogin={() => setMode("login")}
+              />
+            ) : (
+              <ForgotPasswordCard
+                redirectUrl={detail?.redirectUrl}
+                onBackToLogin={() => setMode("login")}
               />
             )}
           </div>

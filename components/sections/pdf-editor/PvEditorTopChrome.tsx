@@ -933,7 +933,22 @@ function ToolToolbar() {
                     disabled={disabled}
                     icon={tool.icon}
                     label={tool.label}
-                    onClick={() => setActiveTool(tool.id)}
+                    onClick={() => {
+                      // Signal `use-fabric-canvas` to discard any live
+                      // selection so selection-driven floating toolbars
+                      // (FloatingTextToolbar / FloatingShapeToolbar) don't
+                      // stay open on top of the new tool's own panel. Only
+                      // fires on user toolbar clicks — programmatic
+                      // `setActiveTool` calls (e.g. `use-image-tool.ts`
+                      // returning to select after a drop) skip this so the
+                      // just-added object stays selected. QA 2026-09-10:
+                      // "edit annotation, then click Highlight → the two
+                      // panels overlap on the right side."
+                      window.dispatchEvent(
+                        new CustomEvent("editor:toolbar-tool-picked"),
+                      );
+                      setActiveTool(tool.id);
+                    }}
                   />
                 );
               }
