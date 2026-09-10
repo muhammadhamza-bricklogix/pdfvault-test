@@ -1,0 +1,92 @@
+name: Save-flow regression tests
+
+# Runs the PDF-composer save-flow Playwright suite on every PR against
+# main/staging AND on every push into staging or main. Guards against
+# save regressions before the code hits staging.pdfvault.ai or
+# pdfvault.ai.
+#
+# The suite lives at `tests/pdf-editor/regression/` and covers:
+#   • Save button preserves all layers
+#   • Logo-click nav-save preserves all layers
+#   • save-before-action preserves all layers
+#   • Mid-typing logo click captures latest chars
+#   • Signed-out reload preserves fabric layers via IDB
+#
+# Each future save-flow bug fix should add one more spec in the same
+# folder. If this workflow ever fails, DO NOT merge — one of the
+# save paths lost a layer type.
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: PDF composer — save flow regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright + Chrome
+        run: bunx playwright install --with-deps chrome
+
+      - name: Start dev server
+        run: |
+          bun run dev > /tmp/dev-server.log 2>&1 &
+          echo $! > /tmp/dev-server.pid
+          # Wait for the server to be reachable — cap at 90 s.
+          for i in $(seq 1 45); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -qE "^(200|3[0-9]{2})$"; then
+              echo "dev server up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "dev server failed to start"
+          cat /tmp/dev-server.log
+          exit 1
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://api.pdfvault.ai
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY_TEST || 'pk_test_placeholder' }}
+          NODE_ENV: development
+
+      - name: Run save-flow regression suite
+        run: bunx playwright test tests/pdf-editor/regression/ --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          # Clerk dev magic-code sign-in credentials — the test setup
+          # signs in a canary user before the auth-gated specs run. If
+          # these secrets aren't set, the setup gracefully skips and
+          # only the signed-out spec runs (still useful signal).
+          E2E_CLERK_EMAIL: ${{ secrets.E2E_CLERK_EMAIL }}
+          E2E_CLERK_PASSWORD: ${{ secrets.E2E_CLERK_PASSWORD }}
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ -f /tmp/dev-server.pid ]; then
+            kill "$(cat /tmp/dev-server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
