@@ -311,6 +311,7 @@ type PdfEditorStore = {
   setCurrentPage: (page: number) => void;
   applyManagePagesSave: (params: {
     currentPage: number;
+    extractedPages: Set<number>;
     fabricJsonByPage: Map<number, string>;
     file: File;
     historyByPage: Map<number, string[]>;
@@ -780,6 +781,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
 
   applyManagePagesSave: ({
     currentPage,
+    extractedPages,
     fabricJsonByPage,
     file,
     historyByPage,
@@ -787,6 +789,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   }) =>
     set({
       currentPage,
+      extractedPages: new Set(extractedPages),
       fabricJsonByPage: new Map(fabricJsonByPage),
       file,
       hasUnsavedChanges: true,
