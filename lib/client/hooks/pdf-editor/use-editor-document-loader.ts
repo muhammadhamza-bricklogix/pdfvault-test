@@ -366,7 +366,10 @@ export function useEditorDocumentLoader() {
         // circuits the hydrator early (ranRef stays true) and leaves the
         // flag set. Clearing it here — once the file is in store — is safe:
         // `!file` is about to become false, so shouldRedirectAway stays off.
-        usePdfEditorStore.setState({ hasUnsavedChanges: false, isRestoringSession: false });
+        usePdfEditorStore.setState({
+          hasUnsavedChanges: false,
+          isRestoringSession: false,
+        });
         lastHydratedDocumentId.current = id;
         logger.event(EVENTS.DOCUMENT_LOADER_LOAD_OK, "info", {
           id,
