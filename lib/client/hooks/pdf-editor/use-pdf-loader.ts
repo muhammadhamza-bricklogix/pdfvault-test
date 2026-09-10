@@ -119,11 +119,25 @@ export function usePdfLoader() {
         });
         setPdfDocument(doc, doc.numPages);
       } catch (err) {
+        // Firefox rejects pdf.js's internal stream reads with a native
+        // `DOMException("AbortError: The operation was aborted.")` when
+        // the worker/stream tears down (React re-render, StrictMode
+        // double-mount, sourceKey flip mid-load). Chrome silently
+        // swallows it. Treat the abort as cleanup — never surface it as
+        // a user-facing load failure. Return before logger.error so it
+        // doesn't spam telemetry either.
+        const name = (err as { name?: string })?.name;
+        const message = (err as { message?: string })?.message ?? "";
+        const isAbort =
+          name === "AbortError" ||
+          message === "The operation was aborted." ||
+          message.toLowerCase().includes("aborted");
+
+        if (isAbort) return;
+
         logger.error("[PDFedits] load: failed", err);
 
         if (!cancelled) {
-          const name = (err as { name?: string })?.name;
-
           if (name === "PasswordException") {
             // QA 2026-08-27: uploading a locked PDF (e.g. one the user
             // just password-protected + downloaded here, then re-uploaded)
