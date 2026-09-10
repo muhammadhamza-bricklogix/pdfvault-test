@@ -1,6 +1,7 @@
 "use client";
 
 import type { Canvas } from "fabric";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Modal, Tabs } from "@heroui/react";
@@ -11,6 +12,73 @@ import { FileUpload } from "@/components/ui/file-upload/file-upload";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+
+/**
+ * Composites a pdf.js page and its stored Fabric overlay JSON into a JPEG
+ * data URL suitable for `thumbnailSnapshots`. Runs entirely offscreen —
+ * creates + disposes its own <canvas> elements and a Fabric StaticCanvas.
+ *
+ * Why this exists: the live capture in `PdfViewerCanvas.tsx` only fires
+ * `object:added/modified/removed` for the CURRENT page's mounted Fabric
+ * canvas. When the signature modal splices a signature into
+ * `fabricJsonByPage[page]` for every OTHER target page, no canvas is
+ * mounted for those pages so no capture fires — the sidebar thumbnail
+ * stays stale (or shows a raw pdf.js render with no signature) until the
+ * user visits the page and triggers a Fabric event themselves. QA
+ * 2026-09-11: "not showing on my sidebar pdf composer until I edited
+ * that page using drawer and highlight etc."
+ *
+ * Failure mode is silent: any exception logs + returns null, and the
+ * caller leaves the thumbnail unchanged (worst case: same behaviour as
+ * before this helper existed).
+ */
+async function generateOffscreenSnapshot({
+  pdfDocument,
+  sourcePage,
+  fabricJson,
+}: {
+  fabricJson: string;
+  pdfDocument: PDFDocumentProxy;
+  sourcePage: number;
+}): Promise<string | null> {
+  try {
+    const page = await pdfDocument.getPage(sourcePage);
+    const viewport = page.getViewport({ scale: 1 });
+
+    const pdfCanvas = document.createElement("canvas");
+
+    pdfCanvas.width = viewport.width;
+    pdfCanvas.height = viewport.height;
+    const pdfCtx = pdfCanvas.getContext("2d");
+
+    if (!pdfCtx) return null;
+    await page.render({ canvas: pdfCanvas, viewport }).promise;
+
+    const { StaticCanvas } = await import("fabric");
+    const fabricEl = document.createElement("canvas");
+    const fc = new StaticCanvas(fabricEl, {
+      backgroundColor: undefined,
+      height: viewport.height,
+      width: viewport.width,
+    });
+
+    try {
+      await fc.loadFromJSON(JSON.parse(fabricJson));
+      fc.renderAll();
+      pdfCtx.drawImage(fc.lowerCanvasEl, 0, 0);
+    } finally {
+      fc.dispose();
+    }
+
+    return pdfCanvas.toDataURL("image/jpeg", 0.7);
+  } catch (err) {
+    logger.warn("[PDFedits] signature: offscreen thumbnail generation failed", {
+      err,
+    });
+
+    return null;
+  }
+}
 
 // Parses "1, 3, 5-7" into [1, 3, 5, 6, 7], deduped and sorted. Silently
 // clamps to [1, totalPages] and drops out-of-range or malformed tokens.
@@ -457,6 +525,7 @@ function SignatureModalContent({
     // the user drags it into place).
     if (otherPages.length > 0) {
       const state = usePdfEditorStore.getState();
+      const pdfDocument = state.pdfDocument;
 
       for (const page of otherPages) {
         try {
@@ -492,6 +561,26 @@ function SignatureModalContent({
 
           state.pushHistory(page, nextJson);
           state.saveFabricJson(page, nextJson);
+
+          // Refresh the sidebar thumbnail for this page. Without this the
+          // signature is in `fabricJsonByPage[page]` but the thumbnail
+          // still shows the stale pre-signature snapshot (or a raw pdf.js
+          // render for never-visited pages) until the user navigates to
+          // the page and fires a Fabric event that triggers the live
+          // capture in `PdfViewerCanvas.tsx`. Awaiting per page keeps the
+          // number of concurrent pdf.js `getPage` renders bounded — a
+          // 40-page "sign all pages" run stays under one worker's memory
+          // budget and finishes in ~a few hundred ms total.
+          if (pdfDocument) {
+            const sourcePage = state.getSourcePageIndex(page);
+            const dataUrl = await generateOffscreenSnapshot({
+              fabricJson: nextJson,
+              pdfDocument,
+              sourcePage,
+            });
+
+            if (dataUrl) state.setThumbnailSnapshot(page, dataUrl);
+          }
         } catch (err) {
           logger.captureError(err, "signature.multi_page_add_failed", {
             page,
