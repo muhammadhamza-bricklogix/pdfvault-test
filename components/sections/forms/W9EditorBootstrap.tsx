@@ -167,6 +167,18 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       ? Promise.resolve()
       : (async () => {
           try {
+            // Skip the library lookup for signed-out users — the endpoint
+            // requires auth and returns 401 for guests, producing a noisy
+            // console error in Firefox. Wait for Clerk to finish hydrating
+            // first (up to 3 s), then bail early if there's no active
+            // session so we never fire the auth-gated request as a guest.
+            const { waitForClerk } = await import(
+              "@/lib/client/auth/get-auth-token"
+            );
+            const clerk = await waitForClerk(3000);
+
+            if (!clerk?.session) return;
+
             const existing = await findDuplicateByFilename(W9_LIBRARY_FILENAME);
 
             if (cancelled || !existing) return;
@@ -227,6 +239,12 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     const resumePromise = resumeDocId
       ? (async () => {
           try {
+            const { waitForClerk } = await import(
+              "@/lib/client/auth/get-auth-token"
+            );
+            const clerk = await waitForClerk(3000);
+
+            if (!clerk?.session) return;
             const doc = await documentsService.getDocument(resumeDocId);
 
             if (cancelled) return;

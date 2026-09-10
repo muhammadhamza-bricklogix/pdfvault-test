@@ -4,6 +4,7 @@ import type { ThemeProviderProps } from "next-themes";
 
 import { Toast } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { useEffect } from "react";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { AuthModal } from "@/components/shared/auth-modal";
@@ -21,6 +22,33 @@ import { UserSyncBoot } from "@/components/shared/user-sync-boot";
 import { UploadToastProvider } from "@/components/ui/upload-toast";
 
 import { QueryProvider } from "./query-provider";
+
+/**
+ * Suppresses the "Skipped ViewTransition due to another transition
+ * starting" DOMException that Next.js App Router throws in Firefox
+ * when two soft navigations race each other. The browser aborts the
+ * second transition — the UI is fine — but the rejected promise
+ * surfaces as an uncaught error in the console and Sentry.
+ * Chrome silently discards it; Firefox does not.
+ */
+function ViewTransitionErrorSuppressor() {
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      if (
+        event.reason instanceof DOMException &&
+        event.reason.message.includes("Skipped ViewTransition")
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("unhandledrejection", handler);
+
+    return () => window.removeEventListener("unhandledrejection", handler);
+  }, []);
+
+  return null;
+}
 
 type AppProvidersProps = {
   children: React.ReactNode;
@@ -54,6 +82,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <SentryUserContext />
           <EditorEventsLogger />
           <LangPrefHonor />
+          <ViewTransitionErrorSuppressor />
         </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>

@@ -151,9 +151,22 @@ export function EmailFirstModal() {
     try {
       // eslint-disable-next-line no-console
       console.info("[AUTH_DIAG] email_first.probe", { hasEmail: true });
-      const { error: probeError } = await signIn.create({
-        identifier: trimmed,
-      });
+      // Wrap the Clerk probe in a 10-second timeout. In Firefox,
+      // Enhanced Tracking Protection can block Cloudflare Turnstile
+      // (Clerk's bot-protection CAPTCHA), causing `signIn.create()`
+      // to hang indefinitely and leaving the modal stuck at "Checking…"
+      // with no error surface. Timeout rejects → catch block shows a
+      // retry message so the user isn't permanently stranded.
+      const probeResult = await Promise.race([
+        signIn.create({ identifier: trimmed }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Email check timed out. Please try again.")),
+            10_000,
+          ),
+        ),
+      ]);
+      const { error: probeError } = probeResult;
 
       // Existing account: `signIn.create` returns no error and the
       // signIn moves to needs_first_factor (or complete for OAuth-
