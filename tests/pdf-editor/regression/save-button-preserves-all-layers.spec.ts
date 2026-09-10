@@ -1,39 +1,36 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  addAllCanaries,
+  verifyCanaryLayers,
+} from "../../helpers/canary-layers";
 import { openSamplePdfInEditor, waitForPdfReady } from "../../helpers/editor";
 
 /**
- * Regression: signed-in user clicks the Save button and every layer they
- * added (shape + text + drawing path) survives the save round-trip.
+ * Kitchen-sink: signed-in user adds EVERY layer type — shape, text,
+ * drawing, highlight, signature, image, page-number, watermark, bg
+ * image — then fires `editor:save`. Every canary must survive
+ * post-`applyPostSaveReset` in the store (which is what the next
+ * save cycle will read).
  *
- * We stub the backend `POST /documents/upload` response so this spec is
- * deterministic and doesn't create a real doc row in the test user's
- * library on every run. The stub returns a plausible `Document` payload
- * so `applyPostSaveReset` fires cleanly (swaps `store.file` to the
- * "saved bytes" and marks `hasUnsavedChanges: false`) — that's the
- * client-side surface this spec guards.
+ * `POST /documents/upload` is stubbed so the spec is deterministic
+ * + doesn't create a real doc row in the test user's library.
  *
- * Failure signals to the user (all of them are real regressions we
- * shipped and fixed this month):
- *   • Save button pressed → nothing uploaded (persistEditorDocument
- *     short-circuited on a stale `hasUnsavedChanges: false`).
- *   • Save uploaded stale bytes (flushLiveFabricPage skipped, live
- *     canvas not flushed to fabricJsonByPage).
- *   • `applyPostSaveReset` failed to fire → store.hasUnsavedChanges
- *     stays true → next save loops with duplicated overlays.
+ * Failures here indicate a regression in the Save-button pipeline:
+ *   • hasUnsavedChanges short-circuit before upload.
+ *   • flushLiveFabricPage skipped → live canvas not captured.
+ *   • applyPostSaveReset didn't fire → hasUnsavedChanges stuck true.
+ *   • applyPristineSweep stripped a layer type it shouldn't (shapes,
+ *     drawings, highlights, signatures, and user-images stay in
+ *     fabricJsonByPage; source-tied editModeText + pageNumber stay
+ *     too per skill log 2026-06-19 (d)).
+ *   • watermarkConfig / backgroundImageConfig reset by mistake.
  */
 
 test.describe("PDF editor — Save button preserves all layers", () => {
-  test("shape + textbox + drawing survive Save button + applyPostSaveReset", async ({
+  test("shape + text + drawing + highlight + signature + image + page-number + watermark + bg-image all survive Save", async ({
     page,
   }) => {
-    // Stub the backend so this spec doesn't hit prod / staging and
-    // doesn't need a running backend. `POST /documents/upload` must
-    // return a Document shape with id, filename, url etc.; the
-    // relevant fields for the client's applyPostSaveReset flow are
-    // just `id` + `filename`, but we return a fuller shape so any
-    // downstream consumer (SaveStatusChip, etc.) doesn't crash on a
-    // missing field.
     await page.route(
       (url) => url.pathname.endsWith("/documents/upload"),
       async (route) => {
@@ -41,7 +38,7 @@ test.describe("PDF editor — Save button preserves all layers", () => {
           status: 201,
           contentType: "application/json",
           body: JSON.stringify({
-            id: "canary-doc-id-regression",
+            id: "canary-doc-save-button",
             filename: "sample.pdf",
             contentType: "application/pdf",
             url: "https://example.invalid/canary.pdf",
@@ -56,65 +53,16 @@ test.describe("PDF editor — Save button preserves all layers", () => {
 
     await openSamplePdfInEditor(page);
     await waitForPdfReady(page);
-
     await page.waitForFunction(
       () => Boolean(window.__PDF_EDITOR_TEST__?.fabricCanvas),
       undefined,
       { timeout: 15_000 },
     );
 
-    // Add three canary overlays via the test harness. Each carries a
-    // unique `editorType` so the post-save assertion can spot them
-    // even if their spatial coords drift by 1-2 pt due to Fabric
-    // internals.
-    await page.evaluate(async () => {
-      const fc = window.__PDF_EDITOR_TEST__!.fabricCanvas;
+    await addAllCanaries(page);
 
-      if (!fc) throw new Error("fabricCanvas missing at test entry");
-
-      const fabric = await import("fabric");
-      const rect = new fabric.Rect({
-        left: 200,
-        top: 200,
-        width: 100,
-        height: 60,
-        fill: "red",
-      });
-
-      (rect as unknown as { editorType?: string }).editorType = "canaryRect";
-
-      const text = new fabric.Textbox("REGRESSION-CANARY-SAVE", {
-        left: 200,
-        top: 320,
-        fontSize: 20,
-        fill: "#000000",
-        width: 320,
-        splitByGrapheme: true,
-      });
-
-      (text as unknown as { editorType?: string }).editorType = "canaryText";
-
-      const path = new fabric.Path("M 50 50 L 150 100 L 250 50 L 350 100", {
-        stroke: "#333333",
-        strokeWidth: 3,
-        fill: "",
-      });
-
-      (path as unknown as { editorType?: string }).editorType = "canaryDraw";
-
-      fc.add(rect);
-      fc.add(text);
-      fc.add(path);
-      // Fire object:added so use-editor-history's snapshot handler
-      // pushes into fabricJsonByPage — mirrors what real user
-      // interactions do when they release a tool click.
-      fc.fire("object:added", { target: rect });
-      fc.fire("object:added", { target: text });
-      fc.fire("object:added", { target: path });
-      fc.requestRenderAll();
-    });
-
-    // Confirm the flush landed in store BEFORE we fire the save.
+    // Wait for the flush to land in `fabricJsonByPage` — the
+    // snapshot handler fires on `object:added`.
     await expect
       .poll(
         () =>
@@ -127,9 +75,6 @@ test.describe("PDF editor — Save button preserves all layers", () => {
       )
       .toBe(true);
 
-    // Fire the Save button's event. Using the CustomEvent bus is
-    // more reliable than clicking the button (button position varies
-    // between mobile chrome / desktop chrome / W-9 layouts).
     const uploadResponsePromise = page.waitForResponse((response) =>
       response.url().includes("/documents/upload"),
     );
@@ -140,12 +85,7 @@ test.describe("PDF editor — Save button preserves all layers", () => {
 
     await uploadResponsePromise;
 
-    // Post-save assertions:
-    //   1. `hasUnsavedChanges` must be false (applyPostSaveReset fired).
-    //   2. `currentDocumentId` must match the stubbed id.
-    //   3. Canary overlays must still be present on the live canvas
-    //      (post-save the file swaps but Fabric objects stay in
-    //      fabricJsonByPage; the mount effect reloads them).
+    // Post-save: hasUnsavedChanges → false, currentDocumentId set.
     await expect
       .poll(
         () =>
@@ -161,39 +101,33 @@ test.describe("PDF editor — Save button preserves all layers", () => {
       )
       .toEqual({
         hasUnsavedChanges: false,
-        currentDocumentId: "canary-doc-id-regression",
+        currentDocumentId: "canary-doc-save-button",
       });
 
-    // Verify the canary overlays are still present in the store's
-    // fabric map (readable regardless of Fabric canvas remount timing).
-    const overlayCheck = await page.evaluate(() => {
-      const store = window.__PDF_EDITOR_TEST__!.getStore();
-      const pageJson = store.fabricJsonByPage.get(store.currentPage);
+    const restored = await verifyCanaryLayers(page);
 
-      if (!pageJson) return { found: null };
-      const parsed = JSON.parse(pageJson) as {
-        objects?: Array<{ editorType?: string; text?: string }>;
-      };
-      const objs = parsed.objects ?? [];
-
-      return {
-        found: {
-          canaryRect: objs.some((o) => o.editorType === "canaryRect"),
-          canaryText: objs.some(
-            (o) =>
-              o.editorType === "canaryText" &&
-              o.text === "REGRESSION-CANARY-SAVE",
-          ),
-          canaryDraw: objs.some((o) => o.editorType === "canaryDraw"),
-          totalObjects: objs.length,
-        },
-      };
-    });
-
-    expect(overlayCheck.found, "fabricJsonByPage missing after save").not.toBeNull();
-    expect(overlayCheck.found!.canaryRect).toBe(true);
-    expect(overlayCheck.found!.canaryText).toBe(true);
-    expect(overlayCheck.found!.canaryDraw).toBe(true);
-    expect(overlayCheck.found!.totalObjects).toBeGreaterThanOrEqual(3);
+    expect(restored.hasCanaryShape, "shape lost across Save").toBe(true);
+    expect(restored.hasCanaryText, "text lost across Save").toBe(true);
+    expect(restored.hasCanaryDraw, "drawing lost across Save").toBe(true);
+    expect(restored.hasCanaryHighlight, "highlight lost across Save").toBe(
+      true,
+    );
+    expect(restored.hasCanarySignature, "signature lost across Save").toBe(
+      true,
+    );
+    expect(restored.hasCanaryImage, "user image lost across Save").toBe(true);
+    expect(restored.hasCanaryPageNumber, "page number lost across Save").toBe(
+      true,
+    );
+    expect(restored.watermarkEnabled, "watermark config reset by Save").toBe(
+      true,
+    );
+    expect(restored.watermarkText).toBe("CANARY-WATERMARK");
+    expect(restored.bgImageEnabled, "bg image config reset by Save").toBe(
+      true,
+    );
+    expect(restored.bgImageHasData, "bg image data blanked by Save").toBe(
+      true,
+    );
   });
 });
