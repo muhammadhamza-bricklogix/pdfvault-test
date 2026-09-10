@@ -96,6 +96,20 @@ function humaniseClerkMessage(raw: string, code?: string): string {
 
 type Step = "request" | "reset";
 
+type ForgotPasswordCardProps = {
+  /**
+   * Post-reset destination. When provided (modal mode), used instead of
+   * `?redirect_url` from the URL search params.
+   */
+  redirectUrl?: string;
+  /**
+   * When rendered inside AuthModal, calling this switches the modal back
+   * to login mode. When omitted (standalone page) the "Remembered it?"
+   * link falls back to a `<Link>` to the sign-in page.
+   */
+  onBackToLogin?: () => void;
+};
+
 /**
  * Password-reset flow, wired to Clerk's
  * `reset_password_email_code` strategy.
@@ -112,7 +126,10 @@ type Step = "request" | "reset";
  * Copy + shape mirror LoginCard / SignupCard so the visual language of
  * the auth surfaces stays consistent.
  */
-export function ForgotPasswordCard() {
+export function ForgotPasswordCard({
+  redirectUrl: redirectUrlProp,
+  onBackToLogin,
+}: ForgotPasswordCardProps = {}) {
   const { signIn } = useSignIn();
   const searchParams = useSearchParams();
 
@@ -135,8 +152,9 @@ export function ForgotPasswordCard() {
 
   const afterResetPath = useMemo(
     () =>
+      redirectUrlProp ??
       safeRedirectPath(searchParams.get("redirect_url"), ROUTES.APP.DASHBOARD),
-    [searchParams],
+    [redirectUrlProp, searchParams],
   );
 
   const sendResetCode = async (address: string) => {
@@ -516,12 +534,22 @@ export function ForgotPasswordCard() {
 
       <p className="mt-6 text-center text-[16px] text-[#5f5f5f]">
         Remembered it?{" "}
-        <Link
-          className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-          href={ROUTES.AUTH.SIGN_IN}
-        >
-          Log In
-        </Link>
+        {onBackToLogin ? (
+          <button
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            type="button"
+            onClick={onBackToLogin}
+          >
+            Log In
+          </button>
+        ) : (
+          <Link
+            className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+            href={ROUTES.AUTH.SIGN_IN}
+          >
+            Log In
+          </Link>
+        )}
       </p>
     </section>
   );
