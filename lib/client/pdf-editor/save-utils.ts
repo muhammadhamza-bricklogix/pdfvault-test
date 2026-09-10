@@ -6,7 +6,7 @@ import { logger } from "@/lib/shared/utils/logger";
 import {
   isIdentityOrder,
   materializeSidebarReorder,
-  stripPageNumberOverlays,
+  stripBakedOverlaysForSave,
 } from "./materialize-page-order";
 import { mergeFabricEditsIntoPdf } from "./merge-pdf";
 import { sanitizeSourceBytesForPdfLib } from "./sanitize-source-bytes";
@@ -805,9 +805,18 @@ export async function buildEditedPdfBytes({
   // in so the user's downloaded PDF carries the labels. See skill log
   // 2026-06-19 (d) for why the bake-then-strip pattern broke for users who
   // had also extracted text on the same pages.
+  // Save path (`bakeOverlays === false`): strip everything except
+  // `editModeText` from the merge input. Shapes / drawings / highlights /
+  // annotations / signatures stay in `fabricJsonByPage` (cloud editorState)
+  // so they remain selectable Fabric overlays on reload — they are NOT baked
+  // into the cloud PDF bytes, which prevents the double-render duplication
+  // (baked PDF layer + Fabric layer both visible). The Download / Export path
+  // (`bakeOverlays === true`) skips the strip so exported PDFs carry all
+  // overlays baked in. `pageNumber` is subsumed by this strip (editModeText
+  // filter already excludes it). See `stripBakedOverlaysForSave` jsdoc.
   const mergeJsonForBake = bakeOverlays
     ? mergeFabricJsonByPage
-    : stripPageNumberOverlays(mergeFabricJsonByPage);
+    : stripBakedOverlaysForSave(mergeFabricJsonByPage);
 
   // After materialize, source bytes already carry the reorder, so the merge
   // walks pages 1..N as identity. Pass an identity pageOrder of the same
