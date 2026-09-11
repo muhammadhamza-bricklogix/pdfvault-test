@@ -283,3 +283,19 @@ body {
   display: none !important;
 }
 
+/* CookieYes ships a floating "revisit consent" button (small circular
+ * badge, usually bottom-left) that overlaps our own UI — most visibly
+ * the profile icon in the dashboard sidebar. The banner itself still
+ * shows on first visit; only the persistent floating widget is hidden.
+ * Selectors are intentionally broad — CookieYes has shipped multiple
+ * class variants and position modifiers over the years. */
+.cky-btn-revisit-wrapper,
+.cky-revisit-bottom-left,
+.cky-revisit-bottom-right,
+.cky-revisit-top-left,
+.cky-revisit-top-right,
+[class*="cky-btn-revisit"],
+[class*="cky-revisit-"] {
+  display: none !important;
+}
+
