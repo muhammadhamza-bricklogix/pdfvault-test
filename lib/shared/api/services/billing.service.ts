@@ -132,6 +132,35 @@ async function syncHistory(): Promise<{
   return data;
 }
 
+/**
+ * Persist card brand + last-4 the user just paid with. Called from
+ * Solidgate's client SDK `onOrderStatus` handler in `PaywallModal` the
+ * moment the transaction settles (auth_ok / settle_ok).
+ *
+ * Solidgate does not return `card_type` / `card_last4` on webhook or
+ * `/subscription/status` REST for `payment_action: auth_settle`
+ * products (verified against real webhooks 2026-09-10/11). The client
+ * SDK is the only reliable source. Backend stashes on Subscription so
+ * the Payment confirmation transactional email (id 2) renders the real
+ * values instead of the "your card" / "on file" fallback.
+ *
+ * Fire-and-forget from the caller — a failure here doesn't block
+ * checkout success UI, and the backend already awaits this record via
+ * `resolveCardMeta`'s poll loop before firing the transactional.
+ */
+async function persistCheckoutCardMetadata(input: {
+  solidgateSubscriptionId: string;
+  cardBrand?: string;
+  cardLast4?: string;
+}): Promise<{ ok: boolean }> {
+  const { data } = await apiClient.post<{ ok: boolean }>(
+    "/billing/checkout/card-metadata",
+    input,
+  );
+
+  return data;
+}
+
 export const billingService = {
   listPlans,
   getSubscription,
@@ -139,4 +168,5 @@ export const billingService = {
   listInvoices,
   syncSubscription,
   syncHistory,
+  persistCheckoutCardMetadata,
 };

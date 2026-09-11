@@ -126,6 +126,17 @@ interface StablePaymentFormProps {
   retryKey: number;
   onFail: () => void;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
+  /**
+   * Fires as the transaction settles (auth_ok / settle_ok). Carries the
+   * `response.transactions[*].card` block the parent uses to POST card
+   * brand + last-4 to `POST /billing/checkout/card-metadata` so the
+   * Payment confirmation transactional email (id 2) renders real card
+   * details instead of the "your card" / "on file" fallback. Solidgate
+   * does NOT expose card details on webhook or `/subscription/status`
+   * REST for `payment_action: auth_settle` products — the client SDK's
+   * onOrderStatus event is the only reliable source.
+   */
+  onOrderStatus: (message: unknown) => void;
 }
 
 const StablePaymentForm = memo(function StablePaymentForm({
@@ -137,6 +148,7 @@ const StablePaymentForm = memo(function StablePaymentForm({
   retryKey,
   onFail,
   onSuccess,
+  onOrderStatus,
 }: StablePaymentFormProps) {
   const merchantData = useMemo(
     () => ({ merchant, signature, paymentIntent }),
@@ -162,6 +174,7 @@ const StablePaymentForm = memo(function StablePaymentForm({
       onError={handleError}
       onFail={onFail}
       onMounted={handleMounted}
+      onOrderStatus={onOrderStatus}
       onSuccess={onSuccess}
     />
   );
@@ -577,6 +590,96 @@ export function PaywallModal({
     });
   };
 
+  /**
+   * Solidgate client SDK `onOrderStatus` fires as each transaction
+   * transitions state (auth_ok, settle_ok, declined, etc.). We use the
+   * first APPROVED-family transition to capture card brand + last-4
+   * and POST them to `POST /billing/checkout/card-metadata` so the
+   * Payment confirmation transactional (id 2) renders real values
+   * instead of the "your card" / "on file" fallback.
+   *
+   * Solidgate does NOT return card details on webhook or
+   * `/subscription/status` REST for `payment_action: auth_settle`
+   * products — verified against Huzaifa's 2026-09-11 test. The SDK
+   * message is the only reliable source.
+   *
+   * Fire-and-forget POST — a network hiccup here doesn't block
+   * checkout success. The backend's `resolveCardMeta` polls the
+   * Subscription row for up to 2 seconds before firing the email, so
+   * a POST that lands within that window is guaranteed to make it into
+   * the receipt.
+   */
+  const handleOrderStatus = useCallback((message: unknown) => {
+    // Solidgate `OrderStatusMessage.response` shape:
+    //   { order: { subscription_id, status, ... },
+    //     transactions?: Record<string, Transaction>,
+    //     transaction?: Transaction }
+    // Transaction.card carries { brand, number (masked), card_type, ... }.
+    const resp = (message as { response?: unknown })?.response;
+
+    if (!resp || typeof resp !== "object") return;
+
+    const respObj = resp as {
+      order?: { subscription_id?: string; status?: string };
+      transaction?: {
+        status?: string;
+        card?: { brand?: string; number?: string };
+      };
+      transactions?: Record<
+        string,
+        { status?: string; card?: { brand?: string; number?: string } }
+      >;
+    };
+
+    const subscriptionId = respObj.order?.subscription_id;
+
+    if (!subscriptionId) return;
+
+    // Pick the FIRST approved-family transaction that carries a card
+    // block. Solidgate emits multiple transactions during 3DS (attempt →
+    // verify → settle); only the successful one has fully-populated
+    // card metadata.
+    const approvedStatuses = new Set([
+      "auth_ok",
+      "settle_ok",
+      "approved",
+      "success",
+      "settled",
+    ]);
+    const candidates = [
+      ...(respObj.transaction ? [respObj.transaction] : []),
+      ...Object.values(respObj.transactions ?? {}),
+    ];
+    const winner = candidates.find((tx) => {
+      const st = (tx?.status ?? "").toLowerCase();
+
+      return approvedStatuses.has(st) && (tx?.card?.brand || tx?.card?.number);
+    });
+
+    if (!winner) return;
+
+    const brand = winner.card?.brand?.trim();
+    const raw = winner.card?.number ?? "";
+    // Solidgate masks the PAN — last 4 digits are always visible.
+    // Strip everything but digits, then take the trailing 4.
+    const digits = raw.replace(/\D+/g, "");
+    const last4 = digits.length >= 4 ? digits.slice(-4) : undefined;
+
+    if (!brand && !last4) return;
+
+    billingService
+      .persistCheckoutCardMetadata({
+        solidgateSubscriptionId: subscriptionId,
+        cardBrand: brand,
+        cardLast4: last4,
+      })
+      .catch((err) => {
+        logger.captureError(err, "checkout.card_metadata_post_failed", {
+          subscriptionId,
+        });
+      });
+  }, []);
+
   const handleRetry = () => {
     logger.event(EVENTS.CHECKOUT_RETRY_START, "info");
     // Fresh CheckoutIntent for the retry — Solidgate marks the previous
@@ -783,6 +886,7 @@ export function PaywallModal({
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
               onFail={handleIframeFail}
+              onOrderStatus={handleOrderStatus}
               onRetry={handleRetry}
               onSuccess={handleIframeSuccess}
             />
@@ -1100,6 +1204,7 @@ function PayStep({
   intent,
   onSuccess,
   onFail,
+  onOrderStatus,
   payFailed,
   retryKey,
   retryLoading,
@@ -1110,6 +1215,7 @@ function PayStep({
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
   onFail: () => void;
+  onOrderStatus: (message: unknown) => void;
   payFailed: boolean;
   retryKey: number;
   retryLoading: boolean;
@@ -1272,6 +1378,7 @@ function PayStep({
                 retryKey={retryKey}
                 signature={intent.signature}
                 onFail={onFail}
+                onOrderStatus={onOrderStatus}
                 onSuccess={onSuccess}
               />
             </div>
