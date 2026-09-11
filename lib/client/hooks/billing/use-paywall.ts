@@ -86,21 +86,6 @@ export function usePaywall() {
     // payment.
     const wasBeforeSuccess = Boolean(busResolverRef.current);
 
-    // QA 2026-09-09 — mandatory paywall (converted docs) refuses to
-    // close before payment. Guard here so ANY close attempt (X, Esc,
-    // backdrop click, PaywallModal.finish's onClose) becomes a no-op
-    // until `onPaymentSuccess` clears the bus resolver. After payment
-    // the resolver is null so we fall through and dismiss normally.
-    if (mandatory && wasBeforeSuccess) {
-      logger.event(EVENTS.PAYWALL_CANCELLED, "warning", {
-        hasBusResolver: true,
-        hasPendingAction: Boolean(pending),
-        blockedByMandatory: true,
-      });
-
-      return;
-    }
-
     if (wasBeforeSuccess) {
       logger.event(EVENTS.PAYWALL_CANCELLED, "info", {
         hasBusResolver: true,

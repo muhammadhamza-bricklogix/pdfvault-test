@@ -37,7 +37,6 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
     guard,
     preview,
     hidePreview,
-    mandatory,
     close,
     onPaymentSuccess,
   } = usePaywall();
@@ -48,7 +47,6 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
       <PaywallModal
         hidePreview={hidePreview}
         isOpen={isOpen}
-        mandatory={mandatory}
         preview={preview}
         onClose={close}
         onPaymentSuccess={onPaymentSuccess}
