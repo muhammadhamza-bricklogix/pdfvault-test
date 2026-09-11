@@ -143,8 +143,9 @@ function SidebarNavItem({
  */
 function ProfileRow({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useUser();
-  const fullName = user?.fullName ?? "Guest";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
+  const fullName = user?.fullName ?? email.split("@")[0] ?? "";
+  const initial = (fullName || email || "?").slice(0, 1).toUpperCase();
 
   return (
     <div
@@ -168,7 +169,7 @@ function ProfileRow({ onNavigate }: { onNavigate?: () => void }) {
                 />
               ) : (
                 <span className="flex size-9 items-center justify-center rounded-full bg-[var(--pv-tile)] text-[13px] font-semibold text-[var(--pv-text-body)]">
-                  {fullName.slice(0, 1).toUpperCase()}
+                  {initial}
                 </span>
               )}
               <span
