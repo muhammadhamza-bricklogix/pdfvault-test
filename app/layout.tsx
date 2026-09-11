@@ -121,10 +121,16 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: "/PDFVault_stacked_layers.png",
       shortcut: "/PDFVault_stacked_layers.png",
     },
+    // NOTE — `openGraph.images` and `twitter.images` are intentionally
+    // NOT set here. Next.js auto-generates them from
+    // `app/opengraph-image.tsx` + `app/twitter-image.tsx` (file-based
+    // metadata convention). Setting them here would emit stale
+    // duplicate meta tags pointing at the non-existent `/og.png` that
+    // returned 404 before this fix. Trust the file convention; Next.js
+    // wires the auto-generated URLs into the meta tags at build time.
     openGraph: {
       description:
         "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
-      images: [{ height: 630, url: "/og.png", width: 1200 }],
       locale: OG_LOCALE_TAG[locale],
       alternateLocale: localeAlternates,
       siteName: "pdfvault.ai",
@@ -136,7 +142,6 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       description:
         "Edit, compress, convert, sign and secure your PDFs online. Fast, private, no installs.",
-      images: ["/og.png"],
       title: "pdfvault.ai — PDF tools that work",
     },
     alternates: {
