@@ -18,7 +18,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
       // Edit → PDF Composer. Compress / Merge → dedicated landing pages
       // that funnel into the editor with the matching tool auto-open.
       // Convert → the Word-to-PDF landing (most-used input format).
-      { label: "Edit & SIgn", href: ROUTES.TOOLS.PDF_EDITOR },
+      { label: "Edit & Sign", href: ROUTES.TOOLS.PDF_EDITOR },
       { label: "Merge PDF", href: "/merge-pdf" },
       { label: "Compress", href: TOOL_ROUTE.compress },
       { label: "Convert", href: "/convert/pdf-to-word" },

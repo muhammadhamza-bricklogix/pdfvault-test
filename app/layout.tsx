@@ -103,6 +103,13 @@ export async function generateMetadata(): Promise<Metadata> {
   );
 
   return {
+    // Anchor every relative asset URL (openGraph.images, twitter.images,
+    // icons) to the production origin. Without this, Next.js falls back
+    // to `http://localhost:3000` when a crawler / static analyzer can't
+    // resolve a request origin — exactly what QA saw when Slack refused
+    // to unfurl a `pdfvault.ai` link because the meta tag emitted
+    // `og:image=http://localhost:3000/og.png`.
+    metadataBase: new URL("https://pdfvault.ai"),
     title: {
       default: "pdfvault.ai",
       template: "%s | pdfvault.ai",
