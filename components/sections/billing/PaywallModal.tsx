@@ -3,7 +3,7 @@
 import type { CheckoutIntent, Invoice } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
-import { Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -861,6 +861,7 @@ export function PaywallModal({
               retryKey={retryKey}
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
+              onBack={() => setStep("plan")}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
               onRetry={handleRetry}
@@ -1187,6 +1188,7 @@ function PayStep({
   onRetry,
   selectedPlan,
   preview,
+  onBack,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
@@ -1198,6 +1200,13 @@ function PayStep({
   onRetry: () => void;
   selectedPlan: PlanId;
   preview: PaywallPreview | null;
+  /**
+   * Return to the plan-picker step. Preserves `selectedPlan` +
+   * `intent` in the parent so the user's prior selection stays
+   * highlighted and no extra checkout-intent fetch is needed unless
+   * they change plan and click Continue again.
+   */
+  onBack: () => void;
 }) {
   const todayDisplay = formatMinor(intent.amountTodayMinor, intent.currency);
   const renewDisplay = formatMinor(intent.amountRenewMinor, intent.currency);
@@ -1264,10 +1273,23 @@ function PayStep({
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ── Left column — payment (white) ── */}
       <div className="flex flex-col gap-0">
+        {/* Back-to-plan link (QA 2026-09-11: without this the user's
+            only way to change plan mid-checkout was to close the modal
+            entirely via X, which drops the whole flow). Sits above the
+            "Total due today" header so it's the first thing the user
+            reads when scanning from top-left. */}
+        <button
+          className="inline-flex items-center gap-1.5 self-start px-6 pt-5 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:px-8"
+          type="button"
+          onClick={onBack}
+        >
+          <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />
+          Back
+        </button>
         {/* Total due today header — matches the right-column order
             summary so both instances of "Total due today" read at
             the same weight and size (2026-09-03 PM ask). */}
-        <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-5 md:px-8">
+        <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-4 md:px-8">
           <span className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
             Total due today
           </span>
