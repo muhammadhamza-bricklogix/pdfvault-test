@@ -102,11 +102,17 @@ export function CompressModal() {
       // on the login form (QA 2026-09-06). Cards finalize with
       // `window.location.assign(returnTo)`; hydrator re-opens the
       // compress modal via step #4 on return.
+      //
+      // Copy matches the Done → Download flow in `use-export-editor.ts`
+      // (QA 2026-09-12: "The compress modal is different; it should be
+      // the same. 'Your file is ready'"). Keeps guest-tool prompts
+      // consistent across compress / export / any other pre-signup gate
+      // that funnels through the same downstream auth chain.
       dispatchEmailFirstModal({
         redirectUrl: returnTo,
-        title: "Compress your PDF",
-        subtitle: "Create an account to shrink your PDF.",
-        submitLabel: "Compress PDF",
+        title: "Your file is ready",
+        subtitle: "Create an account to download it",
+        submitLabel: "Download file",
       });
 
       setIsOpen(false);

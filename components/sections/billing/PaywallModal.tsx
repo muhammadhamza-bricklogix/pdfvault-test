@@ -3,7 +3,7 @@
 import type { CheckoutIntent, Invoice } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 
-import { Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -197,15 +197,6 @@ interface PaywallModalProps {
    * there is no document context to preview.
    */
   hidePreview?: boolean;
-  /**
-   * QA 2026-09-09 — force-open mode. Hides the X close button, disables
-   * Escape-to-close, and disables backdrop-click-to-close so the user
-   * is blocked from bypassing the paywall. Used for converted-doc
-   * gating (Flow 1 X→PDF post-signup). `usePaywall.close()` also
-   * short-circuits while `mandatory` is set so any programmatic close
-   * before payment is a no-op.
-   */
-  mandatory?: boolean;
   onClose: () => void;
   onPaymentSuccess: () => void;
 }
@@ -230,7 +221,6 @@ export function PaywallModal({
   isOpen,
   preview,
   hidePreview = false,
-  mandatory = false,
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
@@ -812,23 +802,12 @@ export function PaywallModal({
     );
   };
 
-  // QA 2026-09-09 — `mandatory` refuses close paths BEFORE the success
-  // step. Once the user reaches `success` the bus resolver has already
-  // settled to "success" so `onClose` there is safe regardless.
-  const canDismiss = !mandatory || step === "success";
-
   return (
     <Modal.Backdrop
       isDismissable={false}
-      isKeyboardDismissDisabled={!canDismiss}
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          // Mandatory + not yet on success → refuse. `usePaywall.close`
-          // also guards this but we skip the analytics event when the
-          // close was blocked so telemetry stays clean.
-          if (!canDismiss) return;
-
           // Success step: `onPaymentSuccess` already fired on mount and
           // resolved the bus. `onClose` (from usePaywall) is now
           // idempotent — it detects the bus was already settled and
@@ -857,10 +836,7 @@ export function PaywallModal({
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
         >
-          {/* CloseTrigger visible on all steps EXCEPT when mandatory-and-
-              pre-success. Hides the X button so the user can't bail out
-              of a converted-doc paywall before paying (Flow 1 spec). */}
-          {canDismiss ? <Modal.CloseTrigger /> : null}
+          <Modal.CloseTrigger />
           {error ? (
             <ErrorState error={error} />
           ) : !intent ? (
@@ -885,6 +861,7 @@ export function PaywallModal({
               retryKey={retryKey}
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
+              onBack={() => setStep("plan")}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
               onRetry={handleRetry}
@@ -1211,6 +1188,7 @@ function PayStep({
   onRetry,
   selectedPlan,
   preview,
+  onBack,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
@@ -1222,6 +1200,13 @@ function PayStep({
   onRetry: () => void;
   selectedPlan: PlanId;
   preview: PaywallPreview | null;
+  /**
+   * Return to the plan-picker step. Preserves `selectedPlan` +
+   * `intent` in the parent so the user's prior selection stays
+   * highlighted and no extra checkout-intent fetch is needed unless
+   * they change plan and click Continue again.
+   */
+  onBack: () => void;
 }) {
   const todayDisplay = formatMinor(intent.amountTodayMinor, intent.currency);
   const renewDisplay = formatMinor(intent.amountRenewMinor, intent.currency);
@@ -1288,10 +1273,23 @@ function PayStep({
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ── Left column — payment (white) ── */}
       <div className="flex flex-col gap-0">
+        {/* Back-to-plan link (QA 2026-09-11: without this the user's
+            only way to change plan mid-checkout was to close the modal
+            entirely via X, which drops the whole flow). Sits above the
+            "Total due today" header so it's the first thing the user
+            reads when scanning from top-left. */}
+        <button
+          className="inline-flex items-center gap-1.5 self-start px-6 pt-5 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:px-8"
+          type="button"
+          onClick={onBack}
+        >
+          <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />
+          Back
+        </button>
         {/* Total due today header — matches the right-column order
             summary so both instances of "Total due today" read at
             the same weight and size (2026-09-03 PM ask). */}
-        <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-5 md:px-8">
+        <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-4 md:px-8">
           <span className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
             Total due today
           </span>
