@@ -117,11 +117,17 @@ export function AboutUsContent() {
               key={p.title}
               className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 text-left"
             >
-              <div className="flex items-center justify-start gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--pv-brand-red)]/10 text-[var(--pv-brand-red)]">
-                  <HugeiconsIcon icon={p.icon} size={20} />
+              <div className="flex items-center gap-3">
+                {/* `color-mix` instead of Tailwind's `bg-[var(--…)]/10`
+                    modifier — Edge (and older Chromium) can't compute
+                    the alpha on a CSS variable at build time, so the
+                    tinted backdrop disappears and the icon reads as a
+                    lone outline floating next to the heading (QA
+                    2026-09-12). Matches the Tools grid below. */}
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23]">
+                  <HugeiconsIcon icon={p.icon} size={22} strokeWidth={1.8} />
                 </span>
-                <h3 className="text-[16px] font-semibold text-[var(--pv-text-strong)]">
+                <h3 className="text-[16px] font-semibold leading-tight text-[var(--pv-text-strong)]">
                   {p.title}
                 </h3>
               </div>
