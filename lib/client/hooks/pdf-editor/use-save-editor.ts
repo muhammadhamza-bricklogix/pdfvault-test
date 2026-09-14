@@ -10,6 +10,10 @@ import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
+import {
+  COOKIE_GATE_TOAST,
+  isSaveGatedByCookieYes,
+} from "@/lib/shared/utils/cookie-consent";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -131,6 +135,14 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
             description:
               "Wait for the document to finish loading, then try again.",
           });
+        } else if (isSaveGatedByCookieYes()) {
+          // CookieYes' auto-blocker is likely wrapping the Clerk boot
+          // script → no session cookie → the backend rejects the upload.
+          // Point the user at the cookie banner instead of surfacing a
+          // generic "Save failed" toast with no path forward. Firefox
+          // reproduces this the most reliably because ETP + strict
+          // tracking protection amplify the auto-blocker's effect.
+          toast.error(COOKIE_GATE_TOAST);
         } else {
           toast.error({
             title: "Save failed",
@@ -173,10 +185,14 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
       });
     } catch (err) {
       logger.captureError(err, "save.button");
-      toast.error({
-        title: "Save failed",
-        description: "We couldn't save your edits. Please try again.",
-      });
+      if (isSaveGatedByCookieYes()) {
+        toast.error(COOKIE_GATE_TOAST);
+      } else {
+        toast.error({
+          title: "Save failed",
+          description: "We couldn't save your edits. Please try again.",
+        });
+      }
     } finally {
       toast.close(loadingKey);
       isSavingRef.current = false;

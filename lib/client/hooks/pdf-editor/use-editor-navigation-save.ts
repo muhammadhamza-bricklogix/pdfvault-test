@@ -9,6 +9,10 @@ import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-do
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import {
+  COOKIE_GATE_TOAST,
+  isSaveGatedByCookieYes,
+} from "@/lib/shared/utils/cookie-consent";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -189,11 +193,15 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           return;
         }
 
-        toast.error({
-          title: "Could not save W-9",
-          description:
-            "We couldn't save your W-9 before leaving. Please try Download to save.",
-        });
+        if (isSaveGatedByCookieYes()) {
+          toast.error(COOKIE_GATE_TOAST);
+        } else {
+          toast.error({
+            title: "Could not save W-9",
+            description:
+              "We couldn't save your W-9 before leaving. Please try Download to save.",
+          });
+        }
 
         return;
       }
@@ -290,11 +298,20 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           // convinced the edits were persisted. Surface each reason
           // explicitly and abort the navigation so the user can retry.
           if (result.reason === "error") {
-            toast.error({
-              title: "Could not save",
-              description:
-                "We couldn't save your PDF before leaving. Please try Save first.",
-            });
+            // Same cookie-gate detection as `useSaveEditor` — the back
+            // button save fails silently when Clerk is blocked by
+            // CookieYes' auto-blocker (QA report on Firefox: "clicked
+            // Back, got 'try to save first' with no explanation"). Point
+            // the user at the cookie banner instead.
+            if (isSaveGatedByCookieYes()) {
+              toast.error(COOKIE_GATE_TOAST);
+            } else {
+              toast.error({
+                title: "Could not save",
+                description:
+                  "We couldn't save your PDF before leaving. Please try Save first.",
+              });
+            }
           } else if (result.reason === "not-loaded") {
             toast.error({
               title: "Still loading",
@@ -339,11 +356,15 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         navigate();
       } catch (err) {
         toast.close(loadingKey);
-        toast.error({
-          title: "Could not save",
-          description:
-            "We couldn't save your PDF before leaving. Please try Save first.",
-        });
+        if (isSaveGatedByCookieYes()) {
+          toast.error(COOKIE_GATE_TOAST);
+        } else {
+          toast.error({
+            title: "Could not save",
+            description:
+              "We couldn't save your PDF before leaving. Please try Save first.",
+          });
+        }
         throw err;
       } finally {
         isNavigatingRef.current = false;

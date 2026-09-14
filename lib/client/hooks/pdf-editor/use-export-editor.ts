@@ -17,6 +17,11 @@ import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-fi
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
+import {
+  COOKIE_GATE_TOAST,
+  hasCookieYesRejection,
+  isSaveGatedByCookieYes,
+} from "@/lib/shared/utils/cookie-consent";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -61,36 +66,6 @@ const FORMAT_TO_CONVERSION_TYPE: Record<
   txt: "pdf_to_txt",
   xlsx: "pdf_to_xlsx",
 };
-
-/**
- * True when the user has actively rejected non-necessary CookieYes categories.
- * CookieYes stores its consent state in `cookieyes-consent`; when the user
- * rejects, that cookie carries `consent:no` for functional / analytics /
- * performance / advertisement / other. If any of those are `no`, CookieYes'
- * auto-blocker is actively intercepting fetch / XHR / script tags — the
- * likely cause of a bare AbortError in the export pipeline.
- * Client-only (reads `document.cookie`); returns false in SSR.
- */
-function hasCookieYesRejection(): boolean {
-  if (typeof document === "undefined") return false;
-  try {
-    const raw = document.cookie
-      .split(";")
-      .map((c) => c.trim())
-      .find((c) => c.startsWith("cookieyes-consent="));
-
-    if (!raw) return false;
-    // Value format is a URL-encoded, colon/comma-delimited string like
-    // `consentid:...,consent:{necessary:yes,functional:no,analytics:no,...}`
-    // — a simple substring match on any `:no` inside the consent map is
-    // enough to detect a rejection without parsing the whole thing.
-    const decoded = decodeURIComponent(raw.slice("cookieyes-consent=".length));
-
-    return /:no\b/.test(decoded);
-  } catch {
-    return false;
-  }
-}
 
 function buildPdfExportFilename(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -835,12 +810,12 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         const isCookieGated =
           errName === "AbortError" ||
           /aborted/i.test(errMessage) ||
-          hasCookieYesRejection();
+          hasCookieYesRejection() ||
+          isSaveGatedByCookieYes();
 
         if (isCookieGated) {
           toast.error({
-            description:
-              "Your cookie preferences are blocking downloads. Open the cookie banner and enable Necessary cookies, then try again.",
+            description: COOKIE_GATE_TOAST.description,
             title: "Cookies blocking download",
           });
         } else {

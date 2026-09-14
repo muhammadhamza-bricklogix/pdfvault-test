@@ -1,6 +1,10 @@
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import {
+  COOKIE_GATE_TOAST,
+  isSaveGatedByCookieYes,
+} from "@/lib/shared/utils/cookie-consent";
 import { toast } from "@/lib/shared/utils/toast";
 
 type SaveBeforeActionReason =
@@ -79,6 +83,12 @@ export async function saveBeforeAction(
         // Deliberate skip — no error toast. The follow-up action
         // (export, share, etc.) still proceeds against the local
         // in-memory file, matching the "keep editing locally" intent.
+      } else if (isSaveGatedByCookieYes()) {
+        // Cookie-blocked variant of the generic "Could not save" toast —
+        // same signal as `useSaveEditor` / `useEditorNavigationSave`. This
+        // is the path Merge / Manage Pages / Create New / Share hit when
+        // the backend upload fails because Clerk never booted.
+        toast.error(COOKIE_GATE_TOAST);
       } else {
         toast.error({
           title: "Could not save",

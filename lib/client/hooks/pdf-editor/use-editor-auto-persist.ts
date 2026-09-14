@@ -8,6 +8,10 @@ import { useEffect, useRef } from "react";
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import {
+  COOKIE_GATE_TOAST,
+  isSaveGatedByCookieYes,
+} from "@/lib/shared/utils/cookie-consent";
 import { toast } from "@/lib/shared/utils/toast";
 
 /**
@@ -73,11 +77,18 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
           // User picked Cancel on the duplicate prompt. Leave the
           // page changes local; no error toast, no forced navigation.
         } else if (result.reason === "error") {
-          toast.error({
-            title: "Could not save pages",
-            description:
-              "Your page changes were applied but cloud save failed. Use Save to retry.",
-          });
+          // Same cookie-gate signal as the manual Save + back-button
+          // paths so Manage Pages auto-save fails loudly with the right
+          // message on Firefox / rejected-consent sessions.
+          if (isSaveGatedByCookieYes()) {
+            toast.error(COOKIE_GATE_TOAST);
+          } else {
+            toast.error({
+              title: "Could not save pages",
+              description:
+                "Your page changes were applied but cloud save failed. Use Save to retry.",
+            });
+          }
         }
 
         return;
