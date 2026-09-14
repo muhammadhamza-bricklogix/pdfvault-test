@@ -127,7 +127,7 @@ export function AboutUsContent() {
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23]">
                   <HugeiconsIcon icon={p.icon} size={22} strokeWidth={1.8} />
                 </span>
-                <h3 className="text-[16px] font-semibold leading-tight text-[var(--pv-text-strong)]">
+                <h3 className="flex min-h-10 items-center text-[16px] font-semibold leading-tight text-[var(--pv-text-strong)]">
                   {p.title}
                 </h3>
               </div>
@@ -162,7 +162,7 @@ export function AboutUsContent() {
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23] transition-colors group-hover:bg-[color-mix(in_srgb,#f12c23_18%,transparent)]">
                   <HugeiconsIcon icon={t.icon} size={22} strokeWidth={1.8} />
                 </span>
-                <h3 className="text-[16px] font-semibold leading-tight text-[#121212]">
+                <h3 className="flex min-h-10 items-center text-[16px] font-semibold leading-tight text-[#121212]">
                   {t.title}
                 </h3>
               </div>
