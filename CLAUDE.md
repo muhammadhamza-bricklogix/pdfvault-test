@@ -155,6 +155,49 @@ Full commit trail: `git log --oneline main -- lib/client/hooks/pdf-editor/use-ex
 
 Playwright coverage: `tests/pdf-editor/export-signin-redirect.spec.ts` guards items 1–4 and 8 above.
 
+## Ads attribution → checkout-intent DTO contract (do NOT drift)
+
+The paywall's checkout-intent request is a **cross-repo contract** between this frontend and the NestJS backend at `pdf-viewer-backend`. Between 2026-09-05 and 2026-09-14 it silently broke and ~80% of paid-search users got a hard 400 for 9 days. Every ads-attributed conversion was lost. The invariant now:
+
+**Frontend enriches the payload in `lib/shared/api/services/billing.service.ts:64-102`.** `createCheckoutIntent()` reads first-party cookies (`pdfvault_gclid`, `pdfvault_gbraid`, `pdfvault_wbraid`, `pdfvault_click_ts`) and spreads them into the POST body:
+
+```
+{
+  disclaimerVersion,
+  fileName?,
+  gclid?, gbraid?, wbraid?, clickTimestamp?
+}
+```
+
+Cookies are set by `components/shared/google-ads-click-boot.tsx` on landing when the URL carries `?gclid=` / `?gbraid=` / `?wbraid=` (Google Ads decorates every ad click with these). Storage keys and sanitisation regex live in `lib/client/analytics/google-click-id.ts` (`[A-Za-z0-9._~%-]{1,200}`).
+
+**Backend DTO (separate repo, `src/billing/dto/checkout-intent.request.dto.ts`) MUST whitelist those exact four fields.** NestJS runs `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })` globally in `src/main.ts`. Any field appearing in the request that is not declared on the DTO produces a hard 400:
+
+```json
+{"message":["property gclid should not exist", ...],
+ "error":"Bad Request","statusCode":400}
+```
+
+The frontend's `toApiError()` cannot map that array-shaped `message` back to the standard envelope, so the paywall renders the generic `"Invalid request."` string — dead-end.
+
+**Rules:**
+
+- **Never add a new field to the enriched payload in `billing.service.ts` without adding the matching `@IsOptional() @IsString() @Matches(...)` to the backend DTO in the SAME PR** (or land the backend PR first, deploy, then land the frontend). Deploy order matters.
+- **Never remove `gclid` / `gbraid` / `wbraid` / `clickTimestamp` from the enrichment** without a plan for Google Ads Offline Conversion Import. Attribution goes to zero the moment the field stops flowing to the backend.
+- **Never rename the cookie storage keys** in `google-click-id.ts`. Users who landed the day before are still carrying `pdfvault_gclid` on their session — a rename silently orphans them.
+- **Never remove `GoogleAdsClickBoot` from the root layout mount.** No boot = no cookie = no attribution.
+- **Never change `main.ts` from `forbidNonWhitelisted: true` to `false`.** That would mask this whole class of bug — silently strip unknown fields on the wire, ship attribution data into `/dev/null`, and hide the next contract drift for weeks. Loud failure is the design.
+
+**Repro / QA:** Direct-typed URLs and SEO clicks don't set the cookies, so internal testing NEVER exercises the enriched payload. Real coverage requires either:
+
+1. Land with a synthetic query param — `https://pdfvault.ai/?gclid=EAIaIQobChMTEST123abc` — before opening the paywall.
+2. Curl the endpoint directly with a real Clerk JWT and the four ads fields in the body — see the reproduction guide in this session's spec.
+3. QA checklist: every paywall test session starts with `?gclid=QA_TEST` on the landing URL.
+
+**Files (locked):** `lib/shared/api/services/billing.service.ts`, `lib/client/analytics/google-click-id.ts`, `components/shared/google-ads-click-boot.tsx`. Backend DTO tracked in `pdf-viewer-backend/CLAUDE.md` → section 8.1.
+
+Frontend commit that introduced the enrichment: `1552536` (2026-09-05). Backend PR #19 (`a4873f8` → merged as `6594677`) is the fix that whitelisted the fields.
+
 ### Locking strategy (enforced)
 
 The off-limits list above is also enforced mechanically. `.claude/settings.json` registers a `PreToolUse` hook (`.claude/hooks/check-locked-paths.cjs`) that blocks `Edit`, `Write`, `MultiEdit`, and `NotebookEdit` against any path listed in `.claude/LOCKED_PATHS`.
