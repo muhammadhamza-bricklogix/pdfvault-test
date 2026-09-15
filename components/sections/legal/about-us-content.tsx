@@ -162,11 +162,11 @@ export function AboutUsContent() {
               key={t.title}
               className="group rounded-2xl border border-[var(--pv-border-subtle,#dee2e6)] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,#f12c23_35%,transparent)] hover:shadow-[0_10px_28px_-18px_rgba(241,44,35,0.35)]"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-start gap-3">
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23] transition-colors group-hover:bg-[color-mix(in_srgb,#f12c23_18%,transparent)]">
                   <HugeiconsIcon icon={t.icon} size={22} strokeWidth={1.8} />
                 </span>
-                <h3 className="flex min-h-10 items-center text-[16px] font-semibold leading-tight text-[#121212]">
+                <h3 className="text-[16px] font-semibold leading-tight text-[#121212]">
                   {t.title}
                 </h3>
               </div>
