@@ -1,6 +1,5 @@
 import type { Document } from "@/lib/shared/types/documents.types";
 
-import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
   requestPaywall,
@@ -19,24 +18,28 @@ function safeDownloadFilename(name: string): string {
  *
  * Gates on entitlement for EVERY document — native uploads and converted
  * PDFs alike require an active subscription (QA 2026-09-14 revised item
- * #17). Non-entitled users see the paywall first and only proceed after
- * payment succeeds. Returns silently if the paywall is cancelled so
- * callers can distinguish success (no throw) from a dismissed gate.
+ * #17, hardened 2026-09-15). Every Download click defers to
+ * `requestPaywall`, which reads the LIVE `useSubscriptionQuery` cache
+ * inside the bus handler (`use-paywall.ts`) — entitled users are
+ * short-circuited to `"success"` there with no visible modal flash;
+ * non-entitled users see the paywall. Going through the bus (instead
+ * of pre-checking via the module-level `entitledSnapshot`) closes the
+ * race where the snapshot's mirror `useEffect` hasn't landed yet after
+ * a cancel/downgrade — the bus reads React state, so it's always as
+ * fresh as the last query resolution. Cancelled paywalls return
+ * silently so callers can distinguish success (no throw) from a
+ * dismissed gate.
  */
 export async function triggerDocumentDownload(doc: Document): Promise<void> {
-  const entitled = await ensureFreshEntitlement();
+  try {
+    const outcome = await requestPaywall(undefined, { hidePreview: true });
 
-  if (!entitled) {
-    try {
-      const outcome = await requestPaywall(undefined, { hidePreview: true });
-
-      if (outcome !== "success") return;
-    } catch (err) {
-      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
-        return;
-      }
-      throw err;
+    if (outcome !== "success") return;
+  } catch (err) {
+    if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+      return;
     }
+    throw err;
   }
 
   const { url } = await documentsService.getDocument(doc.id);
