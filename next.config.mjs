@@ -49,6 +49,26 @@ const nextConfig = {
   // packages).
   experimental: {
     optimizeCss: true,
+    // Trust Server Action POSTs whose `Origin` is either the apex or www
+    // host. CloudFront/ALB can forward `x-forwarded-host` as one canonical
+    // form while the browser's `Origin` header carries the other — Next.js
+    // then treats the mismatch as CSRF and aborts the action (returns 500,
+    // leaves the UI hung on the pending promise, e.g. "Checking…" modal).
+    // Real incident 2026-09-15 15:36 UTC: single guest sign-up in Arc hung
+    // forever because `x-forwarded-host: pdfvault.ai` didn't match
+    // `origin: www.pdfvault.ai`. Backend was clean, Clerk user was
+    // created, but the client never got a Server Action response.
+    // Any additional public host that serves this app must be listed here.
+    serverActions: {
+      allowedOrigins: [
+        "pdfvault.ai",
+        "www.pdfvault.ai",
+        "pdfedits.io",
+        "www.pdfedits.io",
+        "pdfvault.com",
+        "www.pdfvault.com",
+      ],
+    },
     optimizePackageImports: [
       "@heroui/react",
       "@tabler/icons-react",
