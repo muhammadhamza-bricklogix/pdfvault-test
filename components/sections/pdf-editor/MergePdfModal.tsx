@@ -51,7 +51,10 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   // CompressModal / useExportEditor pattern (auth-chain item #1). The
   // store's cached `isSignedIn` lags one tick during post-signin
   // returns; reading from Clerk keeps the gate deterministic.
-  const { isSignedIn } = useAuth();
+  // `isLoaded` covers the race where a fast click on Merge & download
+  // arrives before Clerk finishes hydrating — treating `undefined` as
+  // "signed-out" would email-first modal a genuinely signed-in user.
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   // QA 2026-09-08: `isMerging` is React state — updates are async, so a
   // fast second click on "Merge & download" can slip through the
   // `isDisabled={!canMerge}` gate before the state re-render lands.
@@ -119,6 +122,20 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
     // declaration above for the full rationale.
     if (mergeInFlightRef.current) return;
     mergeInFlightRef.current = true;
+
+    // Clerk still hydrating — bail silently and let the user click
+    // again in a moment. Firing the signed-out gate here would
+    // email-first modal a signed-in user during the loading window
+    // (auth-chain item #2 rationale, adapted for a click handler).
+    if (!authLoaded) {
+      mergeInFlightRef.current = false;
+      toast.info({
+        title: "Just a moment",
+        description: "Getting things ready — try again in a second.",
+      });
+
+      return;
+    }
 
     // Sign-in gate (QA 2026-09-15). Mirrors CompressModal /
     // useExportEditor: guests hit the email-first modal BEFORE the
@@ -329,7 +346,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       setIsMerging(false);
       mergeInFlightRef.current = false;
     }
-  }, [source, extras, isSignedIn, onClose]);
+  }, [source, extras, authLoaded, isSignedIn, onClose]);
 
   const allEntries = source ? [source, ...extras] : extras;
   const totalPages = allEntries.reduce((n, e) => n + e.pageCount, 0);
