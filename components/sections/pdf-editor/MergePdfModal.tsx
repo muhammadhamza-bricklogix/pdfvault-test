@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import {
   Add01Icon,
   ArrowDown01Icon,
@@ -23,6 +24,9 @@ import {
   type MergeEntry,
 } from "@/lib/client/pdf-tools/merge-pdfs";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import { triggerDownload } from "@/lib/client/pdf-tools/split-pdf";
@@ -43,6 +47,11 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   const [extras, setExtras] = useState<MergeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
+  // Read Clerk auth directly for the signed-out gate below — mirrors the
+  // CompressModal / useExportEditor pattern (auth-chain item #1). The
+  // store's cached `isSignedIn` lags one tick during post-signin
+  // returns; reading from Clerk keeps the gate deterministic.
+  const { isSignedIn } = useAuth();
   // QA 2026-09-08: `isMerging` is React state — updates are async, so a
   // fast second click on "Merge & download" can slip through the
   // `isDisabled={!canMerge}` gate before the state re-render lands.
@@ -110,6 +119,32 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
     // declaration above for the full rationale.
     if (mergeInFlightRef.current) return;
     mergeInFlightRef.current = true;
+
+    // Sign-in gate (QA 2026-09-15). Mirrors CompressModal /
+    // useExportEditor: guests hit the email-first modal BEFORE the
+    // paywall bus fires, so they never see the "Welcome Back" login
+    // card (via `use-paywall.ts` signed-out branch) that was tripping
+    // QA in the merge → download flow. After auth return the hydrator
+    // opens the merge modal again via `?tool=merge` (Step 4); user
+    // clicks Merge & download → now signed-in → paywall → payment →
+    // merge downloads.
+    if (!isSignedIn) {
+      mergeInFlightRef.current = false;
+      try {
+        await snapshotPendingEditorFile();
+      } catch (err) {
+        logger.warn("[merge-pdf-modal] pending file snapshot failed", err);
+      }
+      dispatchEmailFirstModal({
+        redirectUrl: `${ROUTES.TOOLS.PDF_EDITOR}?tool=merge`,
+        title: "Your file is ready",
+        subtitle: "Create an account to download it",
+        submitLabel: "Download file",
+      });
+      onClose();
+
+      return;
+    }
 
     setIsMerging(true);
     try {
@@ -294,7 +329,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       setIsMerging(false);
       mergeInFlightRef.current = false;
     }
-  }, [source, extras, onClose]);
+  }, [source, extras, isSignedIn, onClose]);
 
   const allEntries = source ? [source, ...extras] : extras;
   const totalPages = allEntries.reduce((n, e) => n + e.pageCount, 0);
