@@ -9,7 +9,7 @@ import type {
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -155,15 +155,22 @@ export function usePaywall() {
                 ? "/"
                 : `${window.location.pathname}${window.location.search}`;
 
-            // Signed-out paywall trigger — open AuthModal directly.
-            // Preserves item #5's intent (route signed-out users
-            // through auth before the paywall's `/billing/checkout-intent`
-            // POST, which needs a JWT). Cards' finalize still does
-            // `window.location.assign(returnTo)` (item #15), so the
+            // Signed-out paywall trigger — open EmailFirstModal instead
+            // of the full LoginCard (QA 2026-09-16). The login card asks
+            // for email + password and traps users who don't have an
+            // account into a manual sign-up detour; the email-first
+            // modal takes ONE email, probes Clerk, and branches to
+            // auto-signup (new) or LoginToDownloadModal (existing) —
+            // both of which end with `window.location.assign(returnTo)`
+            // so item #15 (iOS Safari cookie commit) still holds. The
             // guarded action re-fires from the queued caller after
-            // signin, same as before.
-            dispatchAuthModal({
-              mode: "login",
+            // signin. Downstream hydrator chain (items #8–12) is
+            // unchanged. This is the belt-and-suspenders that keeps
+            // Merge / Compress / axios-interceptor / any other future
+            // paywall entry consistent — every one now uses the same
+            // email-only prompt whether or not the caller wrapped its
+            // own gate first.
+            dispatchEmailFirstModal({
               redirectUrl: returnTo,
             });
             resolve("cancelled");
