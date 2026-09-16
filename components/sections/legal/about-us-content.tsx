@@ -117,13 +117,17 @@ export function AboutUsContent() {
               key={p.title}
               className="rounded-2xl border border-[var(--pv-hairline)] bg-[var(--pv-surface)] p-5 text-left"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-start gap-3">
                 {/* `color-mix` instead of Tailwind's `bg-[var(--…)]/10`
                     modifier — Edge (and older Chromium) can't compute
                     the alpha on a CSS variable at build time, so the
                     tinted backdrop disappears and the icon reads as a
                     lone outline floating next to the heading (QA
-                    2026-09-12). Matches the Tools grid below. */}
+                    2026-09-12). Matches the Tools grid below.
+                    Icon-above-title stack (QA 2026-09-15) so
+                    `Privacy by design` doesn't wrap into the icon and
+                    read as "touching the icon bottom" at the 3-col
+                    breakpoint. */}
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23]">
                   <HugeiconsIcon icon={p.icon} size={22} strokeWidth={1.8} />
                 </span>
@@ -158,7 +162,7 @@ export function AboutUsContent() {
               key={t.title}
               className="group rounded-2xl border border-[var(--pv-border-subtle,#dee2e6)] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,#f12c23_35%,transparent)] hover:shadow-[0_10px_28px_-18px_rgba(241,44,35,0.35)]"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-start gap-3">
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,#f12c23_12%,transparent)] text-[#f12c23] transition-colors group-hover:bg-[color-mix(in_srgb,#f12c23_18%,transparent)]">
                   <HugeiconsIcon icon={t.icon} size={22} strokeWidth={1.8} />
                 </span>
