@@ -226,12 +226,19 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       // vanish after the merge finishes. The `editor:build-current-bytes`
       // event reads live `fabricCanvas` via `useSaveEditor`'s ref and
       // returns baked bytes via callback — no side effects on the store.
+      // `bakeOverlays: true` is CRITICAL (QA 2026-09-16). The shell's
+      // handler defaults to `false` (the Save-to-cloud variant, which
+      // strips shapes/drawings/highlights per skill log 2026-09-10 (b)
+      // to avoid duplicate-layer render on reload). Without this flag
+      // the merged download comes out overlay-free — exactly the
+      // reported "edits not reflected in merged PDF" bug.
       let sourceBytes: Uint8Array | null = null;
 
       await new Promise<void>((resolve) => {
         window.dispatchEvent(
           new CustomEvent("editor:build-current-bytes", {
             detail: {
+              bakeOverlays: true,
               onComplete: (r: {
                 ok: boolean;
                 bytes?: Uint8Array;
