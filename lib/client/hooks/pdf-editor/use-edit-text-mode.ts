@@ -81,21 +81,25 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       .getState()
       .extractedPages.has(sourcePage);
 
-    // Only run when the user has explicitly armed text editing for this
-    // page (via the "Edit Text" toolbar tool), OR when we're returning
-    // to a page we've already extracted (so the rotation-mismatch reset
-    // below can re-extract if Manage Pages rotated the page).
+    // QA 2026-09-16: re-enabled auto-extract on the default Select tool
+    // so users can select / tap text the moment a PDF opens, without
+    // first activating "Edit Text" from the toolbar. Extraction still
+    // runs on `editText` too (unchanged); the new branch is the
+    // `select` allowance below.
     //
-    // Reverted 2026-06-24: the 2026-06-22 auto-extract-on-Select branch
-    // caused every PDF load to drop white-on-coloured-background text
-    // to black (the page's mode color) because the color extractor's
-    // zip-by-index falls back to mode colour for graphics-state-driven
-    // coloured text (e.g. white title on a blue banner). Restoring the
-    // explicit Edit Text gate keeps the default load on pdf.js's native
-    // paint — colours correct, no mid-word wrap from the overlay
-    // Textbox. Users still get on-demand text editing via the toolbar
-    // button.
-    if (!alreadyExtracted && activeTool !== "editText") return;
+    // Known trade-off (see 2026-06-24 revert): the colour extractor's
+    // zip-by-index fallback can render white-on-coloured-background
+    // text (e.g. a white heading on a red banner) as black on load
+    // for pages where graphics-state-driven colouring drifts from the
+    // extracted colour array. If that regression comes back the fix
+    // belongs in `extractSequentialTextColors` (make the fallback
+    // colour-aware) rather than reverting this gate again — QA's
+    // "text isn't selectable until Edit is clicked" report is a
+    // higher-priority UX issue than the colour edge case.
+    const armedForExtraction =
+      activeTool === "editText" || activeTool === "select";
+
+    if (!alreadyExtracted && !armedForExtraction) return;
 
     // If `getTextContent` previously threw on this page (older Safari
     // WebKit), don't retry — the user has already seen the toast and
