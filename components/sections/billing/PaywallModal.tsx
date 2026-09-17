@@ -278,6 +278,21 @@ export function PaywallModal({
         if (preExistingChildren.has(child)) continue;
         const el = child as HTMLElement;
 
+        // Skip CookieYes portals. The consent banner + preference-center
+        // modal must stay behind the paywall — the CSS in globals.css
+        // pins them to z-index 40 so HeroUI's z-index 50 backdrop
+        // covers them. Un-inerting + hoisting to max-int here would
+        // override that pin and put the banner on top of the checkout
+        // dialog (P1 2026-09-18). Filter by `cky-*` id/class prefixes,
+        // which is the vendor's canonical namespace across every
+        // banner / modal / overlay variant they ship.
+        if (
+          typeof el.matches === "function" &&
+          el.matches('[id^="cky-"], [id^="cookieyes"], [class*="cky-"]')
+        ) {
+          continue;
+        }
+
         // Only fix elements that React Aria actually marked inert/hidden.
         if (!el.inert && el.getAttribute("aria-hidden") !== "true") continue;
         el.inert = false;
