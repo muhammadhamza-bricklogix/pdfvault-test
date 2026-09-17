@@ -5,15 +5,9 @@ import type { Key } from "@heroui/react";
 import {
   Add01Icon,
   Clock01Icon,
-  FileExportIcon,
-  FileMinusIcon,
   FolderOpenIcon,
-  Layers01Icon,
-  Link01Icon,
   Menu01Icon,
   NoteIcon,
-  Search01Icon,
-  SplitIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
@@ -512,30 +506,16 @@ export function HamburgerMenu() {
                   <HugeiconsIcon icon={NoteIcon} size={14} />
                   <Label>My PDFs</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="find-replace" textValue="Find and Replace">
-                  <HugeiconsIcon icon={Search01Icon} size={14} />
-                  <Label>Find and Replace</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="compress" textValue="Compress PDF">
-                  <HugeiconsIcon icon={FileMinusIcon} size={14} />
-                  <Label>Compress PDF</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="split" textValue="Split PDF">
-                  <HugeiconsIcon icon={SplitIcon} size={14} />
-                  <Label>Split PDF</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="extract-images" textValue="Extract Images">
-                  <HugeiconsIcon icon={FileExportIcon} size={14} />
-                  <Label>Extract Images</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="flatten" textValue="Flatten PDF">
-                  <HugeiconsIcon icon={Layers01Icon} size={14} />
-                  <Label>Flatten PDF</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="share" textValue="Share via link">
-                  <HugeiconsIcon icon={Link01Icon} size={14} />
-                  <Label>Share via link</Label>
-                </Dropdown.Item>
+                {/* Find and Replace, Compress, Split, Extract Images,
+                    Flatten, and Share via link are intentionally NOT
+                    listed here — each already has its own dedicated,
+                    always-visible button in the toolbar (desktop
+                    ToolToolbar / mobile BottomDock, plus the Search and
+                    Share buttons in the top bar). Listing them again here
+                    was pure duplication (UX review item #12). Their
+                    `handleAction` cases below stay in place since nothing
+                    else references removing them, and future menu
+                    entries can still target the same ids if needed. */}
                 <Dropdown.Item id="versions" textValue="Version History">
                   <HugeiconsIcon icon={Clock01Icon} size={14} />
                   <Label>Version History</Label>

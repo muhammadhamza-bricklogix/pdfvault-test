@@ -21,8 +21,14 @@ interface PvSearchToolbarProps {
 
 /**
  * Search row above the file table. Controlled `value` lets the parent drive
- * client-side filtering against the rows. `⌘K` chip is decorative — global
- * search shortcut is out of scope for this pass.
+ * client-side filtering against the rows.
+ *
+ * There used to be a decorative `⌘K` chip here, but it never triggered a
+ * global search shortcut (out of scope for that pass) and it hardcoded the
+ * Mac symbol even for Windows users — a UX review flagged it as a promise
+ * the UI didn't keep. Removed rather than wired up, since a real global
+ * shortcut is still out of scope; re-add a chip only alongside an actual
+ * `Ctrl+K` / `⌘K` keydown handler.
  */
 export function PvSearchToolbar({ value, onChange }: PvSearchToolbarProps) {
   return (
@@ -33,7 +39,7 @@ export function PvSearchToolbar({ value, onChange }: PvSearchToolbarProps) {
         </span>
         <input
           aria-label="Search for PDFs"
-          className="h-11 w-full rounded-[12px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] pl-9 pr-3 text-[14px] text-[var(--pv-text-strong)] placeholder:text-[var(--pv-text-muted)] focus:border-[var(--pv-text-strong)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--pv-brand-red)]/25 sm:pr-16"
+          className="h-11 w-full rounded-[12px] border border-[var(--pv-hairline)] bg-[var(--pv-surface)] pl-9 pr-3 text-[14px] text-[var(--pv-text-strong)] placeholder:text-[var(--pv-text-muted)] focus:border-[var(--pv-text-strong)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--pv-brand-red)]/25"
           placeholder="Search for PDFs"
           type="search"
           value={value}
@@ -41,9 +47,6 @@ export function PvSearchToolbar({ value, onChange }: PvSearchToolbarProps) {
             onChange(e.target.value)
           }
         />
-        <span className="pointer-events-none absolute inset-y-0 right-3 hidden items-center sm:flex">
-          <kbd className="pv-kbd">⌘K</kbd>
-        </span>
       </div>
     </div>
   );

@@ -262,7 +262,11 @@ function Thumbnail({
           ref={dragActivatorRef}
           {...dragHandleProps}
           aria-label={`Drag to reorder page ${displayPageNumber}`}
-          className="mb-0.5 w-full cursor-grab text-center text-[10px] leading-none text-default-400 active:cursor-grabbing"
+          // Taller hit area + hover feedback than the previous 10px text
+          // line — that hit target was too small to reliably grab with a
+          // mouse, which made mouse drag-reorder feel unavailable even
+          // though @dnd-kit's PointerSensor already supports it.
+          className="mb-0.5 flex w-full cursor-grab items-center justify-center rounded py-1 text-center text-sm leading-none text-default-400 hover:bg-default-200/70 hover:text-default-600 active:cursor-grabbing"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >

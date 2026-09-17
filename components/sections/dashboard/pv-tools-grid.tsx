@@ -16,7 +16,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { DocPickerModal } from "@/components/sections/dashboard/doc-picker-modal";
 import { FormsModal } from "@/components/shared/forms-modal";
+import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 type IconGlyph = typeof Edit02Icon;
 
@@ -28,62 +30,67 @@ interface ToolCardEntry {
   action?: "forms";
 }
 
-// Each composer tile links to its marketing landing page so signed-out
-// dashboard visitors (and signed-in users who missed the picker
-// shortcut) see the same "Drag & drop file to edit" hero as every other
-// uploader.
+// Composer tiles link to `TOOL_ROUTE.*` (a `/pdf-composer?tool=<slug>`
+// URL) rather than the marketing landing pages. `extractComposerToolSlug`
+// below detects that shape and opens `DocPickerModal` instead of
+// navigating directly, so a signed-in user with saved PDFs lands
+// straight in the matching tool on their own file — the same
+// "Pick a PDF to <Tool>" flow already used by the My PDFs quick-tool
+// cards — rather than being bounced to a fresh drag-and-drop upload.
 const TOOL_CARDS: readonly ToolCardEntry[] = [
   {
     title: "PDF Composer",
     description:
       "Revise text and objects inline with our full in-browser PDF composer.",
-    href: "/edit",
+    href: TOOL_ROUTE.edit,
     icon: Edit02Icon,
   },
   {
     title: "Compress Document",
     description: "Reduce PDF file size with upto 3 compression levels.",
-    href: "/compress",
+    href: TOOL_ROUTE.compress,
     icon: LayerAddIcon,
   },
   {
     title: "Organize Pages",
     description:
       "Reorder, insert, and rotate thumbnails until the flow is right.",
-    href: "/organize-pdf",
+    href: TOOL_ROUTE.managePages,
     icon: LayoutGridIcon,
   },
   {
     title: "Split & Extract Pages",
     description:
       "Pull out the pages you need or split a long file into lighter ones.",
-    href: "/split-pdf",
+    href: TOOL_ROUTE.split,
     icon: Scissor01Icon,
   },
   {
     title: "Password Protect",
     description:
       "Lock your PDF with a password so only intended readers get in.",
-    href: "/password-protect-pdf",
+    href: TOOL_ROUTE.password,
     icon: SquareLock02Icon,
   },
   {
     title: "Unlock PDF",
     description: "Remove encryption when you have the right credentials.",
-    href: "/unlock-pdf",
+    href: TOOL_ROUTE.unlock,
     icon: SquareUnlock01Icon,
   },
   {
     title: "Rotate Pages",
     description: "Fix upside-down scans or mixed-orientation bundles.",
-    href: "/rotate-pdf",
+    // Rotate lives inside the manage-pages tool alongside organize/delete
+    // — there is no standalone `?tool=rotate` slug.
+    href: TOOL_ROUTE.managePages,
     icon: RefreshIcon,
   },
   {
     title: "Delete Pages",
     description:
       "Drop extras, blanks, or outdated sections without re-exporting.",
-    href: "/delete-pages",
+    href: TOOL_ROUTE.managePages,
     icon: Delete02Icon,
   },
   {
@@ -95,6 +102,22 @@ const TOOL_CARDS: readonly ToolCardEntry[] = [
     action: "forms",
   },
 ];
+
+/**
+ * If the tile's href is `/pdf-composer?tool=<slug>`, return the slug so
+ * we can open the doc-picker modal instead of navigating to an empty
+ * composer. Mirrors `pv-quick-tool-cards.tsx`'s helper of the same name.
+ */
+function extractComposerToolSlug(href: string): string | null {
+  if (!href.startsWith("/pdf-composer")) return null;
+  const qIdx = href.indexOf("?");
+
+  if (qIdx < 0) return null;
+  const params = new URLSearchParams(href.slice(qIdx + 1));
+  const tool = params.get("tool");
+
+  return tool && tool !== "editor" ? tool : null;
+}
 
 // `h-full` on the card + `h-full` on each grid `<li>` makes every card
 // stretch to the tallest sibling in its row — so a 1-line description and
@@ -135,9 +158,11 @@ function ToolCardContent({ tool }: { tool: ToolCardEntry }) {
 function ToolCard({
   tool,
   onOpenForms,
+  onOpenPicker,
 }: {
   tool: ToolCardEntry;
   onOpenForms: () => void;
+  onOpenPicker: (slug: string, label: string) => void;
 }) {
   if (tool.action === "forms") {
     return (
@@ -145,6 +170,20 @@ function ToolCard({
         className={TOOL_CARD_CLASSNAME}
         type="button"
         onClick={onOpenForms}
+      >
+        <ToolCardContent tool={tool} />
+      </button>
+    );
+  }
+
+  const pickerSlug = extractComposerToolSlug(tool.href);
+
+  if (pickerSlug) {
+    return (
+      <button
+        className={TOOL_CARD_CLASSNAME}
+        type="button"
+        onClick={() => onOpenPicker(pickerSlug, tool.title)}
       >
         <ToolCardContent tool={tool} />
       </button>
@@ -160,6 +199,10 @@ function ToolCard({
 
 export function PvToolsGrid() {
   const [formsOpen, setFormsOpen] = useState(false);
+  const [picker, setPicker] = useState<{
+    slug: string;
+    label: string;
+  } | null>(null);
 
   return (
     <>
@@ -167,12 +210,22 @@ export function PvToolsGrid() {
         <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {TOOL_CARDS.map((tool) => (
             <li key={tool.title} className="h-full">
-              <ToolCard tool={tool} onOpenForms={() => setFormsOpen(true)} />
+              <ToolCard
+                tool={tool}
+                onOpenForms={() => setFormsOpen(true)}
+                onOpenPicker={(slug, label) => setPicker({ slug, label })}
+              />
             </li>
           ))}
         </ul>
       </section>
       <FormsModal isOpen={formsOpen} onOpenChange={setFormsOpen} />
+      <DocPickerModal
+        isOpen={picker !== null}
+        toolLabel={picker?.label ?? null}
+        toolSlug={picker?.slug ?? null}
+        onClose={() => setPicker(null)}
+      />
     </>
   );
 }

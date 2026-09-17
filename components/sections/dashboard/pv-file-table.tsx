@@ -7,11 +7,18 @@ import {
   Delete02Icon,
   Download01Icon,
   Edit02Icon,
+  LockKeyIcon,
   Time04Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Tooltip } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
+
+import { UploadPdfButton } from "./pv-page-header";
+
+import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
+import { isConvertedDocument } from "@/lib/shared/types/documents.types";
 
 interface PvFileTableProps {
   rows: readonly PvFileRow[];
@@ -149,16 +156,25 @@ function RowActions({
   // flow upserts into it forever, so delete + rename must be
   // suppressed. Download / History still make sense.
   const isProtectedSystemDoc = row.name.toLowerCase() === "irs form w-9.pdf";
+  // Mirrors `gateEntitledAction`'s own check (see
+  // `lib/client/utils/gate-entitled-action.ts`) purely for display — this
+  // never decides whether the download is allowed, only whether the icon
+  // shows a lock badge so the paywall isn't a surprise. The actual gate
+  // still runs inside `triggerDocumentDownload` on click.
+  const isEntitled = useIsEntitled();
+  const downloadNeedsPlan = isConvertedDocument(row.doc) && !isEntitled;
   const actions: {
     label: string;
     icon: typeof Download01Icon;
     handler?: () => void;
     danger?: boolean;
+    locked?: boolean;
   }[] = [
     {
-      label: "Download",
+      label: downloadNeedsPlan ? "Download (unlocks with a plan)" : "Download",
       icon: Download01Icon,
       handler: () => onDownload?.(row),
+      locked: downloadNeedsPlan,
     },
     ...(isProtectedSystemDoc
       ? []
@@ -184,19 +200,31 @@ function RowActions({
 
   return (
     <div className="flex items-center justify-center gap-1">
-      {actions.map(({ label, icon, handler, danger }) => (
-        <button
-          key={label}
-          aria-label={`${label} ${row.name}`}
-          className={`flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--pv-text-muted)] ${
-            danger ? "hover:!text-[var(--pv-file-pdf)]" : ""
-          }`}
-          disabled={disabled}
-          type="button"
-          onClick={handler}
-        >
-          <HugeiconsIcon icon={icon} size={16} />
-        </button>
+      {actions.map(({ label, icon, handler, danger, locked }) => (
+        <Tooltip key={label} delay={300}>
+          <button
+            aria-label={`${label} ${row.name}`}
+            className={`relative flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--pv-text-muted)] ${
+              danger ? "hover:!text-[var(--pv-file-pdf)]" : ""
+            }`}
+            disabled={disabled}
+            type="button"
+            onClick={handler}
+          >
+            <HugeiconsIcon icon={icon} size={16} />
+            {locked ? (
+              <HugeiconsIcon
+                aria-hidden
+                className="absolute right-0.5 bottom-0.5 rounded-full bg-[var(--pv-surface)] text-[var(--pv-brand-red)]"
+                icon={LockKeyIcon}
+                size={10}
+              />
+            ) : null}
+          </button>
+          <Tooltip.Content>
+            <p className={danger ? "text-danger" : undefined}>{label}</p>
+          </Tooltip.Content>
+        </Tooltip>
       ))}
     </div>
   );
@@ -524,12 +552,7 @@ export function PvFileTable({
                 >
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
                     <p>No files match your search.</p>
-                    <a
-                      className="pv-btn-primary inline-flex px-5 py-1.5 text-[13px]"
-                      href="/pdf-composer"
-                    >
-                      Upload a PDF
-                    </a>
+                    <UploadPdfButton />
                   </div>
                 </td>
               </tr>

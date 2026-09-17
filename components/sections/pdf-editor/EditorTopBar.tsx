@@ -428,27 +428,37 @@ export function EditorInfoBar() {
               Filename itself is hidden below md so the row doesn't get
               squeezed between save/tools/zoom on tablets. */}
           <div className="hidden min-w-0 items-center gap-2 sm:flex lg:gap-3">
-            <input
-              key={fileName}
-              ref={nameInputRef}
-              aria-label="Document name"
-              className="hidden max-w-24 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white md:inline-block lg:max-w-40"
-              defaultValue={displayName}
-              disabled={!file}
-              title="Click to rename"
-              type="text"
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  nameInputRef.current?.blur();
-                } else if (e.key === "Escape") {
-                  if (nameInputRef.current)
-                    nameInputRef.current.value = displayName;
-                  nameInputRef.current?.blur();
-                }
-              }}
-            />
+            <div className="relative hidden md:inline-block">
+              <input
+                key={fileName}
+                ref={nameInputRef}
+                aria-label="Document name"
+                className="max-w-24 truncate rounded-md border border-transparent bg-transparent py-1 pr-5 pl-2 text-sm font-medium text-[var(--color-foreground)] outline-none transition-colors hover:border-default-200 focus:border-[#f12c23] focus:bg-white lg:max-w-40"
+                defaultValue={displayName}
+                disabled={!file}
+                title="Click to rename"
+                type="text"
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    nameInputRef.current?.blur();
+                  } else if (e.key === "Escape") {
+                    if (nameInputRef.current)
+                      nameInputRef.current.value = displayName;
+                    nameInputRef.current?.blur();
+                  }
+                }}
+              />
+              {file ? (
+                <HugeiconsIcon
+                  aria-hidden
+                  className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-default-400"
+                  icon={PencilEdit01Icon}
+                  size={12}
+                />
+              ) : null}
+            </div>
 
             {/* QA 2026-09-08: SaveStatusChip removed per product decision.
                 See PvEditorTopChrome for the same removal + full rationale. */}

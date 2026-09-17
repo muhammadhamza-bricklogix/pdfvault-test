@@ -20,6 +20,7 @@ import {
   Select,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
 } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -462,12 +463,22 @@ export function FloatingTextToolbar({
               });
             }}
           >
-            <ToggleButton isIconOnly aria-label="Bold" id="bold">
-              <HugeiconsIcon icon={TextBoldIcon} size={16} />
-            </ToggleButton>
-            <ToggleButton isIconOnly aria-label="Italic" id="italic">
-              <HugeiconsIcon icon={TextItalicIcon} size={16} />
-            </ToggleButton>
+            <Tooltip delay={300}>
+              <ToggleButton isIconOnly aria-label="Bold" id="bold">
+                <HugeiconsIcon icon={TextBoldIcon} size={16} />
+              </ToggleButton>
+              <Tooltip.Content>
+                <p>Bold</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Tooltip delay={300}>
+              <ToggleButton isIconOnly aria-label="Italic" id="italic">
+                <HugeiconsIcon icon={TextItalicIcon} size={16} />
+              </ToggleButton>
+              <Tooltip.Content>
+                <p>Italic</p>
+              </Tooltip.Content>
+            </Tooltip>
           </ToggleButtonGroup>
         </div>
 
@@ -490,15 +501,30 @@ export function FloatingTextToolbar({
               }
             }}
           >
-            <ToggleButton isIconOnly aria-label="Align left" id="left">
-              <HugeiconsIcon icon={TextAlignLeftIcon} size={16} />
-            </ToggleButton>
-            <ToggleButton isIconOnly aria-label="Align center" id="center">
-              <HugeiconsIcon icon={TextAlignCenterIcon} size={16} />
-            </ToggleButton>
-            <ToggleButton isIconOnly aria-label="Align right" id="right">
-              <HugeiconsIcon icon={TextAlignRightIcon} size={16} />
-            </ToggleButton>
+            <Tooltip delay={300}>
+              <ToggleButton isIconOnly aria-label="Align left" id="left">
+                <HugeiconsIcon icon={TextAlignLeftIcon} size={16} />
+              </ToggleButton>
+              <Tooltip.Content>
+                <p>Align left</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Tooltip delay={300}>
+              <ToggleButton isIconOnly aria-label="Align center" id="center">
+                <HugeiconsIcon icon={TextAlignCenterIcon} size={16} />
+              </ToggleButton>
+              <Tooltip.Content>
+                <p>Align center</p>
+              </Tooltip.Content>
+            </Tooltip>
+            <Tooltip delay={300}>
+              <ToggleButton isIconOnly aria-label="Align right" id="right">
+                <HugeiconsIcon icon={TextAlignRightIcon} size={16} />
+              </ToggleButton>
+              <Tooltip.Content>
+                <p>Align right</p>
+              </Tooltip.Content>
+            </Tooltip>
           </ToggleButtonGroup>
         </div>
 

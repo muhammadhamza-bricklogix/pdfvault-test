@@ -546,28 +546,36 @@ export function ShapePropertiesContent({
           <div className={sectionWrapperClass}>
             <Section title="Stroke thickness">
               <div className="flex flex-wrap gap-2">
-                {STROKE_WIDTHS.map((width) => (
-                  <Button
-                    key={width}
-                    isIconOnly
-                    aria-label={width === 0 ? "No stroke" : `${width}px stroke`}
-                    size="sm"
-                    variant={
-                      currentStrokeWidth === width ? "secondary" : "ghost"
-                    }
-                    onPress={() => setStrokeWidth(width)}
-                  >
-                    <span
-                      className="block w-4 rounded-full bg-[var(--color-foreground)]"
-                      style={{
-                        height: width === 0 ? 1 : Math.max(width, 1),
-                      }}
-                    />
-                    {width === 0 && (
-                      <span className="absolute h-5 w-px rotate-45 bg-danger" />
-                    )}
-                  </Button>
-                ))}
+                {STROKE_WIDTHS.map((width) => {
+                  const label = width === 0 ? "No stroke" : `${width}px stroke`;
+
+                  return (
+                    <Tooltip key={width} delay={300}>
+                      <Button
+                        isIconOnly
+                        aria-label={label}
+                        size="sm"
+                        variant={
+                          currentStrokeWidth === width ? "secondary" : "ghost"
+                        }
+                        onPress={() => setStrokeWidth(width)}
+                      >
+                        <span
+                          className="block w-4 rounded-full bg-[var(--color-foreground)]"
+                          style={{
+                            height: width === 0 ? 1 : Math.max(width, 1),
+                          }}
+                        />
+                        {width === 0 && (
+                          <span className="absolute h-5 w-px rotate-45 bg-danger" />
+                        )}
+                      </Button>
+                      <Tooltip.Content>
+                        <p>{label}</p>
+                      </Tooltip.Content>
+                    </Tooltip>
+                  );
+                })}
               </div>
             </Section>
           </div>

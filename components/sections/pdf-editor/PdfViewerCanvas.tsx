@@ -386,6 +386,42 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     }
     /* eslint-enable react-hooks/immutability */
 
+    // Shared by the Edit Text tool's tap-to-edit (below) and the Select
+    // tool's double-click-to-edit (`handleDoubleClick`) — both need the
+    // exact same "enter editing + position the caret at the click" steps.
+    const enterExtractedTextEditing = (
+      target: import("fabric").FabricObject & { editorType?: string },
+      e?: Event,
+    ) => {
+      if (target.editorType !== "editModeText") return false;
+
+      // Structural check — extracted text is now a Textbox (extends
+      // IText). `enterEditing` exists on both, so the instanceof
+      // check we previously had against IText would miss Textbox.
+      const editable = target as unknown as {
+        enterEditing?: (e?: Event) => void;
+        setCursorByClick?: (e?: Event) => void;
+        initDelayedCursor?: (restart?: boolean) => void;
+      };
+
+      if (typeof editable.enterEditing !== "function") return false;
+
+      fc.setActiveObject(target);
+      editable.enterEditing(e);
+      // Position the caret at the tapped glyph. `enterEditing()` only
+      // flips editing on — it leaves selectionStart at 0, so the first
+      // keystroke would insert at the START of the run instead of where
+      // the user tapped (reported as "typing starts a few chars before
+      // my cursor"). Fabric's built-in click-to-edit flow calls
+      // `setCursorByClick`; because we shortcut straight into editing on
+      // the first tap, we have to do the same ourselves.
+      editable.setCursorByClick?.(e);
+      editable.initDelayedCursor?.(true);
+      fc.renderAll();
+
+      return true;
+    };
+
     const handleMouseDown = async (opt: TPointerEventInfo) => {
       // Edit Text tool — tap any IText sentence to start editing it.
       // Without this handler users would need Fabric's default
@@ -395,31 +431,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           | (import("fabric").FabricObject & { editorType?: string })
           | null;
 
-        if (target && target.editorType === "editModeText") {
-          // Structural check — extracted text is now a Textbox (extends
-          // IText). `enterEditing` exists on both, so the instanceof
-          // check we previously had against IText would miss Textbox.
-          const editable = target as unknown as {
-            enterEditing?: (e?: Event) => void;
-            setCursorByClick?: (e?: Event) => void;
-            initDelayedCursor?: (restart?: boolean) => void;
-          };
-
-          if (typeof editable.enterEditing === "function") {
-            fc.setActiveObject(target);
-            editable.enterEditing(opt.e);
-            // Position the caret at the tapped glyph. `enterEditing()` only
-            // flips editing on — it leaves selectionStart at 0, so the first
-            // keystroke would insert at the START of the run instead of where
-            // the user tapped (reported as "typing starts a few chars before
-            // my cursor"). Fabric's built-in click-to-edit flow calls
-            // `setCursorByClick`; because we shortcut straight into editing on
-            // the first tap, we have to do the same ourselves.
-            editable.setCursorByClick?.(opt.e);
-            editable.initDelayedCursor?.(true);
-            fc.renderAll();
-          }
-        }
+        if (target) enterExtractedTextEditing(target, opt.e);
 
         return;
       }
@@ -522,7 +534,26 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       });
     };
 
+    // Select tool — double-click an already-extracted text object to jump
+    // straight into editing it, instead of requiring the user to first
+    // switch to the Edit Text tool. Fabric's own IText/Textbox ships a
+    // native double-click-to-edit handler, but it only fires once an
+    // object is already the active selection; a fresh double-click on an
+    // unselected object was landing as two separate "select" clicks
+    // instead of entering edit mode, which is the "Select tool doesn't
+    // respond to double-click" behavior reported in review.
+    const handleDoubleClick = (opt: TPointerEventInfo) => {
+      if (activeTool !== "select") return;
+
+      const target = opt.target as
+        | (import("fabric").FabricObject & { editorType?: string })
+        | null;
+
+      if (target) enterExtractedTextEditing(target, opt.e);
+    };
+
     fc.on("mouse:down", handleMouseDown);
+    fc.on("mouse:dblclick", handleDoubleClick);
     fc.on("object:scaling", handleScaling);
     fc.on("object:modified", handleScaling);
 
@@ -547,6 +578,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     return () => {
       fc.off("mouse:down", handleMouseDown);
+      fc.off("mouse:dblclick", handleDoubleClick);
       fc.off("object:scaling", handleScaling);
       fc.off("object:modified", handleScaling);
       fc.off("mouse:move", handleMouseMove);

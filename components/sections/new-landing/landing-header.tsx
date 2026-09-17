@@ -425,7 +425,9 @@ export function LandingHeader() {
             <Modal.Header>
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
-            <Modal.Body className="max-h-[80vh] overflow-y-auto p-0">
+            <Modal.Body
+              className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-default-300"
+            >
               {/* Click delegation: any tile navigation dismisses the modal
                   synchronously, regardless of whether the destination is a
                   new pathname (`/pdf-composer` → `/dashboard`) or a same-

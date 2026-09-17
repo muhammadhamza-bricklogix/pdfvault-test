@@ -890,7 +890,9 @@ function PlanStep({
             {readyHeading}
           </h2>
           <p className="text-[13px] text-[#6c6c6c]">
-            Cancel anytime · Secure checkout · Instant access
+            {hidePreview
+              ? "Cancel anytime · Secure checkout · Instant access"
+              : "Start a plan below to download it — cancel anytime · secure checkout · instant access"}
           </p>
         </div>
         <div className="flex flex-col items-stretch gap-1 sm:items-end">

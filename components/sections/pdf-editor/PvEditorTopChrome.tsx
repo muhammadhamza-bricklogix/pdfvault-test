@@ -679,12 +679,15 @@ function TopAppBar() {
         <Tooltip delay={300}>
           <button
             aria-label="Undo"
-            className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex cursor-pointer items-center justify-center gap-1 rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40 sm:px-1.5"
             disabled={!canUndo}
             type="button"
             onClick={() => fireEditorEvent("editor:undo")}
           >
             <HugeiconsIcon icon={UndoIcon} size={18} />
+            <span className="hidden text-[13px] font-medium sm:inline">
+              Undo
+            </span>
           </button>
           <Tooltip.Content>
             <p>Undo</p>
@@ -694,12 +697,15 @@ function TopAppBar() {
         <Tooltip delay={300}>
           <button
             aria-label="Redo"
-            className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex cursor-pointer items-center justify-center gap-1 rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40 sm:px-1.5"
             disabled={!canRedo}
             type="button"
             onClick={() => fireEditorEvent("editor:redo")}
           >
             <HugeiconsIcon icon={RedoIcon} size={18} />
+            <span className="hidden text-[13px] font-medium sm:inline">
+              Redo
+            </span>
           </button>
           <Tooltip.Content>
             <p>Redo</p>
