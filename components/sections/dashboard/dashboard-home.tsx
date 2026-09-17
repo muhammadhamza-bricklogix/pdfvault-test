@@ -160,7 +160,7 @@ export function DashboardHome() {
   const handleDownload = async (row: PvFileRow) => {
     if (!row.doc) return;
     try {
-      await triggerDocumentDownload(row.doc);
+      await triggerDocumentDownload(row.doc, router);
     } catch (err) {
       toast.error({
         title: "Download failed",
