@@ -996,7 +996,7 @@ function PlanStep({
         </div>
         <div className="flex flex-col items-stretch gap-1 sm:items-end">
           <button
-            className="group inline-flex h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[14px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(241,44,35,0.6)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_14px_28px_-8px_rgba(241,44,35,0.7)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px"
+            className="group inline-flex h-[58px] cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[17px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[62px] sm:text-[18px]"
             disabled={continueDisabled}
             type="button"
             onClick={onContinue}
@@ -1005,7 +1005,7 @@ function PlanStep({
             {continueLoading ? null : (
               <span
                 aria-hidden
-                className="transition-transform group-hover:translate-x-0.5"
+                className="text-[22px] leading-none transition-transform group-hover:translate-x-1"
               >
                 →
               </span>
