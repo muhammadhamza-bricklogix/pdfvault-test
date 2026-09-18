@@ -631,6 +631,19 @@ export function ToolsContent({
     <Toolbar aria-label="Drawing tools">
       <ToggleButtonGroup
         disallowEmptySelection
+        // `isDetached` — without it, ToggleButtonGroup's default "attached"
+        // mode connects every button into ONE continuous bar (only the
+        // first/last corners rounded, thin 1px separators between).
+        // `ToolsContent` sits directly next to `BottomDock`'s ACTION_TOOLS
+        // row, whose buttons are individually gapped + fully rounded — so
+        // even with matching `--color-default` backgrounds (see that
+        // file's fix for review item #7), the CONTINUOUS bar butting up
+        // against SEPARATE pills still read as visually inconsistent
+        // (confirmed by a follow-up screenshot after the first fix).
+        // `isDetached` makes every ToggleButton its own separated,
+        // fully-rounded pill — matching ACTION_TOOLS' shape, not just its
+        // color, for one uniform-looking toolbar end to end.
+        isDetached
         selectedKeys={new Set([activeTool])}
         selectionMode="single"
         size="md"

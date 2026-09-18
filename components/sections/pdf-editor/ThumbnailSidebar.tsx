@@ -360,7 +360,17 @@ function SortableThumbnail({
 
   if (dragWholeCard && !sortableDisabled) {
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div
+        ref={setNodeRef}
+        // Lets callers (e.g. ManagePagesModal's "scroll to the page I
+        // just added" fix, review item #10) find a specific page's
+        // thumbnail in the DOM without threading a ref map through
+        // this shared component. Purely additive — no behavior change.
+        data-page-id={id}
+        style={style}
+        {...attributes}
+        {...listeners}
+      >
         <Thumbnail
           {...thumbnailProps}
           isDragging={isDragging}
@@ -371,7 +381,7 @@ function SortableThumbnail({
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} data-page-id={id} style={style}>
       <Thumbnail
         {...thumbnailProps}
         dragActivatorRef={sortableDisabled ? undefined : setActivatorNodeRef}

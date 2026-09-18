@@ -11,6 +11,7 @@ import {
   DEFAULT_LOCALE,
   type Locale,
   parseLocalePrefix,
+  RTL_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
 type Entry = { code: Locale; label: string; short: string };
@@ -128,6 +129,7 @@ export function LandingLanguageSwitcher({
 
   const current =
     LANGUAGES.find((lang) => lang.code === activeLocale) ?? LANGUAGES[0];
+  const isRtl = RTL_LOCALES.includes(activeLocale);
 
   const select = (code: Locale) => {
     setOpen(false);
@@ -167,7 +169,15 @@ export function LandingLanguageSwitcher({
       {open ? (
         <div
           className={`absolute top-[calc(100%+8px)] z-30 min-w-[160px] rounded-xl border border-[var(--pv-card-border)] bg-white p-1.5 shadow-lg ${
-            variant === "mobile" ? "left-0" : "right-0"
+            // `left-0`/`right-0` are physical, not logical, so they don't
+            // auto-flip with `dir="rtl"`. In the mobile drawer the trigger
+            // sits near the right edge of the screen in RTL (Arabic) — a
+            // `left-0` dropdown there grows further right and gets clipped
+            // off-screen (review: "Language Dropdown Hidden in Arabic").
+            // Anchoring to `right-0` instead makes it grow back into the
+            // viewport, matching how it already anchors correctly in LTR.
+            // Desktop's `right-0` anchor is untouched — not the reported bug.
+            variant === "mobile" ? (isRtl ? "right-0" : "left-0") : "right-0"
           }`}
           role="menu"
         >
