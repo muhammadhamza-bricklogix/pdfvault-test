@@ -300,7 +300,17 @@ export function PvFileTable({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    // Bottom padding safety zone — the row-action Dropdown.Popover opens
+    // beneath its trigger by default. On the LAST row of a fully-scrolled
+    // list the trigger sits flush against the bottom of the scroll
+    // container, so the popover either got clipped by the browser chrome
+    // (user report 2026-09-18) or React Aria's flip logic didn't trigger
+    // because the shared scroll container swallowed the overflow. The
+    // extra room here guarantees the popover always has vertical space
+    // to render inside the viewport, and — with the popover open — the
+    // scroll container isn't jammed against the browser bottom, so the
+    // page can still be scrolled.
+    <div className="flex flex-col gap-2 pb-32 md:pb-40">
       {selectedRows.length > 0 ? (
         <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--pv-hairline)] bg-[var(--pv-fill-subtle)] px-4 py-2">
           <span className="text-[13px] font-medium text-[var(--pv-text-strong)]">
