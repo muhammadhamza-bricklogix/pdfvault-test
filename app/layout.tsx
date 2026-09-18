@@ -286,38 +286,47 @@ gtag('config', 'AW-18226423046');`}
       */}
       <head>
         {/* CookieYes consent banner. `async` + preconnect above keep it
-            off the critical path.
-            2026-09-18 — client asked to keep the banner UI (GDPR template)
-            but stop blocking / tracking on Accept/Reject clicks during the
-            2–4 week compliance review window. To achieve that:
-            - `data-cookieyes-*` categorization stripped from GTM/Trustpilot/
-              Clarity below → auto-blocker has nothing to wrap in text/plain.
-            - Panel-side must ALSO disable Support GCM, Clarity Consent API,
-              Microsoft UET Consent Mode, and Consent log in Advanced
-              Settings. Without those, the banner still signals consent
-              state to Google/Microsoft under the hood. */}
+            off the critical path; CookieYes' dashboard-side auto-blocker
+            gates downstream trackers regardless of load order. */}
         <script
           async
           id="cookieyes"
           src="https://cdn-cookieyes.com/client_data/98d78886fe30030f1080cdeb0a6c0a25/script.js"
           type="text/javascript"
         />
+        {/* GTM loader — marked cookieyes-necessary so CookieYes' auto-blocker
+            does NOT wrap the tag in `type="text/plain"` when the user rejects
+            cookies. This is compliance-safe ONLY IF the GTM container has
+            Consent Mode v2 configured (analytics_storage/ad_storage gated on
+            granted consent). Without Consent Mode, GTM will fire GA + Ads
+            tags regardless of user choice → GDPR/ePrivacy violation. Audit
+            in Tag Assistant before assuming this is compliant. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5R5LRTTD');`,
           }}
+          data-cookieyes="cookieyes-necessary"
         />
         {trustpilotInviteId ? (
           <script
             dangerouslySetInnerHTML={{
               __html: `(function(w,d,s,r,n){w.TrustpilotObject=n;w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)};a=d.createElement(s);a.async=1;a.src=r;a.type='text/java'+s;f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(a,f)})(window,document,'script','https://invitejs.trustpilot.com/tp.min.js','tp');tp('register', '${trustpilotInviteId}');`,
             }}
+            data-cookieyes="cookieyes-functional"
           />
         ) : null}
+        {/* Microsoft Clarity — user-behaviour analytics. Raw inline in
+            <head> for parity with GTM/Trustpilot so the snippet ships in
+            the SSR HTML (Clarity's setup checker inspects source).
+            Marked cookieyes-necessary per user request 2026-09-09 — this is
+            NOT strictly compliant (Clarity always tracks on load). Safer
+            categorization is `cookieyes-performance`; switch if Consent
+            Mode / dedicated Clarity consent wiring is not in place. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ych70e11tb");`,
           }}
+          data-cookieyes="cookieyes-necessary"
         />
       </head>
       <body className="min-h-screen bg-[var(--color-background)] font-sans text-[var(--color-foreground)] antialiased">
