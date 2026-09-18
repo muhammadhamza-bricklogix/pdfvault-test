@@ -369,9 +369,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           try {
             // Persist file + per-page Fabric edits + extractedPages across
             // the full-page sign-in redirect so the editor can rehydrate
-            // the exact state on return. The helper flushes the live
-            // canvas for the current page first — the store may lag one
-            // page-navigation behind the visible canvas.
+            // the exact state on return. Still done even though the new
+            // bake-and-upload path below covers the same case — the IDB
+            // snapshot is the fallback when the upload half of
+            // `runAutoSignup` fails (network hiccup, backend downtime).
+            // The helper flushes the live canvas for the current page
+            // first — the store may lag one page-navigation behind the
+            // visible canvas.
             await snapshotPendingEditorFile(liveCanvas);
             logger.breadcrumb("export", "pending_file.saved", {
               format,
@@ -380,6 +384,39 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             });
           } catch (err) {
             logger.captureError(err, "export.pending_file", { format });
+          }
+
+          // NEW (2026-09-18): pre-bake the file so `runAutoSignup` can
+          // upload it via `/documents/upload` right after ticket
+          // sign-in. The resulting docId is passed into `POST
+          // /auth/quick-signup/notify` so the Customer.io welcome
+          // email's CTA links straight to the composer with THIS file
+          // loaded — same on the current device (same-session
+          // finalize also uses `?id=<docId>`) and on any other device
+          // where the user later opens the email (cloud storage
+          // instead of IDB). Bake failure is non-fatal: modal still
+          // opens, upload falls back to the IDB-restore hydrator
+          // path, welcome email lands with the dashboard fallback URL.
+          let bakedFile: File | undefined;
+
+          if (sourceFile && liveCanvas) {
+            try {
+              const { bytes } = await buildEditedPdfBytes({
+                currentPage: page,
+                fabricCanvas: liveCanvas,
+                file: sourceFile,
+                bakeOverlays: true,
+              });
+              const bakedName = sourceFile.name.toLowerCase().endsWith(".pdf")
+                ? sourceFile.name
+                : `${sourceFile.name}.pdf`;
+
+              bakedFile = new File([bytes as BlobPart], bakedName, {
+                type: "application/pdf",
+              });
+            } catch (err) {
+              logger.captureError(err, "export.bake_for_guest", { format });
+            }
           }
 
           const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
@@ -403,6 +440,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             title: "Your file is ready",
             subtitle: "Create an account to download it",
             submitLabel: "Download file",
+            bakedFile,
           });
 
           isExportingRef.current = false;
