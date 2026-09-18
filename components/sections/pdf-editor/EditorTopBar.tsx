@@ -121,21 +121,23 @@ export function EditorInfoBar() {
     return () => window.removeEventListener("editor:toggle-thumbs", toggle);
   }, []);
 
-  // Welcome-email `?tool=export` auto-launch — hydrator dispatches
-  // this event once the file has loaded from cloud, opening the
-  // ExportFormatModal so the user picks their format before the
-  // paywall / download decision fires (via the modal's Download button
-  // → `useExportEditor` gate). Product ask 2026-09-18. Mirror of the
-  // listener in PvEditorTopChrome so both mobile + desktop chromes
-  // handle the event.
+  // Welcome-email arrival — mirror of PvEditorTopChrome's watcher.
+  // Store flag pattern (rather than CustomEvent) so the modal opens
+  // even when the chrome mounted after the hydrator's setTimeout
+  // fired. See `pendingOpenExportModal` docstring in pdf-editor-store.
+  const pendingOpenExportModal = usePdfEditorStore(
+    (s) => s.pendingOpenExportModal,
+  );
+  const setPendingOpenExportModal = usePdfEditorStore(
+    (s) => s.setPendingOpenExportModal,
+  );
+
   useEffect(() => {
-    const onOpenExportModal = () => setIsExportModalOpen(true);
-
-    window.addEventListener("editor:open-export-modal", onOpenExportModal);
-
-    return () =>
-      window.removeEventListener("editor:open-export-modal", onOpenExportModal);
-  }, []);
+    if (pendingOpenExportModal) {
+      setIsExportModalOpen(true);
+      setPendingOpenExportModal(false);
+    }
+  }, [pendingOpenExportModal, setPendingOpenExportModal]);
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);

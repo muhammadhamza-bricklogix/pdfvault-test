@@ -360,22 +360,27 @@ function TopAppBar() {
     );
   };
 
-  // Auto-open the ExportFormatModal when the welcome-email button
-  // lands the user here with `?tool=export` in the URL. The hydrator's
-  // Step 4 (pending-editor-file-hydrator.tsx) fires this event once
-  // the file has loaded from cloud; the modal's own Download button
-  // then dispatches `editor:export` which runs the standard
-  // `useExportEditor` gate — paid caller downloads, unpaid caller sees
-  // the paywall. Product ask (2026-09-18, revised): format-picker
-  // first so users see options before the paywall / download decision.
+  // Auto-open the ExportFormatModal when the welcome-email arrival
+  // flag flips. Hydrator sets `pendingOpenExportModal` when it sees
+  // `?tool=export` or the CIO UTM combo on `/pdf-composer`; this
+  // effect flips the local `isExportModalOpen` state and clears the
+  // flag so a re-render doesn't reopen. Store flag pattern (rather
+  // than CustomEvent) so it works whether the chrome mounted before
+  // or after the hydrator's `setTimeout` fires — the flag survives
+  // in the store until this subscription observes it.
+  const pendingOpenExportModal = usePdfEditorStore(
+    (s) => s.pendingOpenExportModal,
+  );
+  const setPendingOpenExportModal = usePdfEditorStore(
+    (s) => s.setPendingOpenExportModal,
+  );
+
   useEffect(() => {
-    const onOpenExportModal = () => setIsExportModalOpen(true);
-
-    window.addEventListener("editor:open-export-modal", onOpenExportModal);
-
-    return () =>
-      window.removeEventListener("editor:open-export-modal", onOpenExportModal);
-  }, []);
+    if (pendingOpenExportModal) {
+      setIsExportModalOpen(true);
+      setPendingOpenExportModal(false);
+    }
+  }, [pendingOpenExportModal, setPendingOpenExportModal]);
 
   // Display name strips `.pdf` because the extension is redundant in
   // an editor that only handles PDFs — commit re-appends it before
