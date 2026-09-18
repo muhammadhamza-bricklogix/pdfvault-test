@@ -360,6 +360,26 @@ function TopAppBar() {
     );
   };
 
+  // Auto-open the ExportFormatModal when the welcome-email arrival
+  // flag flips. Hydrator sets `pendingOpenExportModal` when it sees
+  // `?tool=export` or the CIO UTM combo on `/pdf-composer`; the
+  // modal below reads it inline via `isOpen={... || pendingOpenExportModal}`
+  // so the open state is DERIVED rather than mirrored into local state
+  // by an effect. Effect-based mirroring tripped React 19's
+  // `react-hooks/set-state-in-effect` rule (calling `setState`
+  // synchronously in a `useEffect` body is a build error).
+  //
+  // Close handler clears both the local state (in case the user
+  // manually opened it via the Done button) and the pending flag (in
+  // case this open was auto-triggered by the hydrator). Safe to clear
+  // both on every close — no-op if the flag was already false.
+  const pendingOpenExportModal = usePdfEditorStore(
+    (s) => s.pendingOpenExportModal,
+  );
+  const setPendingOpenExportModal = usePdfEditorStore(
+    (s) => s.setPendingOpenExportModal,
+  );
+
   // Display name strips `.pdf` because the extension is redundant in
   // an editor that only handles PDFs — commit re-appends it before
   // saving. Input state is fully owned by <EditableFilenameField/>.
@@ -784,8 +804,11 @@ function TopAppBar() {
       </div>
 
       <ExportFormatModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
+        isOpen={isExportModalOpen || pendingOpenExportModal}
+        onClose={() => {
+          setIsExportModalOpen(false);
+          setPendingOpenExportModal(false);
+        }}
       />
     </div>
   );
