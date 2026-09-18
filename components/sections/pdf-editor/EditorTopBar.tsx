@@ -121,6 +121,22 @@ export function EditorInfoBar() {
     return () => window.removeEventListener("editor:toggle-thumbs", toggle);
   }, []);
 
+  // Welcome-email `?tool=export` auto-launch — hydrator dispatches
+  // this event once the file has loaded from cloud, opening the
+  // ExportFormatModal so the user picks their format before the
+  // paywall / download decision fires (via the modal's Download button
+  // → `useExportEditor` gate). Product ask 2026-09-18. Mirror of the
+  // listener in PvEditorTopChrome so both mobile + desktop chromes
+  // handle the event.
+  useEffect(() => {
+    const onOpenExportModal = () => setIsExportModalOpen(true);
+
+    window.addEventListener("editor:open-export-modal", onOpenExportModal);
+
+    return () =>
+      window.removeEventListener("editor:open-export-modal", onOpenExportModal);
+  }, []);
+
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
 
