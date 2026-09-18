@@ -655,18 +655,13 @@ export function PendingEditorFileHydrator() {
               // Welcome-email button lands users here — opens
               // ExportFormatModal so the user picks their format
               // (PDF / DOCX / JPG / etc.) before the paywall /
-              // download decision fires. The modal's Download
-              // button dispatches `editor:export` internally, which
-              // runs the standard `useExportEditor` gate:
-              //   - paid → downloads the file
-              //   - unpaid → paywall opens
-              // Product ask (2026-09-18): earlier version used
-              // `?export=pdf` to auto-launch the paywall on arrival,
-              // but PM asked for format-picker first so users see
-              // their options before committing.
-              window.dispatchEvent(
-                new CustomEvent("editor:open-export-modal"),
-              );
+              // download decision fires. Uses a store flag rather
+              // than a CustomEvent because chrome hosts may not yet
+              // have registered their event listener at the moment
+              // this setTimeout fires (race on initial page load).
+              // Chrome hosts subscribe to `pendingOpenExportModal`
+              // and open their local modal state whenever it flips.
+              usePdfEditorStore.getState().setPendingOpenExportModal(true);
               break;
             default:
               logger.warn(`unknown auto-launch tool: ${tool}`);
@@ -682,10 +677,11 @@ export function PendingEditorFileHydrator() {
         // Welcome-email fallback signal — see `cameFromWelcomeEmail`
         // above. Fires only when neither the explicit `tool` case nor
         // `exportFormat` case handled the arrival, so we don't double-
-        // open modals when a URL happens to carry both `?tool=export`
-        // AND the CIO UTM params (the tool case already opened it).
+        // set the flag when a URL happens to carry both `?tool=export`
+        // AND the CIO UTM params. Same store flag path as the tool
+        // case above — see rationale in the store field docstring.
         if (cameFromWelcomeEmail && tool !== "export" && !exportFormat) {
-          window.dispatchEvent(new CustomEvent("editor:open-export-modal"));
+          usePdfEditorStore.getState().setPendingOpenExportModal(true);
         }
 
         // Strip the one-shot auto-launch params from the URL so a browser

@@ -352,6 +352,22 @@ type PdfEditorStore = {
   setDocumentPassword: (password: string | null) => void;
   setPdfSourceUrl: (url: string | null) => void;
   setIsCompressModalOpen: (value: boolean) => void;
+  /**
+   * One-shot flag flipped ON by the hydrator when a URL signal (either
+   * `?tool=export` or the welcome-email UTM combo) says the composer
+   * should auto-open ExportFormatModal on arrival. Chrome hosts
+   * (PvEditorTopChrome + EditorTopBar) subscribe to it and flip their
+   * local `isExportModalOpen` state, then clear the flag. Using a
+   * store flag instead of a CustomEvent because the event dispatch
+   * fires from a 400ms `setTimeout` in the hydrator, which can race
+   * ahead of the chrome host's `useEffect` listener registration on
+   * initial mount — the event lands with no listener → modal never
+   * opens (QA report 2026-09-18 after PR #92: URL cleaned, modal
+   * missing). Store subscriptions don't race — the chrome's effect
+   * fires on both mount AND subsequent flag flips.
+   */
+  pendingOpenExportModal: boolean;
+  setPendingOpenExportModal: (value: boolean) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
   setIsFormFieldsModalOpen: (value: boolean) => void;
   setIsPageNumbersModalOpen: (value: boolean) => void;
@@ -401,6 +417,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   hasUnsavedChanges: false,
   pendingCloudSaveAfterReload: false,
   postSaveReloadPending: false,
+  pendingOpenExportModal: false,
   fontDataByLoadedName: new Map(),
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
@@ -822,6 +839,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     }),
   setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
+  setPendingOpenExportModal: (value) =>
+    set({ pendingOpenExportModal: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
   setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),
