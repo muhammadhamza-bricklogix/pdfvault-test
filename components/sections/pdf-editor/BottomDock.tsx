@@ -190,17 +190,23 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
         {pageCount > 0 && (
           <Tooltip delay={300}>
             <Button
-              aria-label="Manage pages"
+              // Was "Manage" (visible label) / "Manage pages" (aria-label +
+              // tooltip, lowercase "p") — desktop's equivalent button
+              // (`PvEditorTopChrome.tsx`'s `GROUP_MANAGE`) uses the exact
+              // string "Manage Pages" throughout. Aligned all three
+              // (visible text, aria-label, tooltip) to match desktop
+              // exactly, per review item #8.
+              aria-label="Manage Pages"
               className="h-auto shrink-0 flex-col gap-0.5 px-2.5 py-1.5"
               size="sm"
               variant="tertiary"
               onPress={() => void handleOpenManagePages()}
             >
               <HugeiconsIcon icon={Layout03Icon} size={18} />
-              <span className="text-[10px] leading-tight">Manage</span>
+              <span className="text-[10px] leading-tight">Manage Pages</span>
             </Button>
             <Tooltip.Content>
-              <p>Manage pages</p>
+              <p>Manage Pages</p>
             </Tooltip.Content>
           </Tooltip>
         )}
@@ -221,7 +227,19 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
             <button
               key={tool.id}
               aria-label={tool.label}
-              className="flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-md px-2.5 py-1.5 text-default-600 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50"
+              // Matches `ToolsContent`'s `ToggleButton`s (rendered just
+              // above in this same scroll strip): those use HeroUI's
+              // "default" toggle-button variant, which has an always-on
+              // `background-color: var(--color-default)` at rest, not
+              // just on hover. These plain <button>s previously had no
+              // rest-state background (`hover:bg-default-100` only), so
+              // the strip visibly changed background right at the
+              // Background → Compress boundary where the two button
+              // types meet (review: "Inconsistent Toolbar Background").
+              // Referencing the same `--color-default`/`-hover` tokens
+              // (rather than the `default-100` scale) guarantees an
+              // exact match, including in dark mode.
+              className="flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-md bg-[var(--color-default)] px-2.5 py-1.5 text-default-600 transition-colors hover:bg-[var(--color-default-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!file}
               type="button"
               onClick={() => handleAction(tool.id)}

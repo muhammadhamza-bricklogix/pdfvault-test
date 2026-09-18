@@ -18,9 +18,32 @@ const FOOTER_COLUMNS: FooterColumn[] = [
       // Edit → PDF Composer. Compress / Merge → dedicated landing pages
       // that funnel into the editor with the matching tool auto-open.
       // Convert → the Word-to-PDF landing (most-used input format).
-      { label: "Edit & Sign", href: ROUTES.TOOLS.PDF_EDITOR },
+      //
+      // `TOOL_ROUTE.editor` (not the bare `ROUTES.TOOLS.PDF_EDITOR`) —
+      // every other composer-bound link here already goes through
+      // `TOOL_ROUTE.*`, which appends `?fresh=1` so the hydrator wipes
+      // any previous session's file on landing (see the doc comment on
+      // `TOOL_ROUTE` in `lib/shared/constants/tool-routes.ts`). This one
+      // was the sole holdout using the raw route with no `fresh=1`, so a
+      // stale file from an earlier session (e.g. the W-9 template) kept
+      // reappearing in the Composer instead of a blank drop-zone (review:
+      // "W-9 Form Opens in Composer" — reproduced via Fill W-9 → close →
+      // Edit & Sign from the footer).
+      { label: "Edit & Sign", href: TOOL_ROUTE.editor },
       { label: "Merge PDF", href: "/merge-pdf" },
-      { label: "Compress", href: TOOL_ROUTE.compress },
+      // Was `TOOL_ROUTE.compress` (`/pdf-composer?fresh=1&tool=compress`)
+      // — that's a dead end for a signed-out visitor with no file loaded:
+      // `PdfEditorShell`'s `shouldRedirectAway` bounces straight to the
+      // generic marketing homepage (`ROUTES.PUBLIC.HOME`), which shows
+      // ITS OWN "Edit Any PDF in Seconds" hero — the exact "heading and
+      // features specific to Compress ... display the content for Edit"
+      // bug from review. The dedicated `/compress` page (`ToolLandingPage`
+      // with Compress-specific title/description) is the correct
+      // destination — the comment above already describes this as the
+      // intended design ("Compress / Merge → dedicated landing pages"),
+      // and "Merge PDF" right above already follows it correctly; this
+      // was the one link that didn't match its own stated pattern.
+      { label: "Compress", href: "/compress" },
       { label: "Convert", href: "/convert/pdf-to-word" },
     ],
   },
