@@ -839,8 +839,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     }),
   setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
-  setPendingOpenExportModal: (value) =>
-    set({ pendingOpenExportModal: value }),
+  setPendingOpenExportModal: (value) => set({ pendingOpenExportModal: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
   setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),
