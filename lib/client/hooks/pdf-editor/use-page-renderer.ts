@@ -58,7 +58,7 @@ type UsePageRendererParams = {
   fitContainer?: boolean;
 };
 
-type RenderedSize = { height: number; width: number } | null;
+type RenderedSize = { height: number; width: number; zoom: number } | null;
 
 export function usePageRenderer({
   canvasRef,
@@ -153,7 +153,13 @@ export function usePageRenderer({
               return prev;
             }
 
-            return { height: cssHeight, width: cssWidth };
+            // `zoom` travels with the size it produced so consumers (see
+            // `useFabricCanvas`'s resize effect) can apply a zoom factor
+            // that's always in sync with the dimensions being set — reading
+            // the store's live `zoom` separately here would let a Fabric
+            // resize race ahead of/behind the raster layer's own async
+            // render during a fast pinch/wheel gesture.
+            return { height: cssHeight, width: cssWidth, zoom };
           });
           // Notify subscribers (specifically `useFabricCanvas`) that the
           // post-save reparse is now on screen, so Fabric can safely
