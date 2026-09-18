@@ -12,7 +12,12 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { MantineReactTable } from "mantine-react-table";
 
+import { W9_LIBRARY_FILENAME } from "@/components/sections/forms/W9FinalizeIntercept";
 import { AddFilesIllustration } from "@/components/ui/illustrations";
+import {
+  PAYWALL_CANCELLED_ERR_NAME,
+  requestPaywall,
+} from "@/lib/client/hooks/billing/paywall-bus";
 import { useDocumentsQuery } from "@/lib/client/query/queries/documents.query";
 import {
   documentMatchesTableFilters,
@@ -21,6 +26,7 @@ import {
 } from "@/lib/client/utils/documents-table-display";
 import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BulkDeleteDocumentsModal } from "./bulk-delete-documents-modal";
@@ -229,22 +235,67 @@ export function DocumentsTable() {
   const selectedDocuments = items.filter((doc) => rowSelection[doc.id]);
   const selectedCount = selectedDocuments.length;
 
+  // US-03 (2026-09-18): route each selected non-W-9 doc through the editor
+  // auto-export so bulk downloads carry the same overlays (drawings,
+  // highlights, annotations, signatures, page numbers, watermark, bg image)
+  // that single-doc downloads bake in. The cloud PDF stored per doc has
+  // `stripBakedOverlaysForSave` applied on save, so streaming the cloud
+  // URL returns the original / partially-edited bytes — the bug the P0
+  // review flagged. Editor auto-launch (`useExportEditor` items #1-4)
+  // reloads the doc, hydrates `editorState`, and produces the fully
+  // baked PDF. W-9 library saves are server-finalized on save so we
+  // stream those directly (skip the editor round-trip).
   const handleBulkDownload = async () => {
     if (!selectedDocuments.length) return;
 
     setBulkDownloadPending(true);
 
     try {
+      // Gate paywall once for the whole batch. Entitled callers short-
+      // circuit silently inside `requestPaywall`; non-entitled see the
+      // paywall once, and subsequent per-doc opens benefit from the
+      // now-hot entitlement cache.
+      const outcome = await requestPaywall(undefined, { hidePreview: true });
+
+      if (outcome !== "success") return;
+
+      let openedTabs = 0;
+
       for (const doc of selectedDocuments) {
-        await triggerDocumentDownload(doc);
+        const isW9 =
+          doc.filename.toLowerCase() === W9_LIBRARY_FILENAME.toLowerCase();
+
+        if (isW9) {
+          await triggerDocumentDownload(doc);
+        } else {
+          const query = new URLSearchParams({ id: doc.id, export: "pdf" });
+          const win = window.open(
+            `${ROUTES.TOOLS.PDF_EDITOR}?${query.toString()}`,
+            "_blank",
+            "noopener",
+          );
+
+          if (win) openedTabs += 1;
+        }
+
         await new Promise((r) => setTimeout(r, BULK_DOWNLOAD_DELAY_MS));
       }
 
+      const nonW9Count = selectedDocuments.filter(
+        (d) => d.filename.toLowerCase() !== W9_LIBRARY_FILENAME.toLowerCase(),
+      ).length;
+      const someBlocked = openedTabs < nonW9Count;
+
       toast.success({
         title: "Downloads started",
-        description: `${selectedDocuments.length} file(s).`,
+        description: someBlocked
+          ? `${selectedDocuments.length} file(s). Some tabs were blocked by your browser — allow popups from this site and retry, or use the row Download button.`
+          : `${selectedDocuments.length} file(s).`,
       });
     } catch (err) {
+      if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+        return;
+      }
       toast.error({
         title: "Download failed",
         description: err instanceof Error ? err.message : undefined,
