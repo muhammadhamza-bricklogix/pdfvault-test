@@ -9,9 +9,9 @@ import {
   ArrowUp01Icon,
   BackgroundIcon,
   Cursor01Icon,
-  DashboardSpeed01Icon,
   DownloadIcon,
   EraserIcon,
+  Grid2X2Icon,
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
@@ -402,6 +402,18 @@ export function EditorInfoBar() {
               </Button>
             </div>
 
+            {/*
+              Mobile UX #14: this button opens the full Tools catalog
+              (ToolsModal — PDF to Word, Compress, etc.), but it previously
+              used `DashboardSpeed01Icon`, a speedometer/gauge glyph with no
+              visual connection to "tools" — read as an unlabeled, unclear
+              icon (tooltips don't help touch users, who can't hover before
+              tapping). Swapped to `Grid2X2Icon`, the same 2x2-grid glyph
+              already used for the marketing site's own "All Tools" trigger
+              (`landing-header.tsx`) — reusing this app's own established
+              visual language for "opens a grid of tools" instead of
+              introducing a new one. Behavior/aria-label/tooltip unchanged.
+            */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Browse all tools"
@@ -409,7 +421,7 @@ export function EditorInfoBar() {
                 variant="tertiary"
                 onPress={() => setIsToolsModalOpen(true)}
               >
-                <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
+                <HugeiconsIcon icon={Grid2X2Icon} size={16} />
               </Button>
               <Tooltip.Content>
                 <p>Browse PDF and image tools</p>

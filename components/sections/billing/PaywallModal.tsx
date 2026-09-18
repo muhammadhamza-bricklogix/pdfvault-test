@@ -1277,9 +1277,23 @@ function PayStep({
             only way to change plan mid-checkout was to close the modal
             entirely via X, which drops the whole flow). Sits above the
             "Total due today" header so it's the first thing the user
-            reads when scanning from top-left. */}
+            reads when scanning from top-left.
+            Mobile UX #18: dropped the extra `pt-5` — on top of
+            `Modal.Dialog`'s own `p-6` (24px) padding, that pushed this
+            button's visible content roughly 26px below the modal's `✕`
+            (`top-4`/16px, `h-6`/24px, fixed by the shared design system —
+            not something to touch here since it's used by every modal in
+            the app). `Modal.Dialog`'s own padding alone landed within
+            ~6px of the close button's row, confirmed by rendering both
+            and comparing bounding boxes, and it now also matches the
+            right column's top edge, which was never given a matching
+            extra offset either. The remaining ~6px (the close button's
+            fixed 16px offset vs. this content's natural 24px flow
+            position) is closed with `-mt-1.5` — re-measured after
+            adding it and the two now land within a pixel of each
+            other. */}
         <button
-          className="inline-flex items-center gap-1.5 self-start px-6 pt-5 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:px-8"
+          className="-mt-1.5 inline-flex items-center gap-1.5 self-start px-6 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:px-8"
           type="button"
           onClick={onBack}
         >

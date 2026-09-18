@@ -3,7 +3,13 @@
 import type { FabricObject, Textbox, TPointerEventInfo } from "fabric";
 import type { PDFPageProxy } from "pdfjs-dist";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { useDrawTool } from "@/lib/client/hooks/pdf-editor/use-draw-tool";
 import { useEditTextMode } from "@/lib/client/hooks/pdf-editor/use-edit-text-mode";
@@ -186,6 +192,54 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     suppressText: isPageExtracted,
     zoom,
   });
+
+  // --- Keep the viewport's visual center anchored across zoom changes ---
+  // Nothing previously adjusted `viewerScrollRef`'s scroll position when
+  // `zoom` changed, so the page grows/shrinks from its top-left corner while
+  // scrollTop/scrollLeft stay put. Whatever text the user was looking at
+  // slides to a different screen position on every zoom press — it reads as
+  // "the page doesn't zoom, the text just moves" (reported on the zoom
+  // in/out buttons specifically, since a button click has no cursor/pinch
+  // point of its own to anchor to the way wheel/pinch gestures naturally do).
+  //
+  // `scrollAnchorRef` captures the page-relative fraction under the
+  // viewport's center BEFORE the resize, in a `useLayoutEffect` (runs before
+  // `use-page-renderer.ts`'s passive effect has resized the canvas). The
+  // plain `useEffect` below — declared after `usePageRenderer` so it runs
+  // after that resize in the same passive-effect pass — re-applies that same
+  // fraction against the new (post-zoom) content size, so the point that was
+  // centered stays centered instead of drifting.
+  const scrollAnchorRef = useRef<{ fracX: number; fracY: number } | null>(
+    null,
+  );
+  const prevZoomRef = useRef(zoom);
+
+  useLayoutEffect(() => {
+    const el = viewerScrollRef.current;
+
+    if (el && zoom !== prevZoomRef.current) {
+      const { scrollWidth, scrollHeight, clientWidth, clientHeight } = el;
+
+      if (scrollWidth > 0 && scrollHeight > 0) {
+        scrollAnchorRef.current = {
+          fracX: (el.scrollLeft + clientWidth / 2) / scrollWidth,
+          fracY: (el.scrollTop + clientHeight / 2) / scrollHeight,
+        };
+      }
+    }
+    prevZoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    const el = viewerScrollRef.current;
+    const anchor = scrollAnchorRef.current;
+
+    if (!el || !anchor) return;
+
+    el.scrollLeft = anchor.fracX * el.scrollWidth - el.clientWidth / 2;
+    el.scrollTop = anchor.fracY * el.scrollHeight - el.clientHeight / 2;
+    scrollAnchorRef.current = null;
+  }, [zoom]);
 
   const bgObjectFit: "contain" | "cover" | "fill" =
     backgroundImageConfig.fit === "stretch"
@@ -678,9 +732,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   }, [undo, redo, fabricCanvas]);
 
   // Pinch-zoom (mobile) + wheel-zoom (desktop trackpad / Cmd-wheel).
-  // Both call `setZoom` directly on the store — `use-fabric-canvas.ts` already
-  // watches `zoom` and resizes the canvas in its resize effect (lines 153-173),
-  // so nothing else needs to know about gestures.
+  // Both call `setZoom` directly on the store — `use-page-renderer.ts` re-renders
+  // the PDF layer at the new zoom, and once that completes `use-fabric-canvas.ts`'s
+  // resize effect picks up the paired `renderedSize.zoom` to resize/rezoom the
+  // overlay in lockstep, so nothing else needs to know about gestures.
   useEffect(() => {
     const el = containerRef.current;
 

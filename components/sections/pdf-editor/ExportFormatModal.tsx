@@ -94,10 +94,12 @@ type ExportFormatModalProps = {
 };
 
 function ExportFormatModalBody({
-  initialName,
+  fileName,
+  setFileName,
   onClose,
 }: {
-  initialName: string;
+  fileName: string;
+  setFileName: (name: string) => void;
   onClose: () => void;
 }) {
   const file = usePdfEditorStore((s) => s.file);
@@ -126,8 +128,8 @@ function ExportFormatModalBody({
     [isW9Route, W9_ALLOWED_FORMATS],
   );
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");
-  const [fileName, setFileName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
+  const fileNameInputRef = useRef<HTMLInputElement>(null);
 
   // Duplicate-name check against the user's My PDFs library. Only
   // runs on the W-9 route per product ask 2026-08-29 — the shell
@@ -371,6 +373,7 @@ function ExportFormatModalBody({
               onChange={setFileName}
             >
               <Input
+                ref={fileNameInputRef}
                 aria-invalid={duplicateExists}
                 aria-label="File name"
                 className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
@@ -378,11 +381,27 @@ function ExportFormatModalBody({
                 placeholder="document"
               />
             </TextField>
-            <HugeiconsIcon
-              className="shrink-0 text-default-400"
-              icon={PencilEdit01Icon}
-              size={15}
-            />
+            {/*
+              Mobile UX #15 (this modal's own instance): the pencil here was
+              a bare icon with no click handler at all — clicking the input
+              text already focuses it natively (it's a real, always-editable
+              `Input`), but the pencil itself did nothing, which is exactly
+              the "field works, pencil doesn't" gap the user flagged. Wrapped
+              it in a real button that focuses + selects the input's text,
+              mirroring the pattern already used by the top-bar filename
+              field's own pencil (`EditableFilenameField.tsx`).
+            */}
+            <button
+              aria-label="Rename file"
+              className="shrink-0 rounded p-0.5 text-default-400 transition-colors hover:bg-default-200 hover:text-default-700"
+              type="button"
+              onClick={() => {
+                fileNameInputRef.current?.focus();
+                fileNameInputRef.current?.select();
+              }}
+            >
+              <HugeiconsIcon icon={PencilEdit01Icon} size={15} />
+            </button>
           </div>
           {isW9Route && duplicateExists ? (
             <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
@@ -428,6 +447,31 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
   const file = usePdfEditorStore((s) => s.file);
   const initialName = file ? stripExt(file.name) : "document";
 
+  // Mobile UX #16: `fileName` lives HERE, not inside `ExportFormatModalBody`,
+  // specifically so a typed rename survives the modal closing. Repro:
+  // rename in the "File name" field → Download → for a guest this triggers
+  // the sign-in prompt (`handleDownload` calls `onClose()` right after
+  // dispatching `editor:export`, before anything is actually downloaded) →
+  // cancel that prompt → reopen Download. `ExportFormatModalBody` remounts
+  // on every open (`key` below — kept deliberately, since `selected` format
+  // and the duplicate-name-check state SHOULD reset fresh each time), which
+  // was wiping this typed name back to the file's default along with it.
+  const [fileName, setFileName] = useState(initialName);
+  const lastFileRef = useRef(file);
+
+  // Reset only when the underlying file actually changes (a genuinely
+  // different document was opened) — not on every open/close of the SAME
+  // file. A `useEffect` (rather than comparing the ref during render) is
+  // required here — this project's React Compiler lint rejects reading a
+  // ref while rendering, since it can't guarantee the comparison still
+  // lines up under the compiler's own re-render granularity.
+  useEffect(() => {
+    if (file !== lastFileRef.current) {
+      lastFileRef.current = file;
+      setFileName(initialName);
+    }
+  }, [file, initialName]);
+
   return (
     <Modal.Backdrop
       isOpen={isOpen}
@@ -439,7 +483,8 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
         {isOpen && (
           <ExportFormatModalBody
             key={`${initialName}::${isOpen}`}
-            initialName={initialName}
+            fileName={fileName}
+            setFileName={setFileName}
             onClose={onClose}
           />
         )}
