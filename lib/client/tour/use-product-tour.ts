@@ -7,51 +7,45 @@ import { TOUR_STORAGE_KEYS, TOURS, type TourKey } from "./tour-config";
 
 import "driver.js/dist/driver.css";
 
-// Auto-launch is desktop-only. On mobile the sidebar is behind a
-// hamburger and the editor's chrome differs — a driven overlay would
-// mis-anchor. The help button (`?`) still lets a mobile user replay.
-const AUTO_LAUNCH_MIN_WIDTH = 768;
-
 /**
  * Event name fired when any tour instance is destroyed (completed,
  * skipped, or route-change cleanup). Listeners can defer their own
  * work until after the tour finishes — e.g. the composer hydrator
- * uses this to wait out the first-visit tour before dispatching a
- * tool-open event (QA 2026-09-06: tool modal + tour opened together
- * and interfered with each other).
+ * uses this to wait out the tour before dispatching a tool-open event
+ * when the tour is manually started from `TourHelpButton`.
  */
 export const TOUR_ENDED_EVENT = "editor:tour-ended";
 
 /**
- * True when `useProductTour(key)` WOULD auto-launch on this visit —
- * used by out-of-tree callers (hydrator, etc.) to decide whether to
- * defer their own work behind the tour. Mirrors the exact gates in
- * the auto-launch effect below (SSR-safe, viewport-gated,
- * already-seen aware, module-level dedupe).
+ * Retained for backwards-compatibility with the composer hydrator
+ * (`pending-editor-file-hydrator.tsx`) which checks this flag before
+ * deferring its auto-launch behind `TOUR_ENDED_EVENT`. Auto-launch is
+ * disabled (product decision 2026-09-17: interrupting first use hurt
+ * conversion; tours are now user-initiated via `TourHelpButton`), so
+ * this always returns false and the hydrator takes the return-visitor
+ * (instant launch) path.
  */
-export function willTourAutoLaunch(key: TourKey): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return false;
-  if (alreadySeen(key)) return false;
-
-  return true;
+export function willTourAutoLaunch(_key: TourKey): boolean {
+  return false;
 }
 
-// Module-level singletons so the hook stays safe when multiple
+// Module-level singleton so the hook stays safe when multiple
 // components mount it for the same surface (e.g. DashboardHome +
 // TourHelpButton both call useProductTour("dashboard")). Without
-// these guards, each caller spawns its own driver instance and the
+// this guard, each caller spawns its own driver instance and the
 // overlays overlap on screen — two "Next" buttons visible at once.
-const autoLaunchedKeys = new Set<TourKey>();
 let activeInstance: ReturnType<typeof driver> | null = null;
 
-function alreadySeen(key: TourKey): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    return window.localStorage.getItem(TOUR_STORAGE_KEYS[key]) === "1";
-  } catch {
-    return true;
-  }
+type DataLayerWindow = Window & {
+  dataLayer?: Array<Record<string, unknown>>;
+};
+
+function pushDataLayer(payload: Record<string, unknown>): void {
+  if (typeof window === "undefined") return;
+  const w = window as DataLayerWindow;
+
+  w.dataLayer = w.dataLayer ?? [];
+  w.dataLayer.push(payload);
 }
 
 function markSeen(key: TourKey): void {
@@ -65,6 +59,7 @@ function markSeen(key: TourKey): void {
 
 export function useProductTour(key: TourKey, enabled: boolean = true) {
   const start = useCallback(() => {
+    if (!enabled) return;
     if (typeof window === "undefined") return;
 
     // Kill any prior instance BEFORE spawning a new one. Guards against
@@ -75,6 +70,17 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
       activeInstance.destroy();
       activeInstance = null;
     }
+
+    const totalSteps = TOURS[key].length;
+    let lastStepIndex = 0;
+
+    // GA4 via GTM — fires "tour_started" so completion rate can be
+    // computed against "tour_ended" downstream.
+    pushDataLayer({
+      event: "tour_started",
+      tour_key: key,
+      total_steps: totalSteps,
+    });
 
     // Wait a frame so the target elements are actually mounted when the
     // caller fires immediately after a route transition.
@@ -92,6 +98,11 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
         prevBtnText: "Back",
         doneBtnText: "Got it",
         steps: TOURS[key],
+        onHighlightStarted: (_el, _step, opts) => {
+          const idx = opts?.state?.activeIndex;
+
+          if (typeof idx === "number") lastStepIndex = idx;
+        },
         onPopoverRender: (popover) => {
           // Inject a "Skip all" button on the left of the footer.
           // driver.js re-renders the popover on every step, so this
@@ -110,6 +121,21 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
         onDestroyed: () => {
           markSeen(key);
           if (activeInstance === instance) activeInstance = null;
+
+          const completed = lastStepIndex >= totalSteps - 1;
+
+          pushDataLayer({
+            event: "tour_ended",
+            tour_key: key,
+            last_step_index: lastStepIndex,
+            total_steps: totalSteps,
+            completed,
+            completion_rate:
+              totalSteps > 0
+                ? Math.round(((lastStepIndex + 1) / totalSteps) * 100)
+                : 0,
+          });
+
           // Notify deferred consumers (composer hydrator, etc.) that
           // the tour is done so they can now run their own auto-launch
           // (tool modal, export, etc.) without fighting the driver.js
@@ -125,29 +151,7 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
       activeInstance = instance;
       instance.drive();
     });
-  }, [key]);
-
-  // Auto-launch once per surface, desktop only. Module-level Set makes
-  // sure only ONE caller triggers the tour per session even when
-  // several components share the same `useProductTour(key)` call.
-  // `enabled=false` short-circuits so a caller can suppress the tour on
-  // specific routes without breaking the rules-of-hooks (e.g. the W-9
-  // form reuses <PdfEditorShell /> but must NOT auto-run the editor
-  // tour — anchors don't map, copy references the wrong surface).
-  useEffect(() => {
-    if (!enabled) return;
-    if (typeof window === "undefined") return;
-    if (window.innerWidth < AUTO_LAUNCH_MIN_WIDTH) return;
-    if (alreadySeen(key)) return;
-    if (autoLaunchedKeys.has(key)) return;
-    autoLaunchedKeys.add(key);
-
-    const id = window.setTimeout(() => {
-      start();
-    }, 600);
-
-    return () => window.clearTimeout(id);
-  }, [key, start, enabled]);
+  }, [key, enabled]);
 
   // Destroy any active tour instance when the host component unmounts —
   // the most common trigger is a route change (browser back, in-app
@@ -156,8 +160,7 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
   // (user report: tour visible on landing after leaving the editor).
   // `activeInstance` is a module-level singleton, so tearing it down
   // here doesn't affect other surfaces — the next surface's mount
-  // triggers its own `start()`. `markSeen` still fires via
-  // `onDestroyed` so the tour won't auto-relaunch on the same key.
+  // triggers its own `start()`.
   useEffect(() => {
     return () => {
       if (activeInstance) {

@@ -537,7 +537,7 @@ export function EditorInfoBar() {
               <span className="ml-1 hidden sm:inline">Share</span>
             </Button>
             <Button
-              aria-label="Done"
+              aria-label="Finish and Download"
               isDisabled={!file || isSavingBeforeExport}
               size="sm"
               variant="primary"
@@ -545,7 +545,7 @@ export function EditorInfoBar() {
             >
               <HugeiconsIcon icon={Tick01Icon} size={14} />
               <span className="ml-1 hidden sm:inline">
-                {isSavingBeforeExport ? "Saving…" : "Done"}
+                {isSavingBeforeExport ? "Saving…" : "Finish & Download"}
               </span>
             </Button>
 

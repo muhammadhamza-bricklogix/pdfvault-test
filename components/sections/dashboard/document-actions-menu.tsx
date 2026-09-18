@@ -8,9 +8,10 @@ import {
   Delete02Icon,
   Download01Icon,
   FileEditIcon,
+  MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, Tooltip } from "@heroui/react";
+import { Button, Dropdown, Label } from "@heroui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -57,7 +58,7 @@ export function DocumentActionsMenu({
 
   const handleDownload = async () => {
     try {
-      await triggerDocumentDownload(doc);
+      await triggerDocumentDownload(doc, router);
     } catch (err) {
       toast.error({
         title: "Download failed",
@@ -67,86 +68,73 @@ export function DocumentActionsMenu({
   };
 
   return (
-    <div className="flex items-center justify-end gap-1">
-      <Tooltip delay={300}>
+    <div className="flex items-center justify-end gap-2">
+      {/* Primary CTA — Download. Row-level review 2026-09-17: users
+          want the reward action visible on every row, not hidden in
+          a menu. Every other action moves into the 3-dot overflow. */}
+      <Button
+        aria-label={`Download ${doc.filename}`}
+        className="h-8 shrink-0 gap-1.5 rounded-full px-3 text-[13px] font-semibold"
+        size="sm"
+        variant="primary"
+        onPress={() => void handleDownload()}
+      >
+        <HugeiconsIcon icon={Download01Icon} size={14} />
+        <span className="hidden sm:inline">Download</span>
+      </Button>
+
+      {/* Overflow menu — Open / History / Rename / Delete. Handlers
+          untouched so the paywall gate in `openDocumentInEditor`
+          (converted-PDF gate) and the delete-confirm modal continue
+          to fire from the same call sites. */}
+      <Dropdown>
         <Button
-          isIconOnly
-          aria-label={`Open ${doc.filename}`}
-          className="text-default-600"
+          aria-label={`More actions for ${doc.filename}`}
+          className="!h-8 !w-8 !min-w-0 shrink-0 rounded-full text-default-600"
           size="sm"
           variant="ghost"
-          onPress={() => void handleOpen()}
         >
-          <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+          <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
         </Button>
-        <Tooltip.Content>
-          <p>Open</p>
-        </Tooltip.Content>
-      </Tooltip>
-      <Tooltip delay={300}>
-        <Button
-          isIconOnly
-          aria-label={`Download ${doc.filename}`}
-          className="text-default-600"
-          size="sm"
-          variant="ghost"
-          onPress={() => void handleDownload()}
-        >
-          <HugeiconsIcon icon={Download01Icon} size={16} />
-        </Button>
-        <Tooltip.Content>
-          <p>Download</p>
-        </Tooltip.Content>
-      </Tooltip>
-      <Tooltip delay={300}>
-        <Button
-          isIconOnly
-          aria-label={`View history for ${doc.filename}`}
-          className="text-default-600"
-          size="sm"
-          variant="ghost"
-          onPress={() => setIsHistoryOpen(true)}
-        >
-          <HugeiconsIcon icon={Clock01Icon} size={16} />
-        </Button>
-        <Tooltip.Content>
-          <p>History</p>
-        </Tooltip.Content>
-      </Tooltip>
-      {isProtectedSystemDoc ? null : (
-        <Tooltip delay={300}>
-          <Button
-            isIconOnly
-            aria-label={`Rename ${doc.filename}`}
-            className="text-default-600"
-            size="sm"
-            variant="ghost"
-            onPress={onRename}
-          >
-            <HugeiconsIcon icon={FileEditIcon} size={16} />
-          </Button>
-          <Tooltip.Content>
-            <p>Rename</p>
-          </Tooltip.Content>
-        </Tooltip>
-      )}
-      {isProtectedSystemDoc ? null : (
-        <Tooltip delay={300}>
-          <Button
-            isIconOnly
-            aria-label={`Delete ${doc.filename}`}
-            className="text-danger"
-            size="sm"
-            variant="ghost"
-            onPress={onDelete}
-          >
-            <HugeiconsIcon icon={Delete02Icon} size={16} />
-          </Button>
-          <Tooltip.Content>
-            <p className="text-danger">Delete</p>
-          </Tooltip.Content>
-        </Tooltip>
-      )}
+        <Dropdown.Popover className="min-w-[180px]" placement="bottom end">
+          <Dropdown.Menu aria-label={`Actions for ${doc.filename}`}>
+            <Dropdown.Item
+              id="open"
+              textValue="Open"
+              onAction={() => void handleOpen()}
+            >
+              <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+              <Label>Open</Label>
+            </Dropdown.Item>
+            <Dropdown.Item
+              id="history"
+              textValue="Version history"
+              onAction={() => setIsHistoryOpen(true)}
+            >
+              <HugeiconsIcon icon={Clock01Icon} size={16} />
+              <Label>Version history</Label>
+            </Dropdown.Item>
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item id="rename" textValue="Rename" onAction={onRename}>
+                <HugeiconsIcon icon={FileEditIcon} size={16} />
+                <Label>Rename</Label>
+              </Dropdown.Item>
+            )}
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item
+                className="text-danger"
+                id="delete"
+                textValue="Delete"
+                onAction={onDelete}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} />
+                <Label>Delete</Label>
+              </Dropdown.Item>
+            )}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown>
+
       <VersionHistoryModal
         documentId={isHistoryOpen ? doc.id : null}
         isOpen={isHistoryOpen}

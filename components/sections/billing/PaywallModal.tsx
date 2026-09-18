@@ -278,6 +278,21 @@ export function PaywallModal({
         if (preExistingChildren.has(child)) continue;
         const el = child as HTMLElement;
 
+        // Skip CookieYes portals. The consent banner + preference-center
+        // modal must stay behind the paywall — the CSS in globals.css
+        // pins them to z-index 40 so HeroUI's z-index 50 backdrop
+        // covers them. Un-inerting + hoisting to max-int here would
+        // override that pin and put the banner on top of the checkout
+        // dialog (P1 2026-09-18). Filter by `cky-*` id/class prefixes,
+        // which is the vendor's canonical namespace across every
+        // banner / modal / overlay variant they ship.
+        if (
+          typeof el.matches === "function" &&
+          el.matches('[id^="cky-"], [id^="cookieyes"], [class*="cky-"]')
+        ) {
+          continue;
+        }
+
         // Only fix elements that React Aria actually marked inert/hidden.
         if (!el.inert && el.getAttribute("aria-hidden") !== "true") continue;
         el.inert = false;
@@ -982,36 +997,46 @@ function PlanStep({
     return "Your PDF is ready.";
   })();
 
+  // Shared Continue CTA — rendered directly beneath the plan selector in
+  // both single-column (`hidePreview`) and two-column layouts. Product
+  // review 2026-09-18: previous header-right placement forced the eye to
+  // jump plan → header on decision; putting the CTA immediately below
+  // the cards keeps "Select plan → Continue" contiguous and reads as one
+  // visual step. Full-width + larger tap target (h-[60px] sm:h-[64px])
+  // makes the action unmistakable on mobile and desktop. Position stays
+  // the same regardless of preview state so the button never jumps
+  // between pricing sub-steps. Handler + loading state unchanged.
+  const continueButton = (
+    <button
+      className="group inline-flex h-[60px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[17px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[64px] sm:text-[18px]"
+      disabled={continueDisabled}
+      type="button"
+      onClick={onContinue}
+    >
+      {continueLoading ? "Preparing…" : "Continue"}
+      {continueLoading ? null : (
+        <span
+          aria-hidden
+          className="text-[22px] leading-none transition-transform group-hover:translate-x-1"
+        >
+          →
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <div className="flex flex-col">
-      {/* Header row — title (left) + Continue (right) */}
-      <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
-        <div className="flex flex-col gap-1">
-          <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            {readyHeading}
-          </h2>
-          <p className="text-[13px] text-[#6c6c6c]">
-            Cancel anytime · Secure checkout · Instant access
-          </p>
-        </div>
-        <div className="flex flex-col items-stretch gap-1 sm:items-end">
-          <button
-            className="group inline-flex h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[14px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(241,44,35,0.6)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_14px_28px_-8px_rgba(241,44,35,0.7)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px"
-            disabled={continueDisabled}
-            type="button"
-            onClick={onContinue}
-          >
-            {continueLoading ? "Preparing…" : "Continue"}
-            {continueLoading ? null : (
-              <span
-                aria-hidden
-                className="transition-transform group-hover:translate-x-0.5"
-              >
-                →
-              </span>
-            )}
-          </button>
-        </div>
+      {/* Header — title + subtitle only. Continue moved directly below
+          the plan selector (see `continueButton` above) so plan
+          selection → CTA is a single visual beat. */}
+      <div className="flex flex-col gap-1 border-b border-[#ececec] p-6 md:p-8">
+        <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
+          {readyHeading}
+        </h2>
+        <p className="text-[13px] text-[#6c6c6c]">
+          Cancel anytime · Secure checkout · Instant access
+        </p>
       </div>
 
       {/* Body — two columns, or plan-picker only when the caller
@@ -1028,6 +1053,8 @@ function PlanStep({
           />
 
           <AcceptedCards />
+
+          {continueButton}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1083,6 +1110,8 @@ function PlanStep({
             />
 
             <AcceptedCards />
+
+            {continueButton}
           </div>
         </div>
       )}

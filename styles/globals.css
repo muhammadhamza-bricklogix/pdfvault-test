@@ -299,3 +299,24 @@ body {
   display: none !important;
 }
 
+/* Force the CookieYes consent banner to sit BELOW HeroUI modals.
+ * HeroUI's modal backdrop is at `z-index: 50` (see node_modules/
+ * @heroui/styles/dist/components/modal.css `.modal__backdrop`).
+ * CookieYes ships its banner at a very high default (~999999) which
+ * covered the paywall's disclaimer footer in-flight. Pinning to 40
+ * keeps the banner above regular page chrome when no modal is open
+ * (page content is `z-index: auto`), and lets any HeroUI modal
+ * cover it during checkout so required subscription terms stay
+ * visible. Reported 2026-09-17. */
+.cky-consent-container,
+.cky-consent-bar,
+.cky-modal,
+.cky-modal-container,
+.cky-preference-center,
+.cky-preference-modal,
+.cky-overlay,
+[class*="cky-consent"],
+[class*="cky-modal"] {
+  z-index: 40 !important;
+}
+
