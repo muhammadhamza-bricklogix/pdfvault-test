@@ -13,6 +13,7 @@
  * the backend's entitlement resolver.
  */
 export const ENTITLEMENT_ALLOWLIST: ReadonlySet<string> = new Set([
+  "uzair@thesoftaims.com",
   "muhammad.hamza@brickslogix.com",
   "huzaifa@pdfvault.ai",
   "vifaq.zafar@brickslogix.com",
