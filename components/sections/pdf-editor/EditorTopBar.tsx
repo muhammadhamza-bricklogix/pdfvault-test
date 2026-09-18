@@ -121,23 +121,18 @@ export function EditorInfoBar() {
     return () => window.removeEventListener("editor:toggle-thumbs", toggle);
   }, []);
 
-  // Welcome-email arrival — mirror of PvEditorTopChrome's watcher.
-  // Store flag pattern (rather than CustomEvent) so the modal opens
-  // even when the chrome mounted after the hydrator's setTimeout
-  // fired. See `pendingOpenExportModal` docstring in pdf-editor-store.
+  // Welcome-email arrival — mirror of PvEditorTopChrome. Derived
+  // open-state (`isOpen={isExportModalOpen || pendingOpenExportModal}`
+  // below) + close handler that clears both flags. See the sibling
+  // block in PvEditorTopChrome + `pendingOpenExportModal` docstring
+  // in pdf-editor-store for full rationale (React 19's
+  // `react-hooks/set-state-in-effect` rule + hydrator/chrome mount race).
   const pendingOpenExportModal = usePdfEditorStore(
     (s) => s.pendingOpenExportModal,
   );
   const setPendingOpenExportModal = usePdfEditorStore(
     (s) => s.setPendingOpenExportModal,
   );
-
-  useEffect(() => {
-    if (pendingOpenExportModal) {
-      setIsExportModalOpen(true);
-      setPendingOpenExportModal(false);
-    }
-  }, [pendingOpenExportModal, setPendingOpenExportModal]);
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
@@ -351,8 +346,11 @@ export function EditorInfoBar() {
         onClose={() => setIsToolsModalOpen(false)}
       />
       <ExportFormatModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
+        isOpen={isExportModalOpen || pendingOpenExportModal}
+        onClose={() => {
+          setIsExportModalOpen(false);
+          setPendingOpenExportModal(false);
+        }}
       />
       {/*
         Mobile (<sm) gets a two-row layout: action bar on row 1, page + zoom
