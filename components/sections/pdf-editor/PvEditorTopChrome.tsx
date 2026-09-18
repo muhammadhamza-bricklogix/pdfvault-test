@@ -42,7 +42,7 @@ import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
@@ -359,6 +359,23 @@ function TopAppBar() {
       }),
     );
   };
+
+  // Auto-open the ExportFormatModal when the welcome-email button
+  // lands the user here with `?tool=export` in the URL. The hydrator's
+  // Step 4 (pending-editor-file-hydrator.tsx) fires this event once
+  // the file has loaded from cloud; the modal's own Download button
+  // then dispatches `editor:export` which runs the standard
+  // `useExportEditor` gate — paid caller downloads, unpaid caller sees
+  // the paywall. Product ask (2026-09-18, revised): format-picker
+  // first so users see options before the paywall / download decision.
+  useEffect(() => {
+    const onOpenExportModal = () => setIsExportModalOpen(true);
+
+    window.addEventListener("editor:open-export-modal", onOpenExportModal);
+
+    return () =>
+      window.removeEventListener("editor:open-export-modal", onOpenExportModal);
+  }, []);
 
   // Display name strips `.pdf` because the extension is redundant in
   // an editor that only handles PDFs — commit re-appends it before

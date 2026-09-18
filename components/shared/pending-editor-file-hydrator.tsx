@@ -631,6 +631,23 @@ export function PendingEditorFileHydrator() {
             case "flatten":
               window.dispatchEvent(new CustomEvent("editor:open-flatten"));
               break;
+            case "export":
+              // Welcome-email button lands users here — opens
+              // ExportFormatModal so the user picks their format
+              // (PDF / DOCX / JPG / etc.) before the paywall /
+              // download decision fires. The modal's Download
+              // button dispatches `editor:export` internally, which
+              // runs the standard `useExportEditor` gate:
+              //   - paid → downloads the file
+              //   - unpaid → paywall opens
+              // Product ask (2026-09-18): earlier version used
+              // `?export=pdf` to auto-launch the paywall on arrival,
+              // but PM asked for format-picker first so users see
+              // their options before committing.
+              window.dispatchEvent(
+                new CustomEvent("editor:open-export-modal"),
+              );
+              break;
             default:
               logger.warn(`unknown auto-launch tool: ${tool}`);
           }
