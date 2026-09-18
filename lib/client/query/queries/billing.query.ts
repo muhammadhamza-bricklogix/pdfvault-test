@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -18,12 +19,22 @@ import { billingKeys } from "@/lib/shared/constants/query-keys";
  * `staleTime` is short (30s) so a successful checkout flips the local
  * cache quickly without waiting for the next mount. The paywall modal
  * also invalidates this key on success.
+ *
+ * Gated on Clerk auth: `PaywallProvider` mounts at the app root so this
+ * query would otherwise fire for signed-out landing-page visitors and
+ * return a 401. Skipping the request until Clerk has loaded AND the
+ * user is signed in avoids the noise without changing downstream
+ * behaviour — signed-out callers of the paywall are already routed
+ * through `dispatchSignInPrompt` in `usePaywall` before they ever read
+ * subscription state.
  */
 export function useSubscriptionQuery() {
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const allowlisted = useIsEntitlementAllowlisted();
   const result = useQuery({
     queryKey: billingKeys.subscription(),
     queryFn: billingService.getSubscription,
+    enabled: authLoaded && Boolean(isSignedIn),
     staleTime: 30_000,
   });
 
