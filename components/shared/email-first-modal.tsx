@@ -44,6 +44,23 @@ export type EmailFirstModalDetail = {
    * button so the user's email is restored when they return.
    */
   initialEmail?: string;
+  /**
+   * When set, the auto-signup flow (item #5 in the modal's docstring)
+   * uploads this file — the PDF with all Fabric edits burned in —
+   * via the authenticated `/documents/upload` endpoint AFTER the
+   * Clerk ticket sign-in but BEFORE `signIn.finalize`, then calls
+   * `POST /auth/quick-signup/notify` with the resulting `docId` so
+   * the Customer.io welcome email's CTA links straight to the
+   * composer with the file already loaded. `id=<docId>` is also
+   * appended to the finalize redirect so the composer loads from
+   * cloud on the same-session return (skips the IDB-restore path in
+   * the hydrator). Not set → runAutoSignup falls through to the
+   * legacy IDB-hydrator flow, and the welcome email lands with the
+   * dashboard fallback URL. Editor `Done → Download` sets this via
+   * `useExportEditor`; other callers (compress, password) leave it
+   * empty.
+   */
+  bakedFile?: File;
 };
 
 /**
@@ -234,6 +251,16 @@ export function EmailFirstModal() {
           redirectUrl: returnTo,
           signIn,
           fileName: editorFile?.name,
+          // Forward the pre-baked file (Fabric edits burned in) so
+          // runAutoSignup can upload it right after ticket sign-in and
+          // pass the resulting docId into `POST /auth/quick-signup/notify`
+          // — that makes the welcome email's CTA land the user in the
+          // composer with their edited file already loaded, instead of
+          // a generic dashboard link. Not every caller of this modal
+          // bakes ahead of time (compress / password / etc.), so this
+          // is optional; runAutoSignup falls back to the IDB-restore
+          // path when absent.
+          bakedFile: detail?.bakedFile,
         });
 
         if (outcome.kind === "created") {

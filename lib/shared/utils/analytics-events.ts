@@ -49,6 +49,10 @@ export const EVENTS = {
   AUTH_QUICK_SIGNUP_BACKEND_ERROR: "auth.quick_signup.backend_error",
   AUTH_QUICK_SIGNUP_TICKET_OK: "auth.quick_signup.ticket_ok",
   AUTH_QUICK_SIGNUP_TICKET_ERROR: "auth.quick_signup.ticket_error",
+  AUTH_QUICK_SIGNUP_UPLOAD_OK: "auth.quick_signup.upload_ok",
+  AUTH_QUICK_SIGNUP_UPLOAD_ERROR: "auth.quick_signup.upload_error",
+  AUTH_QUICK_SIGNUP_NOTIFY_OK: "auth.quick_signup.notify_ok",
+  AUTH_QUICK_SIGNUP_NOTIFY_ERROR: "auth.quick_signup.notify_error",
   AUTH_QUICK_SIGNUP_FINALIZE_OK: "auth.quick_signup.finalize_ok",
   AUTH_QUICK_SIGNUP_FINALIZE_ERROR: "auth.quick_signup.finalize_error",
 
