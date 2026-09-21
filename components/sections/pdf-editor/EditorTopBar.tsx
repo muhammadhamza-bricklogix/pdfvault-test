@@ -11,7 +11,7 @@ import {
   Cursor01Icon,
   DownloadIcon,
   EraserIcon,
-  Grid2X2Icon,
+  GridIcon,
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
@@ -424,11 +424,14 @@ export function EditorInfoBar() {
               used `DashboardSpeed01Icon`, a speedometer/gauge glyph with no
               visual connection to "tools" — read as an unlabeled, unclear
               icon (tooltips don't help touch users, who can't hover before
-              tapping). Swapped to `Grid2X2Icon`, the same 2x2-grid glyph
-              already used for the marketing site's own "All Tools" trigger
-              (`landing-header.tsx`) — reusing this app's own established
-              visual language for "opens a grid of tools" instead of
-              introducing a new one. Behavior/aria-label/tooltip unchanged.
+              tapping). Swapped to `GridIcon` — the same grid glyph
+              already used inside the composer (`ManagePagesModal`
+              Select All), reusing this app's established visual
+              language for "opens a grid of tools" instead of
+              introducing a new one. (Was previously `Grid2X2Icon`;
+              that alias was removed from `@hugeicons/core-free-icons`
+              and broke the Turbopack build.) Behavior / aria-label /
+              tooltip unchanged.
             */}
             <Tooltip delay={300}>
               <Button
@@ -437,7 +440,7 @@ export function EditorInfoBar() {
                 variant="tertiary"
                 onPress={() => setIsToolsModalOpen(true)}
               >
-                <HugeiconsIcon icon={Grid2X2Icon} size={16} />
+                <HugeiconsIcon icon={GridIcon} size={16} />
               </Button>
               <Tooltip.Content>
                 <p>Browse PDF and image tools</p>
