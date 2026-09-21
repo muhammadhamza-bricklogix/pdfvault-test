@@ -164,20 +164,57 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
     try {
       const { IText: FabricIText } = await import("fabric");
 
-      // Centre the glyph on the current Fabric viewport. `getZoom`
-      // returns the visual zoom; we want base (zoom=1) coords so the
-      // object position matches what `mergeFabricEditsIntoPdf`
+      // `getZoom` returns the visual zoom; we want base (zoom=1) coords
+      // so the object position matches what `mergeFabricEditsIntoPdf`
       // expects. Width/height of the canvas at zoom=1 = base dims.
       const zoom = liveCanvas.getZoom() || 1;
       const baseWidth = liveCanvas.getWidth() / zoom;
       const baseHeight = liveCanvas.getHeight() / zoom;
-
-      // Drop the annotation roughly at canvas centre. Width estimate
-      // uses the same `fontSize * 0.6` heuristic used elsewhere — exact
-      // centring isn't critical since the user usually drags it after.
       const approxWidth = def.glyph.length * def.fontSize * 0.6;
-      const left = Math.max(0, (baseWidth - approxWidth) / 2);
-      const top = Math.max(0, (baseHeight - def.fontSize) / 2);
+      const clamp = (value: number, min: number, max: number) =>
+        Math.min(Math.max(value, min), max);
+
+      // Default: page centre (used if the scroll container can't be
+      // found for some reason).
+      let left = clamp(
+        (baseWidth - approxWidth) / 2,
+        0,
+        Math.max(0, baseWidth - approxWidth),
+      );
+      let top = clamp(
+        (baseHeight - def.fontSize) / 2,
+        0,
+        Math.max(0, baseHeight - def.fontSize),
+      );
+
+      // Prefer the centre of the currently VISIBLE viewport over the
+      // page's absolute centre — on a tall page at mobile's low fit-to-
+      // width zoom, page-centre can land far outside what the user is
+      // actually looking at (they have to scroll to find it).
+      const canvasEl = liveCanvas.getElement();
+      const scrollEl = canvasEl.closest<HTMLElement>(
+        "[data-pdf-viewer-scroll]",
+      );
+
+      if (scrollEl) {
+        const canvasRect = canvasEl.getBoundingClientRect();
+        const scrollRect = scrollEl.getBoundingClientRect();
+        const visibleCenterX = scrollRect.left + scrollRect.width / 2;
+        const visibleCenterY = scrollRect.top + scrollRect.height / 2;
+        const baseCenterX = (visibleCenterX - canvasRect.left) / zoom;
+        const baseCenterY = (visibleCenterY - canvasRect.top) / zoom;
+
+        left = clamp(
+          baseCenterX - approxWidth / 2,
+          0,
+          Math.max(0, baseWidth - approxWidth),
+        );
+        top = clamp(
+          baseCenterY - def.fontSize / 2,
+          0,
+          Math.max(0, baseHeight - def.fontSize),
+        );
+      }
 
       const obj = new FabricIText(def.glyph, {
         editorType: "annotation",
