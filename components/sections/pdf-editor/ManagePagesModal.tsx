@@ -32,16 +32,15 @@ import {
   Modal,
   NumberField,
   Popover,
-  Separator,
   Tooltip,
 } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useManagePagesDraft } from "@/lib/client/hooks/pdf-editor/use-manage-pages-draft";
-import { usePdfEditorStore } from "@/lib/client/stores";
-
 import { PageResizeDialog } from "./PageResizeDialog";
 import { SortablePageList } from "./ThumbnailSidebar";
+
+import { useManagePagesDraft } from "@/lib/client/hooks/pdf-editor/use-manage-pages-draft";
+import { usePdfEditorStore } from "@/lib/client/stores";
 
 type ManagePagesModalProps = {
   isOpen: boolean;
@@ -55,31 +54,16 @@ type ToolbarItem = {
   label: string;
 };
 
-// Review item #9 ("Manage Pages UI Confusion" — mobile UX pass): the
-// original flat LEFT_TOOLS list crammed all 11 page-actions into one
-// row with no hierarchy. Split into the handful used constantly
-// (kept as direct buttons) and the rest (moved into the "More
-// actions" dropdown below, PDF-Guru-style, per the user's explicit
-// choice of that option over a plain re-grouping).
-//
-// New Page / Delete Pages are the two most fundamental actions in any
-// page manager. Background Color stays a direct button too, but for a
-// structural reason, not a frequency one: it opens its OWN anchored
-// `Popover` with a live color picker (see `BackgroundColorPickerControl`
-// below) — nesting an anchored popover trigger inside a Dropdown.Item
-// doesn't work cleanly (the parent menu closes and unmounts the trigger
-// before the child popover can attach to it), so it has to stay a
-// standalone control either way.
+// Background Color stays a direct button (not a Dropdown.Item) because it opens its own
+// anchored Popover, and a popover trigger nested inside a Dropdown.Item doesn't work cleanly.
 const PRIMARY_LEFT_TOOLS: ToolbarItem[] = [
   { icon: Add01Icon, id: "new-page", label: "New Page" },
   { icon: Delete02Icon, id: "delete", label: "Delete Pages" },
   { icon: ColorsIcon, id: "background-color", label: "Background Color" },
 ];
 
-// Everything else: all fire a plain action or open their own dialog
-// (Resize Page, Move) — both compatible with a menu item, unlike
-// Background Color's anchored popover above.
-const OVERFLOW_LEFT_TOOLS: ToolbarItem[] = [
+// Every other page action lives in this single "More actions" dropdown.
+const MORE_ACTIONS_TOOLS: ToolbarItem[] = [
   { icon: Copy01Icon, id: "duplicate", label: "Duplicate" },
   { icon: RotateLeft01Icon, id: "rotate-left", label: "Rotate Left" },
   { icon: RotateRight01Icon, id: "rotate-right", label: "Rotate Right" },
@@ -88,9 +72,6 @@ const OVERFLOW_LEFT_TOOLS: ToolbarItem[] = [
   { icon: ArrowLeft01Icon, id: "move-before", label: "Move Before" },
   { icon: ArrowRight01Icon, id: "move-after", label: "Move After" },
   { icon: FileImportIcon, id: "import", label: "Import Document" },
-];
-
-const RIGHT_TOOLS: ToolbarItem[] = [
   { icon: UndoIcon, id: "undo", label: "Undo" },
   { icon: RedoIcon, id: "redo", label: "Redo" },
   { icon: GridIcon, id: "select-all", label: "Select All" },
@@ -99,31 +80,12 @@ const RIGHT_TOOLS: ToolbarItem[] = [
   { icon: SearchAddIcon, id: "zoom-in", label: "Zoom In" },
 ];
 
-// Review item #9 follow-up (2026-09-18): the original icon-above-label
-// stacked buttons were wide enough that the toolbar wrapped into 4
-// separate, disjointed rows on a narrow modal — including the new
-// "More actions" trigger landing alone on its own row with no visible
-// label at all. Switched every button here to a compact, icon-only
-// square (tooltip carries the label, same pattern EditorTopBar.tsx /
-// PvEditorTopChrome.tsx / BottomDock.tsx already use for their
-// toolbars) so the whole bar reads as one clean row instead of a
-// stack of mismatched pills.
+// Icon-only square styling, used by BackgroundColorPickerControl's standalone trigger.
 const TOOLBAR_BUTTON_CLASSES =
   "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors";
 
 function toolbarButtonStateClasses(disabled: boolean) {
-  // Review item #11 ("Manage Pages Tools Appear Active Without Page
-  // Selection"): `isToolDisabled()` below was already correctly
-  // preventing clicks via the native `disabled` attribute — the actual
-  // gap was purely visual. `text-default-300` alone (a slightly lighter
-  // icon color, no opacity change) reads as "still basically normal" at
-  // a glance, especially at icon-only size — not clearly "disabled",
-  // which is exactly the "tools appear tappable" confusion reported.
-  // Switched to the same base color as the enabled state PLUS
-  // `opacity-40`, matching the disabled treatment already used for
-  // icon buttons elsewhere in this editor (e.g. Undo/Redo in
-  // `PvEditorTopChrome.tsx`) — a dimmed, unmistakably-inactive look
-  // instead of a subtly-different text shade.
+  // Dimmed opacity (not just a lighter text color) so disabled reads as clearly inactive.
   return disabled
     ? "cursor-not-allowed text-default-600 opacity-40"
     : "cursor-pointer text-default-600 hover:bg-default-100";
@@ -136,27 +98,22 @@ type ManagePagesToolbarButtonProps = {
   onPress?: () => void;
 };
 
-function ManagePagesToolbarButton({
+function ManagePagesLabeledButton({
   disabled = false,
   icon,
   label,
   onPress,
 }: ManagePagesToolbarButtonProps) {
   return (
-    <Tooltip delay={300}>
-      <button
-        aria-label={label}
-        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
-        disabled={disabled}
-        type="button"
-        onClick={onPress}
-      >
-        <HugeiconsIcon icon={icon} size={18} />
-      </button>
-      <Tooltip.Content>
-        <p>{label}</p>
-      </Tooltip.Content>
-    </Tooltip>
+    <Button
+      isDisabled={disabled}
+      size="sm"
+      variant="tertiary"
+      onPress={onPress}
+    >
+      <HugeiconsIcon icon={icon} size={16} />
+      {label}
+    </Button>
   );
 }
 
@@ -255,14 +212,8 @@ function BackgroundColorPickerControl({
   }
 
   return (
-    // NOT wrapping `Popover.Trigger` in a `Tooltip` here (unlike the
-    // other icon-only buttons above) — `Popover` is built on React
-    // Aria's `DialogTrigger`, which expects its trigger as a direct
-    // child to wire up press/open state; this exact control already
-    // has documented history of that wiring breaking (see the
-    // 2026-06-16 QA note above re: `ColorPicker`'s Trigger not driving
-    // open state). `aria-label` alone still gives it an accessible
-    // name; not worth the regression risk for a hover tooltip.
+    // Not wrapped in a Tooltip: Popover.Trigger must be a direct child for React
+    // Aria's DialogTrigger to wire up press/open state correctly.
     <Popover isOpen={isOpen} onOpenChange={handleOpenChange}>
       <Popover.Trigger
         aria-label={label}
@@ -352,25 +303,13 @@ export function ManagePagesModal({
     if (isOpen) draft.resetDraft();
   }, [draft.resetDraft, isOpen, pageCount, storePageOrder]);
 
-  // Scroll to a newly-added page (New Page, Duplicate, Import Document —
-  // anything that grows `draft.pages`) so the user sees it land instead
-  // of it silently appearing off-screen in a long grid (review item #10,
-  // "Added Pages Not Automatically Visible"). Diffs the id set on every
-  // `draft.pages` change rather than hooking each individual action, so
-  // it works uniformly regardless of which action added the page or
-  // where in the list it landed (New Page can insert mid-list, right
-  // after each selected page — not just at the end).
+  // Scroll a newly-added page into view (New Page, Duplicate, Import Document
+  // all grow `draft.pages`); diffs the id set so it works regardless of where
+  // in the list the new page landed.
   const prevPageIdsRef = useRef<Set<string>>(
     new Set(draft.pages.map((p) => p.id)),
   );
-  // `resetDraft()` above repopulates `draft.pages` from scratch every
-  // time the modal opens — without this guard, that reset would look
-  // identical to "a page was added" on every single open (all-new ids
-  // vs. whatever `prevPageIdsRef` last held from before it was closed)
-  // and jump-scroll the grid on open for no reason. Set on the open
-  // transition, consumed (and cleared) by the very next pages-diff run
-  // below — regardless of how many renders it takes `draft.pages` to
-  // settle to its post-reset value.
+  // Guards against resetDraft() on open being mistaken for a newly-added page.
   const suppressNextScrollRef = useRef(false);
 
   useEffect(() => {
@@ -576,25 +515,19 @@ export function ManagePagesModal({
         }}
       >
         <Modal.Container
-          className="!box-border !flex-none !h-[80vh] !max-h-[80vh] !min-h-0 !w-[80vw] !max-w-[80vw] sm:!w-[80vw]"
+          // 95vw on phones (below sm) so the toolbar has room; sm: and up keeps 80vw.
+          className="!box-border !flex-none !h-[80vh] !max-h-[80vh] !min-h-0 !w-[95vw] !max-w-[95vw] sm:!w-[80vw] sm:!max-w-[80vw]"
           scroll="inside"
           size="cover"
         >
           <Modal.Dialog className="flex !h-full !max-h-full !w-full !max-w-none flex-col overflow-hidden p-0 sm:!max-w-none">
             <Modal.CloseTrigger />
 
-            {/* `flex-nowrap` + `overflow-x-auto` (not `flex-wrap`) — with
-                icon-only buttons this whole bar comfortably fits on one
-                line on any reasonable width, and on the rare very-narrow
-                phone it scrolls as a single row instead of breaking into
-                the multi-row stack review item #9 originally flagged. */}
-            {/* `gap-3` (not `justify-between`) — with an explicit
-                <Separator> now marking the page-actions/view-actions
-                boundary, `justify-between` would just stretch empty space
-                on either side of that separator instead of grouping
-                everything into one tidy row. */}
-            <div className="flex shrink-0 flex-nowrap items-center gap-3 overflow-x-auto border-b border-default-200 bg-[var(--color-background)] px-3 py-2 pr-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex flex-nowrap items-center gap-1">
+            {/* The primary tools scroll independently so the "⋯" trigger (entry point to
+                every other action) stays outside that area and is never clipped or scrolled
+                out of view. */}
+            <div className="flex shrink-0 items-center gap-1 border-b border-default-200 bg-[var(--color-background)] py-2 pr-12 pl-3">
+              <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {PRIMARY_LEFT_TOOLS.map((tool) => {
                   const disabled = isToolDisabled(tool.id);
 
@@ -613,7 +546,7 @@ export function ManagePagesModal({
                   }
 
                   return (
-                    <ManagePagesToolbarButton
+                    <ManagePagesLabeledButton
                       key={tool.id}
                       disabled={disabled}
                       icon={tool.icon}
@@ -622,62 +555,38 @@ export function ManagePagesModal({
                     />
                   );
                 })}
+              </div>
 
-                <Dropdown>
-                  {/* HeroUI's own `Button` (not a plain <button>) as the
-                      trigger — every other `Dropdown` in this codebase
-                      (HamburgerMenu.tsx, language-switcher.tsx) uses it
-                      this way; deviating to a native element here is
-                      unproven for this exact trigger wiring and not worth
-                      the risk for a cosmetic hover-shade tweak. `ghost`
-                      variant is transparent at rest (matching this bar's
-                      other buttons) with a `--color-default-hover` hover,
-                      close enough to `hover:bg-default-100` to read as
-                      consistent without touching untested trigger plumbing. */}
-                  <Button
-                    isIconOnly
+              <Dropdown>
+                <Button
+                  isIconOnly
+                  aria-label="More page actions"
+                  size="sm"
+                  variant="ghost"
+                >
+                  <HugeiconsIcon icon={More01Icon} size={18} />
+                </Button>
+                <Dropdown.Popover placement="bottom start">
+                  <Dropdown.Menu
                     aria-label="More page actions"
-                    size="sm"
-                    variant="ghost"
+                    disabledKeys={MORE_ACTIONS_TOOLS.filter((tool) =>
+                      isToolDisabled(tool.id),
+                    ).map((tool) => tool.id)}
+                    onAction={(key) => handleToolPress(String(key))}
                   >
-                    <HugeiconsIcon icon={More01Icon} size={18} />
-                  </Button>
-                  <Dropdown.Popover placement="bottom start">
-                    <Dropdown.Menu
-                      aria-label="More page actions"
-                      disabledKeys={OVERFLOW_LEFT_TOOLS.filter((tool) =>
-                        isToolDisabled(tool.id),
-                      ).map((tool) => tool.id)}
-                      onAction={(key) => handleToolPress(String(key))}
-                    >
-                      {OVERFLOW_LEFT_TOOLS.map((tool) => (
-                        <Dropdown.Item
-                          key={tool.id}
-                          id={tool.id}
-                          textValue={tool.label}
-                        >
-                          <HugeiconsIcon icon={tool.icon} size={16} />
-                          <Label>{tool.label}</Label>
-                        </Dropdown.Item>
-                      ))}
-                    </Dropdown.Menu>
-                  </Dropdown.Popover>
-                </Dropdown>
-              </div>
-
-              <Separator className="!h-6 shrink-0" orientation="vertical" />
-
-              <div className="flex flex-nowrap items-center gap-1">
-                {RIGHT_TOOLS.map((tool) => (
-                  <ManagePagesToolbarButton
-                    key={tool.id}
-                    disabled={isToolDisabled(tool.id)}
-                    icon={tool.icon}
-                    label={tool.label}
-                    onPress={() => handleToolPress(tool.id)}
-                  />
-                ))}
-              </div>
+                    {MORE_ACTIONS_TOOLS.map((tool) => (
+                      <Dropdown.Item
+                        key={tool.id}
+                        id={tool.id}
+                        textValue={tool.label}
+                      >
+                        <HugeiconsIcon icon={tool.icon} size={16} />
+                        <Label>{tool.label}</Label>
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
             </div>
 
             <Modal.Body className="min-h-0 flex-1 overflow-y-auto bg-default-100 p-6">

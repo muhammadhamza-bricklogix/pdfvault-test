@@ -153,12 +153,7 @@ export function usePageRenderer({
               return prev;
             }
 
-            // `zoom` travels with the size it produced so consumers (see
-            // `useFabricCanvas`'s resize effect) can apply a zoom factor
-            // that's always in sync with the dimensions being set — reading
-            // the store's live `zoom` separately here would let a Fabric
-            // resize race ahead of/behind the raster layer's own async
-            // render during a fast pinch/wheel gesture.
+            // `zoom` travels with the size it produced so consumers stay in sync.
             return { height: cssHeight, width: cssWidth, zoom };
           });
           // Notify subscribers (specifically `useFabricCanvas`) that the

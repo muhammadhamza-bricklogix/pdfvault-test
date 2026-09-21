@@ -108,14 +108,7 @@ export function DashboardHome() {
     router.replace(suffix ? `${pathname}?${suffix}` : pathname);
   }, [openPickerParam, pathname, router, searchParams]);
 
-  // `?tour=dashboard` arrives when `TourHelpButton` redirects here from a
-  // different dashboard route (Mobile UX #20) — this page's own anchors
-  // (`dashboard-upload`, `dashboard-quick-tools`) only exist here, so the
-  // "Show me around" tour couldn't run from wherever the user actually
-  // clicked it. Starts the SAME tour instance `useProductTour("dashboard")`
-  // above already owns, then strips the param (same shape as the
-  // `openPickerParam` effect right above) so a refresh doesn't re-trigger
-  // it.
+  // `?tour=dashboard` triggers the product tour, then strips the param.
   const tourParam = searchParams.get("tour");
 
   useEffect(() => {

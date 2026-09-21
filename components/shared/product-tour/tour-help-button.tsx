@@ -17,17 +17,7 @@ type TourHelpButtonProps = {
   label?: string;
 };
 
-// Mobile UX #20: the "dashboard" tour's `dashboard-upload` and
-// `dashboard-quick-tools` anchors only exist on the dashboard HOME route
-// (`/dashboard`, rendered by `DashboardHome`) — `dashboard-nav` and
-// `dashboard-profile` live in the shared `DashboardShell` and render on
-// every dashboard route (`/dashboard/tools`, `/dashboard/forms`, etc).
-// This button is mounted inside that same shared shell, so clicking it
-// from one of those other routes used to run the tour in place against a
-// page missing half its targets (driver.js silently skips them — no
-// crash, just a broken-looking tour). Only "dashboard" has this problem;
-// the "editor" tour only ever renders on the editor's own single route,
-// so it's left out of this map and behaves exactly as before.
+// Routes each tour needs to be on for all of its anchors to exist.
 const TOUR_HOME_PATH: Partial<Record<TourKey, string>> = {
   dashboard: ROUTES.APP.DASHBOARD,
 };
@@ -44,9 +34,7 @@ export function TourHelpButton({
 
   const handleClick = () => {
     if (homePath && pathname !== homePath) {
-      // Land on the tour's home page first — it picks up `?tour=<key>`
-      // (see `DashboardHome`) and starts this same tour once its own
-      // anchors have mounted, instead of running it here.
+      // Redirect to the tour's home route; it picks up `?tour=<key>` and starts the tour there.
       router.push(`${homePath}?tour=${tour}`);
 
       return;

@@ -180,23 +180,10 @@ export type PersistEditorResult =
 type PersistEditorDocumentInput = {
   fabricCanvas?: FabricCanvas | null;
   /**
-   * Optional live sign-in override. `usePdfEditorStore.getState().isSignedIn`
-   * is synced from Clerk's `useAuth()` by a `useEffect` in `PdfEditorShell`
-   * (see CLAUDE.md auth-chain item #1), which means it can lag one tick
-   * behind the real value — the same race that item #1 already fixed for
-   * `useExportEditor` by reading `useAuth()` directly instead of the store
-   * copy. This function isn't a hook, so it can't call `useAuth()` itself;
-   * callers that already have live access to it (e.g. `useSaveEditor`) can
-   * pass it here to bypass the store's copy for just this call. Callers
-   * that don't pass it keep the exact previous behavior (store snapshot),
-   * so this is purely additive — no other call site's behavior changes.
-   *
-   * Fixes: "Manage Pages Login Prompt" (mobile UX review item #12) —
-   * `saveBeforeAction` → `editor:save-before-action` → this function was
-   * reading the possibly-stale store copy, so a signed-in user could hit
-   * an incorrect sign-in prompt on a LATER Manage Pages open in the same
-   * session, even though the very first open (right after the store had
-   * time to sync) worked fine.
+   * Optional live sign-in override — the store's `isSignedIn` can lag a
+   * tick behind Clerk's `useAuth()`. Callers with live access to it (e.g.
+   * `useSaveEditor`) can pass it to bypass the store snapshot for this
+   * call; omitting it keeps the previous store-snapshot behavior.
    */
   isSignedIn?: boolean;
   /**
@@ -250,9 +237,7 @@ export async function persistEditorDocument({
   const state = usePdfEditorStore.getState();
   const { currentPage, file, hasUnsavedChanges, isSignedIn, pdfDocument } =
     state;
-  // Prefer the caller's live value when provided (see the `isSignedIn`
-  // doc comment above) — falls back to the store snapshot otherwise, so
-  // every caller that doesn't opt in keeps its exact previous behavior.
+  // Prefer the caller's live value when provided, else fall back to the store snapshot.
   const effectiveIsSignedIn = isSignedInOverride ?? isSignedIn;
   // Reassigned after the duplicate-overwrite branch may stamp the
   // store, so the downstream upload sees the freshly-adopted id.

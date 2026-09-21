@@ -193,22 +193,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     zoom,
   });
 
-  // --- Keep the viewport's visual center anchored across zoom changes ---
-  // Nothing previously adjusted `viewerScrollRef`'s scroll position when
-  // `zoom` changed, so the page grows/shrinks from its top-left corner while
-  // scrollTop/scrollLeft stay put. Whatever text the user was looking at
-  // slides to a different screen position on every zoom press — it reads as
-  // "the page doesn't zoom, the text just moves" (reported on the zoom
-  // in/out buttons specifically, since a button click has no cursor/pinch
-  // point of its own to anchor to the way wheel/pinch gestures naturally do).
-  //
-  // `scrollAnchorRef` captures the page-relative fraction under the
-  // viewport's center BEFORE the resize, in a `useLayoutEffect` (runs before
-  // `use-page-renderer.ts`'s passive effect has resized the canvas). The
-  // plain `useEffect` below — declared after `usePageRenderer` so it runs
-  // after that resize in the same passive-effect pass — re-applies that same
-  // fraction against the new (post-zoom) content size, so the point that was
-  // centered stays centered instead of drifting.
+  // Keeps the viewport's visual center anchored across zoom changes: useLayoutEffect
+  // captures the centered fraction before usePageRenderer resizes the canvas, and the
+  // effect below re-applies it after the resize so the same point stays centered.
   const scrollAnchorRef = useRef<{ fracX: number; fracY: number } | null>(
     null,
   );
