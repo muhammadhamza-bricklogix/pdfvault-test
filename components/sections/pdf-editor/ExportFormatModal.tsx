@@ -381,16 +381,6 @@ function ExportFormatModalBody({
                 placeholder="document"
               />
             </TextField>
-            {/*
-              Mobile UX #15 (this modal's own instance): the pencil here was
-              a bare icon with no click handler at all — clicking the input
-              text already focuses it natively (it's a real, always-editable
-              `Input`), but the pencil itself did nothing, which is exactly
-              the "field works, pencil doesn't" gap the user flagged. Wrapped
-              it in a real button that focuses + selects the input's text,
-              mirroring the pattern already used by the top-bar filename
-              field's own pencil (`EditableFilenameField.tsx`).
-            */}
             <button
               aria-label="Rename file"
               className="shrink-0 rounded p-0.5 text-default-400 transition-colors hover:bg-default-200 hover:text-default-700"
@@ -447,24 +437,14 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
   const file = usePdfEditorStore((s) => s.file);
   const initialName = file ? stripExt(file.name) : "document";
 
-  // Mobile UX #16: `fileName` lives HERE, not inside `ExportFormatModalBody`,
-  // specifically so a typed rename survives the modal closing. Repro:
-  // rename in the "File name" field → Download → for a guest this triggers
-  // the sign-in prompt (`handleDownload` calls `onClose()` right after
-  // dispatching `editor:export`, before anything is actually downloaded) →
-  // cancel that prompt → reopen Download. `ExportFormatModalBody` remounts
-  // on every open (`key` below — kept deliberately, since `selected` format
-  // and the duplicate-name-check state SHOULD reset fresh each time), which
-  // was wiping this typed name back to the file's default along with it.
+  // fileName is lifted to this parent (not ExportFormatModalBody) so a typed rename
+  // survives the body remounting on each open/close of the same file.
   const [fileName, setFileName] = useState(initialName);
   const lastFileRef = useRef(file);
 
-  // Reset only when the underlying file actually changes (a genuinely
-  // different document was opened) — not on every open/close of the SAME
-  // file. A `useEffect` (rather than comparing the ref during render) is
-  // required here — this project's React Compiler lint rejects reading a
-  // ref while rendering, since it can't guarantee the comparison still
-  // lines up under the compiler's own re-render granularity.
+  // Only reset fileName when the file itself changes, not on every open. Done in an
+  // effect rather than during render since the React Compiler lint disallows reading
+  // a ref at render time.
   useEffect(() => {
     if (file !== lastFileRef.current) {
       lastFileRef.current = file;

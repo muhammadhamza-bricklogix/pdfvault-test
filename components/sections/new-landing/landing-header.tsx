@@ -146,6 +146,10 @@ export function LandingHeader() {
               aria-label="PDFVault home"
               className="flex shrink-0 items-center"
               href={ROUTES.PUBLIC.HOME}
+              // Closes the mobile drawer explicitly: navigating to the same
+              // route doesn't change `pathname`, so the auto-close effect
+              // above wouldn't otherwise fire.
+              onClick={() => setMobileOpen(false)}
             >
               <Image
                 priority
@@ -353,19 +357,9 @@ export function LandingHeader() {
               ))}
               <li>
                 <button
-                  // Explicit `text-start` (logical, not `text-left`) so
-                  // this matches the sibling PRIMARY_LINKS <Link>s above
-                  // in EVERY language, not just LTR vs RTL. `<button>`
-                  // elements carry their own browser-default
-                  // `text-align: center` (unlike `<a>`/<Link>, which has
-                  // no such default) — the previous `text-left` was
-                  // *physical* and didn't flip for RTL, but simply
-                  // removing it exposed that centered button default
-                  // instead of the sibling links' `start` alignment
-                  // (regression caught in EN + AR screenshots after the
-                  // first attempt). `text-start` fixes both: it matches
-                  // the links exactly and correctly follows `dir` for
-                  // any language, not just a left/right special-case.
+                  // `text-start` (logical) rather than `text-left` so this
+                  // matches the sibling links in RTL too — `<button>`
+                  // defaults to centered text, unlike `<a>`.
                   className="block w-full rounded-lg px-2 py-2.5 text-start text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
                   type="button"
                   onClick={openFormsModal}

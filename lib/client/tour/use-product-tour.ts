@@ -86,19 +86,8 @@ export function useProductTour(key: TourKey, enabled: boolean = true) {
         stagePadding: 6,
         stageRadius: 12,
         smoothScroll: true,
-        // Mobile UX #21: driver.js cuts a hole in its overlay over the
-        // highlighted "stage" element, and by default leaves whatever's
-        // under that hole fully clickable — meant for tours that want the
-        // user to click the real UI as a tour step. None of ours are that
-        // kind (every step here is just "here's this area", not "click
-        // this"), so real controls underneath a highlighted section (a
-        // Quick Tools card, the language switcher inside the nav, an
-        // unlock/upgrade action in the profile menu) stayed tappable
-        // DURING the tour. Tapping one opened the real app modal behind
-        // the tour, stacking two overlays with their own darkened
-        // backdrops on top of each other. `disableActiveInteraction`
-        // keeps the stage visible/highlighted but inert to clicks, same
-        // as the rest of the dimmed page.
+        // Keeps the highlighted stage visible but inert to clicks, so
+        // controls under it can't open a modal behind the tour overlay.
         disableActiveInteraction: true,
         popoverClass: "pv-tour-popover",
         overlayColor: "#171717",

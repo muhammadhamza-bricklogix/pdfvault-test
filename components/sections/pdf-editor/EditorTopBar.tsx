@@ -402,18 +402,6 @@ export function EditorInfoBar() {
               </Button>
             </div>
 
-            {/*
-              Mobile UX #14: this button opens the full Tools catalog
-              (ToolsModal — PDF to Word, Compress, etc.), but it previously
-              used `DashboardSpeed01Icon`, a speedometer/gauge glyph with no
-              visual connection to "tools" — read as an unlabeled, unclear
-              icon (tooltips don't help touch users, who can't hover before
-              tapping). Swapped to `Grid2X2Icon`, the same 2x2-grid glyph
-              already used for the marketing site's own "All Tools" trigger
-              (`landing-header.tsx`) — reusing this app's own established
-              visual language for "opens a grid of tools" instead of
-              introducing a new one. Behavior/aria-label/tooltip unchanged.
-            */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Browse all tools"
@@ -598,7 +586,8 @@ export function EditorInfoBar() {
 // Tool Bar — all editing tools as individual buttons
 // ---------------------------------------------------------------------------
 
-const TOOLS = [
+// Exported so BottomDock.tsx (mobile) can build its own grouped pill layout from this same tool list.
+export const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
@@ -643,18 +632,9 @@ export function ToolsContent({
     <Toolbar aria-label="Drawing tools">
       <ToggleButtonGroup
         disallowEmptySelection
-        // `isDetached` — without it, ToggleButtonGroup's default "attached"
-        // mode connects every button into ONE continuous bar (only the
-        // first/last corners rounded, thin 1px separators between).
-        // `ToolsContent` sits directly next to `BottomDock`'s ACTION_TOOLS
-        // row, whose buttons are individually gapped + fully rounded — so
-        // even with matching `--color-default` backgrounds (see that
-        // file's fix for review item #7), the CONTINUOUS bar butting up
-        // against SEPARATE pills still read as visually inconsistent
-        // (confirmed by a follow-up screenshot after the first fix).
-        // `isDetached` makes every ToggleButton its own separated,
-        // fully-rounded pill — matching ACTION_TOOLS' shape, not just its
-        // color, for one uniform-looking toolbar end to end.
+        // isDetached separates buttons into individual pills instead of one continuous bar.
+        // HeroUI's default radius (rounded-3xl) still needs an explicit rounded-md override
+        // below on each ToggleButton to match ACTION_TOOLS' shape.
         isDetached
         selectedKeys={new Set([activeTool])}
         selectionMode="single"
@@ -666,7 +646,7 @@ export function ToolsContent({
             <ToggleButton
               key={tool.id}
               aria-label={tool.label}
-              className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+              className="h-auto flex-col gap-0.5 rounded-md px-2.5 py-1.5"
               id={tool.id}
             >
               {i > 0 && <ToggleButtonGroup.Separator />}
@@ -675,7 +655,12 @@ export function ToolsContent({
             </ToggleButton>
           ) : (
             <Tooltip key={tool.id} delay={300}>
-              <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
+              <ToggleButton
+                isIconOnly
+                aria-label={tool.label}
+                className="rounded-md"
+                id={tool.id}
+              >
                 {i > 0 && <ToggleButtonGroup.Separator />}
                 <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
               </ToggleButton>

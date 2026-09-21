@@ -4,7 +4,7 @@ import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
@@ -82,6 +82,7 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -98,6 +99,12 @@ export function EmailFirstModal() {
 
     return () => window.removeEventListener("app:email-first-modal", onOpen);
   }, []);
+
+  // Focus without letting the browser scroll the page to bring the input
+  // into view — the modal is already centered via CSS.
+  useEffect(() => {
+    if (detail) emailInputRef.current?.focus({ preventScroll: true });
+  }, [detail]);
 
   const close = useCallback(() => {
     setDetail(null);
@@ -344,7 +351,7 @@ export function EmailFirstModal() {
                     <HugeiconsIcon icon={Mail01Icon} size={18} />
                   </span>
                   <input
-                    autoFocus
+                    ref={emailInputRef}
                     required
                     aria-invalid={error ? true : undefined}
                     autoComplete="email"

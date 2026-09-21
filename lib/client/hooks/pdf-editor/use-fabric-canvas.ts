@@ -71,9 +71,6 @@ export function useFabricCanvas({
   // Latest renderedSize is read inside the mount effect via a ref so we don't
   // re-mount Fabric on every zoom change. Only sourcePage changes trigger a
   // full re-mount; zoom/size adjustments live in the resize effect below.
-  // `renderedSize.zoom` (not the store's live `zoom`) is what mount/resize
-  // apply — it's the zoom the raster layer actually finished rendering at,
-  // so it's always in sync with `renderedSize.width/height`.
   const renderedSizeRef = useRef(renderedSize);
 
   useEffect(() => {
@@ -446,13 +443,8 @@ export function useFabricCanvas({
       height: renderedSize.height,
       width: renderedSize.width,
     });
-    // Use the zoom paired with this renderedSize, not the store's live
-    // `zoom` — during a fast pinch/wheel gesture the store can already hold
-    // a newer zoom than the raster layer has finished rendering, which
-    // used to make Fabric jump its content to the new zoom a frame before
-    // `setDimensions` above caught up, clipping/detaching annotations from
-    // the page. Keying both calls off the same renderedSize object keeps
-    // them atomic.
+    // Use the zoom paired with this renderedSize, not the store's live zoom,
+    // to avoid a pinch/wheel race with the raster layer.
     fc.setZoom(renderedSize.zoom);
 
     // Fabric caches a rasterized bitmap per object (text/groups especially).

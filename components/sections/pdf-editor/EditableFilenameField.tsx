@@ -148,14 +148,6 @@ export function EditableFilenameField({
           }}
         />
       ) : (
-        // Mobile UX #15: the pencil button already calls `enterEdit` and
-        // works — verified with a live tap test — but the display text
-        // itself had no click handler, contradicting this component's own
-        // "click-to-edit" docstring and the reviewer's expectation that
-        // tapping the field is the primary way in, with the pencil as a
-        // second, equally-working entry point. Wiring the same `enterEdit`
-        // here (not new logic — same disabled-guard, same focus/select) so
-        // both the text and the pencil reliably open edit mode.
         <span
           className={`truncate font-medium text-[var(--color-foreground)] ${fontSizeClass} ${disabled ? "" : "cursor-pointer"}`}
           style={{ maxWidth: inputWidth ?? undefined }}

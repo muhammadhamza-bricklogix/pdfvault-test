@@ -60,19 +60,8 @@ type SaveBeforeActionDetail = {
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Live Clerk value, mirrored into a ref (same pattern as `fabricRef`
-  // right below) rather than closed over directly — the
-  // `editor:save-before-action` listener further down is registered in
-  // a `useEffect` with an EMPTY dependency array (mount-once), so a
-  // value read directly from `useAuth()` inside that listener would be
-  // frozen at whatever it was on first mount, forever. Reading
-  // `isSignedInRef.current` instead always gets this render's latest
-  // value without needing to re-register the listener. Passed into
-  // `persistEditorDocument`'s `save-before-action` call to bypass a
-  // possibly-stale `store.isSignedIn` snapshot — see that function's
-  // `isSignedIn` doc comment. Fixes mobile UX review item #12, "Manage
-  // Pages Login Prompt": a signed-in user could get an incorrect
-  // sign-in prompt on a later Manage Pages open in the same session.
+  // Live Clerk value, mirrored into a ref since the listener below is
+  // registered once on mount and would otherwise close over a stale value.
   const { isSignedIn: isSignedInLive } = useAuth();
   const isSignedInRef = useRef(isSignedInLive);
 
@@ -291,10 +280,7 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           persistEditorDocument({
             fabricCanvas: fabricRef.current,
             force: detail?.force,
-            // Live value (via ref, not the closed-over hook value — see
-            // the comment above `isSignedInRef`), not the store snapshot.
-            // See `persistEditorDocument`'s `isSignedIn` doc comment
-            // (review item #12).
+            // Live value via ref, not the store snapshot — see isSignedInRef above.
             isSignedIn: Boolean(isSignedInRef.current),
             // Same rationale as the button-Save above — Done/Download
             // and other save-before-action flows must not silently
