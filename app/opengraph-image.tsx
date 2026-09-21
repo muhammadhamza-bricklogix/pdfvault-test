@@ -76,7 +76,6 @@ export default function OpengraphImage() {
         }}
       >
         {LOGO_DATA_URL ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             alt=""
             height={140}

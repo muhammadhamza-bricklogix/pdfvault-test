@@ -418,7 +418,6 @@ export function EditorInfoBar() {
               </Button>
             </div>
 
-
             <Tooltip delay={300}>
               <Button
                 aria-label="Browse all tools"

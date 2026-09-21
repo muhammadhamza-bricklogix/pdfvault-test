@@ -67,9 +67,8 @@ const GROUPS: FaqGroup[] = [
         q: "When will I be charged?",
         a: (
           <>
-            You&apos;re charged $0.99 when you start your trial, and then
-            $39.99 every month after your trial ends, unless you cancel before
-            your
+            You&apos;re charged $0.99 when you start your trial, and then $39.99
+            every month after your trial ends, unless you cancel before your
             trial expires or before the next renewal date.
           </>
         ),
