@@ -21,7 +21,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@heroui/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -120,6 +120,37 @@ export function FloatingTextToolbar({
   const [style, setStyle] = useState<TextStyle>(DEFAULT_STYLE);
   const activeObjRef = useRef<IText | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
+
+  // Tracks BottomDock's actual current height so this panel sits just
+  // above it. A fixed `bottom-[70px]` matched the dock's own height
+  // when only its tool row was showing, but the dock grows taller when
+  // its page-thumbnail strip opens (BottomDock.tsx's `isThumbsOpen`) —
+  // with a fixed offset, this panel stayed pinned at the old (shorter)
+  // height and visibly overlapped the taller dock underneath it.
+  const [dockOffset, setDockOffset] = useState(70);
+
+  useLayoutEffect(() => {
+    if (!isMobile) return;
+
+    const dockEl = document.querySelector<HTMLElement>(
+      '[aria-label="Editor dock"]',
+    );
+
+    if (!dockEl) return;
+
+    const GAP = 12; // matches the panel's original ~12px separation from the dock
+
+    const update = () =>
+      setDockOffset(dockEl.getBoundingClientRect().height + GAP);
+
+    update();
+
+    const observer = new ResizeObserver(update);
+
+    observer.observe(dockEl);
+
+    return () => observer.disconnect();
+  }, [isMobile]);
 
   // Observability logs for touch behaviour on the mobile toolbar. The
   // real "page above swipes when I swipe the toolbar" bug was in
@@ -408,12 +439,12 @@ export function FloatingTextToolbar({
       aria-label="Text formatting"
       className={
         isMobile
-          ? // `bottom-[70px]` (was 58) lifts the panel ~12px above the
-            // BottomDock so the two chrome bars visually separate instead
-            // of stacking flush together (QA report 2026-08-25).
-            "pointer-events-auto fixed inset-x-0 bottom-[70px] z-50 flex touch-none flex-col gap-2 border-t border-default-200 bg-white px-4 pb-3 pt-2 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)]"
+          ? // `bottom` comes from the `dockOffset` state (see above) —
+            // it tracks the dock's actual height instead of a fixed value.
+            "pointer-events-auto fixed inset-x-0 z-50 flex touch-none flex-col gap-2 border-t border-default-200 bg-white px-4 pb-3 pt-2 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)]"
           : "pointer-events-auto fixed right-4 top-1/2 z-50 flex w-[188px] -translate-y-1/2 flex-col gap-4 rounded-2xl border border-default-200 bg-white p-4 shadow-[0_8px_24px_rgba(16,24,40,0.08)]"
       }
+      style={isMobile ? { bottom: dockOffset } : undefined}
       // `data-editor-overlay` opts this out of `PdfViewerCanvas`'s
       // document-scoped swipe-to-flip page-nav handler. Without it,
       // horizontal swipes on the FONT/SIZE/STYLE strip flipped pages
@@ -439,7 +470,14 @@ export function FloatingTextToolbar({
       <div
         className={
           isMobile
-            ? "flex touch-pan-x items-start gap-4 overflow-x-auto pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            ? // `pb-2`: `overflow-x-auto` also clips the Y axis per the CSS
+              // overflow spec (a non-`visible` x paired with `visible` y
+              // computes both to `auto`). The Font/Size `Select.Trigger`s'
+              // box-shadow reaches exactly to this row's own bottom edge,
+              // so without this the shadow's blur was clipped off flush —
+              // Bold/Align's borderless `ToggleButton`s have no shadow, so
+              // they never showed the same cut.
+              "flex touch-pan-x items-start gap-4 overflow-x-auto pb-2 pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             : "flex flex-col gap-4"
         }
         data-touch-scroll-x={isMobile ? "" : undefined}
