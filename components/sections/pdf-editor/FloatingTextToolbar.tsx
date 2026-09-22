@@ -138,7 +138,10 @@ export function FloatingTextToolbar({
 
     if (!dockEl) return;
 
-    const GAP = 12; // matches the panel's original ~12px separation from the dock
+    // Keep the text toolbar flush with the dock. A visible gap exposes
+    // the PDF page between the two fixed controls and looks like a broken
+    // stacked toolbar on mobile Safari.
+    const GAP = 0;
 
     const update = () =>
       setDockOffset(dockEl.getBoundingClientRect().height + GAP);

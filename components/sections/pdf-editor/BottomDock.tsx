@@ -94,6 +94,7 @@ function DockPillGroup({ children }: { children: React.ReactNode }) {
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
@@ -206,6 +207,12 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   };
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );
