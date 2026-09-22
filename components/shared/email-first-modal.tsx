@@ -101,6 +101,17 @@ export function EmailFirstModal() {
   const [submitting, setSubmitting] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
+  const scrollEmailInputIntoView = useCallback(
+    (block: ScrollLogicalPosition = "nearest") => {
+      emailInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block,
+        inline: "nearest",
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     const onOpen = (event: Event) => {
       const custom = event as CustomEvent<EmailFirstModalDetail>;
@@ -126,22 +137,23 @@ export function EmailFirstModal() {
   useEffect(() => {
     if (!detail) return;
     emailInputRef.current?.focus({ preventScroll: true });
+    requestAnimationFrame(() => scrollEmailInputIntoView("nearest"));
+    window.setTimeout(() => scrollEmailInputIntoView("center"), 250);
 
     const vv = window.visualViewport;
 
     if (!vv) return;
 
     const handleViewportResize = () => {
-      emailInputRef.current?.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
+      if (document.activeElement !== emailInputRef.current) return;
+
+      scrollEmailInputIntoView("center");
     };
 
     vv.addEventListener("resize", handleViewportResize);
 
     return () => vv.removeEventListener("resize", handleViewportResize);
-  }, [detail]);
+  }, [detail, scrollEmailInputIntoView]);
 
   const close = useCallback(() => {
     setDetail(null);
@@ -414,6 +426,7 @@ export function EmailFirstModal() {
                       setEmail(e.target.value);
                       if (error) setError(null);
                     }}
+                    onFocus={() => scrollEmailInputIntoView("nearest")}
                   />
                 </div>
                 {error ? (

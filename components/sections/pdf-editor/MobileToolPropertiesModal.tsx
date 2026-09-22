@@ -31,16 +31,20 @@ export function MobileToolPropertiesModal() {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="!max-h-[80vh] !w-[92vw] !max-w-[420px]">
+        <Modal.Dialog className="flex !max-h-[80dvh] !w-[92vw] !max-w-[420px] flex-col overflow-hidden">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>
               {isWatermark ? "Watermark" : "Background image"}
             </Modal.Heading>
           </Modal.Header>
-          <Modal.Body className="overflow-y-auto">
-            {isWatermark && <WatermarkPropertiesContent />}
-            {isBackgroundImage && <BackgroundImagePropertiesContent />}
+          <Modal.Body className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+            {isWatermark && (
+              <WatermarkPropertiesContent scrollContainer={false} />
+            )}
+            {isBackgroundImage && (
+              <BackgroundImagePropertiesContent scrollContainer={false} />
+            )}
           </Modal.Body>
         </Modal.Dialog>
       </Modal.Container>

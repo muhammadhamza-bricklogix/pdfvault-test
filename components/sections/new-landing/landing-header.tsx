@@ -73,19 +73,14 @@ export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const [formsModalOpen, setFormsModalOpen] = useState(false);
-  // QA 2026-09-22 (issue #1, second follow-up): a real, always-visible
-  // native scrollbar is not achievable on touch browsers — iOS Safari
-  // and Android Chrome intentionally fade their scroll indicator out
-  // once a scroll gesture ends (a platform-level UX convention, not a
-  // CSS-controllable one; there is no standards-track way to keep a
-  // native mobile scroll indicator painted at rest). `toolsBodyRef` +
-  // `toolsHasOverflow` back a scroll-position-independent affordance
-  // instead: a small bottom gradient that stays on screen the entire
-  // time the list has more content below, on every browser/OS, without
-  // depending on the native scrollbar at all. See the sticky footer
-  // node in the modal JSX below.
+  // iOS Safari hides native scrollbars at rest. This state backs a
+  // custom, always-visible scroll indicator for the All Tools modal.
   const toolsBodyRef = useRef<HTMLDivElement>(null);
   const [toolsHasOverflow, setToolsHasOverflow] = useState(false);
+  const [toolsScrollIndicator, setToolsScrollIndicator] = useState({
+    height: 0,
+    top: 0,
+  });
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -134,30 +129,64 @@ export function LandingHeader() {
     setMobileOpen(false);
   };
 
-  // Measures whether the All Tools list actually overflows its scroll
-  // region, so the bottom "more below" fade (rendered in the modal JSX)
-  // only shows up when there is real content to hint at. `AllToolsCatalog`
-  // is lazy-loaded, so its real height isn't known on the first paint —
-  // a `ResizeObserver` on the scroll container itself re-checks whenever
-  // that height settles, without needing a callback threaded through the
-  // server-safe catalog component (same constraint noted in the
-  // click-delegation comment below).
+  // Measures overflow and keeps the custom scroll thumb synced. The
+  // catalog is lazy-loaded, so observing the content wrapper matters:
+  // its height changes after the modal first opens.
   useEffect(() => {
     if (!toolsModalOpen) return;
-    const el = toolsBodyRef.current;
+    const scrollContainer = toolsBodyRef.current;
 
-    if (!el) return;
+    if (!scrollContainer) return;
 
-    const check = () =>
-      setToolsHasOverflow(el.scrollHeight > el.clientHeight + 1);
+    let frame = 0;
+
+    const check = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const maxScroll =
+          scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const hasOverflow = maxScroll > 1;
+
+        setToolsHasOverflow(hasOverflow);
+
+        if (!hasOverflow) {
+          setToolsScrollIndicator({ height: 0, top: 0 });
+
+          return;
+        }
+
+        const trackHeight = Math.max(scrollContainer.clientHeight - 32, 32);
+        const thumbHeight = Math.max(
+          32,
+          (scrollContainer.clientHeight / scrollContainer.scrollHeight) *
+            trackHeight,
+        );
+        const thumbTop =
+          (scrollContainer.scrollTop / maxScroll) *
+          (trackHeight - thumbHeight);
+
+        setToolsScrollIndicator({ height: thumbHeight, top: thumbTop });
+      });
+    };
 
     check();
 
     const observer = new ResizeObserver(check);
+    const contentWrapper = scrollContainer.firstElementChild;
 
-    observer.observe(el);
+    observer.observe(scrollContainer);
 
-    return () => observer.disconnect();
+    if (contentWrapper) observer.observe(contentWrapper);
+
+    scrollContainer.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      scrollContainer.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
   }, [toolsModalOpen]);
 
   const openFormsModal = () => {
@@ -468,72 +497,50 @@ export function LandingHeader() {
             <Modal.Header>
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
-            <Modal.Body
-              // QA 2026-09-22: the issue #1 fix (max-h-[80dvh] +
-              // overflow-y-auto) gave this list a real scroll region, but
-              // the thumb color class (`bg-default-300`) never actually
-              // compiled — this app's "default" token is a single flat
-              // color (see @heroui/styles' theme.css), not a numbered
-              // 100–900 scale, so Tailwind silently drops any `-N` suffix
-              // on it (confirmed by inspecting the real generated
-              // stylesheet: no `.bg-default-300` rule exists anywhere).
-              // The scrollbar had therefore been rendering as the plain
-              // browser/OS default the whole time, which several
-              // browsers auto-hide ("overlay" mode) between scroll
-              // gestures. `#c7c7c7`/`#ececec` are literal hex values
-              // already used elsewhere in this app's own components
-              // (e.g. PaywallModal.tsx's disabled-button and divider
-              // colors) rather than the broken numbered-token pattern.
-              // Both `scrollbar-color` (Firefox + Chromium 121+) and the
-              // `::-webkit-scrollbar-track`/`-thumb` pair (older
-              // Chromium/Safari) now resolve to real colors, which is
-              // what actually forces a permanently-rendered, non-overlay
-              // scrollbar instead of a fade-in-on-scroll one.
-              ref={toolsBodyRef}
-              className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [scrollbar-color:#c7c7c7_#ececec] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c7c7c7] [&::-webkit-scrollbar-track]:bg-[#ececec]"
-            >
-              {/* Click delegation: any tile navigation dismisses the modal
-                  synchronously, regardless of whether the destination is a
-                  new pathname (`/pdf-composer` → `/dashboard`) or a same-
-                  path query change (`?tool=edit` → `?tool=compress`). The
-                  pathname/searchParams useEffect above misses same-path
-                  query nav in Next 16 in some flows, so this is the
-                  authoritative dismiss. Keeping `AllToolsCatalog` prop-free
-                  is required by CLAUDE.md item 20 (RSC serialization). */}
-              {/* Delegation catches native click events bubbled up from
-                  each Link — including the click Enter/Space fires on a
-                  focused <a> — so keyboard users get the same dismiss
-                  as mouse users without a separate onKeyDown here. */}
-              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
-              <div
-                onClick={(event) => {
-                  if ((event.target as HTMLElement).closest("a")) {
-                    setToolsModalOpen(false);
-                  }
-                }}
+            <div className="relative">
+              <Modal.Body
+                ref={toolsBodyRef}
+                className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <AllToolsCatalog />
-              </div>
-              {/* "More tools below" cue. `position: sticky` inside this
-                  same scroll container pins it to the bottom of the
-                  visible viewport while there's more content underneath,
-                  then stops being sticky (scrolls away with the rest of
-                  the content) at the exact moment the real bottom is
-                  reached — so it disappears precisely when there is
-                  nothing left to hint at, with no scroll-position JS
-                  needed. `-mt-10` cancels its own height so it overlaps
-                  the last row instead of adding blank space below it.
-                  Only rendered when `toolsHasOverflow` is true, so
-                  desktop viewports where the whole catalog already fits
-                  never show a stray sliver under the last tile. */}
+                {/* Click delegation: any tile navigation dismisses the modal
+                    synchronously, regardless of whether the destination is a
+                    new pathname (`/pdf-composer` → `/dashboard`) or a same-
+                    path query change (`?tool=edit` → `?tool=compress`). The
+                    pathname/searchParams useEffect above misses same-path
+                    query nav in Next 16 in some flows, so this is the
+                    authoritative dismiss. Keeping `AllToolsCatalog` prop-free
+                    is required by CLAUDE.md item 20 (RSC serialization). */}
+                {/* Delegation catches native click events bubbled up from
+                    each Link — including the click Enter/Space fires on a
+                    focused <a> — so keyboard users get the same dismiss
+                    as mouse users without a separate onKeyDown here. */}
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
+                <div
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest("a")) {
+                      setToolsModalOpen(false);
+                    }
+                  }}
+                >
+                  <AllToolsCatalog />
+                </div>
+              </Modal.Body>
               {toolsHasOverflow ? (
                 <div
                   aria-hidden
-                  className="pointer-events-none sticky bottom-0 -mt-10 h-10 bg-gradient-to-t from-white to-transparent"
-                  data-testid="all-tools-scroll-fade"
-                />
+                  className="pointer-events-none absolute bottom-4 right-2 top-4 z-10 w-1.5 rounded-full bg-[#ececec] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
+                  data-testid="all-tools-scroll-indicator"
+                >
+                  <div
+                    className="absolute left-0 right-0 rounded-full bg-[#a8a8a8]"
+                    style={{
+                      height: `${toolsScrollIndicator.height}px`,
+                      transform: `translateY(${toolsScrollIndicator.top}px)`,
+                    }}
+                  />
+                </div>
               ) : null}
-            </Modal.Body>
+            </div>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
