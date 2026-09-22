@@ -58,7 +58,7 @@ type UsePageRendererParams = {
   fitContainer?: boolean;
 };
 
-type RenderedSize = { height: number; width: number } | null;
+type RenderedSize = { height: number; width: number; zoom: number } | null;
 
 export function usePageRenderer({
   canvasRef,
@@ -153,7 +153,8 @@ export function usePageRenderer({
               return prev;
             }
 
-            return { height: cssHeight, width: cssWidth };
+            // `zoom` travels with the size it produced so consumers stay in sync.
+            return { height: cssHeight, width: cssWidth, zoom };
           });
           // Notify subscribers (specifically `useFabricCanvas`) that the
           // post-save reparse is now on screen, so Fabric can safely

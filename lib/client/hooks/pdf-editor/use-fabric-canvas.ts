@@ -11,7 +11,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 
 type UseFabricCanvasParams = {
   fabricCanvasRef: RefObject<HTMLCanvasElement | null>;
-  renderedSize: { height: number; width: number } | null;
+  renderedSize: { height: number; width: number; zoom: number } | null;
 };
 
 // Tools that draw onto the Fabric overlay with a 1-finger gesture. Only these
@@ -52,7 +52,6 @@ export function useFabricCanvas({
 
     return order[s.currentPage - 1] ?? s.currentPage;
   });
-  const zoom = usePdfEditorStore((s) => s.zoom);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const getFabricJson = usePdfEditorStore((s) => s.getFabricJson);
   const saveFabricJsonBySourcePage = usePdfEditorStore(
@@ -73,12 +72,10 @@ export function useFabricCanvas({
   // re-mount Fabric on every zoom change. Only sourcePage changes trigger a
   // full re-mount; zoom/size adjustments live in the resize effect below.
   const renderedSizeRef = useRef(renderedSize);
-  const zoomRef = useRef(zoom);
 
   useEffect(() => {
     renderedSizeRef.current = renderedSize;
-    zoomRef.current = zoom;
-  }, [renderedSize, zoom]);
+  }, [renderedSize]);
 
   const hasRenderedSize = !!renderedSize;
 
@@ -144,7 +141,7 @@ export function useFabricCanvas({
         width: currentRenderedSize.width,
       });
 
-      fc.setZoom(zoomRef.current);
+      fc.setZoom(currentRenderedSize.zoom);
 
       // Fabric wraps the canvas in a <div data-fabric="wrapper"> with position:relative.
       // Make it overlay the PDF canvas with position:absolute instead.
@@ -188,7 +185,7 @@ export function useFabricCanvas({
           if (cancelled) return;
         }
 
-        fc.setZoom(zoomRef.current);
+        fc.setZoom(currentRenderedSize.zoom);
         fc.renderAll();
       }
 
@@ -446,7 +443,9 @@ export function useFabricCanvas({
       height: renderedSize.height,
       width: renderedSize.width,
     });
-    fc.setZoom(zoom);
+    // Use the zoom paired with this renderedSize, not the store's live zoom,
+    // to avoid a pinch/wheel race with the raster layer.
+    fc.setZoom(renderedSize.zoom);
 
     // Fabric caches a rasterized bitmap per object (text/groups especially).
     // Without invalidation, that cached bitmap is just scaled when zoom
@@ -457,7 +456,7 @@ export function useFabricCanvas({
     }
 
     fc.renderAll();
-  }, [renderedSize, zoom, fabricCanvas]);
+  }, [renderedSize, fabricCanvas]);
 
   return { fabricCanvas, fabricRef };
 }

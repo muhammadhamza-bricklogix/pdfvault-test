@@ -94,10 +94,12 @@ type ExportFormatModalProps = {
 };
 
 function ExportFormatModalBody({
-  initialName,
+  fileName,
+  setFileName,
   onClose,
 }: {
-  initialName: string;
+  fileName: string;
+  setFileName: (name: string) => void;
   onClose: () => void;
 }) {
   const file = usePdfEditorStore((s) => s.file);
@@ -126,8 +128,8 @@ function ExportFormatModalBody({
     [isW9Route, W9_ALLOWED_FORMATS],
   );
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");
-  const [fileName, setFileName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
+  const fileNameInputRef = useRef<HTMLInputElement>(null);
 
   // Duplicate-name check against the user's My PDFs library. Only
   // runs on the W-9 route per product ask 2026-08-29 — the shell
@@ -290,10 +292,10 @@ function ExportFormatModalBody({
       <Modal.CloseTrigger />
       <Modal.Header className="!pb-3 text-center">
         <Modal.Heading className="text-center text-xl font-bold">
-          Great Job!
+          Your file is ready
         </Modal.Heading>
         <p className="mt-1 text-center text-sm text-default-500">
-          Select the format to download your file.
+          Your changes are saved. Choose a format to download.
         </p>
       </Modal.Header>
 
@@ -371,6 +373,7 @@ function ExportFormatModalBody({
               onChange={setFileName}
             >
               <Input
+                ref={fileNameInputRef}
                 aria-invalid={duplicateExists}
                 aria-label="File name"
                 className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
@@ -378,11 +381,17 @@ function ExportFormatModalBody({
                 placeholder="document"
               />
             </TextField>
-            <HugeiconsIcon
-              className="shrink-0 text-default-400"
-              icon={PencilEdit01Icon}
-              size={15}
-            />
+            <button
+              aria-label="Rename file"
+              className="shrink-0 rounded p-0.5 text-default-400 transition-colors hover:bg-default-200 hover:text-default-700"
+              type="button"
+              onClick={() => {
+                fileNameInputRef.current?.focus();
+                fileNameInputRef.current?.select();
+              }}
+            >
+              <HugeiconsIcon icon={PencilEdit01Icon} size={15} />
+            </button>
           </div>
           {isW9Route && duplicateExists ? (
             <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
@@ -428,6 +437,21 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
   const file = usePdfEditorStore((s) => s.file);
   const initialName = file ? stripExt(file.name) : "document";
 
+  // fileName is lifted to this parent (not ExportFormatModalBody) so a typed rename
+  // survives the body remounting on each open/close of the same file.
+  const [fileName, setFileName] = useState(initialName);
+  const lastFileRef = useRef(file);
+
+  // Only reset fileName when the file itself changes, not on every open. Done in an
+  // effect rather than during render since the React Compiler lint disallows reading
+  // a ref at render time.
+  useEffect(() => {
+    if (file !== lastFileRef.current) {
+      lastFileRef.current = file;
+      setFileName(initialName);
+    }
+  }, [file, initialName]);
+
   return (
     <Modal.Backdrop
       isOpen={isOpen}
@@ -439,7 +463,8 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
         {isOpen && (
           <ExportFormatModalBody
             key={`${initialName}::${isOpen}`}
-            initialName={initialName}
+            fileName={fileName}
+            setFileName={setFileName}
             onClose={onClose}
           />
         )}

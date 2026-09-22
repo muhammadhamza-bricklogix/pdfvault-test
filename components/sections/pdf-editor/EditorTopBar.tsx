@@ -9,9 +9,9 @@ import {
   ArrowUp01Icon,
   BackgroundIcon,
   Cursor01Icon,
-  DashboardSpeed01Icon,
   DownloadIcon,
   EraserIcon,
+  GridIcon,
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
@@ -425,7 +425,7 @@ export function EditorInfoBar() {
                 variant="tertiary"
                 onPress={() => setIsToolsModalOpen(true)}
               >
-                <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
+                <HugeiconsIcon icon={GridIcon} size={16} />
               </Button>
               <Tooltip.Content>
                 <p>Browse PDF and image tools</p>
@@ -553,7 +553,7 @@ export function EditorInfoBar() {
               <span className="ml-1 hidden sm:inline">Share</span>
             </Button>
             <Button
-              aria-label="Done"
+              aria-label="Finish and Download"
               isDisabled={!file || isSavingBeforeExport}
               size="sm"
               variant="primary"
@@ -561,7 +561,7 @@ export function EditorInfoBar() {
             >
               <HugeiconsIcon icon={Tick01Icon} size={14} />
               <span className="ml-1 hidden sm:inline">
-                {isSavingBeforeExport ? "Saving…" : "Done"}
+                {isSavingBeforeExport ? "Saving…" : "Finish & Download"}
               </span>
             </Button>
 
@@ -602,7 +602,8 @@ export function EditorInfoBar() {
 // Tool Bar — all editing tools as individual buttons
 // ---------------------------------------------------------------------------
 
-const TOOLS = [
+// Exported so BottomDock.tsx (mobile) can build its own grouped pill layout from this same tool list.
+export const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
   { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
   { icon: SignatureIcon, id: "signature", label: "Signature" },
@@ -647,6 +648,10 @@ export function ToolsContent({
     <Toolbar aria-label="Drawing tools">
       <ToggleButtonGroup
         disallowEmptySelection
+        // isDetached separates buttons into individual pills instead of one continuous bar.
+        // HeroUI's default radius (rounded-3xl) still needs an explicit rounded-md override
+        // below on each ToggleButton to match ACTION_TOOLS' shape.
+        isDetached
         selectedKeys={new Set([activeTool])}
         selectionMode="single"
         size="md"
@@ -657,7 +662,7 @@ export function ToolsContent({
             <ToggleButton
               key={tool.id}
               aria-label={tool.label}
-              className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+              className="h-auto flex-col gap-0.5 rounded-md px-2.5 py-1.5"
               id={tool.id}
             >
               {i > 0 && <ToggleButtonGroup.Separator />}
@@ -666,7 +671,12 @@ export function ToolsContent({
             </ToggleButton>
           ) : (
             <Tooltip key={tool.id} delay={300}>
-              <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
+              <ToggleButton
+                isIconOnly
+                aria-label={tool.label}
+                className="rounded-md"
+                id={tool.id}
+              >
                 {i > 0 && <ToggleButtonGroup.Separator />}
                 <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
               </ToggleButton>

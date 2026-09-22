@@ -180,6 +180,13 @@ export type PersistEditorResult =
 type PersistEditorDocumentInput = {
   fabricCanvas?: FabricCanvas | null;
   /**
+   * Optional live sign-in override — the store's `isSignedIn` can lag a
+   * tick behind Clerk's `useAuth()`. Callers with live access to it (e.g.
+   * `useSaveEditor`) can pass it to bypass the store snapshot for this
+   * call; omitting it keeps the previous store-snapshot behavior.
+   */
+  isSignedIn?: boolean;
+  /**
    * Bypasses the `hasUnsavedChanges` short-circuit. Set to `true` for code
    * paths that produce a NEW source file even when the Fabric overlay is empty
    * — e.g. Manage Pages reorder/import/rotate, which rebuilds the PDF bytes
@@ -225,10 +232,13 @@ export async function persistEditorDocument({
   force = false,
   checkFilenameDuplicate = false,
   preserveStoreOverlays = false,
+  isSignedIn: isSignedInOverride,
 }: PersistEditorDocumentInput = {}): Promise<PersistEditorResult> {
   const state = usePdfEditorStore.getState();
   const { currentPage, file, hasUnsavedChanges, isSignedIn, pdfDocument } =
     state;
+  // Prefer the caller's live value when provided, else fall back to the store snapshot.
+  const effectiveIsSignedIn = isSignedInOverride ?? isSignedIn;
   // Reassigned after the duplicate-overwrite branch may stamp the
   // store, so the downstream upload sees the freshly-adopted id.
   let currentDocumentId = state.currentDocumentId;
@@ -237,7 +247,7 @@ export async function persistEditorDocument({
     return { ok: false, reason: "no-file" };
   }
 
-  if (!isSignedIn) {
+  if (!effectiveIsSignedIn) {
     return { ok: false, reason: "not-signed-in" };
   }
 

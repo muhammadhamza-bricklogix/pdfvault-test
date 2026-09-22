@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
+import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LanguageSwitcher } from "./language-switcher";
@@ -112,10 +113,18 @@ export function SiteNavbar() {
 
   // Auth routes render their own logo + language menu — bail out here to
   // avoid the double-header stack the user reported.
-  if (
-    pathname &&
-    HIDE_ON_PATHNAMES.some((prefix) => pathname.startsWith(prefix))
-  ) {
+  //
+  // QA 2026-09-22: on a locale-prefixed URL (`/ar/forms/w-9`),
+  // `usePathname()` keeps the `/ar/` prefix, so a raw `.startsWith`
+  // against `/forms/w-9` silently failed and SiteNavbar rendered on
+  // top of the page's own LandingHeader — a duplicated header visible
+  // only on non-EN locales (EN has no prefix, so it happened to work
+  // there). `stripLocalePrefix` is the established fix for this exact
+  // class of bug elsewhere in the app (EditorTopBar, ShareModal, etc.)
+  // — see its own doc comment in locale-map.ts.
+  const strippedPathname = stripLocalePrefix(pathname);
+
+  if (HIDE_ON_PATHNAMES.some((prefix) => strippedPathname.startsWith(prefix))) {
     return null;
   }
 

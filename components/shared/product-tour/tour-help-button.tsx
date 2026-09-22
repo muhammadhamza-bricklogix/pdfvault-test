@@ -4,8 +4,10 @@ import type { TourKey } from "@/lib/client/tour/tour-config";
 
 import { HelpCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useProductTour } from "@/lib/client/tour/use-product-tour";
+import { ROUTES } from "@/lib/shared/constants/routes";
 
 type Variant = "sidebar" | "chrome";
 
@@ -15,12 +17,30 @@ type TourHelpButtonProps = {
   label?: string;
 };
 
+// Routes each tour needs to be on for all of its anchors to exist.
+const TOUR_HOME_PATH: Partial<Record<TourKey, string>> = {
+  dashboard: ROUTES.APP.DASHBOARD,
+};
+
 export function TourHelpButton({
   tour,
   variant = "sidebar",
   label = "Show me around",
 }: TourHelpButtonProps) {
   const { start } = useProductTour(tour);
+  const pathname = usePathname();
+  const router = useRouter();
+  const homePath = TOUR_HOME_PATH[tour];
+
+  const handleClick = () => {
+    if (homePath && pathname !== homePath) {
+      // Redirect to the tour's home route; it picks up `?tour=<key>` and starts the tour there.
+      router.push(`${homePath}?tour=${tour}`);
+
+      return;
+    }
+    start();
+  };
 
   if (variant === "chrome") {
     return (
@@ -29,7 +49,7 @@ export function TourHelpButton({
         className="hidden md:inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-default-200 bg-white text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
         title={label}
         type="button"
-        onClick={start}
+        onClick={handleClick}
       >
         <HugeiconsIcon icon={HelpCircleIcon} size={16} />
       </button>
@@ -40,7 +60,7 @@ export function TourHelpButton({
     <button
       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--pv-text-body)] transition-colors hover:bg-[var(--pv-nav-active)]/60 hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)]"
       type="button"
-      onClick={start}
+      onClick={handleClick}
     >
       <HugeiconsIcon
         className="shrink-0"

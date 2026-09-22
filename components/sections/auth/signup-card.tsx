@@ -817,11 +817,29 @@ export function SignupCard({
         id={headingId}
       >
         {step === "credentials"
-          ? "Sign up for PDFVault"
+          ? // UX review 2026-09-17: when the SignupCard is opened
+            // from the file-download flow (email-first modal falls
+            // through to auth-modal + carries the email forward via
+            // `initialEmail`), the file is the reward the user is
+            // waiting on — not the account. Lead with "Your file is
+            // ready" so account creation reads as the small step
+            // between them and the download. Direct /sign-up visits
+            // (no initialEmail) keep the neutral "Sign up for
+            // PDFVault" heading.
+            initialEmail
+            ? "Your file is ready"
+            : "Sign up for PDFVault"
           : "Enter the code to sign up"}
       </h1>
       {/* Subtitle only on the verify step per the reference SS.
-          Credentials step (SS4) shows the heading alone. */}
+          Credentials step (SS4) shows the heading alone; the file-
+          download entry also shows a one-liner beneath the heading so
+          the "why am I signing up?" question is answered. */}
+      {step === "credentials" && initialEmail ? (
+        <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
+          Create an account to download it.
+        </p>
+      ) : null}
       {step === "verify" ? (
         <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
           {`Please check your email ${maskEmailAddress(email)}.`}

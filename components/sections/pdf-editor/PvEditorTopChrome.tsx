@@ -789,7 +789,7 @@ function TopAppBar() {
         </button>
 
         <Button
-          aria-label="Download"
+          aria-label="Finish and Download"
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
           isDisabled={!canDownload || isSavingBeforeExport}
@@ -798,7 +798,7 @@ function TopAppBar() {
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
 
           <span className="hidden sm:inline">
-            {isSavingBeforeExport ? "Saving…" : "Done"}
+            {isSavingBeforeExport ? "Saving…" : "Finish & Download"}
           </span>
         </Button>
       </div>

@@ -15,19 +15,27 @@ export function FileUploadDropzone({
 }: FileUploadDropzoneProps) {
   return (
     <div
-      className={`w-full max-w-4xl rounded-[2rem] border p-4 transition-all duration-200 sm:p-5 ${
+      className={`group w-full max-w-4xl rounded-[2rem] border p-4 transition-all duration-300 sm:p-5 ${
         isDragging
-          ? "border-solid border-accent ring-2 ring-accent/10"
-          : "border-dashed border-[color-mix(in_oklab,var(--color-accent)_40%,var(--color-background))]"
+          ? "border-solid border-accent shadow-2xl ring-4 ring-accent/20"
+          : "border-dashed border-[color-mix(in_oklab,var(--color-accent)_45%,var(--color-background))] hover:border-solid hover:border-accent hover:shadow-xl"
       }`}
     >
       <div
-        className={`flex min-h-[20rem] flex-col items-center justify-center rounded-[1.75rem] bg-[var(--color-accent)] px-6 py-10 text-center text-[var(--color-background)] transition-transform duration-200 sm:min-h-[22rem] ${
-          isDragging ? "scale-[1.01]" : ""
+        className={`flex min-h-[20rem] flex-col items-center justify-center rounded-[1.75rem] bg-[var(--color-accent)] px-6 py-10 text-center text-[var(--color-background)] transition-transform duration-300 sm:min-h-[22rem] ${
+          isDragging ? "scale-[1.015]" : "group-hover:scale-[1.008]"
         }`}
       >
-        <div className="flex h-24 w-24 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-foreground)_16%,var(--color-background))] bg-[var(--color-background)] text-5xl font-light text-[var(--color-foreground)] shadow-sm">
-          {isDragging ? "\u2193" : "+"}
+        <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-foreground)_16%,var(--color-background))] bg-[var(--color-background)] text-5xl font-light text-[var(--color-foreground)] shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+          {!isDragging ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-[var(--color-background)]/40 animate-pulse"
+            />
+          ) : null}
+          <span className={isDragging ? "inline-block animate-bounce" : ""}>
+            {isDragging ? "\u2193" : "+"}
+          </span>
         </div>
 
         <p className="mt-8 text-2xl font-semibold tracking-tight">

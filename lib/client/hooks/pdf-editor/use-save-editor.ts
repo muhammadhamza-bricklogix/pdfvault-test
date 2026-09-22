@@ -2,6 +2,7 @@
 
 import type { Canvas as FabricCanvas } from "fabric";
 
+import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -59,6 +60,14 @@ type SaveBeforeActionDetail = {
 export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Live Clerk value, mirrored into a ref since the listener below is
+  // registered once on mount and would otherwise close over a stale value.
+  const { isSignedIn: isSignedInLive } = useAuth();
+  const isSignedInRef = useRef(isSignedInLive);
+
+  useEffect(() => {
+    isSignedInRef.current = isSignedInLive;
+  }, [isSignedInLive]);
 
   const isSavingRef = useRef(false);
   const fabricRef = useRef(fabricCanvas);
@@ -271,6 +280,8 @@ export function useSaveEditor(fabricCanvas: FabricCanvas | null) {
           persistEditorDocument({
             fabricCanvas: fabricRef.current,
             force: detail?.force,
+            // Live value via ref, not the store snapshot — see isSignedInRef above.
+            isSignedIn: Boolean(isSignedInRef.current),
             // Same rationale as the button-Save above — Done/Download
             // and other save-before-action flows must not silently
             // duplicate a same-name row.

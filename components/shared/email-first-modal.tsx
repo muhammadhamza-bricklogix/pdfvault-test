@@ -4,7 +4,7 @@ import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
@@ -99,6 +99,7 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -115,6 +116,32 @@ export function EmailFirstModal() {
 
     return () => window.removeEventListener("app:email-first-modal", onOpen);
   }, []);
+
+  // Focus without letting the browser scroll the page to bring the input
+  // into view — the modal is already centered via CSS. On mobile the
+  // keyboard opens AFTER focus and shrinks the visible area, which can
+  // push the input above the fold; re-run scrollIntoView (targets the
+  // modal's own scrollable container, not the page) on visualViewport
+  // resize so the input stays reachable once the keyboard settles.
+  useEffect(() => {
+    if (!detail) return;
+    emailInputRef.current?.focus({ preventScroll: true });
+
+    const vv = window.visualViewport;
+
+    if (!vv) return;
+
+    const handleViewportResize = () => {
+      emailInputRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    };
+
+    vv.addEventListener("resize", handleViewportResize);
+
+    return () => vv.removeEventListener("resize", handleViewportResize);
+  }, [detail]);
 
   const close = useCallback(() => {
     setDetail(null);
@@ -371,7 +398,7 @@ export function EmailFirstModal() {
                     <HugeiconsIcon icon={Mail01Icon} size={18} />
                   </span>
                   <input
-                    autoFocus
+                    ref={emailInputRef}
                     required
                     aria-invalid={error ? true : undefined}
                     autoComplete="email"

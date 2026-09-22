@@ -57,7 +57,7 @@ const TOOL_LABELS: Record<string, string> = {
  *   history / download all keep their existing UX + optimistic updates.
  */
 export function DashboardHome() {
-  useProductTour("dashboard");
+  const { start: startDashboardTour } = useProductTour("dashboard");
   const [search, setSearch] = useState("");
   const [renameTarget, setRenameTarget] = useState<Document | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
@@ -107,6 +107,21 @@ export function DashboardHome() {
 
     router.replace(suffix ? `${pathname}?${suffix}` : pathname);
   }, [openPickerParam, pathname, router, searchParams]);
+
+  // `?tour=dashboard` triggers the product tour, then strips the param.
+  const tourParam = searchParams.get("tour");
+
+  useEffect(() => {
+    if (tourParam !== "dashboard") return;
+    startDashboardTour();
+
+    const next = new URLSearchParams(searchParams.toString());
+
+    next.delete("tour");
+    const suffix = next.toString();
+
+    router.replace(suffix ? `${pathname}?${suffix}` : pathname);
+  }, [tourParam, pathname, router, searchParams, startDashboardTour]);
 
   const items: readonly Document[] = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
