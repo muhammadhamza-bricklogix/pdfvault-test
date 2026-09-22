@@ -7,6 +7,7 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -38,6 +39,22 @@ function safeRedirectPath(raw: string | null, fallback: string): string {
   }
 
   return raw;
+}
+
+/**
+ * Dashboard fallback that preserves the CURRENT locale prefix. Same
+ * reasoning as `login-card.tsx` — a signed-out user opening the signup
+ * card from `/de/…` without an explicit `redirect_url` must land on
+ * `/de/dashboard` after finalize, not the English `/dashboard`. Server
+ * path returns the raw route since `window.location` isn't available.
+ */
+function localizedDashboardFallback(): string {
+  if (typeof window === "undefined") return ROUTES.APP.DASHBOARD;
+  const parsed = parseLocalePrefix(window.location.pathname);
+
+  return parsed
+    ? `/${parsed.locale}${ROUTES.APP.DASHBOARD}`
+    : ROUTES.APP.DASHBOARD;
 }
 
 /** Extracts the first useful Clerk error message + rewrites the awkward ones. */
@@ -247,7 +264,7 @@ export function SignupCard({
     () =>
       safeRedirectPath(
         redirectUrl ?? searchParams.get("redirect_url"),
-        ROUTES.APP.DASHBOARD,
+        localizedDashboardFallback(),
       ),
     [redirectUrl, searchParams],
   );

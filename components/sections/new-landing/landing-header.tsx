@@ -12,6 +12,7 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -49,10 +50,20 @@ const AUTH_RETURN_ROUTES = [
 ] as const;
 
 function authReturnUrlFor(pathname: string): string | undefined {
+  // Match AUTH_RETURN_ROUTES against the locale-stripped path so
+  // `/de/pdf-composer`, `/es/convert/word-to-pdf`, etc. are treated
+  // the same as their unprefixed equivalents. Without this the user
+  // signs in on `/de/convert/…` with no returnUrl set, LoginCard
+  // falls back to `/dashboard` (English), and the whole app flips
+  // out of German after the finalize `window.location.assign(…)`.
+  const parsed = parseLocalePrefix(pathname);
+  const effectivePath = parsed?.rest ?? pathname;
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
-    pathname.startsWith(prefix),
+    effectivePath.startsWith(prefix),
   );
 
+  // Return the ORIGINAL locale-prefixed pathname so the finalize
+  // navigation lands on the same localized page the user started on.
   return returnHere ? pathname : undefined;
 }
 
@@ -162,8 +173,7 @@ export function LandingHeader() {
             trackHeight,
         );
         const thumbTop =
-          (scrollContainer.scrollTop / maxScroll) *
-          (trackHeight - thumbHeight);
+          (scrollContainer.scrollTop / maxScroll) * (trackHeight - thumbHeight);
 
         setToolsScrollIndicator({ height: thumbHeight, top: thumbTop });
       });
@@ -197,14 +207,16 @@ export function LandingHeader() {
   return (
     <>
       <header
-        className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${scrolled
+        className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+          scrolled
             ? "border-[var(--pv-border-subtle)] bg-white/85 shadow-[0_4px_18px_-14px_rgba(0,0,0,0.25)]"
             : "border-transparent bg-[var(--pv-header-bg)]"
-          }`}
+        }`}
       >
         <div
-          className={`pv-container flex items-center justify-between gap-4 transition-[height] duration-300 ${scrolled ? "h-[62px]" : "h-[68px]"
-            }`}
+          className={`pv-container flex items-center justify-between gap-4 transition-[height] duration-300 ${
+            scrolled ? "h-[62px]" : "h-[68px]"
+          }`}
         >
           {/* Left: logo + primary nav */}
           <div className="flex items-center gap-7">
@@ -234,10 +246,11 @@ export function LandingHeader() {
               <button
                 aria-expanded={toolsModalOpen}
                 aria-haspopup="dialog"
-                className={`inline-flex items-center gap-1.5 rounded-full border border-[var(--pv-brand-primary)] px-4 py-1.5 text-[14px] font-medium transition-colors ${toolsModalOpen
+                className={`inline-flex items-center gap-1.5 rounded-full border border-[var(--pv-brand-primary)] px-4 py-1.5 text-[14px] font-medium transition-colors ${
+                  toolsModalOpen
                     ? "bg-[var(--pv-brand-primary)] text-white shadow-sm"
                     : "bg-transparent text-[var(--pv-brand-primary)] hover:bg-[var(--pv-brand-primary)]/10"
-                  }`}
+                }`}
                 type="button"
                 onClick={openToolsModal}
               >

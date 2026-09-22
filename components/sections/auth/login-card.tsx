@@ -8,6 +8,7 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import { OtpBoxes } from "@/components/ui/form/otp-boxes";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignInSchema } from "@/lib/shared/schemas/auth/sign-in.schema";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -36,6 +37,26 @@ function safeRedirectPath(raw: string | null, fallback: string): string {
   }
 
   return raw;
+}
+
+/**
+ * Dashboard fallback that preserves the CURRENT locale prefix. When a
+ * signed-out user opens the login card from `/de/…` (or any prefixed
+ * locale) without an explicit `redirect_url`, we default to
+ * `/de/dashboard` instead of `/dashboard`. Otherwise the finalize
+ * `window.location.assign(…)` (invariant #15) lands the user on the
+ * English dashboard and the whole authenticated app flips out of the
+ * locale they arrived on. Server-side / SSR path returns the raw
+ * dashboard route — the client-side memo below re-evaluates once
+ * `window.location` is available.
+ */
+function localizedDashboardFallback(): string {
+  if (typeof window === "undefined") return ROUTES.APP.DASHBOARD;
+  const parsed = parseLocalePrefix(window.location.pathname);
+
+  return parsed
+    ? `/${parsed.locale}${ROUTES.APP.DASHBOARD}`
+    : ROUTES.APP.DASHBOARD;
 }
 
 function BackChevron() {
@@ -272,7 +293,7 @@ export function LoginCard({
     () =>
       safeRedirectPath(
         redirectUrl ?? searchParams.get("redirect_url"),
-        ROUTES.APP.DASHBOARD,
+        localizedDashboardFallback(),
       ),
     [redirectUrl, searchParams],
   );
