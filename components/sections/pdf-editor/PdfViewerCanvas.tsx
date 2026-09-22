@@ -1018,6 +1018,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     <div
       ref={viewerScrollRef}
       className="flex-1 touch-pan-x touch-pan-y overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      data-pdf-viewer-scroll=""
     >
       {/*
         `w-fit mx-auto` sizes to the page and auto-centres horizontally.
