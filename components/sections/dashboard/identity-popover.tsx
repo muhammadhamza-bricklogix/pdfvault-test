@@ -29,12 +29,14 @@ type IdentityPopoverProps = {
    */
   content?: React.ReactNode;
   onNavigate?: () => void;
+  showLogout?: boolean;
 };
 
 export function IdentityPopover({
   collapsed,
   content,
   onNavigate,
+  showLogout = true,
 }: IdentityPopoverProps) {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -205,26 +207,34 @@ export function IdentityPopover({
             </ListBox.Item>
           </ListBox>
 
-          {/* Extra top margin + thicker divider isolates the destructive
-              Log out action from T&C / Help rows above. QA testers
-              reported hitting T&C when going for Log out
-              (2026-07-29 item 49). */}
-          <ListBox
-            aria-label="Session"
-            className="border-t-2 border-default-200 px-2 pb-2 pt-2"
-            selectionMode="none"
-            onAction={handleAction}
-          >
-            <ListBox.Item id="logout" textValue="Log out" variant="danger">
-              <div className="flex h-8 items-center justify-center">
-                <HugeiconsIcon
-                  className="size-4 shrink-0 text-danger"
-                  icon={Logout03Icon}
-                />
-              </div>
-              <Label>Log out</Label>
-            </ListBox.Item>
-          </ListBox>
+          {showLogout ? (
+            <>
+              {/* Extra top margin + thicker divider isolates the destructive
+                  Log out action from T&C / Help rows above. QA testers
+                  reported hitting T&C when going for Log out
+                  (2026-07-29 item 49). */}
+              <ListBox
+                aria-label="Session"
+                className="border-t-2 border-default-200 px-2 pb-2 pt-2"
+                selectionMode="none"
+                onAction={handleAction}
+              >
+                <ListBox.Item
+                  id="logout"
+                  textValue="Log out"
+                  variant="danger"
+                >
+                  <div className="flex h-8 items-center justify-center">
+                    <HugeiconsIcon
+                      className="size-4 shrink-0 text-danger"
+                      icon={Logout03Icon}
+                    />
+                  </div>
+                  <Label>Log out</Label>
+                </ListBox.Item>
+              </ListBox>
+            </>
+          ) : null}
         </Popover.Dialog>
       </Popover.Content>
     </Popover>

@@ -39,8 +39,8 @@ const ACTION_TOOLS = [
   { id: "split", label: "Split", icon: SplitIcon },
   { id: "flatten", label: "Flatten", icon: Layers01Icon },
   { id: "extract", label: "Extract", icon: FileExportIcon },
-  { id: "page-numbers", label: "Page No.", icon: TextNumberSignIcon },
-  { id: "annotate", label: "Annotation", icon: Comment01Icon },
+  { id: "page-numbers", label: "Page No", icon: TextNumberSignIcon },
+  { id: "annotate", label: "Annotate", icon: Comment01Icon },
 ] as const;
 
 // Split at the same 6/7 boundary as desktop's GROUP_A/GROUP_B (PvEditorTopChrome.tsx).

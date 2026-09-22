@@ -375,8 +375,16 @@ export function EditorInfoBar() {
               </Tooltip>
             </div>
 
-            {/* Undo + Redo — mobile only */}
+            {/* Back + Undo + Redo — mobile only */}
             <div className="flex items-center gap-1 sm:hidden">
+              <Button
+                aria-label="Back to dashboard"
+                size="sm"
+                variant="tertiary"
+                onPress={handleBack}
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+              </Button>
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -582,9 +590,9 @@ export function EditorInfoBar() {
 // Exported so BottomDock.tsx (mobile) can build its own grouped pill layout from this same tool list.
 export const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
-  { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
-  { icon: SignatureIcon, id: "signature", label: "Signature" },
-  { icon: TextFontIcon, id: "text", label: "Add Text" },
+  { icon: PencilEdit01Icon, id: "editText", label: "Edit" },
+  { icon: SignatureIcon, id: "signature", label: "Sign" },
+  { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },
