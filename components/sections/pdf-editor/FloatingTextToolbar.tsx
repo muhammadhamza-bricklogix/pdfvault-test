@@ -493,7 +493,7 @@ export function FloatingTextToolbar({
             selectedKey={style.fontFamily}
             onSelectionChange={(key) => applyStyle({ fontFamily: String(key) })}
           >
-            <Select.Trigger>
+            <Select.Trigger className="rounded-3xl border-0 bg-default shadow-none">
               <Select.Value />
               <Select.Indicator />
             </Select.Trigger>
@@ -526,7 +526,7 @@ export function FloatingTextToolbar({
               applyStyle({ fontSize: next });
             }}
           >
-            <Select.Trigger>
+            <Select.Trigger className="rounded-3xl border-0 bg-default shadow-none">
               <Select.Value />
               <Select.Indicator />
             </Select.Trigger>

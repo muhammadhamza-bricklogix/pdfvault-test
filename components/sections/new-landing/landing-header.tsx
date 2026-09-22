@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
@@ -73,6 +73,19 @@ export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const [formsModalOpen, setFormsModalOpen] = useState(false);
+  // QA 2026-09-22 (issue #1, second follow-up): a real, always-visible
+  // native scrollbar is not achievable on touch browsers — iOS Safari
+  // and Android Chrome intentionally fade their scroll indicator out
+  // once a scroll gesture ends (a platform-level UX convention, not a
+  // CSS-controllable one; there is no standards-track way to keep a
+  // native mobile scroll indicator painted at rest). `toolsBodyRef` +
+  // `toolsHasOverflow` back a scroll-position-independent affordance
+  // instead: a small bottom gradient that stays on screen the entire
+  // time the list has more content below, on every browser/OS, without
+  // depending on the native scrollbar at all. See the sticky footer
+  // node in the modal JSX below.
+  const toolsBodyRef = useRef<HTMLDivElement>(null);
+  const [toolsHasOverflow, setToolsHasOverflow] = useState(false);
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -120,6 +133,32 @@ export function LandingHeader() {
     setToolsModalOpen(true);
     setMobileOpen(false);
   };
+
+  // Measures whether the All Tools list actually overflows its scroll
+  // region, so the bottom "more below" fade (rendered in the modal JSX)
+  // only shows up when there is real content to hint at. `AllToolsCatalog`
+  // is lazy-loaded, so its real height isn't known on the first paint —
+  // a `ResizeObserver` on the scroll container itself re-checks whenever
+  // that height settles, without needing a callback threaded through the
+  // server-safe catalog component (same constraint noted in the
+  // click-delegation comment below).
+  useEffect(() => {
+    if (!toolsModalOpen) return;
+    const el = toolsBodyRef.current;
+
+    if (!el) return;
+
+    const check = () =>
+      setToolsHasOverflow(el.scrollHeight > el.clientHeight + 1);
+
+    check();
+
+    const observer = new ResizeObserver(check);
+
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [toolsModalOpen]);
 
   const openFormsModal = () => {
     setFormsModalOpen(true);
@@ -433,7 +472,28 @@ export function LandingHeader() {
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
             <Modal.Body
-              className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-default-300"
+              // QA 2026-09-22: the issue #1 fix (max-h-[80dvh] +
+              // overflow-y-auto) gave this list a real scroll region, but
+              // the thumb color class (`bg-default-300`) never actually
+              // compiled — this app's "default" token is a single flat
+              // color (see @heroui/styles' theme.css), not a numbered
+              // 100–900 scale, so Tailwind silently drops any `-N` suffix
+              // on it (confirmed by inspecting the real generated
+              // stylesheet: no `.bg-default-300` rule exists anywhere).
+              // The scrollbar had therefore been rendering as the plain
+              // browser/OS default the whole time, which several
+              // browsers auto-hide ("overlay" mode) between scroll
+              // gestures. `#c7c7c7`/`#ececec` are literal hex values
+              // already used elsewhere in this app's own components
+              // (e.g. PaywallModal.tsx's disabled-button and divider
+              // colors) rather than the broken numbered-token pattern.
+              // Both `scrollbar-color` (Firefox + Chromium 121+) and the
+              // `::-webkit-scrollbar-track`/`-thumb` pair (older
+              // Chromium/Safari) now resolve to real colors, which is
+              // what actually forces a permanently-rendered, non-overlay
+              // scrollbar instead of a fade-in-on-scroll one.
+              ref={toolsBodyRef}
+              className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [scrollbar-color:#c7c7c7_#ececec] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c7c7c7] [&::-webkit-scrollbar-track]:bg-[#ececec]"
             >
               {/* Click delegation: any tile navigation dismisses the modal
                   synchronously, regardless of whether the destination is a
@@ -457,6 +517,25 @@ export function LandingHeader() {
               >
                 <AllToolsCatalog />
               </div>
+              {/* "More tools below" cue. `position: sticky` inside this
+                  same scroll container pins it to the bottom of the
+                  visible viewport while there's more content underneath,
+                  then stops being sticky (scrolls away with the rest of
+                  the content) at the exact moment the real bottom is
+                  reached — so it disappears precisely when there is
+                  nothing left to hint at, with no scroll-position JS
+                  needed. `-mt-10` cancels its own height so it overlaps
+                  the last row instead of adding blank space below it.
+                  Only rendered when `toolsHasOverflow` is true, so
+                  desktop viewports where the whole catalog already fits
+                  never show a stray sliver under the last tile. */}
+              {toolsHasOverflow ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none sticky bottom-0 -mt-10 h-10 bg-gradient-to-t from-white to-transparent"
+                  data-testid="all-tools-scroll-fade"
+                />
+              ) : null}
             </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>

@@ -26,6 +26,7 @@ import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { DASHBOARD_MOBILE_SIDEBAR_EVENT } from "@/lib/client/tour/tour-config";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 
@@ -314,6 +315,30 @@ export function DashboardShell({ children }: DashboardShellProps) {
       document.body.style.overflow = previous;
     };
   }, [isMobileOpen]);
+
+  // QA 2026-09-22 (issue #20, second follow-up): the dashboard tour's
+  // "Quick tools" / "Account & settings" steps target elements that
+  // live in different places on mobile — quick tools in `<main>`,
+  // account/settings inside this drawer — so `tour-config.ts` dispatches
+  // this event per step to open/close the drawer as the tour advances.
+  // See `DASHBOARD_MOBILE_SIDEBAR_EVENT`'s own comment for the full
+  // reasoning. A no-op on desktop: `isMobileOpen` is only read by the
+  // mobile branch below.
+  useEffect(() => {
+    const onSetMobileSidebar = (event: Event) => {
+      const open = (event as CustomEvent<{ open: boolean }>).detail?.open;
+
+      if (typeof open === "boolean") setIsMobileOpen(open);
+    };
+
+    window.addEventListener(DASHBOARD_MOBILE_SIDEBAR_EVENT, onSetMobileSidebar);
+
+    return () =>
+      window.removeEventListener(
+        DASHBOARD_MOBILE_SIDEBAR_EVENT,
+        onSetMobileSidebar,
+      );
+  }, []);
 
   if (!isMobile) {
     return (

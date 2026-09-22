@@ -1306,9 +1306,18 @@ function PayStep({
             only way to change plan mid-checkout was to close the modal
             entirely via X, which drops the whole flow). Sits above the
             "Total due today" header so it's the first thing the user
-            reads when scanning from top-left. */}
+            reads when scanning from top-left.
+            QA 2026-09-22: the Back arrow rendered ~48px from the
+            dialog's left edge (Modal.Dialog's own 24px `p-6` PLUS this
+            button's own `px-6`/`md:px-8` stacking on top of it), while
+            the "✕" close trigger — absolute-positioned, so it ignores
+            the dialog's padding — sits only ~20px from the right edge.
+            `-ml-7`/`md:-ml-9` cancel exactly enough of that stacked
+            padding to land the Back arrow at the same ~20px inset,
+            without touching the dialog's shared padding or the
+            untouchable `.modal__close-trigger` design-system class. */}
         <button
-          className="-mt-1.5 inline-flex items-center gap-1.5 self-start px-6 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:px-8"
+          className="-ml-7 -mt-1.5 inline-flex items-center gap-1.5 self-start px-6 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:-ml-9 md:px-8"
           type="button"
           onClick={onBack}
         >
