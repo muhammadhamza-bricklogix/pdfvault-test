@@ -36,11 +36,11 @@ import {
 } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { PageResizeDialog } from "./PageResizeDialog";
-import { SortablePageList } from "./ThumbnailSidebar";
-
 import { useManagePagesDraft } from "@/lib/client/hooks/pdf-editor/use-manage-pages-draft";
 import { usePdfEditorStore } from "@/lib/client/stores";
+
+import { PageResizeDialog } from "./PageResizeDialog";
+import { SortablePageList } from "./ThumbnailSidebar";
 
 type ManagePagesModalProps = {
   isOpen: boolean;

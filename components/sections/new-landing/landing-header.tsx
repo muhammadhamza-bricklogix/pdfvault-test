@@ -471,30 +471,7 @@ export function LandingHeader() {
             <Modal.Header>
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
-            <Modal.Body
-              // QA 2026-09-22: the issue #1 fix (max-h-[80dvh] +
-              // overflow-y-auto) gave this list a real scroll region, but
-              // the thumb color class (`bg-default-300`) never actually
-              // compiled — this app's "default" token is a single flat
-              // color (see @heroui/styles' theme.css), not a numbered
-              // 100–900 scale, so Tailwind silently drops any `-N` suffix
-              // on it (confirmed by inspecting the real generated
-              // stylesheet: no `.bg-default-300` rule exists anywhere).
-              // The scrollbar had therefore been rendering as the plain
-              // browser/OS default the whole time, which several
-              // browsers auto-hide ("overlay" mode) between scroll
-              // gestures. `#c7c7c7`/`#ececec` are literal hex values
-              // already used elsewhere in this app's own components
-              // (e.g. PaywallModal.tsx's disabled-button and divider
-              // colors) rather than the broken numbered-token pattern.
-              // Both `scrollbar-color` (Firefox + Chromium 121+) and the
-              // `::-webkit-scrollbar-track`/`-thumb` pair (older
-              // Chromium/Safari) now resolve to real colors, which is
-              // what actually forces a permanently-rendered, non-overlay
-              // scrollbar instead of a fade-in-on-scroll one.
-              ref={toolsBodyRef}
-              className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [scrollbar-color:#c7c7c7_#ececec] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c7c7c7] [&::-webkit-scrollbar-track]:bg-[#ececec]"
-            >
+            <Modal.Body className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-default-300">
               {/* Click delegation: any tile navigation dismisses the modal
                   synchronously, regardless of whether the destination is a
                   new pathname (`/pdf-composer` → `/dashboard`) or a same-

@@ -10,7 +10,7 @@
 
 - **Free by default** — editing a PDF (open, save to vault, annotate, edit text, sign, watermark) is free. Sign-in is not required to start.
 - **Paywall triggers at value moment** — the very first time the user asks the backend to convert, export a downloadable file, share publicly, or run a bulk PDF-tool operation, the paywall fires.
-- **One SKU only** — 7-day trial at $0.99, then $25/month recurring. No standalone annual plan. No retention downsells. Full disclosure shown adjacent to the pay button.
+- **One SKU only** — 7-day trial at $0.99, then $39.99/month recurring. No standalone annual plan. No retention downsells. Full disclosure shown adjacent to the pay button.
 - **Solidgate iframe** — card data never touches PDFVault's servers. Apple Pay + Google Pay + card, all inside the Solidgate-hosted iframe.
 - **Cancel anytime** — dashboard button, two-step flow captures reason then finalises.
 - **Access continues until period end** — cancellation is not instant termination; the user still gets what they paid for.
@@ -19,7 +19,7 @@
 
 | Plan kind | Trial | Recurring | Interval | Notes |
 |---|---|---|---|---|
-| `TRIAL_MONTHLY` | $0.99 for 7 days | $25.00 | Every 30 days | The only plan seeded and offered. Backed by one Solidgate `product_id` set via `SOLIDGATE_PRODUCT_TRIAL_MONTHLY`. |
+| `TRIAL_MONTHLY` | $0.99 for 7 days | $39.99 | Every 30 days | The only plan seeded and offered. Backed by one Solidgate `product_id` set via `SOLIDGATE_PRODUCT_TRIAL_MONTHLY`. |
 | ~~`ANNUAL`~~ | — | — | — | Enum value exists in schema, no plan seeded. Reserved for future. |
 | ~~`DOWNSELL_1Y`~~ | — | — | — | Enum value exists in schema, no plan seeded. Reserved for future retention flow. |
 | ~~`DOWNSELL_2Y`~~ | — | — | — | Enum value exists in schema, no plan seeded. Reserved for future retention flow. |
@@ -125,7 +125,7 @@ User clicks Convert
     │       Backend calls Solidgate SDK formMerchantData()
     │       Backend returns:
     │         { merchant, paymentIntent (encrypted), signature,
-    │           orderId, amountTodayMinor: 99, amountRenewMinor: 2500,
+    │           orderId, amountTodayMinor: 99, amountRenewMinor: 3999,
     │           renewalDate, currency: "USD" }
     │
     ├── Modal renders:
@@ -160,9 +160,9 @@ User clicks Convert
 
 Rendered directly above the iframe. Non-collapsible, non-hidden, always visible before the user pays.
 
-> **By continuing, you agree you will be charged $0.99 today for a 7-day trial and $25 automatically every 30 days thereafter unless you cancel before your trial ends. You can cancel auto-renewing charges through your online account, by emailing payments@pdfvault.ai before your next monthly renewal date. Prices may change. See our Subscription Policy and Refund Policy for full details.**
+> **By continuing, you agree you will be charged $0.99 today for a 7-day trial and $39.99 automatically every 30 days thereafter unless you cancel before your trial ends. You can cancel auto-renewing charges through your online account, by emailing payments@pdfvault.ai before your next monthly renewal date. Prices may change. See our Subscription Policy and Refund Policy for full details.**
 
-The two numeric amounts (`$0.99` and `$25`) are interpolated from the server response, never hardcoded — the disclaimer always reflects what the user will actually be charged.
+The two numeric amounts (`$0.99` and `$39.99`) are interpolated from the server response, never hardcoded — the disclaimer always reflects what the user will actually be charged.
 
 Every paywall render writes a `ConsentRecord` row with:
 
@@ -173,7 +173,7 @@ Every paywall render writes a `ConsentRecord` row with:
 - `ip`, `userAgent`
 - `createdAt`
 
-This is the paper trail we hand to a card scheme during a chargeback dispute: "user saw disclaimer version 2026-07-12.v1 on {timestamp} from {ip}, agreed to be charged $0.99 today and $25 at renewal on {date}."
+This is the paper trail we hand to a card scheme during a chargeback dispute: "user saw disclaimer version 2026-07-12.v1 on {timestamp} from {ip}, agreed to be charged $0.99 today and $39.99 at renewal on {date}."
 
 **Rule:** if the ConsentRecord write fails for any reason, the backend does NOT return a signed intent. No charge is ever possible without a stored consent.
 
@@ -209,7 +209,7 @@ This is the paper trail we hand to a card scheme during a chargeback dispute: "u
 
 **At trial end + 1 second:**
 
-- Solidgate charges $25.00.
+- Solidgate charges $39.99.
 - Webhook: `subscription.recurring_success` (or the Solidgate equivalent) → local status flips `TRIALING → ACTIVE`, `Payment` row inserted, `Invoice` link stored on the Payment, receipt email sent.
 
 **If the card fails at renewal:**

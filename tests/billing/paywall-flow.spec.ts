@@ -62,7 +62,7 @@ test.describe("Public landing — no paywall", () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(rows[0].kind).toBe("TRIAL_MONTHLY");
     expect(rows[0].trialAmountMinor).toBe(99);
-    expect(rows[0].recurringAmountMinor).toBe(2500);
+    expect(rows[0].recurringAmountMinor).toBe(3999);
   });
 });
 

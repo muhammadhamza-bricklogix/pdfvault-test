@@ -196,9 +196,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // Keeps the viewport's visual center anchored across zoom changes: useLayoutEffect
   // captures the centered fraction before usePageRenderer resizes the canvas, and the
   // effect below re-applies it after the resize so the same point stays centered.
-  const scrollAnchorRef = useRef<{ fracX: number; fracY: number } | null>(
-    null,
-  );
+  const scrollAnchorRef = useRef<{ fracX: number; fracY: number } | null>(null);
   const prevZoomRef = useRef(zoom);
 
   useLayoutEffect(() => {

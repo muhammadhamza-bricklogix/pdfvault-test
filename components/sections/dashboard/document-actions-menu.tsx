@@ -58,7 +58,7 @@ export function DocumentActionsMenu({
 
   const handleDownload = async () => {
     try {
-      await triggerDocumentDownload(doc, router);
+      await triggerDocumentDownload(doc);
     } catch (err) {
       toast.error({
         title: "Download failed",

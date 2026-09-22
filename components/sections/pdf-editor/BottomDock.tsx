@@ -19,13 +19,13 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 
+import { usePdfEditorStore } from "@/lib/client/stores";
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
+
 import { TOOLS } from "./EditorTopBar";
 import { MobileToolPropertiesModal } from "./MobileToolPropertiesModal";
 import { ShapePropertiesContent } from "./RightSidebar";
 import { ThumbnailStrip } from "./ThumbnailSidebar";
-
-import { usePdfEditorStore } from "@/lib/client/stores";
-import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 
 type BottomDockProps = {
   fabricCanvas: FabricCanvas | null;
