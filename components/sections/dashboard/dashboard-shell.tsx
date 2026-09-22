@@ -222,8 +222,8 @@ function ProfileRow({
             />
           </>
         }
-        onNavigate={onNavigate}
         showLogout={!showStandaloneLogout}
+        onNavigate={onNavigate}
       />
       {showStandaloneLogout ? (
         <button
@@ -316,10 +316,7 @@ function SidebarBody({
         <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
           <LanguageSwitcher />
         </div>
-        <ProfileRow
-          showStandaloneLogout={isMobile}
-          onNavigate={onNavigate}
-        />
+        <ProfileRow showStandaloneLogout={isMobile} onNavigate={onNavigate} />
       </div>
     </div>
   );

@@ -219,11 +219,7 @@ export function IdentityPopover({
                 selectionMode="none"
                 onAction={handleAction}
               >
-                <ListBox.Item
-                  id="logout"
-                  textValue="Log out"
-                  variant="danger"
-                >
+                <ListBox.Item id="logout" textValue="Log out" variant="danger">
                   <div className="flex h-8 items-center justify-center">
                     <HugeiconsIcon
                       className="size-4 shrink-0 text-danger"

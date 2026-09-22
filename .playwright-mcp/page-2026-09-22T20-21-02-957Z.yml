@@ -1,0 +1,9 @@
+- generic [active]:
+  - generic [ref=f16e9]:
+    - complementary "Page thumbnails" [ref=f16e10]
+    - status:
+      - generic:
+        - generic:
+          - paragraph: Loading your PDF…
+          - paragraph: Your PDF is a little larger — hang tight, we're almost there. Apologies for the wait.
+  - alert [ref=f16e17]
