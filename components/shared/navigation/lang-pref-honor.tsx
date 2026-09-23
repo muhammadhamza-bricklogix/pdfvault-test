@@ -10,19 +10,22 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
-// URL patterns where a full-page reload would destroy in-flight state
-// (uploads mid-transfer, auto-signup finalize step, converter pending
-// overlay, editor unsaved edits). LangPrefHonor's redirect skips these
-// paths — Weglot still translates the underlying page since the URL
-// prefix mismatch is only cosmetic while the flow completes.
-const SKIP_REDIRECT_PREFIXES = [
-  "/pdf-composer",
-  "/pdf-editor",
-  "/w-9-form",
-  "/forms/w-9",
-  "/convert/",
-  "/sso-callback",
-];
+// URL patterns where a full-page reload would destroy in-flight auth
+// state that has no client-side recovery. Currently only OAuth callback
+// — Clerk needs to complete the token exchange without interference.
+// Every other route (including `/pdf-composer`, `/convert/`, editor,
+// W-9) does redirect back to the locale prefix, but with the debounce
+// below so it doesn't race concurrent `window.location.assign` calls
+// from the auto-signup finalize path (item #15 of the auth chain).
+const SKIP_REDIRECT_PREFIXES = ["/sso-callback"];
+
+// Delay before the redirect fires. During this window, any URL change
+// (e.g. auto-signup's own `window.location.assign` from a signed-out
+// upload flow) cancels the pending redirect via the useEffect cleanup,
+// then re-schedules on the new pathname. Empirically 1000 ms covers
+// the auto-signup finalize → composer navigation without user-visible
+// delay on a normal `<Link>` click.
+const REDIRECT_DEBOUNCE_MS = 1000;
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -52,12 +55,6 @@ export function LangPrefHonor() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (parseLocalePrefix(pathname)) return;
-    // Skip the redirect on paths where a full-page reload would nuke
-    // in-flight React state — QA 2026-09-23: main landing → Upload PDF
-    // on `/de/` needed two attempts to reach the composer because the
-    // reload raced auto-signup's own `window.location.assign`. Weglot
-    // still translates the underlying page in place while these flows
-    // complete; the URL prefix mismatch is cosmetic.
     if (SKIP_REDIRECT_PREFIXES.some((p) => pathname.startsWith(p))) return;
 
     const pref = readCookie(LANG_PREF_COOKIE);
@@ -65,11 +62,24 @@ export function LangPrefHonor() {
     if (!pref || pref === DEFAULT_LOCALE) return;
     if (!(SUPPORTED_LOCALES as readonly string[]).includes(pref)) return;
 
-    const suffix = pathname === "/" ? "" : pathname;
-    const search = window.location.search ?? "";
-    const hash = window.location.hash ?? "";
+    // Debounce the redirect so it can't race a concurrent
+    // `window.location.assign` from the auto-signup finalize flow
+    // (item #15 of the auth chain). If the pathname changes during
+    // the wait — because auto-signup navigated to a different URL, or
+    // a shell effect swapped it — the useEffect cleanup clears this
+    // timer and the next fire re-schedules against the new pathname.
+    // Once the URL is stable for `REDIRECT_DEBOUNCE_MS`, the reload
+    // fires and the user lands on `/{locale}/…` with Clerk's session
+    // cookie already committed by the preceding assign.
+    const timer = window.setTimeout(() => {
+      const suffix = pathname === "/" ? "" : pathname;
+      const search = window.location.search ?? "";
+      const hash = window.location.hash ?? "";
 
-    window.location.replace(`/${pref}${suffix}${search}${hash}`);
+      window.location.replace(`/${pref}${suffix}${search}${hash}`);
+    }, REDIRECT_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   // (2) Capture the current URL's locale prefix into the cookie so
