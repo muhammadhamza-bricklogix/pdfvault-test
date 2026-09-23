@@ -841,32 +841,29 @@ export function PaywallModal({
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {/*
-          `translate="no"` + `notranslate` / `wg-notranslate` class fence off
-          the modal subtree from Weglot (and Google Translate).
-          Without this, the modal crashes on any translated locale
-          (`/de/`, `/es/`, `/fr/`, …) the moment React re-renders the
-          plan step — Weglot has already swapped React's text nodes for
-          translated ones, so React's next `removeChild` throws
-          `NotFoundError: The node to be removed is not a child of this
-          node.` and the global-error boundary blanks the page with
-          "Application error: a client-side exception has occurred". See
-          repro 2026-09-22 via Playwright on `/de/dashboard` → Download
-          → Annual plan card. English paywall copy on translated
-          locales is intentional until we move the plan/pay/success
-          copy into next-intl.
+          Fence markers removed 2026-09-23 per product decision: users
+          on `/de/`, `/es/`, `/fr/`, `/pt/`, `/ar/` expect the paywall
+          to render in their locale, not English. Weglot now translates
+          the modal like the rest of the page.
+
+          Known trade-off: the plan-card swap (Monthly ↔ Annual) can
+          trigger a React ↔ Weglot `NotFoundError: Failed to execute
+          'removeChild' on 'Node'` crash because Weglot has mutated
+          the text nodes React expects to update in place. If this
+          resurfaces, add `key={selectedPlan}` on the plan-cards
+          wrapper (forces full unmount/remount, avoiding text-node
+          diff) or move the copy into next-intl.
         */}
         <Modal.Dialog
           className={
-            (step === "success"
+            step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
                 ? hidePreview
                   ? "max-h-[calc(100dvh-32px)] w-[min(760px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                   : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
-                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
-            " notranslate wg-notranslate"
+                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
           }
-          translate="no"
         >
           <Modal.CloseTrigger />
           {error ? (
