@@ -1,0 +1,61 @@
+{
+  "tools": {
+    "select": "Auswählen",
+    "editText": "Bearbeiten",
+    "signature": "Signieren",
+    "text": "Text",
+    "draw": "Zeichnen",
+    "highlight": "Markieren",
+    "shape": "Formen",
+    "eraser": "Radierer",
+    "whiteout": "Weißen",
+    "redact": "Schwärzen",
+    "image": "Bild",
+    "watermark": "Wasserzeichen",
+    "backgroundImage": "Hintergrund",
+    "compress": "Komprimieren",
+    "secure": "Sichern",
+    "merge": "Zusammenführen",
+    "split": "Aufteilen",
+    "flatten": "Zusammenfügen",
+    "extract": "Extrahieren",
+    "pageNumbers": "Seiten-Nr.",
+    "annotate": "Kommentieren",
+    "managePages": "Seiten verwalten"
+  },
+  "topChrome": {
+    "backToDashboard": "Zurück zum Dashboard",
+    "home": "Startseite",
+    "zoom": "Zoom",
+    "zoomOut": "Verkleinern",
+    "zoomIn": "Vergrößern",
+    "openPdfToSave": "PDF öffnen, um zu speichern",
+    "loginToSave": "Anmelden, um in Ihrer Bibliothek zu speichern",
+    "saveToMyPdfs": "In Meine PDFs speichern",
+    "save": "Speichern",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "search": "Im PDF suchen",
+    "print": "Drucken",
+    "share": "Per Link teilen",
+    "download": "Fertigstellen und Herunterladen"
+  },
+  "saveStatus": {
+    "saving": "Ihre Änderungen werden gespeichert",
+    "saved": "In Meine PDFs gespeichert",
+    "unsaved": "Ungespeicherte Änderungen"
+  },
+  "menu": {
+    "editorMenu": "Editor-Menü",
+    "createNew": "Neu erstellen",
+    "openFile": "Datei öffnen",
+    "myPdfs": "Meine PDFs",
+    "findReplace": "Suchen und Ersetzen",
+    "compressPdf": "PDF komprimieren",
+    "splitPdf": "PDF teilen",
+    "extractImages": "Bilder extrahieren",
+    "flattenPdf": "PDF zusammenfügen",
+    "share": "Per Link teilen",
+    "versionHistory": "Versionsverlauf"
+  }
+}

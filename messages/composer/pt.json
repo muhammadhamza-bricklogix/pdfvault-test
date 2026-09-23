@@ -1,0 +1,61 @@
+{
+  "tools": {
+    "select": "Selecionar",
+    "editText": "Editar",
+    "signature": "Assinar",
+    "text": "Texto",
+    "draw": "Desenhar",
+    "highlight": "Destacar",
+    "shape": "Formas",
+    "eraser": "Borracha",
+    "whiteout": "Corretor",
+    "redact": "Ocultar",
+    "image": "Imagem",
+    "watermark": "Marca d'água",
+    "backgroundImage": "Fundo",
+    "compress": "Comprimir",
+    "secure": "Proteger",
+    "merge": "Mesclar",
+    "split": "Dividir",
+    "flatten": "Achatar",
+    "extract": "Extrair",
+    "pageNumbers": "Nº da página",
+    "annotate": "Anotar",
+    "managePages": "Gerenciar páginas"
+  },
+  "topChrome": {
+    "backToDashboard": "Voltar ao painel",
+    "home": "Início",
+    "zoom": "Zoom",
+    "zoomOut": "Diminuir zoom",
+    "zoomIn": "Aumentar zoom",
+    "openPdfToSave": "Abra um PDF para salvar",
+    "loginToSave": "Entre para salvar na sua biblioteca",
+    "saveToMyPdfs": "Salvar em Meus PDFs",
+    "save": "Salvar",
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "search": "Pesquisar no PDF",
+    "print": "Imprimir",
+    "share": "Compartilhar via link",
+    "download": "Concluir e Baixar"
+  },
+  "saveStatus": {
+    "saving": "Salvando suas edições",
+    "saved": "Salvo em Meus PDFs",
+    "unsaved": "Edições não salvas"
+  },
+  "menu": {
+    "editorMenu": "Menu do editor",
+    "createNew": "Criar novo",
+    "openFile": "Abrir arquivo",
+    "myPdfs": "Meus PDFs",
+    "findReplace": "Localizar e substituir",
+    "compressPdf": "Comprimir PDF",
+    "splitPdf": "Dividir PDF",
+    "extractImages": "Extrair imagens",
+    "flattenPdf": "Achatar PDF",
+    "share": "Compartilhar via link",
+    "versionHistory": "Histórico de versões"
+  }
+}
