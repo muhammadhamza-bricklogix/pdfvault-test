@@ -985,6 +985,7 @@ export function PaywallModal({
               retryKey={retryKey}
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
+              strings={strings}
               onBack={() => setStep("plan")}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
@@ -1327,6 +1328,7 @@ function PayStep({
   selectedPlan,
   preview,
   onBack,
+  strings,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
@@ -1345,6 +1347,7 @@ function PayStep({
    * they change plan and click Continue again.
    */
   onBack: () => void;
+  strings: PaywallStrings;
 }) {
   const todayDisplay = formatMinor(intent.amountTodayMinor, intent.currency);
   const renewDisplay = formatMinor(intent.amountRenewMinor, intent.currency);
@@ -1431,14 +1434,14 @@ function PayStep({
           onClick={onBack}
         >
           <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />
-          Back
+          {strings.pay.back}
         </button>
         {/* Total due today header — matches the right-column order
             summary so both instances of "Total due today" read at
             the same weight and size (2026-09-03 PM ask). */}
         <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-4 md:px-8">
           <span className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
-            Total due today
+            {strings.pay.totalDueToday}
           </span>
           <span className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
             {todayDisplay}
@@ -1448,7 +1451,7 @@ function PayStep({
         <div className="flex flex-col gap-4 p-6 md:p-8">
           {/* Express checkout label */}
           <p className="text-[13px] font-semibold uppercase tracking-wide text-[#1a1c21]">
-            Express checkout
+            {strings.pay.expressCheckout}
           </p>
 
           {/* Real SDK wallet buttons + card form. Mounted immediately on
@@ -1488,6 +1491,7 @@ function PayStep({
                 work before expanding (parity with PDF Guru). */}
             <PayWithCardHeader
               expanded={cardExpanded}
+              label={strings.pay.payWithCard}
               onToggle={() => setCardExpanded((v) => !v)}
             />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
@@ -1535,19 +1539,16 @@ function PayStep({
               className="flex flex-col gap-2.5 rounded-xl border border-danger-200 bg-danger-50 p-5 text-[14px] text-danger-800 sm:p-6 sm:text-[15px] dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
             >
               <p className="text-[15px] font-semibold leading-snug sm:text-[17px]">
-                Your card was declined and hasn&apos;t been charged.
+                {strings.pay.cardDeclinedHeading}
               </p>
-              <p className="leading-relaxed">
-                Try another card or contact your bank. You can re-enter details
-                below.
-              </p>
+              <p className="leading-relaxed">{strings.pay.cardDeclinedBody}</p>
               <button
                 className="mt-2 inline-flex h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:text-[16px]"
                 disabled={retryLoading}
                 type="button"
                 onClick={onRetry}
               >
-                {retryLoading ? "Preparing…" : "Try another card"}
+                {retryLoading ? strings.pay.preparing : strings.pay.tryAnotherCard}
               </button>
             </div>
           ) : null}
@@ -1555,38 +1556,48 @@ function PayStep({
           {/* Plan features */}
           <div className="flex flex-col gap-3">
             <p className="text-[12px] font-bold uppercase tracking-widest text-[#1a1c21]">
-              {selectedPlan === "annual" ? "Annual Access" : "7-Day Access"}
+              {selectedPlan === "annual"
+                ? strings.pay.annualAccess
+                : strings.pay.sevenDayAccess}
             </p>
             <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
-              <Feature>Unlimited downloads</Feature>
-              <Feature>Unlimited edits</Feature>
-              <Feature>Convert to any format</Feature>
-              <Feature>Password-protect your documents</Feature>
+              <Feature>{strings.pay.unlimitedDownloads}</Feature>
+              <Feature>{strings.pay.unlimitedEdits}</Feature>
+              <Feature>{strings.pay.convertAnyFormat}</Feature>
+              <Feature>{strings.pay.passwordProtect}</Feature>
             </ul>
           </div>
 
           {/* Legal small-print */}
-          <p className="text-[11px] leading-relaxed text-[#8a8a8a]">
-            By continuing you agree to be charged{" "}
-            {selectedPlan === "annual"
-              ? `${todayDisplay} every 365 days`
-              : `${todayDisplay} today for a 7-day trial, then ${renewDisplay} per month`}{" "}
-            unless cancelled. See our{" "}
-            <a
-              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
-              href="/terms-and-conditions"
-            >
-              Subscription
-            </a>{" "}
-            &amp;{" "}
-            <a
-              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
-              href="/refund-policy"
-            >
-              Refund
-            </a>{" "}
-            policies.
-          </p>
+          {(() => {
+            const disc =
+              selectedPlan === "annual"
+                ? strings.pay.disclaimerAnnual({ todayAmount: todayDisplay })
+                : strings.pay.disclaimerMonthly({
+                    todayAmount: todayDisplay,
+                    renewAmount: renewDisplay,
+                  });
+
+            return (
+              <p className="text-[11px] leading-relaxed text-[#8a8a8a]">
+                {disc.intro}
+                <a
+                  className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
+                  href="/terms-and-conditions"
+                >
+                  {strings.pay.subscriptionLink}
+                </a>
+                {disc.policySeparator}
+                <a
+                  className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
+                  href="/refund-policy"
+                >
+                  {strings.pay.refundLink}
+                </a>
+                {disc.policyOutro}
+              </p>
+            );
+          })()}
 
           {process.env.NODE_ENV !== "production" ? (
             <p className="rounded-md bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
@@ -1612,7 +1623,7 @@ function PayStep({
           >
             <HugeiconsIcon icon={Tick01Icon} size={12} strokeWidth={3} />
           </span>
-          Your document is ready!
+          {strings.pay.yourDocumentReady}
         </div>
         {preview ? (
           <PreviewFileCard preview={preview} />
@@ -1629,7 +1640,7 @@ function PayStep({
         <div className="rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between gap-2">
             <p className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
-              Total due today
+              {strings.pay.totalDueToday}
             </p>
             <p className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
               {todayDisplay}
@@ -1639,8 +1650,7 @@ function PayStep({
 
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
           <span aria-hidden>🔒</span>
-          Card details never touch our servers. Payments run through a
-          PCI-compliant partner.
+          {strings.pay.cardSecurityNote}
         </p>
       </div>
     </div>
@@ -2264,9 +2274,11 @@ const ACCEPTED_CARD_BRANDS = [
 function PayWithCardHeader({
   expanded,
   onToggle,
+  label,
 }: {
   expanded: boolean;
   onToggle: () => void;
+  label: string;
 }) {
   return (
     <button
@@ -2276,9 +2288,7 @@ function PayWithCardHeader({
       type="button"
       onClick={onToggle}
     >
-      <span className="text-[15px] font-semibold text-white">
-        Pay with card
-      </span>
+      <span className="text-[15px] font-semibold text-white">{label}</span>
       <span className="flex items-center gap-1.5">
         {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
           <span
