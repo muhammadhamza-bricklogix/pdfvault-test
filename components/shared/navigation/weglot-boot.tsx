@@ -18,6 +18,12 @@ declare global {
       }) => void;
       switchTo?: (lang: string) => void;
       getCurrentLang?: () => string | undefined;
+      options?: {
+        excluded_blocks?: Array<{ value: string }>;
+        excludedBlocksSelector?: string;
+        [key: string]: unknown;
+      };
+      on?: (event: string, handler: (...args: unknown[]) => void) => void;
     };
     __WEGLOT_INITIALIZED__?: boolean;
   }
@@ -33,19 +39,35 @@ declare global {
 //
 // Weglot ignores the class / `translate="no"` markers by DEFAULT on the
 // "Other" technology integration (`technology_id: 12`) because
-// `excludedBlocksSelector` is empty on the merchant dashboard. Passing
-// `excludeBlocks` here fills that gap client-side and makes the fence
-// markers actually load-bearing.
+// `excludedBlocksSelector` is empty on the merchant dashboard. We fill
+// that gap client-side — but Weglot v4's `initialize()` silently drops
+// unrecognised properties from its config object, so passing
+// `excludeBlocks` to `initialize()` alone is a no-op (verified on
+// staging 2026-09-23: chunk contained the code but
+// `Weglot.options.excluded_blocks` still resolved to `[]`).
 //
-// Verified on staging 2026-09-23 via Playwright: fence + this config →
-// paywall stays open on `/de/dashboard` when Annual is clicked; without
-// this config → `Application error: a client-side exception has
-// occurred` blank page (repro from user report).
+// The only shape that actually sticks is mutating `Weglot.options`
+// directly AFTER init. Both the array (`excluded_blocks`) and the CSS
+// selector string (`excludedBlocksSelector`) are set — Weglot's
+// MutationObserver reads whichever is populated for the current
+// document mode.
 const WEGLOT_EXCLUDE_BLOCKS = [
   { value: ".wg-notranslate" },
   { value: ".notranslate" },
   { value: '[translate="no"]' },
 ];
+const WEGLOT_EXCLUDE_BLOCKS_SELECTOR =
+  '.wg-notranslate, .notranslate, [translate="no"]';
+
+function applyExcludeBlocks(): void {
+  if (typeof window === "undefined") return;
+  const W = window.Weglot;
+
+  if (!W) return;
+  W.options = W.options ?? {};
+  W.options.excluded_blocks = WEGLOT_EXCLUDE_BLOCKS;
+  W.options.excludedBlocksSelector = WEGLOT_EXCLUDE_BLOCKS_SELECTOR;
+}
 
 function initWeglotOnce(): void {
   if (typeof window === "undefined") return;
@@ -58,9 +80,27 @@ function initWeglotOnce(): void {
     destinationLanguages: "de,fr,es,pt,ar",
     subdirectory: true,
     switchers: [] as unknown[],
-    excludeBlocks: WEGLOT_EXCLUDE_BLOCKS,
   });
   window.__WEGLOT_INITIALIZED__ = true;
+
+  // Mutate options AFTER init. `initialize()` overwrites `options` with
+  // the merchant-dashboard config, so any pre-init mutation is lost.
+  // Post-init assignment is the shape verified working in-browser
+  // 2026-09-23 (Playwright repro: paywall stays open, Annual click
+  // transitions cleanly, zero errors captured).
+  applyExcludeBlocks();
+
+  // Belt-and-braces: Weglot also emits `languageChanged` after every
+  // switchTo() call, and internally re-reads `options.excluded_blocks`
+  // for the next translation pass. Re-applying on that event keeps the
+  // fence honoured across manual dropdown-driven language switches.
+  try {
+    window.Weglot?.on?.("languageChanged", applyExcludeBlocks);
+  } catch {
+    // `on` isn't guaranteed on every Weglot build; failing quietly is
+    // acceptable — the post-init assignment above is the load-bearing
+    // path.
+  }
 }
 
 // Re-added 2026-09-02 after apex DNS was moved off Weglot's Cloudflare
