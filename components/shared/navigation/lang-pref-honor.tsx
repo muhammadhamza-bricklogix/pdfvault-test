@@ -10,6 +10,20 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
+// URL patterns where a full-page reload would destroy in-flight state
+// (uploads mid-transfer, auto-signup finalize step, converter pending
+// overlay, editor unsaved edits). LangPrefHonor's redirect skips these
+// paths — Weglot still translates the underlying page since the URL
+// prefix mismatch is only cosmetic while the flow completes.
+const SKIP_REDIRECT_PREFIXES = [
+  "/pdf-composer",
+  "/pdf-editor",
+  "/w-9-form",
+  "/forms/w-9",
+  "/convert/",
+  "/sso-callback",
+];
+
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const target = `${name}=`;
@@ -38,6 +52,13 @@ export function LangPrefHonor() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (parseLocalePrefix(pathname)) return;
+    // Skip the redirect on paths where a full-page reload would nuke
+    // in-flight React state — QA 2026-09-23: main landing → Upload PDF
+    // on `/de/` needed two attempts to reach the composer because the
+    // reload raced auto-signup's own `window.location.assign`. Weglot
+    // still translates the underlying page in place while these flows
+    // complete; the URL prefix mismatch is cosmetic.
+    if (SKIP_REDIRECT_PREFIXES.some((p) => pathname.startsWith(p))) return;
 
     const pref = readCookie(LANG_PREF_COOKIE);
 
