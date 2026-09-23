@@ -109,5 +109,53 @@ export function LangPrefHonor() {
     document.cookie = `${LANG_PREF_COOKIE}=${parsed.locale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${secure}`;
   }, [pathname]);
 
+  // (3) Force Weglot to re-scan the DOM on every locale-prefixed
+  // pathname visit.
+  //
+  // The composer, editor, W-9 form, and other heavy client components
+  // dynamic-import their content and mount it AFTER Weglot's initial
+  // translation pass has already run. Weglot's body-level MutationObserver
+  // should catch these mounts, but in practice — because the composer
+  // renders in a nested wrapper and mounts many nodes in the same task —
+  // some elements slip past. Result on `/de/pdf-composer`: the URL is
+  // German, `Weglot.getCurrentLang()` returns "de", but toolbar / sidebar
+  // labels stay English until the user hovers a button (which triggers
+  // its OWN mutation the observer catches).
+  //
+  // Fix: on every locale-prefixed pathname visit, schedule three
+  // `Weglot.search()` calls at 400 ms / 1200 ms / 2500 ms. First catches
+  // the initial mount, second catches slow-hydration content, third
+  // catches lazy dynamic imports. Cheap operation — Weglot skips
+  // already-translated nodes internally, so redundant calls no-op.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!parseLocalePrefix(pathname)) return;
+
+    const w = window as typeof window & {
+      Weglot?: {
+        search?: () => void;
+        getCurrentLang?: () => string | undefined;
+      };
+    };
+    const rescan = () => {
+      try {
+        if (w.Weglot?.getCurrentLang?.() === "en") return;
+        w.Weglot?.search?.();
+      } catch {
+        // Weglot occasionally throws mid-init on race conditions. Safe
+        // to swallow — the next scheduled call retries.
+      }
+    };
+    const t1 = window.setTimeout(rescan, 400);
+    const t2 = window.setTimeout(rescan, 1200);
+    const t3 = window.setTimeout(rescan, 2500);
+
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [pathname]);
+
   return null;
 }
