@@ -108,42 +108,45 @@ export function LangPrefHonor() {
   // should catch these mounts, but in practice — because the composer
   // renders in a nested wrapper and mounts many nodes in the same task —
   // some elements slip past. Result on `/de/pdf-composer`: the URL is
-  // German, `Weglot.getCurrentLang()` returns "de", but toolbar / sidebar
-  // labels stay English until the user hovers a button (which triggers
-  // its OWN mutation the observer catches).
+  // German, but toolbar / sidebar labels stay English until the user
+  // hovers a button (which triggers its OWN mutation the observer
+  // catches).
   //
-  // Fix: on every locale-prefixed pathname visit, schedule three
-  // `Weglot.search()` calls at 400 ms / 1200 ms / 2500 ms. First catches
-  // the initial mount, second catches slow-hydration content, third
-  // catches lazy dynamic imports. Cheap operation — Weglot skips
-  // already-translated nodes internally, so redundant calls no-op.
+  // Fix: on every locale-prefixed pathname visit, schedule six
+  // `Weglot.search()` calls at 400 / 1200 / 2500 / 5000 / 8000 / 12000
+  // ms. The composer + editor keep hydrating for several seconds after
+  // route change (Fabric canvas init, pdf.js worker boot, dynamic
+  // component chunks) — the shorter 2.5 s ceiling from the first pass
+  // of this fix missed the late-arriving toolbar and sidebar text.
+  //
+  // `Weglot.search()` no-ops on already-translated nodes internally, so
+  // extra calls are cheap. We also DO NOT short-circuit on
+  // `getCurrentLang() === "en"` here — during the composer's initial
+  // hydration Weglot occasionally reports "en" before the URL-driven
+  // language switch settles, and skipping search() in that window is
+  // the very failure mode that keeps composer text English. Calling
+  // search() when Weglot's internal state is still "en" is safe: it
+  // just walks the DOM and finds nothing to translate.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!parseLocalePrefix(pathname)) return;
 
     const w = window as typeof window & {
-      Weglot?: {
-        search?: () => void;
-        getCurrentLang?: () => string | undefined;
-      };
+      Weglot?: { search?: () => void };
     };
     const rescan = () => {
       try {
-        if (w.Weglot?.getCurrentLang?.() === "en") return;
         w.Weglot?.search?.();
       } catch {
         // Weglot occasionally throws mid-init on race conditions. Safe
         // to swallow — the next scheduled call retries.
       }
     };
-    const t1 = window.setTimeout(rescan, 400);
-    const t2 = window.setTimeout(rescan, 1200);
-    const t3 = window.setTimeout(rescan, 2500);
+    const delays = [400, 1200, 2500, 5000, 8000, 12000];
+    const timers = delays.map((d) => window.setTimeout(rescan, d));
 
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-      window.clearTimeout(t3);
+      for (const t of timers) window.clearTimeout(t);
     };
   }, [pathname]);
 
