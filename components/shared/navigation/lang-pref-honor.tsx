@@ -32,6 +32,9 @@ function readCookie(name: string): string | null {
 export function LangPrefHonor() {
   const pathname = usePathname() ?? "/";
 
+  // (1) Redirect prefix-less URLs when the cookie names a non-default
+  // locale. Runs after (2) so the cookie has a chance to be set on the
+  // FIRST hit before the user starts navigating.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (parseLocalePrefix(pathname)) return;
@@ -46,6 +49,33 @@ export function LangPrefHonor() {
     const hash = window.location.hash ?? "";
 
     window.location.replace(`/${pref}${suffix}${search}${hash}`);
+  }, [pathname]);
+
+  // (2) Capture the current URL's locale prefix into the cookie so
+  // subsequent client-side `<Link>` navigations (which drop the prefix
+  // because Next.js doesn't run middleware on soft nav) can be routed
+  // back to `/{locale}/...` by effect (1) above.
+  //
+  // Without this, users who land DIRECTLY on `/de/` from a Google Ads
+  // campaign never trigger the middleware redirect (`proxy.ts:308`
+  // that sets the cookie), so their next `<Link>` click drops them on
+  // English. Set on every locale-prefixed pathname visit — same
+  // attributes as the middleware sets on redirect.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const parsed = parseLocalePrefix(pathname);
+
+    if (!parsed) return;
+    if (!(SUPPORTED_LOCALES as readonly string[]).includes(parsed.locale)) {
+      return;
+    }
+
+    const existing = readCookie(LANG_PREF_COOKIE);
+
+    if (existing === parsed.locale) return;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+
+    document.cookie = `${LANG_PREF_COOKIE}=${parsed.locale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${secure}`;
   }, [pathname]);
 
   return null;
