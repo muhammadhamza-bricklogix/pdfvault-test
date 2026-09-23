@@ -55,7 +55,10 @@ import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
+import {
+  parseLocalePrefix,
+  stripLocalePrefix,
+} from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -696,9 +699,19 @@ function TopAppBar() {
                   // AuthModal (2026-08-28 unify). Cards' finalize does
                   // the item #15 `window.location.assign` — hydrator
                   // restores the snapshotted file on return.
+                  // Preserve URL locale in the finalize redirect —
+                  // otherwise the post-signup `window.location.assign`
+                  // (auth chain #15) lands on bare `/pdf-composer` from
+                  // any `/{locale}/pdf-composer` starting point.
                   dispatchAuthModal({
                     mode: "signup",
-                    redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
+                    redirectUrl: (() => {
+                      const parsed = parseLocalePrefix(pathname ?? "/");
+
+                      return parsed
+                        ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+                        : ROUTES.TOOLS.PDF_EDITOR;
+                    })(),
                   });
 
                   return;

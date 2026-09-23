@@ -50,7 +50,10 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
+import {
+  parseLocalePrefix,
+  stripLocalePrefix,
+} from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -195,9 +198,18 @@ export function EditorInfoBar() {
       // / ?tool= so the hydrator's guards don't wipe the IDB file we
       // just snapshotted. Cards' finalize does `window.location.assign`
       // (item #15).
+      // Preserve URL locale in the finalize redirect — otherwise the
+      // post-signup `window.location.assign` (auth chain #15) lands on
+      // bare `/pdf-composer` from any `/{locale}/pdf-composer`.
       dispatchAuthModal({
         mode: "signup",
-        redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
+        redirectUrl: (() => {
+          const parsed = parseLocalePrefix(pathname ?? "/");
+
+          return parsed
+            ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+            : ROUTES.TOOLS.PDF_EDITOR;
+        })(),
       });
 
       return;

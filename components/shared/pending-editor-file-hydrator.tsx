@@ -16,6 +16,7 @@ import {
   TOUR_ENDED_EVENT,
   willTourAutoLaunch,
 } from "@/lib/client/tour/use-product-tour";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -229,11 +230,24 @@ export function PendingEditorFileHydrator() {
     // within tens of ms of Step 1b's decision.
     const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
+    // Preserve URL locale in the finalize redirect so returning from
+    // signup/sign-in keeps the user on `/fr/pdf-composer` instead of
+    // dropping to bare `/pdf-composer` (English URL). Full-page nav
+    // via `window.location.assign` here means `LangPrefHonor` can't
+    // rescue post-return because composer paths are in
+    // `SKIP_REDIRECT_PREFIXES` (reload-race per #115 / #117).
+    const localePrefix = (() => {
+      if (typeof window === "undefined") return "";
+      const parsed = parseLocalePrefix(window.location.pathname);
+
+      return parsed ? `/${parsed.locale}` : "";
+    })();
+
     if (tool && !docId && isSignedIn && !hasSameSessionFile && isFreshEntry) {
       logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
         tool,
       });
-      const returnTo = `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
+      const returnTo = `${localePrefix}${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
 
       window.location.assign(returnTo);
 
@@ -246,7 +260,7 @@ export function PendingEditorFileHydrator() {
       });
       // Preserve the tool slug in the return URL so we land back in the
       // same launch flow after sign-in.
-      const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
+      const returnTo = `${localePrefix}${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
 
       toast.info({
         title: "Sign in to use this tool",
