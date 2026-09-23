@@ -17,11 +17,16 @@ import {
   receiptFileName,
 } from "@/lib/client/billing/generate-receipt-pdf";
 import {
+  getPaywallStrings,
+  type PaywallStrings,
+} from "@/lib/client/paywall/paywall-strings";
+import {
   useCreateCheckoutIntentMutation,
   useSyncSubscriptionMutation,
 } from "@/lib/client/query/mutations/billing.mutation";
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { formatMinor } from "@/lib/shared/utils/currency";
@@ -224,6 +229,19 @@ export function PaywallModal({
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
+  // Detect current URL locale so the paywall can render its own copy
+  // instead of relying on Weglot. `parseLocalePrefix` mirrors the
+  // middleware's split — `/de/…` → "de", plain routes → English
+  // default. Client-only via `useState` initializer so SSR renders
+  // English and hydration matches on the first paint.
+  const [paywallLocale] = useState<string>(() => {
+    if (typeof window === "undefined") return "en";
+
+    return parseLocalePrefix(window.location.pathname)?.locale ?? "en";
+  });
+  const strings = useMemo(() => getPaywallStrings(paywallLocale), [
+    paywallLocale,
+  ]);
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
@@ -901,6 +919,7 @@ export function PaywallModal({
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {/*
+<<<<<<< Updated upstream
           `translate="no"` + `notranslate` / `wg-notranslate` class fence off
           the modal subtree from Weglot (and Google Translate).
           Without this, the modal crashes on any translated locale
@@ -914,6 +933,18 @@ export function PaywallModal({
           → Annual plan card. English paywall copy on translated
           locales is intentional until we move the plan/pay/success
           copy into next-intl.
+=======
+          Fence markers re-added 2026-09-23: the paywall now ships its
+          own local translations (see `lib/client/paywall/paywall-strings.ts`)
+          for `de` / `es` / `fr` / `pt` / `ar`. Weglot must NOT translate
+          the modal — its MutationObserver mutations collide with React's
+          diff and throw `NotFoundError: Failed to execute 'removeChild'
+          on 'Node'` on plan-card clicks. `translate="no"` +
+          `notranslate` + `wg-notranslate` classes tell Weglot to skip
+          this subtree; combined with `Weglot.options.excluded_blocks`
+          set in `WeglotBoot`, the modal renders exclusively from React
+          state on every locale.
+>>>>>>> Stashed changes
         */}
         <Modal.Dialog
           className={
@@ -942,6 +973,7 @@ export function PaywallModal({
               intent={intent}
               preview={preview}
               selectedPlan={selectedPlan}
+              strings={strings}
               onContinue={handleContinue}
               onSelectPlan={setSelectedPlan}
             />
@@ -986,6 +1018,7 @@ function PlanStep({
   onSelectPlan,
   onContinue,
   continueLoading,
+  strings,
 }: {
   intent: CheckoutIntent;
   annualIntent: CheckoutIntent | null;
@@ -996,6 +1029,7 @@ function PlanStep({
   onSelectPlan: (id: PlanId) => void;
   onContinue: () => void;
   continueLoading: boolean;
+  strings: PaywallStrings;
 }) {
   // Annual is offered only when the backend actually has an ANNUAL
   // plan seeded. Signal: either the standalone ANNUAL intent resolved
@@ -1051,7 +1085,7 @@ function PlanStep({
 
   const continueDisabled = continueLoading;
   const readyHeading = (() => {
-    if (!preview) return "Your PDF is ready.";
+    if (!preview) return strings.ready.pdf;
     const ext = (
       preview.targetExt ||
       preview.sourceExt ||
@@ -1061,17 +1095,15 @@ function PlanStep({
       .toLowerCase()
       .trim();
 
-    if (["jpg", "jpeg"].includes(ext)) return "Your JPG is ready.";
-    if (ext === "png") return "Your PNG is ready.";
-    if (["doc", "docx", "word"].includes(ext))
-      return "Your Word document is ready.";
-    if (["xls", "xlsx", "excel"].includes(ext))
-      return "Your Excel document is ready.";
+    if (["jpg", "jpeg"].includes(ext)) return strings.ready.jpg;
+    if (ext === "png") return strings.ready.png;
+    if (["doc", "docx", "word"].includes(ext)) return strings.ready.word;
+    if (["xls", "xlsx", "excel"].includes(ext)) return strings.ready.excel;
     if (["ppt", "pptx", "powerpoint"].includes(ext))
-      return "Your PowerPoint presentation is ready.";
-    if (ext === "txt") return "Your Text document is ready.";
+      return strings.ready.powerpoint;
+    if (ext === "txt") return strings.ready.txt;
 
-    return "Your PDF is ready.";
+    return strings.ready.pdf;
   })();
 
   // Shared Continue CTA — rendered directly beneath the plan selector in
@@ -1090,7 +1122,7 @@ function PlanStep({
       type="button"
       onClick={onContinue}
     >
-      {continueLoading ? "Preparing…" : "Continue"}
+      {continueLoading ? strings.continuePreparing : strings.continueCta}
       {continueLoading ? null : (
         <span
           aria-hidden
@@ -1111,9 +1143,7 @@ function PlanStep({
         <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
           {readyHeading}
         </h2>
-        <p className="text-[13px] text-[#6c6c6c]">
-          Cancel anytime · Secure checkout · Instant access
-        </p>
+        <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
       </div>
 
       {/* Body — two columns, or plan-picker only when the caller
@@ -1126,6 +1156,7 @@ function PlanStep({
             annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
+            strings={strings}
             onSelectPlan={onSelectPlan}
           />
 
@@ -1153,7 +1184,7 @@ function PlanStep({
                       strokeWidth={3}
                     />
                   </span>
-                  Your document is ready to download
+                  {strings.documentReady}
                 </span>
                 <PreviewFileCard preview={preview} />
               </>
@@ -1168,7 +1199,7 @@ function PlanStep({
                       strokeWidth={3}
                     />
                   </span>
-                  Your document is ready to download
+                  {strings.documentReady}
                 </span>
                 <GenericPreviewCard />
               </>
@@ -1183,6 +1214,7 @@ function PlanStep({
               annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
               selectedPlan={selectedPlan}
+              strings={strings}
               onSelectPlan={onSelectPlan}
             />
 
@@ -2019,6 +2051,7 @@ function PlanCards({
   annualPrice,
   annualFullPrice,
   annualAvailable,
+  strings,
 }: {
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
@@ -2026,23 +2059,24 @@ function PlanCards({
   annualPrice: string;
   annualFullPrice: string;
   annualAvailable: boolean;
+  strings: PaywallStrings;
 }) {
   const plans = [
     {
       id: "monthly" as PlanId,
-      title: "7-day trial",
+      title: strings.sevenDayTrial,
       price: fullAccessPrice,
       priceSuffix: undefined as string | undefined,
       note: "",
-      badge: "Most popular",
+      badge: strings.mostPopular,
     },
     ...(annualAvailable
       ? [
           {
             id: "annual" as PlanId,
-            title: "Annual Plan",
+            title: strings.annualPlan,
             price: annualPrice,
-            priceSuffix: "/ month",
+            priceSuffix: strings.perMonth,
             // 2026-09-03 (PM): drop the "Billed as X / year" note from
             // the Annual Plan card. The renew total already lives on the
             // pay-step's order-summary card, so it's redundant here.
@@ -2072,7 +2106,7 @@ function PlanCards({
             {/* "Most popular" full-width banner inside the card */}
             {plan.badge ? (
               <div className="w-full bg-gradient-to-r from-[#ffcc7a] to-[#fdb45e] py-2 text-center text-[12px] font-semibold text-[#7a4d0f]">
-                🚀 {plan.badge}
+                {plan.badge}
               </div>
             ) : null}
 
@@ -2113,7 +2147,14 @@ function PlanCards({
             {selected ? (
               <div className="border-t border-[#f5f5f5] px-5 pb-5 pt-3">
                 <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
-                  {PLAN_FEATURES.map((feature) => (
+                  {[
+                    strings.features.unlimitedEdits,
+                    strings.features.unlimitedDownloads,
+                    strings.features.multiFormatConversion,
+                    strings.features.editTextImages,
+                    strings.features.organizePages,
+                    strings.features.protectPassword,
+                  ].map((feature) => (
                     <li key={feature} className="flex items-center gap-2.5">
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15">
                         ✓
