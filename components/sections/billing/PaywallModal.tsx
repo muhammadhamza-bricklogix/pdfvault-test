@@ -315,6 +315,66 @@ export function PaywallModal({
     return () => observer.disconnect();
   }, [isOpen]);
 
+  // Pause Weglot for the paywall's lifetime.
+  //
+  // The `translate="no"` + `notranslate` + `wg-notranslate` markers on
+  // `<Modal.Dialog>` (plus the excludeBlocks selector we configure in
+  // WeglotBoot) stop the FIRST-paint translation of the modal, so it
+  // opens in English on `/de/` / `/es/` / etc. That's enough on modal
+  // open. It is NOT enough on subsequent React re-renders — clicking a
+  // plan card swaps the highlighted state on both plan tiles, React
+  // commits DOM mutations, and Weglot's body-level MutationObserver
+  // still fires. Something in the observer path adjacent to the fenced
+  // subtree touches text nodes React still remembers, and the next
+  // `commitDeletion` throws `NotFoundError: Failed to execute
+  // 'removeChild' on 'Node': The node to be removed is not a child of
+  // this node.` — the app blanks to `<app.global-error>` and the user
+  // can't buy.
+  //
+  // Reproduced on staging 2026-09-23 via Playwright: with `Weglot.
+  // getCurrentLang() === "de"`, Monthly → Annual → Monthly crashes.
+  // With `Weglot.switchTo("en")` before the flow, same clicks pass
+  // cleanly. Flipping Weglot back off is the smallest change that
+  // survives every React re-render inside the modal.
+  //
+  // The switch takes ~1 frame and only re-translates already-exposed
+  // DOM outside the modal (dashboard, sidebar). When the modal closes
+  // we restore the original language, so `/de/` returns to German
+  // immediately. Users see paywall in English (same intended trade-off
+  // as the PR #98 fence) but no crash.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+
+    const w = window as typeof window & {
+      Weglot?: {
+        getCurrentLang?: () => string | undefined;
+        switchTo?: (lang: string) => void;
+      };
+    };
+    const W = w.Weglot;
+
+    if (!W?.getCurrentLang || !W?.switchTo) return;
+    const prevLang = W.getCurrentLang();
+
+    if (!prevLang || prevLang === "en") return;
+    try {
+      W.switchTo("en");
+    } catch {
+      // Weglot occasionally throws mid-init if `switchTo` runs before
+      // its bootstrap resolves. Safe to swallow — the fence markers
+      // still block the FIRST paint, and the retry on close is
+      // idempotent.
+    }
+
+    return () => {
+      try {
+        W.switchTo?.(prevLang);
+      } catch {
+        // As above.
+      }
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -840,16 +900,33 @@ export function PaywallModal({
       }}
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
+        {/*
+          `translate="no"` + `notranslate` / `wg-notranslate` class fence off
+          the modal subtree from Weglot (and Google Translate).
+          Without this, the modal crashes on any translated locale
+          (`/de/`, `/es/`, `/fr/`, …) the moment React re-renders the
+          plan step — Weglot has already swapped React's text nodes for
+          translated ones, so React's next `removeChild` throws
+          `NotFoundError: The node to be removed is not a child of this
+          node.` and the global-error boundary blanks the page with
+          "Application error: a client-side exception has occurred". See
+          repro 2026-09-22 via Playwright on `/de/dashboard` → Download
+          → Annual plan card. English paywall copy on translated
+          locales is intentional until we move the plan/pay/success
+          copy into next-intl.
+        */}
         <Modal.Dialog
           className={
-            step === "success"
+            (step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
                 ? hidePreview
                   ? "max-h-[calc(100dvh-32px)] w-[min(760px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                   : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
-                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
+                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
+            " notranslate wg-notranslate"
           }
+          translate="no"
         >
           <Modal.CloseTrigger />
           {error ? (

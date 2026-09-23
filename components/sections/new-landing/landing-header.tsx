@@ -12,6 +12,7 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -49,10 +50,20 @@ const AUTH_RETURN_ROUTES = [
 ] as const;
 
 function authReturnUrlFor(pathname: string): string | undefined {
+  // Match AUTH_RETURN_ROUTES against the locale-stripped path so
+  // `/de/pdf-composer`, `/es/convert/word-to-pdf`, etc. are treated
+  // the same as their unprefixed equivalents. Without this the user
+  // signs in on `/de/convert/…` with no returnUrl set, LoginCard
+  // falls back to `/dashboard` (English), and the whole app flips
+  // out of German after the finalize `window.location.assign(…)`.
+  const parsed = parseLocalePrefix(pathname);
+  const effectivePath = parsed?.rest ?? pathname;
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
-    pathname.startsWith(prefix),
+    effectivePath.startsWith(prefix),
   );
 
+  // Return the ORIGINAL locale-prefixed pathname so the finalize
+  // navigation lands on the same localized page the user started on.
   return returnHere ? pathname : undefined;
 }
 
