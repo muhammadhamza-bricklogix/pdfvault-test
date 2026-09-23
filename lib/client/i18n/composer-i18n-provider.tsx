@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import {
   LANG_PREF_COOKIE,
@@ -10,10 +10,7 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
-import {
-  getComposerMessages,
-  type ComposerLocale,
-} from "./composer-messages";
+import { getComposerMessages, type ComposerLocale } from "./composer-messages";
 
 function readLangPrefCookie(): string | null {
   if (typeof document === "undefined") return null;
@@ -31,7 +28,9 @@ function readLangPrefCookie(): string | null {
 
 // Scopes next-intl to the composer subtree only.
 //
-// Locale resolution order:
+// Locale resolution order (all computed synchronously during render via
+// useMemo — no effect, no setState. Prior effect+state version tripped
+// the react-hooks/set-state-in-effect lint rule):
 //   1. URL locale prefix (`/de/pdf-composer` → "de")
 //   2. `lang_pref` cookie (set by middleware + `LangPrefHonor` on every
 //      locale-prefixed visit) — covers the post-signup return case where
@@ -41,6 +40,14 @@ function readLangPrefCookie(): string | null {
 //      after auth returns.
 //   3. `en` default
 //
+// SSR always returns "en" from `readLangPrefCookie` (document is
+// undefined) so the server-rendered pass matches an EN cookie, but for
+// non-EN cookies the client's first paint may briefly render EN before
+// re-rendering with the cookie-derived locale. `suppressHydrationWarning`
+// on the fence div swallows the resulting mismatch — visually it's a
+// sub-frame flicker at most since the composer's own client-side
+// loading shell is what the user actually sees during that window.
+//
 // The wrapper also stamps `translate="no"` + `notranslate` + `wg-notranslate`
 // on its root so Weglot's MutationObserver skips this subtree entirely.
 // Otherwise Weglot would race the composer's local strings and produce
@@ -48,28 +55,11 @@ function readLangPrefCookie(): string | null {
 // the paywall fence markers in #107 / #110 / #111).
 export function ComposerI18nProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
-  // Cookie read is client-only (document is undefined on SSR). Start
-  // with URL-based locale so SSR + first render match; refine from the
-  // cookie once mounted. This does mean the composer flashes EN for one
-  // paint on the post-signup bare `/pdf-composer` URL — acceptable since
-  // the cookie-refine settles on the same tick and prevents the far
-  // worse "entire session is English" bug.
-  const urlLocale: ComposerLocale = useMemo(() => {
+
+  const locale: ComposerLocale = useMemo(() => {
     const parsed = parseLocalePrefix(pathname);
 
-    return (parsed?.locale ?? "en") as ComposerLocale;
-  }, [pathname]);
-
-  const [locale, setLocale] = useState<ComposerLocale>(urlLocale);
-
-  useEffect(() => {
-    // If URL has a locale prefix, trust it — it's the strongest signal.
-    if (parseLocalePrefix(pathname)) {
-      setLocale(urlLocale);
-
-      return;
-    }
-    // No URL prefix — fall back to the cookie.
+    if (parsed) return parsed.locale as ComposerLocale;
     const cookie = readLangPrefCookie();
 
     if (
@@ -77,16 +67,20 @@ export function ComposerI18nProvider({ children }: { children: ReactNode }) {
       cookie !== "en" &&
       (SUPPORTED_LOCALES as readonly string[]).includes(cookie)
     ) {
-      setLocale(cookie as ComposerLocale);
-    } else {
-      setLocale("en");
+      return cookie as ComposerLocale;
     }
-  }, [pathname, urlLocale]);
+
+    return "en";
+  }, [pathname]);
 
   const messages = useMemo(() => getComposerMessages(locale), [locale]);
 
   return (
-    <div className="notranslate wg-notranslate contents" translate="no">
+    <div
+      suppressHydrationWarning
+      className="notranslate wg-notranslate contents"
+      translate="no"
+    >
       <NextIntlClientProvider
         locale={locale}
         messages={messages}
