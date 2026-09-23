@@ -601,6 +601,27 @@ export function PdfEditorShell() {
   const shouldRedirectAway = !file && !pendingDocumentId && !isRestoringSession;
 
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits-i18n] PdfEditorShell state", {
+      pathname:
+        typeof window !== "undefined" ? window.location.pathname : "?",
+      hasFile: !!file,
+      pendingDocumentId,
+      isRestoringSession,
+      shouldRedirectAway,
+      authLoaded,
+      isSignedIn,
+    });
+  }, [
+    file,
+    pendingDocumentId,
+    isRestoringSession,
+    shouldRedirectAway,
+    authLoaded,
+    isSignedIn,
+  ]);
+
+  useEffect(() => {
     if (!shouldRedirectAway) return;
     // 2026-08-30: wait for Clerk to hydrate before deciding target.
     // Without this guard the first render after a full-page nav
@@ -619,8 +640,28 @@ export function PdfEditorShell() {
     if (!authLoaded) return;
     const target = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
+    // eslint-disable-next-line no-console
+    console.log("[PDFedits-i18n] PdfEditorShell shouldRedirectAway=true", {
+      pathname:
+        typeof window !== "undefined" ? window.location.pathname : "?",
+      hasFile: !!file,
+      pendingDocumentId,
+      isRestoringSession,
+      authLoaded,
+      isSignedIn,
+      target,
+    });
+
     shellRouter.replace(target);
-  }, [shouldRedirectAway, authLoaded, isSignedIn, shellRouter]);
+  }, [
+    shouldRedirectAway,
+    authLoaded,
+    isSignedIn,
+    shellRouter,
+    file,
+    pendingDocumentId,
+    isRestoringSession,
+  ]);
 
   let content: React.ReactNode;
 
