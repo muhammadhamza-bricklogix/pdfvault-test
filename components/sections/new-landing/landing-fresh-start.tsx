@@ -25,13 +25,39 @@ export function LandingFreshStart() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     let cancelled = false;
+    // Capture the file reference at mount time. We only clear if the
+    // store STILL holds that same reference when the deferred callback
+    // fires — otherwise a fresh upload set a new File between mount and
+    // the ric firing, and clearing it would wipe the user's just-
+    // uploaded PDF. Symptom: on `/de/` (or any locale landing), user
+    // uploads → composer starts loading → `LandingFreshStart` ric fires
+    // during the route transition → `clearFile()` runs → composer shell
+    // sees `file=null` and redirects the signed-out user to `/` (which
+    // middleware routes back to `/de/`). QA 2026-09-23.
+    let originalFile: unknown = null;
     const run = () => {
       if (cancelled) return;
       void import("@/lib/client/stores").then((m) => {
         if (cancelled) return;
+        const currentFile = m.usePdfEditorStore.getState().file;
+
+        // Race guard: if the file was replaced or set after mount, do
+        // not clear it. The user is mid-upload flow and their new file
+        // must survive the route change.
+        if (currentFile !== originalFile) return;
+        if (currentFile === null) return; // nothing to clear anyway
         m.usePdfEditorStore.getState().clearFile();
       });
     };
+
+    // Snapshot the file reference synchronously via a lightweight
+    // dynamic import — same chunk the run() uses, so this is a cheap
+    // no-op on the second call. Keeps `originalFile` accurate even if
+    // the store loads after mount.
+    void import("@/lib/client/stores").then((m) => {
+      if (cancelled) return;
+      originalFile = m.usePdfEditorStore.getState().file;
+    });
     const ric = (
       window as unknown as {
         requestIdleCallback?: (cb: () => void) => number;
