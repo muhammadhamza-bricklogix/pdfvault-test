@@ -872,6 +872,23 @@ export function PaywallModal({
             <LoadingState />
           ) : step === "plan" ? (
             <PlanStep
+              // `key={selectedPlan}` forces React to unmount + remount the
+              // whole PlanStep subtree whenever the user swaps between
+              // Monthly and Annual. Without this, React tries to diff
+              // text nodes in place — but on `/de/` / `/es/` / etc.
+              // Weglot has already mutated those text nodes, so React's
+              // next `commitDeletion` throws
+              // `NotFoundError: Failed to execute 'removeChild' on
+              // 'Node'` and the whole tree unmounts to
+              // `<app.global-error>`. Full unmount/remount removes
+              // PlanStep's root div from the DOM (safe removal — React
+              // still owns that reference), letting Weglot re-translate
+              // the fresh subtree without collision. Reproduced +
+              // verified via Playwright 2026-09-23. Small UX cost
+              // (PlanStep internal state resets on plan click) but
+              // acceptable — user interaction on the plan cards is
+              // just picking a plan; no in-progress work is lost.
+              key={selectedPlan}
               annualIntent={annualIntent}
               annualUnavailable={annualUnavailable}
               continueLoading={continueLoading}
