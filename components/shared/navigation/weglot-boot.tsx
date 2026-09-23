@@ -14,6 +14,7 @@ declare global {
         destinationLanguages?: string;
         subdirectory?: boolean;
         switchers?: unknown[];
+        excludeBlocks?: Array<{ value: string }>;
       }) => void;
       switchTo?: (lang: string) => void;
       getCurrentLang?: () => string | undefined;
@@ -21,6 +22,30 @@ declare global {
     __WEGLOT_INITIALIZED__?: boolean;
   }
 }
+
+// Selectors Weglot must skip. Load-bearing: without this the paywall
+// modal (marked `class="notranslate wg-notranslate" translate="no"`)
+// still gets translated by Weglot's MutationObserver, and any React
+// re-render inside the modal (e.g. clicking the Annual plan card)
+// crashes with `NotFoundError: Failed to execute 'removeChild' on
+// 'Node': The node to be removed is not a child of this node.` — React
+// tries to remove text nodes Weglot has already swapped.
+//
+// Weglot ignores the class / `translate="no"` markers by DEFAULT on the
+// "Other" technology integration (`technology_id: 12`) because
+// `excludedBlocksSelector` is empty on the merchant dashboard. Passing
+// `excludeBlocks` here fills that gap client-side and makes the fence
+// markers actually load-bearing.
+//
+// Verified on staging 2026-09-23 via Playwright: fence + this config →
+// paywall stays open on `/de/dashboard` when Annual is clicked; without
+// this config → `Application error: a client-side exception has
+// occurred` blank page (repro from user report).
+const WEGLOT_EXCLUDE_BLOCKS = [
+  { value: ".wg-notranslate" },
+  { value: ".notranslate" },
+  { value: '[translate="no"]' },
+];
 
 function initWeglotOnce(): void {
   if (typeof window === "undefined") return;
@@ -33,6 +58,7 @@ function initWeglotOnce(): void {
     destinationLanguages: "de,fr,es,pt,ar",
     subdirectory: true,
     switchers: [] as unknown[],
+    excludeBlocks: WEGLOT_EXCLUDE_BLOCKS,
   });
   window.__WEGLOT_INITIALIZED__ = true;
 }
