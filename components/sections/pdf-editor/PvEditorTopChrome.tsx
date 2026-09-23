@@ -42,6 +42,7 @@ import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
@@ -75,6 +76,33 @@ type IconGlyph = ComponentProps<typeof HugeiconsIcon>["icon"];
 type ToolEntry =
   | { kind: "mode"; id: ActiveTool; label: string; icon: IconGlyph }
   | { kind: "action"; id: string; label: string; icon: IconGlyph };
+
+// Maps tool id → translation key in `messages/composer/*.json` under
+// `tools.*`. Kept in sync with the ToolEntry definitions below.
+const TOOL_LABEL_KEYS: Record<string, string> = {
+  select: "select",
+  editText: "editText",
+  signature: "signature",
+  text: "text",
+  draw: "draw",
+  highlight: "highlight",
+  shape: "shape",
+  eraser: "eraser",
+  whiteout: "whiteout",
+  redact: "redact",
+  image: "image",
+  watermark: "watermark",
+  backgroundImage: "backgroundImage",
+  compress: "compress",
+  secure: "secure",
+  merge: "merge",
+  split: "split",
+  flatten: "flatten",
+  extract: "extract",
+  "page-numbers": "pageNumbers",
+  annotate: "annotate",
+  "manage-pages": "managePages",
+};
 
 const GROUP_A: ToolEntry[] = [
   { kind: "mode", id: "select", label: "Select", icon: Cursor01Icon },
@@ -226,6 +254,7 @@ function ZoomPill() {
   const zoom = usePdfEditorStore((s) => s.zoom);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
   const file = usePdfEditorStore((s) => s.file);
+  const t = useTranslations("topChrome");
 
   if (!file) return null;
 
@@ -235,13 +264,13 @@ function ZoomPill() {
 
   return (
     <div
-      aria-label="Zoom"
+      aria-label={t("zoom")}
       className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border border-default-200 bg-white px-1 py-0.5"
       role="group"
     >
       <Tooltip delay={300}>
         <button
-          aria-label="Zoom out"
+          aria-label={t("zoomOut")}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-default-700 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!canZoomOut}
           type="button"
@@ -252,7 +281,7 @@ function ZoomPill() {
           <HugeiconsIcon icon={SearchMinusIcon} size={14} />
         </button>
         <Tooltip.Content>
-          <p>Zoom out</p>
+          <p>{t("zoomOut")}</p>
         </Tooltip.Content>
       </Tooltip>
 
@@ -265,7 +294,7 @@ function ZoomPill() {
 
       <Tooltip delay={300}>
         <button
-          aria-label="Zoom in"
+          aria-label={t("zoomIn")}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-default-700 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!canZoomIn}
           type="button"
@@ -276,7 +305,7 @@ function ZoomPill() {
           <HugeiconsIcon icon={SearchAddIcon} size={14} />
         </button>
         <Tooltip.Content>
-          <p>Zoom in</p>
+          <p>{t("zoomIn")}</p>
         </Tooltip.Content>
       </Tooltip>
     </div>
@@ -289,6 +318,7 @@ function ZoomPill() {
 
 function TopAppBar() {
   const pathname = usePathname();
+  const t = useTranslations("topChrome");
   // Explicit Save affordance for the W-9 route only. The generic
   // composer's Save button is hidden per product decision, but on
   // `/w-9-form` there's no other in-flow save trigger — the user's
@@ -579,7 +609,7 @@ function TopAppBar() {
       <div className="flex min-w-0 items-center gap-3">
         <Tooltip delay={300}>
           <button
-            aria-label="Back to dashboard"
+            aria-label={t("backToDashboard")}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
             type="button"
             onClick={handleBack}
@@ -587,7 +617,7 @@ function TopAppBar() {
             <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
           </button>
           <Tooltip.Content>
-            <p>Back to dashboard</p>
+            <p>{t("backToDashboard")}</p>
           </Tooltip.Content>
         </Tooltip>
 
@@ -606,7 +636,7 @@ function TopAppBar() {
         {showW9Save ? null : <HamburgerMenu />}
 
         <Link
-          aria-label="Home"
+          aria-label={t("home")}
           className="flex shrink-0 items-center gap-2"
           href={ROUTES.PUBLIC.HOME}
           onClick={handleLogoClick}
@@ -653,7 +683,7 @@ function TopAppBar() {
         {showW9Save && (
           <Tooltip delay={300}>
             <button
-              aria-label="Save"
+              aria-label={t("save")}
               className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
               disabled={!file}
               type="button"
@@ -677,15 +707,15 @@ function TopAppBar() {
               }}
             >
               <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
-              <span className="hidden sm:inline">Save</span>
+              <span className="hidden sm:inline">{t("save")}</span>
             </button>
             <Tooltip.Content>
               <p>
                 {!file
-                  ? "Open a PDF to save"
+                  ? t("openPdfToSave")
                   : !isSignedIn
-                    ? "Login to save to your library"
-                    : "Save to My PDFs"}
+                    ? t("loginToSave")
+                    : t("saveToMyPdfs")}
               </p>
             </Tooltip.Content>
           </Tooltip>
@@ -694,7 +724,7 @@ function TopAppBar() {
         <div className="flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
           <Tooltip delay={300}>
             <button
-              aria-label="Undo"
+              aria-label={t("undo")}
               className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!canUndo}
               type="button"
@@ -703,13 +733,13 @@ function TopAppBar() {
               <HugeiconsIcon icon={UndoIcon} size={18} />
             </button>
             <Tooltip.Content>
-              <p>Undo</p>
+              <p>{t("undo")}</p>
             </Tooltip.Content>
           </Tooltip>
           <span aria-hidden className="h-4 w-px bg-default-200" />
           <Tooltip delay={300}>
             <button
-              aria-label="Redo"
+              aria-label={t("redo")}
               className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!canRedo}
               type="button"
@@ -718,7 +748,7 @@ function TopAppBar() {
               <HugeiconsIcon icon={RedoIcon} size={18} />
             </button>
             <Tooltip.Content>
-              <p>Redo</p>
+              <p>{t("redo")}</p>
             </Tooltip.Content>
           </Tooltip>
         </div>
@@ -738,7 +768,7 @@ function TopAppBar() {
         {/* Search — PDF-wide text search with highlight + navigation. */}
         <Tooltip delay={300}>
           <button
-            aria-label="Search in PDF"
+            aria-label={t("search")}
             aria-pressed={isSearchOpen}
             className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
               isSearchOpen
@@ -750,10 +780,10 @@ function TopAppBar() {
             onClick={() => (isSearchOpen ? closeSearch() : openSearch())}
           >
             <HugeiconsIcon icon={Search01Icon} size={14} />
-            <span className="hidden sm:inline">Search</span>
+            <span className="hidden sm:inline">{t("search")}</span>
           </button>
           <Tooltip.Content>
-            <p>Search in PDF</p>
+            <p>{t("search")}</p>
           </Tooltip.Content>
         </Tooltip>
 
@@ -761,23 +791,23 @@ function TopAppBar() {
             the browser print dialog via a hidden iframe. */}
         <Tooltip delay={300}>
           <button
-            aria-label="Print"
+            aria-label={t("print")}
             className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
             disabled={!file}
             type="button"
             onClick={() => void handlePrint()}
           >
             <HugeiconsIcon icon={PrinterIcon} size={14} />
-            <span className="hidden sm:inline">Print</span>
+            <span className="hidden sm:inline">{t("print")}</span>
           </button>
           <Tooltip.Content>
-            <p>Print</p>
+            <p>{t("print")}</p>
           </Tooltip.Content>
         </Tooltip>
 
         {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
         <button
-          aria-label="Share via link"
+          aria-label={t("share")}
           className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
           data-tour="editor-share"
           disabled={!canShare}
@@ -785,11 +815,11 @@ function TopAppBar() {
           onClick={() => fireEditorEvent("editor:open-share")}
         >
           <HugeiconsIcon icon={Link01Icon} size={14} />
-          <span className="hidden sm:inline">Share via link</span>
+          <span className="hidden sm:inline">{t("share")}</span>
         </button>
 
         <Button
-          aria-label="Finish and Download"
+          aria-label={t("download")}
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
           isDisabled={!canDownload || isSavingBeforeExport}
@@ -798,7 +828,7 @@ function TopAppBar() {
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
 
           <span className="hidden sm:inline">
-            {isSavingBeforeExport ? "Saving…" : "Finish & Download"}
+            {isSavingBeforeExport ? "…" : t("download")}
           </span>
         </Button>
       </div>
@@ -827,6 +857,12 @@ function ToolToolbar() {
   // unaffected. Path check is done AFTER hook calls to satisfy the
   // rules-of-hooks order.
   const pathname = usePathname();
+  const tLabel = useTranslations("tools");
+  const labelFor = (id: string) => {
+    const key = TOOL_LABEL_KEYS[id];
+
+    return key ? tLabel(key) : id;
+  };
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCompressModalOpen = usePdfEditorStore(
@@ -955,7 +991,7 @@ function ToolToolbar() {
                     active={active}
                     disabled={disabled}
                     icon={tool.icon}
-                    label={tool.label}
+                    label={labelFor(tool.id)}
                     onClick={() => {
                       // Signal `use-fabric-canvas` to discard any live
                       // selection so selection-driven floating toolbars

@@ -1,0 +1,61 @@
+{
+  "tools": {
+    "select": "Sélectionner",
+    "editText": "Modifier",
+    "signature": "Signer",
+    "text": "Texte",
+    "draw": "Dessiner",
+    "highlight": "Surligner",
+    "shape": "Formes",
+    "eraser": "Gomme",
+    "whiteout": "Effacer",
+    "redact": "Caviarder",
+    "image": "Image",
+    "watermark": "Filigrane",
+    "backgroundImage": "Arrière-plan",
+    "compress": "Compresser",
+    "secure": "Sécuriser",
+    "merge": "Fusionner",
+    "split": "Diviser",
+    "flatten": "Aplatir",
+    "extract": "Extraire",
+    "pageNumbers": "N° page",
+    "annotate": "Annoter",
+    "managePages": "Gérer les pages"
+  },
+  "topChrome": {
+    "backToDashboard": "Retour au tableau de bord",
+    "home": "Accueil",
+    "zoom": "Zoom",
+    "zoomOut": "Dézoomer",
+    "zoomIn": "Zoomer",
+    "openPdfToSave": "Ouvrir un PDF pour enregistrer",
+    "loginToSave": "Connectez-vous pour enregistrer dans votre bibliothèque",
+    "saveToMyPdfs": "Enregistrer dans Mes PDF",
+    "save": "Enregistrer",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "search": "Rechercher dans le PDF",
+    "print": "Imprimer",
+    "share": "Partager via un lien",
+    "download": "Terminer et Télécharger"
+  },
+  "saveStatus": {
+    "saving": "Enregistrement de vos modifications",
+    "saved": "Enregistré dans Mes PDF",
+    "unsaved": "Modifications non enregistrées"
+  },
+  "menu": {
+    "editorMenu": "Menu de l'éditeur",
+    "createNew": "Créer un nouveau",
+    "openFile": "Ouvrir un fichier",
+    "myPdfs": "Mes PDF",
+    "findReplace": "Rechercher et remplacer",
+    "compressPdf": "Compresser le PDF",
+    "splitPdf": "Diviser le PDF",
+    "extractImages": "Extraire les images",
+    "flattenPdf": "Aplatir le PDF",
+    "share": "Partager via un lien",
+    "versionHistory": "Historique des versions"
+  }
+}

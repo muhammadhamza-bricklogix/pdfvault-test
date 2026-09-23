@@ -1,0 +1,61 @@
+{
+  "tools": {
+    "select": "Select",
+    "editText": "Edit",
+    "signature": "Sign",
+    "text": "Text",
+    "draw": "Draw",
+    "highlight": "Highlight",
+    "shape": "Shapes",
+    "eraser": "Eraser",
+    "whiteout": "Whiteout",
+    "redact": "Redact",
+    "image": "Image",
+    "watermark": "Watermark",
+    "backgroundImage": "Background",
+    "compress": "Compress",
+    "secure": "Secure",
+    "merge": "Merge",
+    "split": "Split",
+    "flatten": "Flatten",
+    "extract": "Extract",
+    "pageNumbers": "Page No",
+    "annotate": "Annotate",
+    "managePages": "Manage Pages"
+  },
+  "topChrome": {
+    "backToDashboard": "Back to dashboard",
+    "home": "Home",
+    "zoom": "Zoom",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "openPdfToSave": "Open a PDF to save",
+    "loginToSave": "Login to save to your library",
+    "saveToMyPdfs": "Save to My PDFs",
+    "save": "Save",
+    "undo": "Undo",
+    "redo": "Redo",
+    "search": "Search in PDF",
+    "print": "Print",
+    "share": "Share via link",
+    "download": "Finish and Download"
+  },
+  "saveStatus": {
+    "saving": "Saving your edits",
+    "saved": "Saved to My PDFs",
+    "unsaved": "Unsaved edits"
+  },
+  "menu": {
+    "editorMenu": "Editor menu",
+    "createNew": "Create New",
+    "openFile": "Open File",
+    "myPdfs": "My PDFs",
+    "findReplace": "Find and Replace",
+    "compressPdf": "Compress PDF",
+    "splitPdf": "Split PDF",
+    "extractImages": "Extract Images",
+    "flattenPdf": "Flatten PDF",
+    "share": "Share via link",
+    "versionHistory": "Version History"
+  }
+}
