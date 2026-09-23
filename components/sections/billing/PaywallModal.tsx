@@ -966,6 +966,17 @@ export function PaywallModal({
             <LoadingState />
           ) : step === "plan" ? (
             <PlanStep
+              // `key={selectedPlan}` forces React to unmount + remount
+              // the whole PlanStep subtree on plan swap. Even with local
+              // i18n + fence markers keeping Weglot away from the modal,
+              // some flows (pdf-composer paywall on `/de/`) still see
+              // Weglot mutate text nodes before the fence takes effect,
+              // and React's in-place text-node diff throws
+              // `NotFoundError: Failed to execute 'removeChild' on
+              // 'Node'`. Full unmount/remount removes PlanStep's root
+              // div via one parent-owned `removeChild` — safe — and
+              // sidesteps the diff. No effect on English default.
+              key={selectedPlan}
               annualIntent={annualIntent}
               annualUnavailable={annualUnavailable}
               continueLoading={continueLoading}
