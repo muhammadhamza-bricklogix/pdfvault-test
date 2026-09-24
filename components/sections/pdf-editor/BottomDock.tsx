@@ -39,29 +39,17 @@ const ACTION_TOOLS = [
   { id: "split", label: "Split", icon: SplitIcon },
   { id: "flatten", label: "Flatten", icon: Layers01Icon },
   { id: "extract", label: "Extract", icon: FileExportIcon },
-  { id: "page-numbers", label: "Page No.", icon: TextNumberSignIcon },
-  { id: "annotate", label: "Annotation", icon: Comment01Icon },
+  { id: "page-numbers", label: "Page No", icon: TextNumberSignIcon },
+  { id: "annotate", label: "Annotate", icon: Comment01Icon },
 ] as const;
 
 // Split at the same 6/7 boundary as desktop's GROUP_A/GROUP_B (PvEditorTopChrome.tsx).
 const MODE_TOOLS_GROUP_1 = TOOLS.slice(0, 6);
 const MODE_TOOLS_GROUP_2 = TOOLS.slice(6);
 
-// Mobile-only label overrides for the shared `TOOLS` list imported from
-// `EditorTopBar.tsx`. Desktop keeps the short verb labels (Edit, Sign,
-// Text) because the desktop pill row is roomy and the toolbar tour /
-// muscle memory relies on them. Mobile pills are smaller and reached by
-// first-time users more often, so more descriptive noun/phrase labels
-// reduce ambiguity ("Edit what?" → "Edit Text"). QA request 2026-09-23.
-// Any tool id NOT in this map falls back to the shared `tool.label`.
-const MOBILE_MODE_LABEL_OVERRIDES: Partial<Record<string, string>> = {
-  editText: "Edit Text",
-  signature: "Signature",
-  text: "Add Text",
-};
-
+// SCRUM-315: keep mobile tool labels identical to desktop.
 function mobileModeLabel(tool: { id: string; label: string }): string {
-  return MOBILE_MODE_LABEL_OVERRIDES[tool.id] ?? tool.label;
+  return tool.label;
 }
 
 type DockIcon = ComponentProps<typeof HugeiconsIcon>["icon"];
