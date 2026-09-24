@@ -33,6 +33,11 @@ import { formatMinor } from "@/lib/shared/utils/currency";
 import { persistUserCurrency } from "@/lib/client/billing/user-currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import {
+  getGaClientId,
+  trackAddPaymentInfo,
+  trackTrialStart,
+} from "@/lib/client/analytics/gtag";
 
 // The payment SDK's iframe loader touches `window` at import time —
 // dynamic import with `ssr: false` keeps the Next.js server bundle
@@ -748,19 +753,22 @@ export function PaywallModal({
     const digits = raw.replace(/\D+/g, "");
     const last4 = digits.length >= 4 ? digits.slice(-4) : undefined;
 
-    if (!brand && !last4) return;
+    void getGaClientId().then((gaClientId) => {
+      if (!brand && !last4 && !gaClientId) return;
 
-    billingService
-      .persistCheckoutCardMetadata({
-        solidgateSubscriptionId: subscriptionId,
-        cardBrand: brand,
-        cardLast4: last4,
-      })
-      .catch((err) => {
-        logger.captureError(err, "checkout.card_metadata_post_failed", {
-          subscriptionId,
+      billingService
+        .persistCheckoutCardMetadata({
+          solidgateSubscriptionId: subscriptionId,
+          cardBrand: brand,
+          cardLast4: last4,
+          gaClientId: gaClientId || undefined,
+        })
+        .catch((err) => {
+          logger.captureError(err, "checkout.card_metadata_post_failed", {
+            subscriptionId,
+          });
         });
-      });
+    });
   }, []);
 
   const handleRetry = () => {
@@ -1421,6 +1429,14 @@ function PayStep({
   // than conditionally rendering the whole PaymentForm.
   const [cardExpanded, setCardExpanded] = useState(false);
 
+  useEffect(() => {
+    trackAddPaymentInfo({
+      currency: intent.currency,
+      value: intent.amountTodayMinor / 100,
+      coupon: "",
+    });
+  }, [intent.amountTodayMinor, intent.currency]);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ── Left column — payment (white) ── */}
@@ -1718,6 +1734,11 @@ function SuccessStep({
   // preferred hook for post-payment tracking — see 2026-08-31 request
   // for "post-payment URL" (there isn't one; the flow is modal-only).
   useEffect(() => {
+    trackTrialStart({
+      plan_name: selectedPlan === "monthly" ? "7-Day Trial → Monthly" : "Annual",
+      price: intent.amountTodayMinor / 100,
+      currency: intent.currency,
+    });
     if (!Array.isArray(window.dataLayer)) window.dataLayer = [];
     window.dataLayer.push({
       currency: intent.currency,

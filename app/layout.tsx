@@ -243,16 +243,16 @@ export default async function RootLayout({
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
       <link href="https://www.clarity.ms" rel="dns-prefetch" />
 
-      {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
+      {/* Google tag (gtag.js) — GA4 (G-VNFTBW1HBH) + Ads (AW-18226423046) */}
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-K6PVB4B39T"
+        src="https://www.googletagmanager.com/gtag/js?id=G-VNFTBW1HBH"
         strategy="afterInteractive"
       />
       <Script id="gtag-init" strategy="afterInteractive">
         {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-K6PVB4B39T');
+gtag('config', 'G-VNFTBW1HBH', { debug_mode: ${process.env.NODE_ENV !== "production"} });
 gtag('config', 'AW-18226423046');`}
       </Script>
       {/*

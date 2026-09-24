@@ -21,6 +21,7 @@ import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import { trackActivation } from "@/lib/client/analytics/gtag";
 
 export type ExportFormat =
   | "pdf"
@@ -625,6 +626,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             bytesLen: bytes.byteLength,
           });
           downloadBytes(bytes, outName);
+          trackActivation("pdf_editor_download");
           logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
             bytes: bytes.byteLength,
@@ -863,6 +865,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               : result.fileName;
 
           triggerBlobDownload(result.blob, outName);
+          trackActivation(`convert_to_${format}`);
           logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
             filename: result.fileName,

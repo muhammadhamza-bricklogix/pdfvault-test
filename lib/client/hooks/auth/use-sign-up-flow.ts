@@ -17,6 +17,7 @@ import {
 } from "@/lib/shared/schemas/auth";
 import { parseClerkError } from "@/lib/shared/utils/clerk-error";
 import { logger } from "@/lib/shared/utils/logger";
+import { trackSignUp } from "@/lib/client/analytics/gtag";
 
 type SignUpStep = "credentials" | "verification";
 
@@ -163,6 +164,7 @@ export function useSignUpFlow() {
         }
 
         if (signUp.status === "complete") {
+          trackSignUp("email");
           await navigateToHome();
 
           return;

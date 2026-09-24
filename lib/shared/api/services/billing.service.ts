@@ -152,6 +152,7 @@ async function persistCheckoutCardMetadata(input: {
   solidgateSubscriptionId: string;
   cardBrand?: string;
   cardLast4?: string;
+  gaClientId?: string;
 }): Promise<{ ok: boolean }> {
   const { data } = await apiClient.post<{ ok: boolean }>(
     "/billing/checkout/card-metadata",
