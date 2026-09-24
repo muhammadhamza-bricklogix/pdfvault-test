@@ -74,7 +74,11 @@ function Section({
 // Main
 // ---------------------------------------------------------------------------
 
-export function WatermarkPropertiesContent() {
+export function WatermarkPropertiesContent({
+  scrollContainer = true,
+}: {
+  scrollContainer?: boolean;
+}) {
   const config = usePdfEditorStore((s) => s.watermarkConfig);
   const setConfig = usePdfEditorStore((s) => s.setWatermarkConfig);
 
@@ -147,7 +151,13 @@ export function WatermarkPropertiesContent() {
   );
 
   return (
-    <div className="flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div
+      className={
+        scrollContainer
+          ? "flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "flex min-w-48 max-w-full flex-col gap-4 overflow-x-hidden px-3 pb-4 sm:px-4"
+      }
+    >
       {/* Enable / Disable */}
       <Switch
         isSelected={config.enabled}

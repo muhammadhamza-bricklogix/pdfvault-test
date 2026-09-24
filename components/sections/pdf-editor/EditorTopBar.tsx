@@ -11,7 +11,6 @@ import {
   Cursor01Icon,
   DownloadIcon,
   EraserIcon,
-  GridIcon,
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
@@ -61,7 +60,6 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
-import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -111,7 +109,6 @@ export function EditorInfoBar() {
     );
   }, [pathname]);
 
-  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
@@ -353,10 +350,6 @@ export function EditorInfoBar() {
 
   return (
     <>
-      <ToolsModal
-        isOpen={isToolsModalOpen}
-        onClose={() => setIsToolsModalOpen(false)}
-      />
       <ExportFormatModal
         isOpen={isExportModalOpen || pendingOpenExportModal}
         onClose={() => {
@@ -377,7 +370,7 @@ export function EditorInfoBar() {
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
-            {/* Back + Hamburger — desktop only */}
+            {/* Back - desktop/tablet only in this legacy responsive bar. */}
             <div className="hidden sm:flex sm:items-center sm:gap-1">
               <Tooltip delay={300}>
                 <Button
@@ -392,20 +385,18 @@ export function EditorInfoBar() {
                   <p>Back to dashboard</p>
                 </Tooltip.Content>
               </Tooltip>
-              {/*
-                Guests: HamburgerMenu hides its own dropdown trigger
-                but stays MOUNTED so its bridge event listeners
-                (editor:open-merge / open-split / open-flatten /
-                open-annotations) keep firing for the top toolbar.
-                Unmounting for guests makes those toolbar buttons idle
-                (QA 2026-09-06). Rationale mirrored in
-                `PvEditorTopChrome.tsx`.
-              */}
-              {isW9Route ? null : <HamburgerMenu />}
             </div>
 
-            {/* Undo + Redo — mobile only */}
+            {/* Back + Undo + Redo — mobile only */}
             <div className="flex items-center gap-1 sm:hidden">
+              <Button
+                aria-label="Back to dashboard"
+                size="sm"
+                variant="tertiary"
+                onPress={handleBack}
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+              </Button>
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -430,19 +421,13 @@ export function EditorInfoBar() {
               </Button>
             </div>
 
-            <Tooltip delay={300}>
-              <Button
-                aria-label="Browse all tools"
-                size="sm"
-                variant="tertiary"
-                onPress={() => setIsToolsModalOpen(true)}
-              >
-                <HugeiconsIcon icon={GridIcon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Browse PDF and image tools</p>
-              </Tooltip.Content>
-            </Tooltip>
+            {/*
+              Same menu as desktop, in the old mobile grid-icon slot.
+              HamburgerMenu gates its visible trigger on `isSignedIn`, but
+              remains mounted for guests so editor bridge listeners keep
+              working.
+            */}
+            {isW9Route ? null : <HamburgerMenu />}
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
@@ -617,9 +602,9 @@ export function EditorInfoBar() {
 // Exported so BottomDock.tsx (mobile) can build its own grouped pill layout from this same tool list.
 export const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
-  { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
-  { icon: SignatureIcon, id: "signature", label: "Signature" },
-  { icon: TextFontIcon, id: "text", label: "Add Text" },
+  { icon: PencilEdit01Icon, id: "editText", label: "Edit" },
+  { icon: SignatureIcon, id: "signature", label: "Sign" },
+  { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },

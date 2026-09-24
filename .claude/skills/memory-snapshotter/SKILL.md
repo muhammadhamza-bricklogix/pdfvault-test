@@ -1,17 +1,17 @@
 ---
 name: memory-snapshotter
-description: Use to persist context from the current conversation into `/Users/brickslogix/.claude/projects/-Users-brickslogix-pdf-viewer-app/memory/` so it survives context compression, session end, and future conversations. Trigger explicitly whenever the user says "save memory", "update memory", "remember this", "snapshot context", "before we lose it", "context is filling up", or "wrap up the session". Trigger automatically at these moments even without being asked — (a) when a PreCompact reminder appears, (b) when the user closes out a multi-step task with any new preference / decision / feedback / project status change, (c) after a bug is diagnosed and root-caused (the WHY is worth keeping even if the fix isn't). This is the primary defense against context loss for a solo vibe-coder who cannot afford to re-explain the project every session — treat it as load-bearing, not optional. Skip only if the entire conversation was trivial lookups with no new user preferences, no new project state, and no non-obvious decisions.
+description: Use to persist context from the current conversation into the user's auto-memory directory (`~/.claude/projects/-Users-<username>-pdf-viewer-app/memory/` — resolve `$HOME` at runtime; on this machine it is `/Users/softaims/.claude/projects/-Users-softaims-pdf-viewer-app/memory/`) so it survives context compression, session end, and future conversations. Trigger explicitly whenever the user says "save memory", "update memory", "remember this", "snapshot context", "before we lose it", "context is filling up", or "wrap up the session". Trigger automatically at these moments even without being asked — (a) when a PreCompact reminder appears, (b) when the user closes out a multi-step task with any new preference / decision / feedback / project status change, (c) after a bug is diagnosed and root-caused (the WHY is worth keeping even if the fix isn't). This is the primary defense against context loss for a solo vibe-coder who cannot afford to re-explain the project every session — treat it as load-bearing, not optional. Skip only if the entire conversation was trivial lookups with no new user preferences, no new project state, and no non-obvious decisions.
 ---
 
 # Memory snapshotter
 
-The user is a solo developer (Hamza) who works with Claude across many short sessions. Losing context between sessions — or across a mid-session compaction — means re-explaining the same off-limits rules, mobile invariants, and business decisions every time. This skill is the ritual that keeps that from happening.
+The user is a solo developer who works with Claude across many short sessions. Losing context between sessions — or across a mid-session compaction — means re-explaining the same off-limits rules, mobile invariants, and business decisions every time. This skill is the ritual that keeps that from happening.
 
 Your job: scan the current conversation for anything that a future Claude session would need to know, and write it into the memory system per the auto-memory format from the system prompt.
 
 ## The memory system (quick reference)
 
-- Root: `/Users/brickslogix/.claude/projects/-Users-brickslogix-pdf-viewer-app/memory/`
+- Root: `~/.claude/projects/-Users-<username>-pdf-viewer-app/memory/` — resolve `$HOME` at runtime. On this machine (`whoami` = `softaims`) that resolves to `/Users/softaims/.claude/projects/-Users-softaims-pdf-viewer-app/memory/`.
 - Index: `MEMORY.md` (keep entries ≤150 chars each, one line per memory)
 - Types: `user`, `feedback`, `project`, `reference` (see system prompt for full spec)
 - Filename convention: `{type}_{topic}.md` in kebab-case (e.g. `feedback_no_amend.md`)

@@ -1,0 +1,106 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e3]:
+    - banner [ref=f15e4]:
+      - generic [ref=f15e5]:
+        - heading "Form W-9" [level=1] [ref=f15e6]
+        - paragraph [ref=f15e7]: Fill out, sign, and export as a PDF.
+      - generic [ref=f15e8]:
+        - paragraph [ref=f15e9]: Session c4bdeff1…
+        - group "Zoom" [ref=f15e10]:
+          - button "Zoom out" [ref=f15e11] [cursor=pointer]
+          - generic [ref=f15e12]: 150%
+          - button "Zoom in" [ref=f15e13] [cursor=pointer]
+        - button "Hide field list" [expanded] [ref=f15e14] [cursor=pointer]:
+          - generic [ref=f15e15]: Hide fields
+        - button "Add signature" [ref=f15e16] [cursor=pointer]:
+          - generic [ref=f15e17]: Signature
+        - button "Done" [ref=f15e18] [cursor=pointer]
+    - generic [ref=f15e19]:
+      - paragraph [ref=f15e21]: Loading form…
+      - complementary [ref=f15e23]:
+        - generic [ref=f15e24]:
+          - generic [ref=f15e25]:
+            - heading "1. Your identity" [level=2] [ref=f15e26]
+            - paragraph [ref=f15e27]: Name and business name as shown on your tax return.
+          - generic [ref=f15e28]:
+            - generic [ref=f15e29]:
+              - generic [ref=f15e30]: Name (as shown on your income tax return)
+              - textbox "Name (as shown on your income tax return)" [ref=f15e31]:
+                - /placeholder: " "
+            - generic [ref=f15e32]:
+              - generic [ref=f15e33]: Business name / disregarded entity (if different)
+              - textbox "Business name / disregarded entity (if different)" [ref=f15e34]:
+                - /placeholder: " "
+        - generic [ref=f15e35]:
+          - generic [ref=f15e36]:
+            - heading "3. Federal tax classification" [level=2] [ref=f15e37]
+            - paragraph [ref=f15e38]: Tick the box that matches how you are taxed.
+          - generic [ref=f15e39]:
+            - radiogroup "Federal tax classification" [ref=f15e40]:
+              - generic [ref=f15e42]:
+                - radio "Individual / sole proprietor" [ref=f15e43]
+                - radio "C corporation" [ref=f15e46]
+                - radio "S corporation" [ref=f15e49]
+                - radio "Partnership" [ref=f15e52]
+                - radio "Trust / estate" [ref=f15e55]
+                - radio "LLC" [ref=f15e58]
+                - radio "Other" [ref=f15e61]
+            - generic [ref=f15e64] [cursor=pointer]:
+              - checkbox "3b — Partnership, trust, or LLC providing W-9 to a partnership with foreign partners" [ref=f15e66]
+              - generic [ref=f15e67]: 3b — Partnership, trust, or LLC providing W-9 to a partnership with foreign partners
+        - generic [ref=f15e68]:
+          - heading "4. Exemptions (most people leave blank)" [level=2] [ref=f15e70]
+          - generic [ref=f15e71]:
+            - generic [ref=f15e72]:
+              - generic [ref=f15e73]: Exempt payee code (if any)
+              - textbox "Exempt payee code (if any)" [ref=f15e74]:
+                - /placeholder: " "
+            - generic [ref=f15e75]:
+              - generic [ref=f15e76]: Exemption from FATCA reporting code (if any)
+              - textbox "Exemption from FATCA reporting code (if any)" [ref=f15e77]:
+                - /placeholder: " "
+        - generic [ref=f15e78]:
+          - heading "5 & 6. Address" [level=2] [ref=f15e80]
+          - generic [ref=f15e81]:
+            - generic [ref=f15e82]:
+              - generic [ref=f15e83]: Address (number, street, and apt or suite no.)
+              - textbox "Address (number, street, and apt or suite no.)" [ref=f15e84]:
+                - /placeholder: " "
+            - generic [ref=f15e85]:
+              - generic [ref=f15e86]: City, state, and ZIP code
+              - textbox "City, state, and ZIP code" [ref=f15e87]:
+                - /placeholder: " "
+            - generic [ref=f15e88]:
+              - generic [ref=f15e89]: Requester's name and address (optional)
+              - textbox "Requester's name and address (optional)" [ref=f15e90]:
+                - /placeholder: " "
+            - generic [ref=f15e91]:
+              - generic [ref=f15e92]: List account number(s) here (optional)
+              - textbox "List account number(s) here (optional)" [ref=f15e93]:
+                - /placeholder: " "
+        - generic [ref=f15e94]:
+          - generic [ref=f15e95]:
+            - heading "Part I — Taxpayer Identification Number (TIN)" [level=2] [ref=f15e96]
+            - paragraph [ref=f15e97]: Enter your SSN (individuals / most sole proprietors) OR your EIN (businesses). Use only one.
+          - generic [ref=f15e98]:
+            - generic [ref=f15e99]:
+              - generic [ref=f15e100]: Social Security Number
+              - textbox "Social Security Number" [ref=f15e101]:
+                - /placeholder: 123-45-6789
+            - generic [ref=f15e102]:
+              - generic [ref=f15e103]: Employer Identification Number
+              - textbox "Employer Identification Number" [ref=f15e104]:
+                - /placeholder: 12-3456789
+        - generic [ref=f15e105]:
+          - generic [ref=f15e106]:
+            - heading "Part II — Certification and signature" [level=2] [ref=f15e107]
+            - paragraph [ref=f15e108]: Sign and date to certify your TIN is correct and that you are not subject to backup withholding.
+          - generic [ref=f15e109]:
+            - generic [ref=f15e110]:
+              - generic [ref=f15e111]: Signature of U.S. person
+              - button "Add signature" [ref=f15e112] [cursor=pointer]
+            - generic [ref=f15e113]:
+              - generic [ref=f15e114]: Date
+              - textbox "Date" [ref=f15e115]
+              - paragraph [ref=f15e116]: "Display: MM/DD/YYYY"
+  - alert [ref=f15e117]

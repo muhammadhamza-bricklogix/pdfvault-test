@@ -5,13 +5,12 @@ import type { ComponentProps } from "react";
 
 import {
   ArrowLeft01Icon,
-  Tick01Icon,
   BackgroundIcon,
-  PrinterIcon,
   Comment01Icon,
   Search01Icon,
   Copy01Icon,
   Cursor01Icon,
+  Doc01Icon,
   EraserIcon,
   FileExportIcon,
   FileMinusIcon,
@@ -25,6 +24,7 @@ import {
   PaintBrush01Icon,
   PaintBucketIcon,
   PencilEdit01Icon,
+  PrinterIcon,
   RedoIcon,
   SearchAddIcon,
   SearchMinusIcon,
@@ -34,6 +34,7 @@ import {
   Stamp01Icon,
   TextFontIcon,
   TextNumberSignIcon,
+  Tick01Icon,
   UndoIcon,
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
@@ -355,6 +356,7 @@ function TopAppBar() {
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
+  const [isConvertingToWord, setIsConvertingToWord] = useState(false);
 
   // QA 2026-09-07: Done click now saves the current edits to cloud FIRST,
   // then opens the export modal. User was reporting that clicking Done →
@@ -387,6 +389,47 @@ function TopAppBar() {
             toast.close(toastKey);
             setIsSavingBeforeExport(false);
             setIsExportModalOpen(true);
+          },
+        },
+      }),
+    );
+  };
+
+  const convertToWordAfterSave = () => {
+    if (!file || showW9Save) return;
+
+    const dispatchWordExport = () => {
+      window.dispatchEvent(
+        new CustomEvent("editor:export", {
+          detail: { format: "docx" },
+        }),
+      );
+    };
+
+    if (!isSignedIn) {
+      dispatchWordExport();
+
+      return;
+    }
+
+    setIsConvertingToWord(true);
+    const toastKey = toast.loading({
+      title: "Saving your edits",
+      description: "Hold on — we'll start the Word conversion once saved.",
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("editor:save-before-action", {
+        detail: {
+          force: true,
+          skipReset: true,
+          onComplete: (result: { ok: boolean; reason?: string }) => {
+            toast.close(toastKey);
+            setIsConvertingToWord(false);
+
+            if (result.ok || result.reason === "not-signed-in") {
+              dispatchWordExport();
+            }
           },
         },
       }),
@@ -831,11 +874,27 @@ function TopAppBar() {
           <span className="hidden sm:inline">{t("share")}</span>
         </button>
 
+        {showW9Save ? null : (
+          <Button
+            aria-label="Convert to Word"
+            className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#2563eb] !px-3 !text-[13px] !font-semibold !text-white hover:!bg-[#1d4ed8] disabled:!opacity-50 sm:!px-4"
+            isDisabled={
+              !canDownload || isSavingBeforeExport || isConvertingToWord
+            }
+            onPress={convertToWordAfterSave}
+          >
+            <HugeiconsIcon className="text-white" icon={Doc01Icon} size={15} />
+            <span className="hidden sm:inline">
+              {isConvertingToWord ? "Saving…" : "Convert to Word"}
+            </span>
+          </Button>
+        )}
+
         <Button
           aria-label={t("download")}
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
-          isDisabled={!canDownload || isSavingBeforeExport}
+          isDisabled={!canDownload || isSavingBeforeExport || isConvertingToWord}
           onPress={openExportModalAfterSave}
         >
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />

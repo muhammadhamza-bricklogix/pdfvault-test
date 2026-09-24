@@ -4,6 +4,7 @@ import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -99,7 +100,56 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [keyboardViewport, setKeyboardViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  const scrollEmailInputIntoView = useCallback(
+    (block: ScrollLogicalPosition = "nearest") => {
+      emailInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block,
+        inline: "nearest",
+      });
+    },
+    [],
+  );
+
+  const syncKeyboardViewport = useCallback(() => {
+    const visualViewport = window.visualViewport;
+    const input = emailInputRef.current;
+
+    if (!visualViewport || document.activeElement !== input) {
+      setKeyboardViewport(null);
+      return;
+    }
+
+    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
+
+    if (!keyboardIsOpen) {
+      setKeyboardViewport(null);
+      return;
+    }
+
+    setKeyboardViewport({
+      height: Math.floor(visualViewport.height),
+      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
+    });
+
+    requestAnimationFrame(() => scrollEmailInputIntoView("center"));
+  }, [scrollEmailInputIntoView]);
+
+  const focusEmailInputWithoutPageScroll = useCallback(() => {
+    const input = emailInputRef.current;
+
+    if (!input) return;
+
+    input.focus({ preventScroll: true });
+    requestAnimationFrame(syncKeyboardViewport);
+    window.setTimeout(syncKeyboardViewport, 250);
+  }, [syncKeyboardViewport]);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -125,27 +175,63 @@ export function EmailFirstModal() {
   // resize so the input stays reachable once the keyboard settles.
   useEffect(() => {
     if (!detail) return;
-    emailInputRef.current?.focus({ preventScroll: true });
+    focusEmailInputWithoutPageScroll();
+    requestAnimationFrame(() => scrollEmailInputIntoView("nearest"));
+    window.setTimeout(() => scrollEmailInputIntoView("center"), 250);
 
     const vv = window.visualViewport;
 
     if (!vv) return;
 
     const handleViewportResize = () => {
-      emailInputRef.current?.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
+      if (document.activeElement !== emailInputRef.current) return;
+
+      syncKeyboardViewport();
+      scrollEmailInputIntoView("center");
     };
 
     vv.addEventListener("resize", handleViewportResize);
+    vv.addEventListener("scroll", handleViewportResize);
 
-    return () => vv.removeEventListener("resize", handleViewportResize);
-  }, [detail]);
+    return () => {
+      vv.removeEventListener("resize", handleViewportResize);
+      vv.removeEventListener("scroll", handleViewportResize);
+      setKeyboardViewport(null);
+    };
+  }, [
+    detail,
+    focusEmailInputWithoutPageScroll,
+    scrollEmailInputIntoView,
+    syncKeyboardViewport,
+  ]);
 
   const close = useCallback(() => {
     setDetail(null);
     setSubmitting(false);
+    setKeyboardViewport(null);
+  }, []);
+
+  const handleEmailPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLInputElement>) => {
+      if (
+        event.pointerType === "mouse" ||
+        document.activeElement === event.currentTarget
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      focusEmailInputWithoutPageScroll();
+    },
+    [focusEmailInputWithoutPageScroll],
+  );
+
+  const handleEmailBlur = useCallback(() => {
+    window.setTimeout(() => {
+      if (document.activeElement !== emailInputRef.current) {
+        setKeyboardViewport(null);
+      }
+    }, 0);
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -334,6 +420,17 @@ export function EmailFirstModal() {
   };
 
   const isOpen = detail !== null;
+  const viewportFrameStyle: CSSProperties | undefined = keyboardViewport
+    ? {
+        height: `${keyboardViewport.height}px`,
+        maxHeight: `${keyboardViewport.height}px`,
+        minHeight: `${keyboardViewport.height}px`,
+        transform: `translateY(${keyboardViewport.top}px)`,
+      }
+    : undefined;
+  const containerClassName = keyboardViewport
+    ? "items-start justify-center overflow-y-auto overscroll-contain px-4 py-3"
+    : "min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4";
 
   return (
     <Modal.Backdrop
@@ -342,7 +439,11 @@ export function EmailFirstModal() {
         if (!open) close();
       }}
     >
-      <Modal.Container className="min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4">
+      <Modal.Container className={containerClassName}>
+        <div
+          className="flex w-full items-center justify-center"
+          style={viewportFrameStyle}
+        >
         <Modal.Dialog className="!w-fit !max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none">
           <div className="relative">
             <button
@@ -369,7 +470,7 @@ export function EmailFirstModal() {
 
             <section
               aria-labelledby="email-first-heading"
-              className="box-border w-[min(620px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+              className="box-border max-h-[calc(100dvh-32px)] w-[min(620px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
             >
               <h1
                 className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
@@ -414,6 +515,12 @@ export function EmailFirstModal() {
                       setEmail(e.target.value);
                       if (error) setError(null);
                     }}
+                    onBlur={handleEmailBlur}
+                    onFocus={() => {
+                      syncKeyboardViewport();
+                      scrollEmailInputIntoView("nearest");
+                    }}
+                    onPointerDown={handleEmailPointerDown}
                   />
                 </div>
                 {error ? (
@@ -454,6 +561,7 @@ export function EmailFirstModal() {
             </section>
           </div>
         </Modal.Dialog>
+        </div>
       </Modal.Container>
     </Modal.Backdrop>
   );

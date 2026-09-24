@@ -385,10 +385,12 @@ function EditorLayout() {
             </div>
           </div>
         </div>
-        <BottomDock
-          fabricCanvas={fabricCanvas}
-          onReorderPages={handleReorderPages}
-        />
+        {isW9Layout ? null : (
+          <BottomDock
+            fabricCanvas={fabricCanvas}
+            onReorderPages={handleReorderPages}
+          />
+        )}
         {managePagesModal}
         {findReplaceModal}
       </>

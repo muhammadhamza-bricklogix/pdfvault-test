@@ -39,13 +39,18 @@ const ACTION_TOOLS = [
   { id: "split", label: "Split", icon: SplitIcon },
   { id: "flatten", label: "Flatten", icon: Layers01Icon },
   { id: "extract", label: "Extract", icon: FileExportIcon },
-  { id: "page-numbers", label: "Page No.", icon: TextNumberSignIcon },
-  { id: "annotate", label: "Annotation", icon: Comment01Icon },
+  { id: "page-numbers", label: "Page No", icon: TextNumberSignIcon },
+  { id: "annotate", label: "Annotate", icon: Comment01Icon },
 ] as const;
 
 // Split at the same 6/7 boundary as desktop's GROUP_A/GROUP_B (PvEditorTopChrome.tsx).
 const MODE_TOOLS_GROUP_1 = TOOLS.slice(0, 6);
 const MODE_TOOLS_GROUP_2 = TOOLS.slice(6);
+
+// SCRUM-315: keep mobile tool labels identical to desktop.
+function mobileModeLabel(tool: { id: string; label: string }): string {
+  return tool.label;
+}
 
 type DockIcon = ComponentProps<typeof HugeiconsIcon>["icon"];
 
@@ -94,6 +99,7 @@ function DockPillGroup({ children }: { children: React.ReactNode }) {
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
@@ -206,6 +212,12 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   };
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );
@@ -280,7 +292,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
                 key={tool.id}
                 active={activeTool === tool.id}
                 icon={tool.icon}
-                label={tool.label}
+                label={mobileModeLabel(tool)}
                 onClick={() => handleModeToolPick(tool.id)}
               />
             ))}
@@ -292,7 +304,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
                 key={tool.id}
                 active={activeTool === tool.id}
                 icon={tool.icon}
-                label={tool.label}
+                label={mobileModeLabel(tool)}
                 onClick={() => handleModeToolPick(tool.id)}
               />
             ))}

@@ -342,6 +342,66 @@ export function PaywallModal({
     return () => observer.disconnect();
   }, [isOpen]);
 
+  // Pause Weglot for the paywall's lifetime.
+  //
+  // The `translate="no"` + `notranslate` + `wg-notranslate` markers on
+  // `<Modal.Dialog>` (plus the excludeBlocks selector we configure in
+  // WeglotBoot) stop the FIRST-paint translation of the modal, so it
+  // opens in English on `/de/` / `/es/` / etc. That's enough on modal
+  // open. It is NOT enough on subsequent React re-renders — clicking a
+  // plan card swaps the highlighted state on both plan tiles, React
+  // commits DOM mutations, and Weglot's body-level MutationObserver
+  // still fires. Something in the observer path adjacent to the fenced
+  // subtree touches text nodes React still remembers, and the next
+  // `commitDeletion` throws `NotFoundError: Failed to execute
+  // 'removeChild' on 'Node': The node to be removed is not a child of
+  // this node.` — the app blanks to `<app.global-error>` and the user
+  // can't buy.
+  //
+  // Reproduced on staging 2026-09-23 via Playwright: with `Weglot.
+  // getCurrentLang() === "de"`, Monthly → Annual → Monthly crashes.
+  // With `Weglot.switchTo("en")` before the flow, same clicks pass
+  // cleanly. Flipping Weglot back off is the smallest change that
+  // survives every React re-render inside the modal.
+  //
+  // The switch takes ~1 frame and only re-translates already-exposed
+  // DOM outside the modal (dashboard, sidebar). When the modal closes
+  // we restore the original language, so `/de/` returns to German
+  // immediately. Users see paywall in English (same intended trade-off
+  // as the PR #98 fence) but no crash.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+
+    const w = window as typeof window & {
+      Weglot?: {
+        getCurrentLang?: () => string | undefined;
+        switchTo?: (lang: string) => void;
+      };
+    };
+    const W = w.Weglot;
+
+    if (!W?.getCurrentLang || !W?.switchTo) return;
+    const prevLang = W.getCurrentLang();
+
+    if (!prevLang || prevLang === "en") return;
+    try {
+      W.switchTo("en");
+    } catch {
+      // Weglot occasionally throws mid-init if `switchTo` runs before
+      // its bootstrap resolves. Safe to swallow — the fence markers
+      // still block the FIRST paint, and the retry on close is
+      // idempotent.
+    }
+
+    return () => {
+      try {
+        W.switchTo?.(prevLang);
+      } catch {
+        // As above.
+      }
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
