@@ -91,13 +91,16 @@ export type PaywallStrings = {
     // Two variants — monthly (trial → recurring) vs annual.
     // `<0>` and `<1>` mark the position of the "Subscription" and
     // "Refund" links so PayStep can render them via segments.
-    disclaimerMonthly: (a: {
-      todayAmount: string;
-      renewAmount: string;
-    }) => { intro: string; policySeparator: string; policyOutro: string };
-    disclaimerAnnual: (a: {
-      todayAmount: string;
-    }) => { intro: string; policySeparator: string; policyOutro: string };
+    disclaimerMonthly: (a: { todayAmount: string; renewAmount: string }) => {
+      intro: string;
+      policySeparator: string;
+      policyOutro: string;
+    };
+    disclaimerAnnual: (a: { todayAmount: string }) => {
+      intro: string;
+      policySeparator: string;
+      policyOutro: string;
+    };
     subscriptionLink: string;
     refundLink: string;
     // Right column
@@ -236,8 +239,7 @@ const de: PaywallStrings = {
     yourDocumentReady: "Ihr Dokument ist fertig!",
     cardSecurityNote:
       "Kartendaten erreichen unsere Server nie. Zahlungen werden über einen PCI-konformen Partner abgewickelt.",
-    cardDeclinedHeading:
-      "Ihre Karte wurde abgelehnt und nicht belastet.",
+    cardDeclinedHeading: "Ihre Karte wurde abgelehnt und nicht belastet.",
     cardDeclinedBody:
       "Versuchen Sie eine andere Karte oder wenden Sie sich an Ihre Bank. Sie können die Daten unten erneut eingeben.",
     tryAnotherCard: "Andere Karte versuchen",
@@ -255,8 +257,7 @@ const es: PaywallStrings = {
     powerpoint: "Tu presentación de PowerPoint está lista.",
     txt: "Tu documento de texto está listo.",
   },
-  headerSubtitle:
-    "Cancela cuando quieras · Pago seguro · Acceso instantáneo",
+  headerSubtitle: "Cancela cuando quieras · Pago seguro · Acceso instantáneo",
   documentReady: "Tu documento está listo para descargar",
   mostPopular: "🚀 Más popular",
   sevenDayTrial: "Prueba de 7 días",

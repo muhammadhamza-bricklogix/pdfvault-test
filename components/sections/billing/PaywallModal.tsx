@@ -239,9 +239,10 @@ export function PaywallModal({
 
     return parseLocalePrefix(window.location.pathname)?.locale ?? "en";
   });
-  const strings = useMemo(() => getPaywallStrings(paywallLocale), [
-    paywallLocale,
-  ]);
+  const strings = useMemo(
+    () => getPaywallStrings(paywallLocale),
+    [paywallLocale],
+  );
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
@@ -1499,7 +1500,9 @@ function PayStep({
                 type="button"
                 onClick={onRetry}
               >
-                {retryLoading ? strings.pay.preparing : strings.pay.tryAnotherCard}
+                {retryLoading
+                  ? strings.pay.preparing
+                  : strings.pay.tryAnotherCard}
               </button>
             </div>
           ) : null}

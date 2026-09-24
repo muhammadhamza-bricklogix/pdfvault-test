@@ -603,8 +603,7 @@ export function PdfEditorShell() {
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.log("[PDFedits-i18n] PdfEditorShell state", {
-      pathname:
-        typeof window !== "undefined" ? window.location.pathname : "?",
+      pathname: typeof window !== "undefined" ? window.location.pathname : "?",
       hasFile: !!file,
       pendingDocumentId,
       isRestoringSession,
@@ -642,8 +641,7 @@ export function PdfEditorShell() {
 
     // eslint-disable-next-line no-console
     console.log("[PDFedits-i18n] PdfEditorShell shouldRedirectAway=true", {
-      pathname:
-        typeof window !== "undefined" ? window.location.pathname : "?",
+      pathname: typeof window !== "undefined" ? window.location.pathname : "?",
       hasFile: !!file,
       pendingDocumentId,
       isRestoringSession,

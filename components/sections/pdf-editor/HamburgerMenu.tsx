@@ -486,10 +486,7 @@ export function HamburgerMenu() {
                   <HugeiconsIcon icon={NoteIcon} size={14} />
                   <Label>{t("myPdfs")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item
-                  id="find-replace"
-                  textValue={t("findReplace")}
-                >
+                <Dropdown.Item id="find-replace" textValue={t("findReplace")}>
                   <HugeiconsIcon icon={Search01Icon} size={14} />
                   <Label>{t("findReplace")}</Label>
                 </Dropdown.Item>
