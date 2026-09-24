@@ -245,6 +245,16 @@ export function PaywallModal({
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  // Preserve the initial monthly intent alongside `intent` so a user
+  // who picks Annual → Continue → Back → 7-day trial → Continue lands
+  // on the pay step with the ORIGINAL monthly paymentIntent, not the
+  // stale annual one `handleContinue` swapped in. Without this the
+  // Solidgate iframe re-renders on `intent.paymentIntent` and charges
+  // annual pricing even though the plan picker shows trial (QA
+  // 2026-09-24).
+  const [monthlyIntent, setMonthlyIntent] = useState<CheckoutIntent | null>(
+    null,
+  );
   // Fetched in parallel with the primary (monthly) intent so the
   // plan-picker card shows the same annual per-month price the payment
   // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
@@ -388,6 +398,7 @@ export function PaywallModal({
           // "USD". See `lib/client/billing/user-currency.ts`.
           persistUserCurrency(intent.currency);
           setIntent(intent);
+          setMonthlyIntent(intent);
         },
         onError: (err) => {
           // Enriched forensic log — captures the raw non-enveloped 400
@@ -514,6 +525,7 @@ export function PaywallModal({
     return () => {
       cancelled = true;
       setIntent(null);
+      setMonthlyIntent(null);
       setAnnualIntent(null);
       setAnnualUnavailable(false);
       setError(null);
@@ -768,6 +780,11 @@ export function PaywallModal({
     });
 
     if (selectedPlan === "monthly") {
+      // Restore the monthly intent if a prior Continue swapped it for
+      // the annual one (Annual → Back → 7-day trial → Continue path).
+      // Without this, PayStep + the Solidgate iframe render annual
+      // pricing / paymentIntent despite the user picking trial.
+      if (monthlyIntent) setIntent(monthlyIntent);
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
         plan: "monthly",
         via: "direct",
@@ -937,7 +954,17 @@ export function PaywallModal({
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
               strings={strings}
-              onBack={() => setStep("plan")}
+              onBack={() => {
+                // Reset the shared `intent` to the monthly baseline so
+                // the plan step's `pickPlan(intent, …)` reads from the
+                // primary intent's alternatePlans in the same shape it
+                // saw on first mount. Also protects against `intent`
+                // being the annual variant when the user picks 7-day
+                // trial again — `handleContinue` mirrors this restore
+                // for the direct-monthly Continue path.
+                if (monthlyIntent) setIntent(monthlyIntent);
+                setStep("plan");
+              }}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
               onRetry={handleRetry}

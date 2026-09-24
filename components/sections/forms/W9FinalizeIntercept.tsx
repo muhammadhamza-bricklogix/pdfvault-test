@@ -596,6 +596,68 @@ function normalizeLibraryFilename(_input: string | undefined): string {
   return W9_LIBRARY_FILENAME;
 }
 
+/**
+ * Stamp the current W-9 client-side and return a Blob URL the paywall
+ * modal can render as its preview. Mirrors the pdf-composer pattern
+ * (`useExportEditor` → `previewObjectUrl`) so the paywall shows the
+ * user's filled W-9 in an iframe instead of the generic blurred lock
+ * mock. Returns null on stamp failure — caller falls through to the
+ * paywall's mock preview.
+ *
+ * Caller MUST revoke the returned URL after the paywall resolves.
+ */
+async function buildW9PaywallPreviewUrl(
+  values: Record<string, string>,
+): Promise<string | null> {
+  try {
+    const signaturePreview =
+      useFormEditorStore.getState().signaturePreview ?? null;
+    const stampedBytes = await stampW9Client(values, signaturePreview);
+    const previewBlob = new Blob([stampedBytes.buffer as ArrayBuffer], {
+      type: "application/pdf",
+    });
+
+    return URL.createObjectURL(previewBlob);
+  } catch (err) {
+    logger.captureError(err, "w9.paywall_preview_generate");
+
+    return null;
+  }
+}
+
+/**
+ * Run the paywall-entitlement gate for the W-9 flows, generating a
+ * client-stamped preview so the paywall renders the user's actual W-9
+ * instead of the blurred lock mock. Returns `true` when the user is
+ * entitled (either already or after a successful payment) and the
+ * caller should proceed with finalize; `false` when the user cancels
+ * or the paywall errors and the caller should bail silently.
+ */
+async function ensureW9Entitlement(
+  values: Record<string, string>,
+  filename: string,
+  targetExt: "pdf" | "docx" | "png" | "jpg",
+): Promise<boolean> {
+  const entitled = await ensureFreshEntitlement();
+
+  if (entitled) return true;
+
+  const previewObjectUrl = await buildW9PaywallPreviewUrl(values);
+
+  try {
+    const outcome = await requestPaywall({
+      filename,
+      sourceExt: "pdf",
+      targetExt,
+      ...(previewObjectUrl ? { previewObjectUrl } : {}),
+    });
+
+    return outcome === "success";
+  } finally {
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+  }
+}
+
 async function ensureLibrarySave(
   downloadUrl: string,
   sessionId: string,
@@ -978,21 +1040,20 @@ export function W9FinalizeIntercept() {
           // never triggers the backend stamp job. The loading toast
           // is intentionally left up under the paywall modal so the
           // user sees state resume without an extra flicker after
-          // purchase.
-          const entitled = await ensureFreshEntitlement();
+          // purchase. `ensureW9Entitlement` stamps the current W-9
+          // client-side and hands the paywall a Blob URL so the
+          // preview column shows the user's filled form instead of
+          // the generic blurred lock mock (2026-09-24 QA fix).
+          const paywallOk = await ensureW9Entitlement(
+            values,
+            requestedFilename?.trim() || "w-9.pdf",
+            requestedFormat,
+          );
 
-          if (!entitled) {
-            const outcome = await requestPaywall({
-              filename: "w-9.pdf",
-              sourceExt: "pdf",
-              targetExt: "pdf",
-            });
-
-            if (outcome !== "success") {
-              // User cancelled or paywall errored — bail silently.
-              // The paywall UI surfaces its own error state.
-              return;
-            }
+          if (!paywallOk) {
+            // User cancelled or paywall errored — bail silently.
+            // The paywall UI surfaces its own error state.
+            return;
           }
 
           // Re-upload the signature if we only have a preview from a
@@ -1331,18 +1392,15 @@ export function W9FinalizeIntercept() {
         try {
           // Save routes through finalize (a paid feature). Same
           // entitlement flow as the download intercept so users
-          // pay once and both save + download work.
-          const entitled = await ensureFreshEntitlement();
+          // pay once and both save + download work. Client-stamped
+          // preview so the paywall shows the filled W-9.
+          const paywallOk = await ensureW9Entitlement(
+            values,
+            W9_LIBRARY_FILENAME,
+            "pdf",
+          );
 
-          if (!entitled) {
-            const outcome = await requestPaywall({
-              filename: "w-9.pdf",
-              sourceExt: "pdf",
-              targetExt: "pdf",
-            });
-
-            if (outcome !== "success") return;
-          }
+          if (!paywallOk) return;
 
           const effectiveSignatureKey =
             (await ensureSignatureKeyForSession(sessionId)) ?? signatureKey;
@@ -1536,20 +1594,18 @@ export function W9FinalizeIntercept() {
 
       void (async () => {
         try {
-          const entitled = await ensureFreshEntitlement();
+          // Client-stamped preview so the paywall shows the filled
+          // W-9. Matches the Save + Download entitlement gates.
+          const paywallOk = await ensureW9Entitlement(
+            values,
+            W9_LIBRARY_FILENAME,
+            "pdf",
+          );
 
-          if (!entitled) {
-            const outcome = await requestPaywall({
-              filename: "w-9.pdf",
-              sourceExt: "pdf",
-              targetExt: "pdf",
-            });
+          if (!paywallOk) {
+            detail.onComplete({ ok: false, reason: "cancelled" });
 
-            if (outcome !== "success") {
-              detail.onComplete({ ok: false, reason: "cancelled" });
-
-              return;
-            }
+            return;
           }
 
           const effectiveSignatureKey =
