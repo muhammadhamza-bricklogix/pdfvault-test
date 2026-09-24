@@ -9,6 +9,7 @@ import type {
 import { getStoredGoogleClickIds } from "@/lib/client/analytics/google-click-id";
 import { apiClient } from "@/lib/config/api-client";
 import { BILLING } from "@/lib/shared/constants/endpoints";
+import { resolveClientLanguage } from "@/lib/shared/constants/locale-map";
 
 async function listPlans(): Promise<Plan[]> {
   const { data } = await apiClient.get<Plan[]>(BILLING.PLANS);
@@ -78,6 +79,7 @@ async function createCheckoutIntent(
       ? stored.clickTimestamp
       : undefined;
   const cleanFileName = sanitizeFileName(input.fileName);
+  const language = input.language ?? resolveClientLanguage();
   const enriched: CheckoutIntentRequest = {
     ...(gclid ? { gclid } : {}),
     ...(gbraid ? { gbraid } : {}),
@@ -87,6 +89,9 @@ async function createCheckoutIntent(
     // Spread cleaned filename AFTER `...input` so a garbage-empty
     // fileName from the caller can't survive the sanitisation.
     ...(cleanFileName ? { fileName: cleanFileName } : { fileName: undefined }),
+    // Resolved AFTER `...input` so the URL/cookie value wins when the
+    // caller didn't pass one explicitly (nullish-coalesced above).
+    ...(language ? { language } : {}),
   };
 
   // Drop any explicit `undefined` — JSON.stringify would omit it, but

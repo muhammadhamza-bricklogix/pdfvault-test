@@ -3,6 +3,7 @@ import type { SignInFutureResource } from "@clerk/shared/types";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { getAuthToken } from "@/lib/client/auth/get-auth-token";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { resolveClientLanguage } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -65,8 +66,24 @@ export async function runAutoSignup(params: {
    * the hydrator's IDB restore takes over on return.
    */
   bakedFile?: File;
+  /**
+   * ISO 639-1 language the user is currently browsing in. Defaults to
+   * whatever `resolveClientLanguage()` returns (URL prefix / cookie / EN).
+   * Forwarded to `/auth/quick-signup` so the backend parks it on Clerk
+   * metadata AND to `/auth/quick-signup/notify` so the Customer.io "New
+   * account created" transactional send picks the matching translated
+   * template variant (CIO template id 4 currently ships EN + `de`).
+   */
+  language?: string;
 }): Promise<AutoSignupOutcome> {
-  const { email, redirectUrl, signIn, fileName, bakedFile } = params;
+  const {
+    email,
+    redirectUrl,
+    signIn,
+    fileName,
+    bakedFile,
+    language = resolveClientLanguage(),
+  } = params;
 
   if (!API_BASE_URL) {
     logger.warn("auto-signup: NEXT_PUBLIC_API_BASE_URL not set");
@@ -114,7 +131,7 @@ export async function runAutoSignup(params: {
 
   try {
     response = await fetch(`${API_BASE_URL}/auth/quick-signup`, {
-      body: JSON.stringify({ email, fileName }),
+      body: JSON.stringify({ email, fileName, language }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
       signal: abortController.signal,
@@ -357,10 +374,15 @@ export async function runAutoSignup(params: {
   // dashboard snippet when `pdf_editor_url` isn't in message_data.
   try {
     const token = await getAuthToken();
-    const notifyBody: { fileName?: string; docId?: string } = {};
+    const notifyBody: {
+      fileName?: string;
+      docId?: string;
+      language?: string;
+    } = {};
 
     if (fileName) notifyBody.fileName = fileName;
     if (uploadedDocId) notifyBody.docId = uploadedDocId;
+    if (language) notifyBody.language = language;
 
     const notifyResponse = await fetch(
       `${API_BASE_URL}/auth/quick-signup/notify`,

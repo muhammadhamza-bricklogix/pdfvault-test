@@ -197,3 +197,37 @@ export function stripLocalePrefix(pathname: string | null | undefined): string {
 
   return parseLocalePrefix(pathname)?.rest ?? pathname;
 }
+
+/**
+ * Resolve the user's active UI language client-side for anything that
+ * needs to forward it to the backend (checkout-intent, auto-signup,
+ * language-switcher push, etc.). Order of precedence:
+ *   1. URL locale prefix (`/de/…`) — the active view wins.
+ *   2. `lang_pref` cookie — covers redirects that stripped the prefix.
+ *   3. `DEFAULT_LOCALE` ("en") — safe fallback for SSR + unset callers.
+ *
+ * Server-side (no `window`) always returns `DEFAULT_LOCALE`, so callers
+ * that need a specific server-time locale should read the request
+ * headers instead.
+ */
+export function resolveClientLanguage(): Locale {
+  if (typeof window === "undefined") return DEFAULT_LOCALE;
+  const parsed = parseLocalePrefix(window.location.pathname);
+
+  if (parsed) return parsed.locale;
+
+  if (typeof document !== "undefined" && document.cookie) {
+    const target = `${LANG_PREF_COOKIE}=`;
+
+    for (const raw of document.cookie.split(";")) {
+      const entry = raw.trim();
+
+      if (!entry.startsWith(target)) continue;
+      const value = entry.slice(target.length);
+
+      if (isSupportedLocale(value)) return value;
+    }
+  }
+
+  return DEFAULT_LOCALE;
+}

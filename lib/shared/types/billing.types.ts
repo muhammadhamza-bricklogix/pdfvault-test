@@ -54,6 +54,15 @@ export interface CheckoutIntentRequest {
    */
   fileName?: string;
   /**
+   * User's current UI language as an ISO 639-1 code (`en`, `de`, `fr`,
+   * `es`, `pt`, `ar`). Resolved client-side from the URL locale prefix
+   * with a `lang_pref` cookie fallback. Sent to Customer.io via the
+   * identify traits + `checkout_started` event so lifecycle + transactional
+   * templates can render `{{customer.language}}` / `{{trigger.language}}`
+   * and pick the localized copy without a separate profile push.
+   */
+  language?: string;
+  /**
    * Google Ads click identifiers captured off the landing URL by
    * `GoogleAdsClickBoot`. Backend persists whichever is present on the
    * subscription record, then uploads to Google Ads Offline Conversion
