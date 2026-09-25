@@ -42,7 +42,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -322,6 +322,7 @@ function ZoomPill() {
 
 function TopAppBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations("topChrome");
   // Explicit Save affordance for the W-9 route only. The generic
   // composer's Save button is hidden per product decision, but on
@@ -336,6 +337,7 @@ function TopAppBar() {
   // languages other than English (QA 2026-09-06).
   const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
+  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
@@ -469,46 +471,12 @@ function TopAppBar() {
     const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
     if (showW9Save) {
-      // W-9 route: save the partial form THROUGH the finalize path
-      // (`W9FinalizeIntercept.saveAndContinueHandler` — falls back to
-      // a client-side stamp so partial forms still land in My PDFs).
-      // Only navigate when the save resolves `ok`; failures show a
-      // toast and keep the user on the form so nothing is lost. Per
-      // product 2026-09-01: "hit save first, don't go back until the
-      // form is saved."
-      const savingToast = toast.loading({
-        title: "Saving your W-9",
-        description: "Hold on — you'll go back once your progress is saved.",
-      });
-
-      window.dispatchEvent(
-        new CustomEvent("editor:w9-save-and-continue", {
-          detail: {
-            onComplete: (result: { ok: boolean; reason?: string }) => {
-              toast.close(savingToast);
-
-              if (!result.ok) {
-                toast.error({
-                  title: "Couldn't save your W-9",
-                  description:
-                    "Your progress is still on this page — try again in a moment.",
-                });
-
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent("editor:navigate-after-save", {
-                  detail: {
-                    url: targetUrl,
-                    clearFileAfter: true,
-                  },
-                }),
-              );
-            },
-          },
-        }),
-      );
+      // W-9 Back is plain navigation. Do not dispatch
+      // `editor:w9-save-and-continue` here because that path finalizes the
+      // W-9 and can open the paywall; payment stays tied to explicit
+      // Save/Done/Download actions.
+      clearFile();
+      router.push(targetUrl);
 
       return;
     }
@@ -530,11 +498,10 @@ function TopAppBar() {
   };
 
   // QA 2026-09-07: logo click must save current edits BEFORE navigating
-  // home. Same shape as the back button (`handleBack`) — dispatch the
-  // navigate-after-save event (or the W-9 save-and-continue variant on
-  // /w-9-form) and cancel the Link's default navigation. Signed-out
-  // users have no cloud doc to persist, so let the Link navigate
-  // normally (returns `undefined` → `<Link>` proceeds).
+  // home. Same shape as the non-W-9 back button (`handleBack`) — dispatch
+  // the navigate-after-save event and cancel the Link's default navigation.
+  // W-9 intentionally bypasses finalize/save here; logo navigation must not
+  // open the paywall.
   const handleLogoClick = (
     e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
   ) => {
@@ -550,36 +517,11 @@ function TopAppBar() {
     const targetUrl = ROUTES.PUBLIC.HOME;
 
     if (showW9Save) {
-      const savingToast = toast.loading({
-        title: "Saving your W-9",
-        description: "Hold on — you'll go home once your progress is saved.",
-      });
-
-      window.dispatchEvent(
-        new CustomEvent("editor:w9-save-and-continue", {
-          detail: {
-            onComplete: (result: { ok: boolean; reason?: string }) => {
-              toast.close(savingToast);
-
-              if (!result.ok) {
-                toast.error({
-                  title: "Couldn't save your W-9",
-                  description:
-                    "Your progress is still on this page — try again in a moment.",
-                });
-
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent("editor:navigate-after-save", {
-                  detail: { url: targetUrl, clearFileAfter: true },
-                }),
-              );
-            },
-          },
-        }),
-      );
+      // W-9 Logo is plain navigation, matching the Back button. Do not
+      // dispatch `editor:w9-save-and-continue` because that finalizes the
+      // form and can open the paywall.
+      clearFile();
+      router.push(targetUrl);
 
       return;
     }

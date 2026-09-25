@@ -25,19 +25,19 @@ type W9EditorBootstrapProps = {
  * can operate.
  *
  * Effect guards:
- *   - Empty deps `[]` — the effect must run exactly once per mount.
- *     Never include `useMutation` result objects here; TanStack Query
+ *   - Do not include `useMutation` result objects here; TanStack Query
  *     returns a fresh object identity on every render, which would
  *     re-fire the effect and POST /start in an infinite loop until the
  *     backend rate-limiter kicks in with 429s (the exact bug reported
  *     2026-08-21). Same reason we call `formsService.startFormSession`
  *     directly instead of going through `useStartFormSessionMutation`.
- *   - `hasBootstrappedRef` — module-level dedupe for the StrictMode
- *     dev double-invoke. We do NOT reset it in cleanup; a genuine
- *     unmount + remount still creates a new component instance with a
- *     fresh ref, so refetch behaviour is unchanged.
- *   - `cancelled` — swallows results from a still-in-flight fetch
- *     when the component has unmounted before the network completed.
+ *   - `bootstrapRunIdRef` + `cancelled` — swallows results from stale
+ *     in-flight work while still allowing React StrictMode's development
+ *     setup → cleanup → setup cycle to run the second, active bootstrap.
+ *     A previous one-shot "already bootstrapped" guard latched during
+ *     the first StrictMode setup, then cleanup cancelled the template
+ *     fetch; the second setup was skipped and first visits stayed stuck
+ *     on "Loading your PDF…" until a reload served the PDF from cache.
  *
  * On unmount both stores are cleared so `/pdf-composer` doesn't
  * inherit the W-9 file and a subsequent `/w-9-form` visit fetches a
@@ -49,14 +49,15 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
   const searchParams = useSearchParams();
   const resumeDocId = searchParams.get("resumeDocId");
 
-  const hasBootstrappedRef = useRef(false);
+  const bootstrapRunIdRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (hasBootstrappedRef.current) return;
-    hasBootstrappedRef.current = true;
+    const runId = bootstrapRunIdRef.current + 1;
 
+    bootstrapRunIdRef.current = runId;
     let cancelled = false;
+    const isActiveRun = () => !cancelled && bootstrapRunIdRef.current === runId;
 
     // SYNC restore FIRST — before any async network work. Reads local
     // state (values + signature preview) and pushes it into the store
@@ -93,6 +94,9 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     // Parallel bootstrap: template fetch + form session. Neither
     // depends on the other so we don't want them serialized.
     const templatePromise = (async () => {
+      await Promise.resolve();
+      if (!isActiveRun()) return;
+
       const res = await fetch(ROUTES.STATIC.W9_BLANK_PDF, {
         cache: "force-cache",
       });
@@ -102,12 +106,12 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       }
       const blob = await res.blob();
 
-      if (cancelled) return;
+      if (!isActiveRun()) return;
       const file = new File([blob], "w-9.pdf", { type: "application/pdf" });
 
       setFile(file);
     })().catch((err: unknown) => {
-      if (cancelled) return;
+      if (!isActiveRun()) return;
       logger.captureError(err, "w9.template_load");
       setError(
         err instanceof Error ? err.message : "Couldn't load the W-9 template.",
@@ -115,12 +119,15 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     });
 
     const sessionPromise = (async () => {
+      await Promise.resolve();
+      if (!isActiveRun()) return;
+
       // Direct service call — bypasses `useStartFormSessionMutation`
       // because that hook's return object changes identity on every
       // render and would destabilize the effect deps if referenced.
       const session = await formsService.startFormSession({ formId: "w-9" });
 
-      if (cancelled) return;
+      if (!isActiveRun()) return;
       useFormEditorStore.getState().hydrateFromSession(session);
 
       // Values + signature preview already restored synchronously at
@@ -166,14 +173,17 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     const autoResumePromise = resumeDocId
       ? Promise.resolve()
       : (async () => {
+          await Promise.resolve();
+          if (!isActiveRun()) return;
+
           try {
             const existing = await findDuplicateByFilename(W9_LIBRARY_FILENAME);
 
-            if (cancelled || !existing) return;
+            if (!isActiveRun() || !existing) return;
 
             const doc = await documentsService.getDocument(existing.id);
 
-            if (cancelled) return;
+            if (!isActiveRun()) return;
 
             type ResumeEnvelope = {
               w9?: {
@@ -226,10 +236,13 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
     const resumePromise = resumeDocId
       ? (async () => {
+          await Promise.resolve();
+          if (!isActiveRun()) return;
+
           try {
             const doc = await documentsService.getDocument(resumeDocId);
 
-            if (cancelled) return;
+            if (!isActiveRun()) return;
 
             // Only claim ownership of this document row if it's really
             // a saved W-9 (has a `w9` marker in `editorState`). Without
