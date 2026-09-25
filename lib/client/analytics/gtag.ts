@@ -1,7 +1,7 @@
 "use client";
 
 export const GA_MEASUREMENT_ID =
-  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-VNFTBW1HBH";
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
 
 /**
  * Safely fire an event to Google Analytics (GA4) via gtag.js.
