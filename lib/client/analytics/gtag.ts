@@ -1,6 +1,6 @@
 "use client";
 
-export const GA_MEASUREMENT_ID = "G-VNFTBW1HBH";
+export const GA_MEASUREMENT_ID = "G-K6PVB4B39T";
 
 /**
  * Safely fire an event to Google Analytics (GA4) via gtag.js.
@@ -70,10 +70,23 @@ export function trackTrialStart(params: {
 /**
  * 4. tutorial_complete / activation
  * Triggered when the user performs the core "Aha!" action within the 7 days (e.g. downloads edited/converted PDF).
+ * Gated with localStorage flag so repeat downloads from the same user do not inflate activation counts.
  */
 export function trackActivation(feature_name: string): void {
+  if (typeof window !== "undefined") {
+    try {
+      const KEY = "pv_activation_fired";
+      if (localStorage.getItem(KEY)) {
+        return;
+      }
+      localStorage.setItem(KEY, "true");
+    } catch {
+      // Ignore storage errors if localStorage is restricted
+    }
+  }
+
   // We send both Google's standard recommended event name (tutorial_complete)
-  // and the custom event name (activation) so both cards/reports capture it.
+  // and the custom event name (activation) so both cards/reports capture it once per user.
   trackEvent("tutorial_complete", { feature_name });
   trackEvent("activation", { feature_name });
 }
