@@ -70,16 +70,17 @@ export function trackTrialStart(params: {
 /**
  * 4. tutorial_complete / activation
  * Triggered when the user performs the core "Aha!" action within the 7 days (e.g. downloads edited/converted PDF).
- * Gated with localStorage flag so repeat downloads from the same user do not inflate activation counts.
+ * Gated per user in localStorage so repeat downloads by the same user do not inflate activation counts,
+ * while allowing different users on the same shared browser to each activate independently.
  */
-export function trackActivation(feature_name: string): void {
+export function trackActivation(feature_name: string, userId?: string | null): void {
   if (typeof window !== "undefined") {
     try {
-      const KEY = "pv_activation_fired";
-      if (localStorage.getItem(KEY)) {
+      const key = userId ? `pv_activation_fired_${userId}` : "pv_activation_fired_anon";
+      if (localStorage.getItem(key)) {
         return;
       }
-      localStorage.setItem(KEY, "true");
+      localStorage.setItem(key, "true");
     } catch {
       // Ignore storage errors if localStorage is restricted
     }
