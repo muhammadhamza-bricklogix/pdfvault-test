@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
+import { setBingUserData } from "@/lib/client/analytics/bing-uet";
 
 /**
  * Only allow same-origin relative paths so the redirect can't be
@@ -128,6 +129,10 @@ export default function SSOCallbackPage() {
           router.replace(signUpUrl);
 
           return;
+        }
+
+        if (signUp?.status === "complete" && signUp.emailAddress) {
+          void setBingUserData({ email: signUp.emailAddress });
         }
       } catch (err) {
         if (cancelled) return;
