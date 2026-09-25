@@ -9,9 +9,11 @@ import {
   Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useAuth } from "@clerk/nextjs";
 import { Button, Modal } from "@heroui/react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
@@ -22,7 +24,15 @@ import {
   mergePdfs,
   type MergeEntry,
 } from "@/lib/client/pdf-tools/merge-pdfs";
+import {
+  clearPendingMergeDownload,
+  loadPendingMergeDownload,
+  savePendingMergeDownload,
+} from "@/lib/client/pdf-tools/pending-merge-download";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
+import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import { triggerDownload } from "@/lib/client/pdf-tools/split-pdf";
@@ -39,8 +49,10 @@ type Props = {
  * All work is client-side via pdf-lib — no server round-trip required.
  */
 export function MergePdfModal({ isOpen, onClose, source }: Props) {
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [extras, setExtras] = useState<MergeEntry[]>([]);
+  const [pendingAutoDownload, setPendingAutoDownload] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   // QA 2026-09-08: `isMerging` is React state — updates are async, so a
@@ -53,6 +65,48 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   // synchronous — the second click hits the guard before touching
   // React state and returns immediately.
   const mergeInFlightRef = useRef(false);
+  const pendingAutoStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      pendingAutoStartedRef.current = false;
+
+      return;
+    }
+    if (!source) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const pending = await loadPendingMergeDownload();
+
+        if (cancelled || !pending) return;
+
+        setExtras(pending.extras);
+        setPendingAutoDownload(pending.autoDownload);
+      } catch (err) {
+        logger.warn("[merge-pdf-modal] pending merge restore failed", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, source]);
+
+  const buildMergeReturnUrl = useCallback(() => {
+    if (typeof window === "undefined") {
+      return `${ROUTES.TOOLS.PDF_EDITOR}?tool=merge`;
+    }
+
+    const parsed = parseLocalePrefix(window.location.pathname);
+    const editorPath = parsed
+      ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+      : ROUTES.TOOLS.PDF_EDITOR;
+
+    return `${editorPath}?tool=merge`;
+  }, []);
 
   const handleAddFiles = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,6 +167,35 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
     setIsMerging(true);
     try {
+      if (!authLoaded) return;
+
+      if (!isSignedIn) {
+        const saved = await savePendingMergeDownload(extras, true);
+
+        if (!saved) {
+          toast.error({
+            title: "Couldn't prepare download",
+            description:
+              "Keep this tab open and try again. We couldn't preserve the PDFs you added for merge.",
+          });
+
+          return;
+        }
+
+        await snapshotPendingEditorFile().catch((err) =>
+          logger.warn("[merge-pdf-modal] pending editor save failed", err),
+        );
+
+        dispatchEmailFirstModal({
+          redirectUrl: buildMergeReturnUrl(),
+          title: "Your file is ready",
+          subtitle: "Create an account to download it",
+          submitLabel: "Download file",
+        });
+
+        return;
+      }
+
       // QA 2026-09-06: merge is 100% client-side (pdf-lib), so no
       // axios `isGatedRequest` interceptor ever fires — a signed-in
       // but non-entitled user could merge + download freely, bypassing
@@ -245,6 +328,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       });
 
       triggerDownload(mergedBlob, outName);
+      await clearPendingMergeDownload();
 
       // QA 2026-09-09: also swap the composer's source to the merged
       // file so the user's next edit session runs against the combined
@@ -294,11 +378,30 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       setIsMerging(false);
       mergeInFlightRef.current = false;
     }
-  }, [source, extras, onClose]);
+  }, [authLoaded, isSignedIn, source, extras, buildMergeReturnUrl, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !source || !pendingAutoDownload) return;
+    if (!authLoaded || !isSignedIn) return;
+    if (extras.length === 0) return;
+    if (pendingAutoStartedRef.current) return;
+
+    pendingAutoStartedRef.current = true;
+    setPendingAutoDownload(false);
+    void handleMerge();
+  }, [
+    authLoaded,
+    extras.length,
+    handleMerge,
+    isOpen,
+    isSignedIn,
+    pendingAutoDownload,
+    source,
+  ]);
 
   const allEntries = source ? [source, ...extras] : extras;
   const totalPages = allEntries.reduce((n, e) => n + e.pageCount, 0);
-  const canMerge = !isMerging && !!source && extras.length > 0;
+  const canMerge = authLoaded && !isMerging && !!source && extras.length > 0;
 
   return (
     <Modal.Backdrop
