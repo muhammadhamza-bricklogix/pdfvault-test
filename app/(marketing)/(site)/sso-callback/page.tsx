@@ -132,7 +132,7 @@ export default function SSOCallbackPage() {
         }
 
         if (signUp?.status === "complete") {
-          trackSignUp("google");
+          trackSignUp("google", { email: signUp.emailAddress });
         }
       } catch (err) {
         if (cancelled) return;

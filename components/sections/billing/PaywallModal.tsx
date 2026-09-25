@@ -6,6 +6,7 @@ import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
+import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -1427,6 +1428,7 @@ function PayStep({
   // (it's what mounts Apple Pay / Google Pay into the detached refs
   // above), so we hide the card iframe wrapper via `hidden` rather
   // than conditionally rendering the whole PaymentForm.
+  const { user } = useUser();
   const [cardExpanded, setCardExpanded] = useState(false);
 
   useEffect(() => {
@@ -1434,8 +1436,12 @@ function PayStep({
       currency: intent.currency,
       value: intent.amountTodayMinor / 100,
       coupon: "",
+      user: {
+        email: user?.primaryEmailAddress?.emailAddress || null,
+        phone: user?.primaryPhoneNumber?.phoneNumber || null,
+      },
     });
-  }, [intent.amountTodayMinor, intent.currency]);
+  }, [intent.amountTodayMinor, intent.currency, user]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1698,6 +1704,7 @@ function SuccessStep({
   onClose: () => void;
   onFireQueuedAction: () => void;
 }) {
+  const { user } = useUser();
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
@@ -1734,10 +1741,18 @@ function SuccessStep({
   // preferred hook for post-payment tracking — see 2026-08-31 request
   // for "post-payment URL" (there isn't one; the flow is modal-only).
   useEffect(() => {
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+
     trackTrialStart({
       plan_name: selectedPlan === "monthly" ? "7-Day Trial → Monthly" : "Annual",
       price: intent.amountTodayMinor / 100,
       currency: intent.currency,
+      orderId: intent.orderId,
+      user: {
+        email: userEmail,
+        phone: userPhone,
+      },
     });
     if (!Array.isArray(window.dataLayer)) window.dataLayer = [];
     window.dataLayer.push({
@@ -1747,7 +1762,7 @@ function SuccessStep({
       plan: selectedPlan,
       value: intent.amountTodayMinor / 100,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
+  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan, user]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to

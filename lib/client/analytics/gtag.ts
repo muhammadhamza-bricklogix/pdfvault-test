@@ -1,5 +1,9 @@
 "use client";
 
+import { setBingUserData, trackBingPurchase } from "./bing-uet";
+
+export { setBingUserData, trackBingPurchase } from "./bing-uet";
+
 export const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
 
@@ -26,13 +30,22 @@ export function trackEvent(name: string, params?: Record<string, unknown>): void
   }
 }
 
+
 /**
  * 1. sign_up
  * Recommended event: triggered when user successfully creates an account.
+ * Standardizes and hashes user parameters (email, phone) for Bing UET & GTM dataLayer.
  * @param method 'google' | 'email' | 'github' etc.
+ * @param user Optional user data (email, phone) for enhanced conversion tracking.
  */
-export function trackSignUp(method: string): void {
+export function trackSignUp(
+  method: string,
+  user?: { email?: string | null; phone?: string | null },
+): void {
   trackEvent("sign_up", { method });
+  if (user) {
+    void setBingUserData(user);
+  }
 }
 
 /**
@@ -43,22 +56,29 @@ export function trackAddPaymentInfo(params: {
   currency: string;
   value: number;
   coupon?: string;
+  user?: { email?: string | null; phone?: string | null };
 }): void {
   trackEvent("add_payment_info", {
     currency: params.currency,
     value: params.value,
     coupon: params.coupon || undefined,
   });
+  if (params.user) {
+    void setBingUserData(params.user);
+  }
 }
 
 /**
  * 3. trial_start
  * Custom event: triggered when the 7-day trial officially starts upon payment confirmation.
+ * Simultaneously fires Bing UET purchase conversion with dynamic revenue_value and currency.
  */
 export function trackTrialStart(params: {
   plan_name: string;
   price: number;
   currency: string;
+  orderId?: string;
+  user?: { email?: string | null; phone?: string | null };
 }): void {
   trackEvent("trial_start", {
     plan_name: params.plan_name,
@@ -66,6 +86,47 @@ export function trackTrialStart(params: {
     currency: params.currency,
     value: params.price,
   });
+
+  // Mirror purchase conversion to Bing UET
+  trackBingPurchase({
+    revenue_value: params.price,
+    currency: params.currency,
+    orderId: params.orderId,
+  });
+
+  if (params.user) {
+    void setBingUserData(params.user);
+  }
+}
+
+/**
+ * purchase
+ * Ecommerce event: triggered on order confirmation / subscription payment.
+ * Fires both GA4 purchase event and Bing UET purchase conversion.
+ */
+export function trackPurchase(params: {
+  transaction_id: string;
+  value: number;
+  currency: string;
+  items?: Array<{ item_id: string; item_name: string; price: number; quantity?: number }>;
+  user?: { email?: string | null; phone?: string | null };
+}): void {
+  trackEvent("purchase", {
+    transaction_id: params.transaction_id,
+    value: params.value,
+    currency: params.currency,
+    items: params.items,
+  });
+
+  trackBingPurchase({
+    revenue_value: params.value,
+    currency: params.currency,
+    orderId: params.transaction_id,
+  });
+
+  if (params.user) {
+    void setBingUserData(params.user);
+  }
 }
 
 /**

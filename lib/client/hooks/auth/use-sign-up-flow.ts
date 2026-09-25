@@ -164,7 +164,7 @@ export function useSignUpFlow() {
         }
 
         if (signUp.status === "complete") {
-          trackSignUp("email");
+          trackSignUp("email", { email: signUp.emailAddress });
           await navigateToHome();
 
           return;
