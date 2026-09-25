@@ -88,6 +88,15 @@ function stripExt(name: string): string {
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
+function toEditorPdfName(name: string): string | null {
+  const trimmed = name.trim();
+
+  if (!trimmed) return null;
+  const baseName = trimmed.replace(/\.[^./\\]+$/, "").trim();
+
+  return baseName ? `${baseName}.pdf` : null;
+}
+
 type ExportFormatModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -472,6 +481,7 @@ function ExportFormatModalBody({
 
 export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
   const file = usePdfEditorStore((s) => s.file);
+  const setFile = usePdfEditorStore((s) => s.setFile);
   const initialName = file ? stripExt(file.name) : "document";
 
   // fileName is lifted to this parent (not ExportFormatModalBody) so a typed rename
@@ -489,6 +499,27 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
     }
   }, [file, initialName]);
 
+  const syncFileName = useCallback(
+    (nextName: string) => {
+      setFileName(nextName);
+
+      const nextFileName = toEditorPdfName(nextName);
+      const currentFile = usePdfEditorStore.getState().file;
+
+      if (!currentFile || !nextFileName || currentFile.name === nextFileName) {
+        return;
+      }
+
+      setFile(
+        new File([currentFile], nextFileName, {
+          lastModified: currentFile.lastModified,
+          type: currentFile.type,
+        }),
+      );
+    },
+    [setFile],
+  );
+
   return (
     <Modal.Backdrop
       isOpen={isOpen}
@@ -499,9 +530,9 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {isOpen && (
           <ExportFormatModalBody
-            key={`${initialName}::${isOpen}`}
+            key={`${file?.size ?? 0}::${file?.lastModified ?? 0}::${isOpen}`}
             fileName={fileName}
-            setFileName={setFileName}
+            setFileName={syncFileName}
             onClose={onClose}
           />
         )}
