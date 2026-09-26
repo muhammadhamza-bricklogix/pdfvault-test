@@ -1104,7 +1104,7 @@ export function UploadWorkspace({
                   </button>
 
                   <p className="mt-5 text-[14px] text-[#8A8A8A]">
-                    Size upto 100 MB
+                    Size up to 100 MB
                   </p>
                 </div>
               )}

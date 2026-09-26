@@ -57,5 +57,8 @@
     "flattenPdf": "PDF zusammenfügen",
     "share": "Per Link teilen",
     "versionHistory": "Versionsverlauf"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "Diese PDF-Datei ist nicht passwortgeschützt – es gibt kein Passwort zu entfernen."
   }
 }
