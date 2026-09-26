@@ -229,20 +229,9 @@ export function EmailFirstModal() {
     };
   }, [close, detail]);
 
-  const handleEmailPointerDown = useCallback(
-    (event: React.PointerEvent<HTMLInputElement>) => {
-      if (
-        event.pointerType === "mouse" ||
-        document.activeElement === event.currentTarget
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      focusEmailInputWithoutPageScroll();
-    },
-    [focusEmailInputWithoutPageScroll],
-  );
+  const handleEmailPointerDown = useCallback(() => {
+    window.setTimeout(syncKeyboardViewport, 0);
+  }, [syncKeyboardViewport]);
 
   const handleEmailBlur = useCallback(() => {
     window.setTimeout(() => {
@@ -472,14 +461,20 @@ export function EmailFirstModal() {
       className={styles.overlay}
       role="dialog"
       style={overlayStyle}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+      onPointerDownCapture={(event) => event.stopPropagation()}
     >
-      <button
-        aria-label="Close"
-        className="absolute inset-0 h-full w-full cursor-default bg-transparent"
-        type="button"
+      <div
+        aria-hidden
+        className={styles.backdropHitbox}
         onClick={close}
       />
-      <div className={containerClassName}>
+      <div
+        className={containerClassName}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div
           className={`${styles.frame} flex w-full items-center justify-center overflow-hidden`}
           style={viewportFrameStyle}
