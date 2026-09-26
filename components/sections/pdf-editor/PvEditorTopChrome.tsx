@@ -847,7 +847,9 @@ function TopAppBar() {
           aria-label={t("download")}
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
-          isDisabled={!canDownload || isSavingBeforeExport || isConvertingToWord}
+          isDisabled={
+            !canDownload || isSavingBeforeExport || isConvertingToWord
+          }
           onPress={openExportModalAfterSave}
         >
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
