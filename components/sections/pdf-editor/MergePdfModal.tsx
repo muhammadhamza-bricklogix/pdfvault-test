@@ -186,12 +186,23 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
           logger.warn("[merge-pdf-modal] pending editor save failed", err),
         );
 
-        dispatchEmailFirstModal({
-          redirectUrl: buildMergeReturnUrl(),
-          title: "Your file is ready",
-          subtitle: "Create an account to download it",
-          submitLabel: "Download file",
-        });
+        const returnUrl = buildMergeReturnUrl();
+
+        // Close the HeroUI merge modal before opening the custom
+        // email-first modal. Leaving both mounted lets the underlying
+        // modal's focus/pointer handling compete with the visible email
+        // prompt, which can make the input ignore clicks and can wake the
+        // Add PDFs file picker underneath.
+        onClose();
+
+        window.setTimeout(() => {
+          dispatchEmailFirstModal({
+            redirectUrl: returnUrl,
+            title: "Your file is ready",
+            subtitle: "Create an account to download it",
+            submitLabel: "Download file",
+          });
+        }, 0);
 
         return;
       }
