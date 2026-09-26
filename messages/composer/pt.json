@@ -38,7 +38,8 @@
     "search": "Pesquisar no PDF",
     "print": "Imprimir",
     "share": "Compartilhar via link",
-    "download": "Concluir e Baixar"
+    "download": "Concluir e Baixar",
+    "convertToWord": "Converter para Word"
   },
   "saveStatus": {
     "saving": "Salvando suas edições",
