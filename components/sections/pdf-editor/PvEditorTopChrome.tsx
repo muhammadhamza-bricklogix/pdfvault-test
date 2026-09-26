@@ -818,7 +818,7 @@ function TopAppBar() {
 
         {showW9Save ? null : (
           <Button
-            aria-label="Convert to Word"
+            aria-label={t("convertToWord")}
             className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#2563eb] !px-3 !text-[13px] !font-semibold !text-white hover:!bg-[#1d4ed8] disabled:!opacity-50 sm:!px-4"
             isDisabled={
               !canDownload || isSavingBeforeExport || isConvertingToWord
@@ -827,7 +827,7 @@ function TopAppBar() {
           >
             <HugeiconsIcon className="text-white" icon={Doc01Icon} size={15} />
             <span className="hidden sm:inline">
-              {isConvertingToWord ? "Saving…" : "Convert to Word"}
+              {isConvertingToWord ? "…" : t("convertToWord")}
             </span>
           </Button>
         )}

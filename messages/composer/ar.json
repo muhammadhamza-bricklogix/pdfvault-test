@@ -38,7 +38,8 @@
     "search": "البحث في PDF",
     "print": "طباعة",
     "share": "مشاركة عبر رابط",
-    "download": "إنهاء وتنزيل"
+    "download": "إنهاء وتنزيل",
+    "convertToWord": "التحويل إلى Word"
   },
   "saveStatus": {
     "saving": "جارٍ حفظ تعديلاتك",
