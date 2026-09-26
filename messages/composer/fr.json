@@ -57,5 +57,8 @@
     "flattenPdf": "Aplatir le PDF",
     "share": "Partager via un lien",
     "versionHistory": "Historique des versions"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "Ce PDF n'est pas protégé par mot de passe — il n'y a rien à supprimer."
   }
 }

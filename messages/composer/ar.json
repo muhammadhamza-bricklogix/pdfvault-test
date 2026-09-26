@@ -57,5 +57,8 @@
     "flattenPdf": "تسوية PDF",
     "share": "مشاركة عبر رابط",
     "versionHistory": "سجل الإصدارات"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "ملف PDF هذا غير محمي بكلمة مرور — لا يوجد ما يجب إزالته."
   }
 }
