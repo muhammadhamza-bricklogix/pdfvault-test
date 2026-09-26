@@ -10,12 +10,13 @@ import {
   CheckmarkBadge01Icon,
   File01Icon,
   Home01Icon,
+  Logout03Icon,
   Menu01Icon,
   MenuSquareIcon,
   SquareUnlock01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -26,6 +27,8 @@ import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import { DASHBOARD_MOBILE_SIDEBAR_EVENT } from "@/lib/client/tour/tour-config";
+import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 
@@ -141,11 +144,26 @@ function SidebarNavItem({
  * Pinned profile row — avatar with green online dot, name + verified badge,
  * email, chevron. The whole row is the popover trigger.
  */
-function ProfileRow({ onNavigate }: { onNavigate?: () => void }) {
+function ProfileRow({
+  onNavigate,
+  showStandaloneLogout = false,
+}: {
+  onNavigate?: () => void;
+  showStandaloneLogout?: boolean;
+}) {
   const { user } = useUser();
+  const { signOut } = useClerk();
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const fullName = user?.fullName ?? email.split("@")[0] ?? "";
   const initial = (fullName || email || "?").slice(0, 1).toUpperCase();
+
+  const handleLogOut = () => {
+    onNavigate?.();
+    void usersService.signOutAudit().catch(() => undefined);
+    void signOut({ redirectUrl: ROUTES.PUBLIC.HOME }).catch(() => {
+      window.location.assign(ROUTES.PUBLIC.HOME);
+    });
+  };
 
   return (
     <div
@@ -204,16 +222,33 @@ function ProfileRow({ onNavigate }: { onNavigate?: () => void }) {
             />
           </>
         }
+        showLogout={!showStandaloneLogout}
         onNavigate={onNavigate}
       />
+      {showStandaloneLogout ? (
+        <button
+          aria-label="Log out of PDFVault"
+          className="mt-2 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm font-medium text-danger transition-colors hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+          type="button"
+          onClick={handleLogOut}
+        >
+          <HugeiconsIcon
+            className="size-4 shrink-0 text-danger"
+            icon={Logout03Icon}
+          />
+          <span>Log out</span>
+        </button>
+      ) : null}
     </div>
   );
 }
 
 function SidebarBody({
+  isMobile = false,
   pathname,
   onNavigate,
 }: {
+  isMobile?: boolean;
   pathname: string;
   onNavigate?: () => void;
 }) {
@@ -281,7 +316,7 @@ function SidebarBody({
         <div className="border-t border-[var(--pv-hairline)] px-3 py-2">
           <LanguageSwitcher />
         </div>
-        <ProfileRow onNavigate={onNavigate} />
+        <ProfileRow showStandaloneLogout={isMobile} onNavigate={onNavigate} />
       </div>
     </div>
   );
@@ -314,6 +349,30 @@ export function DashboardShell({ children }: DashboardShellProps) {
       document.body.style.overflow = previous;
     };
   }, [isMobileOpen]);
+
+  // QA 2026-09-22 (issue #20, second follow-up): the dashboard tour's
+  // "Quick tools" / "Account & settings" steps target elements that
+  // live in different places on mobile — quick tools in `<main>`,
+  // account/settings inside this drawer — so `tour-config.ts` dispatches
+  // this event per step to open/close the drawer as the tour advances.
+  // See `DASHBOARD_MOBILE_SIDEBAR_EVENT`'s own comment for the full
+  // reasoning. A no-op on desktop: `isMobileOpen` is only read by the
+  // mobile branch below.
+  useEffect(() => {
+    const onSetMobileSidebar = (event: Event) => {
+      const open = (event as CustomEvent<{ open: boolean }>).detail?.open;
+
+      if (typeof open === "boolean") setIsMobileOpen(open);
+    };
+
+    window.addEventListener(DASHBOARD_MOBILE_SIDEBAR_EVENT, onSetMobileSidebar);
+
+    return () =>
+      window.removeEventListener(
+        DASHBOARD_MOBILE_SIDEBAR_EVENT,
+        onSetMobileSidebar,
+      );
+  }, []);
 
   if (!isMobile) {
     return (
@@ -360,6 +419,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <HugeiconsIcon icon={Cancel01Icon} size={16} />
         </button>
         <SidebarBody
+          isMobile
           pathname={pathname}
           onNavigate={() => setIsMobileOpen(false)}
         />

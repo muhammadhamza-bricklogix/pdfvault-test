@@ -12,6 +12,7 @@ import {
   Delete02Icon,
   FileImportIcon,
   GridIcon,
+  More01Icon,
   RedoIcon,
   RotateLeft01Icon,
   RotateRight01Icon,
@@ -26,6 +27,7 @@ import {
   Button,
   ColorArea,
   ColorSlider,
+  Dropdown,
   Label,
   Modal,
   NumberField,
@@ -52,21 +54,24 @@ type ToolbarItem = {
   label: string;
 };
 
-const LEFT_TOOLS: ToolbarItem[] = [
+// Background Color stays a direct button (not a Dropdown.Item) because it opens its own
+// anchored Popover, and a popover trigger nested inside a Dropdown.Item doesn't work cleanly.
+const PRIMARY_LEFT_TOOLS: ToolbarItem[] = [
   { icon: Add01Icon, id: "new-page", label: "New Page" },
   { icon: Delete02Icon, id: "delete", label: "Delete Pages" },
+  { icon: ColorsIcon, id: "background-color", label: "Background Color" },
+];
+
+// Every other page action lives in this single "More actions" dropdown.
+const MORE_ACTIONS_TOOLS: ToolbarItem[] = [
   { icon: Copy01Icon, id: "duplicate", label: "Duplicate" },
   { icon: RotateLeft01Icon, id: "rotate-left", label: "Rotate Left" },
   { icon: RotateRight01Icon, id: "rotate-right", label: "Rotate Right" },
   { icon: ThreeDScaleIcon, id: "resize", label: "Resize Page" },
-  { icon: ColorsIcon, id: "background-color", label: "Background Color" },
   { icon: ArrowLeftRightIcon, id: "move", label: "Move" },
   { icon: ArrowLeft01Icon, id: "move-before", label: "Move Before" },
   { icon: ArrowRight01Icon, id: "move-after", label: "Move After" },
   { icon: FileImportIcon, id: "import", label: "Import Document" },
-];
-
-const RIGHT_TOOLS: ToolbarItem[] = [
   { icon: UndoIcon, id: "undo", label: "Undo" },
   { icon: RedoIcon, id: "redo", label: "Redo" },
   { icon: GridIcon, id: "select-all", label: "Select All" },
@@ -75,12 +80,14 @@ const RIGHT_TOOLS: ToolbarItem[] = [
   { icon: SearchAddIcon, id: "zoom-in", label: "Zoom In" },
 ];
 
+// Icon-only square styling, used by BackgroundColorPickerControl's standalone trigger.
 const TOOLBAR_BUTTON_CLASSES =
-  "flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors";
+  "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors";
 
 function toolbarButtonStateClasses(disabled: boolean) {
+  // Dimmed opacity (not just a lighter text color) so disabled reads as clearly inactive.
   return disabled
-    ? "cursor-not-allowed text-default-300"
+    ? "cursor-not-allowed text-default-600 opacity-40"
     : "cursor-pointer text-default-600 hover:bg-default-100";
 }
 
@@ -91,27 +98,22 @@ type ManagePagesToolbarButtonProps = {
   onPress?: () => void;
 };
 
-function ManagePagesToolbarButton({
+function ManagePagesLabeledButton({
   disabled = false,
   icon,
   label,
   onPress,
 }: ManagePagesToolbarButtonProps) {
   return (
-    <Tooltip delay={300}>
-      <button
-        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(disabled)}`}
-        disabled={disabled}
-        type="button"
-        onClick={onPress}
-      >
-        <HugeiconsIcon icon={icon} size={18} />
-        <span className="whitespace-nowrap leading-tight">{label}</span>
-      </button>
-      <Tooltip.Content>
-        <p>{label}</p>
-      </Tooltip.Content>
-    </Tooltip>
+    <Button
+      isDisabled={disabled}
+      size="sm"
+      variant="tertiary"
+      onPress={onPress}
+    >
+      <HugeiconsIcon icon={icon} size={16} />
+      {label}
+    </Button>
   );
 }
 
@@ -193,26 +195,31 @@ function BackgroundColorPickerControl({
   // nothing-selected pages.
   if (isDisabled) {
     return (
-      <span
-        aria-disabled
-        aria-label={label}
-        className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(true)}`}
-        role="button"
-      >
-        <HugeiconsIcon icon={icon} size={18} />
-        <span className="whitespace-nowrap leading-tight">{label}</span>
-      </span>
+      <Tooltip delay={300}>
+        <span
+          aria-disabled
+          aria-label={label}
+          className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(true)}`}
+          role="button"
+        >
+          <HugeiconsIcon icon={icon} size={18} />
+        </span>
+        <Tooltip.Content>
+          <p>{label}</p>
+        </Tooltip.Content>
+      </Tooltip>
     );
   }
 
   return (
+    // Not wrapped in a Tooltip: Popover.Trigger must be a direct child for React
+    // Aria's DialogTrigger to wire up press/open state correctly.
     <Popover isOpen={isOpen} onOpenChange={handleOpenChange}>
       <Popover.Trigger
         aria-label={label}
         className={`${TOOLBAR_BUTTON_CLASSES} ${toolbarButtonStateClasses(false)}`}
       >
         <HugeiconsIcon icon={icon} size={18} />
-        <span className="whitespace-nowrap leading-tight">{label}</span>
       </Popover.Trigger>
       <Popover.Content offset={8} placement="bottom">
         <Popover.Dialog className="!min-w-[260px] !p-3">
@@ -295,6 +302,44 @@ export function ManagePagesModal({
   useEffect(() => {
     if (isOpen) draft.resetDraft();
   }, [draft.resetDraft, isOpen, pageCount, storePageOrder]);
+
+  // Scroll a newly-added page into view (New Page, Duplicate, Import Document
+  // all grow `draft.pages`); diffs the id set so it works regardless of where
+  // in the list the new page landed.
+  const prevPageIdsRef = useRef<Set<string>>(
+    new Set(draft.pages.map((p) => p.id)),
+  );
+  // Guards against resetDraft() on open being mistaken for a newly-added page.
+  const suppressNextScrollRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) suppressNextScrollRef.current = true;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const currentIds = draft.pages.map((p) => p.id);
+
+    if (suppressNextScrollRef.current) {
+      suppressNextScrollRef.current = false;
+      prevPageIdsRef.current = new Set(currentIds);
+
+      return;
+    }
+
+    const newId = currentIds.find((id) => !prevPageIdsRef.current.has(id));
+
+    if (newId) {
+      // rAF: wait one frame so the new thumbnail has actually painted
+      // before we ask the browser to scroll to it.
+      requestAnimationFrame(() => {
+        document
+          .querySelector(`[data-page-id="${CSS.escape(newId)}"]`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+
+    prevPageIdsRef.current = new Set(currentIds);
+  }, [draft.pages]);
 
   const pageTotal = draft.pages.length;
   const hasSelection = draft.selectedCount > 0;
@@ -470,16 +515,20 @@ export function ManagePagesModal({
         }}
       >
         <Modal.Container
-          className="!box-border !flex-none !h-[80vh] !max-h-[80vh] !min-h-0 !w-[80vw] !max-w-[80vw] sm:!w-[80vw]"
+          // 95vw on phones (below sm) so the toolbar has room; sm: and up keeps 80vw.
+          className="!box-border !flex-none !h-[80vh] !max-h-[80vh] !min-h-0 !w-[95vw] !max-w-[95vw] sm:!w-[80vw] sm:!max-w-[80vw]"
           scroll="inside"
           size="cover"
         >
           <Modal.Dialog className="flex !h-full !max-h-full !w-full !max-w-none flex-col overflow-hidden p-0 sm:!max-w-none">
             <Modal.CloseTrigger />
 
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default-200 bg-[var(--color-background)] px-3 py-2 pr-12">
-              <div className="flex flex-wrap items-center gap-0.5">
-                {LEFT_TOOLS.map((tool) => {
+            {/* The primary tools scroll independently so the "⋯" trigger (entry point to
+                every other action) stays outside that area and is never clipped or scrolled
+                out of view. */}
+            <div className="flex shrink-0 items-center gap-1 border-b border-default-200 bg-[var(--color-background)] py-2 pr-12 pl-3">
+              <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {PRIMARY_LEFT_TOOLS.map((tool) => {
                   const disabled = isToolDisabled(tool.id);
 
                   if (tool.id === "background-color") {
@@ -497,7 +546,7 @@ export function ManagePagesModal({
                   }
 
                   return (
-                    <ManagePagesToolbarButton
+                    <ManagePagesLabeledButton
                       key={tool.id}
                       disabled={disabled}
                       icon={tool.icon}
@@ -508,17 +557,36 @@ export function ManagePagesModal({
                 })}
               </div>
 
-              <div className="flex flex-wrap items-center gap-0.5">
-                {RIGHT_TOOLS.map((tool) => (
-                  <ManagePagesToolbarButton
-                    key={tool.id}
-                    disabled={isToolDisabled(tool.id)}
-                    icon={tool.icon}
-                    label={tool.label}
-                    onPress={() => handleToolPress(tool.id)}
-                  />
-                ))}
-              </div>
+              <Dropdown>
+                <Button
+                  isIconOnly
+                  aria-label="More page actions"
+                  size="sm"
+                  variant="ghost"
+                >
+                  <HugeiconsIcon icon={More01Icon} size={18} />
+                </Button>
+                <Dropdown.Popover placement="bottom start">
+                  <Dropdown.Menu
+                    aria-label="More page actions"
+                    disabledKeys={MORE_ACTIONS_TOOLS.filter((tool) =>
+                      isToolDisabled(tool.id),
+                    ).map((tool) => tool.id)}
+                    onAction={(key) => handleToolPress(String(key))}
+                  >
+                    {MORE_ACTIONS_TOOLS.map((tool) => (
+                      <Dropdown.Item
+                        key={tool.id}
+                        id={tool.id}
+                        textValue={tool.label}
+                      >
+                        <HugeiconsIcon icon={tool.icon} size={16} />
+                        <Label>{tool.label}</Label>
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
             </div>
 
             <Modal.Body className="min-h-0 flex-1 overflow-y-auto bg-default-100 p-6">

@@ -13,6 +13,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Modal } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
   PAYWALL_CANCELLED_ERR_NAME,
@@ -30,7 +31,7 @@ import {
   saveMergeExtras,
 } from "@/lib/client/upload/pending-merge-extras";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -92,10 +93,6 @@ type Props = {
  * All work is client-side via pdf-lib — no server round-trip required.
  */
 export function MergePdfModal({ isOpen, onClose, source }: Props) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [extras, setExtras] = useState<MergeEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isMerging, setIsMerging] = useState(false);
   // Read Clerk auth directly for the signed-out gate below — mirrors the
   // CompressModal / useExportEditor pattern (auth-chain item #1). The
   // store's cached `isSignedIn` lags one tick during post-signin
@@ -104,6 +101,10 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   // arrives before Clerk finishes hydrating — treating `undefined` as
   // "signed-out" would email-first modal a genuinely signed-in user.
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [extras, setExtras] = useState<MergeEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
   // QA 2026-09-08: `isMerging` is React state — updates are async, so a
   // fast second click on "Merge & download" can slip through the
   // `isDisabled={!canMerge}` gate before the state re-render lands.
@@ -121,6 +122,23 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   // callback each render).
   const autoFireRef = useRef(false);
   const handleMergeRef = useRef<() => Promise<void>>(async () => {});
+
+  // Locale-aware return URL (i18n item, landed on staging via #130):
+  // preserve the URL locale prefix so `/de/…`, `/es/…`, `/fr/…` users
+  // return to the same language after sign-in. Falls back to the
+  // canonical editor path when locale can't be parsed or during SSR.
+  const buildMergeReturnUrl = useCallback(() => {
+    if (typeof window === "undefined") {
+      return `${ROUTES.TOOLS.PDF_EDITOR}?tool=merge`;
+    }
+
+    const parsed = parseLocalePrefix(window.location.pathname);
+    const editorPath = parsed
+      ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+      : ROUTES.TOOLS.PDF_EDITOR;
+
+    return `${editorPath}?tool=merge`;
+  }, []);
 
   const handleAddFiles = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,7 +242,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       }
       markPendingMerge();
       dispatchEmailFirstModal({
-        redirectUrl: `${ROUTES.TOOLS.PDF_EDITOR}?tool=merge`,
+        redirectUrl: buildMergeReturnUrl(),
         title: "Your file is ready",
         subtitle: "Create an account to download it",
         submitLabel: "Download file",
@@ -424,7 +442,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       setIsMerging(false);
       mergeInFlightRef.current = false;
     }
-  }, [source, extras, authLoaded, isSignedIn, onClose]);
+  }, [source, extras, authLoaded, isSignedIn, buildMergeReturnUrl, onClose]);
 
   useEffect(() => {
     handleMergeRef.current = handleMerge;
@@ -481,7 +499,7 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
 
   const allEntries = source ? [source, ...extras] : extras;
   const totalPages = allEntries.reduce((n, e) => n + e.pageCount, 0);
-  const canMerge = !isMerging && !!source && extras.length > 0;
+  const canMerge = authLoaded && !isMerging && !!source && extras.length > 0;
 
   return (
     <Modal.Backdrop

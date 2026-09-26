@@ -38,7 +38,11 @@ function Section({
   );
 }
 
-export function BackgroundImagePropertiesContent() {
+export function BackgroundImagePropertiesContent({
+  scrollContainer = true,
+}: {
+  scrollContainer?: boolean;
+}) {
   const config = usePdfEditorStore((s) => s.backgroundImageConfig);
   const setConfig = usePdfEditorStore((s) => s.setBackgroundImageConfig);
 
@@ -111,7 +115,13 @@ export function BackgroundImagePropertiesContent() {
   }, [setConfig]);
 
   return (
-    <div className="flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div
+      className={
+        scrollContainer
+          ? "flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "flex min-w-48 max-w-full flex-col gap-4 overflow-x-hidden pb-4"
+      }
+    >
       <Switch
         isSelected={config.enabled}
         size="sm"

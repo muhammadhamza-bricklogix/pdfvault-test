@@ -17,6 +17,7 @@ import {
 } from "@/lib/shared/schemas/auth";
 import { parseClerkError } from "@/lib/shared/utils/clerk-error";
 import { logger } from "@/lib/shared/utils/logger";
+import { setBingUserData } from "@/lib/client/analytics/bing-uet";
 
 type SignUpStep = "credentials" | "verification";
 
@@ -163,6 +164,9 @@ export function useSignUpFlow() {
         }
 
         if (signUp.status === "complete") {
+          if (signUp.emailAddress) {
+            void setBingUserData({ email: signUp.emailAddress });
+          }
           await navigateToHome();
 
           return;

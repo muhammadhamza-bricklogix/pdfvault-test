@@ -12,7 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Input, Modal, TextField } from "@heroui/react";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -88,16 +88,27 @@ function stripExt(name: string): string {
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
+function toEditorPdfName(name: string): string | null {
+  const trimmed = name.trim();
+
+  if (!trimmed) return null;
+  const baseName = trimmed.replace(/\.[^./\\]+$/, "").trim();
+
+  return baseName ? `${baseName}.pdf` : null;
+}
+
 type ExportFormatModalProps = {
   isOpen: boolean;
   onClose: () => void;
 };
 
 function ExportFormatModalBody({
-  initialName,
+  fileName,
+  setFileName,
   onClose,
 }: {
-  initialName: string;
+  fileName: string;
+  setFileName: (name: string) => void;
   onClose: () => void;
 }) {
   const file = usePdfEditorStore((s) => s.file);
@@ -126,8 +137,47 @@ function ExportFormatModalBody({
     [isW9Route, W9_ALLOWED_FORMATS],
   );
   const [selected, setSelected] = useState<FormatOption["id"]>("pdf");
-  const [fileName, setFileName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
+  const fileNameInputRef = useRef<HTMLInputElement>(null);
+
+  const scrollFileNameInputIntoView = useCallback(
+    (block: ScrollLogicalPosition = "nearest") => {
+      fileNameInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block,
+        inline: "nearest",
+      });
+    },
+    [],
+  );
+
+  const focusFileNameInput = useCallback(() => {
+    const input = fileNameInputRef.current;
+
+    if (!input) return;
+
+    input.focus({ preventScroll: true });
+    input.select();
+    requestAnimationFrame(() => scrollFileNameInputIntoView("nearest"));
+    window.setTimeout(() => scrollFileNameInputIntoView("center"), 250);
+  }, [scrollFileNameInputIntoView]);
+
+  useEffect(() => {
+    const visualViewport = window.visualViewport;
+
+    if (!visualViewport) return;
+
+    const handleViewportResize = () => {
+      if (document.activeElement !== fileNameInputRef.current) return;
+
+      scrollFileNameInputIntoView("center");
+    };
+
+    visualViewport.addEventListener("resize", handleViewportResize);
+
+    return () =>
+      visualViewport.removeEventListener("resize", handleViewportResize);
+  }, [scrollFileNameInputIntoView]);
 
   // Duplicate-name check against the user's My PDFs library. Only
   // runs on the W-9 route per product ask 2026-08-29 — the shell
@@ -290,10 +340,10 @@ function ExportFormatModalBody({
       <Modal.CloseTrigger />
       <Modal.Header className="!pb-3 text-center">
         <Modal.Heading className="text-center text-xl font-bold">
-          Great Job!
+          Your file is ready
         </Modal.Heading>
         <p className="mt-1 text-center text-sm text-default-500">
-          Select the format to download your file.
+          Your changes are saved. Choose a format to download.
         </p>
       </Modal.Header>
 
@@ -371,18 +421,23 @@ function ExportFormatModalBody({
               onChange={setFileName}
             >
               <Input
+                ref={fileNameInputRef}
                 aria-invalid={duplicateExists}
                 aria-label="File name"
                 className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
                 id="export-file-name"
                 placeholder="document"
+                onFocus={() => scrollFileNameInputIntoView("nearest")}
               />
             </TextField>
-            <HugeiconsIcon
-              className="shrink-0 text-default-400"
-              icon={PencilEdit01Icon}
-              size={15}
-            />
+            <button
+              aria-label="Rename file"
+              className="shrink-0 rounded p-0.5 text-default-400 transition-colors hover:bg-default-200 hover:text-default-700"
+              type="button"
+              onClick={focusFileNameInput}
+            >
+              <HugeiconsIcon icon={PencilEdit01Icon} size={15} />
+            </button>
           </div>
           {isW9Route && duplicateExists ? (
             <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
@@ -426,7 +481,44 @@ function ExportFormatModalBody({
 
 export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
   const file = usePdfEditorStore((s) => s.file);
+  const setFile = usePdfEditorStore((s) => s.setFile);
   const initialName = file ? stripExt(file.name) : "document";
+
+  // fileName is lifted to this parent (not ExportFormatModalBody) so a typed rename
+  // survives the body remounting on each open/close of the same file.
+  const [fileName, setFileName] = useState(initialName);
+  const lastFileRef = useRef(file);
+
+  // Only reset fileName when the file itself changes, not on every open. Done in an
+  // effect rather than during render since the React Compiler lint disallows reading
+  // a ref at render time.
+  useEffect(() => {
+    if (file !== lastFileRef.current) {
+      lastFileRef.current = file;
+      setFileName(initialName);
+    }
+  }, [file, initialName]);
+
+  const syncFileName = useCallback(
+    (nextName: string) => {
+      setFileName(nextName);
+
+      const nextFileName = toEditorPdfName(nextName);
+      const currentFile = usePdfEditorStore.getState().file;
+
+      if (!currentFile || !nextFileName || currentFile.name === nextFileName) {
+        return;
+      }
+
+      setFile(
+        new File([currentFile], nextFileName, {
+          lastModified: currentFile.lastModified,
+          type: currentFile.type,
+        }),
+      );
+    },
+    [setFile],
+  );
 
   return (
     <Modal.Backdrop
@@ -438,8 +530,9 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {isOpen && (
           <ExportFormatModalBody
-            key={`${initialName}::${isOpen}`}
-            initialName={initialName}
+            key={`${file?.size ?? 0}::${file?.lastModified ?? 0}::${isOpen}`}
+            fileName={fileName}
+            setFileName={syncFileName}
             onClose={onClose}
           />
         )}

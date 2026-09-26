@@ -6,7 +6,6 @@ import {
   FOOTER_COMPANY_ENTITY,
 } from "@/lib/shared/constants/footer";
 import { ROUTES } from "@/lib/shared/constants/routes";
-import { TOOL_ROUTE } from "@/lib/shared/constants/tool-routes";
 
 type FooterLink = { label: string; href: string };
 type FooterColumn = { heading: string; links: FooterLink[] };
@@ -15,12 +14,12 @@ const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "TOOLS",
     links: [
-      // Edit → PDF Composer. Compress / Merge → dedicated landing pages
-      // that funnel into the editor with the matching tool auto-open.
-      // Convert → the Word-to-PDF landing (most-used input format).
-      { label: "Edit & Sign", href: ROUTES.TOOLS.PDF_EDITOR },
+      // Edit & Sign / Compress / Merge → dedicated landing pages that
+      // funnel into the editor with the matching tool auto-open. Convert
+      // → the Word-to-PDF landing (most-used input format).
+      { label: "Edit & Sign", href: "/edit" },
       { label: "Merge PDF", href: "/merge-pdf" },
-      { label: "Compress", href: TOOL_ROUTE.compress },
+      { label: "Compress", href: "/compress" },
       { label: "Convert", href: "/convert/pdf-to-word" },
     ],
   },

@@ -33,6 +33,7 @@ import {
   savePendingEditorFile,
 } from "@/lib/client/upload/pending-editor-file";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -332,6 +333,25 @@ export function UploadWorkspace({
     [acceptedExtensions],
   );
 
+  // Prepend the current URL's locale prefix to a bare path so
+  // `router.push` doesn't drop the user from `/fr/…` back to `/…` on
+  // navigation. Next.js App Router treats `/pdf-composer` and
+  // `/fr/pdf-composer` as different routes — the middleware rewrites
+  // internally, but soft-nav from the client honors the string as-is.
+  // Without this, uploading a PDF on `/fr` lands the composer at
+  // `/pdf-composer` (English) instead of `/fr/pdf-composer`.
+  const withLocalePrefix = useCallback(
+    (path: string) => {
+      const parsed = parseLocalePrefix(pathname ?? "/");
+
+      if (!parsed) return path;
+      const suffix = path.startsWith("/") ? path : `/${path}`;
+
+      return `/${parsed.locale}${suffix}`;
+    },
+    [pathname],
+  );
+
   // Build the /pdf-composer URL for a given saved-document id. When we
   // have an id, the editor loads the persisted bytes from the backend
   // via `?id=<docId>`, and future Save actions overwrite that same row
@@ -346,10 +366,11 @@ export function UploadWorkspace({
       if (tool) query.set("tool", tool);
       if (exportFormat && !opts?.skipExport) query.set("export", exportFormat);
       const q = query.toString();
+      const base = withLocalePrefix(ROUTES.TOOLS.PDF_EDITOR);
 
-      return q ? `${ROUTES.TOOLS.PDF_EDITOR}?${q}` : ROUTES.TOOLS.PDF_EDITOR;
+      return q ? `${base}?${q}` : base;
     },
-    [tool, exportFormat],
+    [tool, exportFormat, withLocalePrefix],
   );
 
   const openFileInEditor = useCallback(
@@ -619,7 +640,7 @@ export function UploadWorkspace({
           });
 
           void runPendingConversion(tempId, picked);
-          router.push(ROUTES.APP.DASHBOARD);
+          router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
 
           return;
         }
@@ -939,7 +960,7 @@ export function UploadWorkspace({
           title: `${first.name} selected`,
           description: "Sign in to finish importing from Google Drive.",
         });
-        router.push("/dashboard");
+        router.push(withLocalePrefix("/dashboard"));
       } catch (err) {
         toast.error({
           title: "Google Drive upload failed",
@@ -947,7 +968,7 @@ export function UploadWorkspace({
         });
       }
     },
-    [cloudUploadStart, router],
+    [cloudUploadStart, router, withLocalePrefix],
   );
 
   const onZoneKeyDown = (event: React.KeyboardEvent) => {
@@ -980,7 +1001,7 @@ export function UploadWorkspace({
 
     void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(ROUTES.APP.DASHBOARD);
+    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
   };
 
   const handleConvertDuplicateCancelHero = () => {
@@ -1083,7 +1104,7 @@ export function UploadWorkspace({
                   </button>
 
                   <p className="mt-5 text-[14px] text-[#8A8A8A]">
-                    Size upto 100 MB
+                    Size up to 100 MB
                   </p>
                 </div>
               )}
@@ -1193,7 +1214,7 @@ export function UploadWorkspace({
 
     void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(ROUTES.APP.DASHBOARD);
+    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
   };
 
   const handleConvertDuplicateCancel = () => {

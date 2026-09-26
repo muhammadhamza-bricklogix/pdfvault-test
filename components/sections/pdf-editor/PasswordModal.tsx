@@ -4,6 +4,7 @@ import type { EncryptKeyLength } from "@/lib/shared/types/pdf-tools.types";
 
 import { useAuth } from "@clerk/nextjs";
 import { Button, Label, Modal } from "@heroui/react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
@@ -35,6 +36,7 @@ export function PasswordModal() {
   );
   const setDocumentPassword = usePdfEditorStore((s) => s.setDocumentPassword);
   const { isSignedIn } = useAuth();
+  const tPw = useTranslations("passwordModal");
 
   const isUnlockOnly = variant === "unlock-only";
   // `mode` is only meaningful when the tab bar is visible (variant=both).
@@ -194,9 +196,7 @@ export function PasswordModal() {
 
             return;
           }
-          setUnprotectError(
-            "This PDF is not password-protected — there's nothing to remove.",
-          );
+          setUnprotectError(tPw("notPasswordProtected"));
 
           return;
         }

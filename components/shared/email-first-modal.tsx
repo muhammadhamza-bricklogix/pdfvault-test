@@ -3,8 +3,8 @@
 import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Modal } from "@heroui/react";
-import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
@@ -14,6 +14,8 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+
+import styles from "./email-first-modal.module.css";
 
 export type EmailFirstModalDetail = {
   /**
@@ -44,6 +46,23 @@ export type EmailFirstModalDetail = {
    * button so the user's email is restored when they return.
    */
   initialEmail?: string;
+  /**
+   * When set, the auto-signup flow (item #5 in the modal's docstring)
+   * uploads this file — the PDF with all Fabric edits burned in —
+   * via the authenticated `/documents/upload` endpoint AFTER the
+   * Clerk ticket sign-in but BEFORE `signIn.finalize`, then calls
+   * `POST /auth/quick-signup/notify` with the resulting `docId` so
+   * the Customer.io welcome email's CTA links straight to the
+   * composer with the file already loaded. `id=<docId>` is also
+   * appended to the finalize redirect so the composer loads from
+   * cloud on the same-session return (skips the IDB-restore path in
+   * the hydrator). Not set → runAutoSignup falls through to the
+   * legacy IDB-hydrator flow, and the welcome email lands with the
+   * dashboard fallback URL. Editor `Done → Download` sets this via
+   * `useExportEditor`; other callers (compress, password) leave it
+   * empty.
+   */
+  bakedFile?: File;
 };
 
 /**
@@ -82,6 +101,56 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [keyboardViewport, setKeyboardViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  const scrollEmailInputIntoView = useCallback(
+    (block: ScrollLogicalPosition = "nearest") => {
+      emailInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block,
+        inline: "nearest",
+      });
+    },
+    [],
+  );
+
+  const syncKeyboardViewport = useCallback(() => {
+    const visualViewport = window.visualViewport;
+    const input = emailInputRef.current;
+
+    if (!visualViewport || document.activeElement !== input) {
+      setKeyboardViewport(null);
+      return;
+    }
+
+    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
+
+    if (!keyboardIsOpen) {
+      setKeyboardViewport(null);
+      return;
+    }
+
+    setKeyboardViewport({
+      height: Math.floor(visualViewport.height),
+      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
+    });
+
+    requestAnimationFrame(() => scrollEmailInputIntoView("center"));
+  }, [scrollEmailInputIntoView]);
+
+  const focusEmailInputWithoutPageScroll = useCallback(() => {
+    const input = emailInputRef.current;
+
+    if (!input) return;
+
+    input.focus({ preventScroll: true });
+    requestAnimationFrame(syncKeyboardViewport);
+    window.setTimeout(syncKeyboardViewport, 250);
+  }, [syncKeyboardViewport]);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -99,9 +168,77 @@ export function EmailFirstModal() {
     return () => window.removeEventListener("app:email-first-modal", onOpen);
   }, []);
 
+  // Focus without letting the browser scroll the page to bring the input
+  // into view — the modal is already centered via CSS. On mobile the
+  // keyboard opens AFTER focus and shrinks the visible area, which can
+  // push the input above the fold; re-run scrollIntoView (targets the
+  // modal's own scrollable container, not the page) on visualViewport
+  // resize so the input stays reachable once the keyboard settles.
+  useEffect(() => {
+    if (!detail) return;
+    focusEmailInputWithoutPageScroll();
+    requestAnimationFrame(() => scrollEmailInputIntoView("nearest"));
+    window.setTimeout(() => scrollEmailInputIntoView("center"), 250);
+
+    const vv = window.visualViewport;
+
+    if (!vv) return;
+
+    const handleViewportResize = () => {
+      if (document.activeElement !== emailInputRef.current) return;
+
+      syncKeyboardViewport();
+      scrollEmailInputIntoView("center");
+    };
+
+    vv.addEventListener("resize", handleViewportResize);
+    vv.addEventListener("scroll", handleViewportResize);
+
+    return () => {
+      vv.removeEventListener("resize", handleViewportResize);
+      vv.removeEventListener("scroll", handleViewportResize);
+      setKeyboardViewport(null);
+    };
+  }, [
+    detail,
+    focusEmailInputWithoutPageScroll,
+    scrollEmailInputIntoView,
+    syncKeyboardViewport,
+  ]);
+
   const close = useCallback(() => {
     setDetail(null);
     setSubmitting(false);
+    setKeyboardViewport(null);
+  }, []);
+
+  useEffect(() => {
+    if (!detail) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [close, detail]);
+
+  const handleEmailPointerDown = useCallback(() => {
+    window.setTimeout(syncKeyboardViewport, 0);
+  }, [syncKeyboardViewport]);
+
+  const handleEmailBlur = useCallback(() => {
+    window.setTimeout(() => {
+      if (document.activeElement !== emailInputRef.current) {
+        setKeyboardViewport(null);
+      }
+    }, 0);
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -234,6 +371,16 @@ export function EmailFirstModal() {
           redirectUrl: returnTo,
           signIn,
           fileName: editorFile?.name,
+          // Forward the pre-baked file (Fabric edits burned in) so
+          // runAutoSignup can upload it right after ticket sign-in and
+          // pass the resulting docId into `POST /auth/quick-signup/notify`
+          // — that makes the welcome email's CTA land the user in the
+          // composer with their edited file already loaded, instead of
+          // a generic dashboard link. Not every caller of this modal
+          // bakes ahead of time (compress / password / etc.), so this
+          // is optional; runAutoSignup falls back to the IDB-restore
+          // path when absent.
+          bakedFile: detail?.bakedFile,
         });
 
         if (outcome.kind === "created") {
@@ -280,16 +427,59 @@ export function EmailFirstModal() {
   };
 
   const isOpen = detail !== null;
+  const keyboardCardMaxHeight = keyboardViewport
+    ? Math.max(280, keyboardViewport.height - 96)
+    : null;
+  const overlayStyle: CSSProperties | undefined = keyboardViewport
+    ? {
+        height: `${keyboardViewport.height}px`,
+        maxHeight: `${keyboardViewport.height}px`,
+        minHeight: `${keyboardViewport.height}px`,
+        transform: `translate3d(0, ${keyboardViewport.top}px, 0)`,
+      }
+    : undefined;
+  const viewportFrameStyle: CSSProperties | undefined = keyboardViewport
+    ? {
+        height: `${keyboardViewport.height}px`,
+        maxHeight: `${keyboardViewport.height}px`,
+        minHeight: `${keyboardViewport.height}px`,
+      }
+    : undefined;
+  const containerClassName = keyboardViewport
+    ? `${styles.container} items-start justify-center overflow-hidden overscroll-contain px-4 py-3`
+    : `${styles.container} min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4`;
+  const cardStyle: CSSProperties | undefined = keyboardCardMaxHeight
+    ? { maxHeight: `${keyboardCardMaxHeight}px` }
+    : undefined;
+
+  if (!isOpen) return null;
 
   return (
-    <Modal.Backdrop
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        if (!open) close();
+    <div
+      aria-labelledby="email-first-heading"
+      aria-modal="true"
+      className={styles.overlay}
+      role="dialog"
+      style={overlayStyle}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
       }}
+      onPointerDownCapture={(event) => event.stopPropagation()}
     >
-      <Modal.Container className="min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4">
-        <Modal.Dialog className="!w-fit !max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none">
+      <div
+        aria-hidden
+        className={styles.backdropHitbox}
+        onClick={close}
+      />
+      <div
+        className={containerClassName}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div
+          className={`${styles.frame} flex w-full items-center justify-center overflow-hidden`}
+          style={viewportFrameStyle}
+        >
+        <div className={`${styles.dialog} w-fit max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none`}>
           <div className="relative">
             <button
               aria-label="Close"
@@ -315,7 +505,8 @@ export function EmailFirstModal() {
 
             <section
               aria-labelledby="email-first-heading"
-              className="box-border w-[min(620px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+              className={`${styles.cardSurface} box-border max-h-[calc(100dvh-32px)] w-[min(620px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]`}
+              style={cardStyle}
             >
               <h1
                 className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
@@ -344,7 +535,7 @@ export function EmailFirstModal() {
                     <HugeiconsIcon icon={Mail01Icon} size={18} />
                   </span>
                   <input
-                    autoFocus
+                    ref={emailInputRef}
                     required
                     aria-invalid={error ? true : undefined}
                     autoComplete="email"
@@ -360,6 +551,12 @@ export function EmailFirstModal() {
                       setEmail(e.target.value);
                       if (error) setError(null);
                     }}
+                    onBlur={handleEmailBlur}
+                    onFocus={() => {
+                      syncKeyboardViewport();
+                      scrollEmailInputIntoView("nearest");
+                    }}
+                    onPointerDown={handleEmailPointerDown}
                   />
                 </div>
                 {error ? (
@@ -399,8 +596,9 @@ export function EmailFirstModal() {
               </form>
             </section>
           </div>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </div>
+        </div>
+      </div>
+    </div>
   );
 }

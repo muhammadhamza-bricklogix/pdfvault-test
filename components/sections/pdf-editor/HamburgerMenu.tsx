@@ -18,6 +18,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Dropdown, Label, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -50,6 +51,7 @@ const BRIDGE_EVENTS = {
 } as const;
 
 export function HamburgerMenu() {
+  const t = useTranslations("menu");
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const file = usePdfEditorStore((s) => s.file);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
@@ -460,7 +462,7 @@ export function HamburgerMenu() {
           <Dropdown>
             <Button
               isIconOnly
-              aria-label="Editor menu"
+              aria-label={t("editorMenu")}
               data-tour="editor-menu"
               size="sm"
               variant="tertiary"
@@ -468,46 +470,55 @@ export function HamburgerMenu() {
               <HugeiconsIcon icon={Menu01Icon} size={16} />
             </Button>
             <Dropdown.Popover className="min-w-[200px]">
-              <Dropdown.Menu aria-label="Editor menu" onAction={handleAction}>
-                <Dropdown.Item id="new" textValue="Create New">
+              <Dropdown.Menu
+                aria-label={t("editorMenu")}
+                onAction={handleAction}
+              >
+                <Dropdown.Item id="new" textValue={t("createNew")}>
                   <HugeiconsIcon icon={Add01Icon} size={14} />
-                  <Label>Create New</Label>
+                  <Label>{t("createNew")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="open" textValue="Open File">
+                <Dropdown.Item id="open" textValue={t("openFile")}>
                   <HugeiconsIcon icon={FolderOpenIcon} size={14} />
-                  <Label>Open File</Label>
+                  <Label>{t("openFile")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="my-pdfs" textValue="My PDFs">
+                <Dropdown.Item id="my-pdfs" textValue={t("myPdfs")}>
                   <HugeiconsIcon icon={NoteIcon} size={14} />
-                  <Label>My PDFs</Label>
+                  <Label>{t("myPdfs")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="find-replace" textValue="Find and Replace">
+                <Dropdown.Item
+                  id="find-replace"
+                  textValue={t("findReplace")}
+                >
                   <HugeiconsIcon icon={Search01Icon} size={14} />
-                  <Label>Find and Replace</Label>
+                  <Label>{t("findReplace")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="compress" textValue="Compress PDF">
+                <Dropdown.Item id="compress" textValue={t("compressPdf")}>
                   <HugeiconsIcon icon={FileMinusIcon} size={14} />
-                  <Label>Compress PDF</Label>
+                  <Label>{t("compressPdf")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="split" textValue="Split PDF">
+                <Dropdown.Item id="split" textValue={t("splitPdf")}>
                   <HugeiconsIcon icon={SplitIcon} size={14} />
-                  <Label>Split PDF</Label>
+                  <Label>{t("splitPdf")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="extract-images" textValue="Extract Images">
+                <Dropdown.Item
+                  id="extract-images"
+                  textValue={t("extractImages")}
+                >
                   <HugeiconsIcon icon={FileExportIcon} size={14} />
-                  <Label>Extract Images</Label>
+                  <Label>{t("extractImages")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="flatten" textValue="Flatten PDF">
+                <Dropdown.Item id="flatten" textValue={t("flattenPdf")}>
                   <HugeiconsIcon icon={Layers01Icon} size={14} />
-                  <Label>Flatten PDF</Label>
+                  <Label>{t("flattenPdf")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="share" textValue="Share via link">
+                <Dropdown.Item id="share" textValue={t("share")}>
                   <HugeiconsIcon icon={Link01Icon} size={14} />
-                  <Label>Share via link</Label>
+                  <Label>{t("share")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item id="versions" textValue="Version History">
+                <Dropdown.Item id="versions" textValue={t("versionHistory")}>
                   <HugeiconsIcon icon={Clock01Icon} size={14} />
-                  <Label>Version History</Label>
+                  <Label>{t("versionHistory")}</Label>
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>

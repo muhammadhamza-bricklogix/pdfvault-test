@@ -9,7 +9,6 @@ import {
   ArrowUp01Icon,
   BackgroundIcon,
   Cursor01Icon,
-  DashboardSpeed01Icon,
   DownloadIcon,
   EraserIcon,
   HighlighterIcon,
@@ -50,7 +49,10 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
+import {
+  parseLocalePrefix,
+  stripLocalePrefix,
+} from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -58,7 +60,6 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
-import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -113,7 +114,6 @@ export function EditorInfoBar() {
     );
   }, [pathname]);
 
-  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
@@ -125,6 +125,19 @@ export function EditorInfoBar() {
 
     return () => window.removeEventListener("editor:toggle-thumbs", toggle);
   }, []);
+
+  // Welcome-email arrival — mirror of PvEditorTopChrome. Derived
+  // open-state (`isOpen={isExportModalOpen || pendingOpenExportModal}`
+  // below) + close handler that clears both flags. See the sibling
+  // block in PvEditorTopChrome + `pendingOpenExportModal` docstring
+  // in pdf-editor-store for full rationale (React 19's
+  // `react-hooks/set-state-in-effect` rule + hydrator/chrome mount race).
+  const pendingOpenExportModal = usePdfEditorStore(
+    (s) => s.pendingOpenExportModal,
+  );
+  const setPendingOpenExportModal = usePdfEditorStore(
+    (s) => s.setPendingOpenExportModal,
+  );
 
   const zoomOut = () => {
     const prev = ZOOM_PRESETS.filter((z) => z < zoom).at(-1);
@@ -187,9 +200,18 @@ export function EditorInfoBar() {
       // / ?tool= so the hydrator's guards don't wipe the IDB file we
       // just snapshotted. Cards' finalize does `window.location.assign`
       // (item #15).
+      // Preserve URL locale in the finalize redirect — otherwise the
+      // post-signup `window.location.assign` (auth chain #15) lands on
+      // bare `/pdf-composer` from any `/{locale}/pdf-composer`.
       dispatchAuthModal({
         mode: "signup",
-        redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
+        redirectUrl: (() => {
+          const parsed = parseLocalePrefix(pathname ?? "/");
+
+          return parsed
+            ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+            : ROUTES.TOOLS.PDF_EDITOR;
+        })(),
       });
 
       return;
@@ -333,13 +355,12 @@ export function EditorInfoBar() {
 
   return (
     <>
-      <ToolsModal
-        isOpen={isToolsModalOpen}
-        onClose={() => setIsToolsModalOpen(false)}
-      />
       <ExportFormatModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
+        isOpen={isExportModalOpen || pendingOpenExportModal}
+        onClose={() => {
+          setIsExportModalOpen(false);
+          setPendingOpenExportModal(false);
+        }}
       />
       {/*
         Mobile (<sm) gets a two-row layout: action bar on row 1, page + zoom
@@ -354,7 +375,7 @@ export function EditorInfoBar() {
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
-            {/* Back + Hamburger — desktop only */}
+            {/* Back - desktop/tablet only in this legacy responsive bar. */}
             <div className="hidden sm:flex sm:items-center sm:gap-1">
               <Tooltip delay={300}>
                 <Button
@@ -369,20 +390,18 @@ export function EditorInfoBar() {
                   <p>Back to dashboard</p>
                 </Tooltip.Content>
               </Tooltip>
-              {/*
-                Guests: HamburgerMenu hides its own dropdown trigger
-                but stays MOUNTED so its bridge event listeners
-                (editor:open-merge / open-split / open-flatten /
-                open-annotations) keep firing for the top toolbar.
-                Unmounting for guests makes those toolbar buttons idle
-                (QA 2026-09-06). Rationale mirrored in
-                `PvEditorTopChrome.tsx`.
-              */}
-              {isW9Route ? null : <HamburgerMenu />}
             </div>
 
-            {/* Undo + Redo — mobile only */}
+            {/* Back + Undo + Redo — mobile only */}
             <div className="flex items-center gap-1 sm:hidden">
+              <Button
+                aria-label="Back to dashboard"
+                size="sm"
+                variant="tertiary"
+                onPress={handleBack}
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+              </Button>
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -407,19 +426,13 @@ export function EditorInfoBar() {
               </Button>
             </div>
 
-            <Tooltip delay={300}>
-              <Button
-                aria-label="Browse all tools"
-                size="sm"
-                variant="tertiary"
-                onPress={() => setIsToolsModalOpen(true)}
-              >
-                <HugeiconsIcon icon={DashboardSpeed01Icon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Browse PDF and image tools</p>
-              </Tooltip.Content>
-            </Tooltip>
+            {/*
+              Same menu as desktop, in the old mobile grid-icon slot.
+              HamburgerMenu gates its visible trigger on `isSignedIn`, but
+              remains mounted for guests so editor bridge listeners keep
+              working.
+            */}
+            {isW9Route ? null : <HamburgerMenu />}
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
@@ -542,7 +555,7 @@ export function EditorInfoBar() {
               <span className="ml-1 hidden sm:inline">Share</span>
             </Button>
             <Button
-              aria-label="Done"
+              aria-label="Finish and Download"
               isDisabled={!file || isSavingBeforeExport}
               size="sm"
               variant="primary"
@@ -550,7 +563,7 @@ export function EditorInfoBar() {
             >
               <HugeiconsIcon icon={Tick01Icon} size={14} />
               <span className="ml-1 hidden sm:inline">
-                {isSavingBeforeExport ? "Saving…" : "Done"}
+                {isSavingBeforeExport ? "Saving…" : "Finish & Download"}
               </span>
             </Button>
 
@@ -591,11 +604,12 @@ export function EditorInfoBar() {
 // Tool Bar — all editing tools as individual buttons
 // ---------------------------------------------------------------------------
 
-const TOOLS = [
+// Exported so BottomDock.tsx (mobile) can build its own grouped pill layout from this same tool list.
+export const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
-  { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
-  { icon: SignatureIcon, id: "signature", label: "Signature" },
-  { icon: TextFontIcon, id: "text", label: "Add Text" },
+  { icon: PencilEdit01Icon, id: "editText", label: "Edit" },
+  { icon: SignatureIcon, id: "signature", label: "Sign" },
+  { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },
@@ -636,6 +650,10 @@ export function ToolsContent({
     <Toolbar aria-label="Drawing tools">
       <ToggleButtonGroup
         disallowEmptySelection
+        // isDetached separates buttons into individual pills instead of one continuous bar.
+        // HeroUI's default radius (rounded-3xl) still needs an explicit rounded-md override
+        // below on each ToggleButton to match ACTION_TOOLS' shape.
+        isDetached
         selectedKeys={new Set([activeTool])}
         selectionMode="single"
         size="md"
@@ -646,7 +664,7 @@ export function ToolsContent({
             <ToggleButton
               key={tool.id}
               aria-label={tool.label}
-              className="h-auto flex-col gap-0.5 px-2.5 py-1.5"
+              className="h-auto flex-col gap-0.5 rounded-md px-2.5 py-1.5"
               id={tool.id}
             >
               {i > 0 && <ToggleButtonGroup.Separator />}
@@ -655,7 +673,12 @@ export function ToolsContent({
             </ToggleButton>
           ) : (
             <Tooltip key={tool.id} delay={300}>
-              <ToggleButton isIconOnly aria-label={tool.label} id={tool.id}>
+              <ToggleButton
+                isIconOnly
+                aria-label={tool.label}
+                className="rounded-md"
+                id={tool.id}
+              >
                 {i > 0 && <ToggleButtonGroup.Separator />}
                 <HugeiconsIcon icon={tool.icon} size={toolIconSize} />
               </ToggleButton>
@@ -729,11 +752,18 @@ function HistoryActions() {
 export function EditorToolBar() {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
 
   const canManagePages = !!pdfDocument && pageCount > 0;
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );

@@ -6,12 +6,13 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -49,10 +50,20 @@ const AUTH_RETURN_ROUTES = [
 ] as const;
 
 function authReturnUrlFor(pathname: string): string | undefined {
+  // Match AUTH_RETURN_ROUTES against the locale-stripped path so
+  // `/de/pdf-composer`, `/es/convert/word-to-pdf`, etc. are treated
+  // the same as their unprefixed equivalents. Without this the user
+  // signs in on `/de/convert/…` with no returnUrl set, LoginCard
+  // falls back to `/dashboard` (English), and the whole app flips
+  // out of German after the finalize `window.location.assign(…)`.
+  const parsed = parseLocalePrefix(pathname);
+  const effectivePath = parsed?.rest ?? pathname;
   const returnHere = AUTH_RETURN_ROUTES.some((prefix) =>
-    pathname.startsWith(prefix),
+    effectivePath.startsWith(prefix),
   );
 
+  // Return the ORIGINAL locale-prefixed pathname so the finalize
+  // navigation lands on the same localized page the user started on.
   return returnHere ? pathname : undefined;
 }
 
@@ -73,6 +84,14 @@ export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [toolsModalOpen, setToolsModalOpen] = useState(false);
   const [formsModalOpen, setFormsModalOpen] = useState(false);
+  // iOS Safari hides native scrollbars at rest. This state backs a
+  // custom, always-visible scroll indicator for the All Tools modal.
+  const toolsBodyRef = useRef<HTMLDivElement>(null);
+  const [toolsHasOverflow, setToolsHasOverflow] = useState(false);
+  const [toolsScrollIndicator, setToolsScrollIndicator] = useState({
+    height: 0,
+    top: 0,
+  });
   const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -121,6 +140,65 @@ export function LandingHeader() {
     setMobileOpen(false);
   };
 
+  // Measures overflow and keeps the custom scroll thumb synced. The
+  // catalog is lazy-loaded, so observing the content wrapper matters:
+  // its height changes after the modal first opens.
+  useEffect(() => {
+    if (!toolsModalOpen) return;
+    const scrollContainer = toolsBodyRef.current;
+
+    if (!scrollContainer) return;
+
+    let frame = 0;
+
+    const check = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const maxScroll =
+          scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const hasOverflow = maxScroll > 1;
+
+        setToolsHasOverflow(hasOverflow);
+
+        if (!hasOverflow) {
+          setToolsScrollIndicator({ height: 0, top: 0 });
+
+          return;
+        }
+
+        const trackHeight = Math.max(scrollContainer.clientHeight - 32, 32);
+        const thumbHeight = Math.max(
+          32,
+          (scrollContainer.clientHeight / scrollContainer.scrollHeight) *
+            trackHeight,
+        );
+        const thumbTop =
+          (scrollContainer.scrollTop / maxScroll) * (trackHeight - thumbHeight);
+
+        setToolsScrollIndicator({ height: thumbHeight, top: thumbTop });
+      });
+    };
+
+    check();
+
+    const observer = new ResizeObserver(check);
+    const contentWrapper = scrollContainer.firstElementChild;
+
+    observer.observe(scrollContainer);
+
+    if (contentWrapper) observer.observe(contentWrapper);
+
+    scrollContainer.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      scrollContainer.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, [toolsModalOpen]);
+
   const openFormsModal = () => {
     setFormsModalOpen(true);
     setMobileOpen(false);
@@ -146,6 +224,10 @@ export function LandingHeader() {
               aria-label="PDFVault home"
               className="flex shrink-0 items-center"
               href={ROUTES.PUBLIC.HOME}
+              // Closes the mobile drawer explicitly: navigating to the same
+              // route doesn't change `pathname`, so the auto-close effect
+              // above wouldn't otherwise fire.
+              onClick={() => setMobileOpen(false)}
             >
               <Image
                 priority
@@ -353,7 +435,10 @@ export function LandingHeader() {
               ))}
               <li>
                 <button
-                  className="block w-full rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  // `text-start` (logical) rather than `text-left` so this
+                  // matches the sibling links in RTL too — `<button>`
+                  // defaults to centered text, unlike `<a>`.
+                  className="block w-full rounded-lg px-2 py-2.5 text-start text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
                   type="button"
                   onClick={openFormsModal}
                 >
@@ -425,30 +510,50 @@ export function LandingHeader() {
             <Modal.Header>
               <Modal.Heading>All Tools</Modal.Heading>
             </Modal.Header>
-            <Modal.Body className="max-h-[80vh] overflow-y-auto p-0">
-              {/* Click delegation: any tile navigation dismisses the modal
-                  synchronously, regardless of whether the destination is a
-                  new pathname (`/pdf-composer` → `/dashboard`) or a same-
-                  path query change (`?tool=edit` → `?tool=compress`). The
-                  pathname/searchParams useEffect above misses same-path
-                  query nav in Next 16 in some flows, so this is the
-                  authoritative dismiss. Keeping `AllToolsCatalog` prop-free
-                  is required by CLAUDE.md item 20 (RSC serialization). */}
-              {/* Delegation catches native click events bubbled up from
-                  each Link — including the click Enter/Space fires on a
-                  focused <a> — so keyboard users get the same dismiss
-                  as mouse users without a separate onKeyDown here. */}
-              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
-              <div
-                onClick={(event) => {
-                  if ((event.target as HTMLElement).closest("a")) {
-                    setToolsModalOpen(false);
-                  }
-                }}
+            <div className="relative">
+              <Modal.Body
+                ref={toolsBodyRef}
+                className="max-h-[80dvh] overflow-y-auto overscroll-contain p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <AllToolsCatalog />
-              </div>
-            </Modal.Body>
+                {/* Click delegation: any tile navigation dismisses the modal
+                    synchronously, regardless of whether the destination is a
+                    new pathname (`/pdf-composer` → `/dashboard`) or a same-
+                    path query change (`?tool=edit` → `?tool=compress`). The
+                    pathname/searchParams useEffect above misses same-path
+                    query nav in Next 16 in some flows, so this is the
+                    authoritative dismiss. Keeping `AllToolsCatalog` prop-free
+                    is required by CLAUDE.md item 20 (RSC serialization). */}
+                {/* Delegation catches native click events bubbled up from
+                    each Link — including the click Enter/Space fires on a
+                    focused <a> — so keyboard users get the same dismiss
+                    as mouse users without a separate onKeyDown here. */}
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
+                <div
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest("a")) {
+                      setToolsModalOpen(false);
+                    }
+                  }}
+                >
+                  <AllToolsCatalog />
+                </div>
+              </Modal.Body>
+              {toolsHasOverflow ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-4 right-2 top-4 z-10 w-1.5 rounded-full bg-[#ececec] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
+                  data-testid="all-tools-scroll-indicator"
+                >
+                  <div
+                    className="absolute left-0 right-0 rounded-full bg-[#a8a8a8]"
+                    style={{
+                      height: `${toolsScrollIndicator.height}px`,
+                      transform: `translateY(${toolsScrollIndicator.top}px)`,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>

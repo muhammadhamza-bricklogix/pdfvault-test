@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Button,
@@ -57,17 +57,12 @@ type Props = {
  * Output is the same as the standalone `/tools/split-pdf` route: single
  * range → plain PDF download, multiple → zip.
  *
- * Unsaved edits are NOT baked in. The caller passes the editor store's
- * source bytes (`file`), so any Fabric overlays the user added in-session
- * remain in the editor but won't appear in the split output. The banner
- * inside the modal warns about this when `hasUnsavedChanges` is true.
- * Routing through `buildEditedPdfBytes` would require a shell-level hook
- * with the live `fabricCanvas` ref (see skill-log 2026-06-10 (f)) —
- * acceptable to defer for v1.
+ * Split bakes the latest editor bytes in-memory before download via the
+ * shell-level `editor:build-current-bytes` event. It does not cloud-save,
+ * swap `store.file`, or reload pdf.js, so the editor keeps its current file
+ * and in-session overlays after the modal closes.
  */
 export function SplitPdfModal({ isOpen, onClose, source }: Props) {
-  const hasUnsavedChanges = usePdfEditorStore((s) => s.hasUnsavedChanges);
-
   const [mode, setMode] = useState<SplitMode>("ranges");
   const [rangesText, setRangesText] = useState("");
   const [chunkSize, setChunkSize] = useState("5");
@@ -272,13 +267,6 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
               full-width border + focus ring have room and the modal
               scrolls tall content instead of clipping. */}
           <Modal.Body className="space-y-4 px-4 sm:px-6">
-            {hasUnsavedChanges && (
-              <div className="rounded-xl border border-warning-200 bg-warning-50 p-3 text-xs text-warning-800">
-                You have unsaved edits. They won&apos;t be included in the split
-                output — save the document first if you need them baked in.
-              </div>
-            )}
-
             {!source && (
               <div className="flex items-center justify-center gap-2 py-4 text-sm text-default-500">
                 <HugeiconsIcon

@@ -15,6 +15,7 @@ import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
@@ -369,9 +370,13 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
           try {
             // Persist file + per-page Fabric edits + extractedPages across
             // the full-page sign-in redirect so the editor can rehydrate
-            // the exact state on return. The helper flushes the live
-            // canvas for the current page first — the store may lag one
-            // page-navigation behind the visible canvas.
+            // the exact state on return. Still done even though the new
+            // bake-and-upload path below covers the same case — the IDB
+            // snapshot is the fallback when the upload half of
+            // `runAutoSignup` fails (network hiccup, backend downtime).
+            // The helper flushes the live canvas for the current page
+            // first — the store may lag one page-navigation behind the
+            // visible canvas.
             await snapshotPendingEditorFile(liveCanvas);
             logger.breadcrumb("export", "pending_file.saved", {
               format,
@@ -382,7 +387,58 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             logger.captureError(err, "export.pending_file", { format });
           }
 
-          const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?export=${encodeURIComponent(format)}`;
+          // NEW (2026-09-18): pre-bake the file so `runAutoSignup` can
+          // upload it via `/documents/upload` right after ticket
+          // sign-in. The resulting docId is passed into `POST
+          // /auth/quick-signup/notify` so the Customer.io welcome
+          // email's CTA links straight to the composer with THIS file
+          // loaded — same on the current device (same-session
+          // finalize also uses `?id=<docId>`) and on any other device
+          // where the user later opens the email (cloud storage
+          // instead of IDB). Bake failure is non-fatal: modal still
+          // opens, upload falls back to the IDB-restore hydrator
+          // path, welcome email lands with the dashboard fallback URL.
+          let bakedFile: File | undefined;
+
+          if (sourceFile && liveCanvas) {
+            try {
+              const { bytes } = await buildEditedPdfBytes({
+                currentPage: page,
+                fabricCanvas: liveCanvas,
+                file: sourceFile,
+                bakeOverlays: true,
+              });
+              const bakedName = sourceFile.name.toLowerCase().endsWith(".pdf")
+                ? sourceFile.name
+                : `${sourceFile.name}.pdf`;
+
+              bakedFile = new File([bytes as BlobPart], bakedName, {
+                type: "application/pdf",
+              });
+            } catch (err) {
+              logger.captureError(err, "export.bake_for_guest", { format });
+            }
+          }
+
+          // Preserve URL locale in the finalize redirect. Signup card's
+          // `window.location.assign(redirectUrl)` (auth chain item #15)
+          // does a FULL-page nav — if `returnTo` is bare `/pdf-composer`,
+          // the user drops from `/fr/pdf-composer` back to English URL.
+          // `LangPrefHonor` can't rescue post-signin because
+          // `/pdf-composer` is in `SKIP_REDIRECT_PREFIXES` (reload-race
+          // avoidance per #115 / #117). Cookie fallback in
+          // `ComposerI18nProvider` (#126) translates the content but
+          // leaves the URL bare; carrying the locale in `returnTo`
+          // keeps the URL correct too.
+          const editorPath = (() => {
+            if (typeof window === "undefined") return ROUTES.TOOLS.PDF_EDITOR;
+            const parsed = parseLocalePrefix(window.location.pathname);
+
+            return parsed
+              ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+              : ROUTES.TOOLS.PDF_EDITOR;
+          })();
+          const returnTo = `${editorPath}?export=${encodeURIComponent(format)}`;
 
           // Email-first modal (2026-08-30 PM ask): capture the email
           // BEFORE choosing signin vs signup so we can branch on
@@ -403,6 +459,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             title: "Your file is ready",
             subtitle: "Create an account to download it",
             submitLabel: "Download file",
+            bakedFile,
           });
 
           isExportingRef.current = false;

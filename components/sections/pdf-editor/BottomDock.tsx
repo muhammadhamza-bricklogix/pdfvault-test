@@ -1,6 +1,8 @@
 "use client";
 
 import type { Canvas as FabricCanvas } from "fabric";
+import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
+import type { ComponentProps } from "react";
 
 import {
   Comment01Icon,
@@ -15,13 +17,15 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
-import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 
-import { ToolsContent } from "./EditorTopBar";
+import { TOOLS } from "./EditorTopBar";
 import { MobileToolPropertiesModal } from "./MobileToolPropertiesModal";
+import { TOOL_LABEL_KEYS } from "./PvEditorTopChrome";
 import { ShapePropertiesContent } from "./RightSidebar";
 import { ThumbnailStrip } from "./ThumbnailSidebar";
 
@@ -37,13 +41,73 @@ const ACTION_TOOLS = [
   { id: "split", label: "Split", icon: SplitIcon },
   { id: "flatten", label: "Flatten", icon: Layers01Icon },
   { id: "extract", label: "Extract", icon: FileExportIcon },
-  { id: "page-numbers", label: "Page No.", icon: TextNumberSignIcon },
-  { id: "annotate", label: "Annotation", icon: Comment01Icon },
+  { id: "page-numbers", label: "Page No", icon: TextNumberSignIcon },
+  { id: "annotate", label: "Annotate", icon: Comment01Icon },
 ] as const;
 
+// Split at the same 6/7 boundary as desktop's GROUP_A/GROUP_B (PvEditorTopChrome.tsx).
+const MODE_TOOLS_GROUP_1 = TOOLS.slice(0, 6);
+const MODE_TOOLS_GROUP_2 = TOOLS.slice(6);
+
+type DockIcon = ComponentProps<typeof HugeiconsIcon>["icon"];
+
+// Mirrors desktop's ToolButton (PvEditorTopChrome.tsx), sized down for the mobile dock.
+function DockToolButton({
+  icon,
+  label,
+  active = false,
+  disabled = false,
+  onClick,
+}: {
+  icon: DockIcon;
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-md px-2.5 py-1.5 text-[10px] font-medium leading-tight transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        active
+          ? "bg-[var(--color-accent)]/12 text-[var(--color-accent)] ring-1 ring-inset ring-[var(--color-accent)]/40"
+          : "text-default-600 hover:bg-default-100"
+      }`}
+      disabled={disabled}
+      type="button"
+      onClick={onClick}
+    >
+      <HugeiconsIcon icon={icon} size={18} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+// Mirrors desktop's PillGroup (PvEditorTopChrome.tsx) bordered-card styling.
+function DockPillGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex shrink-0 items-center gap-1 rounded-[16px] border border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-1.5 py-1.5 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.15)]">
+      {children}
+    </div>
+  );
+}
+
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
+  // Route tool labels through next-intl (same dictionary desktop uses) so the
+  // mobile dock renders locale-correct copy instead of raw English that Weglot
+  // mistranslates (e.g. "Draw" → "Unentschieden"). QA 2026-09-26 F-62 / F-66.
+  const tLabel = useTranslations("tools");
+  const labelFor = (id: string) => {
+    const key = TOOL_LABEL_KEYS[id];
+
+    return key ? tLabel(key) : id;
+  };
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
+  const activeTool = usePdfEditorStore((s) => s.activeTool);
+  const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const setIsCompressModalOpen = usePdfEditorStore(
     (s) => s.setIsCompressModalOpen,
@@ -154,11 +218,23 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   };
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );
 
     if (ok) setIsManagePagesOpen(true);
+  };
+
+  // Dispatches editor:toolbar-tool-picked (clears any open floating toolbar) before switching tools.
+  const handleModeToolPick = (id: ActiveTool) => {
+    window.dispatchEvent(new CustomEvent("editor:toolbar-tool-picked"));
+    setActiveTool(id);
   };
 
   return (
@@ -190,17 +266,19 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
         {pageCount > 0 && (
           <Tooltip delay={300}>
             <Button
-              aria-label="Manage pages"
+              aria-label={labelFor("manage-pages")}
               className="h-auto shrink-0 flex-col gap-0.5 px-2.5 py-1.5"
               size="sm"
               variant="tertiary"
               onPress={() => void handleOpenManagePages()}
             >
               <HugeiconsIcon icon={Layout03Icon} size={18} />
-              <span className="text-[10px] leading-tight">Manage</span>
+              <span className="text-[10px] leading-tight">
+                {labelFor("manage-pages")}
+              </span>
             </Button>
             <Tooltip.Content>
-              <p>Manage pages</p>
+              <p>{labelFor("manage-pages")}</p>
             </Tooltip.Content>
           </Tooltip>
         )}
@@ -216,20 +294,41 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
           data-touch-scroll-x
           className="flex min-w-0 flex-1 touch-pan-x items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <ToolsContent showLabels toolIconSize={18} />
-          {ACTION_TOOLS.map((tool) => (
-            <button
-              key={tool.id}
-              aria-label={tool.label}
-              className="flex h-auto shrink-0 flex-col items-center gap-0.5 rounded-md px-2.5 py-1.5 text-default-600 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!file}
-              type="button"
-              onClick={() => handleAction(tool.id)}
-            >
-              <HugeiconsIcon icon={tool.icon} size={18} />
-              <span className="text-[10px] leading-tight">{tool.label}</span>
-            </button>
-          ))}
+          <DockPillGroup>
+            {MODE_TOOLS_GROUP_1.map((tool) => (
+              <DockToolButton
+                key={tool.id}
+                active={activeTool === tool.id}
+                icon={tool.icon}
+                label={labelFor(tool.id)}
+                onClick={() => handleModeToolPick(tool.id)}
+              />
+            ))}
+          </DockPillGroup>
+
+          <DockPillGroup>
+            {MODE_TOOLS_GROUP_2.map((tool) => (
+              <DockToolButton
+                key={tool.id}
+                active={activeTool === tool.id}
+                icon={tool.icon}
+                label={labelFor(tool.id)}
+                onClick={() => handleModeToolPick(tool.id)}
+              />
+            ))}
+          </DockPillGroup>
+
+          <DockPillGroup>
+            {ACTION_TOOLS.map((tool) => (
+              <DockToolButton
+                key={tool.id}
+                disabled={!file}
+                icon={tool.icon}
+                label={labelFor(tool.id)}
+                onClick={() => handleAction(tool.id)}
+              />
+            ))}
+          </DockPillGroup>
         </div>
       </div>
 

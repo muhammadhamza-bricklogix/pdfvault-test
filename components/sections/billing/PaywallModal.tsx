@@ -6,6 +6,7 @@ import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
+import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -17,17 +18,26 @@ import {
   receiptFileName,
 } from "@/lib/client/billing/generate-receipt-pdf";
 import {
+  getPaywallStrings,
+  type PaywallStrings,
+} from "@/lib/client/paywall/paywall-strings";
+import {
   useCreateCheckoutIntentMutation,
   useSyncSubscriptionMutation,
 } from "@/lib/client/query/mutations/billing.mutation";
 import { billingService } from "@/lib/shared/api/services/billing.service";
 import { DISCLAIMER_VERSION } from "@/lib/shared/constants/billing";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { formatMinor } from "@/lib/shared/utils/currency";
 import { persistUserCurrency } from "@/lib/client/billing/user-currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import {
+  setBingUserData,
+  trackBingPurchase,
+} from "@/lib/client/analytics/bing-uet";
 
 // The payment SDK's iframe loader touches `window` at import time —
 // dynamic import with `ssr: false` keeps the Next.js server bundle
@@ -224,6 +234,20 @@ export function PaywallModal({
   onClose,
   onPaymentSuccess,
 }: PaywallModalProps) {
+  // Detect current URL locale so the paywall can render its own copy
+  // instead of relying on Weglot. `parseLocalePrefix` mirrors the
+  // middleware's split — `/de/…` → "de", plain routes → English
+  // default. Client-only via `useState` initializer so SSR renders
+  // English and hydration matches on the first paint.
+  const [paywallLocale] = useState<string>(() => {
+    if (typeof window === "undefined") return "en";
+
+    return parseLocalePrefix(window.location.pathname)?.locale ?? "en";
+  });
+  const strings = useMemo(
+    () => getPaywallStrings(paywallLocale),
+    [paywallLocale],
+  );
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
@@ -278,6 +302,21 @@ export function PaywallModal({
         if (preExistingChildren.has(child)) continue;
         const el = child as HTMLElement;
 
+        // Skip CookieYes portals. The consent banner + preference-center
+        // modal must stay behind the paywall — the CSS in globals.css
+        // pins them to z-index 40 so HeroUI's z-index 50 backdrop
+        // covers them. Un-inerting + hoisting to max-int here would
+        // override that pin and put the banner on top of the checkout
+        // dialog (P1 2026-09-18). Filter by `cky-*` id/class prefixes,
+        // which is the vendor's canonical namespace across every
+        // banner / modal / overlay variant they ship.
+        if (
+          typeof el.matches === "function" &&
+          el.matches('[id^="cky-"], [id^="cookieyes"], [class*="cky-"]')
+        ) {
+          continue;
+        }
+
         // Only fix elements that React Aria actually marked inert/hidden.
         if (!el.inert && el.getAttribute("aria-hidden") !== "true") continue;
         el.inert = false;
@@ -298,6 +337,66 @@ export function PaywallModal({
     unInertNewPortals();
 
     return () => observer.disconnect();
+  }, [isOpen]);
+
+  // Pause Weglot for the paywall's lifetime.
+  //
+  // The `translate="no"` + `notranslate` + `wg-notranslate` markers on
+  // `<Modal.Dialog>` (plus the excludeBlocks selector we configure in
+  // WeglotBoot) stop the FIRST-paint translation of the modal, so it
+  // opens in English on `/de/` / `/es/` / etc. That's enough on modal
+  // open. It is NOT enough on subsequent React re-renders — clicking a
+  // plan card swaps the highlighted state on both plan tiles, React
+  // commits DOM mutations, and Weglot's body-level MutationObserver
+  // still fires. Something in the observer path adjacent to the fenced
+  // subtree touches text nodes React still remembers, and the next
+  // `commitDeletion` throws `NotFoundError: Failed to execute
+  // 'removeChild' on 'Node': The node to be removed is not a child of
+  // this node.` — the app blanks to `<app.global-error>` and the user
+  // can't buy.
+  //
+  // Reproduced on staging 2026-09-23 via Playwright: with `Weglot.
+  // getCurrentLang() === "de"`, Monthly → Annual → Monthly crashes.
+  // With `Weglot.switchTo("en")` before the flow, same clicks pass
+  // cleanly. Flipping Weglot back off is the smallest change that
+  // survives every React re-render inside the modal.
+  //
+  // The switch takes ~1 frame and only re-translates already-exposed
+  // DOM outside the modal (dashboard, sidebar). When the modal closes
+  // we restore the original language, so `/de/` returns to German
+  // immediately. Users see paywall in English (same intended trade-off
+  // as the PR #98 fence) but no crash.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+
+    const w = window as typeof window & {
+      Weglot?: {
+        getCurrentLang?: () => string | undefined;
+        switchTo?: (lang: string) => void;
+      };
+    };
+    const W = w.Weglot;
+
+    if (!W?.getCurrentLang || !W?.switchTo) return;
+    const prevLang = W.getCurrentLang();
+
+    if (!prevLang || prevLang === "en") return;
+    try {
+      W.switchTo("en");
+    } catch {
+      // Weglot occasionally throws mid-init if `switchTo` runs before
+      // its bootstrap resolves. Safe to swallow — the fence markers
+      // still block the FIRST paint, and the retry on close is
+      // idempotent.
+    }
+
+    return () => {
+      try {
+        W.switchTo?.(prevLang);
+      } catch {
+        // As above.
+      }
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -825,16 +924,30 @@ export function PaywallModal({
       }}
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
+        {/*
+          Fence markers re-added 2026-09-23: the paywall now ships its
+          own local translations (see `lib/client/paywall/paywall-strings.ts`)
+          for `de` / `es` / `fr` / `pt` / `ar`. Weglot must NOT translate
+          the modal — its MutationObserver mutations collide with React's
+          diff and throw `NotFoundError: Failed to execute 'removeChild'
+          on 'Node'` on plan-card clicks. `translate="no"` +
+          `notranslate` + `wg-notranslate` classes tell Weglot to skip
+          this subtree; combined with `Weglot.options.excluded_blocks`
+          set in `WeglotBoot`, the modal renders exclusively from React
+          state on every locale.
+        */}
         <Modal.Dialog
           className={
-            step === "success"
+            (step === "success"
               ? "max-h-[calc(100dvh-32px)] w-[min(460px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
               : step === "plan"
                 ? hidePreview
                   ? "max-h-[calc(100dvh-32px)] w-[min(760px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                   : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
-                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1"
+                : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
+            " notranslate wg-notranslate"
           }
+          translate="no"
         >
           <Modal.CloseTrigger />
           {error ? (
@@ -843,6 +956,17 @@ export function PaywallModal({
             <LoadingState />
           ) : step === "plan" ? (
             <PlanStep
+              // `key={selectedPlan}` forces React to unmount + remount
+              // the whole PlanStep subtree on plan swap. Even with local
+              // i18n + fence markers keeping Weglot away from the modal,
+              // some flows (pdf-composer paywall on `/de/`) still see
+              // Weglot mutate text nodes before the fence takes effect,
+              // and React's in-place text-node diff throws
+              // `NotFoundError: Failed to execute 'removeChild' on
+              // 'Node'`. Full unmount/remount removes PlanStep's root
+              // div via one parent-owned `removeChild` — safe — and
+              // sidesteps the diff. No effect on English default.
+              key={selectedPlan}
               annualIntent={annualIntent}
               annualUnavailable={annualUnavailable}
               continueLoading={continueLoading}
@@ -850,6 +974,7 @@ export function PaywallModal({
               intent={intent}
               preview={preview}
               selectedPlan={selectedPlan}
+              strings={strings}
               onContinue={handleContinue}
               onSelectPlan={setSelectedPlan}
             />
@@ -861,6 +986,7 @@ export function PaywallModal({
               retryKey={retryKey}
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
+              strings={strings}
               onBack={() => setStep("plan")}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
@@ -894,6 +1020,7 @@ function PlanStep({
   onSelectPlan,
   onContinue,
   continueLoading,
+  strings,
 }: {
   intent: CheckoutIntent;
   annualIntent: CheckoutIntent | null;
@@ -904,6 +1031,7 @@ function PlanStep({
   onSelectPlan: (id: PlanId) => void;
   onContinue: () => void;
   continueLoading: boolean;
+  strings: PaywallStrings;
 }) {
   // Annual is offered only when the backend actually has an ANNUAL
   // plan seeded. Signal: either the standalone ANNUAL intent resolved
@@ -959,7 +1087,7 @@ function PlanStep({
 
   const continueDisabled = continueLoading;
   const readyHeading = (() => {
-    if (!preview) return "Your PDF is ready.";
+    if (!preview) return strings.ready.pdf;
     const ext = (
       preview.targetExt ||
       preview.sourceExt ||
@@ -969,49 +1097,55 @@ function PlanStep({
       .toLowerCase()
       .trim();
 
-    if (["jpg", "jpeg"].includes(ext)) return "Your JPG is ready.";
-    if (ext === "png") return "Your PNG is ready.";
-    if (["doc", "docx", "word"].includes(ext))
-      return "Your Word document is ready.";
-    if (["xls", "xlsx", "excel"].includes(ext))
-      return "Your Excel document is ready.";
+    if (["jpg", "jpeg"].includes(ext)) return strings.ready.jpg;
+    if (ext === "png") return strings.ready.png;
+    if (["doc", "docx", "word"].includes(ext)) return strings.ready.word;
+    if (["xls", "xlsx", "excel"].includes(ext)) return strings.ready.excel;
     if (["ppt", "pptx", "powerpoint"].includes(ext))
-      return "Your PowerPoint presentation is ready.";
-    if (ext === "txt") return "Your Text document is ready.";
+      return strings.ready.powerpoint;
+    if (ext === "txt") return strings.ready.txt;
 
-    return "Your PDF is ready.";
+    return strings.ready.pdf;
   })();
+
+  // Shared Continue CTA — rendered directly beneath the plan selector in
+  // both single-column (`hidePreview`) and two-column layouts. Product
+  // review 2026-09-18: previous header-right placement forced the eye to
+  // jump plan → header on decision; putting the CTA immediately below
+  // the cards keeps "Select plan → Continue" contiguous and reads as one
+  // visual step. Full-width + larger tap target (h-[60px] sm:h-[64px])
+  // makes the action unmistakable on mobile and desktop. Position stays
+  // the same regardless of preview state so the button never jumps
+  // between pricing sub-steps. Handler + loading state unchanged.
+  const continueButton = (
+    <button
+      className="group inline-flex h-[60px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[17px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[64px] sm:text-[18px]"
+      disabled={continueDisabled}
+      type="button"
+      onClick={onContinue}
+    >
+      {continueLoading ? strings.continuePreparing : strings.continueCta}
+      {continueLoading ? null : (
+        <span
+          aria-hidden
+          className="text-[22px] leading-none transition-transform group-hover:translate-x-1"
+        >
+          →
+        </span>
+      )}
+    </button>
+  );
 
   return (
     <div className="flex flex-col">
-      {/* Header row — title (left) + Continue (right) */}
-      <div className="flex flex-col gap-3 border-b border-[#ececec] p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
-        <div className="flex flex-col gap-1">
-          <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-            {readyHeading}
-          </h2>
-          <p className="text-[13px] text-[#6c6c6c]">
-            Cancel anytime · Secure checkout · Instant access
-          </p>
-        </div>
-        <div className="flex flex-col items-stretch gap-1 sm:items-end">
-          <button
-            className="group inline-flex h-[56px] min-w-[180px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[16px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(241,44,35,0.6)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_14px_28px_-8px_rgba(241,44,35,0.7)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:min-w-[200px]"
-            disabled={continueDisabled}
-            type="button"
-            onClick={onContinue}
-          >
-            {continueLoading ? "Preparing…" : "Continue"}
-            {continueLoading ? null : (
-              <span
-                aria-hidden
-                className="transition-transform group-hover:translate-x-0.5"
-              >
-                →
-              </span>
-            )}
-          </button>
-        </div>
+      {/* Header — title + subtitle only. Continue moved directly below
+          the plan selector (see `continueButton` above) so plan
+          selection → CTA is a single visual beat. */}
+      <div className="flex flex-col gap-1 border-b border-[#ececec] p-6 md:p-8">
+        <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
+          {readyHeading}
+        </h2>
+        <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
       </div>
 
       {/* Body — two columns, or plan-picker only when the caller
@@ -1024,10 +1158,13 @@ function PlanStep({
             annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
             selectedPlan={selectedPlan}
+            strings={strings}
             onSelectPlan={onSelectPlan}
           />
 
           <AcceptedCards />
+
+          {continueButton}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1049,7 +1186,7 @@ function PlanStep({
                       strokeWidth={3}
                     />
                   </span>
-                  Your document is ready to download
+                  {strings.documentReady}
                 </span>
                 <PreviewFileCard preview={preview} />
               </>
@@ -1064,7 +1201,7 @@ function PlanStep({
                       strokeWidth={3}
                     />
                   </span>
-                  Your document is ready to download
+                  {strings.documentReady}
                 </span>
                 <GenericPreviewCard />
               </>
@@ -1079,10 +1216,13 @@ function PlanStep({
               annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
               selectedPlan={selectedPlan}
+              strings={strings}
               onSelectPlan={onSelectPlan}
             />
 
             <AcceptedCards />
+
+            {continueButton}
           </div>
         </div>
       )}
@@ -1189,6 +1329,7 @@ function PayStep({
   selectedPlan,
   preview,
   onBack,
+  strings,
 }: {
   intent: CheckoutIntent;
   onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
@@ -1207,6 +1348,7 @@ function PayStep({
    * they change plan and click Continue again.
    */
   onBack: () => void;
+  strings: PaywallStrings;
 }) {
   const todayDisplay = formatMinor(intent.amountTodayMinor, intent.currency);
   const renewDisplay = formatMinor(intent.amountRenewMinor, intent.currency);
@@ -1267,7 +1409,17 @@ function PayStep({
   // (it's what mounts Apple Pay / Google Pay into the detached refs
   // above), so we hide the card iframe wrapper via `hidden` rather
   // than conditionally rendering the whole PaymentForm.
+  const { user } = useUser();
   const [cardExpanded, setCardExpanded] = useState(false);
+
+  // Set enhanced user data (SHA-256 hashed email, E.164 phone) for Bing UET on checkout
+  useEffect(() => {
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+    if (userEmail || userPhone) {
+      void setBingUserData({ email: userEmail, phone: userPhone });
+    }
+  }, [user]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1277,21 +1429,30 @@ function PayStep({
             only way to change plan mid-checkout was to close the modal
             entirely via X, which drops the whole flow). Sits above the
             "Total due today" header so it's the first thing the user
-            reads when scanning from top-left. */}
+            reads when scanning from top-left.
+            QA 2026-09-22: the Back arrow rendered ~48px from the
+            dialog's left edge (Modal.Dialog's own 24px `p-6` PLUS this
+            button's own `px-6`/`md:px-8` stacking on top of it), while
+            the "✕" close trigger — absolute-positioned, so it ignores
+            the dialog's padding — sits only ~20px from the right edge.
+            `-ml-7`/`md:-ml-9` cancel exactly enough of that stacked
+            padding to land the Back arrow at the same ~20px inset,
+            without touching the dialog's shared padding or the
+            untouchable `.modal__close-trigger` design-system class. */}
         <button
-          className="inline-flex items-center gap-1.5 self-start px-6 pt-5 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:px-8"
+          className="-ml-7 -mt-1.5 inline-flex items-center gap-1.5 self-start px-6 text-[13px] font-medium text-[#6b6f76] transition-colors hover:text-[#1a1c21] focus-visible:text-[#1a1c21] focus-visible:outline-none md:-ml-9 md:px-8"
           type="button"
           onClick={onBack}
         >
           <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />
-          Back
+          {strings.pay.back}
         </button>
         {/* Total due today header — matches the right-column order
             summary so both instances of "Total due today" read at
             the same weight and size (2026-09-03 PM ask). */}
         <div className="flex items-baseline justify-between border-b border-[#ececec] px-6 py-4 md:px-8">
           <span className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
-            Total due today
+            {strings.pay.totalDueToday}
           </span>
           <span className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
             {todayDisplay}
@@ -1301,7 +1462,7 @@ function PayStep({
         <div className="flex flex-col gap-4 p-6 md:p-8">
           {/* Express checkout label */}
           <p className="text-[13px] font-semibold uppercase tracking-wide text-[#1a1c21]">
-            Express checkout
+            {strings.pay.expressCheckout}
           </p>
 
           {/* Real SDK wallet buttons + card form. Mounted immediately on
@@ -1341,6 +1502,7 @@ function PayStep({
                 work before expanding (parity with PDF Guru). */}
             <PayWithCardHeader
               expanded={cardExpanded}
+              label={strings.pay.payWithCard}
               onToggle={() => setCardExpanded((v) => !v)}
             />
             {/* Card form. `key` bumps on retry so the Solidgate iframe fully
@@ -1388,19 +1550,18 @@ function PayStep({
               className="flex flex-col gap-2.5 rounded-xl border border-danger-200 bg-danger-50 p-5 text-[14px] text-danger-800 sm:p-6 sm:text-[15px] dark:border-danger-800 dark:bg-danger-900/20 dark:text-danger-200"
             >
               <p className="text-[15px] font-semibold leading-snug sm:text-[17px]">
-                Your card was declined and hasn&apos;t been charged.
+                {strings.pay.cardDeclinedHeading}
               </p>
-              <p className="leading-relaxed">
-                Try another card or contact your bank. You can re-enter details
-                below.
-              </p>
+              <p className="leading-relaxed">{strings.pay.cardDeclinedBody}</p>
               <button
                 className="mt-2 inline-flex h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--pv-brand-red,#f12c23)] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[#d8241c] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:text-[16px]"
                 disabled={retryLoading}
                 type="button"
                 onClick={onRetry}
               >
-                {retryLoading ? "Preparing…" : "Try another card"}
+                {retryLoading
+                  ? strings.pay.preparing
+                  : strings.pay.tryAnotherCard}
               </button>
             </div>
           ) : null}
@@ -1408,38 +1569,48 @@ function PayStep({
           {/* Plan features */}
           <div className="flex flex-col gap-3">
             <p className="text-[12px] font-bold uppercase tracking-widest text-[#1a1c21]">
-              {selectedPlan === "annual" ? "Annual Access" : "7-Day Access"}
+              {selectedPlan === "annual"
+                ? strings.pay.annualAccess
+                : strings.pay.sevenDayAccess}
             </p>
             <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
-              <Feature>Unlimited downloads</Feature>
-              <Feature>Unlimited edits</Feature>
-              <Feature>Convert to any format</Feature>
-              <Feature>Password-protect your documents</Feature>
+              <Feature>{strings.pay.unlimitedDownloads}</Feature>
+              <Feature>{strings.pay.unlimitedEdits}</Feature>
+              <Feature>{strings.pay.convertAnyFormat}</Feature>
+              <Feature>{strings.pay.passwordProtect}</Feature>
             </ul>
           </div>
 
           {/* Legal small-print */}
-          <p className="text-[11px] leading-relaxed text-[#8a8a8a]">
-            By continuing you agree to be charged{" "}
-            {selectedPlan === "annual"
-              ? `${todayDisplay} every 365 days`
-              : `${todayDisplay} today for a 7-day trial, then ${renewDisplay} per month`}{" "}
-            unless cancelled. See our{" "}
-            <a
-              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
-              href="/terms-and-conditions"
-            >
-              Subscription
-            </a>{" "}
-            &amp;{" "}
-            <a
-              className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
-              href="/refund-policy"
-            >
-              Refund
-            </a>{" "}
-            policies.
-          </p>
+          {(() => {
+            const disc =
+              selectedPlan === "annual"
+                ? strings.pay.disclaimerAnnual({ todayAmount: todayDisplay })
+                : strings.pay.disclaimerMonthly({
+                    todayAmount: todayDisplay,
+                    renewAmount: renewDisplay,
+                  });
+
+            return (
+              <p className="text-[11px] leading-relaxed text-[#8a8a8a]">
+                {disc.intro}
+                <a
+                  className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
+                  href="/terms-and-conditions"
+                >
+                  {strings.pay.subscriptionLink}
+                </a>
+                {disc.policySeparator}
+                <a
+                  className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
+                  href="/refund-policy"
+                >
+                  {strings.pay.refundLink}
+                </a>
+                {disc.policyOutro}
+              </p>
+            );
+          })()}
 
           {process.env.NODE_ENV !== "production" ? (
             <p className="rounded-md bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
@@ -1465,7 +1636,7 @@ function PayStep({
           >
             <HugeiconsIcon icon={Tick01Icon} size={12} strokeWidth={3} />
           </span>
-          Your document is ready!
+          {strings.pay.yourDocumentReady}
         </div>
         {preview ? (
           <PreviewFileCard preview={preview} />
@@ -1482,7 +1653,7 @@ function PayStep({
         <div className="rounded-2xl bg-white p-5">
           <div className="flex items-baseline justify-between gap-2">
             <p className="pv-heading text-[16px] font-extrabold text-[#1a1c21]">
-              Total due today
+              {strings.pay.totalDueToday}
             </p>
             <p className="pv-heading text-[22px] font-extrabold text-[#1a1c21]">
               {todayDisplay}
@@ -1492,8 +1663,7 @@ function PayStep({
 
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-[#6c6c6c]">
           <span aria-hidden>🔒</span>
-          Card details never touch our servers. Payments run through a
-          PCI-compliant partner.
+          {strings.pay.cardSecurityNote}
         </p>
       </div>
     </div>
@@ -1514,6 +1684,7 @@ function SuccessStep({
   onClose: () => void;
   onFireQueuedAction: () => void;
 }) {
+  const { user } = useUser();
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
@@ -1558,7 +1729,25 @@ function SuccessStep({
       plan: selectedPlan,
       value: intent.amountTodayMinor / 100,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
+
+    // Fire Bing UET purchase conversion with dynamic revenue value and currency
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+    if (userEmail || userPhone) {
+      void setBingUserData({ email: userEmail, phone: userPhone });
+    }
+    trackBingPurchase({
+      revenue_value: intent.amountTodayMinor / 100,
+      currency: intent.currency,
+      orderId: intent.orderId,
+    });
+  }, [
+    intent.amountTodayMinor,
+    intent.currency,
+    intent.orderId,
+    selectedPlan,
+    user,
+  ]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to
@@ -1904,6 +2093,7 @@ function PlanCards({
   annualPrice,
   annualFullPrice,
   annualAvailable,
+  strings,
 }: {
   selectedPlan: PlanId;
   onSelectPlan: (id: PlanId) => void;
@@ -1911,23 +2101,24 @@ function PlanCards({
   annualPrice: string;
   annualFullPrice: string;
   annualAvailable: boolean;
+  strings: PaywallStrings;
 }) {
   const plans = [
     {
       id: "monthly" as PlanId,
-      title: "7-day trial",
+      title: strings.sevenDayTrial,
       price: fullAccessPrice,
       priceSuffix: undefined as string | undefined,
       note: "",
-      badge: "Most popular",
+      badge: strings.mostPopular,
     },
     ...(annualAvailable
       ? [
           {
             id: "annual" as PlanId,
-            title: "Annual Plan",
+            title: strings.annualPlan,
             price: annualPrice,
-            priceSuffix: "/ month",
+            priceSuffix: strings.perMonth,
             // 2026-09-03 (PM): drop the "Billed as X / year" note from
             // the Annual Plan card. The renew total already lives on the
             // pay-step's order-summary card, so it's redundant here.
@@ -1957,7 +2148,7 @@ function PlanCards({
             {/* "Most popular" full-width banner inside the card */}
             {plan.badge ? (
               <div className="w-full bg-gradient-to-r from-[#ffcc7a] to-[#fdb45e] py-2 text-center text-[12px] font-semibold text-[#7a4d0f]">
-                🚀 {plan.badge}
+                {plan.badge}
               </div>
             ) : null}
 
@@ -1998,7 +2189,14 @@ function PlanCards({
             {selected ? (
               <div className="border-t border-[#f5f5f5] px-5 pb-5 pt-3">
                 <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
-                  {PLAN_FEATURES.map((feature) => (
+                  {[
+                    strings.features.unlimitedEdits,
+                    strings.features.unlimitedDownloads,
+                    strings.features.multiFormatConversion,
+                    strings.features.editTextImages,
+                    strings.features.organizePages,
+                    strings.features.protectPassword,
+                  ].map((feature) => (
                     <li key={feature} className="flex items-center gap-2.5">
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15">
                         ✓
@@ -2108,9 +2306,11 @@ const ACCEPTED_CARD_BRANDS = [
 function PayWithCardHeader({
   expanded,
   onToggle,
+  label,
 }: {
   expanded: boolean;
   onToggle: () => void;
+  label: string;
 }) {
   return (
     <button
@@ -2120,9 +2320,7 @@ function PayWithCardHeader({
       type="button"
       onClick={onToggle}
     >
-      <span className="text-[15px] font-semibold text-white">
-        Pay with card
-      </span>
+      <span className="text-[15px] font-semibold text-white">{label}</span>
       <span className="flex items-center gap-1.5">
         {ACCEPTED_CARD_BRANDS.map(({ Mark, label }) => (
           <span

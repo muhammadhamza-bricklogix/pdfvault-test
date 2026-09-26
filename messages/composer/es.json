@@ -1,0 +1,65 @@
+{
+  "tools": {
+    "select": "Seleccionar",
+    "editText": "Editar",
+    "signature": "Firmar",
+    "text": "Texto",
+    "draw": "Dibujar",
+    "highlight": "Resaltar",
+    "shape": "Formas",
+    "eraser": "Borrador",
+    "whiteout": "Corrector",
+    "redact": "Ocultar",
+    "image": "Imagen",
+    "watermark": "Marca de agua",
+    "backgroundImage": "Fondo",
+    "compress": "Comprimir",
+    "secure": "Proteger",
+    "merge": "Combinar",
+    "split": "Dividir",
+    "flatten": "Aplanar",
+    "extract": "Extraer",
+    "pageNumbers": "N.º de página",
+    "annotate": "Anotar",
+    "managePages": "Gestionar páginas"
+  },
+  "topChrome": {
+    "backToDashboard": "Volver al panel",
+    "home": "Inicio",
+    "zoom": "Zoom",
+    "zoomOut": "Alejar",
+    "zoomIn": "Acercar",
+    "openPdfToSave": "Abre un PDF para guardar",
+    "loginToSave": "Inicia sesión para guardar en tu biblioteca",
+    "saveToMyPdfs": "Guardar en Mis PDF",
+    "save": "Guardar",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "search": "Buscar en el PDF",
+    "print": "Imprimir",
+    "share": "Compartir mediante enlace",
+    "download": "Finalizar y Descargar",
+    "convertToWord": "Convertir a Word"
+  },
+  "saveStatus": {
+    "saving": "Guardando tus cambios",
+    "saved": "Guardado en Mis PDF",
+    "unsaved": "Cambios sin guardar"
+  },
+  "menu": {
+    "editorMenu": "Menú del editor",
+    "createNew": "Crear nuevo",
+    "openFile": "Abrir archivo",
+    "myPdfs": "Mis PDF",
+    "findReplace": "Buscar y reemplazar",
+    "compressPdf": "Comprimir PDF",
+    "splitPdf": "Dividir PDF",
+    "extractImages": "Extraer imágenes",
+    "flattenPdf": "Aplanar PDF",
+    "share": "Compartir mediante enlace",
+    "versionHistory": "Historial de versiones"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "Este PDF no está protegido con contraseña: no hay nada que quitar."
+  }
+}

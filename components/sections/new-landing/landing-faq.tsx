@@ -59,7 +59,7 @@ const GROUPS: FaqGroup[] = [
             You can start with a 7-day trial for $0.99, which gives you full
             access to premium features including file downloads. If you
             don&apos;t cancel before the trial ends, it automatically continues
-            as a monthly subscription at $25 per month.
+            as a monthly subscription at $39.99 per month.
           </>
         ),
       },
@@ -67,7 +67,7 @@ const GROUPS: FaqGroup[] = [
         q: "When will I be charged?",
         a: (
           <>
-            You&apos;re charged $0.99 when you start your trial, and then $25
+            You&apos;re charged $0.99 when you start your trial, and then $39.99
             every month after your trial ends, unless you cancel before your
             trial expires or before the next renewal date.
           </>
@@ -136,7 +136,7 @@ const GROUPS: FaqGroup[] = [
         ),
       },
       {
-        q: "Can I get a refund on the $0.99 trial charge or a $25 renewal?",
+        q: "Can I get a refund on the $0.99 trial charge or a $39.99 renewal?",
         a: (
           <>
             Purchases are generally non-refundable, but we&apos;ll review

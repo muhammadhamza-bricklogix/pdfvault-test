@@ -250,12 +250,17 @@ Beyond `pdf-editor-architecture`, this repo ships project-specific skills at `.c
 
 | Skill | Load when |
 |---|---|
+| `problem-triage` | **User reports ANY problem, bug, or unexpected behavior. Default entrypoint for fix requests. Enforces analyze → propose → wait-for-approval → act.** |
 | `pdf-editor-architecture` | Editing anything under `lib/client/pdf-editor/**`, `lib/client/hooks/pdf-editor/**`, `components/sections/pdf-editor/**` |
 | `pdf-composer-render-fix` | User reports "edits missing from downloaded PDF", "drawings not in merged PDF", or any variant of "save works but download is unedited" — covers the 2026-09-07 Fabric-v7 `loadFromJSON` blank-PNG bug + live-canvas raster fix |
 | `auth-flow-guardian` | Editing any file in the 21-item "Auth + paywall + export flow" chain (see section above) |
+| `analytics-check` | User reports GA / GTM / Ads / Clarity / CookieYes tracking problems — codifies the `app/layout.tsx` analytics sweep + Consent Mode v2 wiring |
+| `railway-triage` | User mentions backend / Railway / production health — codifies the services → status → logs → metrics diagnostic sweep via Railway MCP |
 | `regression-forensics` | User reports a bug that used to work, mentions a fix reverting, or says "broken again" |
 | `pre-push-guardian` | About to push, open a PR, merge, or claim work is ready to ship |
 | `memory-snapshotter` | Wrapping up a session, PreCompact hook fires, or a new preference / decision / root cause emerges worth persisting |
+
+**Skill stacking pattern (added 2026-09-22):** `problem-triage` is the parent flow — load it first when the user reports a problem, then it directs you to load the surface-specific companion (`analytics-check`, `railway-triage`, `auth-flow-guardian`, `pdf-editor-architecture`) in its Phase 2. If the symptom is a regression, ALSO stack `regression-forensics`. Never skip straight to Edit/Write; the workflow gates approval explicitly. This kills the "user re-explains the same problem every session" pattern.
 
 A `PreCompact` and `SessionEnd` hook injects a reminder to invoke `memory-snapshotter` before context is lost. The hook is at `.claude/hooks/remind-memory-snapshot.cjs`.
 

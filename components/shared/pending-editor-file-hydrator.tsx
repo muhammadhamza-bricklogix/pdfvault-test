@@ -16,6 +16,7 @@ import {
   TOUR_ENDED_EVENT,
   willTourAutoLaunch,
 } from "@/lib/client/tour/use-product-tour";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -106,6 +107,19 @@ export function PendingEditorFileHydrator() {
   const exportFormat = searchParams.get("export");
   const docId = searchParams.get("id");
   const isFreshEntry = searchParams.get("fresh") === "1";
+  // Fallback signal for the welcome-email CTA. Customer.io's click-
+  // tracker sometimes strips non-UTM query params on redirect, so a
+  // link generated as `?id=<uuid>&tool=export&utm_source=customer.io`
+  // can land as `?id=<uuid>&utm_source=customer.io` — the intended
+  // `&tool=export` param is lost. UTM params always survive, so
+  // detecting the "clicked from welcome email" state via those (which
+  // CIO always attaches) is the reliable signal. When present on a
+  // `/pdf-composer?id=<uuid>` load, treat it like `?tool=export` and
+  // open the ExportFormatModal.
+  const utmSource = searchParams.get("utm_source");
+  const utmMedium = searchParams.get("utm_medium");
+  const cameFromWelcomeEmail =
+    utmSource === "customer.io" && utmMedium === "email_action";
   // Flow 1 (spec 2026-09-09) post-signup landing: guest dropped a
   // non-PDF on /convert/*, silent-signed-up, was routed to
   // `/pdf-composer?convert-pending=1`. `<FlowOneConvertPendingOverlay/>`
@@ -216,11 +230,24 @@ export function PendingEditorFileHydrator() {
     // within tens of ms of Step 1b's decision.
     const hasSameSessionFile = Boolean(usePdfEditorStore.getState().file);
 
+    // Preserve URL locale in the finalize redirect so returning from
+    // signup/sign-in keeps the user on `/fr/pdf-composer` instead of
+    // dropping to bare `/pdf-composer` (English URL). Full-page nav
+    // via `window.location.assign` here means `LangPrefHonor` can't
+    // rescue post-return because composer paths are in
+    // `SKIP_REDIRECT_PREFIXES` (reload-race per #115 / #117).
+    const localePrefix = (() => {
+      if (typeof window === "undefined") return "";
+      const parsed = parseLocalePrefix(window.location.pathname);
+
+      return parsed ? `/${parsed.locale}` : "";
+    })();
+
     if (tool && !docId && isSignedIn && !hasSameSessionFile && isFreshEntry) {
       logger.event(EVENTS.HYDRATOR_SIGNED_IN_REDIRECT_TO_PICKER, "info", {
         tool,
       });
-      const returnTo = `${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
+      const returnTo = `${localePrefix}${ROUTES.APP.DASHBOARD}?openPicker=${encodeURIComponent(tool)}`;
 
       window.location.assign(returnTo);
 
@@ -233,7 +260,7 @@ export function PendingEditorFileHydrator() {
       });
       // Preserve the tool slug in the return URL so we land back in the
       // same launch flow after sign-in.
-      const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
+      const returnTo = `${localePrefix}${ROUTES.TOOLS.PDF_EDITOR}?tool=${encodeURIComponent(tool)}`;
 
       toast.info({
         title: "Sign in to use this tool",
@@ -530,11 +557,18 @@ export function PendingEditorFileHydrator() {
   useEffect(() => {
     if (launchedRef.current) return;
     if (!currentFile) return;
-    if (!tool && !exportFormat) return;
+    // Include the UTM-derived welcome-email signal as a valid
+    // auto-launch trigger — see `cameFromWelcomeEmail` docstring for
+    // why `?tool=export` alone isn't reliable across CIO's tracker.
+    if (!tool && !exportFormat && !cameFromWelcomeEmail) return;
     if (!authLoaded) return;
 
     launchedRef.current = true;
-    logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", { tool, exportFormat });
+    logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
+      tool,
+      exportFormat,
+      cameFromWelcomeEmail,
+    });
 
     // Snapshot the pending-compress flag NOW, before the 400 ms
     // setTimeout below. `CompressModal`'s own auto-fire effect races us:
@@ -659,6 +693,18 @@ export function PendingEditorFileHydrator() {
             case "flatten":
               window.dispatchEvent(new CustomEvent("editor:open-flatten"));
               break;
+            case "export":
+              // Welcome-email button lands users here — opens
+              // ExportFormatModal so the user picks their format
+              // (PDF / DOCX / JPG / etc.) before the paywall /
+              // download decision fires. Uses a store flag rather
+              // than a CustomEvent because chrome hosts may not yet
+              // have registered their event listener at the moment
+              // this setTimeout fires (race on initial page load).
+              // Chrome hosts subscribe to `pendingOpenExportModal`
+              // and open their local modal state whenever it flips.
+              usePdfEditorStore.getState().setPendingOpenExportModal(true);
+              break;
             default:
               logger.warn(`unknown auto-launch tool: ${tool}`);
           }
@@ -669,6 +715,15 @@ export function PendingEditorFileHydrator() {
               detail: { format: exportFormat },
             }),
           );
+        }
+        // Welcome-email fallback signal — see `cameFromWelcomeEmail`
+        // above. Fires only when neither the explicit `tool` case nor
+        // `exportFormat` case handled the arrival, so we don't double-
+        // set the flag when a URL happens to carry both `?tool=export`
+        // AND the CIO UTM params. Same store flag path as the tool
+        // case above — see rationale in the store field docstring.
+        if (cameFromWelcomeEmail && tool !== "export" && !exportFormat) {
+          usePdfEditorStore.getState().setPendingOpenExportModal(true);
         }
 
         // Strip the one-shot auto-launch params from the URL so a browser
@@ -691,6 +746,24 @@ export function PendingEditorFileHydrator() {
         if (cleaned.has("fresh")) {
           cleaned.delete("fresh");
           mutated = true;
+        }
+        // UTM params from the welcome-email click. Strip them after
+        // the auto-launch fires so a refresh doesn't re-open the
+        // ExportFormatModal — same reason we strip `?tool=` and
+        // `?export=`. Only strip when they matched the welcome-email
+        // signal we acted on; otherwise leave them for GA / analytics.
+        if (cameFromWelcomeEmail) {
+          for (const utmKey of [
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_content",
+          ]) {
+            if (cleaned.has(utmKey)) {
+              cleaned.delete(utmKey);
+              mutated = true;
+            }
+          }
         }
         if (mutated) {
           const q = cleaned.toString();

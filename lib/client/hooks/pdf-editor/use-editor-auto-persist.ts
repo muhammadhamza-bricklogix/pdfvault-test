@@ -2,6 +2,7 @@
 
 import type { Canvas as FabricCanvas } from "fabric";
 
+import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
@@ -17,6 +18,8 @@ import { toast } from "@/lib/shared/utils/toast";
 export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Live Clerk value — usePdfEditorStore's copy can lag a render behind.
+  const { isSignedIn: isSignedInLive } = useAuth();
   const pendingCloudSaveAfterReload = usePdfEditorStore(
     (s) => s.pendingCloudSaveAfterReload,
   );
@@ -59,6 +62,8 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
         // page rearrange on a re-uploaded doc silently creates a
         // duplicate row in My PDFs (QA 2026-09-06).
         checkFilenameDuplicate: true,
+        // Live value, not the store snapshot — see isSignedInLive above.
+        isSignedIn: Boolean(isSignedInLive),
       });
 
       if (!result.ok) {
@@ -119,6 +124,7 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
     applyPostSaveReset,
     clearPendingCloudSaveAfterReload,
     file,
+    isSignedInLive,
     pdfDocument,
     pendingCloudSaveAfterReload,
     router,

@@ -11,6 +11,7 @@ import {
   DEFAULT_LOCALE,
   type Locale,
   parseLocalePrefix,
+  RTL_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
 type Entry = { code: Locale; label: string; short: string };
@@ -128,6 +129,7 @@ export function LandingLanguageSwitcher({
 
   const current =
     LANGUAGES.find((lang) => lang.code === activeLocale) ?? LANGUAGES[0];
+  const isRtl = RTL_LOCALES.includes(activeLocale);
 
   const select = (code: Locale) => {
     setOpen(false);
@@ -167,7 +169,9 @@ export function LandingLanguageSwitcher({
       {open ? (
         <div
           className={`absolute top-[calc(100%+8px)] z-30 min-w-[160px] rounded-xl border border-[var(--pv-card-border)] bg-white p-1.5 shadow-lg ${
-            variant === "mobile" ? "left-0" : "right-0"
+            // left-0/right-0 are physical, not logical — flip for RTL so
+            // the mobile dropdown doesn't clip off-screen.
+            variant === "mobile" ? (isRtl ? "right-0" : "left-0") : "right-0"
           }`}
           role="menu"
         >

@@ -42,6 +42,7 @@ import {
 import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-source-bytes";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { ComposerI18nProvider } from "@/lib/client/i18n/composer-i18n-provider";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
@@ -395,10 +396,12 @@ function EditorLayout() {
             </div>
           </div>
         </div>
-        <BottomDock
-          fabricCanvas={fabricCanvas}
-          onReorderPages={handleReorderPages}
-        />
+        {isW9Layout ? null : (
+          <BottomDock
+            fabricCanvas={fabricCanvas}
+            onReorderPages={handleReorderPages}
+          />
+        )}
         {managePagesModal}
         {findReplaceModal}
       </>
@@ -644,29 +647,33 @@ export function PdfEditorShell() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div
-        aria-hidden={blurUnderlyingContent || undefined}
-        className={`flex h-full flex-col transition-[filter] duration-200 ${
-          blurUnderlyingContent ? "pointer-events-none select-none blur-lg" : ""
-        }`}
-      >
-        {content}
+    <ComposerI18nProvider>
+      <div className="flex h-full flex-col">
+        <div
+          aria-hidden={blurUnderlyingContent || undefined}
+          className={`flex h-full flex-col transition-[filter] duration-200 ${
+            blurUnderlyingContent
+              ? "pointer-events-none select-none blur-lg"
+              : ""
+          }`}
+        >
+          {content}
+        </div>
+        <CreatePdfModal
+          key={createPdfModalKey}
+          isOpen={isCreatePdfModalOpen}
+          onClose={() => setIsCreatePdfModalOpen(false)}
+        />
+        <CompressModal />
+        <PasswordModal />
+        <ShareModal />
+        <VersionHistoryModalHost />
+        <MergeModalHost />
+        <PageNumbersModal />
+        <FormFieldsModal />
+        <ReloadConfirmModal />
       </div>
-      <CreatePdfModal
-        key={createPdfModalKey}
-        isOpen={isCreatePdfModalOpen}
-        onClose={() => setIsCreatePdfModalOpen(false)}
-      />
-      <CompressModal />
-      <PasswordModal />
-      <ShareModal />
-      <VersionHistoryModalHost />
-      <MergeModalHost />
-      <PageNumbersModal />
-      <FormFieldsModal />
-      <ReloadConfirmModal />
-    </div>
+    </ComposerI18nProvider>
   );
 }
 

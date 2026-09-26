@@ -12,36 +12,7 @@ function safeDownloadFilename(name: string): string {
   return trimmed || "document.pdf";
 }
 
-/**
- * Fetches a fresh presigned URL and saves the file locally.
- * Uses a blob + object URL so `download` works cross-origin (opening the URL in a new tab often ignores `download` and previews the PDF instead).
- *
- * Gates on entitlement for EVERY document — native uploads and converted
- * PDFs alike require an active subscription (QA 2026-09-14 revised item
- * #17, hardened 2026-09-15). Every Download click defers to
- * `requestPaywall`, which reads the LIVE `useSubscriptionQuery` cache
- * inside the bus handler (`use-paywall.ts`) — entitled users are
- * short-circuited to `"success"` there with no visible modal flash;
- * non-entitled users see the paywall. Going through the bus (instead
- * of pre-checking via the module-level `entitledSnapshot`) closes the
- * race where the snapshot's mirror `useEffect` hasn't landed yet after
- * a cancel/downgrade — the bus reads React state, so it's always as
- * fresh as the last query resolution. Cancelled paywalls return
- * silently so callers can distinguish success (no throw) from a
- * dismissed gate.
- */
-export async function triggerDocumentDownload(doc: Document): Promise<void> {
-  try {
-    const outcome = await requestPaywall(undefined, { hidePreview: true });
-
-    if (outcome !== "success") return;
-  } catch (err) {
-    if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
-      return;
-    }
-    throw err;
-  }
-
+async function streamCloudDocument(doc: Document): Promise<void> {
   const { url } = await documentsService.getDocument(doc.id);
   const filename = safeDownloadFilename(doc.filename);
   const res = await fetch(url, {
@@ -68,4 +39,35 @@ export async function triggerDocumentDownload(doc: Document): Promise<void> {
   window.setTimeout(() => {
     URL.revokeObjectURL(objectUrl);
   }, 2000);
+}
+
+/**
+ * Downloads a document from the dashboard. Paywall gates entitlement
+ * for every doc (CLAUDE.md auth-chain item #17); cancelled paywall
+ * returns silently.
+ *
+ * TRADEOFF (2026-09-21, per user request): streams the cloud PDF
+ * directly instead of routing through the editor. The Save path strips
+ * overlay-only edits (shapes / drawings / highlights / annotations /
+ * signatures / page numbers / watermark / bg image) from cloud bytes
+ * via `stripBakedOverlaysForSave` — those overlays live in
+ * `editorState` and only bake at export time. Downloads therefore ship
+ * baked `editModeText` mods but MISS every other overlay. The prior
+ * router-push flow (P0 fix 2026-09-17) re-hydrated `editorState` in
+ * the editor and auto-exported to bake overlays; user chose direct
+ * download over the editor round-trip.
+ */
+export async function triggerDocumentDownload(doc: Document): Promise<void> {
+  try {
+    const outcome = await requestPaywall(undefined, { hidePreview: true });
+
+    if (outcome !== "success") return;
+  } catch (err) {
+    if ((err as { name?: string })?.name === PAYWALL_CANCELLED_ERR_NAME) {
+      return;
+    }
+    throw err;
+  }
+
+  await streamCloudDocument(doc);
 }

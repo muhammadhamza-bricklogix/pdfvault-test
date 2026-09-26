@@ -77,7 +77,7 @@ export function SubscriptionTermsContent() {
       >
         <p>
           After your trial, your subscription renews automatically at{" "}
-          <strong>US$25 per month</strong> until you cancel. Each renewal
+          <strong>US$39.99 per month</strong> until you cancel. Each renewal
           charges your payment method for another 30-day period. You will
           continue to have access to all subscription features for as long as
           your subscription remains active. The renewal rate will be no more
@@ -95,8 +95,8 @@ export function SubscriptionTermsContent() {
         <p>
           Payment is charged, via our payment processor Adyen, to the payment
           method you submit at the time of purchase — both for the initial
-          US$0.99 trial charge and for each subsequent US$25 monthly renewal. By
-          starting a trial or subscription, you authorize us to charge the
+          US$0.99 trial charge and for each subsequent US$39.99 monthly renewal.
+          By starting a trial or subscription, you authorize us to charge the
           applicable fees to that payment method on an ongoing basis until you
           cancel. If a renewal payment fails, a retry mechanism applies as
           described in Section 7.

@@ -4,13 +4,16 @@ import type { PvFileRow, PvFileType } from "./pv-mock-my-pdfs";
 
 import {
   ArrowDown01Icon,
+  ArrowRight01Icon,
   Delete02Icon,
   Download01Icon,
-  Edit02Icon,
+  FileEditIcon,
+  MoreHorizontalIcon,
   Time04Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Button, Dropdown, Label } from "@heroui/react";
 import { useMemo, useState } from "react";
 
 interface PvFileTableProps {
@@ -131,73 +134,109 @@ function getSortValue(row: PvFileRow, key: SortKey): string | number {
 interface RowActionsProps {
   row: PvFileRow;
   disabled?: boolean;
+  onOpen?: (row: PvFileRow) => void;
   onDownload?: (row: PvFileRow) => void;
   onRename?: (row: PvFileRow) => void;
   onHistory?: (row: PvFileRow) => void;
   onDelete?: (row: PvFileRow) => void;
 }
 
+/**
+ * Row action cluster — a single prominent Download CTA plus a 3-dot
+ * overflow menu that hides Open / Rename / Version history / Delete.
+ *
+ * Design intent (row-level review 2026-09-18):
+ *  • Download is the reward action, so it stays visible on every row
+ *    as a filled brand-red pill.
+ *  • The pencil icon on its own read as "Edit PDF" to users even
+ *    though it renamed the file — moving Rename inside the labeled
+ *    overflow menu (with the `FileEditIcon` glyph AND the text
+ *    "Rename") disambiguates it, while Open in the same menu is what
+ *    routes to the editor for actual editing.
+ *  • Delete + History are safer + rarer, so they don't need their own
+ *    row-level icon slot.
+ *
+ * The W-9 library filename is a system doc — the form flow upserts
+ * into it forever, so Rename + Delete are hidden per prior QA
+ * (2026-09-01). Download + Open + Version history still make sense.
+ */
 function RowActions({
   row,
   disabled = false,
+  onOpen,
   onDownload,
   onRename,
   onHistory,
   onDelete,
 }: RowActionsProps) {
-  // 2026-09-01 (QA): "IRS Form W-9.pdf" is a system doc — the W-9
-  // flow upserts into it forever, so delete + rename must be
-  // suppressed. Download / History still make sense.
   const isProtectedSystemDoc = row.name.toLowerCase() === "irs form w-9.pdf";
-  const actions: {
-    label: string;
-    icon: typeof Download01Icon;
-    handler?: () => void;
-    danger?: boolean;
-  }[] = [
-    {
-      label: "Download",
-      icon: Download01Icon,
-      handler: () => onDownload?.(row),
-    },
-    ...(isProtectedSystemDoc
-      ? []
-      : [
-          {
-            label: "Rename",
-            icon: Edit02Icon,
-            handler: () => onRename?.(row),
-          },
-        ]),
-    { label: "History", icon: Time04Icon, handler: () => onHistory?.(row) },
-    ...(isProtectedSystemDoc
-      ? []
-      : [
-          {
-            label: "Delete",
-            icon: Delete02Icon,
-            handler: () => onDelete?.(row),
-            danger: true,
-          },
-        ]),
-  ];
 
   return (
-    <div className="flex items-center justify-center gap-1">
-      {actions.map(({ label, icon, handler, danger }) => (
-        <button
-          key={label}
-          aria-label={`${label} ${row.name}`}
-          className={`flex size-8 items-center justify-center rounded-md text-[var(--pv-text-muted)] transition-colors hover:bg-[var(--pv-nav-active)] hover:text-[var(--pv-text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pv-brand-red)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--pv-text-muted)] ${
-            danger ? "hover:!text-[var(--pv-file-pdf)]" : ""
-          }`}
-          disabled={disabled}
-          type="button"
-          onClick={handler}
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        aria-label={`Download ${row.name}`}
+        className="h-8 shrink-0 gap-1.5 rounded-full px-3 text-[13px] font-semibold"
+        isDisabled={disabled}
+        size="sm"
+        variant="primary"
+        onPress={() => onDownload?.(row)}
+      >
+        <HugeiconsIcon icon={Download01Icon} size={14} />
+        <span className="hidden sm:inline">Download</span>
+      </Button>
+
+      <Dropdown>
+        <Button
+          aria-label={`More actions for ${row.name}`}
+          className="!h-8 !w-8 !min-w-0 shrink-0 rounded-full text-default-600"
+          isDisabled={disabled}
+          size="sm"
+          variant="ghost"
         >
-          <HugeiconsIcon icon={icon} size={16} />
-        </button>
-      ))}
+          <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
+        </Button>
+        <Dropdown.Popover className="min-w-[180px]" placement="bottom end">
+          <Dropdown.Menu aria-label={`Actions for ${row.name}`}>
+            <Dropdown.Item
+              id="open"
+              textValue="Open"
+              onAction={() => onOpen?.(row)}
+            >
+              <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+              <Label>Open</Label>
+            </Dropdown.Item>
+            <Dropdown.Item
+              id="history"
+              textValue="Version history"
+              onAction={() => onHistory?.(row)}
+            >
+              <HugeiconsIcon icon={Time04Icon} size={16} />
+              <Label>Version history</Label>
+            </Dropdown.Item>
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item
+                id="rename"
+                textValue="Rename"
+                onAction={() => onRename?.(row)}
+              >
+                <HugeiconsIcon icon={FileEditIcon} size={16} />
+                <Label>Rename</Label>
+              </Dropdown.Item>
+            )}
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item
+                className="text-danger"
+                id="delete"
+                textValue="Delete"
+                onAction={() => onDelete?.(row)}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} />
+                <Label>Delete</Label>
+              </Dropdown.Item>
+            )}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown>
     </div>
   );
 }
@@ -261,7 +300,17 @@ export function PvFileTable({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    // Bottom padding safety zone — the row-action Dropdown.Popover opens
+    // beneath its trigger by default. On the LAST row of a fully-scrolled
+    // list the trigger sits flush against the bottom of the scroll
+    // container, so the popover either got clipped by the browser chrome
+    // (user report 2026-09-18) or React Aria's flip logic didn't trigger
+    // because the shared scroll container swallowed the overflow. The
+    // extra room here guarantees the popover always has vertical space
+    // to render inside the viewport, and — with the popover open — the
+    // scroll container isn't jammed against the browser bottom, so the
+    // page can still be scrolled.
+    <div className="flex flex-col gap-2 pb-32 md:pb-40">
       {selectedRows.length > 0 ? (
         <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--pv-hairline)] bg-[var(--pv-fill-subtle)] px-4 py-2">
           <span className="text-[13px] font-medium text-[var(--pv-text-strong)]">
@@ -346,7 +395,7 @@ export function PvFileTable({
                 />
               </th>
               <th
-                className="px-4 py-3 text-center text-[13px] font-medium text-[var(--pv-text-body)]"
+                className="px-4 py-3 text-right text-[13px] font-medium text-[var(--pv-text-body)]"
                 scope="col"
               >
                 Actions
@@ -495,7 +544,7 @@ export function PvFileTable({
                   >
                     {row.fileSize}
                   </td>
-                  <td className="px-4 py-3 text-center align-middle">
+                  <td className="px-4 py-3 text-right align-middle">
                     {isPending ? (
                       <span className="text-[12px] italic text-[var(--pv-text-muted)]">
                         {row.pending?.status === "error"
@@ -509,6 +558,7 @@ export function PvFileTable({
                         onDelete={onDelete}
                         onDownload={onDownload}
                         onHistory={onHistory}
+                        onOpen={onOpen}
                         onRename={onRename}
                       />
                     )}

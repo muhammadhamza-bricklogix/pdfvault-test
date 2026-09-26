@@ -5,13 +5,12 @@ import type { ComponentProps } from "react";
 
 import {
   ArrowLeft01Icon,
-  Tick01Icon,
   BackgroundIcon,
-  PrinterIcon,
   Comment01Icon,
   Search01Icon,
   Copy01Icon,
   Cursor01Icon,
+  Doc01Icon,
   EraserIcon,
   FileExportIcon,
   FileMinusIcon,
@@ -25,6 +24,7 @@ import {
   PaintBrush01Icon,
   PaintBucketIcon,
   PencilEdit01Icon,
+  PrinterIcon,
   RedoIcon,
   SearchAddIcon,
   SearchMinusIcon,
@@ -34,6 +34,7 @@ import {
   Stamp01Icon,
   TextFontIcon,
   TextNumberSignIcon,
+  Tick01Icon,
   UndoIcon,
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
@@ -41,7 +42,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
@@ -54,7 +56,10 @@ import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
+import {
+  parseLocalePrefix,
+  stripLocalePrefix,
+} from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -75,6 +80,33 @@ type IconGlyph = ComponentProps<typeof HugeiconsIcon>["icon"];
 type ToolEntry =
   | { kind: "mode"; id: ActiveTool; label: string; icon: IconGlyph }
   | { kind: "action"; id: string; label: string; icon: IconGlyph };
+
+// Maps tool id → translation key in `messages/composer/*.json` under
+// `tools.*`. Kept in sync with the ToolEntry definitions below.
+export const TOOL_LABEL_KEYS: Record<string, string> = {
+  select: "select",
+  editText: "editText",
+  signature: "signature",
+  text: "text",
+  draw: "draw",
+  highlight: "highlight",
+  shape: "shape",
+  eraser: "eraser",
+  whiteout: "whiteout",
+  redact: "redact",
+  image: "image",
+  watermark: "watermark",
+  backgroundImage: "backgroundImage",
+  compress: "compress",
+  secure: "secure",
+  merge: "merge",
+  split: "split",
+  flatten: "flatten",
+  extract: "extract",
+  "page-numbers": "pageNumbers",
+  annotate: "annotate",
+  "manage-pages": "managePages",
+};
 
 const GROUP_A: ToolEntry[] = [
   { kind: "mode", id: "select", label: "Select", icon: Cursor01Icon },
@@ -118,9 +150,10 @@ const GROUP_C: ToolEntry[] = [
 
 // Manage Pages — kept in its own pill group so the rotate/reorder/delete flow
 // reads as a distinct document-structure action, not another single-page tool.
-// Runs a saveBeforeAction guard locally (same guard the mobile BottomDock and
-// legacy EditorToolBar use) so in-progress edits are flushed before the modal
-// opens.
+// For signed-in users, runs a saveBeforeAction guard locally (same guard the
+// mobile BottomDock and legacy EditorToolBar use) so in-progress edits are
+// flushed before the modal opens. Guests open Manage Pages locally first; the
+// auth/export flow owns persistence later.
 const GROUP_MANAGE: ToolEntry[] = [
   {
     kind: "action",
@@ -226,6 +259,7 @@ function ZoomPill() {
   const zoom = usePdfEditorStore((s) => s.zoom);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
   const file = usePdfEditorStore((s) => s.file);
+  const t = useTranslations("topChrome");
 
   if (!file) return null;
 
@@ -235,13 +269,13 @@ function ZoomPill() {
 
   return (
     <div
-      aria-label="Zoom"
+      aria-label={t("zoom")}
       className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border border-default-200 bg-white px-1 py-0.5"
       role="group"
     >
       <Tooltip delay={300}>
         <button
-          aria-label="Zoom out"
+          aria-label={t("zoomOut")}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-default-700 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!canZoomOut}
           type="button"
@@ -252,7 +286,7 @@ function ZoomPill() {
           <HugeiconsIcon icon={SearchMinusIcon} size={14} />
         </button>
         <Tooltip.Content>
-          <p>Zoom out</p>
+          <p>{t("zoomOut")}</p>
         </Tooltip.Content>
       </Tooltip>
 
@@ -265,7 +299,7 @@ function ZoomPill() {
 
       <Tooltip delay={300}>
         <button
-          aria-label="Zoom in"
+          aria-label={t("zoomIn")}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-default-700 transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!canZoomIn}
           type="button"
@@ -276,7 +310,7 @@ function ZoomPill() {
           <HugeiconsIcon icon={SearchAddIcon} size={14} />
         </button>
         <Tooltip.Content>
-          <p>Zoom in</p>
+          <p>{t("zoomIn")}</p>
         </Tooltip.Content>
       </Tooltip>
     </div>
@@ -289,6 +323,8 @@ function ZoomPill() {
 
 function TopAppBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const t = useTranslations("topChrome");
   // Explicit Save affordance for the W-9 route only. The generic
   // composer's Save button is hidden per product decision, but on
   // `/w-9-form` there's no other in-flow save trigger — the user's
@@ -302,6 +338,7 @@ function TopAppBar() {
   // languages other than English (QA 2026-09-06).
   const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
+  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
@@ -332,6 +369,7 @@ function TopAppBar() {
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
+  const [isConvertingToWord, setIsConvertingToWord] = useState(false);
 
   // QA 2026-09-07: Done click now saves the current edits to cloud FIRST,
   // then opens the export modal. User was reporting that clicking Done →
@@ -370,6 +408,67 @@ function TopAppBar() {
     );
   };
 
+  const convertToWordAfterSave = () => {
+    if (!file || showW9Save) return;
+
+    const dispatchWordExport = () => {
+      window.dispatchEvent(
+        new CustomEvent("editor:export", {
+          detail: { format: "docx" },
+        }),
+      );
+    };
+
+    if (!isSignedIn) {
+      dispatchWordExport();
+
+      return;
+    }
+
+    setIsConvertingToWord(true);
+    const toastKey = toast.loading({
+      title: "Saving your edits",
+      description: "Hold on — we'll start the Word conversion once saved.",
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("editor:save-before-action", {
+        detail: {
+          force: true,
+          skipReset: true,
+          onComplete: (result: { ok: boolean; reason?: string }) => {
+            toast.close(toastKey);
+            setIsConvertingToWord(false);
+
+            if (result.ok || result.reason === "not-signed-in") {
+              dispatchWordExport();
+            }
+          },
+        },
+      }),
+    );
+  };
+
+  // Auto-open the ExportFormatModal when the welcome-email arrival
+  // flag flips. Hydrator sets `pendingOpenExportModal` when it sees
+  // `?tool=export` or the CIO UTM combo on `/pdf-composer`; the
+  // modal below reads it inline via `isOpen={... || pendingOpenExportModal}`
+  // so the open state is DERIVED rather than mirrored into local state
+  // by an effect. Effect-based mirroring tripped React 19's
+  // `react-hooks/set-state-in-effect` rule (calling `setState`
+  // synchronously in a `useEffect` body is a build error).
+  //
+  // Close handler clears both the local state (in case the user
+  // manually opened it via the Done button) and the pending flag (in
+  // case this open was auto-triggered by the hydrator). Safe to clear
+  // both on every close — no-op if the flag was already false.
+  const pendingOpenExportModal = usePdfEditorStore(
+    (s) => s.pendingOpenExportModal,
+  );
+  const setPendingOpenExportModal = usePdfEditorStore(
+    (s) => s.setPendingOpenExportModal,
+  );
+
   // Display name strips `.pdf` because the extension is redundant in
   // an editor that only handles PDFs — commit re-appends it before
   // saving. Input state is fully owned by <EditableFilenameField/>.
@@ -383,46 +482,12 @@ function TopAppBar() {
     const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
     if (showW9Save) {
-      // W-9 route: save the partial form THROUGH the finalize path
-      // (`W9FinalizeIntercept.saveAndContinueHandler` — falls back to
-      // a client-side stamp so partial forms still land in My PDFs).
-      // Only navigate when the save resolves `ok`; failures show a
-      // toast and keep the user on the form so nothing is lost. Per
-      // product 2026-09-01: "hit save first, don't go back until the
-      // form is saved."
-      const savingToast = toast.loading({
-        title: "Saving your W-9",
-        description: "Hold on — you'll go back once your progress is saved.",
-      });
-
-      window.dispatchEvent(
-        new CustomEvent("editor:w9-save-and-continue", {
-          detail: {
-            onComplete: (result: { ok: boolean; reason?: string }) => {
-              toast.close(savingToast);
-
-              if (!result.ok) {
-                toast.error({
-                  title: "Couldn't save your W-9",
-                  description:
-                    "Your progress is still on this page — try again in a moment.",
-                });
-
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent("editor:navigate-after-save", {
-                  detail: {
-                    url: targetUrl,
-                    clearFileAfter: true,
-                  },
-                }),
-              );
-            },
-          },
-        }),
-      );
+      // W-9 Back is plain navigation. Do not dispatch
+      // `editor:w9-save-and-continue` here because that path finalizes the
+      // W-9 and can open the paywall; payment stays tied to explicit
+      // Save/Done/Download actions.
+      clearFile();
+      router.push(targetUrl);
 
       return;
     }
@@ -444,11 +509,10 @@ function TopAppBar() {
   };
 
   // QA 2026-09-07: logo click must save current edits BEFORE navigating
-  // home. Same shape as the back button (`handleBack`) — dispatch the
-  // navigate-after-save event (or the W-9 save-and-continue variant on
-  // /w-9-form) and cancel the Link's default navigation. Signed-out
-  // users have no cloud doc to persist, so let the Link navigate
-  // normally (returns `undefined` → `<Link>` proceeds).
+  // home. Same shape as the non-W-9 back button (`handleBack`) — dispatch
+  // the navigate-after-save event and cancel the Link's default navigation.
+  // W-9 intentionally bypasses finalize/save here; logo navigation must not
+  // open the paywall.
   const handleLogoClick = (
     e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
   ) => {
@@ -464,36 +528,11 @@ function TopAppBar() {
     const targetUrl = ROUTES.PUBLIC.HOME;
 
     if (showW9Save) {
-      const savingToast = toast.loading({
-        title: "Saving your W-9",
-        description: "Hold on — you'll go home once your progress is saved.",
-      });
-
-      window.dispatchEvent(
-        new CustomEvent("editor:w9-save-and-continue", {
-          detail: {
-            onComplete: (result: { ok: boolean; reason?: string }) => {
-              toast.close(savingToast);
-
-              if (!result.ok) {
-                toast.error({
-                  title: "Couldn't save your W-9",
-                  description:
-                    "Your progress is still on this page — try again in a moment.",
-                });
-
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent("editor:navigate-after-save", {
-                  detail: { url: targetUrl, clearFileAfter: true },
-                }),
-              );
-            },
-          },
-        }),
-      );
+      // W-9 Logo is plain navigation, matching the Back button. Do not
+      // dispatch `editor:w9-save-and-continue` because that finalizes the
+      // form and can open the paywall.
+      clearFile();
+      router.push(targetUrl);
 
       return;
     }
@@ -569,7 +608,7 @@ function TopAppBar() {
       <div className="flex min-w-0 items-center gap-3">
         <Tooltip delay={300}>
           <button
-            aria-label="Back to dashboard"
+            aria-label={t("backToDashboard")}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
             type="button"
             onClick={handleBack}
@@ -577,7 +616,7 @@ function TopAppBar() {
             <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
           </button>
           <Tooltip.Content>
-            <p>Back to dashboard</p>
+            <p>{t("backToDashboard")}</p>
           </Tooltip.Content>
         </Tooltip>
 
@@ -596,7 +635,7 @@ function TopAppBar() {
         {showW9Save ? null : <HamburgerMenu />}
 
         <Link
-          aria-label="Home"
+          aria-label={t("home")}
           className="flex shrink-0 items-center gap-2"
           href={ROUTES.PUBLIC.HOME}
           onClick={handleLogoClick}
@@ -643,7 +682,7 @@ function TopAppBar() {
         {showW9Save && (
           <Tooltip delay={300}>
             <button
-              aria-label="Save"
+              aria-label={t("save")}
               className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
               disabled={!file}
               type="button"
@@ -656,9 +695,19 @@ function TopAppBar() {
                   // AuthModal (2026-08-28 unify). Cards' finalize does
                   // the item #15 `window.location.assign` — hydrator
                   // restores the snapshotted file on return.
+                  // Preserve URL locale in the finalize redirect —
+                  // otherwise the post-signup `window.location.assign`
+                  // (auth chain #15) lands on bare `/pdf-composer` from
+                  // any `/{locale}/pdf-composer` starting point.
                   dispatchAuthModal({
                     mode: "signup",
-                    redirectUrl: ROUTES.TOOLS.PDF_EDITOR,
+                    redirectUrl: (() => {
+                      const parsed = parseLocalePrefix(pathname ?? "/");
+
+                      return parsed
+                        ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
+                        : ROUTES.TOOLS.PDF_EDITOR;
+                    })(),
                   });
 
                   return;
@@ -667,15 +716,15 @@ function TopAppBar() {
               }}
             >
               <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
-              <span className="hidden sm:inline">Save</span>
+              <span className="hidden sm:inline">{t("save")}</span>
             </button>
             <Tooltip.Content>
               <p>
                 {!file
-                  ? "Open a PDF to save"
+                  ? t("openPdfToSave")
                   : !isSignedIn
-                    ? "Login to save to your library"
-                    : "Save to My PDFs"}
+                    ? t("loginToSave")
+                    : t("saveToMyPdfs")}
               </p>
             </Tooltip.Content>
           </Tooltip>
@@ -684,7 +733,7 @@ function TopAppBar() {
         <div className="flex shrink-0 items-center gap-2 rounded-full border border-default-200 bg-white px-2 py-1.5">
           <Tooltip delay={300}>
             <button
-              aria-label="Undo"
+              aria-label={t("undo")}
               className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!canUndo}
               type="button"
@@ -693,13 +742,13 @@ function TopAppBar() {
               <HugeiconsIcon icon={UndoIcon} size={18} />
             </button>
             <Tooltip.Content>
-              <p>Undo</p>
+              <p>{t("undo")}</p>
             </Tooltip.Content>
           </Tooltip>
           <span aria-hidden className="h-4 w-px bg-default-200" />
           <Tooltip delay={300}>
             <button
-              aria-label="Redo"
+              aria-label={t("redo")}
               className="flex cursor-pointer items-center justify-center rounded-full p-1 text-default-600 transition-colors hover:bg-default-100 hover:text-default-800 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!canRedo}
               type="button"
@@ -708,7 +757,7 @@ function TopAppBar() {
               <HugeiconsIcon icon={RedoIcon} size={18} />
             </button>
             <Tooltip.Content>
-              <p>Redo</p>
+              <p>{t("redo")}</p>
             </Tooltip.Content>
           </Tooltip>
         </div>
@@ -728,7 +777,7 @@ function TopAppBar() {
         {/* Search — PDF-wide text search with highlight + navigation. */}
         <Tooltip delay={300}>
           <button
-            aria-label="Search in PDF"
+            aria-label={t("search")}
             aria-pressed={isSearchOpen}
             className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
               isSearchOpen
@@ -740,10 +789,10 @@ function TopAppBar() {
             onClick={() => (isSearchOpen ? closeSearch() : openSearch())}
           >
             <HugeiconsIcon icon={Search01Icon} size={14} />
-            <span className="hidden sm:inline">Search</span>
+            <span className="hidden sm:inline">{t("search")}</span>
           </button>
           <Tooltip.Content>
-            <p>Search in PDF</p>
+            <p>{t("search")}</p>
           </Tooltip.Content>
         </Tooltip>
 
@@ -751,23 +800,23 @@ function TopAppBar() {
             the browser print dialog via a hidden iframe. */}
         <Tooltip delay={300}>
           <button
-            aria-label="Print"
+            aria-label={t("print")}
             className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
             disabled={!file}
             type="button"
             onClick={() => void handlePrint()}
           >
             <HugeiconsIcon icon={PrinterIcon} size={14} />
-            <span className="hidden sm:inline">Print</span>
+            <span className="hidden sm:inline">{t("print")}</span>
           </button>
           <Tooltip.Content>
-            <p>Print</p>
+            <p>{t("print")}</p>
           </Tooltip.Content>
         </Tooltip>
 
         {/* Share — icon-only on <sm so the top bar breathes at 375px. */}
         <button
-          aria-label="Share via link"
+          aria-label={t("share")}
           className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-default-200 bg-white px-3 text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
           data-tour="editor-share"
           disabled={!canShare}
@@ -775,27 +824,46 @@ function TopAppBar() {
           onClick={() => fireEditorEvent("editor:open-share")}
         >
           <HugeiconsIcon icon={Link01Icon} size={14} />
-          <span className="hidden sm:inline">Share via link</span>
+          <span className="hidden sm:inline">{t("share")}</span>
         </button>
 
+        {showW9Save ? null : (
+          <Button
+            aria-label={t("convertToWord")}
+            className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#2563eb] !px-3 !text-[13px] !font-semibold !text-white hover:!bg-[#1d4ed8] disabled:!opacity-50 sm:!px-4"
+            isDisabled={
+              !canDownload || isSavingBeforeExport || isConvertingToWord
+            }
+            onPress={convertToWordAfterSave}
+          >
+            <HugeiconsIcon className="text-white" icon={Doc01Icon} size={15} />
+            <span className="hidden sm:inline">
+              {isConvertingToWord ? "…" : t("convertToWord")}
+            </span>
+          </Button>
+        )}
+
         <Button
-          aria-label="Download"
+          aria-label={t("download")}
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
-          isDisabled={!canDownload || isSavingBeforeExport}
+          isDisabled={!canDownload || isSavingBeforeExport || isConvertingToWord}
           onPress={openExportModalAfterSave}
         >
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
 
           <span className="hidden sm:inline">
-            {isSavingBeforeExport ? "Saving…" : "Done"}
+            {isSavingBeforeExport ? "…" : t("download")}
           </span>
         </Button>
       </div>
 
       <ExportFormatModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
+        isOpen={isExportModalOpen || pendingOpenExportModal}
+        onClose={() => {
+          setIsExportModalOpen(false);
+          setPendingOpenExportModal(false);
+        }}
       />
     </div>
   );
@@ -814,6 +882,12 @@ function ToolToolbar() {
   // unaffected. Path check is done AFTER hook calls to satisfy the
   // rules-of-hooks order.
   const pathname = usePathname();
+  const tLabel = useTranslations("tools");
+  const labelFor = (id: string) => {
+    const key = TOOL_LABEL_KEYS[id];
+
+    return key ? tLabel(key) : id;
+  };
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsCompressModalOpen = usePdfEditorStore(
@@ -827,6 +901,7 @@ function ToolToolbar() {
   );
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
 
@@ -856,9 +931,16 @@ function ToolToolbar() {
 
         return;
       }
-      // Same save-before-action guard as EditorToolBar / BottomDock so
-      // in-progress edits get flushed before the modal opens.
+      // Guests match the mobile dock: Manage Pages opens locally first.
+      // Signed-in users save first so their cloud copy is current before
+      // the modal rebuilds page order.
       void (async () => {
+        if (!isSignedIn) {
+          setIsManagePagesOpen(true);
+
+          return;
+        }
+
         const ok = await saveBeforeAction(
           "Saving your edits before opening Manage Pages.",
         );
@@ -942,7 +1024,7 @@ function ToolToolbar() {
                     active={active}
                     disabled={disabled}
                     icon={tool.icon}
-                    label={tool.label}
+                    label={labelFor(tool.id)}
                     onClick={() => {
                       // Signal `use-fabric-canvas` to discard any live
                       // selection so selection-driven floating toolbars
@@ -968,7 +1050,7 @@ function ToolToolbar() {
                   key={tool.id}
                   disabled={isActionDisabled(tool.id)}
                   icon={tool.icon}
-                  label={tool.label}
+                  label={labelFor(tool.id)}
                   onClick={() => handleAction(tool.id)}
                 />
               );

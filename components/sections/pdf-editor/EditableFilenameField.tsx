@@ -149,9 +149,10 @@ export function EditableFilenameField({
         />
       ) : (
         <span
-          className={`truncate font-medium text-[var(--color-foreground)] ${fontSizeClass}`}
+          className={`truncate font-medium text-[var(--color-foreground)] ${fontSizeClass} ${disabled ? "" : "cursor-pointer"}`}
           style={{ maxWidth: inputWidth ?? undefined }}
           title={value}
+          onClick={enterEdit}
         >
           {value}
         </span>

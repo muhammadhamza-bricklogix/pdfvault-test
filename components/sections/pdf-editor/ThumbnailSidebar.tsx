@@ -195,9 +195,17 @@ function Thumbnail({
 
   const highlighted = isSelected || isActive;
 
+  // Grid card width scales with `thumbnailZoom`; 450 is calibrated so the default
+  // `gridZoom` (0.32, in ManagePagesModal.tsx) reproduces the previous fixed 144px width.
+  const GRID_WIDTH_PER_ZOOM_UNIT = 450;
+  const rootStyle: React.CSSProperties | undefined =
+    layout === "grid"
+      ? { width: `${Math.round(thumbnailZoom * GRID_WIDTH_PER_ZOOM_UNIT)}px` }
+      : undefined;
+
   const rootClass =
     layout === "grid"
-      ? "flex w-36 shrink-0 flex-col items-center gap-2 rounded-lg p-2 text-left transition-colors"
+      ? "flex shrink-0 flex-col items-center gap-2 rounded-lg p-2 text-left transition-colors"
       : layout === "horizontal"
         ? "flex w-20 shrink-0 flex-col items-center gap-1 rounded-lg p-1.5 text-left transition-colors"
         : "flex w-full flex-col items-center gap-1 rounded-lg p-2 text-left transition-colors";
@@ -233,6 +241,7 @@ function Thumbnail({
             : "hover:bg-default-100"
       }`}
       role="option"
+      style={rootStyle}
       tabIndex={layout === "grid" ? -1 : 0}
       onClick={() => {
         if (onToggleSelect && draftPage) {
@@ -360,7 +369,14 @@ function SortableThumbnail({
 
   if (dragWholeCard && !sortableDisabled) {
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div
+        ref={setNodeRef}
+        // Lets callers locate a specific page's thumbnail in the DOM (e.g. scroll-to-page).
+        data-page-id={id}
+        style={style}
+        {...attributes}
+        {...listeners}
+      >
         <Thumbnail
           {...thumbnailProps}
           isDragging={isDragging}
@@ -371,7 +387,7 @@ function SortableThumbnail({
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} data-page-id={id} style={style}>
       <Thumbnail
         {...thumbnailProps}
         dragActivatorRef={sortableDisabled ? undefined : setActivatorNodeRef}

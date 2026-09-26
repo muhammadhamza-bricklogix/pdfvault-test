@@ -1,0 +1,65 @@
+{
+  "tools": {
+    "select": "تحديد",
+    "editText": "تحرير",
+    "signature": "توقيع",
+    "text": "نص",
+    "draw": "رسم",
+    "highlight": "تمييز",
+    "shape": "أشكال",
+    "eraser": "ممحاة",
+    "whiteout": "طلاء أبيض",
+    "redact": "إخفاء",
+    "image": "صورة",
+    "watermark": "علامة مائية",
+    "backgroundImage": "خلفية",
+    "compress": "ضغط",
+    "secure": "تأمين",
+    "merge": "دمج",
+    "split": "تقسيم",
+    "flatten": "تسوية",
+    "extract": "استخراج",
+    "pageNumbers": "رقم الصفحة",
+    "annotate": "تعليق",
+    "managePages": "إدارة الصفحات"
+  },
+  "topChrome": {
+    "backToDashboard": "العودة إلى لوحة التحكم",
+    "home": "الرئيسية",
+    "zoom": "تكبير",
+    "zoomOut": "تصغير",
+    "zoomIn": "تكبير",
+    "openPdfToSave": "افتح ملف PDF للحفظ",
+    "loginToSave": "سجّل الدخول للحفظ في مكتبتك",
+    "saveToMyPdfs": "حفظ في ملفات PDF الخاصة بي",
+    "save": "حفظ",
+    "undo": "تراجع",
+    "redo": "إعادة",
+    "search": "البحث في PDF",
+    "print": "طباعة",
+    "share": "مشاركة عبر رابط",
+    "download": "إنهاء وتنزيل",
+    "convertToWord": "التحويل إلى Word"
+  },
+  "saveStatus": {
+    "saving": "جارٍ حفظ تعديلاتك",
+    "saved": "تم الحفظ في ملفات PDF الخاصة بي",
+    "unsaved": "تعديلات غير محفوظة"
+  },
+  "menu": {
+    "editorMenu": "قائمة المحرر",
+    "createNew": "إنشاء جديد",
+    "openFile": "فتح ملف",
+    "myPdfs": "ملفات PDF الخاصة بي",
+    "findReplace": "بحث واستبدال",
+    "compressPdf": "ضغط PDF",
+    "splitPdf": "تقسيم PDF",
+    "extractImages": "استخراج الصور",
+    "flattenPdf": "تسوية PDF",
+    "share": "مشاركة عبر رابط",
+    "versionHistory": "سجل الإصدارات"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "ملف PDF هذا غير محمي بكلمة مرور — لا يوجد ما يجب إزالته."
+  }
+}
