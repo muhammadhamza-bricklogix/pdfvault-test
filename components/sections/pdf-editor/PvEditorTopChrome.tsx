@@ -341,16 +341,26 @@ function TopAppBar() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
-  const renameDoc = useRenameDocumentMutation();
+  // Scalar-boolean selectors so the entire top chrome (tools bar,
+  // save/download row, undo/redo) doesn't re-render on every brush
+  // stroke (QA 2026-09-15). Reading the full `historyByPage` /
+  // `historyIndexByPage` Maps subscribed the whole chrome to every
+  // Map-recreate — rapid tools (draw, eraser, edit-text) toggled
+  // `disabled={!canUndo}` mid-pointerdown and React Aria dropped the
+  // press ("dead click"). Booleans keep Zustand's shallow check on
+  // primitives, so the chrome only re-renders when either capability
+  // flag actually changes.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
+    return idx < len - 1;
+  });
+  const renameDoc = useRenameDocumentMutation();
 
   const fileName = file?.name ?? "Untitled.pdf";
 

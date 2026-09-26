@@ -144,12 +144,18 @@ export function SplitPdfModal({ isOpen, onClose, source }: Props) {
       // editor keeps its live Fabric overlays after the modal closes.
       // The event's `onComplete` returns the baked bytes; fall back
       // to the captured `source.bytes` on failure.
+      // `bakeOverlays: true` is CRITICAL (QA 2026-09-16, same bug
+      // class as MergePdfModal). The shell handler defaults to
+      // `false` (Save-to-cloud variant which strips
+      // shapes/drawings/highlights per skill log 2026-09-10 (b)) —
+      // without it, split PDFs come out overlay-free.
       let bakedBytes: Uint8Array | null = null;
 
       await new Promise<void>((resolve) => {
         window.dispatchEvent(
           new CustomEvent("editor:build-current-bytes", {
             detail: {
+              bakeOverlays: true,
               onComplete: (r: {
                 ok: boolean;
                 bytes?: Uint8Array;

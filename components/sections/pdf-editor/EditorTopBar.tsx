@@ -78,13 +78,18 @@ export function EditorInfoBar() {
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  // Scalar-boolean selectors so the mobile top bar doesn't re-render
+  // on every brush stroke (QA 2026-09-15). Same rationale as
+  // `HistoryActions` below — see that block's comment.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const mobileHistory = historyByPage.get(currentPage) ?? [];
-  const mobileHistoryIdx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = mobileHistoryIdx > 0;
-  const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
+    return idx < len - 1;
+  });
 
   const renameDoc = useRenameDocumentMutation();
 
@@ -689,14 +694,26 @@ export function ToolsContent({
 }
 
 function HistoryActions() {
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  // Scalar-boolean selectors (QA 2026-09-15). Reading the full
+  // `historyByPage` / `historyIndexByPage` Maps subscribes this
+  // component to every Map-recreate — every `pushHistory` fires a new
+  // Map, so the toolbar re-rendered on every brush stroke / typed
+  // character. Rapid-input tools (draw, eraser, edit-text) then
+  // toggled `disabled={!canUndo}` mid-pointerdown, and React Aria's
+  // `usePress` cancels the press when `disabled` flips → the user's
+  // Undo / Redo click was silently dropped ("dead click"). Deriving
+  // the two booleans inline keeps Zustand's shallow equality check on
+  // primitives, so the component only re-renders when the boolean
+  // actually changes.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
+    return idx < len - 1;
+  });
 
   return (
     <Toolbar aria-label="History actions">

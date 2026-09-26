@@ -244,9 +244,10 @@ export function PaywallModal({
 
     return parseLocalePrefix(window.location.pathname)?.locale ?? "en";
   });
-  const strings = useMemo(() => getPaywallStrings(paywallLocale), [
-    paywallLocale,
-  ]);
+  const strings = useMemo(
+    () => getPaywallStrings(paywallLocale),
+    [paywallLocale],
+  );
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
@@ -924,21 +925,6 @@ export function PaywallModal({
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {/*
-<<<<<<< Updated upstream
-          `translate="no"` + `notranslate` / `wg-notranslate` class fence off
-          the modal subtree from Weglot (and Google Translate).
-          Without this, the modal crashes on any translated locale
-          (`/de/`, `/es/`, `/fr/`, …) the moment React re-renders the
-          plan step — Weglot has already swapped React's text nodes for
-          translated ones, so React's next `removeChild` throws
-          `NotFoundError: The node to be removed is not a child of this
-          node.` and the global-error boundary blanks the page with
-          "Application error: a client-side exception has occurred". See
-          repro 2026-09-22 via Playwright on `/de/dashboard` → Download
-          → Annual plan card. English paywall copy on translated
-          locales is intentional until we move the plan/pay/success
-          copy into next-intl.
-=======
           Fence markers re-added 2026-09-23: the paywall now ships its
           own local translations (see `lib/client/paywall/paywall-strings.ts`)
           for `de` / `es` / `fr` / `pt` / `ar`. Weglot must NOT translate
@@ -949,7 +935,6 @@ export function PaywallModal({
           this subtree; combined with `Weglot.options.excluded_blocks`
           set in `WeglotBoot`, the modal renders exclusively from React
           state on every locale.
->>>>>>> Stashed changes
         */}
         <Modal.Dialog
           className={
@@ -1574,7 +1559,9 @@ function PayStep({
                 type="button"
                 onClick={onRetry}
               >
-                {retryLoading ? strings.pay.preparing : strings.pay.tryAnotherCard}
+                {retryLoading
+                  ? strings.pay.preparing
+                  : strings.pay.tryAnotherCard}
               </button>
             </div>
           ) : null}
@@ -1754,7 +1741,13 @@ function SuccessStep({
       currency: intent.currency,
       orderId: intent.orderId,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan, user]);
+  }, [
+    intent.amountTodayMinor,
+    intent.currency,
+    intent.orderId,
+    selectedPlan,
+    user,
+  ]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to
