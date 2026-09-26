@@ -150,9 +150,10 @@ const GROUP_C: ToolEntry[] = [
 
 // Manage Pages — kept in its own pill group so the rotate/reorder/delete flow
 // reads as a distinct document-structure action, not another single-page tool.
-// Runs a saveBeforeAction guard locally (same guard the mobile BottomDock and
-// legacy EditorToolBar use) so in-progress edits are flushed before the modal
-// opens.
+// For signed-in users, runs a saveBeforeAction guard locally (same guard the
+// mobile BottomDock and legacy EditorToolBar use) so in-progress edits are
+// flushed before the modal opens. Guests open Manage Pages locally first; the
+// auth/export flow owns persistence later.
 const GROUP_MANAGE: ToolEntry[] = [
   {
     kind: "action",
@@ -890,6 +891,7 @@ function ToolToolbar() {
   );
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
 
@@ -919,9 +921,16 @@ function ToolToolbar() {
 
         return;
       }
-      // Same save-before-action guard as EditorToolBar / BottomDock so
-      // in-progress edits get flushed before the modal opens.
+      // Guests match the mobile dock: Manage Pages opens locally first.
+      // Signed-in users save first so their cloud copy is current before
+      // the modal rebuilds page order.
       void (async () => {
+        if (!isSignedIn) {
+          setIsManagePagesOpen(true);
+
+          return;
+        }
+
         const ok = await saveBeforeAction(
           "Saving your edits before opening Manage Pages.",
         );
