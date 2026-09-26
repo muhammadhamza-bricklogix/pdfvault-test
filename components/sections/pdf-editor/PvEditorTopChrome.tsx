@@ -1031,7 +1031,7 @@ function ToolToolbar() {
                   key={tool.id}
                   disabled={isActionDisabled(tool.id)}
                   icon={tool.icon}
-                  label={tool.label}
+                  label={labelFor(tool.id)}
                   onClick={() => handleAction(tool.id)}
                 />
               );
