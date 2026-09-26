@@ -6,6 +6,7 @@ import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
+import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -33,6 +34,10 @@ import { formatMinor } from "@/lib/shared/utils/currency";
 import { persistUserCurrency } from "@/lib/client/billing/user-currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import {
+  setBingUserData,
+  trackBingPurchase,
+} from "@/lib/client/analytics/bing-uet";
 
 // The payment SDK's iframe loader touches `window` at import time —
 // dynamic import with `ssr: false` keeps the Next.js server bundle
@@ -1386,7 +1391,17 @@ function PayStep({
   // (it's what mounts Apple Pay / Google Pay into the detached refs
   // above), so we hide the card iframe wrapper via `hidden` rather
   // than conditionally rendering the whole PaymentForm.
+  const { user } = useUser();
   const [cardExpanded, setCardExpanded] = useState(false);
+
+  // Set enhanced user data (SHA-256 hashed email, E.164 phone) for Bing UET on checkout
+  useEffect(() => {
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+    if (userEmail || userPhone) {
+      void setBingUserData({ email: userEmail, phone: userPhone });
+    }
+  }, [user]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1649,6 +1664,7 @@ function SuccessStep({
   onClose: () => void;
   onFireQueuedAction: () => void;
 }) {
+  const { user } = useUser();
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
@@ -1693,7 +1709,19 @@ function SuccessStep({
       plan: selectedPlan,
       value: intent.amountTodayMinor / 100,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
+
+    // Fire Bing UET purchase conversion with dynamic revenue value and currency
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+    if (userEmail || userPhone) {
+      void setBingUserData({ email: userEmail, phone: userPhone });
+    }
+    trackBingPurchase({
+      revenue_value: intent.amountTodayMinor / 100,
+      currency: intent.currency,
+      orderId: intent.orderId,
+    });
+  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan, user]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to
