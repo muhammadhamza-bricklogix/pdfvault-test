@@ -1,10 +1,14 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import {
   FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
   FOOTER_COMPANY_ENTITY,
 } from "@/lib/shared/constants/footer";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 type FooterLink = { label: string; href: string };
@@ -133,6 +137,21 @@ function FooterBackground() {
 }
 
 export function LandingFooter() {
+  // Prepend the current locale segment to every footer nav href so soft-nav
+  // from a localized page keeps the visitor in the same locale. Without this,
+  // clicking Convert / Legal / Login from `/de/` lands on `/convert/pdf-to-word`
+  // (English) — QA F-15 (2026-09-26). Mirrors the helper in `landing-header.tsx`
+  // and `upload-workspace.tsx` (commit 774aca5).
+  const pathname = usePathname();
+  const withLocalePrefix = (path: string) => {
+    const parsed = parseLocalePrefix(pathname ?? "/");
+
+    if (!parsed) return path;
+    const suffix = path.startsWith("/") ? path : `/${path}`;
+
+    return `/${parsed.locale}${suffix}`;
+  };
+
   return (
     <footer className="relative isolate overflow-hidden bg-[#400000] text-white">
       <FooterBackground />
@@ -191,7 +210,7 @@ export function LandingFooter() {
                   <li key={link.label}>
                     <Link
                       className={`inline-block text-[14px] text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING}`}
-                      href={link.href}
+                      href={withLocalePrefix(link.href)}
                     >
                       {link.label}
                     </Link>

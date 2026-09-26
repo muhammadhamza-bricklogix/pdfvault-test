@@ -97,6 +97,20 @@ export function LandingHeader() {
   const pathname = usePathname();
   const entitled = useIsEntitled();
 
+  // Prepend the current locale segment to nav hrefs so soft-nav from a
+  // localized page (e.g. `/de/`) keeps the visitor in the same locale.
+  // Without this, clicking "Convert" / "Edit" / "Compress" from `/de/`
+  // lands on `/convert/file-to-pdf` (English) — QA F-15 (2026-09-26).
+  // Mirrors `withLocalePrefix` in `upload-workspace.tsx` (commit 774aca5).
+  const withLocalePrefix = (path: string) => {
+    const parsed = parseLocalePrefix(pathname ?? "/");
+
+    if (!parsed) return path;
+    const suffix = path.startsWith("/") ? path : `/${path}`;
+
+    return `/${parsed.locale}${suffix}`;
+  };
+
   const handleLogOut = () => {
     void usersService.signOutAudit().catch(() => undefined);
     void signOut();
@@ -288,7 +302,7 @@ export function LandingHeader() {
                 <Link
                   key={link.label}
                   className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
-                  href={link.href}
+                  href={withLocalePrefix(link.href)}
                 >
                   {link.label}
                 </Link>
@@ -426,7 +440,7 @@ export function LandingHeader() {
                 <li key={link.label}>
                   <Link
                     className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
-                    href={link.href}
+                    href={withLocalePrefix(link.href)}
                     onClick={() => setMobileOpen(false)}
                   >
                     {link.label}
