@@ -9,6 +9,16 @@
         "https://gtm-mcp.stape.ai/mcp"
       ],
       "env": {}
+    },
+    "atlassian": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.atlassian.com/v1/sse"
+      ],
+      "env": {}
     }
   }
 }
