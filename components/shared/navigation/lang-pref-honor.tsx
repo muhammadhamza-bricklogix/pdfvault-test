@@ -24,6 +24,14 @@ const SKIP_REDIRECT_PREFIXES = [
   "/sso-callback",
 ];
 
+// Delay the lang-pref redirect so it can't race a concurrent
+// `window.location.assign` from the auto-signup finalize flow (item #15
+// of the auth chain). Restored 2026-09-26 — the const was dropped during
+// a merge conflict resolution on `feat/limited-access-plan`, breaking the
+// production build with "Cannot find name 'REDIRECT_DEBOUNCE_MS'" at the
+// call site below. Value matches the original PR #117 debounce.
+const REDIRECT_DEBOUNCE_MS = 1000;
+
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const target = `${name}=`;
