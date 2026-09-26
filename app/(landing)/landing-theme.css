@@ -281,6 +281,26 @@
   outline-offset: 2px;
 }
 
+/* Footer alignment uses centered mobile cells for every locale, then switches
+   to logical start alignment on wider viewports. RTL mirrors only at the
+   desktop/tablet breakpoint so Arabic mobile columns stay visually balanced. */
+.pdfvault-landing .pv-footer-brand,
+.pdfvault-landing .pv-footer-link-list {
+  align-items: center;
+}
+@media (min-width: 768px) {
+  .pdfvault-landing .pv-footer-brand,
+  .pdfvault-landing .pv-footer-link-list {
+    align-items: flex-start;
+  }
+}
+@media (min-width: 768px) {
+  [dir="rtl"] .pdfvault-landing .pv-footer-brand,
+  [dir="rtl"] .pdfvault-landing .pv-footer-link-list {
+    align-items: flex-end;
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * Dark mode — flip semantic tokens + override the many hardcoded near-black
  * text colors that ship across landing components. `next-themes` sets
