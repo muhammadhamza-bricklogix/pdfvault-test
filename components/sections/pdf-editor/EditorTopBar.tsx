@@ -735,11 +735,18 @@ function HistoryActions() {
 export function EditorToolBar() {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
 
   const canManagePages = !!pdfDocument && pageCount > 0;
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );
