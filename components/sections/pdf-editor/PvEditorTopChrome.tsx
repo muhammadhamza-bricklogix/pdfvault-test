@@ -83,7 +83,7 @@ type ToolEntry =
 
 // Maps tool id → translation key in `messages/composer/*.json` under
 // `tools.*`. Kept in sync with the ToolEntry definitions below.
-const TOOL_LABEL_KEYS: Record<string, string> = {
+export const TOOL_LABEL_KEYS: Record<string, string> = {
   select: "select",
   editText: "editText",
   signature: "signature",
