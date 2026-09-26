@@ -96,8 +96,22 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
     // colour-aware) rather than reverting this gate again — QA's
     // "text isn't selectable until Edit is clicked" report is a
     // higher-priority UX issue than the colour edge case.
+    // Routes that pair a specialised form-fill overlay with the shared
+    // `<PdfEditorShell />` (currently the W-9 route via `W9EditorBootstrap`)
+    // opt out of Select-tool auto-extract by setting
+    // `disableAutoTextExtract`. Users on those routes interact through
+    // the form field overlays — not by tapping source text — and any
+    // pixel-level mismatch between Fabric IText and pdf.js's native paint
+    // reads as visible glyph doubling on the pre-printed template. The
+    // opt-out restores the pre-9284eb9 (2026-09-16) behaviour for those
+    // routes without affecting `/pdf-composer` (QA 2026-09-16: text
+    // selectable on open stays intact). Explicit Edit Text activation
+    // still triggers extraction even when the opt-out is on.
+    const disableAutoExtract =
+      usePdfEditorStore.getState().disableAutoTextExtract;
     const armedForExtraction =
-      activeTool === "editText" || activeTool === "select";
+      activeTool === "editText" ||
+      (activeTool === "select" && !disableAutoExtract);
 
     if (!alreadyExtracted && !armedForExtraction) return;
 
@@ -123,6 +137,19 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         );
 
       if (existingEditText.length > 0 && overlaysMatchRotation) {
+        // Defensive: `existingEditText` was added by a PREVIOUS run of
+        // this effect (fabricCanvas / page / currentPage dep re-fire)
+        // that may have been cancelled between the add-loop and
+        // `markPageExtracted` — leaving IText on the canvas without
+        // flipping `suppressText`. That combination re-introduces the
+        // "pdf.js native text under Fabric IText" doubling this hook is
+        // meant to prevent. Restoring the invariant here is a no-op when
+        // `alreadyExtracted === true` (markPageExtracted early-returns)
+        // and self-heals the race when it isn't.
+        if (!alreadyExtracted) {
+          usePdfEditorStore.getState().markPageExtracted(sourcePage);
+        }
+
         return;
       }
 

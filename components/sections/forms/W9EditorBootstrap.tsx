@@ -90,6 +90,19 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     // template on navigation / pagehide → duplicate rows in My PDFs
     // (QA 2026-08-27). `W9FinalizeIntercept` handles Save via finalize.
     usePdfEditorStore.getState().setAutoPersistDisabled(true);
+    // Opt out of the Select-tool auto-extract restored on 2026-09-16
+    // (commit 9284eb9). W-9 users interact via `W9FormFieldsPortal`, not
+    // by tapping source text, so the Fabric IText overlay adds no value
+    // here — and any pixel-level mismatch between Fabric IText and
+    // pdf.js's native paint of the pre-printed W-9 template reads as
+    // visible glyph doubling (QA 2026-09-26: "the w9 form is regressed
+    // and I am seeing the duplicated and overlapped text"). This flag
+    // restores the pre-9284eb9 behaviour for W-9 only — pdf.js paints
+    // the template natively, no Fabric IText overlay on load. The
+    // Edit Text toolbar tool still triggers extraction on demand.
+    // `/pdf-composer` and other routes are unaffected — the flag
+    // defaults to false + resets on unmount.
+    usePdfEditorStore.getState().setDisableAutoTextExtract(true);
 
     // Parallel bootstrap: template fetch + form session. Neither
     // depends on the other so we don't want them serialized.
@@ -315,6 +328,10 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       // session (avoids replaying a stale sessionId on a new mount).
       usePdfEditorStore.getState().clearFile();
       usePdfEditorStore.getState().setAutoPersistDisabled(false);
+      // Reset the W-9-only auto-extract opt-out so `/pdf-composer` (which
+      // shares the same store) keeps auto-extracting text on Select per
+      // QA 2026-09-16.
+      usePdfEditorStore.getState().setDisableAutoTextExtract(false);
       useFormEditorStore.getState().reset();
     };
   }, [setFile, resumeDocId]);
