@@ -11,7 +11,6 @@ import {
   Cursor01Icon,
   DownloadIcon,
   EraserIcon,
-  GridIcon,
   HighlighterIcon,
   Image01Icon,
   Layout03Icon,
@@ -61,7 +60,6 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
 import { HamburgerMenu } from "./HamburgerMenu";
-import { ToolsModal } from "./ToolsModal";
 
 const ZOOM_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -80,13 +78,18 @@ export function EditorInfoBar() {
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
   const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  // Scalar-boolean selectors so the mobile top bar doesn't re-render
+  // on every brush stroke (QA 2026-09-15). Same rationale as
+  // `HistoryActions` below — see that block's comment.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const mobileHistory = historyByPage.get(currentPage) ?? [];
-  const mobileHistoryIdx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = mobileHistoryIdx > 0;
-  const canRedo = mobileHistoryIdx < mobileHistory.length - 1;
+    return idx < len - 1;
+  });
 
   const renameDoc = useRenameDocumentMutation();
 
@@ -111,7 +114,6 @@ export function EditorInfoBar() {
     );
   }, [pathname]);
 
-  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
   const [isThumbsOpen, setIsThumbsOpen] = useState(false);
@@ -353,10 +355,6 @@ export function EditorInfoBar() {
 
   return (
     <>
-      <ToolsModal
-        isOpen={isToolsModalOpen}
-        onClose={() => setIsToolsModalOpen(false)}
-      />
       <ExportFormatModal
         isOpen={isExportModalOpen || pendingOpenExportModal}
         onClose={() => {
@@ -377,7 +375,7 @@ export function EditorInfoBar() {
             row on sm+ where the page nav sits between them. */}
         <div className="flex items-center justify-between gap-2 sm:flex-1">
           <div className="flex items-center gap-1">
-            {/* Back + Hamburger — desktop only */}
+            {/* Back - desktop/tablet only in this legacy responsive bar. */}
             <div className="hidden sm:flex sm:items-center sm:gap-1">
               <Tooltip delay={300}>
                 <Button
@@ -392,20 +390,18 @@ export function EditorInfoBar() {
                   <p>Back to dashboard</p>
                 </Tooltip.Content>
               </Tooltip>
-              {/*
-                Guests: HamburgerMenu hides its own dropdown trigger
-                but stays MOUNTED so its bridge event listeners
-                (editor:open-merge / open-split / open-flatten /
-                open-annotations) keep firing for the top toolbar.
-                Unmounting for guests makes those toolbar buttons idle
-                (QA 2026-09-06). Rationale mirrored in
-                `PvEditorTopChrome.tsx`.
-              */}
-              {isW9Route ? null : <HamburgerMenu />}
             </div>
 
-            {/* Undo + Redo — mobile only */}
+            {/* Back + Undo + Redo — mobile only */}
             <div className="flex items-center gap-1 sm:hidden">
+              <Button
+                aria-label="Back to dashboard"
+                size="sm"
+                variant="tertiary"
+                onPress={handleBack}
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+              </Button>
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -430,19 +426,13 @@ export function EditorInfoBar() {
               </Button>
             </div>
 
-            <Tooltip delay={300}>
-              <Button
-                aria-label="Browse all tools"
-                size="sm"
-                variant="tertiary"
-                onPress={() => setIsToolsModalOpen(true)}
-              >
-                <HugeiconsIcon icon={GridIcon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Browse PDF and image tools</p>
-              </Tooltip.Content>
-            </Tooltip>
+            {/*
+              Same menu as desktop, in the old mobile grid-icon slot.
+              HamburgerMenu gates its visible trigger on `isSignedIn`, but
+              remains mounted for guests so editor bridge listeners keep
+              working.
+            */}
+            {isW9Route ? null : <HamburgerMenu />}
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
@@ -617,9 +607,9 @@ export function EditorInfoBar() {
 // Exported so BottomDock.tsx (mobile) can build its own grouped pill layout from this same tool list.
 export const TOOLS = [
   { icon: Cursor01Icon, id: "select", label: "Select" },
-  { icon: PencilEdit01Icon, id: "editText", label: "Edit Text" },
-  { icon: SignatureIcon, id: "signature", label: "Signature" },
-  { icon: TextFontIcon, id: "text", label: "Add Text" },
+  { icon: PencilEdit01Icon, id: "editText", label: "Edit" },
+  { icon: SignatureIcon, id: "signature", label: "Sign" },
+  { icon: TextFontIcon, id: "text", label: "Text" },
   { icon: PaintBrush01Icon, id: "draw", label: "Draw" },
   { icon: HighlighterIcon, id: "highlight", label: "Highlight" },
   { icon: ShapesIcon, id: "shape", label: "Shapes" },
@@ -704,14 +694,26 @@ export function ToolsContent({
 }
 
 function HistoryActions() {
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  // Scalar-boolean selectors (QA 2026-09-15). Reading the full
+  // `historyByPage` / `historyIndexByPage` Maps subscribes this
+  // component to every Map-recreate — every `pushHistory` fires a new
+  // Map, so the toolbar re-rendered on every brush stroke / typed
+  // character. Rapid-input tools (draw, eraser, edit-text) then
+  // toggled `disabled={!canUndo}` mid-pointerdown, and React Aria's
+  // `usePress` cancels the press when `disabled` flips → the user's
+  // Undo / Redo click was silently dropped ("dead click"). Deriving
+  // the two booleans inline keeps Zustand's shallow equality check on
+  // primitives, so the component only re-renders when the boolean
+  // actually changes.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
+    return idx < len - 1;
+  });
 
   return (
     <Toolbar aria-label="History actions">
@@ -750,11 +752,18 @@ function HistoryActions() {
 export function EditorToolBar() {
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
 
   const canManagePages = !!pdfDocument && pageCount > 0;
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );

@@ -50,8 +50,18 @@ function CookieTable({
               key={r.name}
               className="border-b border-[var(--legal-border-subtle)] align-top"
             >
-              <td className="py-2 pr-3 font-mono text-[13px]">{r.name}</td>
-              <td className="py-2 pr-3">{r.provider}</td>
+              {/* Cookie identifier + provider brand name: fence from Weglot
+                  so brand names (e.g. "Clerk") and cookie names (e.g.
+                  "OptanonConsent") aren't mistranslated. QA F-48 / F-49. */}
+              <td
+                className="notranslate py-2 pr-3 font-mono text-[13px]"
+                translate="no"
+              >
+                {r.name}
+              </td>
+              <td className="notranslate py-2 pr-3" translate="no">
+                {r.provider}
+              </td>
               <td className="py-2 pr-3">{r.purpose}</td>
               <td className="py-2 whitespace-nowrap">{r.expiry}</td>
             </tr>

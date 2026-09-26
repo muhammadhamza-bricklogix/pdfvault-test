@@ -17,6 +17,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -24,6 +25,7 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 
 import { TOOLS } from "./EditorTopBar";
 import { MobileToolPropertiesModal } from "./MobileToolPropertiesModal";
+import { TOOL_LABEL_KEYS } from "./PvEditorTopChrome";
 import { ShapePropertiesContent } from "./RightSidebar";
 import { ThumbnailStrip } from "./ThumbnailSidebar";
 
@@ -39,8 +41,8 @@ const ACTION_TOOLS = [
   { id: "split", label: "Split", icon: SplitIcon },
   { id: "flatten", label: "Flatten", icon: Layers01Icon },
   { id: "extract", label: "Extract", icon: FileExportIcon },
-  { id: "page-numbers", label: "Page No.", icon: TextNumberSignIcon },
-  { id: "annotate", label: "Annotation", icon: Comment01Icon },
+  { id: "page-numbers", label: "Page No", icon: TextNumberSignIcon },
+  { id: "annotate", label: "Annotate", icon: Comment01Icon },
 ] as const;
 
 // Split at the same 6/7 boundary as desktop's GROUP_A/GROUP_B (PvEditorTopChrome.tsx).
@@ -92,8 +94,18 @@ function DockPillGroup({ children }: { children: React.ReactNode }) {
 }
 
 export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
+  // Route tool labels through next-intl (same dictionary desktop uses) so the
+  // mobile dock renders locale-correct copy instead of raw English that Weglot
+  // mistranslates (e.g. "Draw" → "Unentschieden"). QA 2026-09-26 F-62 / F-66.
+  const tLabel = useTranslations("tools");
+  const labelFor = (id: string) => {
+    const key = TOOL_LABEL_KEYS[id];
+
+    return key ? tLabel(key) : id;
+  };
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const setActiveTool = usePdfEditorStore((s) => s.setActiveTool);
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
@@ -206,6 +218,12 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
   };
 
   const handleOpenManagePages = async () => {
+    if (!isSignedIn) {
+      setIsManagePagesOpen(true);
+
+      return;
+    }
+
     const ok = await saveBeforeAction(
       "Saving your edits before opening Manage Pages.",
     );
@@ -248,17 +266,19 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
         {pageCount > 0 && (
           <Tooltip delay={300}>
             <Button
-              aria-label="Manage Pages"
+              aria-label={labelFor("manage-pages")}
               className="h-auto shrink-0 flex-col gap-0.5 px-2.5 py-1.5"
               size="sm"
               variant="tertiary"
               onPress={() => void handleOpenManagePages()}
             >
               <HugeiconsIcon icon={Layout03Icon} size={18} />
-              <span className="text-[10px] leading-tight">Manage Pages</span>
+              <span className="text-[10px] leading-tight">
+                {labelFor("manage-pages")}
+              </span>
             </Button>
             <Tooltip.Content>
-              <p>Manage Pages</p>
+              <p>{labelFor("manage-pages")}</p>
             </Tooltip.Content>
           </Tooltip>
         )}
@@ -280,7 +300,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
                 key={tool.id}
                 active={activeTool === tool.id}
                 icon={tool.icon}
-                label={tool.label}
+                label={labelFor(tool.id)}
                 onClick={() => handleModeToolPick(tool.id)}
               />
             ))}
@@ -292,7 +312,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
                 key={tool.id}
                 active={activeTool === tool.id}
                 icon={tool.icon}
-                label={tool.label}
+                label={labelFor(tool.id)}
                 onClick={() => handleModeToolPick(tool.id)}
               />
             ))}
@@ -304,7 +324,7 @@ export function BottomDock({ fabricCanvas, onReorderPages }: BottomDockProps) {
                 key={tool.id}
                 disabled={!file}
                 icon={tool.icon}
-                label={tool.label}
+                label={labelFor(tool.id)}
                 onClick={() => handleAction(tool.id)}
               />
             ))}

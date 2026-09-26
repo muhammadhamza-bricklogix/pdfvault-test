@@ -27,7 +27,7 @@ try {
     ``,
     `Extract any new user preferences, project state changes, feedback, or`,
     `non-obvious decisions from this conversation into the memory system at`,
-    `/Users/brickslogix/.claude/projects/-Users-brickslogix-pdf-viewer-app/memory/`,
+    `~/.claude/projects/-Users-<username>-pdf-viewer-app/memory/ (resolve $HOME).`,
     `so they survive into the next session.`,
     ``,
     `If nothing in this conversation is worth persisting, say so plainly.`,

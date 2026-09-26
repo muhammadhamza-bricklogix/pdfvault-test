@@ -5,13 +5,12 @@ import type { ComponentProps } from "react";
 
 import {
   ArrowLeft01Icon,
-  Tick01Icon,
   BackgroundIcon,
-  PrinterIcon,
   Comment01Icon,
   Search01Icon,
   Copy01Icon,
   Cursor01Icon,
+  Doc01Icon,
   EraserIcon,
   FileExportIcon,
   FileMinusIcon,
@@ -25,6 +24,7 @@ import {
   PaintBrush01Icon,
   PaintBucketIcon,
   PencilEdit01Icon,
+  PrinterIcon,
   RedoIcon,
   SearchAddIcon,
   SearchMinusIcon,
@@ -34,6 +34,7 @@ import {
   Stamp01Icon,
   TextFontIcon,
   TextNumberSignIcon,
+  Tick01Icon,
   UndoIcon,
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
@@ -41,7 +42,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -82,7 +83,7 @@ type ToolEntry =
 
 // Maps tool id → translation key in `messages/composer/*.json` under
 // `tools.*`. Kept in sync with the ToolEntry definitions below.
-const TOOL_LABEL_KEYS: Record<string, string> = {
+export const TOOL_LABEL_KEYS: Record<string, string> = {
   select: "select",
   editText: "editText",
   signature: "signature",
@@ -149,9 +150,10 @@ const GROUP_C: ToolEntry[] = [
 
 // Manage Pages — kept in its own pill group so the rotate/reorder/delete flow
 // reads as a distinct document-structure action, not another single-page tool.
-// Runs a saveBeforeAction guard locally (same guard the mobile BottomDock and
-// legacy EditorToolBar use) so in-progress edits are flushed before the modal
-// opens.
+// For signed-in users, runs a saveBeforeAction guard locally (same guard the
+// mobile BottomDock and legacy EditorToolBar use) so in-progress edits are
+// flushed before the modal opens. Guests open Manage Pages locally first; the
+// auth/export flow owns persistence later.
 const GROUP_MANAGE: ToolEntry[] = [
   {
     kind: "action",
@@ -321,6 +323,7 @@ function ZoomPill() {
 
 function TopAppBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations("topChrome");
   // Explicit Save affordance for the W-9 route only. The generic
   // composer's Save button is hidden per product decision, but on
@@ -335,18 +338,29 @@ function TopAppBar() {
   // languages other than English (QA 2026-09-06).
   const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
   const file = usePdfEditorStore((s) => s.file);
+  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
-  const renameDoc = useRenameDocumentMutation();
+  // Scalar-boolean selectors so the entire top chrome (tools bar,
+  // save/download row, undo/redo) doesn't re-render on every brush
+  // stroke (QA 2026-09-15). Reading the full `historyByPage` /
+  // `historyIndexByPage` Maps subscribed the whole chrome to every
+  // Map-recreate — rapid tools (draw, eraser, edit-text) toggled
+  // `disabled={!canUndo}` mid-pointerdown and React Aria dropped the
+  // press ("dead click"). Booleans keep Zustand's shallow check on
+  // primitives, so the chrome only re-renders when either capability
+  // flag actually changes.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
+    return idx < len - 1;
+  });
+  const renameDoc = useRenameDocumentMutation();
 
   const fileName = file?.name ?? "Untitled.pdf";
 
@@ -355,6 +369,7 @@ function TopAppBar() {
   const canDownload = !!file;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
+  const [isConvertingToWord, setIsConvertingToWord] = useState(false);
 
   // QA 2026-09-07: Done click now saves the current edits to cloud FIRST,
   // then opens the export modal. User was reporting that clicking Done →
@@ -387,6 +402,47 @@ function TopAppBar() {
             toast.close(toastKey);
             setIsSavingBeforeExport(false);
             setIsExportModalOpen(true);
+          },
+        },
+      }),
+    );
+  };
+
+  const convertToWordAfterSave = () => {
+    if (!file || showW9Save) return;
+
+    const dispatchWordExport = () => {
+      window.dispatchEvent(
+        new CustomEvent("editor:export", {
+          detail: { format: "docx" },
+        }),
+      );
+    };
+
+    if (!isSignedIn) {
+      dispatchWordExport();
+
+      return;
+    }
+
+    setIsConvertingToWord(true);
+    const toastKey = toast.loading({
+      title: "Saving your edits",
+      description: "Hold on — we'll start the Word conversion once saved.",
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("editor:save-before-action", {
+        detail: {
+          force: true,
+          skipReset: true,
+          onComplete: (result: { ok: boolean; reason?: string }) => {
+            toast.close(toastKey);
+            setIsConvertingToWord(false);
+
+            if (result.ok || result.reason === "not-signed-in") {
+              dispatchWordExport();
+            }
           },
         },
       }),
@@ -426,46 +482,12 @@ function TopAppBar() {
     const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
     if (showW9Save) {
-      // W-9 route: save the partial form THROUGH the finalize path
-      // (`W9FinalizeIntercept.saveAndContinueHandler` — falls back to
-      // a client-side stamp so partial forms still land in My PDFs).
-      // Only navigate when the save resolves `ok`; failures show a
-      // toast and keep the user on the form so nothing is lost. Per
-      // product 2026-09-01: "hit save first, don't go back until the
-      // form is saved."
-      const savingToast = toast.loading({
-        title: "Saving your W-9",
-        description: "Hold on — you'll go back once your progress is saved.",
-      });
-
-      window.dispatchEvent(
-        new CustomEvent("editor:w9-save-and-continue", {
-          detail: {
-            onComplete: (result: { ok: boolean; reason?: string }) => {
-              toast.close(savingToast);
-
-              if (!result.ok) {
-                toast.error({
-                  title: "Couldn't save your W-9",
-                  description:
-                    "Your progress is still on this page — try again in a moment.",
-                });
-
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent("editor:navigate-after-save", {
-                  detail: {
-                    url: targetUrl,
-                    clearFileAfter: true,
-                  },
-                }),
-              );
-            },
-          },
-        }),
-      );
+      // W-9 Back is plain navigation. Do not dispatch
+      // `editor:w9-save-and-continue` here because that path finalizes the
+      // W-9 and can open the paywall; payment stays tied to explicit
+      // Save/Done/Download actions.
+      clearFile();
+      router.push(targetUrl);
 
       return;
     }
@@ -487,11 +509,10 @@ function TopAppBar() {
   };
 
   // QA 2026-09-07: logo click must save current edits BEFORE navigating
-  // home. Same shape as the back button (`handleBack`) — dispatch the
-  // navigate-after-save event (or the W-9 save-and-continue variant on
-  // /w-9-form) and cancel the Link's default navigation. Signed-out
-  // users have no cloud doc to persist, so let the Link navigate
-  // normally (returns `undefined` → `<Link>` proceeds).
+  // home. Same shape as the non-W-9 back button (`handleBack`) — dispatch
+  // the navigate-after-save event and cancel the Link's default navigation.
+  // W-9 intentionally bypasses finalize/save here; logo navigation must not
+  // open the paywall.
   const handleLogoClick = (
     e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
   ) => {
@@ -507,36 +528,11 @@ function TopAppBar() {
     const targetUrl = ROUTES.PUBLIC.HOME;
 
     if (showW9Save) {
-      const savingToast = toast.loading({
-        title: "Saving your W-9",
-        description: "Hold on — you'll go home once your progress is saved.",
-      });
-
-      window.dispatchEvent(
-        new CustomEvent("editor:w9-save-and-continue", {
-          detail: {
-            onComplete: (result: { ok: boolean; reason?: string }) => {
-              toast.close(savingToast);
-
-              if (!result.ok) {
-                toast.error({
-                  title: "Couldn't save your W-9",
-                  description:
-                    "Your progress is still on this page — try again in a moment.",
-                });
-
-                return;
-              }
-
-              window.dispatchEvent(
-                new CustomEvent("editor:navigate-after-save", {
-                  detail: { url: targetUrl, clearFileAfter: true },
-                }),
-              );
-            },
-          },
-        }),
-      );
+      // W-9 Logo is plain navigation, matching the Back button. Do not
+      // dispatch `editor:w9-save-and-continue` because that finalizes the
+      // form and can open the paywall.
+      clearFile();
+      router.push(targetUrl);
 
       return;
     }
@@ -831,11 +827,29 @@ function TopAppBar() {
           <span className="hidden sm:inline">{t("share")}</span>
         </button>
 
+        {showW9Save ? null : (
+          <Button
+            aria-label={t("convertToWord")}
+            className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#2563eb] !px-3 !text-[13px] !font-semibold !text-white hover:!bg-[#1d4ed8] disabled:!opacity-50 sm:!px-4"
+            isDisabled={
+              !canDownload || isSavingBeforeExport || isConvertingToWord
+            }
+            onPress={convertToWordAfterSave}
+          >
+            <HugeiconsIcon className="text-white" icon={Doc01Icon} size={15} />
+            <span className="hidden sm:inline">
+              {isConvertingToWord ? "…" : t("convertToWord")}
+            </span>
+          </Button>
+        )}
+
         <Button
           aria-label={t("download")}
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
-          isDisabled={!canDownload || isSavingBeforeExport}
+          isDisabled={
+            !canDownload || isSavingBeforeExport || isConvertingToWord
+          }
           onPress={openExportModalAfterSave}
         >
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
@@ -889,6 +903,7 @@ function ToolToolbar() {
   );
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
 
@@ -918,9 +933,16 @@ function ToolToolbar() {
 
         return;
       }
-      // Same save-before-action guard as EditorToolBar / BottomDock so
-      // in-progress edits get flushed before the modal opens.
+      // Guests match the mobile dock: Manage Pages opens locally first.
+      // Signed-in users save first so their cloud copy is current before
+      // the modal rebuilds page order.
       void (async () => {
+        if (!isSignedIn) {
+          setIsManagePagesOpen(true);
+
+          return;
+        }
+
         const ok = await saveBeforeAction(
           "Saving your edits before opening Manage Pages.",
         );
@@ -1030,7 +1052,7 @@ function ToolToolbar() {
                   key={tool.id}
                   disabled={isActionDisabled(tool.id)}
                   icon={tool.icon}
-                  label={tool.label}
+                  label={labelFor(tool.id)}
                   onClick={() => handleAction(tool.id)}
                 />
               );

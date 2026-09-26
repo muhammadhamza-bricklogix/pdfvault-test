@@ -38,7 +38,8 @@
     "search": "Rechercher dans le PDF",
     "print": "Imprimer",
     "share": "Partager via un lien",
-    "download": "Terminer et Télécharger"
+    "download": "Terminer et Télécharger",
+    "convertToWord": "Convertir en Word"
   },
   "saveStatus": {
     "saving": "Enregistrement de vos modifications",
@@ -57,5 +58,8 @@
     "flattenPdf": "Aplatir le PDF",
     "share": "Partager via un lien",
     "versionHistory": "Historique des versions"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "Ce PDF n'est pas protégé par mot de passe — il n'y a rien à supprimer."
   }
 }

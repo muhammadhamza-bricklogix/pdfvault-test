@@ -244,9 +244,10 @@ export function PaywallModal({
 
     return parseLocalePrefix(window.location.pathname)?.locale ?? "en";
   });
-  const strings = useMemo(() => getPaywallStrings(paywallLocale), [
-    paywallLocale,
-  ]);
+  const strings = useMemo(
+    () => getPaywallStrings(paywallLocale),
+    [paywallLocale],
+  );
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
@@ -346,6 +347,66 @@ export function PaywallModal({
     unInertNewPortals();
 
     return () => observer.disconnect();
+  }, [isOpen]);
+
+  // Pause Weglot for the paywall's lifetime.
+  //
+  // The `translate="no"` + `notranslate` + `wg-notranslate` markers on
+  // `<Modal.Dialog>` (plus the excludeBlocks selector we configure in
+  // WeglotBoot) stop the FIRST-paint translation of the modal, so it
+  // opens in English on `/de/` / `/es/` / etc. That's enough on modal
+  // open. It is NOT enough on subsequent React re-renders — clicking a
+  // plan card swaps the highlighted state on both plan tiles, React
+  // commits DOM mutations, and Weglot's body-level MutationObserver
+  // still fires. Something in the observer path adjacent to the fenced
+  // subtree touches text nodes React still remembers, and the next
+  // `commitDeletion` throws `NotFoundError: Failed to execute
+  // 'removeChild' on 'Node': The node to be removed is not a child of
+  // this node.` — the app blanks to `<app.global-error>` and the user
+  // can't buy.
+  //
+  // Reproduced on staging 2026-09-23 via Playwright: with `Weglot.
+  // getCurrentLang() === "de"`, Monthly → Annual → Monthly crashes.
+  // With `Weglot.switchTo("en")` before the flow, same clicks pass
+  // cleanly. Flipping Weglot back off is the smallest change that
+  // survives every React re-render inside the modal.
+  //
+  // The switch takes ~1 frame and only re-translates already-exposed
+  // DOM outside the modal (dashboard, sidebar). When the modal closes
+  // we restore the original language, so `/de/` returns to German
+  // immediately. Users see paywall in English (same intended trade-off
+  // as the PR #98 fence) but no crash.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+
+    const w = window as typeof window & {
+      Weglot?: {
+        getCurrentLang?: () => string | undefined;
+        switchTo?: (lang: string) => void;
+      };
+    };
+    const W = w.Weglot;
+
+    if (!W?.getCurrentLang || !W?.switchTo) return;
+    const prevLang = W.getCurrentLang();
+
+    if (!prevLang || prevLang === "en") return;
+    try {
+      W.switchTo("en");
+    } catch {
+      // Weglot occasionally throws mid-init if `switchTo` runs before
+      // its bootstrap resolves. Safe to swallow — the fence markers
+      // still block the FIRST paint, and the retry on close is
+      // idempotent.
+    }
+
+    return () => {
+      try {
+        W.switchTo?.(prevLang);
+      } catch {
+        // As above.
+      }
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -881,21 +942,6 @@ export function PaywallModal({
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {/*
-<<<<<<< Updated upstream
-          `translate="no"` + `notranslate` / `wg-notranslate` class fence off
-          the modal subtree from Weglot (and Google Translate).
-          Without this, the modal crashes on any translated locale
-          (`/de/`, `/es/`, `/fr/`, …) the moment React re-renders the
-          plan step — Weglot has already swapped React's text nodes for
-          translated ones, so React's next `removeChild` throws
-          `NotFoundError: The node to be removed is not a child of this
-          node.` and the global-error boundary blanks the page with
-          "Application error: a client-side exception has occurred". See
-          repro 2026-09-22 via Playwright on `/de/dashboard` → Download
-          → Annual plan card. English paywall copy on translated
-          locales is intentional until we move the plan/pay/success
-          copy into next-intl.
-=======
           Fence markers re-added 2026-09-23: the paywall now ships its
           own local translations (see `lib/client/paywall/paywall-strings.ts`)
           for `de` / `es` / `fr` / `pt` / `ar`. Weglot must NOT translate
@@ -906,7 +952,6 @@ export function PaywallModal({
           this subtree; combined with `Weglot.options.excluded_blocks`
           set in `WeglotBoot`, the modal renders exclusively from React
           state on every locale.
->>>>>>> Stashed changes
         */}
         <Modal.Dialog
           className={
@@ -1541,7 +1586,9 @@ function PayStep({
                 type="button"
                 onClick={onRetry}
               >
-                {retryLoading ? strings.pay.preparing : strings.pay.tryAnotherCard}
+                {retryLoading
+                  ? strings.pay.preparing
+                  : strings.pay.tryAnotherCard}
               </button>
             </div>
           ) : null}
@@ -1721,7 +1768,13 @@ function SuccessStep({
       currency: intent.currency,
       orderId: intent.orderId,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan, user]);
+  }, [
+    intent.amountTodayMinor,
+    intent.currency,
+    intent.orderId,
+    selectedPlan,
+    user,
+  ]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to
