@@ -172,7 +172,7 @@ export function LandingFooter() {
               logo, tagline, and support email all flush-left within the
               column so the eye reads brand → tagline → contact in a single
               vertical line). */}
-          <div className="col-span-2 flex flex-col items-start text-left sm:col-span-4 md:col-span-1 md:pr-16 lg:pr-24">
+          <div className="pv-footer-brand col-span-2 flex min-w-0 flex-col text-center sm:col-span-4 md:col-span-1 md:pe-16 md:text-start lg:pe-24">
             <Image
               alt="PDFVault"
               className="h-[40px] w-auto brightness-0 invert"
@@ -184,13 +184,14 @@ export function LandingFooter() {
             <p className="mt-6 max-w-[250px] text-[16px] leading-[1.55] text-white/80">
               A smarter, more secure place for your PDFs.
             </p>
-            <div className="mt-8 flex flex-col items-start gap-5">
+            <div className="mt-8 flex flex-col gap-5">
               <a
-                className={`flex items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
+                className={`inline-flex max-w-full items-center gap-3 text-[14px] text-white transition-opacity hover:opacity-80 ${FOCUS_RING}`}
+                dir="ltr"
                 href="mailto:support@pdfvault.ai"
               >
                 <SendIcon />
-                support@pdfvault.ai
+                <span dir="ltr">support@pdfvault.ai</span>
               </a>
             </div>
           </div>
@@ -200,17 +201,17 @@ export function LandingFooter() {
             <nav
               key={column.heading}
               aria-label={column.heading}
-              className="text-left"
+              className="min-w-0 text-center md:text-start"
             >
               <h2 className="text-[14px] font-semibold uppercase tracking-[0.04em] text-white">
                 {column.heading}
               </h2>
-              <ul className="mt-6 flex flex-col items-start gap-[18px]">
+              <ul className="pv-footer-link-list mt-6 flex min-w-0 flex-col gap-[18px]">
                 {column.links.map((link) => (
-                  <li key={link.label}>
+                  <li key={link.label} className="min-w-0 max-w-full">
                     <Link
-                      className={`inline-block text-[14px] text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING}`}
-                      href={withLocalePrefix(link.href)}
+                      className={`inline-block max-w-full break-words text-[14px] leading-relaxed text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING}`}
+                      href={link.href}
                     >
                       {link.label}
                     </Link>
@@ -228,7 +229,7 @@ export function LandingFooter() {
         */}
         <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <p className="text-left text-[11px] text-white/60 sm:text-[14px]">
+            <p className="text-start text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
               <span className="font-semibold text-white/90">PDFVault</span> All
               rights reserved.
@@ -236,7 +237,7 @@ export function LandingFooter() {
             {/* Legal entity + short-form address required by Solidgate
                 compliance (EU-visible footer). Full postal address lives in
                 the Terms and conditions + Privacy Policy pages. */}
-            <p className="text-center text-[11px] text-white/60 sm:text-right sm:text-[13px]">
+            <p className="text-center text-[11px] text-white/60 sm:text-end sm:text-[13px]">
               {FOOTER_COMPANY_ENTITY}, {FOOTER_COMPANY_ADDRESS_PLACEHOLDER}
             </p>
           </div>

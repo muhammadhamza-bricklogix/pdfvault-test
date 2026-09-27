@@ -166,29 +166,41 @@ const nextConfig = {
         ],
       },
       // Landing + tool landing + legal pages — prerendered static HTML.
-      // Aggressively cache at the CDN edge (s-maxage=1h + swr=1d) so
-      // CloudFront serves them without hitting the ALB origin on every
-      // visit. Browser cache is tighter (max-age=60) so redeploys land
-      // fast for repeat visitors after CDN invalidation runs.
       //
-      // `stale-while-revalidate` lets CloudFront serve the stale copy
-      // for up to 24 h while it refetches in the background — TTFB
-      // stays sub-50ms globally even during origin flakiness.
+      // Cache-Control breakdown:
+      //  - `max-age=0, must-revalidate` — every browser navigation
+      //    sends a conditional request. CloudFront replies with a
+      //    ~200-byte 304 when unchanged, or the fresh HTML on deploy.
+      //    Deploys reach ALL returning users on their next page load,
+      //    no exceptions.
+      //  - `s-maxage=3600` — CloudFront still caches for 1 h at the
+      //    edge, so those 304s are served from the CDN, not the ALB.
+      //    Origin load is unchanged from the prior config.
+      //
+      // Prior config was `max-age=60, s-maxage=3600,
+      // stale-while-revalidate=86400`. QA 2026-09-24: the 24 h SWR
+      // window meant a returning user within 24 h could get stale HTML
+      // pointing at pre-deploy JS chunks. Symptom that motivated the
+      // switch: users hitting the double-upload bug on `/de/` /
+      // `/fr/` even though the fix (PR #132) was live. Hard refresh
+      // (Cmd+Shift+R) recovered them; a version-check banner would
+      // solve it too but adds complexity — this config change is the
+      // smaller, safer lever.
       //
       // NOTE: CloudFront also needs a cache behavior that RESPECTS
       // these headers. The default distribution (see
       // `infra/cloudfront-setup.sh`) uses CachingDisabled for the
       // catch-all behavior — swap it to CachingOptimized for landing
       // paths or add a per-path behavior. Otherwise these headers only
-      // affect direct-to-ALB traffic.
+      // affect direct-to-ALB traffic (which is still an improvement:
+      // browser-side stale window is what was biting users).
       {
         source:
           "/((?!api|_next|dashboard|pdf-editor|pdf-composer|sign-in|sign-up|login|signup|forgot-password|share|forms|w9-form|w-9-form|oauth-callback|sso-callback).*)",
         headers: [
           {
             key: "Cache-Control",
-            value:
-              "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400",
+            value: "public, max-age=0, s-maxage=3600, must-revalidate",
           },
         ],
       },

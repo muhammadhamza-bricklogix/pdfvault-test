@@ -244,12 +244,23 @@ export function PaywallModal({
 
     return parseLocalePrefix(window.location.pathname)?.locale ?? "en";
   });
-  const strings = useMemo(() => getPaywallStrings(paywallLocale), [
-    paywallLocale,
-  ]);
+  const strings = useMemo(
+    () => getPaywallStrings(paywallLocale),
+    [paywallLocale],
+  );
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  // Preserve the initial monthly intent alongside `intent` so a user
+  // who picks Annual → Continue → Back → 7-day trial → Continue lands
+  // on the pay step with the ORIGINAL monthly paymentIntent, not the
+  // stale annual one `handleContinue` swapped in. Without this the
+  // Solidgate iframe re-renders on `intent.paymentIntent` and charges
+  // annual pricing even though the plan picker shows trial (QA
+  // 2026-09-24).
+  const [monthlyIntent, setMonthlyIntent] = useState<CheckoutIntent | null>(
+    null,
+  );
   // Fetched in parallel with the primary (monthly) intent so the
   // plan-picker card shows the same annual per-month price the payment
   // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
@@ -453,6 +464,7 @@ export function PaywallModal({
           // "USD". See `lib/client/billing/user-currency.ts`.
           persistUserCurrency(intent.currency);
           setIntent(intent);
+          setMonthlyIntent(intent);
         },
         onError: (err) => {
           // Enriched forensic log — captures the raw non-enveloped 400
@@ -579,6 +591,7 @@ export function PaywallModal({
     return () => {
       cancelled = true;
       setIntent(null);
+      setMonthlyIntent(null);
       setAnnualIntent(null);
       setAnnualUnavailable(false);
       setError(null);
@@ -833,6 +846,11 @@ export function PaywallModal({
     });
 
     if (selectedPlan === "monthly") {
+      // Restore the monthly intent if a prior Continue swapped it for
+      // the annual one (Annual → Back → 7-day trial → Continue path).
+      // Without this, PayStep + the Solidgate iframe render annual
+      // pricing / paymentIntent despite the user picking trial.
+      if (monthlyIntent) setIntent(monthlyIntent);
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
         plan: "monthly",
         via: "direct",
@@ -924,21 +942,6 @@ export function PaywallModal({
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {/*
-<<<<<<< Updated upstream
-          `translate="no"` + `notranslate` / `wg-notranslate` class fence off
-          the modal subtree from Weglot (and Google Translate).
-          Without this, the modal crashes on any translated locale
-          (`/de/`, `/es/`, `/fr/`, …) the moment React re-renders the
-          plan step — Weglot has already swapped React's text nodes for
-          translated ones, so React's next `removeChild` throws
-          `NotFoundError: The node to be removed is not a child of this
-          node.` and the global-error boundary blanks the page with
-          "Application error: a client-side exception has occurred". See
-          repro 2026-09-22 via Playwright on `/de/dashboard` → Download
-          → Annual plan card. English paywall copy on translated
-          locales is intentional until we move the plan/pay/success
-          copy into next-intl.
-=======
           Fence markers re-added 2026-09-23: the paywall now ships its
           own local translations (see `lib/client/paywall/paywall-strings.ts`)
           for `de` / `es` / `fr` / `pt` / `ar`. Weglot must NOT translate
@@ -949,7 +952,6 @@ export function PaywallModal({
           this subtree; combined with `Weglot.options.excluded_blocks`
           set in `WeglotBoot`, the modal renders exclusively from React
           state on every locale.
->>>>>>> Stashed changes
         */}
         <Modal.Dialog
           className={
@@ -1002,7 +1004,17 @@ export function PaywallModal({
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
               strings={strings}
-              onBack={() => setStep("plan")}
+              onBack={() => {
+                // Reset the shared `intent` to the monthly baseline so
+                // the plan step's `pickPlan(intent, …)` reads from the
+                // primary intent's alternatePlans in the same shape it
+                // saw on first mount. Also protects against `intent`
+                // being the annual variant when the user picks 7-day
+                // trial again — `handleContinue` mirrors this restore
+                // for the direct-monthly Continue path.
+                if (monthlyIntent) setIntent(monthlyIntent);
+                setStep("plan");
+              }}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
               onRetry={handleRetry}
@@ -1574,7 +1586,9 @@ function PayStep({
                 type="button"
                 onClick={onRetry}
               >
-                {retryLoading ? strings.pay.preparing : strings.pay.tryAnotherCard}
+                {retryLoading
+                  ? strings.pay.preparing
+                  : strings.pay.tryAnotherCard}
               </button>
             </div>
           ) : null}
@@ -1754,7 +1768,13 @@ function SuccessStep({
       currency: intent.currency,
       orderId: intent.orderId,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan, user]);
+  }, [
+    intent.amountTodayMinor,
+    intent.currency,
+    intent.orderId,
+    selectedPlan,
+    user,
+  ]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to

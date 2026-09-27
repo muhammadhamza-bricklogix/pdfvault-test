@@ -11,6 +11,16 @@
   contain: paint;
   transform: translate3d(0, 0, 0);
   -webkit-transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+}
+
+.backdropHitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  cursor: default;
+  background: transparent;
+  pointer-events: auto;
 }
 
 .container,
@@ -26,6 +36,10 @@
   display: flex;
   min-width: 0;
   flex: 1;
+  pointer-events: none;
+}
+
+.frame {
   pointer-events: none;
 }
 

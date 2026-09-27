@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import {
   Add01Icon,
   ArrowDown01Icon,
@@ -9,7 +10,6 @@ import {
   Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useAuth } from "@clerk/nextjs";
 import { Button, Modal } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,18 +24,62 @@ import {
   mergePdfs,
   type MergeEntry,
 } from "@/lib/client/pdf-tools/merge-pdfs";
-import {
-  clearPendingMergeDownload,
-  loadPendingMergeDownload,
-  savePendingMergeDownload,
-} from "@/lib/client/pdf-tools/pending-merge-download";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import {
+  clearMergeExtras,
+  loadMergeExtras,
+  saveMergeExtras,
+} from "@/lib/client/upload/pending-merge-extras";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import { triggerDownload } from "@/lib/client/pdf-tools/split-pdf";
+
+const PENDING_MERGE_STORAGE_KEY = "pdfvault:pendingMerge";
+const PENDING_MERGE_MAX_AGE_MS = 30 * 60 * 1000;
+
+function readPendingMerge(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_MERGE_STORAGE_KEY);
+
+    if (!raw) return false;
+    const ts = Number(raw);
+
+    if (!Number.isFinite(ts) || Date.now() - ts > PENDING_MERGE_MAX_AGE_MS) {
+      window.sessionStorage.removeItem(PENDING_MERGE_STORAGE_KEY);
+
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function markPendingMerge(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      PENDING_MERGE_STORAGE_KEY,
+      String(Date.now()),
+    );
+  } catch {
+    // sessionStorage disabled in private mode — ignore.
+  }
+}
+
+function clearPendingMerge(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(PENDING_MERGE_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 type Props = {
   /** Pre-loaded source entry from the editor (position 0, cannot be removed). */
@@ -49,10 +93,16 @@ type Props = {
  * All work is client-side via pdf-lib — no server round-trip required.
  */
 export function MergePdfModal({ isOpen, onClose, source }: Props) {
+  // Read Clerk auth directly for the signed-out gate below — mirrors the
+  // CompressModal / useExportEditor pattern (auth-chain item #1). The
+  // store's cached `isSignedIn` lags one tick during post-signin
+  // returns; reading from Clerk keeps the gate deterministic.
+  // `isLoaded` covers the race where a fast click on Merge & download
+  // arrives before Clerk finishes hydrating — treating `undefined` as
+  // "signed-out" would email-first modal a genuinely signed-in user.
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [extras, setExtras] = useState<MergeEntry[]>([]);
-  const [pendingAutoDownload, setPendingAutoDownload] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   // QA 2026-09-08: `isMerging` is React state — updates are async, so a
@@ -65,36 +115,18 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
   // synchronous — the second click hits the guard before touching
   // React state and returns immediately.
   const mergeInFlightRef = useRef(false);
-  const pendingAutoStartedRef = useRef(false);
+  // Post-signin auto-fire machinery (QA 2026-09-16). Guards below stop
+  // the effect from re-running after the first successful auto-fire
+  // (autoFireRef) and let the effect body call `handleMerge` without
+  // pulling it into the dep array (handleMergeRef captures the fresh
+  // callback each render).
+  const autoFireRef = useRef(false);
+  const handleMergeRef = useRef<() => Promise<void>>(async () => {});
 
-  useEffect(() => {
-    if (!isOpen) {
-      pendingAutoStartedRef.current = false;
-
-      return;
-    }
-    if (!source) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const pending = await loadPendingMergeDownload();
-
-        if (cancelled || !pending) return;
-
-        setExtras(pending.extras);
-        setPendingAutoDownload(pending.autoDownload);
-      } catch (err) {
-        logger.warn("[merge-pdf-modal] pending merge restore failed", err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, source]);
-
+  // Locale-aware return URL (i18n item, landed on staging via #130):
+  // preserve the URL locale prefix so `/de/…`, `/es/…`, `/fr/…` users
+  // return to the same language after sign-in. Falls back to the
+  // canonical editor path when locale can't be parsed or during SSR.
   const buildMergeReturnUrl = useCallback(() => {
     if (typeof window === "undefined") {
       return `${ROUTES.TOOLS.PDF_EDITOR}?tool=merge`;
@@ -165,37 +197,63 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
     if (mergeInFlightRef.current) return;
     mergeInFlightRef.current = true;
 
+    // Clerk still hydrating — bail silently and let the user click
+    // again in a moment. Firing the signed-out gate here would
+    // email-first modal a signed-in user during the loading window
+    // (auth-chain item #2 rationale, adapted for a click handler).
+    if (!authLoaded) {
+      mergeInFlightRef.current = false;
+      toast.info({
+        title: "Just a moment",
+        description: "Getting things ready — try again in a second.",
+      });
+
+      return;
+    }
+
+    // Sign-in gate (QA 2026-09-15). Mirrors CompressModal /
+    // useExportEditor: guests hit the email-first modal BEFORE the
+    // paywall bus fires, so they never see the "Welcome Back" login
+    // card (via `use-paywall.ts` signed-out branch) that was tripping
+    // QA in the merge → download flow. After auth return the hydrator
+    // opens the merge modal again via `?tool=merge` (Step 4); user
+    // clicks Merge & download → now signed-in → paywall → payment →
+    // merge downloads.
+    if (!isSignedIn) {
+      mergeInFlightRef.current = false;
+      try {
+        await snapshotPendingEditorFile();
+      } catch (err) {
+        logger.warn("[merge-pdf-modal] pending file snapshot failed", err);
+      }
+      // Persist the attached PDFs to IDB + set a sessionStorage marker
+      // so the mount effect below (post-signin return) can restore the
+      // list + auto-fire compression against them. Without this the
+      // returning user would see the merge modal with just the source
+      // PDF and would have to re-attach every file before Merge &
+      // download could re-fire — QA-reported 2026-09-16 as "user is
+      // redirected to the same merge popup rather than paywall".
+      if (extras.length > 0) {
+        try {
+          await saveMergeExtras(extras);
+        } catch (err) {
+          logger.warn("[merge-pdf-modal] pending extras save failed", err);
+        }
+      }
+      markPendingMerge();
+      dispatchEmailFirstModal({
+        redirectUrl: buildMergeReturnUrl(),
+        title: "Your file is ready",
+        subtitle: "Create an account to download it",
+        submitLabel: "Download file",
+      });
+      onClose();
+
+      return;
+    }
+
     setIsMerging(true);
     try {
-      if (!authLoaded) return;
-
-      if (!isSignedIn) {
-        const saved = await savePendingMergeDownload(extras, true);
-
-        if (!saved) {
-          toast.error({
-            title: "Couldn't prepare download",
-            description:
-              "Keep this tab open and try again. We couldn't preserve the PDFs you added for merge.",
-          });
-
-          return;
-        }
-
-        await snapshotPendingEditorFile().catch((err) =>
-          logger.warn("[merge-pdf-modal] pending editor save failed", err),
-        );
-
-        dispatchEmailFirstModal({
-          redirectUrl: buildMergeReturnUrl(),
-          title: "Your file is ready",
-          subtitle: "Create an account to download it",
-          submitLabel: "Download file",
-        });
-
-        return;
-      }
-
       // QA 2026-09-06: merge is 100% client-side (pdf-lib), so no
       // axios `isGatedRequest` interceptor ever fires — a signed-in
       // but non-entitled user could merge + download freely, bypassing
@@ -257,12 +315,19 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       // vanish after the merge finishes. The `editor:build-current-bytes`
       // event reads live `fabricCanvas` via `useSaveEditor`'s ref and
       // returns baked bytes via callback — no side effects on the store.
+      // `bakeOverlays: true` is CRITICAL (QA 2026-09-16). The shell's
+      // handler defaults to `false` (the Save-to-cloud variant, which
+      // strips shapes/drawings/highlights per skill log 2026-09-10 (b)
+      // to avoid duplicate-layer render on reload). Without this flag
+      // the merged download comes out overlay-free — exactly the
+      // reported "edits not reflected in merged PDF" bug.
       let sourceBytes: Uint8Array | null = null;
 
       await new Promise<void>((resolve) => {
         window.dispatchEvent(
           new CustomEvent("editor:build-current-bytes", {
             detail: {
+              bakeOverlays: true,
               onComplete: (r: {
                 ok: boolean;
                 bytes?: Uint8Array;
@@ -328,7 +393,6 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       });
 
       triggerDownload(mergedBlob, outName);
-      await clearPendingMergeDownload();
 
       // QA 2026-09-09: also swap the composer's source to the merged
       // file so the user's next edit session runs against the combined
@@ -378,26 +442,60 @@ export function MergePdfModal({ isOpen, onClose, source }: Props) {
       setIsMerging(false);
       mergeInFlightRef.current = false;
     }
-  }, [authLoaded, isSignedIn, source, extras, buildMergeReturnUrl, onClose]);
+  }, [source, extras, authLoaded, isSignedIn, buildMergeReturnUrl, onClose]);
 
   useEffect(() => {
-    if (!isOpen || !source || !pendingAutoDownload) return;
-    if (!authLoaded || !isSignedIn) return;
-    if (extras.length === 0) return;
-    if (pendingAutoStartedRef.current) return;
+    handleMergeRef.current = handleMerge;
+  });
 
-    pendingAutoStartedRef.current = true;
-    setPendingAutoDownload(false);
-    void handleMerge();
-  }, [
-    authLoaded,
-    extras.length,
-    handleMerge,
-    isOpen,
-    isSignedIn,
-    pendingAutoDownload,
-    source,
-  ]);
+  // Post-signin auto-fire (QA 2026-09-16). If the user clicked
+  // "Merge & download" as a guest we saved the attached PDFs to IDB
+  // via `saveMergeExtras` and marked `pdfvault:pendingMerge` in
+  // sessionStorage before dispatching the email-first modal. When
+  // they return signed-in with `?tool=merge`, the hydrator opens
+  // this modal (source restored from the store), and this effect:
+  //   1. Loads the persisted extras from IDB and restores them into
+  //      the modal's `extras` state so the user's attachment list is
+  //      back exactly as they left it.
+  //   2. Schedules `handleMerge` via `setTimeout(fn, 0)` — that yields
+  //      to React's render-commit + effect flush, so the
+  //      `handleMergeRef` useEffect above rewires `handleMergeRef.current`
+  //      to a fresh `handleMerge` closure whose captured `extras` is the
+  //      restored list. Without the timer trick the ref would still
+  //      point at the pre-restore closure (empty extras) and the merge
+  //      would run against just the source PDF.
+  // Now signed-in, so `handleMerge`'s sign-in gate short-circuits and
+  // the entitlement / paywall check fires directly — no second click
+  // on Merge & download, no "returned to the same merge popup"
+  // dead-end that QA flagged.
+  // `autoFireRef` guards against re-runs across re-renders / re-mounts.
+  // Marker + IDB record cleared as soon as the effect starts so a
+  // reload can't replay the auto-fire.
+  useEffect(() => {
+    if (autoFireRef.current) return;
+    if (!isSignedIn || !source) return;
+    if (!readPendingMerge()) return;
+    autoFireRef.current = true;
+    clearPendingMerge();
+    void (async () => {
+      try {
+        const restored = await loadMergeExtras();
+
+        if (restored && restored.length > 0) {
+          setExtras(restored);
+        }
+      } catch (err) {
+        logger.warn("[merge-pdf-modal] restore extras failed", err);
+      } finally {
+        void clearMergeExtras();
+      }
+      // `setTimeout(0)` yields to React so the setExtras above commits +
+      // the handleMergeRef useEffect refreshes before the merge fires.
+      window.setTimeout(() => {
+        void handleMergeRef.current();
+      }, 0);
+    })();
+  }, [isSignedIn, source]);
 
   const allEntries = source ? [source, ...extras] : extras;
   const totalPages = allEntries.reduce((n, e) => n + e.pageCount, 0);

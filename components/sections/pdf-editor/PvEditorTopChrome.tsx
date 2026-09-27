@@ -150,9 +150,10 @@ const GROUP_C: ToolEntry[] = [
 
 // Manage Pages — kept in its own pill group so the rotate/reorder/delete flow
 // reads as a distinct document-structure action, not another single-page tool.
-// Runs a saveBeforeAction guard locally (same guard the mobile BottomDock and
-// legacy EditorToolBar use) so in-progress edits are flushed before the modal
-// opens.
+// For signed-in users, runs a saveBeforeAction guard locally (same guard the
+// mobile BottomDock and legacy EditorToolBar use) so in-progress edits are
+// flushed before the modal opens. Guests open Manage Pages locally first; the
+// auth/export flow owns persistence later.
 const GROUP_MANAGE: ToolEntry[] = [
   {
     kind: "action",
@@ -340,16 +341,26 @@ function TopAppBar() {
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
-  const currentPage = usePdfEditorStore((s) => s.currentPage);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
-  const renameDoc = useRenameDocumentMutation();
+  // Scalar-boolean selectors so the entire top chrome (tools bar,
+  // save/download row, undo/redo) doesn't re-render on every brush
+  // stroke (QA 2026-09-15). Reading the full `historyByPage` /
+  // `historyIndexByPage` Maps subscribed the whole chrome to every
+  // Map-recreate — rapid tools (draw, eraser, edit-text) toggled
+  // `disabled={!canUndo}` mid-pointerdown and React Aria dropped the
+  // press ("dead click"). Booleans keep Zustand's shallow check on
+  // primitives, so the chrome only re-renders when either capability
+  // flag actually changes.
+  const canUndo = usePdfEditorStore(
+    (s) => (s.historyIndexByPage.get(s.currentPage) ?? -1) > 0,
+  );
+  const canRedo = usePdfEditorStore((s) => {
+    const idx = s.historyIndexByPage.get(s.currentPage) ?? -1;
+    const len = s.historyByPage.get(s.currentPage)?.length ?? 0;
 
-  const history = historyByPage.get(currentPage) ?? [];
-  const idx = historyIndexByPage.get(currentPage) ?? -1;
-  const canUndo = idx > 0;
-  const canRedo = idx < history.length - 1;
+    return idx < len - 1;
+  });
+  const renameDoc = useRenameDocumentMutation();
 
   const fileName = file?.name ?? "Untitled.pdf";
 
@@ -818,7 +829,7 @@ function TopAppBar() {
 
         {showW9Save ? null : (
           <Button
-            aria-label="Convert to Word"
+            aria-label={t("convertToWord")}
             className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#2563eb] !px-3 !text-[13px] !font-semibold !text-white hover:!bg-[#1d4ed8] disabled:!opacity-50 sm:!px-4"
             isDisabled={
               !canDownload || isSavingBeforeExport || isConvertingToWord
@@ -827,7 +838,7 @@ function TopAppBar() {
           >
             <HugeiconsIcon className="text-white" icon={Doc01Icon} size={15} />
             <span className="hidden sm:inline">
-              {isConvertingToWord ? "Saving…" : "Convert to Word"}
+              {isConvertingToWord ? "…" : t("convertToWord")}
             </span>
           </Button>
         )}
@@ -836,7 +847,9 @@ function TopAppBar() {
           aria-label={t("download")}
           className="!h-9 !cursor-pointer !gap-2 !rounded-full !bg-[#f12c23] !px-3 !text-[13px] !font-semibold !text-white hover:!opacity-90 disabled:!opacity-50 sm:!px-4"
           data-tour="editor-download"
-          isDisabled={!canDownload || isSavingBeforeExport || isConvertingToWord}
+          isDisabled={
+            !canDownload || isSavingBeforeExport || isConvertingToWord
+          }
           onPress={openExportModalAfterSave}
         >
           <HugeiconsIcon className="text-white" icon={Tick01Icon} size={15} />
@@ -890,6 +903,7 @@ function ToolToolbar() {
   );
   const setIsManagePagesOpen = usePdfEditorStore((s) => s.setIsManagePagesOpen);
   const file = usePdfEditorStore((s) => s.file);
+  const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
 
@@ -919,9 +933,16 @@ function ToolToolbar() {
 
         return;
       }
-      // Same save-before-action guard as EditorToolBar / BottomDock so
-      // in-progress edits get flushed before the modal opens.
+      // Guests match the mobile dock: Manage Pages opens locally first.
+      // Signed-in users save first so their cloud copy is current before
+      // the modal rebuilds page order.
       void (async () => {
+        if (!isSignedIn) {
+          setIsManagePagesOpen(true);
+
+          return;
+        }
+
         const ok = await saveBeforeAction(
           "Saving your edits before opening Manage Pages.",
         );

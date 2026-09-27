@@ -742,6 +742,13 @@ export function UploadWorkspace({
 
         setCurrentDocument(savedDoc);
         setEditorFile(pdfFile);
+        // eslint-disable-next-line no-console
+        console.log("[PDFedits-i18n] upload.setEditorFile", {
+          pathname,
+          filename: pdfFile.name,
+          size: pdfFile.size,
+          signedIn: isSignedIn,
+        });
 
         // Signed-in flow: navigate with `?id=<docId>` so the editor
         // hydrates from the persisted document row (see proxy.ts —
@@ -764,11 +771,16 @@ export function UploadWorkspace({
         const isGuestPdfOnConvertRoute =
           requiresAuth && authLoaded && !isSignedIn && isPdf(pdfFile);
 
-        router.push(
-          buildComposerHref(savedDoc?.id ?? null, {
-            skipExport: isGuestPdfOnConvertRoute,
-          }),
-        );
+        const composerHref = buildComposerHref(savedDoc?.id ?? null, {
+          skipExport: isGuestPdfOnConvertRoute,
+        });
+
+        // eslint-disable-next-line no-console
+        console.log("[PDFedits-i18n] upload.router.push", {
+          from: pathname,
+          to: composerHref,
+        });
+        router.push(composerHref);
       } catch (err) {
         logger.captureError(err, "upload.open_editor", {
           filename: picked.name,
