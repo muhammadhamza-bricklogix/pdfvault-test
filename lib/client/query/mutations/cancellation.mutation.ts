@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/config/api-client";
 import { billingKeys } from "@/lib/shared/constants/query-keys";
+import { trackSubscriptionCancel } from "@/lib/client/analytics/gtag";
 
 export type ChurnReason =
   | "unforeseen_circumstances"
@@ -26,6 +27,9 @@ export function useFinalizeCancellationMutation() {
     mutationFn: async (input: CancellationFeedback) => {
       await apiClient.post("/billing/subscription/cancel", input);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: billingKeys.all }),
+    onSuccess: (_, input) => {
+      trackSubscriptionCancel({ cancel_reason: input.reason });
+      qc.invalidateQueries({ queryKey: billingKeys.all });
+    },
   });
 }

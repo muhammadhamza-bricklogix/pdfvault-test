@@ -36,6 +36,11 @@ import { persistUserCurrency } from "@/lib/client/billing/user-currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import {
+  getGaClientId,
+  trackAddPaymentInfo,
+  trackTrialStart,
+} from "@/lib/client/analytics/gtag";
+import {
   setBingUserData,
   trackBingPurchase,
 } from "@/lib/client/analytics/bing-uet";
@@ -807,19 +812,22 @@ export function PaywallModal({
     const digits = raw.replace(/\D+/g, "");
     const last4 = digits.length >= 4 ? digits.slice(-4) : undefined;
 
-    if (!brand && !last4) return;
+    void getGaClientId().then((gaClientId) => {
+      if (!brand && !last4 && !gaClientId) return;
 
-    billingService
-      .persistCheckoutCardMetadata({
-        solidgateSubscriptionId: subscriptionId,
-        cardBrand: brand,
-        cardLast4: last4,
-      })
-      .catch((err) => {
-        logger.captureError(err, "checkout.card_metadata_post_failed", {
-          subscriptionId,
+      billingService
+        .persistCheckoutCardMetadata({
+          solidgateSubscriptionId: subscriptionId,
+          cardBrand: brand,
+          cardLast4: last4,
+          gaClientId: gaClientId || undefined,
+        })
+        .catch((err) => {
+          logger.captureError(err, "checkout.card_metadata_post_failed", {
+            subscriptionId,
+          });
         });
-      });
+    });
   }, []);
 
   const handleRetry = () => {
@@ -1565,14 +1573,25 @@ function PayStep({
   const { user } = useUser();
   const [cardExpanded, setCardExpanded] = useState(false);
 
-  // Set enhanced user data (SHA-256 hashed email, E.164 phone) for Bing UET on checkout
+  // GA4 Add Payment Info tracking & Bing UET Enhanced Conversion data
   useEffect(() => {
     const userEmail = user?.primaryEmailAddress?.emailAddress || null;
     const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+
+    trackAddPaymentInfo({
+      currency: intent.currency,
+      value: intent.amountTodayMinor / 100,
+      coupon: "",
+      user: {
+        email: userEmail,
+        phone: userPhone,
+      },
+    });
+
     if (userEmail || userPhone) {
       void setBingUserData({ email: userEmail, phone: userPhone });
     }
-  }, [user]);
+  }, [intent.amountTodayMinor, intent.currency, user]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1874,6 +1893,24 @@ function SuccessStep({
   // preferred hook for post-payment tracking — see 2026-08-31 request
   // for "post-payment URL" (there isn't one; the flow is modal-only).
   useEffect(() => {
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+
+    trackTrialStart({
+      plan_name:
+        selectedPlan === "annual"
+          ? "Annual"
+          : selectedPlan === "limited"
+            ? "Limited Access · 7-Day Trial"
+            : "Full Access · 7-Day Trial",
+      price: intent.amountTodayMinor / 100,
+      currency: intent.currency,
+      orderId: intent.orderId,
+      user: {
+        email: userEmail,
+        phone: userPhone,
+      },
+    });
     if (!Array.isArray(window.dataLayer)) window.dataLayer = [];
     window.dataLayer.push({
       currency: intent.currency,
@@ -1882,18 +1919,9 @@ function SuccessStep({
       plan: selectedPlan,
       value: intent.amountTodayMinor / 100,
     });
-
-    // Fire Bing UET purchase conversion with dynamic revenue value and currency
-    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
-    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
     if (userEmail || userPhone) {
       void setBingUserData({ email: userEmail, phone: userPhone });
     }
-    trackBingPurchase({
-      revenue_value: intent.amountTodayMinor / 100,
-      currency: intent.currency,
-      orderId: intent.orderId,
-    });
   }, [
     intent.amountTodayMinor,
     intent.currency,

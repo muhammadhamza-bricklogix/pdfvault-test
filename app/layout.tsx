@@ -175,6 +175,8 @@ export default async function RootLayout({
       ? envInviteId
       : envInviteId || TRUSTPILOT_INVITE_ID_DEFAULT;
 
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
+
   return (
     <html
       suppressHydrationWarning
@@ -239,17 +241,16 @@ export default async function RootLayout({
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
       <link href="https://www.clarity.ms" rel="dns-prefetch" />
 
-      {/* Google tag (gtag.js) — GA4 (G-K6PVB4B39T) + Ads (AW-18226423046) */}
+      {/* Google tag (gtag.js) — GA4 (from env) + Ads (AW-18226423046) */}
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-K6PVB4B39T"
+        src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId || "AW-18226423046"}`}
         strategy="afterInteractive"
       />
       <Script id="gtag-init" strategy="afterInteractive">
         {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-K6PVB4B39T');
-gtag('config', 'AW-18226423046');`}
+${gaMeasurementId ? `gtag('config', '${gaMeasurementId}', { debug_mode: ${process.env.NODE_ENV !== "production"} });\n` : ""}gtag('config', 'AW-18226423046');`}
       </Script>
       {/*
         Single explicit <head> block. React errors if <head> is rendered
