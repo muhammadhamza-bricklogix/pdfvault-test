@@ -30,7 +30,11 @@ export const termsTocEntries: LegalTocEntry[] = [
     label: "Third-Party Services, Materials, and Advertising",
   },
   { id: "t-2-5", label: "Subscription Fees and Payment" },
-  { id: "t-2-6", label: "User Representation and Restrictions" },
+  // LEGAL_COUNSEL_PENDING — QA F-36: "User Representation" (singular)
+  // was rendered as "Darstellung des Nutzers" (portrayal) in German.
+  // Plural "Representations" nudges Weglot toward "Zusicherungen"
+  // (legal warranties/representations), matching QA's suggestion.
+  { id: "t-2-6", label: "User Representations and Restrictions" },
   { id: "t-2-7", label: "Disclaimer of Warranties" },
   { id: "t-2-8", label: "Limitation of Liability" },
   { id: "t-2-9", label: "Indemnification" },
@@ -348,22 +352,30 @@ export function TermsAndConditionsContent() {
           and ensure all features work correctly.
         </p>
 
+        {/* LEGAL_COUNSEL_PENDING — QA F-34: original opened with two
+            gerunds ("Indem Sie … veröffentlichen, gewähren Sie …") that
+            read awkwardly in German. Reworded the English source to a
+            single lead-in clause so Weglot's German lands with a clean
+            "Indem Sie … veröffentlichen, gewähren Sie …" pattern. Legal
+            counsel to confirm the rewording does not change enforceable
+            meaning before prod. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          3.9 User Reviews and Testimonials
+          <span className="notranslate" translate="no">3.9</span> User Reviews
+          and Testimonials
         </p>
         <p>
-          By submitting, posting, or otherwise providing any review, rating,
-          comment, or testimonial (&ldquo;Review&rdquo;) about the Service on
-          any platform, you grant the Company a non-exclusive, worldwide,
-          perpetual, irrevocable, royalty-free, sublicensable, and transferable
-          right to use, reproduce, modify, publish, translate, distribute, and
-          create derivative works from such Reviews for any lawful purpose,
-          including marketing and product development, without further notice,
-          attribution, or compensation. The Company is not obligated to use or
-          maintain any Review and may remove or edit Reviews at its discretion
-          and is not responsible for the content of Reviews or the opinions
-          expressed in them. To request removal of a Review you submitted,
-          contact <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
+          By publishing any review, rating, comment, or testimonial
+          (&ldquo;Review&rdquo;) about the Service on any platform, you grant
+          the Company a non-exclusive, worldwide, perpetual, irrevocable,
+          royalty-free, sublicensable, and transferable right to use, reproduce,
+          modify, publish, translate, distribute, and create derivative works
+          from that Review for any lawful purpose, including marketing and
+          product development, without further notice, attribution, or
+          compensation. The Company is not obligated to use or maintain any
+          Review and may remove or edit Reviews at its discretion; it is not
+          responsible for the content of Reviews or the opinions expressed in
+          them. To request removal of a Review you submitted, contact{" "}
+          <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
         </p>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
@@ -463,8 +475,11 @@ export function TermsAndConditionsContent() {
           provided.
         </p>
 
+        {/* LEGAL_COUNSEL_PENDING — QA F-35: Weglot re-formatted the
+            section number "5.3" as the German decimal "5,3 Credits".
+            Fencing the numeric segment with `notranslate` locks it. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          5.3 Credits
+          <span className="notranslate" translate="no">5.3</span> Credits
         </p>
         <p>
           The Service may employ a credit-based system to enable access to
@@ -652,7 +667,7 @@ export function TermsAndConditionsContent() {
       <LegalSectionCard
         icon={UserCircleIcon}
         id="t-2-6"
-        title="6. User Representation and Restrictions"
+        title="6. User Representations and Restrictions"
       >
         <p>
           By accessing or using the Service, you confirm that: you have the
@@ -666,10 +681,21 @@ export function TermsAndConditionsContent() {
           applicable laws.
         </p>
 
+        {/* LEGAL_COUNSEL_PENDING — QA F-37/38/39/40: Weglot mixed
+            imperative ("Stellen Sie den Dienst bereit"), plain
+            infinitive ("Nutzen Sie den Dienst nicht"), and bare
+            infinitive without "zu" ("Zugriffsbeschränkungen umgehen")
+            across bullets under this heading. Changing the intro from
+            "You agree not to:" to "You agree that you will not:" +
+            keeping every bullet as a bare verb produces a consistent
+            "keine … tun / nicht … tun" German pattern from Weglot.
+            Legal counsel to confirm the reworded lead-in is
+            equivalent for enforceability. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          6.1 Prohibited Conduct
+          <span className="notranslate" translate="no">6.1</span> Prohibited
+          Conduct
         </p>
-        <p>You agree not to:</p>
+        <p>You agree that you will not:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>
             Collect, scrape, or systematically retrieve data or content from the
