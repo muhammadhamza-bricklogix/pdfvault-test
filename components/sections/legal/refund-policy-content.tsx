@@ -48,9 +48,15 @@ export function RefundPolicyContent() {
           plans, and paid features made on pdfvault.ai (the
           &ldquo;Service&rdquo;) and forms an integral part of our{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> and
-          Subscription Terms. Capitalised terms not defined here have the
-          meaning given in the{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. Nothing
+          {/* LEGAL_COUNSEL_PENDING — QA F-46: "Capitalised terms"
+              was rendered as "großgeschriebene Begriffe" in German
+              (literal, awkward). Reworded to point at the T&C
+              definitions directly, matching QA's natural German
+              suggestion ("die in den Allgemeinen Geschäftsbedingungen
+              definierten Begriffe"). */}
+          Subscription Terms. Terms defined in the{" "}
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
+          meaning given there. Nothing
           in this Policy limits or excludes any non-waivable statutory rights
           you have under the laws of your country of residence, including the
           rights described in Section 6 below.
@@ -112,10 +118,23 @@ export function RefundPolicyContent() {
         </p>
       </LegalSectionCard>
 
+      {/* LEGAL_COUNSEL_PENDING — QA F-45 / F-47: Weglot rendered
+          "Credits" as "Danksagungen" (film-style acknowledgements) and
+          drifted between "Guthaben", "Gutschriften", and "Credits"
+          elsewhere. Fencing "Credits" locks the product term across
+          all locales; "Add-on Features" gives Weglot a cleaner
+          German target than plain "Add-ons". */}
       <LegalSectionCard
         icon={MoneyReceive02Icon}
         id="r-5-4"
-        title="Credits and Add-ons"
+        title={
+          <span>
+            <span className="notranslate" translate="no">
+              Credits
+            </span>{" "}
+            and Add-on Features
+          </span>
+        }
       >
         <p>
           Credits that have been used or consumed are non-refundable.

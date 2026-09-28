@@ -47,8 +47,11 @@ export function SubscriptionTermsContent() {
           These Subscription Terms govern your PDFVault trial and monthly
           subscription, including automatic renewal. They form an integral part
           of our <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>;
-          capitalised terms not defined here have the meaning given in the{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. In the
+          {/* LEGAL_COUNSEL_PENDING — QA F-46: see refund-policy-content
+              for rationale. */}
+          terms defined in the{" "}
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
+          meaning given there. In the
           event of a conflict between these Subscription Terms and the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> in
           relation to trial and subscription billing, these Subscription Terms
