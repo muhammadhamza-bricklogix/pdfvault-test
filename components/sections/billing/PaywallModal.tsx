@@ -1323,7 +1323,7 @@ function PlanStep({
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           {/* Left — preview column (or fallback content) */}
           <div
-            className="flex flex-col justify-start gap-4 p-5 sm:p-6 md:px-8 md:py-6"
+            className="flex min-h-0 flex-col justify-start gap-3 px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6 md:px-8 md:pb-4 md:pt-5"
             style={{ backgroundColor: CREAM }}
           >
             <BrandLogo />
@@ -2112,7 +2112,7 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
     filename.length > 32 ? `${filename.slice(0, 29)}…` : filename;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
+    <div className="flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)] md:min-h-0 md:flex-1">
       {/* File type badge header */}
       <div className="flex items-center justify-end bg-[#f7f7f9] px-4 py-2.5">
         <span
@@ -2125,10 +2125,10 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
 
       {/* Document preview — real PDF iframe when available, blurred mock otherwise */}
       {previewObjectUrl ? (
-        <div className="h-[260px] w-full overflow-hidden">
+        <div className="h-[360px] min-h-0 w-full flex-1 overflow-hidden sm:h-[420px] md:h-auto">
           <iframe
             className="h-full w-full border-none"
-            src={`${previewObjectUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+            src={`${previewObjectUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
             style={{ pointerEvents: "none" }}
             title={filename}
           />
