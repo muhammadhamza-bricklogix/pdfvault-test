@@ -275,8 +275,13 @@ export function LandingFooter() {
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <p className="text-start text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
-              <span className="font-semibold text-white/90">PDFVault</span> All
-              rights reserved.
+              <span
+                className="notranslate wg-notranslate font-semibold text-white/90"
+                translate="no"
+              >
+                PDFVault
+              </span>{" "}
+              All rights reserved.
             </p>
             {/* Legal entity + short-form address required by Solidgate
                 compliance (EU-visible footer). Full postal address lives in

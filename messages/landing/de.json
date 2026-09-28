@@ -16,5 +16,30 @@
   },
   "upload": {
     "maxFileSize": "Maximale Dateigröße: 100 MB"
+  },
+  "brand": {
+    "name": "PDFVault"
+  },
+  "hero": {
+    "title": "Bearbeiten Sie jede PDF-Datei in Sekundenschnelle",
+    "subtitle": "Alles, was Sie zum Bearbeiten, Unterschreiben und Schützen von PDFs brauchen — schnell, sicher und an einem Ort."
+  },
+  "toolsSection": {
+    "titleLineOne": "Alle Tools, die Sie für die Arbeit",
+    "titleLineTwo": "mit PDF-Dateien benötigen, an einem Ort",
+    "description": "Alle Tools, die Sie für den Umgang mit PDFs benötigen — immer griffbereit. Zusammenführen, Teilen, Komprimieren, Umwandeln, Drehen, Entsperren und mit Wasserzeichen versehen — in wenigen Klicks."
+  },
+  "allToolsCatalog": {
+    "heading": "Alle PDFVault-Tools"
+  },
+  "steps": {
+    "sectionTitle": "In drei einfachen Schritten loslegen",
+    "sectionDescription": "Vom Hochladen bis zur sicher gespeicherten Datei — mit PDFVault lassen sich alle PDFs an einem Ort verwalten.",
+    "step1Title": "Laden Sie Ihr Dokument hoch",
+    "step1Body": "Laden Sie es von Ihrem Gerät hoch.",
+    "step2Title": "Passen Sie Ihr Dokument an",
+    "step2Body": "Bearbeiten, umwandeln, komprimieren, schützen, organisieren oder unterschreiben Sie Ihr Dokument mit den Tools, die Sie brauchen.",
+    "step3Title": "Speichern Sie es in Ihrem PDFVault",
+    "step3Body": "Behalten Sie die aktuelle Version in Ihrem PDFVault — jederzeit wieder abrufbar."
   }
 }

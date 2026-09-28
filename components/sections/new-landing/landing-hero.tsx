@@ -1,6 +1,15 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 import { UploadWorkspace } from "./upload-workspace";
 
 export function LandingHero() {
+  // Localised via next-intl so QA-flagged German copy (F-06, F-07)
+  // renders correctly instead of relying on Weglot's machine
+  // translation. See messages/landing/de.json → hero.
+  const t = useTranslations("hero");
+
   return (
     <section
       aria-labelledby="hero-heading"
@@ -10,12 +19,18 @@ export function LandingHero() {
           background under the hero copy. */}
 
       <div className="pv-container relative z-10 flex flex-col items-center pt-16 text-center sm:pt-[8vh]">
-        <h1 className="pv-display max-w-[760px] text-balance" id="hero-heading">
-          Edit Any PDF in Seconds
+        <h1
+          className="pv-display notranslate wg-notranslate max-w-[760px] text-balance"
+          id="hero-heading"
+          translate="no"
+        >
+          {t("title")}
         </h1>
-        <p className="mt-6 max-w-[600px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)] md:max-w-none md:whitespace-nowrap">
-          Everything you need to edit, sign, and protect PDFs — fast, secure,
-          and all in one place
+        <p
+          className="notranslate wg-notranslate mt-6 max-w-[600px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)] md:max-w-none md:whitespace-nowrap"
+          translate="no"
+        >
+          {t("subtitle")}
         </p>
       </div>
 
