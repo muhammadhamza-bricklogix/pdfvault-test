@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -51,6 +52,16 @@ type Tool = {
    * instead of the guest marketing page. Convert tiles leave it unset.
    */
   toolSlug?: string;
+  /**
+   * Opt-in key for `messages/landing/<locale>.json` under
+   * `tools.<i18nKey>.title` and `tools.<i18nKey>.description`. When set,
+   * the render layer swaps `title` + `description` for the localised
+   * strings. When unset, the hardcoded English `title` / `description`
+   * still ship — Weglot continues to translate them at runtime for
+   * non-EN locales. Migrating a tile is therefore purely additive; no
+   * downstream code needs updating.
+   */
+  i18nKey?: string;
 };
 
 const TABS: Tab[] = [
@@ -90,6 +101,11 @@ const TOOLS: Tool[] = [
     href: "/sign-pdf",
     toolSlug: "sign",
     tabs: ["edit"],
+    // QA F-18 / F-19: Weglot rendered "Sign" as "Zeichen" (a mark/symbol)
+    // and left the "vector strokes" wording untouched. The de.json entry
+    // ships correct German ("Unterschreiben" + a plain-language
+    // description) — see messages/landing/de.json → tools.sign.
+    i18nKey: "sign",
   },
   {
     icon: "/landing/editor.svg",
@@ -319,6 +335,15 @@ export function LandingTools() {
   const { isSignedIn } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("edit");
   const [expanded, setExpanded] = useState(false);
+  // Localised tile labels — opt-in via `i18nKey` on individual tiles.
+  // Untouched tiles keep their hardcoded English copy so Weglot still
+  // handles them on non-EN locales until they're migrated too.
+  const tTools = useTranslations("tools");
+  // Section heading / description — QA F-06 flagged the German wording
+  // "Bringen Sie Ihr Dokument mit" (unnatural). F-08 flagged a stray
+  // "v" in "PDF-Dateien v benötigen" (Weglot artifact). Both go away
+  // by rendering the German text directly from de.json.
+  const tToolsSection = useTranslations("toolsSection");
   // Reset "View more" whenever the active tab changes so a fresh tab
   // always paints its capped view. React's adjust-state-during-render
   // pattern (used elsewhere in this repo — see dashboard-home.tsx) is
@@ -361,11 +386,20 @@ export function LandingTools() {
     >
       <div className="pv-container">
         <SectionHeading
-          description="Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
+          description={
+            <span className="notranslate wg-notranslate" translate="no">
+              {tToolsSection("description")}
+            </span>
+          }
           title={
-            <span id="tools-heading">
-              Every tool you need to work
-              <br className="hidden sm:block" /> with PDFs in one place
+            <span
+              className="notranslate wg-notranslate"
+              id="tools-heading"
+              translate="no"
+            >
+              {tToolsSection("titleLineOne")}
+              <br className="hidden sm:block" />{" "}
+              {tToolsSection("titleLineTwo")}
             </span>
           }
         />
@@ -422,15 +456,43 @@ export function LandingTools() {
         >
           {visibleTools.map((tool, index) => {
             const hideOnMobile = !expanded && index >= MOBILE_INITIAL_COUNT;
+            // Prefer localised copy when the tile opts in via `i18nKey`.
+            // Fallback to the hardcoded EN string keeps un-migrated tiles
+            // Weglot-translatable at runtime.
+            const localisedTitle = tool.i18nKey
+              ? tTools(`${tool.i18nKey}.title`)
+              : tool.title;
+            const localisedDescription = tool.i18nKey
+              ? tTools(`${tool.i18nKey}.description`)
+              : tool.description;
+
+            // Fence localised tiles from Weglot so its cached
+            // EN→translated mapping doesn't overwrite our next-intl
+            // strings (Weglot's MutationObserver post-processes the
+            // React output). Only applied when we've authored a
+            // translation via `i18nKey`; un-migrated tiles stay
+            // Weglot-visible so they still translate for non-EN
+            // visitors until they're migrated too.
+            const fenceProps = tool.i18nKey
+              ? {
+                  className:
+                    "notranslate wg-notranslate group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]",
+                  translate: "no" as const,
+                }
+              : {
+                  className:
+                    "group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]",
+                };
 
             return (
               <li
                 key={tool.title}
-                className={`pv-fade-up ${hideOnMobile ? "hidden sm:block" : ""}`.trim()}
+                className={`pv-fade-up ${hideOnMobile ? "hidden sm:block" : ""} ${tool.i18nKey ? "notranslate wg-notranslate" : ""}`.trim()}
                 style={{ animationDelay: `${index * 55}ms` }}
+                translate={tool.i18nKey ? "no" : undefined}
               >
                 <a
-                  className="group flex h-full flex-col rounded-[var(--pv-radius-card)] border border-[var(--pv-card-border)] bg-white p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-[var(--pv-brand-primary)]/40 hover:shadow-[0_18px_38px_-24px_rgba(241,44,35,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
+                  {...fenceProps}
                   href={resolveToolHref(
                     tool.href,
                     tool.toolSlug,
@@ -446,12 +508,38 @@ export function LandingTools() {
                       width={24}
                     />
                   </span>
-                  <h3 className="mt-5 text-[18px] font-bold text-[var(--pv-text-primary)]">
-                    {tool.title}
-                  </h3>
-                  <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]">
-                    {tool.description}
-                  </p>
+                  {/* Leaf-level Weglot fences — an ancestor `notranslate`
+                      class is not always honored by Weglot's cached
+                      translation memory when it seeded from the original
+                      English source. Marking the actual text nodes
+                      guarantees Weglot skips them. Non-i18n tiles fall
+                      through to the plain markup so Weglot still runs.
+                  */}
+                  {tool.i18nKey ? (
+                    <>
+                      <h3
+                        className="notranslate wg-notranslate mt-5 text-[18px] font-bold text-[var(--pv-text-primary)]"
+                        translate="no"
+                      >
+                        {localisedTitle}
+                      </h3>
+                      <p
+                        className="notranslate wg-notranslate mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]"
+                        translate="no"
+                      >
+                        {localisedDescription}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="mt-5 text-[18px] font-bold text-[var(--pv-text-primary)]">
+                        {localisedTitle}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]">
+                        {localisedDescription}
+                      </p>
+                    </>
+                  )}
                   <span className="mt-4 text-[var(--pv-text-primary)] transition-transform duration-300 group-hover:translate-x-1.5">
                     <ArrowIcon />
                   </span>

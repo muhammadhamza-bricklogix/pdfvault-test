@@ -38,7 +38,8 @@
     "search": "البحث في PDF",
     "print": "طباعة",
     "share": "مشاركة عبر رابط",
-    "download": "إنهاء وتنزيل"
+    "download": "إنهاء وتنزيل",
+    "convertToWord": "التحويل إلى Word"
   },
   "saveStatus": {
     "saving": "جارٍ حفظ تعديلاتك",
@@ -57,5 +58,8 @@
     "flattenPdf": "تسوية PDF",
     "share": "مشاركة عبر رابط",
     "versionHistory": "سجل الإصدارات"
+  },
+  "passwordModal": {
+    "notPasswordProtected": "ملف PDF هذا غير محمي بكلمة مرور — لا يوجد ما يجب إزالته."
   }
 }

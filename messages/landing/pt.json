@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "edit": "Edit",
+    "convert": "Convert",
+    "compress": "Compress"
+  },
+  "footer": {
+    "convert": "Convert",
+    "doNotSell": "Do Not Sell or Share My Data"
+  },
+  "tools": {
+    "sign": {
+      "title": "Sign",
+      "description": "Add your signature to any PDF."
+    }
+  },
+  "upload": {
+    "maxFileSize": "Max file size: 100 MB"
+  },
+  "brand": {
+    "name": "PDFVault"
+  },
+  "hero": {
+    "title": "Edit Any PDF in Seconds",
+    "subtitle": "Everything you need to edit, sign, and protect PDFs — fast, secure, and all in one place"
+  },
+  "toolsSection": {
+    "titleLineOne": "Every tool you need to work",
+    "titleLineTwo": "with PDFs in one place",
+    "description": "Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
+  },
+  "allToolsCatalog": {
+    "heading": "Every PDFVault tool"
+  },
+  "steps": {
+    "sectionTitle": "Get started in three simple steps",
+    "sectionDescription": "From upload to a securely saved document, PDFVault makes it easy to handle every PDF in one place.",
+    "step1Title": "Upload your document",
+    "step1Body": "Upload it from your device.",
+    "step2Title": "Customize your document",
+    "step2Body": "Edit, convert, compress, protect, organize, or sign your document with the tools you need.",
+    "step3Title": "Save it to your PDFVault",
+    "step3Body": "Keep the latest version in your PDFVault, ready whenever you need it again."
+  }
+}

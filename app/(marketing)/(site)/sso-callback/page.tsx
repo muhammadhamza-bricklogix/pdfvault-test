@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { logger } from "@/lib/shared/utils/logger";
 import { trackSignUp } from "@/lib/client/analytics/gtag";
+import { setBingUserData } from "@/lib/client/analytics/bing-uet";
 
 /**
  * Only allow same-origin relative paths so the redirect can't be
@@ -133,6 +134,9 @@ export default function SSOCallbackPage() {
 
         if (signUp?.status === "complete") {
           trackSignUp("google", { email: signUp.emailAddress });
+          if (signUp.emailAddress) {
+            void setBingUserData({ email: signUp.emailAddress });
+          }
         }
       } catch (err) {
         if (cancelled) return;

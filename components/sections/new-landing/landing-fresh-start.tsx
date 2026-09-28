@@ -24,6 +24,11 @@ import { useEffect } from "react";
 export function LandingFreshStart() {
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    console.log("[PDFedits-i18n] LandingFreshStart mount", {
+      pathname: location.pathname,
+      langPref: document.cookie.match(/lang_pref=(\w+)/)?.[1] ?? null,
+    });
     let cancelled = false;
     // Capture the file reference at mount time. We only clear if the
     // store STILL holds that same reference when the deferred callback

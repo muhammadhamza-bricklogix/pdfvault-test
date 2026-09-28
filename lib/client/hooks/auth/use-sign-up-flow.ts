@@ -18,6 +18,7 @@ import {
 import { parseClerkError } from "@/lib/shared/utils/clerk-error";
 import { logger } from "@/lib/shared/utils/logger";
 import { trackSignUp } from "@/lib/client/analytics/gtag";
+import { setBingUserData } from "@/lib/client/analytics/bing-uet";
 
 type SignUpStep = "credentials" | "verification";
 
@@ -165,6 +166,9 @@ export function useSignUpFlow() {
 
         if (signUp.status === "complete") {
           trackSignUp("email", { email: signUp.emailAddress });
+          if (signUp.emailAddress) {
+            void setBingUserData({ email: signUp.emailAddress });
+          }
           await navigateToHome();
 
           return;

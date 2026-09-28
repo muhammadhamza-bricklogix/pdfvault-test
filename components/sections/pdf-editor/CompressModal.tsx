@@ -13,7 +13,7 @@ import {
   Slider,
   Switch,
 } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import {
@@ -33,6 +33,58 @@ type PresetOption = {
   label: string;
   value: Exclude<CompressPreset, "custom">;
 };
+
+const PENDING_COMPRESS_STORAGE_KEY = "pdfvault:pendingCompress";
+const PENDING_COMPRESS_MAX_AGE_MS = 30 * 60 * 1000;
+
+type PendingCompressConfig = {
+  preset: CompressPreset;
+  quality: number;
+  maxImageDpi: number;
+  grayscale: boolean;
+  ts: number;
+};
+
+function readPendingCompress(): PendingCompressConfig | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_COMPRESS_STORAGE_KEY);
+
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingCompressConfig;
+
+    if (Date.now() - parsed.ts > PENDING_COMPRESS_MAX_AGE_MS) {
+      window.sessionStorage.removeItem(PENDING_COMPRESS_STORAGE_KEY);
+
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePendingCompress(config: Omit<PendingCompressConfig, "ts">): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      PENDING_COMPRESS_STORAGE_KEY,
+      JSON.stringify({ ...config, ts: Date.now() }),
+    );
+  } catch {
+    // sessionStorage disabled in private mode — ignore.
+  }
+}
+
+function clearPendingCompress(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(PENDING_COMPRESS_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 const PRESET_OPTIONS: ReadonlyArray<PresetOption> = [
   {
@@ -66,12 +118,30 @@ export function CompressModal() {
   const file = usePdfEditorStore((s) => s.file);
   const { isSignedIn } = useAuth();
 
-  const [preset, setPreset] = useState<CompressPreset>("balanced");
-  const [quality, setQuality] = useState(75);
-  const [maxImageDpi, setMaxImageDpi] = useState(150);
-  const [grayscale, setGrayscale] = useState(false);
+  // Seed state from any pending compress config saved by a prior signed-out
+  // "Compress & download" click (see the signed-out branch of
+  // `handleCompress`). Lets the auto-fire effect below run the mutation with
+  // the exact preset + custom knobs the user originally chose, without having
+  // to setState-then-defer.
+  const [preset, setPreset] = useState<CompressPreset>(
+    () => readPendingCompress()?.preset ?? "balanced",
+  );
+  const [quality, setQuality] = useState(
+    () => readPendingCompress()?.quality ?? 75,
+  );
+  const [maxImageDpi, setMaxImageDpi] = useState(
+    () => readPendingCompress()?.maxImageDpi ?? 150,
+  );
+  const [grayscale, setGrayscale] = useState(
+    () => readPendingCompress()?.grayscale ?? false,
+  );
 
   const compress = useCompressFileMutation();
+  const autoFireRef = useRef(false);
+  // Live ref so the auto-fire effect can invoke `handleCompress` without
+  // pulling it into the dep array (the callback captures fresh state on
+  // each render anyway).
+  const handleCompressRef = useRef<() => Promise<void>>(async () => {});
 
   const handleClose = () => {
     if (compress.isPending) return;
@@ -94,6 +164,11 @@ export function CompressModal() {
       await snapshotPendingEditorFile().catch((err) =>
         logger.warn("pending editor file save failed", err),
       );
+
+      // Persist the user's preset selection so the auto-fire effect on
+      // return can run compress with the same config — the modal must
+      // NOT ask them to pick again (QA 2026-09-14).
+      savePendingCompress({ preset, quality, maxImageDpi, grayscale });
 
       const returnTo = `${ROUTES.TOOLS.PDF_EDITOR}?tool=compress`;
 
@@ -182,6 +257,27 @@ export function CompressModal() {
       }
     }
   };
+
+  useEffect(() => {
+    handleCompressRef.current = handleCompress;
+  });
+
+  // Post-signin auto-fire (QA 2026-09-14). If the user clicked "Compress
+  // & download" as a guest we saved their preset to sessionStorage and
+  // dispatched the email-first modal. When they return signed-in with
+  // `?tool=compress`, the hydrator's Step 4 SKIPS opening this modal
+  // (see the pending-config check in `pending-editor-file-hydrator.tsx`)
+  // and this effect resumes compression with the exact same config, no
+  // second popup, no second click. Clears the sessionStorage key on
+  // fire so a reload / retry doesn't loop.
+  useEffect(() => {
+    if (autoFireRef.current) return;
+    if (!isSignedIn || !file) return;
+    if (!readPendingCompress()) return;
+    autoFireRef.current = true;
+    clearPendingCompress();
+    void handleCompressRef.current();
+  }, [isSignedIn, file]);
 
   return (
     <Modal.Backdrop

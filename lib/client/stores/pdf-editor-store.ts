@@ -255,6 +255,20 @@ type PdfEditorStore = {
    */
   autoPersistDisabled: boolean;
   /**
+   * When true, `useEditTextMode` will NOT auto-run text extraction on the
+   * default Select tool. The user can still activate the Edit Text tool
+   * manually to trigger extraction. Set by routes that pair a specialised
+   * form-fill overlay with the shared `<PdfEditorShell />` (e.g. the W-9
+   * route, where users interact via `W9FormFieldsPortal` — not by tapping
+   * source text) so the Fabric IText overlay never paints on load. Without
+   * this gate, the W-9 template's text extraction can produce Fabric IText
+   * objects that misalign with pdf.js's native paint of the same glyphs,
+   * producing visible glyph doubling — the QA 2026-09-26 regression.
+   * Cleared on unmount so `/pdf-composer` continues to auto-extract per
+   * the QA 2026-09-16 UX (text selectable on open).
+   */
+  disableAutoTextExtract: boolean;
+  /**
    * Source page indexes that have had their text successfully extracted
    * into the Fabric IText overlay (driven by the "Edit Text" tool). Once
    * a page is in this set we know:
@@ -385,6 +399,7 @@ type PdfEditorStore = {
   setIsRestoringHistory: (value: boolean) => void;
   setIsRestoringSession: (value: boolean) => void;
   setAutoPersistDisabled: (value: boolean) => void;
+  setDisableAutoTextExtract: (value: boolean) => void;
   setIsSignatureModalOpen: (value: boolean) => void;
   setIsSignedIn: (value: boolean) => void;
   markPageExtracted: (sourcePage: number) => void;
@@ -440,6 +455,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   isRestoringHistory: false,
   isRestoringSession: false,
   autoPersistDisabled: false,
+  disableAutoTextExtract: false,
   isSignatureModalOpen: false,
   isSignedIn: false,
   extractedPages: new Set(),
@@ -871,6 +887,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setIsRestoringHistory: (value) => set({ isRestoringHistory: value }),
   setIsRestoringSession: (value) => set({ isRestoringSession: value }),
   setAutoPersistDisabled: (value) => set({ autoPersistDisabled: value }),
+  setDisableAutoTextExtract: (value) => set({ disableAutoTextExtract: value }),
   setIsSignatureModalOpen: (value) => set({ isSignatureModalOpen: value }),
   setIsSignedIn: (value) => set({ isSignedIn: value }),
   markPageExtracted: (sourcePage) =>

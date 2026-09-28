@@ -159,7 +159,7 @@ export function trackBingPurchase(params: BingPurchaseEventParams): void {
     currency,
   });
 
-  // 2. Push to GTM dataLayer (mirroring GA4 ecommerce structure)
+  // 2. Push to GTM dataLayer (mirroring ecommerce conversion structure)
   if (!Array.isArray(window.dataLayer)) {
     window.dataLayer = [];
   }

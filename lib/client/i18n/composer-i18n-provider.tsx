@@ -53,10 +53,35 @@ function readLangPrefCookie(): string | null {
 // Otherwise Weglot would race the composer's local strings and produce
 // double-translated / flickering text (same class of bug that shipped
 // the paywall fence markers in #107 / #110 / #111).
-export function ComposerI18nProvider({ children }: { children: ReactNode }) {
+export function ComposerI18nProvider({
+  children,
+  initialLocale,
+}: {
+  children: ReactNode;
+  /**
+   * Optional server-resolved locale (QA F-63 fix). When the parent
+   * server component reads the `lang_pref` cookie via `next/headers`
+   * and passes it down, the composer's very first paint already
+   * renders in the correct locale — no more English → German flash
+   * on refresh for German users whose URL is `/pdf-composer` (no
+   * `/de/` prefix). Falls back to the URL / cookie / "en" resolver
+   * when not provided (e.g. any call-site that hasn't been wired
+   * through a server component yet).
+   */
+  initialLocale?: string;
+}) {
   const pathname = usePathname() ?? "/";
 
   const locale: ComposerLocale = useMemo(() => {
+    // Server-resolved locale wins when provided — matches the
+    // hydration render exactly so React doesn't need to swap
+    // messages on the first client paint. QA F-63.
+    if (
+      initialLocale &&
+      (SUPPORTED_LOCALES as readonly string[]).includes(initialLocale)
+    ) {
+      return initialLocale as ComposerLocale;
+    }
     const parsed = parseLocalePrefix(pathname);
 
     if (parsed) return parsed.locale as ComposerLocale;
@@ -71,7 +96,7 @@ export function ComposerI18nProvider({ children }: { children: ReactNode }) {
     }
 
     return "en";
-  }, [pathname]);
+  }, [pathname, initialLocale]);
 
   const messages = useMemo(() => getComposerMessages(locale), [locale]);
 

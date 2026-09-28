@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Script from "next/script";
+import { useTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -267,6 +268,11 @@ export function UploadWorkspace({
   tool,
   variant = "full",
 }: UploadWorkspaceProps = {}) {
+  // Localised UI copy for the drop-zone. Landing routes wrap the tree
+  // in `LandingI18nProvider`; every render site of this component is
+  // inside that provider today (landing hero, tool landing, convert
+  // slug). See QA F-26 for the file-size copy specifically.
+  const tUpload = useTranslations("upload");
   const inputRef = useRef<HTMLInputElement>(null);
   // Holds a File dropped before Clerk hydrated. `openFileInEditor`
   // stashes here + returns early when `authLoaded === false`, and the
@@ -742,6 +748,13 @@ export function UploadWorkspace({
 
         setCurrentDocument(savedDoc);
         setEditorFile(pdfFile);
+        // eslint-disable-next-line no-console
+        console.log("[PDFedits-i18n] upload.setEditorFile", {
+          pathname,
+          filename: pdfFile.name,
+          size: pdfFile.size,
+          signedIn: isSignedIn,
+        });
 
         // Signed-in flow: navigate with `?id=<docId>` so the editor
         // hydrates from the persisted document row (see proxy.ts —
@@ -764,11 +777,16 @@ export function UploadWorkspace({
         const isGuestPdfOnConvertRoute =
           requiresAuth && authLoaded && !isSignedIn && isPdf(pdfFile);
 
-        router.push(
-          buildComposerHref(savedDoc?.id ?? null, {
-            skipExport: isGuestPdfOnConvertRoute,
-          }),
-        );
+        const composerHref = buildComposerHref(savedDoc?.id ?? null, {
+          skipExport: isGuestPdfOnConvertRoute,
+        });
+
+        // eslint-disable-next-line no-console
+        console.log("[PDFedits-i18n] upload.router.push", {
+          from: pathname,
+          to: composerHref,
+        });
+        router.push(composerHref);
       } catch (err) {
         logger.captureError(err, "upload.open_editor", {
           filename: picked.name,
@@ -1103,8 +1121,11 @@ export function UploadWorkspace({
                     Click to Upload Your File
                   </button>
 
-                  <p className="mt-5 text-[14px] text-[#8A8A8A]">
-                    Size upto 100 MB
+                  <p
+                    className="notranslate wg-notranslate mt-5 text-[14px] text-[#8A8A8A]"
+                    translate="no"
+                  >
+                    {tUpload("maxFileSize")}
                   </p>
                 </div>
               )}

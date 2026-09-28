@@ -21,17 +21,7 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
-const playfairDisplay = Playfair_Display({
-  display: "swap",
-  // Only used on /privacy, /terms, /cookies etc. legal-hero components.
-  // Setting `preload: false` skips the <link rel="preload"> so landing +
-  // marketing routes don't fetch the woff2 during the LCP window; legal
-  // pages still get it (loads on demand + swaps via Georgia fallback).
-  preload: false,
-  subsets: ["latin"],
-  variable: "--font-legal-serif",
-  weight: ["400", "600", "700"],
-});
+const playfairDisplay = { variable: "--font-legal-serif font-serif" };
 
 // Signature-tab fonts (Dancing_Script, Great_Vibes, Allura,
 // Sacramento, Pacifico) were previously loaded here at root. Moved
