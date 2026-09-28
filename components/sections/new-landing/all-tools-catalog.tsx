@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { LANDING_TOOL_CATEGORIES } from "@/lib/shared/constants/landing-tools";
 
@@ -19,14 +22,22 @@ import { AllToolsIcon } from "./all-tools-icon";
  * navigation — see `landing-header.tsx`.
  */
 export function AllToolsCatalog() {
+  // Fence the "PDFVault" brand from Weglot so it doesn't render as
+  // "PDFtresor" on /de/ (QA F-02 brand-name consistency).
+  const t = useTranslations("allToolsCatalog");
+
   return (
     <section
       aria-labelledby="all-tools-heading"
       className="bg-white py-16 sm:py-20"
     >
       <div className="pv-container">
-        <h1 className="sr-only" id="all-tools-heading">
-          Every PDFVault tool
+        <h1
+          className="notranslate wg-notranslate sr-only"
+          id="all-tools-heading"
+          translate="no"
+        >
+          {t("heading")}
         </h1>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-2 sm:gap-y-12 md:gap-x-16 lg:grid-cols-4 lg:gap-x-[94px]">

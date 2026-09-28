@@ -16,5 +16,20 @@
   },
   "upload": {
     "maxFileSize": "Max file size: 100 MB"
+  },
+  "brand": {
+    "name": "PDFVault"
+  },
+  "hero": {
+    "title": "Edit Any PDF in Seconds",
+    "subtitle": "Everything you need to edit, sign, and protect PDFs — fast, secure, and all in one place"
+  },
+  "toolsSection": {
+    "titleLineOne": "Every tool you need to work",
+    "titleLineTwo": "with PDFs in one place",
+    "description": "Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
+  },
+  "allToolsCatalog": {
+    "heading": "Every PDFVault tool"
   }
 }

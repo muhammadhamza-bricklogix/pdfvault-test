@@ -339,6 +339,11 @@ export function LandingTools() {
   // Untouched tiles keep their hardcoded English copy so Weglot still
   // handles them on non-EN locales until they're migrated too.
   const tTools = useTranslations("tools");
+  // Section heading / description — QA F-06 flagged the German wording
+  // "Bringen Sie Ihr Dokument mit" (unnatural). F-08 flagged a stray
+  // "v" in "PDF-Dateien v benötigen" (Weglot artifact). Both go away
+  // by rendering the German text directly from de.json.
+  const tToolsSection = useTranslations("toolsSection");
   // Reset "View more" whenever the active tab changes so a fresh tab
   // always paints its capped view. React's adjust-state-during-render
   // pattern (used elsewhere in this repo — see dashboard-home.tsx) is
@@ -381,11 +386,20 @@ export function LandingTools() {
     >
       <div className="pv-container">
         <SectionHeading
-          description="Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
+          description={
+            <span className="notranslate wg-notranslate" translate="no">
+              {tToolsSection("description")}
+            </span>
+          }
           title={
-            <span id="tools-heading">
-              Every tool you need to work
-              <br className="hidden sm:block" /> with PDFs in one place
+            <span
+              className="notranslate wg-notranslate"
+              id="tools-heading"
+              translate="no"
+            >
+              {tToolsSection("titleLineOne")}
+              <br className="hidden sm:block" />{" "}
+              {tToolsSection("titleLineTwo")}
             </span>
           }
         />
