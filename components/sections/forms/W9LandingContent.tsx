@@ -414,14 +414,23 @@ export function W9LandingContent() {
             className="rounded-2xl bg-[color-mix(in_oklab,var(--color-accent)_10%,transparent)] px-6 py-8 text-center"
           >
             <p className="text-lg font-semibold text-[var(--color-foreground)] sm:text-xl">
-              Ready when you are
+              Fill out your W-9 now
             </p>
             <p className="mx-auto mt-2 max-w-xl text-sm text-default-600 dark:text-default-400">
               Your W-9 template is preloaded, editable, and ready to sign — no
               downloads or extra software required.
             </p>
             <div className="mt-4 flex justify-center">
-              <GetFormCta label="Start My W-9" />
+              {/* QA F-59 + F-60: previous copy was "Ready when you are" /
+                  "Start My W-9". Weglot rendered both informally on /de/
+                  ("Ich bin bereit, wenn du es bist" / left "Start My W-9"
+                  untranslated). Formal, action-oriented English gives
+                  Weglot a template that translates cleanly to formal
+                  German ("Füllen Sie jetzt Ihr W-9-Formular aus" /
+                  "Mein W-9-Formular ausfüllen"). Full next-intl migration
+                  of the W-9 landing page is pending — see de.json →
+                  toolPages for the pattern to follow. */}
+              <GetFormCta label="Fill Out My W-9" />
             </div>
           </section>
 

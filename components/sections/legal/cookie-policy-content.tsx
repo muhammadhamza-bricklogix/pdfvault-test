@@ -41,7 +41,11 @@ function CookieTable({
             <th className="py-2 pr-3 font-semibold text-[#121212]">Cookie</th>
             <th className="py-2 pr-3 font-semibold text-[#121212]">Provider</th>
             <th className="py-2 pr-3 font-semibold text-[#121212]">Purpose</th>
-            <th className="py-2 font-semibold text-[#121212]">Expiry</th>
+            {/* QA F-52: the values in this column are durations
+                ("1 year", "6 months") not expiry dates, so the German
+                translation "Ablaufdatum" is misleading. "Retention"
+                → Weglot: "Speicherdauer" / "Aufbewahrungsdauer". */}
+            <th className="py-2 font-semibold text-[#121212]">Retention</th>
           </tr>
         </thead>
         <tbody>
@@ -252,7 +256,11 @@ export function CookiePolicyContent() {
           3.3 ANALYTICS COOKIES
         </p>
         <p>
-          Help us understand how visitors use the Service so we can improve it.
+          {/* QA F-50: sentence needs an explicit subject so Weglot's
+              German rendering ("Helfen Sie uns zu verstehen…") reads as
+              a description, not an imperative. */}
+          These cookies help us understand how visitors use the Service so we
+          can improve it.
           These cookies assign a pseudonymous identifier to your browser; we use
           the resulting data to produce aggregated statistics and do not use it
           to identify you by name. Analytics cookies are set only with your
