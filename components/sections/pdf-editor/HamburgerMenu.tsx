@@ -84,6 +84,7 @@ export function HamburgerMenu() {
   const setMergeSource = usePdfEditorStore((s) => s.setMergeModalSource);
   const router = useRouter();
   const { duplicate, start } = useUploadWithDuplicateCheck();
+  const canShare = !!file && isSignedIn;
   const requireFile = (action: string): File | null => {
     if (!file) {
       toast.info({
@@ -338,14 +339,7 @@ export function HamburgerMenu() {
         setIsAnnotationsOpen(true);
         break;
       case "share": {
-        if (!requireFile("sharing")) return;
-        if (!isSignedIn) {
-          requireSignIn(
-            "Sign in to share this PDF with a public link. Cancel to keep editing.",
-          );
-
-          return;
-        }
+        if (!canShare) return;
         // Bake current edits into the cloud-saved PDF FIRST. Without
         // this the share modal would upload `store.file`, which is the
         // original upload — recipients would see the un-edited PDF.
@@ -472,6 +466,7 @@ export function HamburgerMenu() {
             <Dropdown.Popover className="min-w-[200px]">
               <Dropdown.Menu
                 aria-label={t("editorMenu")}
+                disabledKeys={canShare ? [] : ["share"]}
                 onAction={handleAction}
               >
                 <Dropdown.Item id="new" textValue={t("createNew")}>

@@ -29,6 +29,7 @@ import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { shouldWatermarkPage } from "@/lib/client/pdf-editor/watermark-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
+import { FloatingAnnotationNote } from "./FloatingAnnotationNote";
 import { FloatingTextToolbar } from "./FloatingTextToolbar";
 import { FloatingShapeToolbar } from "./FloatingShapeToolbar";
 import { SearchHighlightLayer } from "./SearchHighlightLayer";
@@ -1073,6 +1074,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
               fabricCanvas={fabricCanvas}
             />
             <FloatingShapeToolbar
+              canvasContainerRef={containerRef}
+              fabricCanvas={fabricCanvas}
+            />
+            <FloatingAnnotationNote
               canvasContainerRef={containerRef}
               fabricCanvas={fabricCanvas}
             />
