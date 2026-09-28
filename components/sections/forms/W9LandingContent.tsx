@@ -28,23 +28,31 @@ const HERO_CTA_LABEL = "Open the W-9 Template";
 const HERO_CTA_NOTE =
   "No account needed to start. Sign in only when you're ready to save or download.";
 
+// QA F-55 / F-56 / F-57: previous copy mixed verb-first bullets
+// ("Start freelance work…") with "Are onboarded…" and noun-phrase
+// bullets ("A freelancer…"), which Weglot then translated
+// inconsistently in German (verb-first infinitives + grammatically
+// incomplete "Ein Freiberufler…, der …" clauses missing a verb).
+// Rewriting every bullet as a full "You + verb" sentence gives Weglot
+// a consistent template — each bullet becomes "Sie + verb …" in
+// German. The lead-in paragraphs below have been reworded to match.
 const TYPICAL_REQUESTS = [
-  "Start freelance or contract work for a U.S. business",
-  "Open certain financial or investment accounts",
-  "Receive rent, royalty, or other reportable payments",
-  "Are onboarded as a vendor or supplier",
+  "You start freelance or contract work for a U.S. business",
+  "You open certain financial or investment accounts",
+  "You receive rent, royalty, or other reportable payments",
+  "You are onboarded as a vendor or supplier",
 ];
 
 const NEEDS_ONE = [
-  "A freelancer or independent contractor invoicing a U.S. business",
-  "A sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
-  "A landlord, vendor, or account holder that a company needs to report payments to",
+  "You are a freelancer or independent contractor invoicing a U.S. business",
+  "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
+  "You are a landlord, vendor, or account holder that a company needs to report payments to",
 ];
 
 const DOES_NOT_NEED = [
-  "A W-2 employee (your employer uses Form W-4 instead)",
-  "A non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
-  "Not currently being paid by or contracted with the entity requesting it",
+  "You are a W-2 employee (your employer uses Form W-4 instead)",
+  "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
+  "You are not currently paid by or contracted with the entity requesting it",
 ];
 
 const BEFORE_YOU_START = [
@@ -273,7 +281,7 @@ export function W9LandingContent() {
                 the &ldquo;payer&rdquo; — uses that information to prepare
                 year-end reporting forms like the 1099-NEC.
               </p>
-              <p>You&apos;ll typically be asked for a W-9 when you:</p>
+              <p>You&apos;ll typically be asked for a W-9 in these cases:</p>
               <BulletList items={TYPICAL_REQUESTS} />
               <p>
                 Unlike a tax return, a W-9 isn&apos;t sent to the IRS. It stays
@@ -289,11 +297,11 @@ export function W9LandingContent() {
             </SectionHeading>
             <Prose>
               <p className="font-semibold text-[var(--color-foreground)]">
-                You probably do if you&apos;re:
+                You probably need to fill one out if:
               </p>
               <BulletList items={NEEDS_ONE} />
               <p className="font-semibold text-[var(--color-foreground)]">
-                You likely don&apos;t if you&apos;re:
+                You likely don&apos;t need to fill one out if:
               </p>
               <BulletList items={DOES_NOT_NEED} />
               <p>
