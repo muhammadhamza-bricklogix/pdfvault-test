@@ -31,5 +31,15 @@
   },
   "allToolsCatalog": {
     "heading": "Alle PDFVault-Tools"
+  },
+  "steps": {
+    "sectionTitle": "In drei einfachen Schritten loslegen",
+    "sectionDescription": "Vom Hochladen bis zur sicher gespeicherten Datei — mit PDFVault lassen sich alle PDFs an einem Ort verwalten.",
+    "step1Title": "Laden Sie Ihr Dokument hoch",
+    "step1Body": "Laden Sie es von Ihrem Gerät hoch.",
+    "step2Title": "Passen Sie Ihr Dokument an",
+    "step2Body": "Bearbeiten, umwandeln, komprimieren, schützen, organisieren oder unterschreiben Sie Ihr Dokument mit den Tools, die Sie brauchen.",
+    "step3Title": "Speichern Sie es in Ihrem PDFVault",
+    "step3Body": "Behalten Sie die aktuelle Version in Ihrem PDFVault — jederzeit wieder abrufbar."
   }
 }
