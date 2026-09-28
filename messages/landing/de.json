@@ -41,5 +41,27 @@
     "step2Body": "Bearbeiten, umwandeln, komprimieren, schützen, organisieren oder unterschreiben Sie Ihr Dokument mit den Tools, die Sie brauchen.",
     "step3Title": "Speichern Sie es in Ihrem PDFVault",
     "step3Body": "Behalten Sie die aktuelle Version in Ihrem PDFVault — jederzeit wieder abrufbar."
+  },
+  "toolPages": {
+    "sign": {
+      "title": "PDF online unterschreiben",
+      "description": "Versehen Sie Ihre PDF-Datei mit einer handschriftlichen oder getippten Unterschrift."
+    },
+    "split": {
+      "title": "PDF teilen und Seiten extrahieren",
+      "description": "Teilen Sie eine PDF-Datei in kleinere Dateien auf oder extrahieren Sie nur die Seiten, die Sie brauchen — Seitenbereich auswählen und in Sekunden herunterladen."
+    },
+    "removeAnnotations": {
+      "title": "Anmerkungen aus PDF flach einbetten",
+      "description": "Betten Sie Markierungen, Kommentare und Formularfelder fest in die Seite ein, sodass sie nicht mehr bearbeitet oder entfernt werden können."
+    },
+    "edit": {
+      "title": "PDF online bearbeiten",
+      "description": "Ändern Sie Texte, Bilder und das Layout direkt im Browser — ganz ohne Installation oder Registrierung."
+    }
+  },
+  "about": {
+    "filesLine": "Wir behandeln alle Dateien mit derselben Sorgfalt — sie werden sicher aufbewahrt und sowohl bei der Übertragung als auch im Ruhezustand verschlüsselt.",
+    "hashingLine": "Passwörter werden als Hashwerte gespeichert, sodass wir Ihr Klartext-Passwort niemals sehen."
   }
 }

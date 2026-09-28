@@ -41,5 +41,27 @@
     "step2Body": "Edit, convert, compress, protect, organize, or sign your document with the tools you need.",
     "step3Title": "Save it to your PDFVault",
     "step3Body": "Keep the latest version in your PDFVault, ready whenever you need it again."
+  },
+  "toolPages": {
+    "sign": {
+      "title": "Sign PDF online",
+      "description": "Add your handwritten or typed signature to any PDF."
+    },
+    "split": {
+      "title": "Split PDF and extract pages",
+      "description": "Split a PDF into smaller files or extract just the pages you need — pick page ranges and download in seconds."
+    },
+    "removeAnnotations": {
+      "title": "Flatten annotations in a PDF",
+      "description": "Embed highlights, comments, and form fields into the page so they can no longer be edited or removed."
+    },
+    "edit": {
+      "title": "Edit PDF online",
+      "description": "Change text, images, and layout directly in your browser — no installation or registration required."
+    }
+  },
+  "about": {
+    "filesLine": "We treat every file with the same care — they are held securely, encrypted in transit and at rest.",
+    "hashingLine": "Passwords are stored as hashed values so we never see your plain-text password."
   }
 }

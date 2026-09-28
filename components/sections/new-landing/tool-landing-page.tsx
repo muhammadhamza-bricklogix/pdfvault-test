@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 import { LandingFooter } from "./landing-footer";
 import { LandingHeader } from "./landing-header";
 import { UploadWorkspace } from "./upload-workspace";
@@ -18,6 +22,15 @@ interface ToolLandingPageProps {
    * tool takes a PDF by default.
    */
   acceptExtensions?: string[];
+  /**
+   * Opt-in localisation. When set, the render layer reads the hero
+   * title + description from `messages/landing/*.json → toolPages.<i18nKey>`
+   * instead of the raw `title` / `description` props. Falls back to the
+   * plain props when unset, so `/convert/[slug]` routes (which
+   * generate titles from user-selected formats) continue to work
+   * untouched. QA F-22 / F-23 / F-24 / F-25 / F-14.
+   */
+  i18nKey?: "sign" | "split" | "removeAnnotations" | "edit";
 }
 
 /**
@@ -33,16 +46,51 @@ export function ToolLandingPage({
   description,
   tool,
   acceptExtensions = ["pdf"],
+  i18nKey,
 }: ToolLandingPageProps) {
+  const t = useTranslations("toolPages");
+  // Prefer localised copy when available. `useTranslations` throws when
+  // a key is missing, so guard the read against unknown i18n keys with a
+  // try/catch fallback to the raw props. This keeps the pre-i18n
+  // `/convert/[slug]` call-sites working.
+  let localisedTitle: string | null = null;
+  let localisedDescription: string | null = null;
+
+  if (i18nKey) {
+    try {
+      localisedTitle = t(`${i18nKey}.title`);
+      localisedDescription = t(`${i18nKey}.description`);
+    } catch {
+      localisedTitle = null;
+      localisedDescription = null;
+    }
+  }
+
+  const heroTitle = localisedTitle ?? title;
+  const heroDescription = localisedDescription ?? description;
+  // Fence the localised hero copy from Weglot so its cached
+  // EN→translated mapping doesn't overwrite the authored German.
+  const fenceProps = i18nKey
+    ? { className: "notranslate wg-notranslate", translate: "no" as const }
+    : {};
+
   return (
     <div id="top">
       <LandingHeader />
       <main>
         <section className="bg-white pt-14 pb-8 sm:pt-20 sm:pb-10">
           <div className="pv-container flex flex-col items-center text-center">
-            <h1 className="pv-display max-w-[820px] text-[#121212]">{title}</h1>
-            <p className="mt-6 max-w-[560px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
-              {description}
+            <h1
+              {...fenceProps}
+              className={`pv-display max-w-[820px] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
+            >
+              {heroTitle}
+            </h1>
+            <p
+              {...fenceProps}
+              className={`mt-6 max-w-[560px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)] ${fenceProps.className ?? ""}`.trim()}
+            >
+              {heroDescription}
             </p>
           </div>
         </section>
