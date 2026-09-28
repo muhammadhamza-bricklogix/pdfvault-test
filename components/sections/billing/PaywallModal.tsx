@@ -247,6 +247,14 @@ export function PaywallModal({
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("full");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  // Preserve the initial FULL_ACCESS intent alongside the mutable
+  // `intent` so the plan-picker's "Full" card keeps showing the correct
+  // price even after `handleContinue` swaps `intent` to the annual or
+  // limited variant. Without this the "Full" card was reading the
+  // annual amount on back-nav (QA 2026-09-28: user selects Annual →
+  // Continue → Back → "7-Day Full Access" displays the annual total).
+  // Mirrors the annualIntent / limitedIntent pattern below.
+  const [fullIntent, setFullIntent] = useState<CheckoutIntent | null>(null);
   // Fetched in parallel with the primary (monthly) intent so the
   // plan-picker card shows the same annual per-month price the payment
   // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
@@ -463,6 +471,11 @@ export function PaywallModal({
           // "USD". See `lib/client/billing/user-currency.ts`.
           persistUserCurrency(intent.currency);
           setIntent(intent);
+          // Snapshot the FULL_ACCESS intent so the plan-picker's "Full"
+          // card can keep displaying its own price after `intent` is
+          // swapped to annual/limited on Continue. See fullIntent
+          // declaration comment.
+          setFullIntent(intent);
         },
         onError: (err) => {
           // Enriched forensic log — captures the raw non-enveloped 400
@@ -610,6 +623,7 @@ export function PaywallModal({
     return () => {
       cancelled = true;
       setIntent(null);
+      setFullIntent(null);
       setAnnualIntent(null);
       setLimitedIntent(null);
       setAnnualUnavailable(false);
@@ -1055,6 +1069,7 @@ export function PaywallModal({
               annualIntent={annualIntent}
               annualUnavailable={annualUnavailable}
               continueLoading={continueLoading}
+              fullIntent={fullIntent}
               hidePreview={hidePreview}
               intent={intent}
               limitedIntent={limitedIntent}
@@ -1099,6 +1114,7 @@ export function PaywallModal({
 // ─────────────────────────────────────────────────────────────
 function PlanStep({
   intent,
+  fullIntent,
   annualIntent,
   annualUnavailable,
   limitedIntent,
@@ -1112,6 +1128,7 @@ function PlanStep({
   strings,
 }: {
   intent: CheckoutIntent;
+  fullIntent: CheckoutIntent | null;
   annualIntent: CheckoutIntent | null;
   annualUnavailable: boolean;
   limitedIntent: CheckoutIntent | null;
@@ -1153,20 +1170,28 @@ function PlanStep({
     }
   }, [annualAvailable, limitedAvailable, selectedPlan, onSelectPlan]);
 
-  // Full Access numbers come from the primary intent (the paywall
-  // opens on this card so the primary intent is already signed for
-  // FULL_ACCESS). Annual + Limited numbers prefer the standalone
-  // prefetched intent (fetched in parallel on modal open) so the
-  // picker's per-month figure matches exactly what the payment step
+  // Full Access numbers come from the snapshotted FULL_ACCESS intent
+  // when available so the "Full" card keeps its own price even after
+  // `handleContinue` swaps `intent` to annual/limited (QA 2026-09-28
+  // bleed). Falls back to `intent` for the brief window before the
+  // initial intent lands. Annual + Limited numbers prefer the
+  // standalone prefetched intent (fetched in parallel on modal open) so
+  // the picker's per-month figure matches exactly what the payment step
   // will show. When a standalone intent hasn't landed yet we fall back
   // to `intent.alternatePlans` — never bake USD strings because the
   // same modal renders EUR / PKR / INR / etc. once local pricing kicks
   // in.
-  const full = {
-    amountTodayMinor: intent.amountTodayMinor,
-    amountRenewMinor: intent.amountRenewMinor,
-    currency: intent.currency,
-  };
+  const full = fullIntent
+    ? {
+        amountTodayMinor: fullIntent.amountTodayMinor,
+        amountRenewMinor: fullIntent.amountRenewMinor,
+        currency: fullIntent.currency,
+      }
+    : {
+        amountTodayMinor: intent.amountTodayMinor,
+        amountRenewMinor: intent.amountRenewMinor,
+        currency: intent.currency,
+      };
   const annual = annualIntent
     ? {
         amountTodayMinor: annualIntent.amountTodayMinor,
