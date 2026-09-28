@@ -381,17 +381,22 @@ export function CookiePolicyContent() {
         id="managing-cookies"
         title="5. Your Choices and Consent"
       >
+        {/* LEGAL_COUNSEL_PENDING — QA F-51: Weglot dropped the space
+            after "Königreich:Bei…" / "USA:Sofern…". Rewording each
+            leader from "<strong>X:</strong> Y" to "<strong>X</strong>
+            — Y" survives Weglot's translation pass with the em-dash
+            separator intact. */}
         <p>
-          <strong>EEA and UK visitors:</strong> on your first visit you will see
-          a cookie consent banner allowing you to accept or reject non-essential
-          cookies before they are set. You can change or withdraw your consent
-          at any time via the &ldquo;Cookie Settings&rdquo; link in the footer
-          of the Service. Withdrawing consent does not affect the lawfulness of
-          processing before withdrawal.
+          <strong>EEA and UK visitors</strong> — on your first visit you will
+          see a cookie consent banner allowing you to accept or reject
+          non-essential cookies before they are set. You can change or withdraw
+          your consent at any time via the &ldquo;Cookie Settings&rdquo; link
+          in the footer of the Service. Withdrawing consent does not affect the
+          lawfulness of processing before withdrawal.
         </p>
         <p className="mt-3">
-          <strong>US visitors:</strong> where state law grants you the right to
-          opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
+          <strong>US visitors</strong> — where state law grants you the right
+          to opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
           advertising via cookies, you may do so via the &ldquo;Cookie
           Settings&rdquo; link. We honor Global Privacy Control (GPC) browser
           signals where required by law.
