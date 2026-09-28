@@ -12,6 +12,7 @@ import { EmailFirstModal } from "@/components/shared/email-first-modal";
 import { LoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { EditorEventsLogger } from "@/components/shared/editor-events-logger";
 import { GoogleAdsClickBoot } from "@/components/shared/google-ads-click-boot";
+import { AcquisitionBoot } from "@/components/shared/acquisition-boot";
 import { MobileDebugBoot } from "@/components/shared/mobile-debug-boot";
 import { LangPrefHonor } from "@/components/shared/navigation/lang-pref-honor";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
@@ -49,6 +50,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <LoginToDownloadModal />
           <MobileDebugBoot />
           <GoogleAdsClickBoot />
+          <AcquisitionBoot />
           <UserSyncBoot />
           <OfflineBoot />
           <SentryUserContext />
