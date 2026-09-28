@@ -318,16 +318,25 @@ export function UploadWorkspace({
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const setEditorFile = usePdfEditorStore((s) => s.setFile);
   const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
+  const effectivePathname = useMemo(() => {
+    const currentPath = pathname ?? "/";
+    const parsed = parseLocalePrefix(currentPath);
+
+    return parsed?.rest ?? currentPath;
+  }, [pathname]);
   // Only convert-TO-pdf routes (Word/PNG/JPG/TXT → PDF; Excel + PowerPoint hidden 2026-08-28)
   // Per the 2026-07-20 flow spec, every `/convert/*` route (both X→PDF
   // and PDF→X) sits under "Flow 1 — Convert file": Land → Sign-in →
-  // Conversion → Payment → Download. So the sign-in gate fires at
-  // upload time regardless of direction; guests never see the composer
-  // preview for convert routes. The composer preview flow (Flow 2) is
-  // reserved for `/pdf-composer` uploads.
+  // Conversion → Payment → Download. Most convert routes still gate at
+  // upload time; `/convert/file-to-pdf` is the explicit exception and
+  // opens the converted PDF in composer first for guests.
   const requiresAuth = useMemo(
-    () => Boolean(pathname?.startsWith("/convert/")),
-    [pathname],
+    () => effectivePathname.startsWith("/convert/"),
+    [effectivePathname],
+  );
+  const opensGenericFileToPdfInComposer = useMemo(
+    () => effectivePathname === "/convert/file-to-pdf",
+    [effectivePathname],
   );
 
   const acceptedExtensions = useMemo(
@@ -495,6 +504,7 @@ export function UploadWorkspace({
         requiresAuth &&
         authLoaded &&
         !isSignedIn &&
+        !opensGenericFileToPdfInComposer &&
         !exportFormat &&
         !inputIsPdf;
 
@@ -509,10 +519,9 @@ export function UploadWorkspace({
       //      where `<FlowOneConvertPendingOverlay/>` shows a loader,
       //      reads the IDB file, fires `runPendingConversion`, and
       //      swaps the URL to `?id=<docId>` on success.
-      //   3. `useEditorDocumentLoader` then fetches the doc metadata,
-      //      sees `originalContentType != null` (converted), and calls
-      //      `gateEntitledAction(doc)` → paywall opens for the freshly-
-      //      signed-up non-entitled user. Native PDFs skip the paywall.
+      //   3. `useEditorDocumentLoader` then fetches the doc metadata and
+      //      opens composer. The converted-document paywall is deferred to
+      //      dashboard Download.
       //   4. On conversion failure the overlay bounces the user to
       //      /dashboard with a toast — no blank editor dead-end.
       if (isGuestXToPdf) {
@@ -758,10 +767,10 @@ export function UploadWorkspace({
 
         // Signed-in flow: navigate with `?id=<docId>` so the editor
         // hydrates from the persisted document row (see proxy.ts —
-        // `?id=` also requires auth). Signed-out visitors never reach
-        // this point on `/convert/*` routes now (the sign-in gate at
-        // the top of the function short-circuits both directions); on
-        // `/` they hit the editor with the in-memory file.
+        // `?id=` also requires auth). Signed-out visitors still reach
+        // this point on `/convert/file-to-pdf`: that generic entrypoint
+        // converts the source to an in-memory PDF and opens composer
+        // first, with auth/paywall deferred to the later download step.
         logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
           documentId: savedDoc?.id ?? null,
           tool,

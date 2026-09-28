@@ -8,17 +8,13 @@ import {
 import { isConvertedDocument } from "@/lib/shared/types/documents.types";
 
 /**
- * Entitlement gate for actions on saved documents. Returns true if the
- * caller is allowed to proceed. Two escapes:
- *   1. The document isn't gated at all (native PDF upload —
- *      `originalContentType == null`). Free.
- *   2. The user is entitled OR completed the paywall. Otherwise false
- *      (paywall cancelled or network read failed).
+ * Entitlement gate for paid saved-document actions. Opening converted PDFs in
+ * composer is intentionally free; callers should use this helper only for
+ * actions that actually deliver the converted output, such as dashboard
+ * Download.
  *
- * QA 2026-09-09 (partial restore of item #17): converted PDFs (X→PDF
- * via the pending-conversion flow) gate on Open + Download + Share.
- * Non-entitled users hit the paywall before any of those actions.
- * Native PDF uploads stay free across the board.
+ * Native PDF uploads (`originalContentType == null`) short-circuit as free.
+ * Converted PDFs require an active entitlement or a completed paywall.
  */
 export async function gateEntitledAction(
   doc?: Pick<Document, "originalContentType"> | null,
@@ -29,13 +25,6 @@ export async function gateEntitledAction(
 
   if (entitled) return true;
 
-  // QA 2026-09-09 — converted documents force the paywall open. Product
-  // decision: signed-up-but-non-entitled users cannot dismiss and get
-  // free access to the converted file. Native PDFs never reach this
-  // branch (short-circuit above), so `mandatory` only ever applies when
-  // the doc is truly converted-and-gated. Other callers (download,
-  // share, ad-hoc button clicks) go through their own request paths
-  // that don't force `mandatory` unless they choose to.
   const isMandatory = doc !== undefined && isConvertedDocument(doc);
 
   try {

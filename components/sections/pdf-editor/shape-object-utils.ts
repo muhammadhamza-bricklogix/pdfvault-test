@@ -17,6 +17,7 @@ export function isShapeObject(
   object: FabricObject | null | undefined,
 ): object is ShapeFabricObject {
   if (!object) return false;
+  if ((object as ShapeFabricObject).editorType === "annotation") return false;
   if (
     object.type === "i-text" ||
     object.type === "textbox" ||
