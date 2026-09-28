@@ -487,8 +487,9 @@ export function LandingTools() {
             return (
               <li
                 key={tool.title}
-                className={`pv-fade-up ${hideOnMobile ? "hidden sm:block" : ""}`.trim()}
+                className={`pv-fade-up ${hideOnMobile ? "hidden sm:block" : ""} ${tool.i18nKey ? "notranslate wg-notranslate" : ""}`.trim()}
                 style={{ animationDelay: `${index * 55}ms` }}
+                translate={tool.i18nKey ? "no" : undefined}
               >
                 <a
                   {...fenceProps}
