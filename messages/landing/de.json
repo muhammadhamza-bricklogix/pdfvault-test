@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "edit": "Bearbeiten",
+    "convert": "Umwandeln",
+    "compress": "Komprimieren"
+  },
+  "footer": {
+    "convert": "Umwandeln",
+    "doNotSell": "Meine Daten nicht verkaufen oder weitergeben"
+  },
+  "tools": {
+    "sign": {
+      "title": "Unterschreiben",
+      "description": "Fügen Sie Ihre Unterschrift zu jedem PDF hinzu."
+    }
+  },
+  "upload": {
+    "maxFileSize": "Maximale Dateigröße: 100 MB"
+  }
+}

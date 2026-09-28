@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "edit": "Edit",
+    "convert": "Convert",
+    "compress": "Compress"
+  },
+  "footer": {
+    "convert": "Convert",
+    "doNotSell": "Do Not Sell or Share My Data"
+  },
+  "tools": {
+    "sign": {
+      "title": "Sign",
+      "description": "Add your signature to any PDF."
+    }
+  },
+  "upload": {
+    "maxFileSize": "Max file size: 100 MB"
+  }
+}

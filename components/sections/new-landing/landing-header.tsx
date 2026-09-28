@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
@@ -72,12 +73,16 @@ function authReturnUrlFor(pathname: string): string | undefined {
 // the AI feature ships. Edit / Compress land on the shared marketing
 // hero (`/edit`, `/compress`) that mirrors `/convert/[slug]` — same
 // "Drag & drop file to edit" screen for every uploader.
-const PRIMARY_LINKS: NavLink[] = [
-  { label: "Edit", href: "/edit" },
-  { label: "Convert", href: "/convert/file-to-pdf" },
-  { label: "Compress", href: "/compress" },
-  // { label: "AI Summarizer", href: "/ai-summarizer" },
-];
+//
+// Convert label is localised via next-intl (`nav.convert`) — Weglot
+// was mistranslating "Convert" as "Umrechnen" (currency/units) on
+// German visitors. See QA F-11.
+const PRIMARY_LINK_HREFS = [
+  { key: "edit", href: "/edit" },
+  { key: "convert", href: "/convert/file-to-pdf" },
+  { key: "compress", href: "/compress" },
+  // { key: "aiSummarizer", href: "/ai-summarizer" },
+] as const;
 
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -96,6 +101,35 @@ export function LandingHeader() {
   const { signOut } = useClerk();
   const pathname = usePathname();
   const entitled = useIsEntitled();
+  const tNav = useTranslations("nav");
+
+  // Compose the primary nav from the localised label registry so
+  // Convert renders as "Umwandeln" on /de/ instead of Weglot's
+  // "Umrechnen" (currency-conversion sense). Memo keeps referential
+  // equality across re-renders — the array is passed to two .map()
+  // sites and one useEffect dependency further down.
+  const primaryLinks = useMemo<NavLink[]>(
+    () =>
+      PRIMARY_LINK_HREFS.map(({ key, href }) => ({
+        label: tNav(key),
+        href,
+      })),
+    [tNav],
+  );
+
+  // Prepend the current locale segment to nav hrefs so soft-nav from a
+  // localized page (e.g. `/de/`) keeps the visitor in the same locale.
+  // Without this, clicking "Convert" / "Edit" / "Compress" from `/de/`
+  // lands on `/convert/file-to-pdf` (English) — QA F-15 (2026-09-26).
+  // Mirrors `withLocalePrefix` in `upload-workspace.tsx` (commit 774aca5).
+  const withLocalePrefix = (path: string) => {
+    const parsed = parseLocalePrefix(pathname ?? "/");
+
+    if (!parsed) return path;
+    const suffix = path.startsWith("/") ? path : `/${path}`;
+
+    return `/${parsed.locale}${suffix}`;
+  };
 
   const handleLogOut = () => {
     void usersService.signOutAudit().catch(() => undefined);
@@ -284,11 +318,12 @@ export function LandingHeader() {
                   />
                 </svg>
               </button>
-              {PRIMARY_LINKS.map((link) => (
+              {primaryLinks.map((link) => (
                 <Link
                   key={link.label}
-                  className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
-                  href={link.href}
+                  className="notranslate wg-notranslate text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+                  href={withLocalePrefix(link.href)}
+                  translate="no"
                 >
                   {link.label}
                 </Link>
@@ -422,11 +457,12 @@ export function LandingHeader() {
                   </svg>
                 </button>
               </li>
-              {PRIMARY_LINKS.map((link) => (
+              {primaryLinks.map((link) => (
                 <li key={link.label}>
                   <Link
-                    className="block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
-                    href={link.href}
+                    className="notranslate wg-notranslate block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                    href={withLocalePrefix(link.href)}
+                    translate="no"
                     onClick={() => setMobileOpen(false)}
                   >
                     {link.label}
