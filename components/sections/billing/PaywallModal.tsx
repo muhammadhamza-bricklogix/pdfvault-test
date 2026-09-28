@@ -252,6 +252,16 @@ export function PaywallModal({
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("full");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  // Preserve the initial FULL_ACCESS intent alongside the mutable
+  // `intent` so the plan-picker's "Full" card keeps showing the correct
+  // price after `handleContinue` swaps `intent` to the annual or
+  // limited variant, and so the `handleContinue` "full" branch + the
+  // pay-step onBack handler can restore the ORIGINAL paymentIntent when
+  // the user returns to Full Access. Without this the Solidgate iframe
+  // was seeded with the annual paymentIntent (QA 2026-09-28: user picks
+  // Annual → Continue → Back → Full → Continue was still charging
+  // annual pricing). Mirrors the annualIntent / limitedIntent pattern.
+  const [fullIntent, setFullIntent] = useState<CheckoutIntent | null>(null);
   // Fetched in parallel with the primary (monthly) intent so the
   // plan-picker card shows the same annual per-month price the payment
   // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
@@ -468,6 +478,11 @@ export function PaywallModal({
           // "USD". See `lib/client/billing/user-currency.ts`.
           persistUserCurrency(intent.currency);
           setIntent(intent);
+          // Snapshot the FULL_ACCESS intent so the plan-picker's "Full"
+          // card + handleContinue restore path can keep using its own
+          // paymentIntent after `intent` mutates. See fullIntent
+          // declaration comment.
+          setFullIntent(intent);
         },
         onError: (err) => {
           // Enriched forensic log — captures the raw non-enveloped 400
@@ -615,6 +630,7 @@ export function PaywallModal({
     return () => {
       cancelled = true;
       setIntent(null);
+      setFullIntent(null);
       setAnnualIntent(null);
       setLimitedIntent(null);
       setAnnualUnavailable(false);
@@ -885,7 +901,16 @@ export function PaywallModal({
       limitedUnavailable,
     });
 
-    if (selectedPlan === "monthly") {
+    if (selectedPlan === "full") {
+      // Restore the FULL_ACCESS intent if a prior Continue swapped it
+      // for the annual or limited variant (Annual → Back → Full →
+      // Continue path). Without this, PayStep + the Solidgate iframe
+      // render annual / limited pricing + paymentIntent despite the
+      // user picking Full Access. Mirrors the QA 2026-09-24 fix that
+      // used `monthlyIntent` on the pre-Limited-Access branch; updated
+      // to the three-plan world where the primary intent snapshot
+      // lives in `fullIntent` (see the state declaration).
+      if (fullIntent) setIntent(fullIntent);
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
         plan: "full",
         via: "direct",
@@ -1065,14 +1090,15 @@ export function PaywallModal({
               selectedPlan={selectedPlan}
               strings={strings}
               onBack={() => {
-                // Reset the shared `intent` to the monthly baseline so
-                // the plan step's `pickPlan(intent, …)` reads from the
-                // primary intent's alternatePlans in the same shape it
-                // saw on first mount. Also protects against `intent`
-                // being the annual variant when the user picks 7-day
-                // trial again — `handleContinue` mirrors this restore
-                // for the direct-monthly Continue path.
-                if (monthlyIntent) setIntent(monthlyIntent);
+                // Reset the shared `intent` to the FULL_ACCESS baseline
+                // so the plan step's `pickPlan(intent, …)` reads from
+                // the primary intent's alternatePlans in the same shape
+                // it saw on first mount. Also protects against `intent`
+                // being the annual/limited variant when the user picks
+                // Full Access again — `handleContinue` mirrors this
+                // restore for the direct-full Continue path (see
+                // `selectedPlan === "full"` branch above).
+                if (fullIntent) setIntent(fullIntent);
                 setStep("plan");
               }}
               onFail={handleIframeFail}
