@@ -924,6 +924,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     let startX = 0;
     let startY = 0;
     let startScrollTop = 0;
+    let startMaxScrollTop = 0;
     // Track whether the touch started inside the PDF viewer element.
     // The listeners below are attached to `document` so Fabric's own
     // touch handling doesn't swallow them, but that means every touch
@@ -941,6 +942,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       startScrollTop = el.scrollTop;
+      startMaxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
       const target = e.target as (Node & Element) | null;
       const inViewer = Boolean(target && el.contains(target));
       // FloatingTextToolbar and FloatingShapeToolbar are DOM-nested
@@ -992,15 +994,32 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       // ── Vertical pull at boundary ─────────────────────────────────────
       if (absDy > absDx && absDy > 60) {
-        const atTop = startScrollTop === 0;
-        const atBottom =
-          startScrollTop + el.clientHeight >= el.scrollHeight - 20;
+        const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+        // Only turn pages on a second boundary pull. If the gesture merely
+        // scrolls this page to its top/bottom, keep the current page visible.
+        const hasScrollablePage = maxScrollTop > 24;
+        const startedAtTop = startScrollTop <= 4;
+        const startedAtBottom = startScrollTop >= startMaxScrollTop - 4;
+        const endedAtTop = el.scrollTop <= 4;
+        const endedAtBottom = el.scrollTop >= maxScrollTop - 4;
 
-        if (dy > 0 && atTop && state.currentPage > 1) {
+        if (
+          dy > 0 &&
+          hasScrollablePage &&
+          startedAtTop &&
+          endedAtTop &&
+          state.currentPage > 1
+        ) {
           navigatePage(state.currentPage - 1, -1);
         }
 
-        if (dy < 0 && atBottom && state.currentPage < state.pageCount) {
+        if (
+          dy < 0 &&
+          hasScrollablePage &&
+          startedAtBottom &&
+          endedAtBottom &&
+          state.currentPage < state.pageCount
+        ) {
           navigatePage(state.currentPage + 1, 1);
         }
       }
