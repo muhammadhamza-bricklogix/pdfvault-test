@@ -3,7 +3,6 @@
 import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Modal } from "@heroui/react";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -15,6 +14,8 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+
+import styles from "./email-first-modal.module.css";
 
 export type EmailFirstModalDetail = {
   /**
@@ -211,20 +212,26 @@ export function EmailFirstModal() {
     setKeyboardViewport(null);
   }, []);
 
-  const handleEmailPointerDown = useCallback(
-    (event: React.PointerEvent<HTMLInputElement>) => {
-      if (
-        event.pointerType === "mouse" ||
-        document.activeElement === event.currentTarget
-      ) {
-        return;
-      }
+  useEffect(() => {
+    if (!detail) return;
 
-      event.preventDefault();
-      focusEmailInputWithoutPageScroll();
-    },
-    [focusEmailInputWithoutPageScroll],
-  );
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [close, detail]);
+
+  const handleEmailPointerDown = useCallback(() => {
+    window.setTimeout(syncKeyboardViewport, 0);
+  }, [syncKeyboardViewport]);
 
   const handleEmailBlur = useCallback(() => {
     window.setTimeout(() => {
@@ -420,31 +427,59 @@ export function EmailFirstModal() {
   };
 
   const isOpen = detail !== null;
+  const keyboardCardMaxHeight = keyboardViewport
+    ? Math.max(280, keyboardViewport.height - 96)
+    : null;
+  const overlayStyle: CSSProperties | undefined = keyboardViewport
+    ? {
+        height: `${keyboardViewport.height}px`,
+        maxHeight: `${keyboardViewport.height}px`,
+        minHeight: `${keyboardViewport.height}px`,
+        transform: `translate3d(0, ${keyboardViewport.top}px, 0)`,
+      }
+    : undefined;
   const viewportFrameStyle: CSSProperties | undefined = keyboardViewport
     ? {
         height: `${keyboardViewport.height}px`,
         maxHeight: `${keyboardViewport.height}px`,
         minHeight: `${keyboardViewport.height}px`,
-        transform: `translateY(${keyboardViewport.top}px)`,
       }
     : undefined;
   const containerClassName = keyboardViewport
-    ? "items-start justify-center overflow-y-auto overscroll-contain px-4 py-3"
-    : "min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4";
+    ? `${styles.container} items-start justify-center overflow-hidden overscroll-contain px-4 py-3`
+    : `${styles.container} min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4`;
+  const cardStyle: CSSProperties | undefined = keyboardCardMaxHeight
+    ? { maxHeight: `${keyboardCardMaxHeight}px` }
+    : undefined;
+
+  if (!isOpen) return null;
 
   return (
-    <Modal.Backdrop
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        if (!open) close();
+    <div
+      aria-labelledby="email-first-heading"
+      aria-modal="true"
+      className={styles.overlay}
+      role="dialog"
+      style={overlayStyle}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
       }}
+      onPointerDownCapture={(event) => event.stopPropagation()}
     >
-      <Modal.Container className={containerClassName}>
+      <div
+        aria-hidden
+        className={styles.backdropHitbox}
+        onClick={close}
+      />
+      <div
+        className={containerClassName}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div
-          className="flex w-full items-center justify-center"
+          className={`${styles.frame} flex w-full items-center justify-center overflow-hidden`}
           style={viewportFrameStyle}
         >
-        <Modal.Dialog className="!w-fit !max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none">
+        <div className={`${styles.dialog} w-fit max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none`}>
           <div className="relative">
             <button
               aria-label="Close"
@@ -470,7 +505,8 @@ export function EmailFirstModal() {
 
             <section
               aria-labelledby="email-first-heading"
-              className="box-border max-h-[calc(100dvh-32px)] w-[min(620px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+              className={`${styles.cardSurface} box-border max-h-[calc(100dvh-32px)] w-[min(620px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]`}
+              style={cardStyle}
             >
               <h1
                 className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
@@ -560,9 +596,9 @@ export function EmailFirstModal() {
               </form>
             </section>
           </div>
-        </Modal.Dialog>
         </div>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
 import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
+import { useUser } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -34,6 +35,10 @@ import { formatMinor } from "@/lib/shared/utils/currency";
 import { persistUserCurrency } from "@/lib/client/billing/user-currency";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import {
+  setBingUserData,
+  trackBingPurchase,
+} from "@/lib/client/analytics/bing-uet";
 
 // The payment SDK's iframe loader touches `window` at import time —
 // dynamic import with `ssr: false` keeps the Next.js server bundle
@@ -247,14 +252,6 @@ export function PaywallModal({
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("full");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
-  // Preserve the initial FULL_ACCESS intent alongside the mutable
-  // `intent` so the plan-picker's "Full" card keeps showing the correct
-  // price even after `handleContinue` swaps `intent` to the annual or
-  // limited variant. Without this the "Full" card was reading the
-  // annual amount on back-nav (QA 2026-09-28: user selects Annual →
-  // Continue → Back → "7-Day Full Access" displays the annual total).
-  // Mirrors the annualIntent / limitedIntent pattern below.
-  const [fullIntent, setFullIntent] = useState<CheckoutIntent | null>(null);
   // Fetched in parallel with the primary (monthly) intent so the
   // plan-picker card shows the same annual per-month price the payment
   // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
@@ -471,11 +468,6 @@ export function PaywallModal({
           // "USD". See `lib/client/billing/user-currency.ts`.
           persistUserCurrency(intent.currency);
           setIntent(intent);
-          // Snapshot the FULL_ACCESS intent so the plan-picker's "Full"
-          // card can keep displaying its own price after `intent` is
-          // swapped to annual/limited on Continue. See fullIntent
-          // declaration comment.
-          setFullIntent(intent);
         },
         onError: (err) => {
           // Enriched forensic log — captures the raw non-enveloped 400
@@ -623,7 +615,6 @@ export function PaywallModal({
     return () => {
       cancelled = true;
       setIntent(null);
-      setFullIntent(null);
       setAnnualIntent(null);
       setLimitedIntent(null);
       setAnnualUnavailable(false);
@@ -894,7 +885,7 @@ export function PaywallModal({
       limitedUnavailable,
     });
 
-    if (selectedPlan === "full") {
+    if (selectedPlan === "monthly") {
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
         plan: "full",
         via: "direct",
@@ -1008,21 +999,6 @@ export function PaywallModal({
     >
       <Modal.Container className="items-start justify-center p-4 sm:items-center">
         {/*
-<<<<<<< Updated upstream
-          `translate="no"` + `notranslate` / `wg-notranslate` class fence off
-          the modal subtree from Weglot (and Google Translate).
-          Without this, the modal crashes on any translated locale
-          (`/de/`, `/es/`, `/fr/`, …) the moment React re-renders the
-          plan step — Weglot has already swapped React's text nodes for
-          translated ones, so React's next `removeChild` throws
-          `NotFoundError: The node to be removed is not a child of this
-          node.` and the global-error boundary blanks the page with
-          "Application error: a client-side exception has occurred". See
-          repro 2026-09-22 via Playwright on `/de/dashboard` → Download
-          → Annual plan card. English paywall copy on translated
-          locales is intentional until we move the plan/pay/success
-          copy into next-intl.
-=======
           Fence markers re-added 2026-09-23: the paywall now ships its
           own local translations (see `lib/client/paywall/paywall-strings.ts`)
           for `de` / `es` / `fr` / `pt` / `ar`. Weglot must NOT translate
@@ -1033,7 +1009,6 @@ export function PaywallModal({
           this subtree; combined with `Weglot.options.excluded_blocks`
           set in `WeglotBoot`, the modal renders exclusively from React
           state on every locale.
->>>>>>> Stashed changes
         */}
         <Modal.Dialog
           className={
@@ -1089,7 +1064,17 @@ export function PaywallModal({
               retryLoading={retryLoading}
               selectedPlan={selectedPlan}
               strings={strings}
-              onBack={() => setStep("plan")}
+              onBack={() => {
+                // Reset the shared `intent` to the monthly baseline so
+                // the plan step's `pickPlan(intent, …)` reads from the
+                // primary intent's alternatePlans in the same shape it
+                // saw on first mount. Also protects against `intent`
+                // being the annual variant when the user picks 7-day
+                // trial again — `handleContinue` mirrors this restore
+                // for the direct-monthly Continue path.
+                if (monthlyIntent) setIntent(monthlyIntent);
+                setStep("plan");
+              }}
               onFail={handleIframeFail}
               onOrderStatus={handleOrderStatus}
               onRetry={handleRetry}
@@ -1551,7 +1536,17 @@ function PayStep({
   // (it's what mounts Apple Pay / Google Pay into the detached refs
   // above), so we hide the card iframe wrapper via `hidden` rather
   // than conditionally rendering the whole PaymentForm.
+  const { user } = useUser();
   const [cardExpanded, setCardExpanded] = useState(false);
+
+  // Set enhanced user data (SHA-256 hashed email, E.164 phone) for Bing UET on checkout
+  useEffect(() => {
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+    if (userEmail || userPhone) {
+      void setBingUserData({ email: userEmail, phone: userPhone });
+    }
+  }, [user]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1816,6 +1811,7 @@ function SuccessStep({
   onClose: () => void;
   onFireQueuedAction: () => void;
 }) {
+  const { user } = useUser();
   const today = formatMinor(intent.amountTodayMinor, intent.currency);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
@@ -1860,7 +1856,25 @@ function SuccessStep({
       plan: selectedPlan,
       value: intent.amountTodayMinor / 100,
     });
-  }, [intent.amountTodayMinor, intent.currency, intent.orderId, selectedPlan]);
+
+    // Fire Bing UET purchase conversion with dynamic revenue value and currency
+    const userEmail = user?.primaryEmailAddress?.emailAddress || null;
+    const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
+    if (userEmail || userPhone) {
+      void setBingUserData({ email: userEmail, phone: userPhone });
+    }
+    trackBingPurchase({
+      revenue_value: intent.amountTodayMinor / 100,
+      currency: intent.currency,
+      orderId: intent.orderId,
+    });
+  }, [
+    intent.amountTodayMinor,
+    intent.currency,
+    intent.orderId,
+    selectedPlan,
+    user,
+  ]);
 
   // Download the receipt inline. Synthesizes an `Invoice` from the
   // CheckoutIntent so we don't need to wait for the backend to

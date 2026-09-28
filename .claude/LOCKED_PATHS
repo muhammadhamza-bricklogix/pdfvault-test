@@ -43,3 +43,32 @@
 #   font/size/bold/italic/color/align pick on download.
 lib/client/pdf-editor/vector-drawers.ts
 components/sections/pdf-editor/FloatingTextToolbar.tsx
+
+# 2026-09-15 — Google Ads attribution → checkout-intent contract.
+# The paywall's `POST /billing/checkout-intent` request body is enriched
+# with `gclid` / `gbraid` / `wbraid` / `clickTimestamp` whenever the
+# user landed via a Google Ads click. The backend DTO
+# (`src/billing/dto/checkout-intent.request.dto.ts`, separate repo) must
+# whitelist these exact four fields, because NestJS runs
+# `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })` in
+# `src/main.ts`. Any drift between these two files = 100% checkout
+# failure for paid-search users (~80% of paying traffic).
+#
+# The bug lived Sep 5 → Sep 14 (backend PR #19 / commit `a4873f8`
+# fixed it). 9 days of lost conversions. Full evidence in
+# CLAUDE.md → "Ads attribution → checkout-intent DTO contract"
+# and `.claude/specs/2026-09-14-paywall-invalid-request.md` (if present).
+#
+# `billing.service.ts` — the enrichment (lines 64–102). If you remove
+#   any of `gclid`/`gbraid`/`wbraid`/`clickTimestamp` from `enriched`,
+#   Google Ads Offline Conversion Import breaks. If you re-add fields
+#   NOT declared in the backend DTO, every paid-ad user 400s.
+# `google-click-id.ts` — cookie storage keys are `pdfvault_gclid` etc.
+#   Renaming them silently orphans in-flight cookies; users who landed
+#   yesterday lose attribution.
+# `google-ads-click-boot.tsx` — URL query-string → cookie writer. Must
+#   run on every landing page (mounted in root layout). Removing it =
+#   attribution goes to zero across every campaign.
+lib/shared/api/services/billing.service.ts
+lib/client/analytics/google-click-id.ts
+components/shared/google-ads-click-boot.tsx

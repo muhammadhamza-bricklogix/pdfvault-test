@@ -570,6 +570,27 @@ export function PendingEditorFileHydrator() {
       cameFromWelcomeEmail,
     });
 
+    // Snapshot the pending-compress flag NOW, before the 400 ms
+    // setTimeout below. `CompressModal`'s own auto-fire effect races us:
+    // as soon as the file is loaded and Clerk is signed-in, it clears
+    // the sessionStorage key and starts compressing. If we re-read
+    // sessionStorage inside the setTimeout we always see it empty and
+    // open a redundant modal on top of the running compression. Only
+    // treat the flag as active when the user is signed-in — a signed-
+    // out visit with a stale flag should still see the modal so they
+    // can retry (fallback for closed-then-reopened email-first modal).
+    let hasPendingCompress = false;
+
+    if (isSignedIn) {
+      try {
+        hasPendingCompress = Boolean(
+          window.sessionStorage.getItem("pdfvault:pendingCompress"),
+        );
+      } catch {
+        // sessionStorage disabled — assume no pending config.
+      }
+    }
+
     const willTourRun = willTourAutoLaunch("editor");
 
     let toolTimeoutId: number | undefined;
@@ -583,7 +604,14 @@ export function PendingEditorFileHydrator() {
         if (tool) {
           switch (tool) {
             case "compress":
-              setIsCompressModalOpen(true);
+              // Skip the modal when the user is mid-flow returning from
+              // sign-in with a saved preset — the CompressModal's auto-
+              // fire effect resumes compression instead (QA 2026-09-14).
+              // For normal `?tool=compress` deep-links the flag is false
+              // and the modal opens as before. `hasPendingCompress` is
+              // captured above BEFORE the CompressModal clears the flag,
+              // so this branch stays deterministic.
+              if (!hasPendingCompress) setIsCompressModalOpen(true);
               break;
             case "password":
               usePdfEditorStore.getState().setPasswordModalVariant("both");
@@ -782,6 +810,7 @@ export function PendingEditorFileHydrator() {
     authLoaded,
     currentFile,
     exportFormat,
+    isSignedIn,
     pathname,
     router,
     searchParams,

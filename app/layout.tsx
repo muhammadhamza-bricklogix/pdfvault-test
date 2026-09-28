@@ -21,17 +21,7 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
-const playfairDisplay = Playfair_Display({
-  display: "swap",
-  // Only used on /privacy, /terms, /cookies etc. legal-hero components.
-  // Setting `preload: false` skips the <link rel="preload"> so landing +
-  // marketing routes don't fetch the woff2 during the LCP window; legal
-  // pages still get it (loads on demand + swaps via Georgia fallback).
-  preload: false,
-  subsets: ["latin"],
-  variable: "--font-legal-serif",
-  weight: ["400", "600", "700"],
-});
+const playfairDisplay = { variable: "--font-legal-serif font-serif" };
 
 // Signature-tab fonts (Dancing_Script, Great_Vibes, Allura,
 // Sacramento, Pacifico) were previously loaded here at root. Moved
@@ -240,6 +230,12 @@ export default async function RootLayout({
       ) : null}
       {/* DNS prefetch only — Solidgate payment iframe is deep in the
           paywall flow, not needed at landing time. */}
+      <link
+        crossOrigin="anonymous"
+        href="https://bat.bing.net"
+        rel="preconnect"
+      />
+      <link href="https://bat.bing.net" rel="dns-prefetch" />
       <link href="https://cdn.charge-auth.com" rel="dns-prefetch" />
       <link href="https://www.clarity.ms" rel="dns-prefetch" />
 
@@ -325,6 +321,13 @@ gtag('config', 'AW-18226423046');`}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ych70e11tb");`,
+          }}
+          data-cookieyes="cookieyes-necessary"
+        />
+        {/* Microsoft Advertising / Bing Universal Event Tracking (UET) Base Tag */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,t,u,o){w[u]=w[u]||[],o.ts=(new Date).getTime();var n=d.createElement(t);n.src="https://bat.bing.net/bat.js?ti="+o.ti+("uetq"!=u?"&q="+u:""),n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&"loaded"!==s&&"complete"!==s||(o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad"),n.onload=n.onreadystatechange=null)};var i=d.getElementsByTagName(t)[0];i.parentNode.insertBefore(n,i);})(window,document,"script","uetq",{ti:"${process.env.NEXT_PUBLIC_BING_UET_TAG_ID || "97271345"}",enableAutoSpaTracking:true});`,
           }}
           data-cookieyes="cookieyes-necessary"
         />

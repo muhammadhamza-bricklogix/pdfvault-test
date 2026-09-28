@@ -136,10 +136,16 @@ function EditorLayout() {
   const isManagePagesOpen = usePdfEditorStore((s) => s.isManagePagesOpen);
   const applyManagePagesSave = usePdfEditorStore((s) => s.applyManagePagesSave);
   const file = usePdfEditorStore((s) => s.file);
-  const extractedPages = usePdfEditorStore((s) => s.extractedPages);
-  const fabricJsonByPage = usePdfEditorStore((s) => s.fabricJsonByPage);
-  const historyByPage = usePdfEditorStore((s) => s.historyByPage);
-  const historyIndexByPage = usePdfEditorStore((s) => s.historyIndexByPage);
+  // Read `extractedPages`, `fabricJsonByPage`, `historyByPage`, and
+  // `historyIndexByPage` via `getState()` inside `handleManagePagesSave`
+  // below instead of subscribing here. Each is a Map that gets replaced
+  // on every brush stroke (via `saveFabricJson` + `pushHistory`), so
+  // subscribing at shell scope re-rendered the entire editor tree —
+  // toolbar, sidebars, overlays, floating toolbars — on every stroke
+  // and every keystroke. That triggered the dead-click / rage-click
+  // reports on rapid tools (eraser, font pick, undo/redo). Manage Pages
+  // save reads the latest snapshot on click, so the fresh `getState()`
+  // read at call time is what we want anyway (QA 2026-09-15).
   const reorderPages = usePdfEditorStore((s) => s.reorderPages);
   const replaceFabricJsonByPage = usePdfEditorStore(
     (s) => s.replaceFabricJsonByPage,
@@ -276,6 +282,15 @@ function EditorLayout() {
         flushLiveFabricPage(currentPage, fabricCanvas);
       }
 
+      // Read the per-stroke Maps at click time via `getState()` so
+      // this callback's dep array doesn't include them (see the
+      // extended comment where the subscriptions used to live above).
+      const snap = usePdfEditorStore.getState();
+      const extractedPages = snap.extractedPages;
+      const fabricJsonByPage = snap.fabricJsonByPage;
+      const historyByPage = snap.historyByPage;
+      const historyIndexByPage = snap.historyIndexByPage;
+
       try {
         const rawSourceBytes = await file.arrayBuffer();
         const sourceBytes = pdfDocument
@@ -323,16 +338,12 @@ function EditorLayout() {
         });
       }
     },
-    [
-      applyManagePagesSave,
-      currentPage,
-      extractedPages,
-      fabricCanvas,
-      fabricJsonByPage,
-      file,
-      historyByPage,
-      historyIndexByPage,
-    ],
+    // extractedPages / fabricJsonByPage / historyByPage /
+    // historyIndexByPage intentionally omitted — read inside the
+    // callback via `getState()` (see block comment above). Keeping the
+    // callback identity stable across strokes is what stops the
+    // downstream re-render storm that produced the dead clicks.
+    [applyManagePagesSave, currentPage, fabricCanvas, file, pdfDocument],
   );
 
   // Only show the full loading shell on the FIRST load. Subsequent
