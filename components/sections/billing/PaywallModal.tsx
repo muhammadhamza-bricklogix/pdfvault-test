@@ -430,6 +430,13 @@ export function PaywallModal({
 
     setSelectedPlan("full");
 
+    // Belt-and-braces: clear any leftover decline flag from a previous
+    // open where the user dismissed the modal without retrying. Without
+    // this, reopening the paywall after a decline can flash the stale
+    // decline banner if `handleContinue` reaches the pay step before
+    // the fresh iframe intent settles.
+    setPayFailed(false);
+
     // Modal lifecycle milestone — fires exactly once per open (isOpen
     // flip). Landmark for the CloudWatch/Sentry trace: any subsequent
     // failure in this session's paywall chain is a descendant of this
@@ -1107,6 +1114,15 @@ export function PaywallModal({
                 // restore for the direct-full Continue path (see
                 // `selectedPlan === "full"` branch above).
                 if (fullIntent) setIntent(fullIntent);
+                // Clear the stale "card declined" flag so a subsequent
+                // Continue → pay step renders a fresh payment form
+                // instead of the previous decline banner. Without this,
+                // picking a different plan after a decline still shows
+                // "Your card was declined…" over the new plan's iframe
+                // (QA 2026-09-29). `handleRetry` already resets this on
+                // inline retry; back-to-plans is the only other exit
+                // from the failed pay step, so mirror the reset here.
+                setPayFailed(false);
                 setStep("plan");
               }}
               onFail={handleIframeFail}
