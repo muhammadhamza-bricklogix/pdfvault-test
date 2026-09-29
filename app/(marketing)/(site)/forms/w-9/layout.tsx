@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { GeistSans } from "geist/font/sans";
 
+import { LandingI18nProvider } from "@/lib/client/i18n/landing-i18n-provider";
+
 import "@/app/(landing)/landing-theme.css";
 
 /**
@@ -10,6 +12,12 @@ import "@/app/(landing)/landing-theme.css";
  * live under the `.pdfvault-landing` scope in landing-theme.css, so
  * this wrapper is required for the header to render with the correct
  * background, container width, and colors.
+ *
+ * `LandingI18nProvider` is required because `LandingHeader` calls
+ * `useTranslations("nav")` — the only mount of the provider is in
+ * `app/(landing)/layout.tsx`, and this route lives outside that
+ * tree, so the hook otherwise throws and the page dead-ends on the
+ * root error boundary.
  */
 export default function W9FormLandingLayout({
   children,
@@ -18,7 +26,7 @@ export default function W9FormLandingLayout({
 }) {
   return (
     <div className={`${GeistSans.variable} pdfvault-landing bg-white`}>
-      {children}
+      <LandingI18nProvider>{children}</LandingI18nProvider>
     </div>
   );
 }
