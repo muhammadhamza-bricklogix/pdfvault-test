@@ -738,6 +738,18 @@ export function PaywallModal({
   const handleIframeFail = () => {
     logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning");
     setPayFailed(true);
+    // Invalidate the cached intent for the plan that just failed —
+    // Solidgate marks a declined paymentIntent terminal, so re-mounting
+    // the iframe against it just re-renders the decline UI. Nulling the
+    // cache forces `handleContinue` for the same plan to hit the fetch-
+    // fresh path (annual/limited already handle this via their else
+    // branch; the "full" branch has a matching fresh-fetch path so a
+    // null `fullIntent` triggers a refetch there too). Covers the
+    // "user clicks Back → picks the same declined plan → Continue"
+    // flow that inline retry doesn't reach. See QA 2026-09-29.
+    if (selectedPlan === "full") setFullIntent(null);
+    else if (selectedPlan === "annual") setAnnualIntent(null);
+    else if (selectedPlan === "limited") setLimitedIntent(null);
     toast.error({
       title: "Payment declined",
       description: "Your card wasn't charged. Try another card to retry.",
@@ -925,12 +937,66 @@ export function PaywallModal({
       // used `monthlyIntent` on the pre-Limited-Access branch; updated
       // to the three-plan world where the primary intent snapshot
       // lives in `fullIntent` (see the state declaration).
-      if (fullIntent) setIntent(fullIntent);
-      logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
-        plan: "full",
-        via: "direct",
-      });
-      setStep("pay");
+      if (fullIntent) {
+        setIntent(fullIntent);
+        logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+          plan: "full",
+          via: "direct",
+        });
+        setStep("pay");
+
+        return;
+      }
+      // No cached Full Access intent — invalidated by a prior
+      // `handleIframeFail` on the same plan. Fetch a fresh intent so the
+      // pay-step iframe renders against a non-terminal Solidgate
+      // paymentIntent (mirrors the annual/limited fallback path below).
+      // Without this branch, `intent` would remain the previously-
+      // declined one and PayStep would re-render Solidgate's own
+      // decline UI even after the user clicked Back → picked Full
+      // again. See QA 2026-09-29.
+      setContinueLoading(true);
+      createIntent.mutate(
+        {
+          disclaimerVersion: DISCLAIMER_VERSION,
+          planKind: "FULL_ACCESS",
+          fileName: preview?.filename,
+        },
+        {
+          onSuccess: (fresh) => {
+            setIntent(fresh);
+            setFullIntent(fresh);
+            logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
+              plan: "full",
+              via: "fallback_fetch",
+            });
+            setStep("pay");
+            setContinueLoading(false);
+          },
+          onError: (err) => {
+            const apiErr = err as { statusCode?: number; message?: string };
+
+            logger.event(EVENTS.CHECKOUT_INTENT_ERROR, "warning", {
+              statusCode: apiErr?.statusCode,
+              errorMessage: apiErr?.message,
+              plan: "full",
+              path: "handleContinue",
+            });
+            logger.captureError(err, "checkout.full_intent", {
+              statusCode: apiErr?.statusCode,
+              errorMessage: apiErr?.message,
+            });
+            setContinueLoading(false);
+            toast.error({
+              title: "Couldn't start checkout",
+              description:
+                err instanceof Error
+                  ? err.message
+                  : "Please try again in a moment.",
+            });
+          },
+        },
+      );
 
       return;
     }
