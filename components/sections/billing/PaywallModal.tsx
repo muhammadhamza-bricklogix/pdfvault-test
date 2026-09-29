@@ -2206,7 +2206,7 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
  */
 function GenericPreviewCard() {
   return (
-    <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)]">
+    <div className="flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)] md:min-h-0 md:flex-1">
       {/* File type badge header */}
       <div className="flex items-center justify-end bg-[#f7f7f9] px-4 py-2.5">
         <span className="inline-flex h-6 shrink-0 items-center rounded-md bg-[#e11d48] px-2 text-[10px] font-bold text-white">
@@ -2215,7 +2215,7 @@ function GenericPreviewCard() {
       </div>
 
       {/* Blurred mock content */}
-      <div className="relative p-4">
+      <div className="relative flex-1 p-4">
         <div
           aria-hidden
           className="pointer-events-none flex select-none flex-col gap-1.5"
