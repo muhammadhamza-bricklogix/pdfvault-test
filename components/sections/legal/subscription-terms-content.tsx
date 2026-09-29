@@ -18,14 +18,17 @@ import { LegalSectionCard } from "@/components/sections/legal/legal-section-card
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const subscriptionTermsTocEntries: LegalTocEntry[] = [
-  { id: "st-1", label: "Trial" },
+  { id: "st-1", label: "Trial Period" },
   { id: "st-2", label: "Subscription and Automatic Renewal" },
   { id: "st-3", label: "Payment Method" },
-  { id: "st-4", label: "Cancellation" },
+  { id: "st-4", label: "Termination and Cancellation" },
   { id: "st-5", label: "Price Changes" },
   { id: "st-6", label: "Refunds" },
   { id: "st-7", label: "Failed Payments" },
-  { id: "st-8", label: "Right of Withdrawal (EU, EEA and UK Residents)" },
+  {
+    id: "st-8",
+    label: "Right of Withdrawal for EU, EEA and UK Customers",
+  },
   { id: "st-9", label: "Contact" },
 ];
 
@@ -47,8 +50,11 @@ export function SubscriptionTermsContent() {
           These Subscription Terms govern your PDFVault trial and monthly
           subscription, including automatic renewal. They form an integral part
           of our <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>;
-          capitalised terms not defined here have the meaning given in the{" "}
-          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link>. In the
+          {/* LEGAL_COUNSEL_PENDING — QA F-46: see refund-policy-content
+              for rationale. */}
+          terms defined in the{" "}
+          <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
+          meaning given there. In the
           event of a conflict between these Subscription Terms and the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> in
           relation to trial and subscription billing, these Subscription Terms
@@ -57,7 +63,14 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Timer01Icon} id="st-1" title="1. TRIAL">
+      {/* LEGAL_COUNSEL_PENDING — QA F-41: "Trial" rendered as "Probe"
+          in German. "Trial Period" nudges Weglot toward "Testphase"
+          which QA suggested. */}
+      <LegalSectionCard
+        icon={Timer01Icon}
+        id="st-1"
+        title="1. TRIAL PERIOD"
+      >
         <p>
           Certain features of the Service — including downloading a completed
           file — require a paid trial. When you start a trial, you will be
@@ -103,7 +116,18 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
-      <LegalSectionCard icon={Cancel01Icon} id="st-4" title="4. CANCELLATION">
+      {/* LEGAL_COUNSEL_PENDING — QA F-42: "Cancellation" rendered as
+          "Stornierung" (one-time reversal). In an ongoing
+          subscription context German prefers "Kündigung" (termination
+          of an ongoing contract). "Termination and Cancellation"
+          nudges Weglot toward "Kündigung und Stornierung" so the
+          heading covers both concepts. Legal counsel to confirm this
+          doesn't change refund/cancellation rights before prod. */}
+      <LegalSectionCard
+        icon={Cancel01Icon}
+        id="st-4"
+        title="4. TERMINATION AND CANCELLATION"
+      >
         <p>You may cancel your trial or subscription at any time:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
           <li>In your account settings, under Subscription.</li>
@@ -183,10 +207,15 @@ export function SubscriptionTermsContent() {
         </p>
       </LegalSectionCard>
 
+      {/* LEGAL_COUNSEL_PENDING — QA F-43: Weglot mis-rendered
+          "Residents" as "Inwohner" (archaic / incorrect German). The
+          correct German is "Einwohner". Rewording to "CUSTOMERS"
+          steers Weglot to "Kunden" — cleaner and semantically clearer
+          for consumer-rights context. */}
       <LegalSectionCard
         icon={ShoppingBag01Icon}
         id="st-8"
-        title="8. RIGHT OF WITHDRAWAL (EU, EEA AND UK RESIDENTS)"
+        title="8. RIGHT OF WITHDRAWAL FOR EU, EEA AND UK CUSTOMERS"
       >
         <p>
           If you are a resident of the European Union, European Economic Area,

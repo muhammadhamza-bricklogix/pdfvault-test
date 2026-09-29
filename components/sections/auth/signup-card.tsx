@@ -10,6 +10,7 @@ import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-nav
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { authSignUpSchema } from "@/lib/shared/schemas/auth/sign-up.schema";
+import { usersService } from "@/lib/shared/api/services/users.service";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -642,6 +643,9 @@ export function SignupCard({
           });
           suppressNextUnload();
           await setActiveSession({ session: sessionId });
+          await usersService.ensureMe().catch((err) => {
+            logger.warn?.("Failed to ensureMe on signup", err);
+          });
           logger.event(EVENTS.SIGNUP_FINALIZE_OK, "info", {
             via,
             afterSignUpPath,

@@ -13,6 +13,11 @@ export const metadata: Metadata = {
 
 export default function EditLandingPage() {
   return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="edit" />
+    <ToolLandingPage
+      description={DESCRIPTION}
+      i18nKey="edit"
+      title={TITLE}
+      tool="edit"
+    />
   );
 }

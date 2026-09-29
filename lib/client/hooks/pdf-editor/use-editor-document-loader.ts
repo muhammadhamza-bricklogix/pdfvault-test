@@ -13,7 +13,6 @@ import {
   upsertCachedDocument,
 } from "@/lib/client/offline";
 import { usePdfEditorStore } from "@/lib/client/stores/pdf-editor-store";
-import { gateEntitledAction } from "@/lib/client/utils/gate-entitled-action";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -302,24 +301,8 @@ export function useEditorDocumentLoader() {
         .then(async (doc) => {
           if (cancelled) return;
 
-          // QA 2026-09-09 (spec Flow 1 + item #17 restore): converted PDFs
-          // gate on Open. Non-entitled users hit the paywall BEFORE the
-          // editor renders — otherwise they'd see the doc for free by
-          // just knowing its URL. Native PDFs skip this gate (`doc.
-          // originalContentType == null` returns true from the helper).
-          // If the paywall is cancelled, bounce to /dashboard so the
-          // user isn't stranded on a blank editor with an aborted load.
-          const allowed = await gateEntitledAction(doc);
-
-          if (cancelled) return;
-
-          if (!allowed) {
-            logger.info("[PDFedits] document loader: paywall gated", { id });
-            router.replace(ROUTES.APP.DASHBOARD);
-
-            return;
-          }
-
+          // Converted documents intentionally open in composer; dashboard
+          // entitlement is enforced at Download time, not at Open time.
           // Seed overlay state BEFORE setting the URL — usePdfLoader opens
           // the pdf.js document as soon as pdfSourceUrl is set, which triggers
           // the render pipeline. fabricJsonByPage must be in store by then.

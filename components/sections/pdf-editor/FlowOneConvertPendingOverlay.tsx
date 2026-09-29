@@ -28,11 +28,10 @@ import { toast } from "@/lib/shared/utils/toast";
  *   2. Fires `runPendingConversion` against the IDB file. The backend
  *      handles the X→PDF conversion at `/documents/upload` time — the
  *      returned Document row's `originalContentType` marks it as
- *      converted so `gateEntitledAction` will fire the paywall.
+ *      converted so dashboard Download can enforce entitlement later.
  *   3. Once the doc is created, replaces the URL with `?id=<docId>`.
  *      `useEditorDocumentLoader` picks that up, fetches the doc meta,
- *      calls `gateEntitledAction(doc)` → paywall opens for the
- *      non-entitled just-signed-up user.
+ *      and opens composer without an open-time paywall.
  *   4. On conversion error, redirects to /dashboard with a toast so
  *      the user isn't stranded on a spinning loader.
  *

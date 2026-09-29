@@ -1,6 +1,6 @@
 "use client";
 
-import type { Canvas as FabricCanvas, IText } from "fabric";
+import type { Canvas as FabricCanvas, Path } from "fabric";
 
 import { useCallback, useEffect, useRef } from "react";
 
@@ -9,130 +9,31 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
-export type AnnotationId =
-  | "check"
-  | "cross"
-  | "arrow-right"
-  | "arrow-up"
-  | "question"
-  | "exclamation"
-  | "star"
-  | "circle-outline"
-  | "pin"
-  | "paragraph"
-  | "asterisk"
-  | "dash";
+export type AnnotationId = "sticky-note";
 
 export type AnnotationDef = {
-  id: AnnotationId;
-  /** Display name shown in the modal grid + the success toast. */
-  label: string;
-  /** Unicode glyph that becomes the IText content. */
-  glyph: string;
-  /** Default fill colour as hex. Reds/greens emphasise check/cross. */
   fill: string;
-  /** Default font size in PDF points (matches Fabric base coords). */
-  fontSize: number;
+  id: AnnotationId;
+  label: string;
 };
 
 /**
- * Annotation catalogue.
- *
- * Each annotation is just a Fabric IText stamped at canvas centre — no
- * custom render code. Users can move, recolour, resize, or edit the
- * glyph after placement using the existing `FloatingTextToolbar`.
- *
- * Picking unicode glyphs over SVG paths because:
- *   - IText is already the renderer used for source-text editing +
- *     page numbers, so the merge pipeline already handles it correctly.
- *   - No per-symbol PDF embedding logic — `Helvetica` covers the
- *     symbols below and pdf-lib's WinAnsi sanitiser already substitutes
- *     unknown glyphs with `?` rather than crashing the save.
+ * PDFGuru-style annotations are sticky notes: the PDF layer gets a small
+ * marker, while the note body is edited in a separate DOM popover. Keeping
+ * note text off the Fabric text layer prevents it from overlapping extracted
+ * PDF text or summoning the text-format toolbar in Edit Text mode.
  */
 export const ANNOTATIONS: ReadonlyArray<AnnotationDef> = [
-  {
-    id: "check",
-    label: "Check mark",
-    glyph: "✓",
-    fill: "#16a34a",
-    fontSize: 36,
-  },
-  {
-    id: "cross",
-    label: "Cross out",
-    glyph: "✗",
-    fill: "#dc2626",
-    fontSize: 36,
-  },
-  {
-    id: "arrow-right",
-    label: "Right arrow",
-    glyph: "→",
-    fill: "#111111",
-    fontSize: 36,
-  },
-  {
-    id: "arrow-up",
-    label: "Up arrow",
-    glyph: "↑",
-    fill: "#111111",
-    fontSize: 36,
-  },
-  {
-    id: "question",
-    label: "Question mark",
-    glyph: "?",
-    fill: "#2563eb",
-    fontSize: 40,
-  },
-  {
-    id: "exclamation",
-    label: "Important",
-    glyph: "!",
-    fill: "#ea580c",
-    fontSize: 40,
-  },
-  { id: "star", label: "Star", glyph: "★", fill: "#eab308", fontSize: 36 },
-  {
-    id: "circle-outline",
-    label: "Circle",
-    glyph: "○",
-    fill: "#111111",
-    fontSize: 40,
-  },
-  { id: "pin", label: "Flag", glyph: "⚑", fill: "#111111", fontSize: 36 },
-  {
-    id: "paragraph",
-    label: "Paragraph",
-    glyph: "¶",
-    fill: "#111111",
-    fontSize: 36,
-  },
-  {
-    id: "asterisk",
-    label: "Asterisk",
-    glyph: "*",
-    fill: "#111111",
-    fontSize: 40,
-  },
-  { id: "dash", label: "Dash line", glyph: "—", fill: "#111111", fontSize: 36 },
+  { fill: "#FFD633", id: "sticky-note", label: "Note" },
 ];
 
 export type AnnotationEventDetail = { id: AnnotationId };
 
 /**
- * Listens for `editor:add-annotation` (dispatched by `AnnotationsModal`).
- *
- * Adds the selected glyph as a Fabric IText at the centre of the live
- * canvas viewport. Mirrors the page-numbers + image-tool patterns:
- *   - The IText becomes part of `fabricJsonByPage` on the next flush,
- *     so it persists across navigation and survives Save → reload.
- *   - The user can drag, resize, recolour, or even retype the glyph
- *     after placement — annotations are just text objects with a
- *     pre-filled label.
- *   - `editorType: "annotation"` marks them as user-authored overlays
- *     (NOT `editModeText`), so the 2026-06-15 (c) merge guard treats
- *     them as genuine edits and ensures they reach the saved PDF.
+ * Listens for `editor:add-annotation` (dispatched by `AnnotationsModal`) and
+ * drops a sticky-note marker in the centre of the currently visible viewport.
+ * The note body is stored as custom metadata (`noteText`) and edited by
+ * `FloatingAnnotationNote`.
  */
 export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
   const fabricCanvasRef = useRef<FabricCanvas | null>(fabricCanvas);
@@ -162,35 +63,28 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
     }
 
     try {
-      const { IText: FabricIText } = await import("fabric");
+      const { Path: FabricPath } = await import("fabric");
 
-      // `getZoom` returns the visual zoom; we want base (zoom=1) coords
-      // so the object position matches what `mergeFabricEditsIntoPdf`
-      // expects. Width/height of the canvas at zoom=1 = base dims.
+      // Fabric coords are stored at zoom=1; convert the current visual
+      // viewport centre back into base coords so save/export stays aligned.
       const zoom = liveCanvas.getZoom() || 1;
       const baseWidth = liveCanvas.getWidth() / zoom;
       const baseHeight = liveCanvas.getHeight() / zoom;
-      const approxWidth = def.glyph.length * def.fontSize * 0.6;
+      const markerSize = 24;
       const clamp = (value: number, min: number, max: number) =>
         Math.min(Math.max(value, min), max);
 
-      // Default: page centre (used if the scroll container can't be
-      // found for some reason).
       let left = clamp(
-        (baseWidth - approxWidth) / 2,
+        (baseWidth - markerSize) / 2,
         0,
-        Math.max(0, baseWidth - approxWidth),
+        Math.max(0, baseWidth - markerSize),
       );
       let top = clamp(
-        (baseHeight - def.fontSize) / 2,
+        (baseHeight - markerSize) / 2,
         0,
-        Math.max(0, baseHeight - def.fontSize),
+        Math.max(0, baseHeight - markerSize),
       );
 
-      // Prefer the centre of the currently VISIBLE viewport over the
-      // page's absolute centre — on a tall page at mobile's low fit-to-
-      // width zoom, page-centre can land far outside what the user is
-      // actually looking at (they have to scroll to find it).
       const canvasEl = liveCanvas.getElement();
       const scrollEl = canvasEl.closest<HTMLElement>(
         "[data-pdf-viewer-scroll]",
@@ -205,62 +99,57 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
         const baseCenterY = (visibleCenterY - canvasRect.top) / zoom;
 
         left = clamp(
-          baseCenterX - approxWidth / 2,
+          baseCenterX - markerSize / 2,
           0,
-          Math.max(0, baseWidth - approxWidth),
+          Math.max(0, baseWidth - markerSize),
         );
         top = clamp(
-          baseCenterY - def.fontSize / 2,
+          baseCenterY - markerSize / 2,
           0,
-          Math.max(0, baseHeight - def.fontSize),
+          Math.max(0, baseHeight - markerSize),
         );
       }
 
-      const obj = new FabricIText(def.glyph, {
+      const obj = new FabricPath(
+        "M3 1H21C22.1 1 23 1.9 23 3V16C23 17.1 22.1 18 21 18H13L5 23V18H3C1.9 18 1 17.1 1 16V3C1 1.9 1.9 1 3 1Z",
+        {
+          annotationKind: "sticky-note",
+          editorType: "annotation",
+          fill: def.fill,
+          left,
+          noteText: "",
+          objectCaching: false,
+          originX: "left",
+          originY: "top",
+          stroke: "#E0B400",
+          strokeLineJoin: "round",
+          strokeWidth: 1,
+          top,
+        } as any,
+      ) as Path;
+
+      obj.set({
+        annotationKind: "sticky-note",
         editorType: "annotation",
-        fill: def.fill,
-        fontFamily: "Helvetica",
-        fontSize: def.fontSize,
-        left,
-        // Lock scaling so corner-handle drags don't distort symbols.
-        // Users can still resize via the FloatingTextToolbar fontSize.
-        lockScalingX: true,
-        lockScalingY: true,
-        originX: "left",
-        originY: "top",
-        top,
-      } as any) as IText;
+        noteText: "",
+      } as any);
 
       liveCanvas.add(obj);
-      // Deliberately NOT calling `setActiveObject(obj)` here — auto-
-      // selecting the fresh annotation fires `selection:created`, which
-      // pops the FloatingTextToolbar (font/size/color controls). QA
-      // 2026-09-07 flagged the toolbar appearing immediately after
-      // picking an annotation as unexpected. Users can still tap the
-      // annotation on the canvas later to summon the toolbar for font
-      // adjustments. The success toast below tells them the annotation
-      // was placed.
-      liveCanvas.discardActiveObject();
+      liveCanvas.setActiveObject(obj);
       liveCanvas.renderAll();
 
-      // Mark dirty so `hasUnsavedChanges` flips and the next Save
-      // picks the new annotation up. `pushHistory` is triggered by
-      // the canvas `object:added` listener registered in
-      // `useEditorHistory` — we don't double-fire it here.
       const store = usePdfEditorStore.getState();
 
       store.markDocumentDirty();
-      // Persist synchronously so save/export can't miss it if the flush at
-      // export time hits a stale/empty live canvas (matches the 2026-07-23
-      // draw/signature persistence pattern).
       store.saveFabricJson(
         store.currentPage,
         serializeFabricCanvas(liveCanvas),
       );
+      window.dispatchEvent(new CustomEvent("editor:focus-annotation-note"));
 
       toast.success({
         title: `${def.label} added`,
-        description: "Drag to position, double-click to edit.",
+        description: "Add details in the note.",
       });
     } catch (err) {
       logger.error("Failed to add annotation", err);

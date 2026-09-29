@@ -320,3 +320,51 @@ body {
   z-index: 40 !important;
 }
 
+/* CookieYes mobile banner compacting.
+ * Keep the desktop banner untouched, but reduce the first-visit mobile
+ * banner's vertical footprint so it does not cover too much of the app. */
+@media (max-width: 640px) {
+  .cky-consent-container {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+
+  .cky-consent-container .cky-consent-bar {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .cky-consent-container .cky-title {
+    margin-bottom: 4px !important;
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+  }
+
+  .cky-consent-container .cky-notice-des,
+  .cky-consent-container .cky-notice-des *,
+  .cky-consent-container .cky-policy {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  .cky-consent-container .cky-notice-des {
+    max-height: 72px !important;
+    overflow-y: auto !important;
+  }
+
+  .cky-consent-container .cky-notice-btn-wrapper {
+    gap: 8px !important;
+    margin-top: 10px !important;
+  }
+
+  .cky-consent-container .cky-btn {
+    min-height: 36px !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+}
+

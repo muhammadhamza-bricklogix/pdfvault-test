@@ -9,7 +9,6 @@ import {
   ArrowUp01Icon,
   BackgroundIcon,
   Cursor01Icon,
-  DownloadIcon,
   EraserIcon,
   HighlighterIcon,
   Image01Icon,
@@ -22,6 +21,8 @@ import {
   RedoIcon,
   FloppyDiskIcon,
   Search01Icon,
+  SearchAddIcon,
+  SearchMinusIcon,
   Share01Icon,
   ShapesIcon,
   SignatureIcon,
@@ -184,6 +185,7 @@ export function EditorInfoBar() {
   // hitting a silently-disabled button — that was confusing users into
   // thinking Save was broken.
   const canSave = !!file;
+  const canShare = !!file && isSignedIn;
   const saveTooltip = !file
     ? "Open a PDF to save"
     : !isSignedIn
@@ -282,6 +284,12 @@ export function EditorInfoBar() {
         },
       }),
     );
+  };
+
+  const openShareModal = () => {
+    if (!canShare) return;
+
+    window.dispatchEvent(new CustomEvent("editor:open-share"));
   };
 
   const pageNav = (
@@ -499,9 +507,9 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* Export controls — Search / Print / Download / Share / Done.
-                Search opens Find & Replace. Print/Download/Share/Done
-                open the shared format-selection modal. */}
+            {/* Export controls — Search / Print / Zoom / Share / Done.
+                Search opens Find & Replace. Print/Done open the format
+                modal; the middle controls zoom the page. */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Search"
@@ -530,26 +538,42 @@ export function EditorInfoBar() {
                 <p>Print</p>
               </Tooltip.Content>
             </Tooltip>
-            <Tooltip delay={300}>
-              <Button
-                aria-label="Download"
-                isDisabled={!file}
-                size="sm"
-                variant="tertiary"
-                onPress={openExportModal}
-              >
-                <HugeiconsIcon icon={DownloadIcon} size={16} />
-              </Button>
-              <Tooltip.Content>
-                <p>Download</p>
-              </Tooltip.Content>
-            </Tooltip>
+            <div className="flex items-center gap-1 sm:hidden">
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Zoom out"
+                  isDisabled={zoom <= ZOOM_PRESETS[0]}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={zoomOut}
+                >
+                  <HugeiconsIcon icon={SearchMinusIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Zoom out</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Zoom in"
+                  isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={zoomIn}
+                >
+                  <HugeiconsIcon icon={SearchAddIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Zoom in</p>
+                </Tooltip.Content>
+              </Tooltip>
+            </div>
             <Button
               aria-label="Share"
-              isDisabled={!file}
+              isDisabled={!canShare}
               size="sm"
               variant="secondary"
-              onPress={openExportModal}
+              onPress={openShareModal}
             >
               <HugeiconsIcon icon={Share01Icon} size={14} />
               <span className="ml-1 hidden sm:inline">Share</span>

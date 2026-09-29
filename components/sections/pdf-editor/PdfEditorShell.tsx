@@ -436,7 +436,19 @@ function EditorLayout() {
   );
 }
 
-export function PdfEditorShell() {
+export function PdfEditorShell({
+  initialLocale,
+}: {
+  /**
+   * Server-resolved locale for the composer's next-intl provider
+   * (QA F-63 — prevents English → German flash on first paint for
+   * German users whose URL doesn't carry a `/de/` prefix). Passed
+   * through to `<ComposerI18nProvider initialLocale=... />` further
+   * down. Optional — legacy call-sites default to the client-side
+   * URL / cookie resolver.
+   */
+  initialLocale?: string;
+} = {}) {
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const shellSearchParams = useSearchParams();
   const shellRouter = useRouter();
@@ -688,7 +700,7 @@ export function PdfEditorShell() {
   }
 
   return (
-    <ComposerI18nProvider>
+    <ComposerI18nProvider initialLocale={initialLocale}>
       <div className="flex h-full flex-col">
         <div
           aria-hidden={blurUnderlyingContent || undefined}

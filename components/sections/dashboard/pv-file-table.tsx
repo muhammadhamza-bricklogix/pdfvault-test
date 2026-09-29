@@ -486,7 +486,7 @@ export function PvFileTable({
                               `originalContentType != null` means the backend
                               converted a Word/Image/etc. into this PDF via
                               the pending-conversion flow. Signals to the
-                              user that Open/Download/Share on this row will
+                              user that dashboard Download on this row will
                               hit the paywall until they subscribe. Native
                               PDF uploads (originalContentType == null) get
                               no badge and are free. */}
@@ -494,7 +494,7 @@ export function PvFileTable({
                             <span
                               aria-label="Converted document"
                               className="inline-flex shrink-0 items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-amber-700"
-                              title="Converted from another format. Subscription required to open."
+                              title="Converted from another format. Subscription required to download."
                             >
                               Converted
                             </span>

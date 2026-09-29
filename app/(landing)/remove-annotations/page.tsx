@@ -13,6 +13,11 @@ export const metadata: Metadata = {
 
 export default function RemoveAnnotationsLandingPage() {
   return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="flatten" />
+    <ToolLandingPage
+      description={DESCRIPTION}
+      i18nKey="removeAnnotations"
+      title={TITLE}
+      tool="flatten"
+    />
   );
 }

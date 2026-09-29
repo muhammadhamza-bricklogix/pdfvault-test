@@ -67,7 +67,9 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
       const live = liveObjects[i] as unknown as Record<string, unknown>;
 
       for (const k of [
+        "annotationKind",
         "editorType",
+        "noteText",
         "pristine",
         "originalText",
         "originalLeft",
@@ -96,6 +98,8 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
         "fontWeight",
         "fontStyle",
         "fill",
+        "stroke",
+        "strokeWidth",
       ]) {
         if (live[k] !== undefined) objs[i][k] = live[k];
       }

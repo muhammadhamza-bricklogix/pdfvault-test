@@ -1,56 +1,20 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 
 import {
   FOOTER_COMPANY_ADDRESS_PLACEHOLDER,
   FOOTER_COMPANY_ENTITY,
 } from "@/lib/shared/constants/footer";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
-type FooterLink = { label: string; href: string };
+type FooterLink = { label: string; href: string; localised?: boolean };
 type FooterColumn = { heading: string; links: FooterLink[] };
-
-const FOOTER_COLUMNS: FooterColumn[] = [
-  {
-    heading: "TOOLS",
-    links: [
-      // Edit & Sign / Compress / Merge → dedicated landing pages that
-      // funnel into the editor with the matching tool auto-open. Convert
-      // → the Word-to-PDF landing (most-used input format).
-      { label: "Edit & Sign", href: "/edit" },
-      { label: "Merge PDF", href: "/merge-pdf" },
-      { label: "Compress", href: "/compress" },
-      { label: "Convert", href: "/convert/pdf-to-word" },
-    ],
-  },
-  {
-    heading: "COMPANY",
-    links: [
-      // "Pricing" still hidden until the public pricing page ships.
-      { label: "About Us", href: ROUTES.PUBLIC.ABOUT },
-      { label: "Contact Us", href: ROUTES.LEGAL.CONTACT },
-    ],
-  },
-  {
-    heading: "LEGAL",
-    links: [
-      { label: "Privacy Policy", href: ROUTES.LEGAL.PRIVACY },
-      { label: "Terms and Conditions", href: ROUTES.LEGAL.TERMS },
-      { label: "Subscription Terms", href: ROUTES.LEGAL.SUBSCRIPTION_TERMS },
-      { label: "Refund Policy", href: ROUTES.LEGAL.REFUND },
-      { label: "Cookie Policy", href: ROUTES.LEGAL.COOKIES },
-      { label: "Do Not Sell", href: ROUTES.LEGAL.DO_NOT_SELL },
-    ],
-  },
-  {
-    heading: "ACCOUNT",
-    links: [
-      // Changelog removed; replaced with the auth pair per PM review.
-      { label: "Login", href: ROUTES.AUTH.SIGN_IN },
-      { label: "Get Started", href: ROUTES.AUTH.SIGN_UP },
-    ],
-  },
-];
 
 // Kept for the future — re-render the icon row in the copyright bar once
 // real social profile URLs land. Currently unused because dead #hash links
@@ -133,6 +97,100 @@ function FooterBackground() {
 }
 
 export function LandingFooter() {
+  // Prepend the current locale segment to every footer nav href so soft-nav
+  // from a localized page keeps the visitor in the same locale. Without this,
+  // clicking Convert / Legal / Login from `/de/` lands on `/convert/pdf-to-word`
+  // (English) — QA F-15 (2026-09-26). Mirrors the helper in `landing-header.tsx`
+  // and `upload-workspace.tsx` (commit 774aca5).
+  const pathname = usePathname();
+  const withLocalePrefix = (path: string) => {
+    const parsed = parseLocalePrefix(pathname ?? "/");
+
+    if (!parsed) return path;
+    const suffix = path.startsWith("/") ? path : `/${path}`;
+
+    return `/${parsed.locale}${suffix}`;
+  };
+
+  // Localised only for labels flagged by QA (F-11 Convert = "Umwandeln",
+  // F-20 Do Not Sell = full CCPA-style long form). Other columns stay
+  // English-source + Weglot-translated until they're audited too.
+  const tFooter = useTranslations("footer");
+  const columns = useMemo<FooterColumn[]>(
+    () => [
+      {
+        heading: "TOOLS",
+        links: [
+          // Edit & Sign / Compress / Merge → dedicated landing pages that
+          // funnel into the editor with the matching tool auto-open. Convert
+          // → the Word-to-PDF landing (most-used input format).
+          { label: "Edit & Sign", href: withLocalePrefix("/edit") },
+          { label: "Merge PDF", href: withLocalePrefix("/merge-pdf") },
+          { label: "Compress", href: withLocalePrefix("/compress") },
+          {
+            label: tFooter("convert"),
+            href: withLocalePrefix("/convert/pdf-to-word"),
+            localised: true,
+          },
+        ],
+      },
+      {
+        heading: "COMPANY",
+        links: [
+          // "Pricing" still hidden until the public pricing page ships.
+          { label: "About Us", href: withLocalePrefix(ROUTES.PUBLIC.ABOUT) },
+          {
+            label: "Contact Us",
+            href: withLocalePrefix(ROUTES.LEGAL.CONTACT),
+          },
+        ],
+      },
+      {
+        heading: "LEGAL",
+        links: [
+          {
+            label: "Privacy Policy",
+            href: withLocalePrefix(ROUTES.LEGAL.PRIVACY),
+          },
+          {
+            label: "Terms and Conditions",
+            href: withLocalePrefix(ROUTES.LEGAL.TERMS),
+          },
+          {
+            label: "Subscription Terms",
+            href: withLocalePrefix(ROUTES.LEGAL.SUBSCRIPTION_TERMS),
+          },
+          {
+            label: "Refund Policy",
+            href: withLocalePrefix(ROUTES.LEGAL.REFUND),
+          },
+          {
+            label: "Cookie Policy",
+            href: withLocalePrefix(ROUTES.LEGAL.COOKIES),
+          },
+          {
+            label: tFooter("doNotSell"),
+            href: withLocalePrefix(ROUTES.LEGAL.DO_NOT_SELL),
+            localised: true,
+          },
+        ],
+      },
+      {
+        heading: "ACCOUNT",
+        links: [
+          // Changelog removed; replaced with the auth pair per PM review.
+          { label: "Login", href: withLocalePrefix(ROUTES.AUTH.SIGN_IN) },
+          {
+            label: "Get Started",
+            href: withLocalePrefix(ROUTES.AUTH.SIGN_UP),
+          },
+        ],
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tFooter, pathname],
+  );
+
   return (
     <footer className="relative isolate overflow-hidden bg-[#400000] text-white">
       <FooterBackground />
@@ -178,7 +236,7 @@ export function LandingFooter() {
           </div>
 
           {/* Link columns — left-aligned to match brand column */}
-          {FOOTER_COLUMNS.map((column) => (
+          {columns.map((column) => (
             <nav
               key={column.heading}
               aria-label={column.heading}
@@ -191,8 +249,13 @@ export function LandingFooter() {
                 {column.links.map((link) => (
                   <li key={link.label} className="min-w-0 max-w-full">
                     <Link
-                      className={`inline-block max-w-full break-words text-[14px] leading-relaxed text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING}`}
+                      // Fence next-intl-sourced labels from Weglot so
+                      // its cached EN→translated mapping doesn't
+                      // overwrite our authored German copy. Un-migrated
+                      // links stay Weglot-visible.
+                      className={`inline-block max-w-full break-words text-[14px] leading-relaxed text-white/75 transition-colors duration-200 hover:text-white ${FOCUS_RING} ${link.localised ? "notranslate wg-notranslate" : ""}`.trim()}
                       href={link.href}
+                      translate={link.localised ? "no" : undefined}
                     >
                       {link.label}
                     </Link>
@@ -212,8 +275,13 @@ export function LandingFooter() {
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <p className="text-start text-[11px] text-white/60 sm:text-[14px]">
               © 2026,{" "}
-              <span className="font-semibold text-white/90">PDFVault</span> All
-              rights reserved.
+              <span
+                className="notranslate wg-notranslate font-semibold text-white/90"
+                translate="no"
+              >
+                PDFVault
+              </span>{" "}
+              All rights reserved.
             </p>
             {/* Legal entity + short-form address required by Solidgate
                 compliance (EU-visible footer). Full postal address lives in

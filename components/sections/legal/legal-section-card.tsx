@@ -8,7 +8,13 @@ type LegalSectionCardProps = {
   children: ReactNode;
   icon?: IconProp;
   id: string;
-  title: string;
+  /**
+   * Section heading. Accepts a plain string for the common case OR a
+   * `ReactNode` so callers can fence product names / cookie IDs from
+   * Weglot with inline `<span className="notranslate">…</span>` (see
+   * refund-policy-content "Credits and Add-on Features", QA F-45).
+   */
+  title: ReactNode;
 };
 
 /**

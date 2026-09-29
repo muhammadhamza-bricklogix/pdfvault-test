@@ -106,6 +106,7 @@ export function useFabricCanvas({
       // edit drawn on top → visible double layer in the editor after
       // save (QA report 2026-06-17).
       for (const property of [
+        "annotationKind",
         "editorType",
         "noteText",
         "linkUrl",

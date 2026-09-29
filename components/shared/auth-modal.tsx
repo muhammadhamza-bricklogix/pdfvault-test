@@ -1,11 +1,13 @@
 "use client";
 
-import { Modal } from "@heroui/react";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
+
+import styles from "./email-first-modal.module.css";
 
 // Lazy-load the heavy card components so they don't ship in the
 // landing / marketing initial JS bundle (2026-08-30 perf ask: LCP
@@ -94,6 +96,55 @@ export function AuthModal() {
   // Local mode mirrors detail.mode initially so the in-card "switch"
   // link can flip tabs without dispatching a new event.
   const [mode, setMode] = useState<AuthModalMode>("login");
+  const [keyboardViewport, setKeyboardViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const scrollActiveElementIntoView = useCallback(
+    (block: ScrollLogicalPosition = "nearest") => {
+      const active = document.activeElement;
+
+      if (!(active instanceof HTMLElement)) return;
+      if (!dialogRef.current?.contains(active)) return;
+
+      active.scrollIntoView({
+        behavior: "smooth",
+        block,
+        inline: "nearest",
+      });
+    },
+    [],
+  );
+
+  const syncKeyboardViewport = useCallback(() => {
+    const visualViewport = window.visualViewport;
+    const active = document.activeElement;
+
+    if (
+      !visualViewport ||
+      !(active instanceof HTMLElement) ||
+      !dialogRef.current?.contains(active)
+    ) {
+      setKeyboardViewport(null);
+      return;
+    }
+
+    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
+
+    if (!keyboardIsOpen) {
+      setKeyboardViewport(null);
+      return;
+    }
+
+    setKeyboardViewport({
+      height: Math.floor(visualViewport.height),
+      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
+    });
+
+    requestAnimationFrame(() => scrollActiveElementIntoView("center"));
+  }, [scrollActiveElementIntoView]);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -141,18 +192,100 @@ export function AuthModal() {
 
   const close = useCallback(() => {
     logger.event(EVENTS.SIGNIN_PROMPT_CANCELLED, "info");
+    setKeyboardViewport(null);
     setDetail(null);
   }, []);
 
+  useEffect(() => {
+    if (!detail) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      setKeyboardViewport(null);
+    };
+  }, [close, detail]);
+
+  useEffect(() => {
+    if (!detail) return;
+
+    const visualViewport = window.visualViewport;
+
+    if (!visualViewport) return;
+
+    const handleViewportChange = () => {
+      syncKeyboardViewport();
+      scrollActiveElementIntoView("center");
+    };
+
+    visualViewport.addEventListener("resize", handleViewportChange);
+    visualViewport.addEventListener("scroll", handleViewportChange);
+
+    return () => {
+      visualViewport.removeEventListener("resize", handleViewportChange);
+      visualViewport.removeEventListener("scroll", handleViewportChange);
+    };
+  }, [detail, scrollActiveElementIntoView, syncKeyboardViewport]);
+
   const isOpen = detail !== null;
+  const keyboardCardMaxHeight = keyboardViewport
+    ? Math.max(280, keyboardViewport.height - 96)
+    : null;
+  const overlayStyle: CSSProperties | undefined = keyboardViewport
+    ? {
+        height: `${keyboardViewport.height}px`,
+        maxHeight: `${keyboardViewport.height}px`,
+        minHeight: `${keyboardViewport.height}px`,
+        transform: `translate3d(0, ${keyboardViewport.top}px, 0)`,
+      }
+    : undefined;
+  const viewportFrameStyle: CSSProperties | undefined = keyboardViewport
+    ? {
+        height: `${keyboardViewport.height}px`,
+        maxHeight: `${keyboardViewport.height}px`,
+        minHeight: `${keyboardViewport.height}px`,
+      }
+    : undefined;
+  const containerClassName = keyboardViewport
+    ? `${styles.container} items-start justify-center overflow-hidden overscroll-contain px-4 py-3`
+    : `${styles.container} min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4`;
+  const cardSurfaceClassName = keyboardViewport
+    ? `${styles.cardSurface} relative overflow-y-auto overscroll-contain rounded-[18px]`
+    : `${styles.cardSurface} relative overflow-visible rounded-[18px]`;
+  const cardStyle: CSSProperties | undefined = keyboardCardMaxHeight
+    ? { maxHeight: `${keyboardCardMaxHeight}px` }
+    : undefined;
+
+  if (!isOpen) return null;
 
   return (
-    <Modal.Backdrop
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        if (!open) close();
+    <div
+      aria-label="Authentication"
+      aria-modal="true"
+      className={styles.overlay}
+      role="dialog"
+      style={overlayStyle}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+      onFocusCapture={() => {
+        requestAnimationFrame(syncKeyboardViewport);
+        window.setTimeout(syncKeyboardViewport, 250);
+      }}
+      onPointerDownCapture={(event) => {
+        event.stopPropagation();
+        window.setTimeout(syncKeyboardViewport, 0);
       }}
     >
+      <div aria-hidden className={styles.backdropHitbox} onClick={close} />
       {/* Centred + scrollable-when-tall pattern (Tailwind UI / Headless
           UI convention). `min-h-full` makes the flex container at
           least as tall as the backdrop, so `items-center` genuinely
@@ -164,66 +297,75 @@ export function AuthModal() {
           item bigger than its parent aligns to the cross-axis start
           even with `items-center`. `overscroll-contain` stops the
           scroll chaining into the page behind the backdrop. */}
-      <Modal.Container className="min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4">
-        <Modal.Dialog
-          // `w-fit` so the dialog hugs the card's own width — otherwise
-          // a fixed 500px dialog would leave the 446/447px card floating
-          // inside it and the close X (positioned relative to the
-          // wrapper) would sit OUTSIDE the visible card border. Bare
-          // dialog: no bg / no shadow / no padding — the card owns all
-          // of that itself.
-          className="!w-fit !max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none"
+      <div
+        className={containerClassName}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div
+          className={`${styles.frame} flex w-full items-center justify-center overflow-hidden`}
+          style={viewportFrameStyle}
         >
-          <div className="relative">
-            {/* Close X — INSIDE the card box (top-right corner, inside
-                the card's own padding area). Simple gray icon matching
-                the reference screenshots. Uses `close()` directly
-                instead of `Modal.CloseTrigger` so we get pixel control
-                over placement + hover state. */}
-            <button
-              aria-label="Close"
-              className="absolute right-4 top-4 z-10 inline-flex size-8 items-center justify-center rounded-md text-[#8a8a8a] transition-colors hover:bg-default-100 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-              type="button"
-              onClick={close}
-            >
-              <svg
-                aria-hidden
-                fill="none"
-                height="20"
-                viewBox="0 0 20 20"
-                width="20"
+          <div
+            ref={dialogRef}
+            // `w-fit` so the dialog hugs the card's own width — otherwise
+            // a fixed 500px dialog would leave the 446/447px card floating
+            // inside it and the close X (positioned relative to the
+            // wrapper) would sit OUTSIDE the visible card border. Bare
+            // dialog: no bg / no shadow / no padding — the card owns all
+            // of that itself.
+            className={`${styles.dialog} w-fit max-w-[min(500px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none`}
+          >
+            <div className={cardSurfaceClassName} style={cardStyle}>
+              {/* Close X — INSIDE the card box (top-right corner, inside
+                  the card's own padding area). Simple gray icon matching
+                  the reference screenshots. Uses `close()` directly
+                  instead of `Modal.CloseTrigger` so we get pixel control
+                  over placement + hover state. */}
+              <button
+                aria-label="Close"
+                className="absolute right-4 top-4 z-10 inline-flex size-8 items-center justify-center rounded-md text-[#8a8a8a] transition-colors hover:bg-default-100 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+                type="button"
+                onClick={close}
               >
-                <path
-                  d="M5 5l10 10M15 5L5 15"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeWidth="1.75"
+                <svg
+                  aria-hidden
+                  fill="none"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  width="20"
+                >
+                  <path
+                    d="M5 5l10 10M15 5L5 15"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.75"
+                  />
+                </svg>
+              </button>
+              {mode === "login" ? (
+                <LoginCard
+                  autoSendCode={detail?.autoSendCode}
+                  initialEmail={detail?.email}
+                  redirectUrl={detail?.redirectUrl}
+                  onForgotPassword={() => setMode("forgotPassword")}
+                  onSwitchToSignup={() => setMode("signup")}
                 />
-              </svg>
-            </button>
-            {mode === "login" ? (
-              <LoginCard
-                autoSendCode={detail?.autoSendCode}
-                initialEmail={detail?.email}
-                redirectUrl={detail?.redirectUrl}
-                onForgotPassword={() => setMode("forgotPassword")}
-                onSwitchToSignup={() => setMode("signup")}
-              />
-            ) : mode === "signup" ? (
-              <SignupCard
-                initialEmail={detail?.email}
-                redirectUrl={detail?.redirectUrl}
-                onSwitchToLogin={() => setMode("login")}
-              />
-            ) : (
-              <ForgotPasswordCard
-                redirectUrl={detail?.redirectUrl}
-                onBackToLogin={() => setMode("login")}
-              />
-            )}
+              ) : mode === "signup" ? (
+                <SignupCard
+                  initialEmail={detail?.email}
+                  redirectUrl={detail?.redirectUrl}
+                  onSwitchToLogin={() => setMode("login")}
+                />
+              ) : (
+                <ForgotPasswordCard
+                  redirectUrl={detail?.redirectUrl}
+                  onBackToLogin={() => setMode("login")}
+                />
+              )}
+            </div>
           </div>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </div>
+      </div>
+    </div>
   );
 }

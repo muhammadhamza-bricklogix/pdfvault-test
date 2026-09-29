@@ -10,6 +10,11 @@ import "@/app/(landing)/landing-theme.css";
  * live under the `.pdfvault-landing` scope in landing-theme.css, so
  * this wrapper is required for the header to render with the correct
  * background, container width, and colors.
+ *
+ * `LandingI18nProvider` is hoisted to `app/(marketing)/layout.tsx` so
+ * `LandingFooter` (rendered by SiteFooter) and every child route
+ * calling `useTranslations` share the same provider — no wrap needed
+ * here.
  */
 export default function W9FormLandingLayout({
   children,

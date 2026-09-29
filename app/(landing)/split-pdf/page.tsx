@@ -13,6 +13,11 @@ export const metadata: Metadata = {
 
 export default function SplitPdfLandingPage() {
   return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="split" />
+    <ToolLandingPage
+      description={DESCRIPTION}
+      i18nKey="split"
+      title={TITLE}
+      tool="split"
+    />
   );
 }

@@ -111,14 +111,18 @@ export function DoNotSellContent() {
         title="How to Opt Out"
       >
         <ul className="mt-2 list-disc space-y-2 pl-5">
+          {/* LEGAL_COUNSEL_PENDING — QA F-54: Weglot dropped the
+              space after "Cookie-Einstellungen:" ("Cookie-Einstellungen:Nutzen").
+              Using " — " (em dash with spaces) instead of ":" survives
+              Weglot's translation pass with the separator intact. */}
           <li>
-            <strong>Cookie Settings:</strong> use the &ldquo;Cookie
+            <strong>Cookie Settings</strong> — use the &ldquo;Cookie
             Settings&rdquo; link in the footer, or visit our{" "}
             <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>, to disable
             analytics and advertising cookies.
           </li>
           <li>
-            <strong>Email:</strong> write to{" "}
+            <strong>Email</strong> — write to{" "}
             <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> with the
             subject line &ldquo;CCPA Opt-Out Request&rdquo; and the email
             address associated with your account.
@@ -201,10 +205,16 @@ export function DoNotSellContent() {
         </p>
       </LegalSectionCard>
 
+      {/* LEGAL_COUNSEL_PENDING — QA F-53: Weglot rendered "other US
+          states" as "andere US-Bundesländer" (German federal states,
+          which is wrong — Bundesländer refers to Germany's own
+          federal structure). "US States" nudges Weglot toward
+          "US-Bundesstaaten" (US federal states) which is the correct
+          German term. */}
       <LegalSectionCard
         icon={JudgeIcon}
         id="d-6-9"
-        title="Rights for Residents of Other States"
+        title="Rights for Residents of Other US States"
       >
         <p>
           Residents of Virginia (VCDPA), Colorado (CPA), Connecticut (CTDPA),

@@ -21,6 +21,7 @@ import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { triggerBlobDownload } from "@/lib/shared/utils/download";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
+import { trackActivation } from "@/lib/client/analytics/gtag";
 
 export type ExportFormat =
   | "pdf"
@@ -148,7 +149,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   // during the auth-return flow where that sync hasn't run yet. Reading
   // Clerk's hook keeps the export gate honest at the exact moment the
   // event fires.
-  const { isLoaded: authLoaded, isSignedIn: clerkIsSignedIn } = useAuth();
+  const { isLoaded: authLoaded, isSignedIn: clerkIsSignedIn, userId } = useAuth();
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
@@ -159,6 +160,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
     file,
     authLoaded,
     clerkIsSignedIn,
+    userId,
   });
 
   useEffect(() => {
@@ -168,8 +170,9 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
       file,
       authLoaded,
       clerkIsSignedIn,
+      userId,
     };
-  }, [currentPage, fabricCanvas, file, authLoaded, clerkIsSignedIn]);
+  }, [currentPage, fabricCanvas, file, authLoaded, clerkIsSignedIn, userId]);
 
   const convertRef = useRef(convert);
 
@@ -625,6 +628,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
             bytesLen: bytes.byteLength,
           });
           downloadBytes(bytes, outName);
+          trackActivation("pdf_editor_download", stateRef.current.userId);
           logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
             bytes: bytes.byteLength,
@@ -863,6 +867,7 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
               : result.fileName;
 
           triggerBlobDownload(result.blob, outName);
+          trackActivation(`convert_to_${format}`, stateRef.current.userId);
           logger.event(EVENTS.EXPORT_SUCCESS, "info", {
             format,
             filename: result.fileName,
