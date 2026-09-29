@@ -1687,7 +1687,7 @@ function PayStep({
                 Google Pay containers along with the card iframe. */}
             <div
               className="rounded-xl"
-              hidden={!cardExpanded}
+              hidden={!cardExpanded || payFailed}
               id="paywall-card-form"
             >
               {/*
