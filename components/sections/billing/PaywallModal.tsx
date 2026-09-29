@@ -40,10 +40,7 @@ import {
   trackAddPaymentInfo,
   trackTrialStart,
 } from "@/lib/client/analytics/gtag";
-import {
-  setBingUserData,
-  trackBingPurchase,
-} from "@/lib/client/analytics/bing-uet";
+import { setBingUserData } from "@/lib/client/analytics/bing-uet";
 
 // The payment SDK's iframe loader touches `window` at import time —
 // dynamic import with `ssr: false` keeps the Next.js server bundle
@@ -297,6 +294,19 @@ export function PaywallModal({
   // paymentIntent to attach the retry to (declined intents can be
   // marked terminal on their side and won't accept a second attempt).
   const [payFailed, setPayFailed] = useState(false);
+  // Tracks `paymentIntent` IDs that Solidgate marked terminal after a
+  // decline. `handleContinue` consults this before reusing a cached
+  // fullIntent/annualIntent/limitedIntent — a match forces the fetch-
+  // fresh path so the pay-step iframe never re-mounts against an
+  // intent that will just re-render the decline UI. Kept separate
+  // from the cache itself so cached intents can stay populated for
+  // the plan picker's visibility + pricing (nulling the cache
+  // collapses the picker when the current active `intent.alternatePlans`
+  // doesn't list its own plan — the "only 2 plans after 3rd decline"
+  // regression, QA 2026-09-29).
+  const [declinedPaymentIntents, setDeclinedPaymentIntents] = useState<
+    Set<string>
+  >(new Set());
   const [retryKey, setRetryKey] = useState(0);
   const [retryLoading, setRetryLoading] = useState(false);
   const createIntent = useCreateCheckoutIntentMutation();
@@ -436,6 +446,12 @@ export function PaywallModal({
     // decline banner if `handleContinue` reaches the pay step before
     // the fresh iframe intent settles.
     setPayFailed(false);
+    // And clear the terminal-paymentIntent tracker so a fresh modal
+    // session doesn't start with stale entries — the initial intents
+    // fetched on this open will have new paymentIntent IDs anyway, but
+    // resetting keeps the set from accumulating unbounded across
+    // sessions.
+    setDeclinedPaymentIntents(new Set());
 
     // Modal lifecycle milestone — fires exactly once per open (isOpen
     // flip). Landmark for the CloudWatch/Sentry trace: any subsequent
@@ -738,18 +754,32 @@ export function PaywallModal({
   const handleIframeFail = () => {
     logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning");
     setPayFailed(true);
-    // Invalidate the cached intent for the plan that just failed —
-    // Solidgate marks a declined paymentIntent terminal, so re-mounting
-    // the iframe against it just re-renders the decline UI. Nulling the
-    // cache forces `handleContinue` for the same plan to hit the fetch-
-    // fresh path (annual/limited already handle this via their else
-    // branch; the "full" branch has a matching fresh-fetch path so a
-    // null `fullIntent` triggers a refetch there too). Covers the
-    // "user clicks Back → picks the same declined plan → Continue"
-    // flow that inline retry doesn't reach. See QA 2026-09-29.
-    if (selectedPlan === "full") setFullIntent(null);
-    else if (selectedPlan === "annual") setAnnualIntent(null);
-    else if (selectedPlan === "limited") setLimitedIntent(null);
+    // Mark this specific paymentIntent as terminal so a subsequent
+    // `handleContinue` for the same plan refetches instead of reusing
+    // the cached (now-terminal) intent. We keep the cached
+    // fullIntent/annualIntent/limitedIntent populated because they
+    // drive the plan-picker's visibility and pricing — nulling any of
+    // them collapses the picker when a plan's own `alternatePlans`
+    // doesn't list itself (siblings only), which is what happened when
+    // users declined multiple plans in one session (QA 2026-09-29:
+    // "after 3rd attempt I am getting only two plans on my step 1").
+    // On successful refetch, the new intent has a different
+    // paymentIntent that isn't in this set, so cache reuse resumes
+    // normally without needing to reset the set.
+    // Null guard: `intent` is only null before the initial fetch
+    // resolves, and this handler can't fire until the iframe has
+    // mounted and Solidgate has processed a card attempt — both require
+    // a settled intent. Guard defensively so a race can't crash the
+    // modal.
+    if (intent) {
+      setDeclinedPaymentIntents((prev) => {
+        const next = new Set(prev);
+
+        next.add(intent.paymentIntent);
+
+        return next;
+      });
+    }
     toast.error({
       title: "Payment declined",
       description: "Your card wasn't charged. Try another card to retry.",
@@ -937,7 +967,11 @@ export function PaywallModal({
       // used `monthlyIntent` on the pre-Limited-Access branch; updated
       // to the three-plan world where the primary intent snapshot
       // lives in `fullIntent` (see the state declaration).
-      if (fullIntent) {
+      // Also skip cache reuse if the cached intent's paymentIntent was
+      // marked terminal by a prior decline — Solidgate rejects a second
+      // attempt on a terminal paymentIntent, so the iframe would just
+      // re-render the decline UI.
+      if (fullIntent && !declinedPaymentIntents.has(fullIntent.paymentIntent)) {
         setIntent(fullIntent);
         logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
           plan: "full",
@@ -947,13 +981,13 @@ export function PaywallModal({
 
         return;
       }
-      // No cached Full Access intent — invalidated by a prior
-      // `handleIframeFail` on the same plan. Fetch a fresh intent so the
-      // pay-step iframe renders against a non-terminal Solidgate
-      // paymentIntent (mirrors the annual/limited fallback path below).
-      // Without this branch, `intent` would remain the previously-
-      // declined one and PayStep would re-render Solidgate's own
-      // decline UI even after the user clicked Back → picked Full
+      // No usable cached Full Access intent — either never cached, or
+      // the cached one is terminal after a prior decline. Fetch a fresh
+      // intent so the pay-step iframe renders against a non-terminal
+      // Solidgate paymentIntent (mirrors the annual/limited fallback
+      // path below). Without this branch, `intent` would remain the
+      // previously-declined one and PayStep would re-render Solidgate's
+      // own decline UI even after the user clicked Back → picked Full
       // again. See QA 2026-09-29.
       setContinueLoading(true);
       createIntent.mutate(
@@ -1024,9 +1058,15 @@ export function PaywallModal({
             errorTitle: "Couldn't start limited-access checkout",
           };
 
-    // Reuse the parallel-fetched intent when it's already landed —
-    // same paymentIntent the picker priced against.
-    if (target.cachedIntent) {
+    // Reuse the parallel-fetched intent when it's already landed AND
+    // its paymentIntent hasn't been marked terminal by a prior decline.
+    // Falls through to the fetch-fresh path below when a decline has
+    // burned this cached intent (same check `handleContinue`'s "full"
+    // branch above uses on `fullIntent`).
+    if (
+      target.cachedIntent &&
+      !declinedPaymentIntents.has(target.cachedIntent.paymentIntent)
+    ) {
       setIntent(target.cachedIntent);
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
         plan: target.planId,
