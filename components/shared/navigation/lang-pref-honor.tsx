@@ -10,6 +10,13 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/shared/constants/locale-map";
 
+// Delay before the redirect fires. During this window, any URL change
+// (e.g. auto-signup's own `window.location.assign` from a signed-out
+// upload flow) cancels the pending redirect via the useEffect cleanup,
+// then re-schedules on the new pathname. Empirically 1000 ms covers
+// the auto-signup finalize → composer navigation without user-visible
+// delay on a normal `<Link>` click.
+const REDIRECT_DEBOUNCE_MS = 1000;
 // URL patterns where a full-page reload would destroy in-flight state
 // (uploads mid-transfer, auto-signup finalize step, converter pending
 // overlay, editor unsaved edits). LangPrefHonor's redirect skips these
@@ -23,14 +30,6 @@ const SKIP_REDIRECT_PREFIXES = [
   "/convert/",
   "/sso-callback",
 ];
-
-// Delay the lang-pref redirect so it can't race a concurrent
-// `window.location.assign` from the auto-signup finalize flow (item #15
-// of the auth chain). Restored 2026-09-26 — the const was dropped during
-// a merge conflict resolution on `feat/limited-access-plan`, breaking the
-// production build with "Cannot find name 'REDIRECT_DEBOUNCE_MS'" at the
-// call site below. Value matches the original PR #117 debounce.
-const REDIRECT_DEBOUNCE_MS = 1000;
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;

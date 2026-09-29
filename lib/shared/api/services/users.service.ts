@@ -1,7 +1,3 @@
-import {
-  clearStoredAcquisition,
-  getStoredAcquisition,
-} from "@/lib/client/analytics/acquisition-tracker";
 import { apiClient } from "@/lib/config/api-client";
 import { USERS } from "@/lib/shared/constants/endpoints";
 
@@ -15,13 +11,9 @@ import { USERS } from "@/lib/shared/constants/endpoints";
  * first action (uploading a doc) could lose a race with Clerk's
  * `user.created` webhook and 500. Calling this immediately after sign-in
  * closes that window.
- *
- * Forwards client-side first-touch acquisition attribution (Google Ads,
- * Bing Ads, Direct, etc.) so it can be associated with the user record.
  */
 async function ensureMe(): Promise<void> {
-  const attribution = getStoredAcquisition();
-  await apiClient.post(USERS.ME, attribution ?? {});
+  await apiClient.post(USERS.ME);
 }
 
 /**
@@ -29,11 +21,11 @@ async function ensureMe(): Promise<void> {
  * still destroyed by `useClerk().signOut()` — this just persists the "who
  * logged out, when, from where" trail for support / abuse triage.
  *
- * Also clears any stored acquisition tracking from cookies and localStorage
- * so that shared browsers do not cross-contaminate attribution to the next user.
+ * Errors are intentionally swallowed by the caller — failing to write an
+ * audit row should never block a sign-out. If the backend is down, the user
+ * still signs out client-side and the log entry is the cost.
  */
 async function signOutAudit(): Promise<void> {
-  clearStoredAcquisition();
   await apiClient.post(USERS.SIGN_OUT);
 }
 
@@ -41,4 +33,3 @@ export const usersService = {
   ensureMe,
   signOutAudit,
 };
-

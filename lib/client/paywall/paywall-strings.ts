@@ -23,12 +23,6 @@
 
 import type { Locale } from "@/lib/shared/constants/locale-map";
 
-// A single bullet in a plan card's feature list. `included: false`
-// renders as a struck-through/greyed-out row with a ✕ mark so the
-// Limited Access card can display features it deliberately excludes
-// as a decoy contrast against Full Access.
-export type PaywallFeature = { text: string; included?: boolean };
-
 export type PaywallStrings = {
   // Header row
   ready: {
@@ -45,25 +39,25 @@ export type PaywallStrings = {
   documentReady: string;
   // Plan cards
   mostPopular: string;
-  limitedPlan: string;
-  fullAccessPlan: string;
+  sevenDayTrial: string;
   annualPlan: string;
   perMonth: string;
   billedAsYear: (fullPrice: string) => string;
-  // Feature lists — Limited has crossed-out rows, Full Access is used
-  // for both the Full Access and Annual cards (Annual mirrors Full).
-  planFeatures: {
-    limited: PaywallFeature[];
-    fullAccess: PaywallFeature[];
+  // Feature list
+  features: {
+    unlimitedEdits: string;
+    unlimitedDownloads: string;
+    multiFormatConversion: string;
+    editTextImages: string;
+    organizePages: string;
+    protectPassword: string;
   };
   // Accepted cards row
   weAccept: string;
   // Continue CTA
   continueCta: string;
   continuePreparing: string;
-  // Disclaimer footer — two variants. Monthly copy also covers the
-  // Limited Access plan (both are 7-day trial → monthly) since the
-  // template already reads the recurring amount from `monthlyAmount`.
+  // Disclaimer footer — two variants
   disclaimerMonthly: (args: {
     todayAmount: string;
     monthlyAmount: string;
@@ -97,16 +91,13 @@ export type PaywallStrings = {
     // Two variants — monthly (trial → recurring) vs annual.
     // `<0>` and `<1>` mark the position of the "Subscription" and
     // "Refund" links so PayStep can render them via segments.
-    disclaimerMonthly: (a: { todayAmount: string; renewAmount: string }) => {
-      intro: string;
-      policySeparator: string;
-      policyOutro: string;
-    };
-    disclaimerAnnual: (a: { todayAmount: string }) => {
-      intro: string;
-      policySeparator: string;
-      policyOutro: string;
-    };
+    disclaimerMonthly: (a: {
+      todayAmount: string;
+      renewAmount: string;
+    }) => { intro: string; policySeparator: string; policyOutro: string };
+    disclaimerAnnual: (a: {
+      todayAmount: string;
+    }) => { intro: string; policySeparator: string; policyOutro: string };
     subscriptionLink: string;
     refundLink: string;
     // Right column
@@ -134,37 +125,17 @@ const en: PaywallStrings = {
   headerSubtitle: "Cancel anytime · Secure checkout · Instant access",
   documentReady: "Your document is ready to download",
   mostPopular: "🚀 Most popular",
-  limitedPlan: "7-Day Limited Access",
-  fullAccessPlan: "7-Day Full Access",
+  sevenDayTrial: "7-day trial",
   annualPlan: "Annual Plan",
   perMonth: "/ month",
   billedAsYear: (p) => `Billed as ${p} / year`,
-  planFeatures: {
-    limited: [
-      { text: "Unlimited edits" },
-      { text: "Unlimited downloads" },
-      { text: "Multi-format conversion (PDF to Word, JPG, Excel, etc.)" },
-      { text: "No installation required" },
-      { text: "Edit text and images in PDF files" },
-      { text: "Organize and reorder PDF pages", included: false },
-      {
-        text: "Pro password protection & external link sharing",
-        included: false,
-      },
-      {
-        text: "High-speed engine (Up to 2x faster processing)",
-        included: false,
-      },
-    ],
-    fullAccess: [
-      { text: "Unlimited edits & downloads" },
-      { text: "Multi-format conversion" },
-      { text: "No installation required" },
-      { text: "Edit text, images, annotations, and shapes" },
-      { text: "Organize, merge, split, and reorder PDF pages" },
-      { text: "Pro password protection & secure external link sharing" },
-      { text: "Up to 2x faster processing & unlimited compressions" },
-    ],
+  features: {
+    unlimitedEdits: "Unlimited edits",
+    unlimitedDownloads: "Unlimited downloads",
+    multiFormatConversion: "Multi-format conversion",
+    editTextImages: "Edit text and images in PDF files",
+    organizePages: "Organize and reorder PDF pages",
+    protectPassword: "Protect PDF with password",
   },
   weAccept: "We accept",
   continueCta: "Continue",
@@ -220,40 +191,17 @@ const de: PaywallStrings = {
   headerSubtitle: "Jederzeit kündbar · Sichere Bezahlung · Sofortiger Zugriff",
   documentReady: "Ihr Dokument steht zum Herunterladen bereit",
   mostPopular: "🚀 Am beliebtesten",
-  limitedPlan: "7-Tage Eingeschränkter Zugriff",
-  fullAccessPlan: "7-Tage Vollzugriff",
+  sevenDayTrial: "7-tägige Testversion",
   annualPlan: "Jahresplan",
   perMonth: "/ Monat",
   billedAsYear: (p) => `Abrechnung als ${p} / Jahr`,
-  planFeatures: {
-    limited: [
-      { text: "Unbegrenzte Bearbeitungen" },
-      { text: "Unbegrenzte Downloads" },
-      {
-        text: "Konvertierung in verschiedene Formate (PDF zu Word, JPG, Excel usw.)",
-      },
-      { text: "Keine Installation erforderlich" },
-      { text: "Text und Bilder in PDF-Dateien bearbeiten" },
-      { text: "PDF-Seiten organisieren und neu anordnen", included: false },
-      { text: "Pro-Passwortschutz & externe Link-Freigabe", included: false },
-      {
-        text: "Hochgeschwindigkeits-Engine (bis zu 2× schnellere Verarbeitung)",
-        included: false,
-      },
-    ],
-    fullAccess: [
-      { text: "Unbegrenzte Bearbeitungen & Downloads" },
-      { text: "Konvertierung in verschiedene Formate" },
-      { text: "Keine Installation erforderlich" },
-      { text: "Text, Bilder, Anmerkungen und Formen bearbeiten" },
-      {
-        text: "PDF-Seiten organisieren, zusammenführen, teilen und neu anordnen",
-      },
-      { text: "Pro-Passwortschutz & sichere externe Link-Freigabe" },
-      {
-        text: "Bis zu 2× schnellere Verarbeitung & unbegrenzte Komprimierungen",
-      },
-    ],
+  features: {
+    unlimitedEdits: "Unbegrenzte Bearbeitungen",
+    unlimitedDownloads: "Unbegrenzte Downloads",
+    multiFormatConversion: "Konvertierung in verschiedene Formate",
+    editTextImages: "Text und Bilder in PDF-Dateien bearbeiten",
+    organizePages: "PDF-Seiten organisieren und neu anordnen",
+    protectPassword: "PDF mit Passwort schützen",
   },
   weAccept: "Wir akzeptieren",
   continueCta: "Weiter",
@@ -288,7 +236,8 @@ const de: PaywallStrings = {
     yourDocumentReady: "Ihr Dokument ist fertig!",
     cardSecurityNote:
       "Kartendaten erreichen unsere Server nie. Zahlungen werden über einen PCI-konformen Partner abgewickelt.",
-    cardDeclinedHeading: "Ihre Karte wurde abgelehnt und nicht belastet.",
+    cardDeclinedHeading:
+      "Ihre Karte wurde abgelehnt und nicht belastet.",
     cardDeclinedBody:
       "Versuchen Sie eine andere Karte oder wenden Sie sich an Ihre Bank. Sie können die Daten unten erneut eingeben.",
     tryAnotherCard: "Andere Karte versuchen",
@@ -306,42 +255,21 @@ const es: PaywallStrings = {
     powerpoint: "Tu presentación de PowerPoint está lista.",
     txt: "Tu documento de texto está listo.",
   },
-  headerSubtitle: "Cancela cuando quieras · Pago seguro · Acceso instantáneo",
+  headerSubtitle:
+    "Cancela cuando quieras · Pago seguro · Acceso instantáneo",
   documentReady: "Tu documento está listo para descargar",
   mostPopular: "🚀 Más popular",
-  limitedPlan: "Acceso Limitado 7 días",
-  fullAccessPlan: "Acceso Completo 7 días",
+  sevenDayTrial: "Prueba de 7 días",
   annualPlan: "Plan anual",
   perMonth: "/ mes",
   billedAsYear: (p) => `Facturado como ${p} / año`,
-  planFeatures: {
-    limited: [
-      { text: "Ediciones ilimitadas" },
-      { text: "Descargas ilimitadas" },
-      { text: "Conversión multiformato (PDF a Word, JPG, Excel, etc.)" },
-      { text: "Sin instalación" },
-      { text: "Editar texto e imágenes en archivos PDF" },
-      { text: "Organizar y reordenar páginas PDF", included: false },
-      {
-        text: "Protección Pro con contraseña y uso compartido por enlace externo",
-        included: false,
-      },
-      {
-        text: "Motor de alta velocidad (hasta 2× más rápido)",
-        included: false,
-      },
-    ],
-    fullAccess: [
-      { text: "Ediciones y descargas ilimitadas" },
-      { text: "Conversión multiformato" },
-      { text: "Sin instalación" },
-      { text: "Editar texto, imágenes, anotaciones y formas" },
-      { text: "Organizar, combinar, dividir y reordenar páginas PDF" },
-      {
-        text: "Protección Pro con contraseña y uso compartido seguro por enlace externo",
-      },
-      { text: "Hasta 2× más rápido y compresiones ilimitadas" },
-    ],
+  features: {
+    unlimitedEdits: "Ediciones ilimitadas",
+    unlimitedDownloads: "Descargas ilimitadas",
+    multiFormatConversion: "Conversión multiformato",
+    editTextImages: "Editar texto e imágenes en archivos PDF",
+    organizePages: "Organizar y reordenar páginas PDF",
+    protectPassword: "Proteger PDF con contraseña",
   },
   weAccept: "Aceptamos",
   continueCta: "Continuar",
@@ -398,39 +326,17 @@ const fr: PaywallStrings = {
     "Annulez à tout moment · Paiement sécurisé · Accès instantané",
   documentReady: "Votre document est prêt à être téléchargé",
   mostPopular: "🚀 Le plus populaire",
-  limitedPlan: "Accès Limité 7 jours",
-  fullAccessPlan: "Accès Complet 7 jours",
+  sevenDayTrial: "Essai de 7 jours",
   annualPlan: "Plan annuel",
   perMonth: "/ mois",
   billedAsYear: (p) => `Facturé ${p} / an`,
-  planFeatures: {
-    limited: [
-      { text: "Modifications illimitées" },
-      { text: "Téléchargements illimités" },
-      { text: "Conversion multi-format (PDF vers Word, JPG, Excel, etc.)" },
-      { text: "Aucune installation requise" },
-      { text: "Modifier le texte et les images des PDF" },
-      { text: "Organiser et réordonner les pages PDF", included: false },
-      {
-        text: "Protection Pro par mot de passe & partage par lien externe",
-        included: false,
-      },
-      {
-        text: "Moteur haute vitesse (jusqu'à 2× plus rapide)",
-        included: false,
-      },
-    ],
-    fullAccess: [
-      { text: "Modifications & téléchargements illimités" },
-      { text: "Conversion multi-format" },
-      { text: "Aucune installation requise" },
-      { text: "Modifier texte, images, annotations et formes" },
-      { text: "Organiser, fusionner, séparer et réordonner les pages PDF" },
-      {
-        text: "Protection Pro par mot de passe & partage sécurisé par lien externe",
-      },
-      { text: "Jusqu'à 2× plus rapide & compressions illimitées" },
-    ],
+  features: {
+    unlimitedEdits: "Modifications illimitées",
+    unlimitedDownloads: "Téléchargements illimités",
+    multiFormatConversion: "Conversion multi-format",
+    editTextImages: "Modifier le texte et les images des PDF",
+    organizePages: "Organiser et réordonner les pages PDF",
+    protectPassword: "Protéger un PDF par mot de passe",
   },
   weAccept: "Nous acceptons",
   continueCta: "Continuer",
@@ -487,41 +393,17 @@ const pt: PaywallStrings = {
     "Cancele a qualquer momento · Checkout seguro · Acesso instantâneo",
   documentReady: "Seu documento está pronto para download",
   mostPopular: "🚀 Mais popular",
-  limitedPlan: "Acesso Limitado por 7 dias",
-  fullAccessPlan: "Acesso Completo por 7 dias",
+  sevenDayTrial: "Teste de 7 dias",
   annualPlan: "Plano anual",
   perMonth: "/ mês",
   billedAsYear: (p) => `Cobrado como ${p} / ano`,
-  planFeatures: {
-    limited: [
-      { text: "Edições ilimitadas" },
-      { text: "Downloads ilimitados" },
-      {
-        text: "Conversão em múltiplos formatos (PDF para Word, JPG, Excel etc.)",
-      },
-      { text: "Nenhuma instalação necessária" },
-      { text: "Editar texto e imagens em arquivos PDF" },
-      { text: "Organizar e reordenar páginas do PDF", included: false },
-      {
-        text: "Proteção Pro por senha e compartilhamento por link externo",
-        included: false,
-      },
-      {
-        text: "Motor de alta velocidade (até 2× mais rápido)",
-        included: false,
-      },
-    ],
-    fullAccess: [
-      { text: "Edições e downloads ilimitados" },
-      { text: "Conversão em múltiplos formatos" },
-      { text: "Nenhuma instalação necessária" },
-      { text: "Editar texto, imagens, anotações e formas" },
-      { text: "Organizar, mesclar, dividir e reordenar páginas do PDF" },
-      {
-        text: "Proteção Pro por senha e compartilhamento seguro por link externo",
-      },
-      { text: "Até 2× mais rápido e compressões ilimitadas" },
-    ],
+  features: {
+    unlimitedEdits: "Edições ilimitadas",
+    unlimitedDownloads: "Downloads ilimitados",
+    multiFormatConversion: "Conversão em múltiplos formatos",
+    editTextImages: "Editar texto e imagens em arquivos PDF",
+    organizePages: "Organizar e reordenar páginas do PDF",
+    protectPassword: "Proteger PDF com senha",
   },
   weAccept: "Aceitamos",
   continueCta: "Continuar",
@@ -577,31 +459,17 @@ const ar: PaywallStrings = {
   headerSubtitle: "إلغاء في أي وقت · دفع آمن · وصول فوري",
   documentReady: "مستندك جاهز للتنزيل",
   mostPopular: "🚀 الأكثر شعبية",
-  limitedPlan: "وصول محدود لمدة 7 أيام",
-  fullAccessPlan: "وصول كامل لمدة 7 أيام",
+  sevenDayTrial: "تجربة 7 أيام",
   annualPlan: "الخطة السنوية",
   perMonth: "/ شهر",
   billedAsYear: (p) => `تُفوتر بمبلغ ${p} / سنة`,
-  planFeatures: {
-    limited: [
-      { text: "تعديلات غير محدودة" },
-      { text: "تنزيلات غير محدودة" },
-      { text: "التحويل بصيغ متعددة (PDF إلى Word وJPG وExcel وغيرها)" },
-      { text: "لا يتطلب تثبيت" },
-      { text: "تحرير النصوص والصور في ملفات PDF" },
-      { text: "تنظيم وإعادة ترتيب صفحات PDF", included: false },
-      { text: "حماية Pro بكلمة مرور ومشاركة عبر رابط خارجي", included: false },
-      { text: "محرك عالي السرعة (أسرع بمعدل 2×)", included: false },
-    ],
-    fullAccess: [
-      { text: "تعديلات وتنزيلات غير محدودة" },
-      { text: "التحويل بصيغ متعددة" },
-      { text: "لا يتطلب تثبيت" },
-      { text: "تحرير النصوص والصور والتعليقات التوضيحية والأشكال" },
-      { text: "تنظيم ودمج وتقسيم وإعادة ترتيب صفحات PDF" },
-      { text: "حماية Pro بكلمة مرور ومشاركة آمنة عبر رابط خارجي" },
-      { text: "أسرع بمعدل 2× وضغط غير محدود" },
-    ],
+  features: {
+    unlimitedEdits: "تعديلات غير محدودة",
+    unlimitedDownloads: "تنزيلات غير محدودة",
+    multiFormatConversion: "التحويل بصيغ متعددة",
+    editTextImages: "تحرير النصوص والصور في ملفات PDF",
+    organizePages: "تنظيم وإعادة ترتيب صفحات PDF",
+    protectPassword: "حماية PDF بكلمة مرور",
   },
   weAccept: "نقبل",
   continueCta: "متابعة",

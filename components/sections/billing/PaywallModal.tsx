@@ -19,7 +19,6 @@ import {
 } from "@/lib/client/billing/generate-receipt-pdf";
 import {
   getPaywallStrings,
-  type PaywallFeature,
   type PaywallStrings,
 } from "@/lib/client/paywall/paywall-strings";
 import {
@@ -115,7 +114,7 @@ const SOLIDGATE_FORM_PARAMS = {
 } as const;
 
 type Step = "plan" | "pay" | "success";
-type PlanId = "limited" | "full" | "annual";
+type PlanId = "monthly" | "annual";
 
 // Stable, memoised wrapper around Solidgate's <PaymentForm>. PayStep
 // re-renders each time a wallet MutationObserver fires
@@ -255,8 +254,18 @@ export function PaywallModal({
     [paywallLocale],
   );
   const [step, setStep] = useState<Step>("plan");
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("full");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("monthly");
   const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  // Preserve the initial monthly intent alongside `intent` so a user
+  // who picks Annual → Continue → Back → 7-day trial → Continue lands
+  // on the pay step with the ORIGINAL monthly paymentIntent, not the
+  // stale annual one `handleContinue` swapped in. Without this the
+  // Solidgate iframe re-renders on `intent.paymentIntent` and charges
+  // annual pricing even though the plan picker shows trial (QA
+  // 2026-09-24).
+  const [monthlyIntent, setMonthlyIntent] = useState<CheckoutIntent | null>(
+    null,
+  );
   // Fetched in parallel with the primary (monthly) intent so the
   // plan-picker card shows the same annual per-month price the payment
   // step will later render. `intent.alternatePlans[ANNUAL]` was drifting
@@ -264,12 +273,6 @@ export function PaywallModal({
   // different figure on the two screens. Reusing this cached intent on
   // Continue also skips the extra round-trip.
   const [annualIntent, setAnnualIntent] = useState<CheckoutIntent | null>(null);
-  // Same pattern for the Limited Access card — pre-fetch on open so
-  // Continue reuses the cached intent instead of blocking the user
-  // on a fresh round-trip when they pick the decoy plan.
-  const [limitedIntent, setLimitedIntent] = useState<CheckoutIntent | null>(
-    null,
-  );
   // Explicit "backend rejected the ANNUAL pre-fetch" flag — the
   // primary intent's alternatePlans is the source of truth for whether
   // annual is seeded, but this flag lets us hide the card immediately
@@ -278,7 +281,6 @@ export function PaywallModal({
   // 12) and the "Couldn't start annual checkout — Resource not found"
   // dead-end on Continue.
   const [annualUnavailable, setAnnualUnavailable] = useState(false);
-  const [limitedUnavailable, setLimitedUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // When Solidgate reports a decline, we surface a "Try another card"
   // affordance instead of leaving the user staring at the read-only
@@ -418,7 +420,7 @@ export function PaywallModal({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStep("plan");
 
-    setSelectedPlan("full");
+    setSelectedPlan("monthly");
 
     // Modal lifecycle milestone — fires exactly once per open (isOpen
     // flip). Landmark for the CloudWatch/Sentry trace: any subsequent
@@ -434,7 +436,7 @@ export function PaywallModal({
     });
 
     logger.event(EVENTS.CHECKOUT_INTENT_START, "info", {
-      plan: "full",
+      plan: "monthly",
       // Diagnostic — Microsoft's automated bots repro a
       // "Couldn't start checkout / Invalid request." 400 that the team
       // cannot reproduce manually. Without capturing the payload +
@@ -451,12 +453,6 @@ export function PaywallModal({
     createIntent.mutate(
       {
         disclaimerVersion: DISCLAIMER_VERSION,
-        // Primary intent = Full Access (Most Popular) — the paywall
-        // opens on this card by default so the backend must issue the
-        // signed intent against Solidgate's Full Access product, not
-        // the TRIAL_MONTHLY default. Alternate plans still ship in
-        // `intent.alternatePlans` for the Limited + Annual cards.
-        planKind: "FULL_ACCESS",
         fileName: preview?.filename,
       },
       {
@@ -473,6 +469,7 @@ export function PaywallModal({
           // "USD". See `lib/client/billing/user-currency.ts`.
           persistUserCurrency(intent.currency);
           setIntent(intent);
+          setMonthlyIntent(intent);
         },
         onError: (err) => {
           // Enriched forensic log — captures the raw non-enveloped 400
@@ -596,34 +593,12 @@ export function PaywallModal({
         logger.captureError(err, "checkout.annual_intent_prefetch");
       });
 
-    // Prefetch the Limited Access card's intent (TRIAL_MONTHLY —
-    // the existing lower-priced product). Same pattern as annual: locks
-    // the price the picker quotes to what the payment step will actually
-    // charge, and lets Continue skip the round-trip when the user picks
-    // Limited.
-    billingService
-      .createCheckoutIntent({
-        disclaimerVersion: DISCLAIMER_VERSION,
-        planKind: "TRIAL_MONTHLY",
-        fileName: preview?.filename,
-      })
-      .then((limited) => {
-        if (cancelled) return;
-        setLimitedIntent(limited);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLimitedUnavailable(true);
-        logger.captureError(err, "checkout.limited_intent_prefetch");
-      });
-
     return () => {
       cancelled = true;
       setIntent(null);
+      setMonthlyIntent(null);
       setAnnualIntent(null);
-      setLimitedIntent(null);
       setAnnualUnavailable(false);
-      setLimitedUnavailable(false);
       setError(null);
       setPayFailed(false);
       setRetryKey(0);
@@ -820,23 +795,12 @@ export function PaywallModal({
     // paymentIntent terminal after a decline, so re-mounting the iframe
     // against the same intent just re-renders the "Payment declined"
     // state. Bump retryKey to force a full PaymentForm remount, then
-    // load a new intent and drop the failed flag once it lands. The
-    // retry must target the same plan the user was on (selectedPlan)
-    // so Full Access + Limited + Annual all retry against their own
-    // Solidgate product IDs, not the backend's default.
-    const retryPlanKind: "FULL_ACCESS" | "TRIAL_MONTHLY" | "ANNUAL" =
-      selectedPlan === "annual"
-        ? "ANNUAL"
-        : selectedPlan === "limited"
-          ? "TRIAL_MONTHLY"
-          : "FULL_ACCESS";
-
+    // load a new intent and drop the failed flag once it lands.
     setRetryLoading(true);
     setPayFailed(false);
     createIntent.mutate(
       {
         disclaimerVersion: DISCLAIMER_VERSION,
-        planKind: retryPlanKind,
         fileName: preview?.filename,
       },
       {
@@ -872,30 +836,31 @@ export function PaywallModal({
     onPaymentSuccess();
   };
 
-  // Continue-from-plan-step handler. Full Access (default) reuses the
-  // primary intent fetched on modal open — that intent is already
-  // signed for the FULL_ACCESS product. Annual + Limited re-swap to
-  // their own `planKind` so the backend returns the right Solidgate
-  // product's price ID before we mount the payment iframe. Both use
-  // the parallel-prefetched intent when it's landed and fall back to
-  // a fresh mutation otherwise.
+  // Continue-from-plan-step handler. Trial reuses the intent already
+  // fetched on modal open. Annual re-fetches the intent with
+  // `planKind: "ANNUAL"` so the backend swaps to the annual price ID
+  // (Solidgate product b1ed4002-ab3f-4f56-b822-1489c538c6c7) and
+  // returns the annual amounts before we mount the payment iframe.
   const [continueLoading, setContinueLoading] = useState(false);
   const handleContinue = () => {
     // Milestone — user committed to a plan and clicked Continue. Slice
-    // paywall funnel by which plan users pick + whether the alt-plan
-    // intents had already resolved by the time they reached Continue
+    // paywall funnel by which plan users pick + whether the annual
+    // intent had already resolved by the time they reached Continue
     // (perf signal for the parallel prefetch at PaywallModal open).
     logger.event(EVENTS.PAYWALL_PLAN_STEP_CONTINUE, "info", {
       selectedPlan,
       annualPrefetchReady: Boolean(annualIntent),
       annualUnavailable,
-      limitedPrefetchReady: Boolean(limitedIntent),
-      limitedUnavailable,
     });
 
     if (selectedPlan === "monthly") {
+      // Restore the monthly intent if a prior Continue swapped it for
+      // the annual one (Annual → Back → 7-day trial → Continue path).
+      // Without this, PayStep + the Solidgate iframe render annual
+      // pricing / paymentIntent despite the user picking trial.
+      if (monthlyIntent) setIntent(monthlyIntent);
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
-        plan: "full",
+        plan: "monthly",
         via: "direct",
       });
       setStep("pay");
@@ -903,35 +868,13 @@ export function PaywallModal({
       return;
     }
 
-    const target: {
-      planId: PlanId;
-      planKind: "ANNUAL" | "TRIAL_MONTHLY";
-      cachedIntent: CheckoutIntent | null;
-      cacheSetter: (intent: CheckoutIntent) => void;
-      errorTitle: string;
-    } =
-      selectedPlan === "annual"
-        ? {
-            planId: "annual",
-            planKind: "ANNUAL",
-            cachedIntent: annualIntent,
-            cacheSetter: setAnnualIntent,
-            errorTitle: "Couldn't start annual checkout",
-          }
-        : {
-            planId: "limited",
-            planKind: "TRIAL_MONTHLY",
-            cachedIntent: limitedIntent,
-            cacheSetter: setLimitedIntent,
-            errorTitle: "Couldn't start limited-access checkout",
-          };
-
-    // Reuse the parallel-fetched intent when it's already landed —
-    // same paymentIntent the picker priced against.
-    if (target.cachedIntent) {
-      setIntent(target.cachedIntent);
+    // Reuse the parallel-fetched annual intent when it's already
+    // landed — same paymentIntent the picker priced against. Only
+    // re-fetch when it's still pending or failed.
+    if (annualIntent) {
+      setIntent(annualIntent);
       logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
-        plan: target.planId,
+        plan: "annual",
         via: "prefetch",
       });
       setStep("pay");
@@ -943,15 +886,15 @@ export function PaywallModal({
     createIntent.mutate(
       {
         disclaimerVersion: DISCLAIMER_VERSION,
-        planKind: target.planKind,
+        planKind: "ANNUAL",
         fileName: preview?.filename,
       },
       {
         onSuccess: (fresh) => {
           setIntent(fresh);
-          target.cacheSetter(fresh);
+          setAnnualIntent(fresh);
           logger.event(EVENTS.PAYWALL_PAY_STEP_MOUNTED, "info", {
-            plan: target.planId,
+            plan: "annual",
             via: "fallback_fetch",
           });
           setStep("pay");
@@ -963,16 +906,16 @@ export function PaywallModal({
           logger.event(EVENTS.CHECKOUT_INTENT_ERROR, "warning", {
             statusCode: apiErr?.statusCode,
             errorMessage: apiErr?.message,
-            plan: target.planId,
+            plan: "annual",
             path: "handleContinue",
           });
-          logger.captureError(err, `checkout.${target.planId}_intent`, {
+          logger.captureError(err, "checkout.annual_intent", {
             statusCode: apiErr?.statusCode,
             errorMessage: apiErr?.message,
           });
           setContinueLoading(false);
           toast.error({
-            title: target.errorTitle,
+            title: "Couldn't start annual checkout",
             description:
               err instanceof Error
                 ? err.message
@@ -1052,11 +995,8 @@ export function PaywallModal({
               annualIntent={annualIntent}
               annualUnavailable={annualUnavailable}
               continueLoading={continueLoading}
-              fullIntent={fullIntent}
               hidePreview={hidePreview}
               intent={intent}
-              limitedIntent={limitedIntent}
-              limitedUnavailable={limitedUnavailable}
               preview={preview}
               selectedPlan={selectedPlan}
               strings={strings}
@@ -1107,11 +1047,8 @@ export function PaywallModal({
 // ─────────────────────────────────────────────────────────────
 function PlanStep({
   intent,
-  fullIntent,
   annualIntent,
   annualUnavailable,
-  limitedIntent,
-  limitedUnavailable,
   preview,
   hidePreview,
   selectedPlan,
@@ -1121,11 +1058,8 @@ function PlanStep({
   strings,
 }: {
   intent: CheckoutIntent;
-  fullIntent: CheckoutIntent | null;
   annualIntent: CheckoutIntent | null;
   annualUnavailable: boolean;
-  limitedIntent: CheckoutIntent | null;
-  limitedUnavailable: boolean;
   preview: PaywallPreview | null;
   hidePreview: boolean;
   selectedPlan: PlanId;
@@ -1134,57 +1068,34 @@ function PlanStep({
   continueLoading: boolean;
   strings: PaywallStrings;
 }) {
-  // Annual + Limited are offered only when the backend actually has
-  // each plan seeded. Signal: either the standalone plan-kind intent
-  // resolved OR the primary intent's alternatePlans includes that
-  // plan's row. When the pre-fetch already 404'd (*Unavailable=true)
-  // we hide regardless — no point offering a plan the checkout will
-  // reject.
+  // Annual is offered only when the backend actually has an ANNUAL
+  // plan seeded. Signal: either the standalone ANNUAL intent resolved
+  // OR the primary intent's alternatePlans includes an ANNUAL row.
+  // When the pre-fetch already 404'd (annualUnavailable=true) we hide
+  // regardless — no point offering a plan the checkout will reject.
   const annualInAlternates = Boolean(
     intent.alternatePlans?.some((row) => row.planKind === "ANNUAL"),
   );
   const annualAvailable =
     !annualUnavailable && (Boolean(annualIntent) || annualInAlternates);
 
-  const limitedInAlternates = Boolean(
-    intent.alternatePlans?.some((row) => row.planKind === "TRIAL_MONTHLY"),
-  );
-  const limitedAvailable =
-    !limitedUnavailable && (Boolean(limitedIntent) || limitedInAlternates);
-
-  // Snap the picker back to Full Access (Most Popular default) if the
-  // user had a plan selected that the backend just told us isn't
-  // available.
+  // Snap the picker back to monthly if the user had annual selected
+  // but the backend just told us it isn't available. Runs at most once
+  // per unavailability transition.
   useEffect(() => {
     if (!annualAvailable && selectedPlan === "annual") {
-      onSelectPlan("full");
-    } else if (!limitedAvailable && selectedPlan === "limited") {
-      onSelectPlan("full");
+      onSelectPlan("monthly");
     }
-  }, [annualAvailable, limitedAvailable, selectedPlan, onSelectPlan]);
+  }, [annualAvailable, selectedPlan, onSelectPlan]);
 
-  // Full Access numbers come from the snapshotted FULL_ACCESS intent
-  // when available so the "Full" card keeps its own price even after
-  // `handleContinue` swaps `intent` to annual/limited (QA 2026-09-28
-  // bleed). Falls back to `intent` for the brief window before the
-  // initial intent lands. Annual + Limited numbers prefer the
-  // standalone prefetched intent (fetched in parallel on modal open) so
-  // the picker's per-month figure matches exactly what the payment step
-  // will show. When a standalone intent hasn't landed yet we fall back
-  // to `intent.alternatePlans` — never bake USD strings because the
-  // same modal renders EUR / PKR / INR / etc. once local pricing kicks
-  // in.
-  const full = fullIntent
-    ? {
-        amountTodayMinor: fullIntent.amountTodayMinor,
-        amountRenewMinor: fullIntent.amountRenewMinor,
-        currency: fullIntent.currency,
-      }
-    : {
-        amountTodayMinor: intent.amountTodayMinor,
-        amountRenewMinor: intent.amountRenewMinor,
-        currency: intent.currency,
-      };
+  // Monthly numbers come from the primary intent. Annual numbers
+  // prefer the standalone ANNUAL intent (fetched in parallel on modal
+  // open) so the per-month figure on the picker matches exactly what
+  // the payment step will show. When the ANNUAL intent hasn't landed
+  // yet we fall back to `intent.alternatePlans[ANNUAL]` — never bake
+  // USD strings because the same modal renders EUR / PKR / INR /
+  // etc. once local pricing kicks in.
+  const monthly = pickPlan(intent, "TRIAL_MONTHLY");
   const annual = annualIntent
     ? {
         amountTodayMinor: annualIntent.amountTodayMinor,
@@ -1192,15 +1103,10 @@ function PlanStep({
         currency: annualIntent.currency,
       }
     : pickPlan(intent, "ANNUAL");
-  const limited = limitedIntent
-    ? {
-        amountTodayMinor: limitedIntent.amountTodayMinor,
-        amountRenewMinor: limitedIntent.amountRenewMinor,
-        currency: limitedIntent.currency,
-      }
-    : pickPlan(intent, "TRIAL_MONTHLY");
-  const fullAccessPrice = formatMinor(full.amountTodayMinor, full.currency);
-  const limitedPrice = formatMinor(limited.amountTodayMinor, limited.currency);
+  const fullAccessPrice = formatMinor(
+    monthly.amountTodayMinor,
+    monthly.currency,
+  );
   const annualPrice = formatMinor(
     Math.round(annual.amountRenewMinor / 12),
     annual.currency,
@@ -1209,6 +1115,10 @@ function PlanStep({
   // ("Billed as $300.00 / year"). Same source as the payment step's
   // order-summary card, so both screens agree.
   const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
+  const todayDisplay =
+    selectedPlan === "annual"
+      ? formatMinor(annual.amountTodayMinor, annual.currency)
+      : formatMinor(monthly.amountTodayMinor, monthly.currency);
 
   const continueDisabled = continueLoading;
   const readyHeading = (() => {
@@ -1282,8 +1192,6 @@ function PlanStep({
             annualFullPrice={annualFullPrice}
             annualPrice={annualPrice}
             fullAccessPrice={fullAccessPrice}
-            limitedAvailable={limitedAvailable}
-            limitedPrice={limitedPrice}
             selectedPlan={selectedPlan}
             strings={strings}
             onSelectPlan={onSelectPlan}
@@ -1342,8 +1250,6 @@ function PlanStep({
               annualFullPrice={annualFullPrice}
               annualPrice={annualPrice}
               fullAccessPrice={fullAccessPrice}
-              limitedAvailable={limitedAvailable}
-              limitedPrice={limitedPrice}
               selectedPlan={selectedPlan}
               strings={strings}
               onSelectPlan={onSelectPlan}
@@ -1359,21 +1265,15 @@ function PlanStep({
       {/* Full-width centered disclaimer footer — spans both columns.
           Wording follows the Solidgate compliance template: state the
           subscription frequency, exact recurring price, source card,
-          and cancellation paths. Limited Access reuses the monthly
-          template with its own pricing — both are 7-day trial → monthly
-          plans, only the recurring amount differs. */}
+          and cancellation paths. */}
       <div className="border-t border-[#ececec] px-6 py-5 md:px-8">
-        {selectedPlan !== "annual" ? (
+        {selectedPlan === "monthly" ? (
           <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-[#8a8a8a]">
             You are enrolling in a monthly subscription to pdfvault.ai.
-            You&apos;ll be charged{" "}
-            {selectedPlan === "limited" ? limitedPrice : fullAccessPrice} today
-            for a 7-day trial, then{" "}
-            {selectedPlan === "limited"
-              ? formatMinor(limited.amountRenewMinor, limited.currency)
-              : formatMinor(full.amountRenewMinor, full.currency)}{" "}
-            per month until you cancel. Payments will be charged from the card
-            you specified below. To cancel, visit your{" "}
+            You&apos;ll be charged {fullAccessPrice} today for a 7-day trial,
+            then {formatMinor(monthly.amountRenewMinor, monthly.currency)} per
+            month until you cancel. Payments will be charged from the card you
+            specified below. To cancel, visit your{" "}
             <a
               className="text-[#8a8a8a] underline underline-offset-2 hover:text-[#6c6c6c]"
               href="/dashboard/settings/billing"
@@ -1925,16 +1825,9 @@ function SuccessStep({
         paidAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
-      const receiptPlanName = (() => {
-        if (selectedPlan === "annual") return "Full Access · Annual";
-        if (selectedPlan === "limited") return "Limited Access · Monthly";
-        // Default fall-through = "full" plan (Full Access monthly).
-
-        return "Full Access · Monthly";
-      })();
       const bytes = await generateReceiptPdf(invoice, {
         customerEmail: null,
-        planName: receiptPlanName,
+        planName: `Full Access · ${selectedPlan === "annual" ? "Annual" : "Monthly"}`,
       });
       const blob = new Blob([bytes as BlobPart], {
         type: "application/pdf",
@@ -2237,6 +2130,17 @@ function Feature({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Feature bullets shown inside every expanded plan panel. Same list
+// for every plan per product spec (2026-07-30 screenshots).
+const PLAN_FEATURES = [
+  "Unlimited edits",
+  "Unlimited downloads",
+  "Multi-format conversion",
+  "Edit text and images in PDF files",
+  "Organize and reorder PDF pages",
+  "Protect PDF with password",
+] as const;
+
 function PlanCards({
   selectedPlan,
   onSelectPlan,
@@ -2244,8 +2148,6 @@ function PlanCards({
   annualPrice,
   annualFullPrice,
   annualAvailable,
-  limitedPrice,
-  limitedAvailable,
   strings,
 }: {
   selectedPlan: PlanId;
@@ -2254,47 +2156,16 @@ function PlanCards({
   annualPrice: string;
   annualFullPrice: string;
   annualAvailable: boolean;
-  limitedPrice: string;
-  limitedAvailable: boolean;
   strings: PaywallStrings;
 }) {
-  // Card order: Limited → Full Access (Most Popular, default) →
-  // Annual. Limited is the existing lower-priced TRIAL_MONTHLY product
-  // ($39.99/mo) shown with fewer feature checkmarks; Full Access is
-  // the newer premium product ($49.99/mo) with the extended feature
-  // set. Annual + Limited only render when the backend seeded their
-  // respective plans.
-  type PlanCard = {
-    id: PlanId;
-    title: string;
-    price: string;
-    priceSuffix: string | undefined;
-    note: string;
-    badge: string | undefined;
-    features: PaywallFeature[];
-  };
-  const plans: PlanCard[] = [
-    ...(limitedAvailable
-      ? [
-          {
-            id: "limited" as PlanId,
-            title: strings.limitedPlan,
-            price: limitedPrice,
-            priceSuffix: undefined,
-            note: "",
-            badge: undefined,
-            features: strings.planFeatures.limited,
-          },
-        ]
-      : []),
+  const plans = [
     {
-      id: "full" as PlanId,
-      title: strings.fullAccessPlan,
+      id: "monthly" as PlanId,
+      title: strings.sevenDayTrial,
       price: fullAccessPrice,
-      priceSuffix: undefined,
+      priceSuffix: undefined as string | undefined,
       note: "",
       badge: strings.mostPopular,
-      features: strings.planFeatures.fullAccess,
     },
     ...(annualAvailable
       ? [
@@ -2307,8 +2178,7 @@ function PlanCards({
             // the Annual Plan card. The renew total already lives on the
             // pay-step's order-summary card, so it's redundant here.
             note: "",
-            badge: undefined,
-            features: strings.planFeatures.fullAccess,
+            badge: undefined as string | undefined,
           },
         ]
       : []),
@@ -2370,36 +2240,25 @@ function PlanCards({
               </span>
             </div>
 
-            {/* Feature list — only for the selected plan. Rows with
-                `included: false` render greyed + ✕ so the Limited card
-                visually contrasts what it excludes vs. what Full Access
-                delivers. */}
+            {/* Feature list — only for the selected plan */}
             {selected ? (
               <div className="border-t border-[#f5f5f5] px-5 pb-5 pt-3">
                 <ul className="flex flex-col gap-2.5 text-[13px] text-[#1a1c21]">
-                  {plan.features.map((feature) => {
-                    const excluded = feature.included === false;
-
-                    return (
-                      <li
-                        key={feature.text}
-                        className={`flex items-center gap-2.5 ${excluded ? "text-[#9ca3af]" : ""}`}
-                      >
-                        <span
-                          className={
-                            excluded
-                              ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#f5f5f5] text-[10px] font-bold text-[#9ca3af] ring-1 ring-[#9ca3af]/20"
-                              : "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15"
-                          }
-                        >
-                          {excluded ? "✕" : "✓"}
-                        </span>
-                        <span className={excluded ? "line-through" : undefined}>
-                          {feature.text}
-                        </span>
-                      </li>
-                    );
-                  })}
+                  {[
+                    strings.features.unlimitedEdits,
+                    strings.features.unlimitedDownloads,
+                    strings.features.multiFormatConversion,
+                    strings.features.editTextImages,
+                    strings.features.organizePages,
+                    strings.features.protectPassword,
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e6f5ec] text-[10px] font-bold text-[#0f9d58] ring-1 ring-[#0f9d58]/15">
+                        ✓
+                      </span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ) : null}

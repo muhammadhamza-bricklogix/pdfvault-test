@@ -5,7 +5,6 @@
 export type PlanKind =
   | "TRIAL_MONTHLY"
   | "ANNUAL"
-  | "FULL_ACCESS"
   | "DOWNSELL_1Y"
   | "DOWNSELL_2Y";
 
