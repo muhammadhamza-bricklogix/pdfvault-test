@@ -175,7 +175,8 @@ export default async function RootLayout({
       ? envInviteId
       : envInviteId || TRUSTPILOT_INVITE_ID_DEFAULT;
 
-  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
+  const gaMeasurementId =
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "G-K6PVB4B39T";
 
   return (
     <html
