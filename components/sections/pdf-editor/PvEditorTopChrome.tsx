@@ -60,7 +60,7 @@ import {
   parseLocalePrefix,
   stripLocalePrefix,
 } from "@/lib/shared/constants/locale-map";
-import { ROUTES } from "@/lib/shared/constants/routes";
+import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { EditableFilenameField } from "./EditableFilenameField";
@@ -335,8 +335,7 @@ function TopAppBar() {
   // The raw `usePathname()` returns the locale-prefixed URL and a
   // direct `===` comparison would flip false on non-EN locales,
   // leaving the composer HamburgerMenu + Tool row visible on W-9 in
-  // languages other than English (QA 2026-09-06).
-  const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
+  const showW9Save = isTaxFormEditorRoute(pathname);
   const file = usePdfEditorStore((s) => s.file);
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
@@ -382,7 +381,7 @@ function TopAppBar() {
   // export flow itself routes them through email-first signin).
   const openExportModalAfterSave = () => {
     if (!file) return;
-    if (!isSignedIn) {
+    if (showW9Save || !isSignedIn) {
       setIsExportModalOpen(true);
 
       return;
@@ -910,8 +909,7 @@ function ToolToolbar() {
   const disabled = !file;
   const canManagePages = !!pdfDocument && pageCount > 0;
 
-  // Locale-normalised — see `showW9Save` above for context.
-  const isW9Route = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
+  const isW9Route = isTaxFormEditorRoute(pathname);
 
   // QA 2026-09-06: Secure / Split / Flatten / Manage Pages appeared
   // greyed-out even when a PDF was open, so users thought the tools

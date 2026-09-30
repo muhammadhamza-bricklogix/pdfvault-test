@@ -252,6 +252,13 @@ const TAX_FORMS_CARDS: HomeToolCard[] = [
     icon: File01Icon,
     title: "W-9 Form",
   },
+  {
+    description:
+      "Complete and generate your IRS Form 1099-NEC for nonemployee compensation — ready to download and print.",
+    href: ROUTES.FORMS.NEC_1099,
+    icon: File01Icon,
+    title: "1099-NEC Form",
+  },
 ];
 
 export type HomeToolGridTabGroup = {

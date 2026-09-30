@@ -55,7 +55,10 @@ export function ShareModal(): React.ReactElement {
     strippedPath === ROUTES.FORMS.W9_SHORT ||
     strippedPath === ROUTES.FORMS.W9_FORM ||
     strippedPath === ROUTES.FORMS.W9 ||
-    strippedPath.startsWith(ROUTES.FORMS.W9_EDIT);
+    strippedPath.startsWith(ROUTES.FORMS.W9_EDIT) ||
+    strippedPath === ROUTES.FORMS.NEC_1099_EDIT ||
+    strippedPath === ROUTES.FORMS.NEC_1099_FORM ||
+    strippedPath.startsWith("/forms/1099-nec");
   const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
