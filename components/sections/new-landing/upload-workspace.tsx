@@ -387,6 +387,52 @@ export function UploadWorkspace({
     [tool, exportFormat, withLocalePrefix],
   );
 
+  // Signed-in backend upload/conversion, then open the saved doc in composer.
+  const convertAndOpenInComposer = useCallback(
+    async (
+      tempId: string,
+      source: File,
+      filename: string,
+      existingDocId?: string,
+    ) => {
+      usePendingConversionsStore.getState().add({
+        tempId,
+        file: source,
+        filename,
+        sizeBytes: source.size,
+      });
+      setOpening(true);
+      const loadingKey = toast.loading({
+        title: isPdf(source) ? "Saving to My PDFs" : "Converting to PDF",
+        description: filename,
+      });
+
+      try {
+        const created = await runPendingConversion(
+          tempId,
+          source,
+          existingDocId,
+        );
+
+        if (!created) {
+          toast.error({
+            title: "Conversion failed",
+            description: "We couldn't convert your document. Please try again.",
+          });
+          setOpening(false);
+
+          return;
+        }
+
+        usePdfEditorStore.getState().clearFile();
+        router.push(buildComposerHref(created.id));
+      } finally {
+        toast.close(loadingKey);
+      }
+    },
+    [buildComposerHref, router],
+  );
+
   const openFileInEditor = useCallback(
     async (picked: File) => {
       // Auth still hydrating — defer on EVERY route (not just
@@ -569,15 +615,9 @@ export function UploadWorkspace({
 
       // Convert routes for signed-in users. Two branches by direction:
       //
-      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): register a pending
-      //     conversion in the Zustand store, fire the convert+save runner
-      //     as a background promise, then navigate to `/dashboard`
-      //     immediately. The dashboard file table renders a "Preparing
-      //     your document…" placeholder row driven by the store while the
-      //     runner works. No toast on this page — the placeholder row on
-      //     the dashboard is the only progress affordance. No paywall
-      //     either; that gate fires when the user clicks Download / Open
-      //     on the completed row.
+      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): convert + save via
+      //     the backend, then open the saved doc in composer. No paywall
+      //     here; that gate fires on Download.
       //
       //   • PDF→X (`exportFormat` set, e.g. pdf-to-word): no early
       //     paywall here. Save + open editor with `?export=<format>`;
@@ -640,21 +680,13 @@ export function UploadWorkspace({
             return;
           }
 
-          usePendingConversionsStore.getState().add({
-            tempId,
-            file: picked,
-            filename: pdfName,
-            sizeBytes: picked.size,
-          });
-
           logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
             documentId: null,
             tool: null,
             exportFormat: null,
           });
 
-          void runPendingConversion(tempId, picked);
-          router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+          await convertAndOpenInComposer(tempId, picked, pdfName);
 
           return;
         }
@@ -811,6 +843,7 @@ export function UploadWorkspace({
     [
       authLoaded,
       buildComposerHref,
+      convertAndOpenInComposer,
       isSignedIn,
       pathname,
       requiresAuth,
@@ -1012,22 +1045,14 @@ export function UploadWorkspace({
     if (!convertDuplicate) return;
     const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-    usePendingConversionsStore.getState().add({
-      tempId,
-      file,
-      filename,
-      sizeBytes: file.size,
-    });
-
     logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
       filename,
       documentId: existingDocId,
       resolution: "overwrite",
     });
 
-    void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+    void convertAndOpenInComposer(tempId, file, filename, existingDocId);
   };
 
   const handleConvertDuplicateCancelHero = () => {
@@ -1214,26 +1239,15 @@ export function UploadWorkspace({
     if (!convertDuplicate) return;
     const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-    // Same dispatch as the no-duplicate path, plus the existingDocId
-    // so the backend upserts. Placeholder row uses the existing id so
-    // the dashboard doesn't briefly show a new pending tile alongside
-    // the one about to be overwritten.
-    usePendingConversionsStore.getState().add({
-      tempId,
-      file,
-      filename,
-      sizeBytes: file.size,
-    });
-
+    // Upload into the existing doc id so the backend versions it.
     logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
       filename,
       documentId: existingDocId,
       resolution: "overwrite",
     });
 
-    void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+    void convertAndOpenInComposer(tempId, file, filename, existingDocId);
   };
 
   const handleConvertDuplicateCancel = () => {
