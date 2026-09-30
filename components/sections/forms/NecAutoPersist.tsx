@@ -97,10 +97,12 @@ export function NecAutoPersist() {
     };
 
     window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("beforeunload", onPageHide);
 
     return () => {
       unsub();
       window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onPageHide);
       latest = snap();
       flushLocalNow();
       flushDbNow();

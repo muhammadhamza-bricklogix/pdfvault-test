@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
+import { readPendingNecState } from "@/components/sections/forms/NecAutoPersist";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -29,6 +30,13 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     bootstrapRunIdRef.current = runId;
     let cancelled = false;
     const isActiveRun = () => !cancelled && bootstrapRunIdRef.current === runId;
+
+    // SYNC restore FIRST — restores any typed values immediately from localStorage
+    // so user never perceives data loss when accidentally closing/reopening tab or navigating back
+    const earlyPending = readPendingNecState();
+    if (earlyPending && Object.keys(earlyPending).length > 0) {
+      useFormEditorStore.getState().setValues(earlyPending);
+    }
 
     // Wipe any leftover file first
     usePdfEditorStore.getState().clearFile();
