@@ -2,7 +2,12 @@
   "nav": {
     "edit": "Edit",
     "convert": "Convert",
-    "compress": "Compress"
+    "compress": "Compress",
+    "allTools": "All Tools",
+    "forms": "Forms",
+    "login": "Login",
+    "dashboard": "Dashboard",
+    "logOut": "Log out"
   },
   "footer": {
     "convert": "Convert",
