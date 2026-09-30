@@ -1,9 +1,13 @@
 {
   "nav": {
-    "edit": "Edit",
-    "convert": "Convert",
-    "compress": "Compress",
-    "login": "Entrar"
+    "edit": "Editar",
+    "convert": "Converter",
+    "compress": "Comprimir",
+    "allTools": "Todas as ferramentas",
+    "forms": "Formulários",
+    "login": "Entrar",
+    "dashboard": "Painel",
+    "logOut": "Sair"
   },
   "footer": {
     "convert": "Convert",

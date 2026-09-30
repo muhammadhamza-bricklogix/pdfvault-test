@@ -1,9 +1,13 @@
 {
   "nav": {
-    "edit": "Edit",
-    "convert": "Convert",
-    "compress": "Compress",
-    "login": "تسجيل الدخول"
+    "edit": "تعديل",
+    "convert": "تحويل",
+    "compress": "ضغط",
+    "allTools": "جميع الأدوات",
+    "forms": "النماذج",
+    "login": "تسجيل الدخول",
+    "dashboard": "لوحة التحكم",
+    "logOut": "تسجيل الخروج"
   },
   "footer": {
     "convert": "Convert",
