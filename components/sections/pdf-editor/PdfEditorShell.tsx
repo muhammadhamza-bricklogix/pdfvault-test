@@ -44,7 +44,7 @@ import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ComposerI18nProvider } from "@/lib/client/i18n/composer-i18n-provider";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
-import { ROUTES } from "@/lib/shared/constants/routes";
+import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BottomDock } from "./BottomDock";
@@ -182,8 +182,7 @@ function EditorLayout() {
   // Normalise via `stripLocalePrefix` so the guard fires on EVERY
   // locale — the raw `usePathname()` returns `/de/w-9-form` etc.
   const layoutPathname = usePathname();
-  const isW9Layout =
-    stripLocalePrefix(layoutPathname) === ROUTES.FORMS.W9_SHORT;
+  const isW9Layout = isTaxFormEditorRoute(layoutPathname);
 
   // QA 2026-09-06 (revised): show the tour FIRST on a first-time
   // visit, then open the tool modal AFTER the tour finishes. The
@@ -628,8 +627,7 @@ export function PdfEditorShell({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.log("[PDFedits-i18n] PdfEditorShell state", {
-      pathname:
-        typeof window !== "undefined" ? window.location.pathname : "?",
+      pathname: typeof window !== "undefined" ? window.location.pathname : "?",
       hasFile: !!file,
       pendingDocumentId,
       isRestoringSession,
@@ -667,8 +665,7 @@ export function PdfEditorShell({
 
     // eslint-disable-next-line no-console
     console.log("[PDFedits-i18n] PdfEditorShell shouldRedirectAway=true", {
-      pathname:
-        typeof window !== "undefined" ? window.location.pathname : "?",
+      pathname: typeof window !== "undefined" ? window.location.pathname : "?",
       hasFile: !!file,
       pendingDocumentId,
       isRestoringSession,

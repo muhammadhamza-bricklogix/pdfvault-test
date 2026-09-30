@@ -122,7 +122,13 @@ function ExportFormatModalBody({
   // server-stamped PDF. Word / Excel / PPTX are intentionally excluded
   // for now — DOCX was removed per product on 2026-08-28.
   const isW9Route = useMemo(
-    () => pathname?.startsWith("/w-9-form") ?? false,
+    () =>
+      Boolean(
+        pathname?.startsWith("/w-9-form") ||
+        pathname?.startsWith("/forms/w-9") ||
+        pathname?.startsWith("/1099-nec-form") ||
+        pathname?.startsWith("/forms/1099-nec"),
+      ),
     [pathname],
   );
   const W9_ALLOWED_FORMATS = useMemo(

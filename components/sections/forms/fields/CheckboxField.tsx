@@ -32,6 +32,7 @@ export function CheckboxField({ field, mode, page }: FieldProps) {
             ? "border-[var(--color-accent)]/60 bg-yellow-100/80 hover:bg-yellow-100/90"
             : "border-yellow-500/40 bg-yellow-100/50 hover:bg-yellow-100/70"
         }`}
+        id={`field-input-${field.id}`}
         role="checkbox"
         style={{
           height: css.height,
