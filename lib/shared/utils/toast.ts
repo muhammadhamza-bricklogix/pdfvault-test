@@ -17,8 +17,12 @@ export const toast = {
     heroToast.success(title, { description, timeout: DEFAULT_TIMEOUT_MS }),
   error: ({ title, description }: ToastInput) =>
     heroToast.danger(title, { description, timeout: ERROR_TIMEOUT_MS }),
-  info: ({ title, description }: ToastInput) =>
-    heroToast.info(title, { description, timeout: DEFAULT_TIMEOUT_MS }),
+  info: ({
+    title,
+    description,
+    timeout = DEFAULT_TIMEOUT_MS,
+  }: ToastInput & { timeout?: number }) =>
+    heroToast.info(title, { description, timeout }),
   /**
    * Persistent loading toast. Returns the key — pass it to `toast.close(key)`
    * once the work finishes so it can be replaced by a success/error toast.

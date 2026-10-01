@@ -246,6 +246,8 @@ interface UploadWorkspaceProps {
   /** Editor tool slug to auto-launch after the file loads
    *  (e.g. `"password"`, `"compress"`, `"manage"`). */
   tool?: string;
+  /** `TOOL_HINTS` key forwarded as `?hint=` (see `ToolLandingPage`). */
+  hint?: string;
   /** Export format to auto-fire once the file loads in the editor
    *  (e.g. `"docx"` for /convert/pdf-to-word). */
   exportFormat?: string;
@@ -265,6 +267,7 @@ interface UploadWorkspaceProps {
 export function UploadWorkspace({
   acceptExtensions,
   exportFormat,
+  hint,
   tool,
   variant = "full",
 }: UploadWorkspaceProps = {}) {
@@ -379,13 +382,14 @@ export function UploadWorkspace({
 
       if (documentId) query.set("id", documentId);
       if (tool) query.set("tool", tool);
+      if (tool && hint) query.set("hint", hint);
       if (exportFormat && !opts?.skipExport) query.set("export", exportFormat);
       const q = query.toString();
       const base = withLocalePrefix(ROUTES.TOOLS.PDF_EDITOR);
 
       return q ? `${base}?${q}` : base;
     },
-    [tool, exportFormat, withLocalePrefix],
+    [tool, hint, exportFormat, withLocalePrefix],
   );
 
   // Signed-in backend upload/conversion, then open the saved doc in composer.
