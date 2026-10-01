@@ -1359,34 +1359,12 @@ function PlanStep({
   const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
 
   const continueDisabled = continueLoading;
-  // Per-file-type "Your <X> is ready" status — rendered as the small
-  // eyebrow line above the big "Choose a plan to download your file"
-  // headline (QA 2026-10-01 update). Uses the existing localized
-  // `strings.ready.*` strings so DE / ES / FR / PT / AR callers keep
-  // their translations for the eyebrow. The large headline below is
-  // hardcoded EN for the hotfix — follow-up PR adds a localized
-  // `strings.choosePlanHeading`.
-  const readyHeading = (() => {
-    if (!preview) return strings.ready.pdf;
-    const ext = (
-      preview.targetExt ||
-      preview.sourceExt ||
-      preview.filename?.split(".").pop() ||
-      ""
-    )
-      .toLowerCase()
-      .trim();
-
-    if (["jpg", "jpeg"].includes(ext)) return strings.ready.jpg;
-    if (ext === "png") return strings.ready.png;
-    if (["doc", "docx", "word"].includes(ext)) return strings.ready.word;
-    if (["xls", "xlsx", "excel"].includes(ext)) return strings.ready.excel;
-    if (["ppt", "pptx", "powerpoint"].includes(ext))
-      return strings.ready.powerpoint;
-    if (ext === "txt") return strings.ready.txt;
-
-    return strings.ready.pdf;
-  })();
+  // 2026-10-01 QA follow-up: the "Your <X> is ready" eyebrow was
+  // dropped — the plan-step header now shows only the big "Choose a
+  // plan to download your file" headline. The `strings.ready.*`
+  // strings are temporarily unused by this component; follow-up PR
+  // should add a localized `strings.choosePlanHeading` field and
+  // remove the dead `ready` object (6 locales × 7 file types).
 
   // Shared Continue CTA — rendered directly beneath the plan selector in
   // both single-column (`hidePreview`) and two-column layouts. Product
@@ -1430,14 +1408,6 @@ function PlanStep({
           existing `strings.ready.*` per-file-type entries. */}
       <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
         <div className="flex min-w-0 flex-col gap-1">
-          {/* Eyebrow — small status line that mirrors the file the user
-              is downloading (per-file-type via `readyHeading`). Kept
-              localized through `strings.ready.*`. */}
-          <p className="text-[13px] font-medium text-[#6c6c6c]">
-            {readyHeading}
-          </p>
-          {/* Primary headline — large, bold, hardcoded EN for the
-              hotfix (i18n debt tracked in PR). */}
           <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
             Choose a plan to download your file
           </h2>
