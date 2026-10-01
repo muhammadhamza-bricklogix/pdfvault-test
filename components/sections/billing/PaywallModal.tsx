@@ -1430,7 +1430,6 @@ function PlanStep({
           <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
             Choose a plan to download your file
           </h2>
-          <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
         </div>
         <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
