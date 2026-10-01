@@ -1359,27 +1359,11 @@ function PlanStep({
   const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
 
   const continueDisabled = continueLoading;
-  const readyHeading = (() => {
-    if (!preview) return strings.ready.pdf;
-    const ext = (
-      preview.targetExt ||
-      preview.sourceExt ||
-      preview.filename?.split(".").pop() ||
-      ""
-    )
-      .toLowerCase()
-      .trim();
-
-    if (["jpg", "jpeg"].includes(ext)) return strings.ready.jpg;
-    if (ext === "png") return strings.ready.png;
-    if (["doc", "docx", "word"].includes(ext)) return strings.ready.word;
-    if (["xls", "xlsx", "excel"].includes(ext)) return strings.ready.excel;
-    if (["ppt", "pptx", "powerpoint"].includes(ext))
-      return strings.ready.powerpoint;
-    if (ext === "txt") return strings.ready.txt;
-
-    return strings.ready.pdf;
-  })();
+  // 2026-10-01 hotfix: the per-file-type `readyHeading` derivation was
+  // replaced with a single hardcoded headline ("Choose a plan to
+  // download your file"). The `strings.ready.*` strings are temporarily
+  // unused by this component; follow-up PR should add a localized
+  // `strings.choosePlanHeading` field and remove the `ready` object.
 
   // Shared Continue CTA — rendered directly beneath the plan selector in
   // both single-column (`hidePreview`) and two-column layouts. Product
@@ -1392,7 +1376,7 @@ function PlanStep({
   // between pricing sub-steps. Handler + loading state unchanged.
   const continueButton = (
     <button
-      className="group inline-flex h-[60px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[17px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[64px] sm:text-[18px]"
+      className="group inline-flex h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[15px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[52px] sm:text-[16px] md:h-[52px] md:w-auto md:px-7"
       disabled={continueDisabled}
       type="button"
       onClick={onContinue}
@@ -1411,14 +1395,27 @@ function PlanStep({
 
   return (
     <div className="flex flex-col">
-      {/* Header — title + subtitle only. Continue moved directly below
-          the plan selector (see `continueButton` above) so plan
-          selection → CTA is a single visual beat. */}
-      <div className="flex flex-col gap-1 border-b border-[#ececec] p-6 md:p-8">
-        <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-          {readyHeading}
-        </h2>
-        <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
+      {/* Header — large headline on the left, Continue CTA on the top-
+          right. Matches the PDFGuru checkout pattern (QA 2026-10-01
+          hotfix) — the headline becomes the primary visual anchor and
+          the top-right CTA keeps the eye in one quadrant for scanning
+          + action. On mobile the two stack vertically with the CTA
+          going full-width so tap target stays large.
+
+          TODO (i18n debt): the headline is hardcoded EN for the hotfix.
+          Follow-up — add a `choosePlanHeading` field to PaywallStrings
+          with translations for de / es / fr / pt / ar and switch to
+          `strings.choosePlanHeading`. The old file-type-specific
+          `strings.ready.*` strings are now unused and can be removed
+          in that follow-up. */}
+      <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
+            Choose a plan to download your file
+          </h2>
+          <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
+        </div>
+        <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
 
       {/* Body — two columns, or plan-picker only when the caller
@@ -1438,8 +1435,8 @@ function PlanStep({
           />
 
           <AcceptedCards />
-
-          {continueButton}
+          {/* Continue CTA moved to the top-right of the header
+              (QA 2026-10-01 hotfix) — intentionally no CTA here. */}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1498,8 +1495,8 @@ function PlanStep({
             />
 
             <AcceptedCards />
-
-            {continueButton}
+            {/* Continue CTA moved to the top-right of the header
+                (QA 2026-10-01 hotfix) — intentionally no CTA here. */}
           </div>
         </div>
       )}
