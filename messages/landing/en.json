@@ -49,20 +49,20 @@
   },
   "toolPages": {
     "sign": {
-      "title": "Sign PDF online",
-      "description": "Add your handwritten or typed signature to any PDF."
+      "title": "Add Your Electronic Signature Instantly",
+      "description": "Sign in seconds — then download your signed PDF as soon as you’re done."
     },
     "split": {
-      "title": "Split PDF and extract pages",
-      "description": "Split a PDF into smaller files or extract just the pages you need — pick page ranges and download in seconds."
+      "title": "Extract the Pages You Need — Fast",
+      "description": "Pick your pages in seconds — then download the new PDF right away."
     },
     "removeAnnotations": {
       "title": "Flatten annotations in a PDF",
       "description": "Embed highlights, comments, and form fields into the page so they can no longer be edited or removed."
     },
     "edit": {
-      "title": "Edit PDF online",
-      "description": "Change text, images, and layout directly in your browser — no installation or registration required."
+      "title": "Edit Any PDF in Seconds",
+      "description": "Make your changes fast — then download your file as soon as you’re done."
     }
   },
   "about": {
