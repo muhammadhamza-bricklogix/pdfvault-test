@@ -1396,22 +1396,26 @@ function PlanStep({
 
   return (
     <div className="flex flex-col">
-      {/* Header — two-line left stack (small "Your <X> is ready"
-          eyebrow + big "Choose a plan to download your file" headline)
-          with the Continue CTA on the top-right. Matches the PDFGuru
-          checkout pattern (QA 2026-10-01 hotfix). Mobile stacks the
-          CTA full-width below the text block for a larger tap target.
+      {/* Header — big "Choose a plan to download your file" headline on
+          the left with the Continue CTA on the right. Matches the
+          PDFGuru checkout pattern (QA 2026-10-01). Alignment notes:
+          - `md:items-center` keeps the headline + button vertically
+            centered on desktop.
+          - `leading-none` on the h2 trims the default line-height slack
+            so the headline bounding box matches the CTA height more
+            closely — fixes the "misaligned" look where the h2's
+            built-in ascender/descender padding made it visually sit
+            above the button mid-line (QA 2026-10-01 follow-up).
+          - Mobile stacks the CTA full-width below the headline for a
+            larger tap target.
 
           TODO (i18n debt): big headline is hardcoded EN. Follow-up PR
           should add `strings.choosePlanHeading` with translations for
-          de / es / fr / pt / ar. The eyebrow stays localized via the
-          existing `strings.ready.*` per-file-type entries. */}
+          de / es / fr / pt / ar. */}
       <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
-            Choose a plan to download your file
-          </h2>
-        </div>
+        <h2 className="pv-heading text-[26px] font-bold leading-none text-[#1a1c21] sm:text-[32px] md:text-[36px]">
+          Choose a plan to download your file
+        </h2>
         <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
 
