@@ -1376,6 +1376,13 @@ function PlanStep({
   const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
 
   const continueDisabled = continueLoading;
+  // Per-file-type "Your <X> is ready" status — rendered as the small
+  // eyebrow line above the big "Choose a plan to download your file"
+  // headline (QA 2026-10-01 update). Uses the existing localized
+  // `strings.ready.*` strings so DE / ES / FR / PT / AR callers keep
+  // their translations for the eyebrow. The large headline below is
+  // hardcoded EN for the hotfix — follow-up PR adds a localized
+  // `strings.choosePlanHeading`.
   const readyHeading = (() => {
     if (!preview) return strings.ready.pdf;
     const ext = (
@@ -1409,7 +1416,7 @@ function PlanStep({
   // between pricing sub-steps. Handler + loading state unchanged.
   const continueButton = (
     <button
-      className="group inline-flex h-[60px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[17px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[64px] sm:text-[18px]"
+      className="group inline-flex h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[15px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[52px] sm:text-[16px] md:h-[52px] md:w-auto md:px-7"
       disabled={continueDisabled}
       type="button"
       onClick={onContinue}
@@ -1428,14 +1435,31 @@ function PlanStep({
 
   return (
     <div className="flex flex-col">
-      {/* Header — title + subtitle only. Continue moved directly below
-          the plan selector (see `continueButton` above) so plan
-          selection → CTA is a single visual beat. */}
-      <div className="flex flex-col gap-1 border-b border-[#ececec] p-6 md:p-8">
-        <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-          {readyHeading}
-        </h2>
-        <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
+      {/* Header — two-line left stack (small "Your <X> is ready"
+          eyebrow + big "Choose a plan to download your file" headline)
+          with the Continue CTA on the top-right. Matches the PDFGuru
+          checkout pattern (QA 2026-10-01 hotfix). Mobile stacks the
+          CTA full-width below the text block for a larger tap target.
+
+          TODO (i18n debt): big headline is hardcoded EN. Follow-up PR
+          should add `strings.choosePlanHeading` with translations for
+          de / es / fr / pt / ar. The eyebrow stays localized via the
+          existing `strings.ready.*` per-file-type entries. */}
+      <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
+        <div className="flex min-w-0 flex-col gap-1">
+          {/* Eyebrow — small status line that mirrors the file the user
+              is downloading (per-file-type via `readyHeading`). Kept
+              localized through `strings.ready.*`. */}
+          <p className="text-[13px] font-medium text-[#6c6c6c]">
+            {readyHeading}
+          </p>
+          {/* Primary headline — large, bold, hardcoded EN for the
+              hotfix (i18n debt tracked in PR). */}
+          <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
+            Choose a plan to download your file
+          </h2>
+        </div>
+        <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
 
       {/* Body — two columns, or plan-picker only when the caller
@@ -1455,8 +1479,8 @@ function PlanStep({
           />
 
           <AcceptedCards />
-
-          {continueButton}
+          {/* Continue CTA moved to the top-right of the header
+              (QA 2026-10-01 hotfix) — intentionally no CTA here. */}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1515,8 +1539,8 @@ function PlanStep({
             />
 
             <AcceptedCards />
-
-            {continueButton}
+            {/* Continue CTA moved to the top-right of the header
+                (QA 2026-10-01 hotfix) — intentionally no CTA here. */}
           </div>
         </div>
       )}
