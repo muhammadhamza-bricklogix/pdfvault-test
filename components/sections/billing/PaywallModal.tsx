@@ -1392,12 +1392,11 @@ function PlanStep({
   const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
 
   const continueDisabled = continueLoading;
-  // 2026-10-01 QA follow-up: the "Your <X> is ready" eyebrow was
-  // dropped — the plan-step header now shows only the big "Choose a
-  // plan to download your file" headline. The `strings.ready.*`
-  // strings are temporarily unused by this component; follow-up PR
-  // should add a localized `strings.choosePlanHeading` field and
-  // remove the dead `ready` object (6 locales × 7 file types).
+  // 2026-10-01 hotfix: the per-file-type `readyHeading` derivation was
+  // replaced with a single hardcoded headline ("Choose a plan to
+  // download your file"). The `strings.ready.*` strings are temporarily
+  // unused by this component; follow-up PR should add a localized
+  // `strings.choosePlanHeading` field and remove the `ready` object.
 
   // Shared Continue CTA — rendered directly beneath the plan selector in
   // both single-column (`hidePreview`) and two-column layouts. Product
@@ -1429,21 +1428,25 @@ function PlanStep({
 
   return (
     <div className="flex flex-col">
-      {/* Header — two-line left stack (small "Your <X> is ready"
-          eyebrow + big "Choose a plan to download your file" headline)
-          with the Continue CTA on the top-right. Matches the PDFGuru
-          checkout pattern (QA 2026-10-01 hotfix). Mobile stacks the
-          CTA full-width below the text block for a larger tap target.
+      {/* Header — large headline on the left, Continue CTA on the top-
+          right. Matches the PDFGuru checkout pattern (QA 2026-10-01
+          hotfix) — the headline becomes the primary visual anchor and
+          the top-right CTA keeps the eye in one quadrant for scanning
+          + action. On mobile the two stack vertically with the CTA
+          going full-width so tap target stays large.
 
-          TODO (i18n debt): big headline is hardcoded EN. Follow-up PR
-          should add `strings.choosePlanHeading` with translations for
-          de / es / fr / pt / ar. The eyebrow stays localized via the
-          existing `strings.ready.*` per-file-type entries. */}
+          TODO (i18n debt): the headline is hardcoded EN for the hotfix.
+          Follow-up — add a `choosePlanHeading` field to PaywallStrings
+          with translations for de / es / fr / pt / ar and switch to
+          `strings.choosePlanHeading`. The old file-type-specific
+          `strings.ready.*` strings are now unused and can be removed
+          in that follow-up. */}
       <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
             Choose a plan to download your file
           </h2>
+          <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
         </div>
         <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
