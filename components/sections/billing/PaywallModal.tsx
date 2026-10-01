@@ -94,19 +94,30 @@ const APPLE_PAY_BUTTON_PARAMS = {
   type: "plain",
   color: "black",
 } as const;
-// PayPal button — enabled once Solidgate merchant-side PayPal is
-// activated for `pdfvault.ai` + `staging.pdfvault.ai`. `enabled: true`
-// is explicit for the same reason as Apple/Google above (SDK defaults
-// undefined → button silently never mounts). `color: "gold"` is
-// PayPal's recommended default that maximizes recognition. `label:
-// "paypal"` renders the PayPal wordmark only (no "Checkout with" /
-// "Pay with" prefix).
+// PayPal button params for the SECOND embedded form that lives beneath
+// the main card/wallet form. Solidgate's UAT guidance (2026-09-30)
+// requires PayPal to be mounted via its own `<PaymentForm>` instance
+// using the pdfvault channel credentials — different from the
+// contentclicks.io channel that powers the main form. See
+// `StablePaypalOnlyForm` below for the mount.
+//
+// `color: "gold"` is PayPal's recommended default that maximizes
+// recognition. `label: "paypal"` renders the PayPal wordmark only
+// (no "Checkout with" / "Pay with" prefix).
 const PAYPAL_BUTTON_PARAMS = {
   enabled: true,
   color: "gold",
   shape: "rect",
   label: "paypal",
 } as const;
+// Explicit disables for the OTHER buttons on the PayPal-only form.
+// Required because the SDK defaults these to enabled when their
+// container refs happen to resolve — passing `enabled: false` keeps
+// the second form strictly PayPal-only even if the DOM has any stale
+// Apple/Google containers from the main form sitting nearby.
+const PAYPAL_FORM_APPLE_DISABLED = { enabled: false } as const;
+const PAYPAL_FORM_GOOGLE_DISABLED = { enabled: false } as const;
+const PAYPAL_FORM_PARAMS = { enabled: false } as const;
 
 // QA 2026-09-08: card expiry field inside Solidgate's iframe accepts
 // more than 2 digits for the year part (user report: "22/2222 is
@@ -146,7 +157,6 @@ type PlanId = "limited" | "full" | "annual";
 interface StablePaymentFormProps {
   applePayContainerRef: React.RefObject<HTMLDivElement | null>;
   googlePayContainerRef: React.RefObject<HTMLDivElement | null>;
-  paypalContainerRef: React.RefObject<HTMLDivElement | null>;
   merchant: string;
   signature: string;
   paymentIntent: string;
@@ -169,7 +179,6 @@ interface StablePaymentFormProps {
 const StablePaymentForm = memo(function StablePaymentForm({
   applePayContainerRef,
   googlePayContainerRef,
-  paypalContainerRef,
   merchant,
   signature,
   paymentIntent,
@@ -197,6 +206,71 @@ const StablePaymentForm = memo(function StablePaymentForm({
       formParams={SOLIDGATE_FORM_PARAMS}
       googlePayButtonParams={GOOGLE_PAY_BUTTON_PARAMS}
       googlePayContainerRef={googlePayContainerRef}
+      merchantData={merchantData}
+      width="100%"
+      onError={handleError}
+      onFail={onFail}
+      onMounted={handleMounted}
+      onOrderStatus={onOrderStatus}
+      onSuccess={onSuccess}
+    />
+  );
+});
+
+/**
+ * SECOND embedded Solidgate form — PayPal only. Mounted beneath the
+ * main `StablePaymentForm` because Solidgate's PayPal activation lives
+ * on a different channel (pdfvault) from cards + Apple Pay + Google Pay
+ * (contentclicks.io). The main form keeps its own merchantData envelope;
+ * this one signs with the pdfvault channel credentials returned by the
+ * backend in the `paypal` field of the CheckoutIntent response.
+ *
+ * All non-PayPal button families are explicitly disabled so the second
+ * SDK instance strictly renders PayPal only — see Solidgate UAT
+ * guidance 2026-09-30.
+ *
+ * Same memoisation discipline as `StablePaymentForm` — primitive props,
+ * stable ref objects, parent-owned callbacks — so parent re-renders
+ * don't thrash the SDK's layout effect.
+ */
+interface StablePaypalOnlyFormProps {
+  paypalContainerRef: React.RefObject<HTMLDivElement | null>;
+  merchant: string;
+  signature: string;
+  paymentIntent: string;
+  retryKey: number;
+  onFail: () => void;
+  onSuccess: (message?: { order?: { subscription_id?: string } }) => void;
+  onOrderStatus: (message: unknown) => void;
+}
+
+const StablePaypalOnlyForm = memo(function StablePaypalOnlyForm({
+  paypalContainerRef,
+  merchant,
+  signature,
+  paymentIntent,
+  retryKey,
+  onFail,
+  onSuccess,
+  onOrderStatus,
+}: StablePaypalOnlyFormProps) {
+  const merchantData = useMemo(
+    () => ({ merchant, signature, paymentIntent }),
+    [merchant, signature, paymentIntent],
+  );
+  const handleError = useCallback((error: unknown) => {
+    logger.captureError(error, "checkout.iframe_error.paypal");
+  }, []);
+  const handleMounted = useCallback(() => {
+    logger.info("[paywall] Solidgate PayPal iframe mounted");
+  }, []);
+
+  return (
+    <PaymentForm
+      key={`paypal-${retryKey}-${paymentIntent}`}
+      applePayButtonParams={PAYPAL_FORM_APPLE_DISABLED}
+      formParams={PAYPAL_FORM_PARAMS}
+      googlePayButtonParams={PAYPAL_FORM_GOOGLE_DISABLED}
       merchantData={merchantData}
       paypalButtonParams={PAYPAL_BUTTON_PARAMS}
       paypalContainerRef={paypalContainerRef}
@@ -1665,6 +1739,11 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // PayPal lives on the SECOND embedded form below the main one and
+  // uses pdfvault-channel credentials from `intent.paypal` (see
+  // `StablePaypalOnlyForm`). Container ref is still owned here so the
+  // skeleton + MutationObserver live alongside Apple/Google for
+  // consistent timing semantics.
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   // Wallet-button loading state (2026-09-06 QA). Solidgate injects the
   // real Apple Pay / Google Pay / PayPal buttons a beat after
@@ -1679,34 +1758,52 @@ function PayStep({
   const [paypalReady, setPaypalReady] = useState(false);
   const [walletTimedOut, setWalletTimedOut] = useState(false);
 
+  // Timeout runs on its own effect so it fires regardless of whether the
+  // observer effect below bailed early on a null ref — otherwise a
+  // missing container would leave the skeletons stuck forever (QA
+  // report 2026-09-30: PayPal "stuck at Loading wallet" on staging).
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   useEffect(() => {
     const applePayEl = applePayContainerRef.current;
     const googlePayEl = googlePayContainerRef.current;
     const paypalEl = paypalContainerRef.current;
 
-    if (!applePayEl || !googlePayEl || !paypalEl) return;
+    const observers: MutationObserver[] = [];
 
-    const applyObserver = new MutationObserver(() => {
-      if (applePayEl.childNodes.length > 0) setApplePayReady(true);
-    });
-    const googleObserver = new MutationObserver(() => {
-      if (googlePayEl.childNodes.length > 0) setGooglePayReady(true);
-    });
-    const paypalObserver = new MutationObserver(() => {
-      if (paypalEl.childNodes.length > 0) setPaypalReady(true);
-    });
+    if (applePayEl) {
+      const o = new MutationObserver(() => {
+        if (applePayEl.childNodes.length > 0) setApplePayReady(true);
+      });
 
-    applyObserver.observe(applePayEl, { childList: true });
-    googleObserver.observe(googlePayEl, { childList: true });
-    paypalObserver.observe(paypalEl, { childList: true });
+      o.observe(applePayEl, { childList: true });
+      observers.push(o);
+    }
 
-    const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
+    if (googlePayEl) {
+      const o = new MutationObserver(() => {
+        if (googlePayEl.childNodes.length > 0) setGooglePayReady(true);
+      });
+
+      o.observe(googlePayEl, { childList: true });
+      observers.push(o);
+    }
+
+    if (paypalEl) {
+      const o = new MutationObserver(() => {
+        if (paypalEl.childNodes.length > 0) setPaypalReady(true);
+      });
+
+      o.observe(paypalEl, { childList: true });
+      observers.push(o);
+    }
 
     return () => {
-      applyObserver.disconnect();
-      googleObserver.disconnect();
-      paypalObserver.disconnect();
-      window.clearTimeout(timeout);
+      for (const o of observers) o.disconnect();
     };
   }, []);
   // 2026-09-03 (PM): the Solidgate card form starts COLLAPSED behind
@@ -1814,19 +1911,24 @@ function PayStep({
                 className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
               />
             </div>
-            {/* PayPal — SDK injects here once merchant-side PayPal is
-                activated in the Solidgate Hub. Silent no-op on browsers
-                / regions where PayPal isn't supported for this merchant
-                (same behaviour as Apple/Google above). */}
-            <div className="relative">
-              {!paypalReady && !walletTimedOut ? (
-                <WalletButtonSkeleton />
-              ) : null}
-              <div
-                ref={paypalContainerRef}
-                className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
-              />
-            </div>
+            {/* PayPal — rendered by a SECOND Solidgate <PaymentForm>
+                mounted below (StablePaypalOnlyForm). The pdfvault
+                channel signs this intent server-side, so this row only
+                appears when the backend returns an `intent.paypal`
+                envelope (feature flag by presence). SDK injects into
+                `paypalContainerRef`. Silent no-op on browsers / regions
+                where PayPal isn't supported for this merchant. */}
+            {intent.paypal ? (
+              <div className="relative">
+                {!paypalReady && !walletTimedOut ? (
+                  <WalletButtonSkeleton />
+                ) : null}
+                <div
+                  ref={paypalContainerRef}
+                  className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
+                />
+              </div>
+            ) : null}
             {/* Card section header — grey collapse toggle. Shows the
                 supported card brands so users know their card will
                 work before expanding (parity with PDF Guru). */}
@@ -1865,7 +1967,6 @@ function PayStep({
                 googlePayContainerRef={googlePayContainerRef}
                 merchant={intent.merchant}
                 paymentIntent={intent.paymentIntent}
-                paypalContainerRef={paypalContainerRef}
                 retryKey={retryKey}
                 signature={intent.signature}
                 onFail={onFail}
@@ -1873,6 +1974,27 @@ function PayStep({
                 onSuccess={onSuccess}
               />
             </div>
+            {/* SECOND embedded Solidgate form — PayPal only. Lives
+                outside the collapsible card wrapper above because the
+                `hidden={!cardExpanded || payFailed}` toggle on that
+                wrapper would also hide PayPal — but PayPal is an
+                express-checkout option that must stay visible without
+                clicking "Pay with card" first. Mounted only when the
+                backend returned an `intent.paypal` envelope (feature
+                flag by presence); absent on prod ECS until the
+                pdfvault channel env vars are added there. */}
+            {intent.paypal ? (
+              <StablePaypalOnlyForm
+                merchant={intent.paypal.merchant}
+                paymentIntent={intent.paypal.paymentIntent}
+                paypalContainerRef={paypalContainerRef}
+                retryKey={retryKey}
+                signature={intent.paypal.signature}
+                onFail={onFail}
+                onOrderStatus={onOrderStatus}
+                onSuccess={onSuccess}
+              />
+            ) : null}
           </div>
 
           {payFailed ? (
