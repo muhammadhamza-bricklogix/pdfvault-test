@@ -56,11 +56,12 @@ import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import {
-  parseLocalePrefix,
-  stripLocalePrefix,
-} from "@/lib/shared/constants/locale-map";
-import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
+  ROUTES,
+  isNec1099EditorRoute,
+  isTaxFormEditorRoute,
+} from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { EditableFilenameField } from "./EditableFilenameField";
@@ -336,6 +337,7 @@ function TopAppBar() {
   // direct `===` comparison would flip false on non-EN locales,
   // leaving the composer HamburgerMenu + Tool row visible on W-9 in
   const showW9Save = isTaxFormEditorRoute(pathname);
+  const canSaveOnNavigate = isNec1099EditorRoute(pathname);
   const file = usePdfEditorStore((s) => s.file);
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
@@ -480,7 +482,7 @@ function TopAppBar() {
   const handleBack = () => {
     const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
-    if (showW9Save) {
+    if (showW9Save && !canSaveOnNavigate) {
       // W-9 Back is plain navigation. Do not dispatch
       // `editor:w9-save-and-continue` here because that path finalizes the
       // W-9 and can open the paywall; payment stays tied to explicit
@@ -502,6 +504,7 @@ function TopAppBar() {
         detail: {
           url: targetUrl,
           clearFileAfter: true,
+          force: canSaveOnNavigate,
         },
       }),
     );
@@ -526,7 +529,7 @@ function TopAppBar() {
 
     const targetUrl = ROUTES.PUBLIC.HOME;
 
-    if (showW9Save) {
+    if (showW9Save && !canSaveOnNavigate) {
       // W-9 Logo is plain navigation, matching the Back button. Do not
       // dispatch `editor:w9-save-and-continue` because that finalizes the
       // form and can open the paywall.

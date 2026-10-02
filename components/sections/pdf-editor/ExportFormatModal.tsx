@@ -121,7 +121,6 @@ function ExportFormatModalBody({
   // in `W9FinalizeIntercept` after finalize returns the byte-perfect
   // server-stamped PDF. Word / Excel / PPTX are intentionally excluded
   // for now — DOCX was removed per product on 2026-08-28.
-  // 1099-NEC is PDF-only — `NecFinalizeIntercept` has no image branch.
   const isNecRoute = useMemo(
     () =>
       Boolean(
@@ -138,11 +137,8 @@ function ExportFormatModalBody({
     [pathname, isNecRoute],
   );
   const W9_ALLOWED_FORMATS = useMemo(
-    () =>
-      isNecRoute
-        ? new Set<FormatOption["id"]>(["pdf"])
-        : new Set<FormatOption["id"]>(["pdf", "png", "jpg"]),
-    [isNecRoute],
+    () => new Set<FormatOption["id"]>(["pdf", "png", "jpg"]),
+    [],
   );
   const visibleOptions = useMemo(
     () =>

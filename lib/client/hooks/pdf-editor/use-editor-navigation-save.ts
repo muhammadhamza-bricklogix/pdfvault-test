@@ -137,7 +137,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       // background and its own toast will surface the outcome).
       if (usePdfEditorStore.getState().autoPersistDisabled) {
         const w9LoadingKey = toast.loading({
-          title: "Saving your W-9…",
+          title: "Saving your form…",
           description: "Adding your entries to My PDFs.",
         });
 
@@ -171,10 +171,13 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         toast.close(w9LoadingKey);
 
         if (w9Result.ok) {
-          if (w9Result.reason !== "not-ready") {
+          if (
+            w9Result.reason !== "not-ready" &&
+            w9Result.reason !== "not-signed-in"
+          ) {
             toast.success({
               title: "Saved to My PDFs",
-              description: "Your W-9 is in your library.",
+              description: "Your form is in your library.",
             });
           }
           navigate();
@@ -190,9 +193,9 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         }
 
         toast.error({
-          title: "Could not save W-9",
+          title: "Could not save your form",
           description:
-            "We couldn't save your W-9 before leaving. Please try Download to save.",
+            "We couldn't save it before leaving. Please try Save again.",
         });
 
         return;
