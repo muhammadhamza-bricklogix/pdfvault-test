@@ -2,6 +2,7 @@
 
 import type { CheckoutIntent, Invoice } from "@/lib/shared/types/billing.types";
 import type { PaywallPreview } from "@/lib/client/hooks/billing/paywall-bus";
+import type { ClientSdkInstance } from "@solidgate/react-sdk";
 
 import { ArrowLeft02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -96,28 +97,29 @@ const APPLE_PAY_BUTTON_PARAMS = {
 } as const;
 // PayPal button params for the SECOND embedded form that lives beneath
 // the main card/wallet form. Solidgate's UAT guidance (2026-09-30)
-// requires PayPal to be mounted via its own `<PaymentForm>` instance
-// using the pdfvault channel credentials — different from the
-// contentclicks.io channel that powers the main form. See
-// `StablePaypalOnlyForm` below for the mount.
+// requires PayPal to be mounted via its own init() instance using the
+// pdfvault channel credentials — different from the contentclicks.io
+// channel that powers the main form. See `StablePaypalOnlyForm` below.
 //
 // `color: "gold"` is PayPal's recommended default that maximizes
 // recognition. `label: "paypal"` renders the PayPal wordmark only
 // (no "Checkout with" / "Pay with" prefix).
-const PAYPAL_BUTTON_PARAMS = {
-  enabled: true,
-  color: "gold",
-  shape: "rect",
-  label: "paypal",
-} as const;
-// Explicit disables for the OTHER buttons on the PayPal-only form.
-// Required because the SDK defaults these to enabled when their
-// container refs happen to resolve — passing `enabled: false` keeps
-// the second form strictly PayPal-only even if the DOM has any stale
-// Apple/Google containers from the main form sitting nearby.
-const PAYPAL_FORM_APPLE_DISABLED = { enabled: false } as const;
-const PAYPAL_FORM_GOOGLE_DISABLED = { enabled: false } as const;
-const PAYPAL_FORM_PARAMS = { enabled: false } as const;
+//
+// Unique container ids for the second SDK instance.
+// `@solidgate/react-sdk`'s `<PaymentForm>` component HARDCODES its
+// iframe host id to `solid-payment-form-container_#123` (see
+// `node_modules/@solidgate/react-sdk/dist/esm/constants/index.js`).
+// Mounting two `<PaymentForm>` React components therefore puts two DOM
+// nodes with the SAME id on the page, the second SDK init collides
+// against the first's host, and the first instance's wallet buttons
+// stop rendering (confirmed empirically 2026-10-02: removing the
+// `SOLIDGATE_PAYPAL_*` backend vars — which hides the second form —
+// made Apple + Google buttons appear again). The vanilla
+// `@solidgate/client-sdk-loader` has no such hardcoded id, so the
+// second form bypasses the React wrapper and calls `SdkLoader.load().
+// init(…)` directly with its own unique host container id.
+const PAYPAL_IFRAME_CONTAINER_ID = "solid-payment-form-paypal-container_#200";
+const PAYPAL_BUTTON_CONTAINER_ID = "paypal-button-container-pdfvault";
 
 // QA 2026-09-08: card expiry field inside Solidgate's iframe accepts
 // more than 2 digits for the year part (user report: "22/2222 is
@@ -225,13 +227,16 @@ const StablePaymentForm = memo(function StablePaymentForm({
  * this one signs with the pdfvault channel credentials returned by the
  * backend in the `paypal` field of the CheckoutIntent response.
  *
- * All non-PayPal button families are explicitly disabled so the second
- * SDK instance strictly renders PayPal only — see Solidgate UAT
- * guidance 2026-09-30.
+ * Uses the vanilla `@solidgate/client-sdk-loader` (re-exported from
+ * `@solidgate/react-sdk`) rather than the React `<PaymentForm>` wrapper
+ * because the React wrapper's iframe host id is hardcoded — mounting
+ * two `<PaymentForm>` instances collides on the same DOM id and
+ * silently prevents the first form's wallet buttons from rendering.
+ * See the comment above `PAYPAL_IFRAME_CONTAINER_ID` for evidence.
  *
- * Same memoisation discipline as `StablePaymentForm` — primitive props,
- * stable ref objects, parent-owned callbacks — so parent re-renders
- * don't thrash the SDK's layout effect.
+ * Only PayPal is enabled on this instance; card form + Apple Pay +
+ * Google Pay are explicitly disabled per Solidgate UAT guidance
+ * 2026-09-30.
  */
 interface StablePaypalOnlyFormProps {
   paypalContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -254,32 +259,105 @@ const StablePaypalOnlyForm = memo(function StablePaypalOnlyForm({
   onSuccess,
   onOrderStatus,
 }: StablePaypalOnlyFormProps) {
-  const merchantData = useMemo(
-    () => ({ merchant, signature, paymentIntent }),
-    [merchant, signature, paymentIntent],
-  );
-  const handleError = useCallback((error: unknown) => {
-    logger.captureError(error, "checkout.iframe_error.paypal");
-  }, []);
-  const handleMounted = useCallback(() => {
-    logger.info("[paywall] Solidgate PayPal iframe mounted");
-  }, []);
+  // Keep callback refs so a parent re-render passing a fresh inline
+  // callback does not re-run the init effect (would tear down and
+  // re-mount the PayPal button, matching the iframe focus-stability
+  // discipline documented on `StablePaymentForm`).
+  const onFailRef = useRef(onFail);
+  const onSuccessRef = useRef(onSuccess);
+  const onOrderStatusRef = useRef(onOrderStatus);
 
+  useEffect(() => {
+    onFailRef.current = onFail;
+    onSuccessRef.current = onSuccess;
+    onOrderStatusRef.current = onOrderStatus;
+  }, [onFail, onSuccess, onOrderStatus]);
+
+  const sdkInstanceRef = useRef<ClientSdkInstance | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const buttonEl = paypalContainerRef.current;
+
+    if (!buttonEl) return;
+
+    // Assign a stable DOM id to the parent-owned PayPal button
+    // container so the SDK can inject into it via containerId. The
+    // React wrapper does this via `getPayButtonParams`; we do it
+    // explicitly here.
+    buttonEl.id = PAYPAL_BUTTON_CONTAINER_ID;
+
+    void (async () => {
+      try {
+        const mod = await import("@solidgate/react-sdk");
+        const sdk = await mod.SdkLoader.load(
+          "https://cdn.charge-auth.com/js/form.js",
+        );
+
+        if (cancelled || !sdk) return;
+
+        const instance = sdk.init({
+          merchantData: { merchant, signature, paymentIntent },
+          iframeParams: {
+            containerId: PAYPAL_IFRAME_CONTAINER_ID,
+            width: "100%",
+          },
+          formParams: { enabled: false },
+          applePayButtonParams: { enabled: false },
+          googlePayButtonParams: { enabled: false },
+          paypalButtonParams: {
+            enabled: true,
+            color: "gold",
+            shape: "rect",
+            label: "paypal",
+            containerId: PAYPAL_BUTTON_CONTAINER_ID,
+          },
+        });
+
+        if (cancelled) {
+          instance.unsubscribeAll();
+
+          return;
+        }
+
+        instance.on(mod.MessageType.Error, (ev) => {
+          logger.captureError(ev.data, "checkout.iframe_error.paypal");
+        });
+        instance.on(mod.MessageType.Mounted, () => {
+          logger.info("[paywall] Solidgate PayPal iframe mounted");
+        });
+        instance.on(mod.MessageType.Fail, () => {
+          onFailRef.current();
+        });
+        instance.on(mod.MessageType.Success, (ev) => {
+          onSuccessRef.current(ev.data as never);
+        });
+        instance.on(mod.MessageType.OrderStatus, (ev) => {
+          onOrderStatusRef.current(ev.data);
+        });
+
+        sdkInstanceRef.current = instance;
+      } catch (err) {
+        logger.captureError(err, "checkout.iframe_error.paypal");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      sdkInstanceRef.current?.unsubscribeAll();
+      sdkInstanceRef.current = null;
+    };
+  }, [merchant, signature, paymentIntent, retryKey, paypalContainerRef]);
+
+  // Hidden host div for the SDK's main iframe. The SDK requires a DOM
+  // element with the configured `iframeParams.containerId` to boot
+  // (where it posts message events + 3DS redirects); hidden because
+  // `formParams.enabled: false` means we don't render a card form here.
   return (
-    <PaymentForm
-      key={`paypal-${retryKey}-${paymentIntent}`}
-      applePayButtonParams={PAYPAL_FORM_APPLE_DISABLED}
-      formParams={PAYPAL_FORM_PARAMS}
-      googlePayButtonParams={PAYPAL_FORM_GOOGLE_DISABLED}
-      merchantData={merchantData}
-      paypalButtonParams={PAYPAL_BUTTON_PARAMS}
-      paypalContainerRef={paypalContainerRef}
-      width="100%"
-      onError={handleError}
-      onFail={onFail}
-      onMounted={handleMounted}
-      onOrderStatus={onOrderStatus}
-      onSuccess={onSuccess}
+    <div
+      aria-hidden
+      id={PAYPAL_IFRAME_CONTAINER_ID}
+      style={{ display: "none" }}
     />
   );
 });
