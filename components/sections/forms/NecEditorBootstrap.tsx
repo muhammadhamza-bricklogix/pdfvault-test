@@ -5,10 +5,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { EditorLoadingShell } from "@/components/sections/pdf-editor/EditorLoadingShell";
 import {
-  readPendingNecState,
+  beginNecDraft,
+  readNecDraft,
   resetNecSessionFinalized,
 } from "@/components/sections/forms/NecAutoPersist";
-import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
@@ -20,6 +20,19 @@ type NecEditorBootstrapProps = {
 };
 
 export const NEC_LIBRARY_FILENAME = "IRS Form 1099-NEC.pdf";
+
+export function necLibraryFilename(values: Record<string, string>): string {
+  const recipient = (values.recipient_name ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "");
+  const year = (values.calendar_year ?? "").trim();
+
+  if (!recipient) return NEC_LIBRARY_FILENAME;
+
+  const suffix = year ? ` (${year})` : "";
+
+  return `IRS Form 1099-NEC - ${recipient}${suffix}.pdf`;
+}
 
 type NecResumeEnvelope = {
   nec?: { values?: Record<string, string> };
@@ -45,6 +58,7 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
   const currentFile = usePdfEditorStore((s) => s.file);
   const searchParams = useSearchParams();
   const resumeDocId = searchParams.get("resumeDocId");
+  const forceNew = searchParams.get("new") === "1";
 
   const bootstrapRunIdRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +71,13 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     const isActiveRun = () => !cancelled && bootstrapRunIdRef.current === runId;
 
     resetNecSessionFinalized();
+    useFormEditorStore.getState().reset();
 
-    // SYNC restore FIRST — restores any typed values immediately from localStorage
-    // so user never perceives data loss when accidentally closing/reopening tab or navigating back
-    const earlyPending = readPendingNecState();
+    const instanceId = beginNecDraft({ resumeDocId, forceNew });
+
+    // SYNC restore FIRST — restores any typed values immediately from
+    // localStorage so the user never perceives data loss on reload or back.
+    const earlyPending = readNecDraft(instanceId);
 
     if (earlyPending && Object.keys(earlyPending).length > 0) {
       useFormEditorStore.getState().setValues(earlyPending);
@@ -132,29 +149,24 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
 
     const resumePromise = (async () => {
       await Promise.resolve();
-      if (!isActiveRun()) return;
+      if (!isActiveRun() || !resumeDocId) return;
 
       try {
-        const docId =
-          resumeDocId ??
-          (await findDuplicateByFilename(NEC_LIBRARY_FILENAME))?.id;
-
-        if (!isActiveRun() || !docId) return;
-
-        const doc = await documentsService.getDocument(docId);
+        const doc = await documentsService.getDocument(resumeDocId);
 
         if (!isActiveRun()) return;
 
         const restored = parseNecValues(doc.editorState);
-
-        if (!restored && !resumeDocId) return;
 
         usePdfEditorStore.getState().setCurrentDocument({
           id: doc.id,
           name: doc.filename,
         });
 
-        if (restored && Object.keys(restored).length > 0) {
+        const hasLocalDraft =
+          earlyPending && Object.keys(earlyPending).length > 0;
+
+        if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
           useFormEditorStore.getState().setValues(restored);
         }
       } catch (err) {
@@ -171,7 +183,7 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
       usePdfEditorStore.getState().setDisableAutoTextExtract(false);
       useFormEditorStore.getState().reset();
     };
-  }, [setFile, resumeDocId]);
+  }, [setFile, resumeDocId, forceNew]);
 
   if (error) {
     return (
