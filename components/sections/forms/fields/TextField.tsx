@@ -33,7 +33,9 @@ export function TextField({ field, mode, page }: FieldProps) {
           id={`field-input-${field.id}`}
           maxLength={field.maxLength}
           style={{
-            fontSize: field.overlayFontSize ?? Math.max(css.height * 0.35, 9),
+            fontSize:
+              field.overlayFontSize ??
+              Math.min(css.height, Math.max(css.height * 0.45, 9), 13),
             height: css.height,
             left: css.left,
             top: css.top,
@@ -54,7 +56,9 @@ export function TextField({ field, mode, page }: FieldProps) {
         id={`field-input-${field.id}`}
         maxLength={field.maxLength}
         style={{
-          fontSize: field.overlayFontSize ?? Math.max(css.height * 0.65, 7.5),
+          fontSize:
+            field.overlayFontSize ??
+            Math.min(css.height, Math.max(css.height * 0.9, 9), 14),
           height: css.height,
           left: css.left,
           top: css.top,

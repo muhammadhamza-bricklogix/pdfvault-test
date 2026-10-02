@@ -60,19 +60,6 @@ export const ROUTES = {
   },
 } as const;
 
-export function isNec1099EditorRoute(
-  pathname: string | null | undefined,
-): boolean {
-  if (!pathname) return false;
-  const stripped =
-    pathname.replace(/^\/[a-z]{2}(-[A-Z]{2})?(?=\/|$)/, "") || "/";
-
-  return (
-    stripped === ROUTES.FORMS.NEC_1099_FORM ||
-    stripped.startsWith("/forms/1099-nec")
-  );
-}
-
 export function isTaxFormEditorRoute(
   pathname: string | null | undefined,
 ): boolean {

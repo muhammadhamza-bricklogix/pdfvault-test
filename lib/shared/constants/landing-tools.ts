@@ -232,6 +232,11 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "line", id: "forms" },
         href: "/forms/w-9",
       },
+      {
+        label: "Forms (1099-NEC)",
+        icon: { kind: "line", id: "forms" },
+        href: "/forms/1099-nec",
+      },
     ],
   },
 ];

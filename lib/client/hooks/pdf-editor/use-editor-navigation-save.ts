@@ -138,7 +138,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       if (usePdfEditorStore.getState().autoPersistDisabled) {
         const w9LoadingKey = toast.loading({
           title: "Saving your form…",
-          description: "Adding your entries to My PDFs.",
+          description: "Updating your form in My PDFs.",
         });
 
         const w9Result = await new Promise<{
@@ -177,7 +177,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           ) {
             toast.success({
               title: "Saved to My PDFs",
-              description: "Your form is in your library.",
+              description: "Your form in My PDFs is up to date.",
             });
           }
           navigate();

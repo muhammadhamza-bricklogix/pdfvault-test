@@ -21,17 +21,8 @@ type NecEditorBootstrapProps = {
 
 export const NEC_LIBRARY_FILENAME = "IRS Form 1099-NEC.pdf";
 
-export function necLibraryFilename(values: Record<string, string>): string {
-  const recipient = (values.recipient_name ?? "")
-    .trim()
-    .replace(/[\\/:*?"<>|]/g, "");
-  const year = (values.calendar_year ?? "").trim();
-
-  if (!recipient) return NEC_LIBRARY_FILENAME;
-
-  const suffix = year ? ` (${year})` : "";
-
-  return `IRS Form 1099-NEC - ${recipient}${suffix}.pdf`;
+export function necLibraryFilename(): string {
+  return NEC_LIBRARY_FILENAME;
 }
 
 type NecResumeEnvelope = {

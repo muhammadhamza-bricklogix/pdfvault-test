@@ -9,6 +9,7 @@ import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { downloadStampedFormAsImages } from "@/lib/client/forms/download-form-images";
 import {
   bindNecDraftToDocument,
+  getNecBoundDocumentId,
   markNecSessionFinalized,
 } from "@/components/sections/forms/NecAutoPersist";
 import { necLibraryFilename } from "@/components/sections/forms/NecEditorBootstrap";
@@ -72,6 +73,37 @@ async function triggerDownload(downloadUrl: string, filename = "1099-nec.pdf") {
     link.click();
     document.body.removeChild(link);
   }
+}
+
+const LIBRARY_PAGE_SIZE = 100;
+const LIBRARY_MAX_PAGES = 100;
+
+/**
+ * Finds the one 1099-NEC row by name. Walks the real page count rather than a
+ * fixed number of pages, so a large library cannot hide the row and cause a
+ * duplicate. Throws on a failed request so the caller can refuse to save
+ * rather than guess that no row exists.
+ */
+async function findNecLibraryDocumentId(
+  filename: string,
+): Promise<string | null> {
+  const needle = filename.toLowerCase();
+  let lastPage = 1;
+
+  for (let page = 1; page <= Math.min(lastPage, LIBRARY_MAX_PAGES); page += 1) {
+    const response = await documentsService.listDocuments({
+      page,
+      pageSize: LIBRARY_PAGE_SIZE,
+    });
+    const match = response.items.find(
+      (doc) => doc.filename.toLowerCase() === needle,
+    );
+
+    if (match) return match.id;
+    lastPage = response.pagination.totalPages;
+  }
+
+  return null;
 }
 
 function hasAnyValue(values: Record<string, string>): boolean {
@@ -260,17 +292,38 @@ export function NecFinalizeIntercept() {
       values: Record<string, string>,
     ): Promise<boolean> => {
       const { currentDocumentId } = usePdfEditorStore.getState();
+      const filename = necLibraryFilename();
+      let targetId = currentDocumentId ?? getNecBoundDocumentId();
+
+      if (!targetId) {
+        try {
+          targetId = await findNecLibraryDocumentId(filename);
+        } catch (lookupErr) {
+          // Refuse to save rather than risk a second row: a failed lookup
+          // is not evidence that no row exists.
+          logger.captureError(lookupErr, "1099-nec.library_lookup");
+
+          return false;
+        }
+      }
 
       try {
-        const stampedFile = new File([blob], necLibraryFilename(values), {
+        const stampedFile = new File([blob], filename, {
           type: "application/pdf",
         });
         const editorState = JSON.stringify({ v: 1, nec: { values } });
-        const savedDoc = await documentsService.uploadDocument({
-          file: stampedFile,
-          documentId: currentDocumentId ?? undefined,
-          editorState,
-        });
+        const upload = (documentId?: string) =>
+          documentsService.uploadDocument({
+            file: stampedFile,
+            documentId,
+            editorState,
+          });
+        // The remembered row can have been deleted from My PDFs, which the
+        // backend answers with a 404. Retry once as a fresh row so the user
+        // is not stuck unable to save.
+        const savedDoc = targetId
+          ? await upload(targetId).catch(() => upload(undefined))
+          : await upload(undefined);
 
         usePdfEditorStore.getState().setCurrentDocument({
           id: savedDoc.id,
@@ -458,7 +511,7 @@ export function NecFinalizeIntercept() {
       inFlightRef.current = true;
       const saveLoadingKey = toast.loading({
         title: "Saving your 1099-NEC",
-        description: "Adding your entries to My PDFs…",
+        description: "Updating your form in My PDFs…",
       });
 
       try {
@@ -469,7 +522,7 @@ export function NecFinalizeIntercept() {
         if (saved) {
           toast.success({
             title: "Saved",
-            description: "Your 1099-NEC is in My PDFs.",
+            description: "Your 1099-NEC in My PDFs is up to date.",
           });
         } else {
           toast.error({
@@ -489,46 +542,16 @@ export function NecFinalizeIntercept() {
       }
     };
 
+    // Navigating away never writes a library row, matching the W-9. The
+    // entries live in the local draft and are restored on the next visit;
+    // only an explicit Save or Download touches My PDFs. Answering here
+    // rather than ignoring the event keeps navigation from stalling on the
+    // caller's 30s timeout.
     const onSaveAndContinue = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveAndContinueDetail>).detail;
 
-      if (!detail?.onComplete) return;
-
-      const { values } = useFormEditorStore.getState();
-
-      if (!isLoadedRef.current || !isSignedInRef.current) {
-        detail.onComplete({ ok: true, reason: "not-signed-in" });
-
-        return;
-      }
-
-      if (!hasAnyValue(values)) {
-        detail.onComplete({ ok: true, reason: "not-ready" });
-
-        return;
-      }
-
-      void (async () => {
-        try {
-          const saved = await saveDraftToLibrary(values);
-
-          if (!saved) {
-            toast.error({
-              title: "Couldn’t save to My PDFs",
-              description:
-                "Your work is still here on the form — try Save again.",
-            });
-            detail.onComplete({ ok: false, reason: "error" });
-
-            return;
-          }
-          detail.onComplete({ ok: true });
-        } catch (err) {
-          logger.captureError(err, "1099-nec.save_and_continue");
-          detail.onComplete({ ok: false, reason: "error" });
-        }
-      })();
+      detail?.onComplete?.({ ok: true, reason: "not-ready" });
     };
 
     window.addEventListener(
