@@ -71,7 +71,7 @@ export default async function ConvertPage({
             <h1 className="pv-display max-w-[820px] text-[#121212]">
               {route.heroTitle ?? route.title}
             </h1>
-            <p className="mt-6 max-w-[560px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)]">
+            <p className="mt-6 max-w-[560px] text-[18px] leading-relaxed font-medium text-[var(--pv-gray-8)]">
               {route.heroSubtitle ?? route.description}
             </p>
           </div>
