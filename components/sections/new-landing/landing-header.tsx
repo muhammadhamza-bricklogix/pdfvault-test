@@ -441,7 +441,12 @@ export function LandingHeader() {
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="flex-1">All Tools</span>
+                  <span
+                    className="notranslate wg-notranslate flex-1"
+                    translate="no"
+                  >
+                    {tNav("allTools")}
+                  </span>
                   <svg
                     aria-hidden
                     fill="none"
@@ -476,11 +481,12 @@ export function LandingHeader() {
                   // `text-start` (logical) rather than `text-left` so this
                   // matches the sibling links in RTL too — `<button>`
                   // defaults to centered text, unlike `<a>`.
-                  className="block w-full rounded-lg px-2 py-2.5 text-start text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  className="notranslate wg-notranslate block w-full rounded-lg px-2 py-2.5 text-start text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  translate="no"
                   type="button"
                   onClick={openFormsModal}
                 >
-                  Forms
+                  {tNav("forms")}
                 </button>
               </li>
               <li className="mt-1 flex items-center gap-3 px-2 py-1">
@@ -494,21 +500,23 @@ export function LandingHeader() {
                   isSignedIn ? (
                     <>
                       <Link
-                        className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                        className="notranslate wg-notranslate pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
                         href={ROUTES.APP.DASHBOARD}
+                        translate="no"
                         onClick={() => setMobileOpen(false)}
                       >
-                        Dashboard
+                        {tNav("dashboard")}
                       </Link>
                       <button
-                        className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                        className="notranslate wg-notranslate inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                        translate="no"
                         type="button"
                         onClick={() => {
                           setMobileOpen(false);
                           handleLogOut();
                         }}
                       >
-                        Log out
+                        {tNav("logOut")}
                       </button>
                     </>
                   ) : (
@@ -517,7 +525,8 @@ export function LandingHeader() {
                     // BEFORE dispatching so the modal renders over the
                     // regular page chrome, not over the drawer scrim.
                     <button
-                      className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      className="notranslate wg-notranslate pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      translate="no"
                       type="button"
                       onClick={() => {
                         setMobileOpen(false);
@@ -527,7 +536,7 @@ export function LandingHeader() {
                         });
                       }}
                     >
-                      Login
+                      {tNav("login")}
                     </button>
                   )
                 ) : null}

@@ -100,7 +100,8 @@ function PdfVaultLogo() {
       />
       <span className="pv-heading text-[17px] font-semibold leading-none">
         <span className="text-[var(--pv-brand-red-logo)]">PDF</span>
-        <span className="text-[var(--pv-text-muted)]">Vault</span>
+        {/* CSS content so Weglot can't translate the brand ("Vault" -> "Tresor"). */}
+        <span className="text-[var(--pv-text-muted)] after:content-['Vault']" />
       </span>
     </div>
   );

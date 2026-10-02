@@ -94,13 +94,19 @@ const APPLE_PAY_BUTTON_PARAMS = {
   type: "plain",
   color: "black",
 } as const;
-// PayPal button — enabled once Solidgate merchant-side PayPal is
-// activated for `pdfvault.ai` + `staging.pdfvault.ai`. `enabled: true`
-// is explicit for the same reason as Apple/Google above (SDK defaults
-// undefined → button silently never mounts). `color: "gold"` is
-// PayPal's recommended default that maximizes recognition. `label:
-// "paypal"` renders the PayPal wordmark only (no "Checkout with" /
-// "Pay with" prefix).
+// PayPal button params — rendered alongside Apple Pay + Google Pay on
+// the single unified `StablePaymentForm`. Solidgate confirmed
+// 2026-10-02 that all payment methods (card + Apple Pay + Google Pay
+// + PayPal + future Worldpay/Adyen MIDs) will live on one channel
+// (`pdfvault`). The earlier dual-channel + dual-form architecture
+// (contentclicks.io main + pdfvault PayPal) was rolled back because
+// `@solidgate/react-sdk` hardcodes its iframe host id, so two
+// `<PaymentForm>` instances collided and the first form's Apple +
+// Google wallet buttons silently stopped rendering.
+//
+// `color: "gold"` is PayPal's recommended default that maximizes
+// recognition. `label: "paypal"` renders the PayPal wordmark only
+// (no "Checkout with" / "Pay with" prefix).
 const PAYPAL_BUTTON_PARAMS = {
   enabled: true,
   color: "gold",
@@ -1388,27 +1394,12 @@ function PlanStep({
   const annualFullPrice = formatMinor(annual.amountRenewMinor, annual.currency);
 
   const continueDisabled = continueLoading;
-  const readyHeading = (() => {
-    if (!preview) return strings.ready.pdf;
-    const ext = (
-      preview.targetExt ||
-      preview.sourceExt ||
-      preview.filename?.split(".").pop() ||
-      ""
-    )
-      .toLowerCase()
-      .trim();
-
-    if (["jpg", "jpeg"].includes(ext)) return strings.ready.jpg;
-    if (ext === "png") return strings.ready.png;
-    if (["doc", "docx", "word"].includes(ext)) return strings.ready.word;
-    if (["xls", "xlsx", "excel"].includes(ext)) return strings.ready.excel;
-    if (["ppt", "pptx", "powerpoint"].includes(ext))
-      return strings.ready.powerpoint;
-    if (ext === "txt") return strings.ready.txt;
-
-    return strings.ready.pdf;
-  })();
+  // 2026-10-01 QA follow-up: the "Your <X> is ready" eyebrow was
+  // dropped — the plan-step header now shows only the big "Choose a
+  // plan to download your file" headline. The `strings.ready.*`
+  // strings are temporarily unused by this component; follow-up PR
+  // should add a localized `strings.choosePlanHeading` field and
+  // remove the dead `ready` object (6 locales × 7 file types).
 
   // Shared Continue CTA — rendered directly beneath the plan selector in
   // both single-column (`hidePreview`) and two-column layouts. Product
@@ -1421,7 +1412,7 @@ function PlanStep({
   // between pricing sub-steps. Handler + loading state unchanged.
   const continueButton = (
     <button
-      className="group inline-flex h-[60px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-8 text-[17px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[64px] sm:text-[18px]"
+      className="group inline-flex h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[var(--pv-brand-red,#f12c23)] px-6 text-[15px] font-semibold tracking-wide text-white shadow-[0_14px_28px_-10px_rgba(241,44,35,0.65)] transition-all hover:-translate-y-px hover:bg-[#d8241c] hover:shadow-[0_18px_36px_-10px_rgba(241,44,35,0.75)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-red,#f12c23)] disabled:cursor-not-allowed disabled:bg-[#c7c7c7] disabled:shadow-none disabled:hover:translate-y-0 active:translate-y-px sm:h-[52px] sm:text-[16px] md:h-[52px] md:w-auto md:px-7"
       disabled={continueDisabled}
       type="button"
       onClick={onContinue}
@@ -1440,14 +1431,27 @@ function PlanStep({
 
   return (
     <div className="flex flex-col">
-      {/* Header — title + subtitle only. Continue moved directly below
-          the plan selector (see `continueButton` above) so plan
-          selection → CTA is a single visual beat. */}
-      <div className="flex flex-col gap-1 border-b border-[#ececec] p-6 md:p-8">
-        <h2 className="pv-heading text-[20px] font-semibold leading-tight text-[#1a1c21] sm:text-[24px]">
-          {readyHeading}
+      {/* Header — big "Choose a plan to download your file" headline on
+          the left with the Continue CTA on the right. Matches the
+          PDFGuru checkout pattern (QA 2026-10-01). Alignment notes:
+          - `md:items-center` keeps the headline + button vertically
+            centered on desktop.
+          - `leading-none` on the h2 trims the default line-height slack
+            so the headline bounding box matches the CTA height more
+            closely — fixes the "misaligned" look where the h2's
+            built-in ascender/descender padding made it visually sit
+            above the button mid-line (QA 2026-10-01 follow-up).
+          - Mobile stacks the CTA full-width below the headline for a
+            larger tap target.
+
+          TODO (i18n debt): big headline is hardcoded EN. Follow-up PR
+          should add `strings.choosePlanHeading` with translations for
+          de / es / fr / pt / ar. */}
+      <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
+        <h2 className="pv-heading text-[26px] font-bold leading-none text-[#1a1c21] sm:text-[32px] md:text-[36px]">
+          Choose a plan to download your file
         </h2>
-        <p className="text-[13px] text-[#6c6c6c]">{strings.headerSubtitle}</p>
+        <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
 
       {/* Body — two columns, or plan-picker only when the caller
@@ -1467,8 +1471,8 @@ function PlanStep({
           />
 
           <AcceptedCards />
-
-          {continueButton}
+          {/* Continue CTA moved to the top-right of the header
+              (QA 2026-10-01 hotfix) — intentionally no CTA here. */}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1527,8 +1531,8 @@ function PlanStep({
             />
 
             <AcceptedCards />
-
-            {continueButton}
+            {/* Continue CTA moved to the top-right of the header
+                (QA 2026-10-01 hotfix) — intentionally no CTA here. */}
           </div>
         </div>
       )}
@@ -1679,6 +1683,10 @@ function PayStep({
   // enablement + domain verification (Apple Pay only).
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // PayPal is rendered by the unified `StablePaymentForm` alongside
+  // Apple + Google Pay (single pdfvault channel per Solidgate
+  // 2026-10-02). Container ref owned here so the skeleton +
+  // MutationObserver live alongside Apple/Google for consistent timing.
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   // Wallet-button loading state (2026-09-06 QA). Solidgate injects the
   // real Apple Pay / Google Pay / PayPal buttons a beat after
@@ -1693,34 +1701,52 @@ function PayStep({
   const [paypalReady, setPaypalReady] = useState(false);
   const [walletTimedOut, setWalletTimedOut] = useState(false);
 
+  // Timeout runs on its own effect so it fires regardless of whether the
+  // observer effect below bailed early on a null ref — otherwise a
+  // missing container would leave the skeletons stuck forever (QA
+  // report 2026-09-30: PayPal "stuck at Loading wallet" on staging).
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   useEffect(() => {
     const applePayEl = applePayContainerRef.current;
     const googlePayEl = googlePayContainerRef.current;
     const paypalEl = paypalContainerRef.current;
 
-    if (!applePayEl || !googlePayEl || !paypalEl) return;
+    const observers: MutationObserver[] = [];
 
-    const applyObserver = new MutationObserver(() => {
-      if (applePayEl.childNodes.length > 0) setApplePayReady(true);
-    });
-    const googleObserver = new MutationObserver(() => {
-      if (googlePayEl.childNodes.length > 0) setGooglePayReady(true);
-    });
-    const paypalObserver = new MutationObserver(() => {
-      if (paypalEl.childNodes.length > 0) setPaypalReady(true);
-    });
+    if (applePayEl) {
+      const o = new MutationObserver(() => {
+        if (applePayEl.childNodes.length > 0) setApplePayReady(true);
+      });
 
-    applyObserver.observe(applePayEl, { childList: true });
-    googleObserver.observe(googlePayEl, { childList: true });
-    paypalObserver.observe(paypalEl, { childList: true });
+      o.observe(applePayEl, { childList: true });
+      observers.push(o);
+    }
 
-    const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
+    if (googlePayEl) {
+      const o = new MutationObserver(() => {
+        if (googlePayEl.childNodes.length > 0) setGooglePayReady(true);
+      });
+
+      o.observe(googlePayEl, { childList: true });
+      observers.push(o);
+    }
+
+    if (paypalEl) {
+      const o = new MutationObserver(() => {
+        if (paypalEl.childNodes.length > 0) setPaypalReady(true);
+      });
+
+      o.observe(paypalEl, { childList: true });
+      observers.push(o);
+    }
 
     return () => {
-      applyObserver.disconnect();
-      googleObserver.disconnect();
-      paypalObserver.disconnect();
-      window.clearTimeout(timeout);
+      for (const o of observers) o.disconnect();
     };
   }, []);
   // 2026-09-03 (PM): the Solidgate card form starts COLLAPSED behind
@@ -1828,10 +1854,13 @@ function PayStep({
                 className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
               />
             </div>
-            {/* PayPal — SDK injects here once merchant-side PayPal is
-                activated in the Solidgate Hub. Silent no-op on browsers
-                / regions where PayPal isn't supported for this merchant
-                (same behaviour as Apple/Google above). */}
+            {/* PayPal — rendered by the main `StablePaymentForm` via
+                `paypalButtonParams` + `paypalContainerRef`. Single
+                unified pdfvault channel per Solidgate 2026-10-02 — no
+                second form instance (that caused the iframe-id
+                collision that killed the Apple/Google buttons). Silent
+                no-op on browsers / regions where PayPal isn't
+                supported for this merchant. */}
             <div className="relative">
               {!paypalReady && !walletTimedOut ? (
                 <WalletButtonSkeleton />

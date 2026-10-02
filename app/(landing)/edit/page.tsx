@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 
 import { ToolLandingPage } from "@/components/sections/new-landing/tool-landing-page";
 
-const TITLE = "Edit PDF online";
+const TITLE = "Edit Any PDF in Seconds";
 const DESCRIPTION =
-  "Add text, images, signatures, highlights, or drawings to any PDF — no install, no sign-up required.";
+  "Make your changes fast — then download your file as soon as you’re done.";
 
 export const metadata: Metadata = {
   title: `${TITLE} — PDFVault`,

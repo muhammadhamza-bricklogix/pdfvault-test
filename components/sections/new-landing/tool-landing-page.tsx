@@ -1,10 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
 import { LandingFooter } from "./landing-footer";
+import { LandingFreshStart } from "./landing-fresh-start";
 import { LandingHeader } from "./landing-header";
+import { LandingSteps } from "./landing-steps";
+import { LandingTestimonials } from "./landing-testimonials";
 import { UploadWorkspace } from "./upload-workspace";
+
+// Below-fold client sections — mirror the root `/` landing's dynamic imports
+// so each tool landing ships the full page (hero → steps → tools → banner →
+// testimonials → FAQ → footer) with the same chunking strategy.
+const LandingTools = dynamic(() =>
+  import("./landing-tools").then((m) => m.LandingTools),
+);
+const LandingBanner = dynamic(() =>
+  import("./landing-banner").then((m) => m.LandingBanner),
+);
+const LandingFAQ = dynamic(() =>
+  import("./landing-faq").then((m) => m.LandingFAQ),
+);
 
 interface ToolLandingPageProps {
   /** Hero headline shown at the top of the page. */
@@ -17,6 +34,8 @@ interface ToolLandingPageProps {
    * for the full list of valid slugs.
    */
   tool: string;
+  /** Optional `TOOL_HINTS` key when several pages share one tool slug. */
+  hint?: string;
   /**
    * File extensions the picker accepts (without leading dot). Every composer
    * tool takes a PDF by default.
@@ -45,6 +64,7 @@ export function ToolLandingPage({
   title,
   description,
   tool,
+  hint,
   acceptExtensions = ["pdf"],
   i18nKey,
 }: ToolLandingPageProps) {
@@ -76,19 +96,20 @@ export function ToolLandingPage({
 
   return (
     <div id="top">
+      <LandingFreshStart />
       <LandingHeader />
       <main>
         <section className="bg-white pt-14 pb-8 sm:pt-20 sm:pb-10">
           <div className="pv-container flex flex-col items-center text-center">
             <h1
               {...fenceProps}
-              className={`pv-display max-w-[820px] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
+              className={`font-bold leading-[1.05] tracking-[-0.03em] whitespace-nowrap text-[clamp(15px,5.5vw,56px)] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
             >
               {heroTitle}
             </h1>
             <p
               {...fenceProps}
-              className={`mt-6 max-w-[560px] text-[17px] leading-relaxed text-[var(--pv-text-secondary)] ${fenceProps.className ?? ""}`.trim()}
+              className={`mt-6 font-medium leading-relaxed whitespace-nowrap text-[clamp(11px,2.3vw,20px)] text-[var(--pv-gray-8)] ${fenceProps.className ?? ""}`.trim()}
             >
               {heroDescription}
             </p>
@@ -98,11 +119,17 @@ export function ToolLandingPage({
           <div className="mx-auto w-full max-w-[880px] px-6">
             <UploadWorkspace
               acceptExtensions={acceptExtensions}
+              hint={hint}
               tool={tool}
               variant="hero"
             />
           </div>
         </section>
+        <LandingSteps />
+        <LandingTools />
+        <LandingBanner />
+        <LandingTestimonials />
+        <LandingFAQ />
       </main>
       <LandingFooter />
     </div>

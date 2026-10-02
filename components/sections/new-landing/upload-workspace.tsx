@@ -4,7 +4,6 @@ import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Script from "next/script";
 import { useTranslations } from "next-intl";
 import {
   useCallback,
@@ -246,6 +245,8 @@ interface UploadWorkspaceProps {
   /** Editor tool slug to auto-launch after the file loads
    *  (e.g. `"password"`, `"compress"`, `"manage"`). */
   tool?: string;
+  /** `TOOL_HINTS` key forwarded as `?hint=` (see `ToolLandingPage`). */
+  hint?: string;
   /** Export format to auto-fire once the file loads in the editor
    *  (e.g. `"docx"` for /convert/pdf-to-word). */
   exportFormat?: string;
@@ -265,6 +266,7 @@ interface UploadWorkspaceProps {
 export function UploadWorkspace({
   acceptExtensions,
   exportFormat,
+  hint,
   tool,
   variant = "full",
 }: UploadWorkspaceProps = {}) {
@@ -379,13 +381,60 @@ export function UploadWorkspace({
 
       if (documentId) query.set("id", documentId);
       if (tool) query.set("tool", tool);
+      if (tool && hint) query.set("hint", hint);
       if (exportFormat && !opts?.skipExport) query.set("export", exportFormat);
       const q = query.toString();
       const base = withLocalePrefix(ROUTES.TOOLS.PDF_EDITOR);
 
       return q ? `${base}?${q}` : base;
     },
-    [tool, exportFormat, withLocalePrefix],
+    [tool, hint, exportFormat, withLocalePrefix],
+  );
+
+  // Signed-in backend upload/conversion, then open the saved doc in composer.
+  const convertAndOpenInComposer = useCallback(
+    async (
+      tempId: string,
+      source: File,
+      filename: string,
+      existingDocId?: string,
+    ) => {
+      usePendingConversionsStore.getState().add({
+        tempId,
+        file: source,
+        filename,
+        sizeBytes: source.size,
+      });
+      setOpening(true);
+      const loadingKey = toast.loading({
+        title: isPdf(source) ? "Saving to My PDFs" : "Converting to PDF",
+        description: filename,
+      });
+
+      try {
+        const created = await runPendingConversion(
+          tempId,
+          source,
+          existingDocId,
+        );
+
+        if (!created) {
+          toast.error({
+            title: "Conversion failed",
+            description: "We couldn't convert your document. Please try again.",
+          });
+          setOpening(false);
+
+          return;
+        }
+
+        usePdfEditorStore.getState().clearFile();
+        router.push(buildComposerHref(created.id));
+      } finally {
+        toast.close(loadingKey);
+      }
+    },
+    [buildComposerHref, router],
   );
 
   const openFileInEditor = useCallback(
@@ -570,15 +619,9 @@ export function UploadWorkspace({
 
       // Convert routes for signed-in users. Two branches by direction:
       //
-      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): register a pending
-      //     conversion in the Zustand store, fire the convert+save runner
-      //     as a background promise, then navigate to `/dashboard`
-      //     immediately. The dashboard file table renders a "Preparing
-      //     your document…" placeholder row driven by the store while the
-      //     runner works. No toast on this page — the placeholder row on
-      //     the dashboard is the only progress affordance. No paywall
-      //     either; that gate fires when the user clicks Download / Open
-      //     on the completed row.
+      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): convert + save via
+      //     the backend, then open the saved doc in composer. No paywall
+      //     here; that gate fires on Download.
       //
       //   • PDF→X (`exportFormat` set, e.g. pdf-to-word): no early
       //     paywall here. Save + open editor with `?export=<format>`;
@@ -641,21 +684,13 @@ export function UploadWorkspace({
             return;
           }
 
-          usePendingConversionsStore.getState().add({
-            tempId,
-            file: picked,
-            filename: pdfName,
-            sizeBytes: picked.size,
-          });
-
           logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
             documentId: null,
             tool: null,
             exportFormat: null,
           });
 
-          void runPendingConversion(tempId, picked);
-          router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+          await convertAndOpenInComposer(tempId, picked, pdfName);
 
           return;
         }
@@ -812,6 +847,7 @@ export function UploadWorkspace({
     [
       authLoaded,
       buildComposerHref,
+      convertAndOpenInComposer,
       isSignedIn,
       pathname,
       requiresAuth,
@@ -1013,22 +1049,14 @@ export function UploadWorkspace({
     if (!convertDuplicate) return;
     const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-    usePendingConversionsStore.getState().add({
-      tempId,
-      file,
-      filename,
-      sizeBytes: file.size,
-    });
-
     logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
       filename,
       documentId: existingDocId,
       resolution: "overwrite",
     });
 
-    void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+    void convertAndOpenInComposer(tempId, file, filename, existingDocId);
   };
 
   const handleConvertDuplicateCancelHero = () => {
@@ -1150,63 +1178,53 @@ export function UploadWorkspace({
             </div>
           </div>
 
-          {/* Trustpilot Micro TrustScore + terms line — landing route only.
-            The hero variant of UploadWorkspace ships on `/` (via
-            LandingHero) and could theoretically be reused elsewhere; the
-            pathname gate keeps social proof + terms copy exclusive to
-            the marketing home. Bootstrap script is only injected when
-            the widget renders so we don't fetch Trustpilot's CDN on
-            routes that never show a widget. */}
-          {pathname === "/" ? (
-            <>
-              <div className="mt-6 flex justify-center">
-                {/* CSS scale enlarges the Micro TrustScore visually — the
-                  widget's own layout is fixed at 20px tall, so bumping
-                  data-style-height just adds whitespace. Reserved height on
-                  the wrapper accounts for the scaled size so the terms line
-                  below doesn't overlap. */}
-                <div
-                  className="origin-center scale-[1.35] sm:scale-[1.6]"
-                  style={{ height: 32, width: "min(360px, 100%)" }}
-                >
-                  <TrustpilotWidget
-                    disableLink
-                    businessUnitId="6a5635cc9545fd0a55b8cee6"
-                    locale="en-US"
-                    reviewUrl=""
-                    skeletonHeight={20}
-                    styleHeight="20px"
-                    styleWidth="100%"
-                    templateId="5419b637fa0340045cd0c936"
-                    token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
-                  />
-                </div>
-              </div>
-              <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
-                By uploading a file, you agree to our{" "}
-                <Link
-                  className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
-                  href={ROUTES.LEGAL.TERMS}
-                >
-                  Terms and Conditions
-                </Link>{" "}
-                and acknowledge our{" "}
-                <Link
-                  className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
-                  href={ROUTES.LEGAL.PRIVACY}
-                >
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-              <Script
-                async
-                id="trustpilot-bootstrap"
-                src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
-                strategy="lazyOnload"
+          {/* Trustpilot Micro TrustScore + terms line — ships on every
+            `variant="hero"` call (root landing + ToolLandingPage + the
+            /convert/[slug] routes). The locale-prefixed root (`/de/`,
+            `/fr/`, …) and tool landings (`/edit`, `/split-pdf`, …)
+            previously missed the stars because the gate was pinned to
+            `pathname === "/"`. The bootstrap script lives in
+            `app/(landing)/layout.tsx` so we don't inject a duplicate here. */}
+          <div className="mt-6 flex justify-center">
+            {/* CSS scale enlarges the Micro TrustScore visually — the
+              widget's own layout is fixed at 20px tall, so bumping
+              data-style-height just adds whitespace. Reserved height on
+              the wrapper accounts for the scaled size so the terms line
+              below doesn't overlap. */}
+            <div
+              className="origin-center scale-[1.35] sm:scale-[1.6]"
+              style={{ height: 32, width: "min(360px, 100%)" }}
+            >
+              <TrustpilotWidget
+                disableLink
+                businessUnitId="6a5635cc9545fd0a55b8cee6"
+                locale="en-US"
+                reviewUrl=""
+                skeletonHeight={20}
+                styleHeight="20px"
+                styleWidth="100%"
+                templateId="5419b637fa0340045cd0c936"
+                token="a947a9b4-cecb-4c81-bcec-8a3920cb39c4"
               />
-            </>
-          ) : null}
+            </div>
+          </div>
+          <p className="mt-4 px-4 text-center text-[13px] text-[var(--pv-text-secondary)]">
+            By uploading a file, you agree to our{" "}
+            <Link
+              className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+              href={ROUTES.LEGAL.TERMS}
+            >
+              Terms and Conditions
+            </Link>{" "}
+            and acknowledge our{" "}
+            <Link
+              className="underline underline-offset-2 hover:text-[var(--pv-text-primary)]"
+              href={ROUTES.LEGAL.PRIVACY}
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </div>
         {/* Cancel/Overwrite modal — hero variant ships on the landing
           page, so signed-in users dropping a file whose target
@@ -1225,26 +1243,15 @@ export function UploadWorkspace({
     if (!convertDuplicate) return;
     const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-    // Same dispatch as the no-duplicate path, plus the existingDocId
-    // so the backend upserts. Placeholder row uses the existing id so
-    // the dashboard doesn't briefly show a new pending tile alongside
-    // the one about to be overwritten.
-    usePendingConversionsStore.getState().add({
-      tempId,
-      file,
-      filename,
-      sizeBytes: file.size,
-    });
-
+    // Upload into the existing doc id so the backend versions it.
     logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
       filename,
       documentId: existingDocId,
       resolution: "overwrite",
     });
 
-    void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+    void convertAndOpenInComposer(tempId, file, filename, existingDocId);
   };
 
   const handleConvertDuplicateCancel = () => {

@@ -2,7 +2,12 @@
   "nav": {
     "edit": "Bearbeiten",
     "convert": "Umwandeln",
-    "compress": "Komprimieren"
+    "compress": "Komprimieren",
+    "allTools": "Alle Tools",
+    "forms": "Formulare",
+    "login": "Anmelden",
+    "dashboard": "Dashboard",
+    "logOut": "Abmelden"
   },
   "footer": {
     "convert": "Umwandeln",

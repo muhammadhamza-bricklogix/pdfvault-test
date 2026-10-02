@@ -921,10 +921,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       "whiteout",
     ]);
 
+    // Boundary pulls only flip once the page has rested at the edge, so a
+    // fling that just reached the bottom isn't turned by the next swipe.
+    const BOUNDARY_REST_MS = 400;
     let startX = 0;
     let startY = 0;
     let startScrollTop = 0;
     let startMaxScrollTop = 0;
+    let lastScrollAt = 0;
+    let restedAtStart = false;
+
+    const onScroll = () => {
+      lastScrollAt = performance.now();
+    };
     // Track whether the touch started inside the PDF viewer element.
     // The listeners below are attached to `document` so Fabric's own
     // touch handling doesn't swallow them, but that means every touch
@@ -943,6 +952,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       startY = e.touches[0].clientY;
       startScrollTop = el.scrollTop;
       startMaxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+      restedAtStart = performance.now() - lastScrollAt >= BOUNDARY_REST_MS;
       const target = e.target as (Node & Element) | null;
       const inViewer = Boolean(target && el.contains(target));
       // FloatingTextToolbar and FloatingShapeToolbar are DOM-nested
@@ -981,8 +991,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       // ── Horizontal swipe (swipe left = next, swipe right = prev) ──────
       const hasHorizontalOverflow = el.scrollWidth > el.clientWidth + 10;
+      const scrolledVertically = Math.abs(el.scrollTop - startScrollTop) > 8;
 
-      if (absDx > absDy && absDx > 50 && !hasHorizontalOverflow) {
+      if (
+        absDx > absDy &&
+        absDx > 50 &&
+        !hasHorizontalOverflow &&
+        !scrolledVertically
+      ) {
         if (dx < 0 && state.currentPage < state.pageCount) {
           navigatePage(state.currentPage + 1, 1);
         } else if (dx > 0 && state.currentPage > 1) {
@@ -1006,6 +1022,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         if (
           dy > 0 &&
           hasScrollablePage &&
+          restedAtStart &&
           startedAtTop &&
           endedAtTop &&
           state.currentPage > 1
@@ -1016,6 +1033,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         if (
           dy < 0 &&
           hasScrollablePage &&
+          restedAtStart &&
           startedAtBottom &&
           endedAtBottom &&
           state.currentPage < state.pageCount
@@ -1025,10 +1043,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       }
     };
 
+    el.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
+      el.removeEventListener("scroll", onScroll);
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
@@ -1037,7 +1057,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   return (
     <div
       ref={viewerScrollRef}
-      className="flex-1 touch-pan-x touch-pan-y overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex-1 touch-pan-x touch-pan-y overflow-auto overscroll-contain bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       data-pdf-viewer-scroll=""
     >
       {/*

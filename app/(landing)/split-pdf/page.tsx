@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 
 import { ToolLandingPage } from "@/components/sections/new-landing/tool-landing-page";
 
-const TITLE = "Split & extract PDF pages";
+const TITLE = "Extract the Pages You Need — Fast";
 const DESCRIPTION =
-  "Break a PDF into smaller files or pull out just the pages you need — pick page ranges and download in seconds.";
+  "Pick your pages in seconds — then download the new PDF right away.";
 
 export const metadata: Metadata = {
   title: `${TITLE} — PDFVault`,

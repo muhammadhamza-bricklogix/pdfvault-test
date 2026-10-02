@@ -3,6 +3,14 @@ import type { ExportFormat } from "@/lib/client/hooks/pdf-editor/use-export-edit
 export interface ConvertRoute {
   title: string;
   description: string;
+  /**
+   * Optional marketing H1 shown on `/convert/[slug]`. When set, overrides
+   * `title` for the hero only — meta title + dashboard pending-conversion
+   * banner continue to use `title` so SEO + resume-flow copy stay stable.
+   */
+  heroTitle?: string;
+  /** Optional marketing subhead for `/convert/[slug]`; overrides `description` for the hero only. */
+  heroSubtitle?: string;
   /** File extensions the picker should accept (without leading dot). */
   accept: string[];
   /**
@@ -63,6 +71,9 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
   "jpg-to-pdf": {
     title: "Convert JPG to PDF",
     description: "Turn JPG photos or scans into a single, tidy PDF.",
+    heroTitle: "Turn JPG into PDF Instantly",
+    heroSubtitle:
+      "Convert in seconds — then download your PDF as soon as it’s ready.",
     accept: ["jpg", "jpeg"],
   },
   "excel-to-pdf": {
@@ -90,6 +101,9 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
     title: "Convert PDF to Word",
     description:
       "Turn a PDF into an editable .docx so you can keep working in Word.",
+    heroTitle: "Convert PDF to Word in Seconds",
+    heroSubtitle:
+      "Convert in moments — then download your editable Word file right away.",
     accept: ["pdf"],
     exportFormat: "docx",
   },

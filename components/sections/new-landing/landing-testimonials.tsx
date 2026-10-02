@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 import { SectionHeading } from "./section-heading";
 import { TrustpilotWidget } from "./trustpilot-widget";
 
@@ -58,19 +56,12 @@ export function LandingTestimonials() {
           />
         </div>
       </div>
-
       {/*
-        Bootstrap script that scans for `.trustpilot-widget` divs and
-        renders them. `afterInteractive` is fine — the widget renders
-        client-side and doesn't need to be in initial HTML (unlike the
-        AFS invite loader in root layout, which is a crawler probe).
+        Bootstrap script lives in `app/(landing)/layout.tsx` so it ships
+        from the server-rendered layout for every landing route. Mounting
+        it here would miss SSR when the enclosing page is a client
+        component (ToolLandingPage).
       */}
-      <Script
-        async
-        id="trustpilot-bootstrap"
-        src="https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js"
-        strategy="lazyOnload"
-      />
     </section>
   );
 }
