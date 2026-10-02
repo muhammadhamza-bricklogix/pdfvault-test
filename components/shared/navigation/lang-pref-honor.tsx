@@ -20,6 +20,8 @@ const SKIP_REDIRECT_PREFIXES = [
   "/pdf-editor",
   "/w-9-form",
   "/forms/w-9",
+  "/forms/1099-nec",
+  "/forms/ds-11",
   "/convert/",
   "/sso-callback",
 ];

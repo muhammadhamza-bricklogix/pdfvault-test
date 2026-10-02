@@ -9,10 +9,13 @@ import { useFormEditorStore } from "@/lib/client/stores";
 import { pdfRectToCss } from "./types";
 
 /**
- * Renders the 7-way W-9 federal tax classification.
+ * Renders a single-choice group — the W-9's 7-way tax classification, the
+ * DS-11's book/card selection, and the yes/no pairs on both.
  *
- * Selecting any option other than "llc" clears f1_03 so the optional LLC
- * letter doesn't get stamped on a non-LLC form. Same for "other" / f1_04.
+ * An option that owns dependent fields declares them on the schema through
+ * `optionFields`; switching away from it clears them, so a value left on an
+ * abandoned branch is never stamped. The W-9 classification uses this for the
+ * LLC letter and the "other" description.
  *
  * Overlay mode renders one transparent hit-area `<button>` per option
  * positioned over the printed checkbox on the PDF. When the user clicks
@@ -24,13 +27,16 @@ export function RadioGroupField({ field, mode, page }: FieldProps) {
 
   const handleChange = (next: string) => {
     setValue(field.id, next);
-    // Clear the LLC letter input when switching away from LLC.
-    if (next !== "llc") {
-      useFormEditorStore.getState().setValue("f1_03", "");
-    }
-    // Clear the "Other" description when switching away from Other.
-    if (next !== "other") {
-      useFormEditorStore.getState().setValue("f1_04", "");
+
+    const dependants = field.optionFields;
+
+    if (!dependants) return;
+
+    const store = useFormEditorStore.getState();
+
+    for (const [optionId, ids] of Object.entries(dependants)) {
+      if (optionId === next) continue;
+      ids.forEach((id) => store.setValue(id, ""));
     }
   };
 

@@ -34,6 +34,13 @@ const FORMS: readonly FormEntry[] = [
     href: ROUTES.FORMS.NEC_1099,
     available: true,
   },
+  {
+    slug: "ds-11",
+    title: "Form DS-11",
+    description: "Apply for a U.S. passport book or passport card.",
+    href: ROUTES.FORMS.DS11,
+    available: true,
+  },
 ];
 
 interface FormsModalProps {

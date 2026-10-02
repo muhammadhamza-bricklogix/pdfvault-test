@@ -11,19 +11,19 @@ import {
   extractApiFieldErrors,
   labelFieldErrors,
 } from "@/lib/client/forms/api-field-errors";
-import { NEC_1099_SCHEMA } from "@/lib/client/forms/1099-nec-schema";
+import { DS_11_SCHEMA } from "@/lib/client/forms/ds-11-schema";
 import { downloadStampedFormAsImages } from "@/lib/client/forms/download-form-images";
 import {
-  bindNecDraftToDocument,
-  getNecBoundDocumentId,
-  markNecSessionFinalized,
-} from "@/components/sections/forms/NecAutoPersist";
-import { necLibraryFilename } from "@/components/sections/forms/NecEditorBootstrap";
+  bindDs11DraftToDocument,
+  getDs11BoundDocumentId,
+  markDs11SessionFinalized,
+} from "@/components/sections/forms/Ds11AutoPersist";
+import { ds11LibraryFilename } from "@/components/sections/forms/Ds11EditorBootstrap";
 import {
-  stampNecDocument,
-  stampNecPreview,
-} from "@/lib/client/forms/stamp-nec-client";
-import { validate1099Nec } from "@/lib/client/forms/validate-1099-nec";
+  stampDs11Document,
+  stampDs11Preview,
+} from "@/lib/client/forms/stamp-ds11-client";
+import { validateDs11 } from "@/lib/client/forms/validate-ds-11";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
@@ -55,7 +55,7 @@ type ExportDetail = {
   format?: string;
 };
 
-async function triggerDownload(downloadUrl: string, filename = "1099-nec.pdf") {
+async function triggerDownload(downloadUrl: string, filename = "ds-11.pdf") {
   try {
     const res = await fetch(downloadUrl);
 
@@ -84,13 +84,7 @@ async function triggerDownload(downloadUrl: string, filename = "1099-nec.pdf") {
 const LIBRARY_PAGE_SIZE = 100;
 const LIBRARY_MAX_PAGES = 100;
 
-/**
- * Finds the one 1099-NEC row by name. Walks the real page count rather than a
- * fixed number of pages, so a large library cannot hide the row and cause a
- * duplicate. Throws on a failed request so the caller can refuse to save
- * rather than guess that no row exists.
- */
-async function findNecLibraryDocumentId(
+async function findDs11LibraryDocumentId(
   filename: string,
 ): Promise<string | null> {
   const needle = filename.toLowerCase();
@@ -118,24 +112,24 @@ function hasAnyValue(values: Record<string, string>): boolean {
   );
 }
 
-async function buildNecPaywallPreviewUrl(
+async function buildDs11PaywallPreviewUrl(
   values: Record<string, string>,
 ): Promise<string | null> {
   try {
-    const bytes = await stampNecPreview(values);
+    const bytes = await stampDs11Preview(values);
     const blob = new Blob([bytes.buffer as ArrayBuffer], {
       type: "application/pdf",
     });
 
     return URL.createObjectURL(blob);
   } catch (err) {
-    logger.captureError(err, "1099-nec.paywall_preview_generate");
+    logger.captureError(err, "ds-11.paywall_preview_generate");
 
     return null;
   }
 }
 
-export function NecFinalizeIntercept() {
+export function Ds11FinalizeIntercept() {
   const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -223,15 +217,18 @@ export function NecFinalizeIntercept() {
 
       if (!isSignedInRef.current) {
         dispatchEmailFirstModal({
-          redirectUrl: `${ROUTES.FORMS.NEC_1099_EDIT}?export=${targetExt}&filename=${encodeURIComponent(targetFilename)}`,
-          title: "Download your 1099-NEC",
+          redirectUrl: `${ROUTES.FORMS.DS11_EDIT}?export=${targetExt}&filename=${encodeURIComponent(targetFilename)}`,
+          title: "Download your passport application",
           subtitle:
-            "Create an account or sign in to download your official Form 1099-NEC.",
+            "Create an account or sign in to download your completed Form DS-11.",
           submitLabel: "Download file",
         });
 
         return null;
       }
+
+      const errors = validateDs11({ values });
+      const errorIds = Object.keys(errors);
 
       const cacheKey = `${currentSessionId}::${JSON.stringify(values)}::${targetFilename}`;
 
@@ -242,7 +239,7 @@ export function NecFinalizeIntercept() {
       const entitled = await ensureFreshEntitlement();
 
       if (!entitled) {
-        const previewObjectUrl = await buildNecPaywallPreviewUrl(values);
+        const previewObjectUrl = await buildDs11PaywallPreviewUrl(values);
 
         try {
           const outcome = await requestPaywall({
@@ -258,13 +255,10 @@ export function NecFinalizeIntercept() {
         }
       }
 
-      const errors = validate1099Nec({ values });
-      const errorIds = Object.keys(errors);
-
       if (errorIds.length > 0) {
         state.setErrors(errors);
         toast.error({
-          title: "Check your 1099-NEC",
+          title: "Check your application",
           description:
             errorIds.length === 1
               ? errors[errorIds[0]!]
@@ -287,7 +281,7 @@ export function NecFinalizeIntercept() {
         signatureKey: null,
       });
 
-      markNecSessionFinalized();
+      markDs11SessionFinalized();
       lastFinalizeRef.current = { key: cacheKey, downloadUrl };
 
       return downloadUrl;
@@ -298,16 +292,14 @@ export function NecFinalizeIntercept() {
       values: Record<string, string>,
     ): Promise<boolean> => {
       const { currentDocumentId } = usePdfEditorStore.getState();
-      const filename = necLibraryFilename();
-      let targetId = currentDocumentId ?? getNecBoundDocumentId();
+      const filename = ds11LibraryFilename();
+      let targetId = currentDocumentId ?? getDs11BoundDocumentId();
 
       if (!targetId) {
         try {
-          targetId = await findNecLibraryDocumentId(filename);
+          targetId = await findDs11LibraryDocumentId(filename);
         } catch (lookupErr) {
-          // Refuse to save rather than risk a second row: a failed lookup
-          // is not evidence that no row exists.
-          logger.captureError(lookupErr, "1099-nec.library_lookup");
+          logger.captureError(lookupErr, "ds-11.library_lookup");
 
           return false;
         }
@@ -317,16 +309,13 @@ export function NecFinalizeIntercept() {
         const stampedFile = new File([blob], filename, {
           type: "application/pdf",
         });
-        const editorState = JSON.stringify({ v: 1, nec: { values } });
+        const editorState = JSON.stringify({ v: 1, ds11: { values } });
         const upload = (documentId?: string) =>
           documentsService.uploadDocument({
             file: stampedFile,
             documentId,
             editorState,
           });
-        // The remembered row can have been deleted from My PDFs, which the
-        // backend answers with a 404. Retry once as a fresh row so the user
-        // is not stuck unable to save.
         const savedDoc = targetId
           ? await upload(targetId).catch(() => upload(undefined))
           : await upload(undefined);
@@ -335,7 +324,7 @@ export function NecFinalizeIntercept() {
           id: savedDoc.id,
           name: savedDoc.filename,
         });
-        bindNecDraftToDocument(savedDoc.id);
+        bindDs11DraftToDocument(savedDoc.id);
 
         try {
           queryClientRef.current.invalidateQueries({
@@ -347,7 +336,7 @@ export function NecFinalizeIntercept() {
 
         return true;
       } catch (saveErr) {
-        logger.captureError(saveErr, "1099-nec.library_save");
+        logger.captureError(saveErr, "ds-11.library_save");
 
         return false;
       }
@@ -362,13 +351,13 @@ export function NecFinalizeIntercept() {
 
         if (!res.ok) {
           throw new Error(
-            `Couldn't fetch the stamped 1099-NEC (HTTP ${res.status}).`,
+            `Couldn't fetch the completed DS-11 (HTTP ${res.status}).`,
           );
         }
 
         return uploadToLibrary(await res.blob(), values);
       } catch (saveErr) {
-        logger.captureError(saveErr, "1099-nec.library_save_fetch");
+        logger.captureError(saveErr, "ds-11.library_save_fetch");
 
         return false;
       }
@@ -378,14 +367,14 @@ export function NecFinalizeIntercept() {
       values: Record<string, string>,
     ): Promise<boolean> => {
       try {
-        const bytes = await stampNecDocument(values);
+        const bytes = await stampDs11Document(values);
         const blob = new Blob([bytes.buffer as ArrayBuffer], {
           type: "application/pdf",
         });
 
         return uploadToLibrary(blob, values);
       } catch (stampErr) {
-        logger.captureError(stampErr, "1099-nec.draft_stamp");
+        logger.captureError(stampErr, "ds-11.draft_stamp");
 
         return false;
       }
@@ -402,8 +391,8 @@ export function NecFinalizeIntercept() {
       }
       if (!isSignedInRef.current) {
         dispatchEmailFirstModal({
-          redirectUrl: ROUTES.FORMS.NEC_1099_EDIT,
-          title: "Save your 1099-NEC",
+          redirectUrl: ROUTES.FORMS.DS11_EDIT,
+          title: "Save your passport application",
           subtitle:
             "Create an account or sign in to keep this form in My PDFs.",
           submitLabel: "Save form",
@@ -433,7 +422,7 @@ export function NecFinalizeIntercept() {
         detail?.format === "png" || detail?.format === "jpg"
           ? detail.format
           : "pdf";
-      const baseName = (detail?.filename ?? "Form-1099-NEC").replace(
+      const baseName = (detail?.filename ?? "Form-DS-11").replace(
         /\.[^./\\]+$/,
         "",
       );
@@ -442,8 +431,8 @@ export function NecFinalizeIntercept() {
       inFlightRef.current = true;
 
       const loadingKey = toast.loading({
-        title: "Preparing your 1099-NEC",
-        description: "Stamping your values onto the template…",
+        title: "Preparing your DS-11",
+        description: "Stamping your answers onto the official form…",
       });
 
       try {
@@ -468,30 +457,30 @@ export function NecFinalizeIntercept() {
             stampedPdfUrl: downloadUrl,
             format: requestedFormat,
             userFilename: targetFilename,
-            fallbackBaseName: "1099-nec",
+            fallbackBaseName: "ds-11",
           });
         }
 
         const saved = await saveToLibrary(downloadUrl, values);
 
         toast.success({
-          title: "1099-NEC ready",
+          title: "DS-11 ready — do not sign it yet",
           description: saved
-            ? "Downloaded and saved to My PDFs."
+            ? "Downloaded and saved to My PDFs. Sign it only when the acceptance agent asks you to."
             : "Downloaded. We couldn't add it to My PDFs — try Save to retry.",
         });
       } catch (err) {
         toast.close(loadingKey);
-        logger.captureError(err, "1099-nec.finalize");
+        logger.captureError(err, "ds-11.finalize");
 
         const apiErrors = extractApiFieldErrors(err);
 
         if (apiErrors.length > 0) {
-          const labelled = labelFieldErrors(apiErrors, NEC_1099_SCHEMA);
+          const labelled = labelFieldErrors(apiErrors, DS_11_SCHEMA);
 
           useFormEditorStore.getState().setErrors(labelled);
           toast.error({
-            title: "Check your 1099-NEC",
+            title: "Check your application",
             description: describeFieldErrors(labelled),
           });
 
@@ -536,8 +525,8 @@ export function NecFinalizeIntercept() {
 
       inFlightRef.current = true;
       const saveLoadingKey = toast.loading({
-        title: "Saving your 1099-NEC",
-        description: "Updating your form in My PDFs…",
+        title: "Saving your application",
+        description: "Adding your answers to My PDFs…",
       });
 
       try {
@@ -548,7 +537,7 @@ export function NecFinalizeIntercept() {
         if (saved) {
           toast.success({
             title: "Saved",
-            description: "Your 1099-NEC in My PDFs is up to date.",
+            description: "Your DS-11 is in My PDFs.",
           });
         } else {
           toast.error({
@@ -558,7 +547,7 @@ export function NecFinalizeIntercept() {
         }
       } catch (err) {
         toast.close(saveLoadingKey);
-        logger.captureError(err, "1099-nec.save");
+        logger.captureError(err, "ds-11.save");
         toast.error({
           title: "Save failed",
           description: "Could not save your progress.",
@@ -568,11 +557,9 @@ export function NecFinalizeIntercept() {
       }
     };
 
-    // Navigating away never writes a library row, matching the W-9. The
-    // entries live in the local draft and are restored on the next visit;
-    // only an explicit Save or Download touches My PDFs. Answering here
-    // rather than ignoring the event keeps navigation from stalling on the
-    // caller's 30s timeout.
+    // Navigating away never writes a library row, matching the W-9 and
+    // the 1099-NEC. Answers the caller so navigation does not stall on its
+    // 30s timeout.
     const onSaveAndContinue = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveAndContinueDetail>).detail;

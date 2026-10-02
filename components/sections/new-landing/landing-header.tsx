@@ -14,6 +14,7 @@ import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { clearAllDs11Drafts } from "@/components/sections/forms/Ds11AutoPersist";
 import { clearAllNecDrafts } from "@/components/sections/forms/NecAutoPersist";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -48,6 +49,8 @@ const AUTH_RETURN_ROUTES = [
   "/pdf-editor",
   "/w-9-form",
   "/forms/w-9",
+  "/forms/1099-nec/edit",
+  "/forms/ds-11/edit",
   "/convert/",
 ] as const;
 
@@ -142,6 +145,7 @@ export function LandingHeader() {
   const handleLogOut = () => {
     void usersService.signOutAudit().catch(() => undefined);
     clearAllNecDrafts();
+    clearAllDs11Drafts();
     void signOut();
   };
 

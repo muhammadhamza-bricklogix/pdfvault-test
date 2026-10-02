@@ -54,6 +54,7 @@ export const W9_SCHEMA: FormSchema = {
           // The radio is rendered as 7 separate AcroForm check-boxes; the
           // editor stamps the right one via the matching pdfRef suffix.
           pdfRef: "topmostSubform[0].Page1[0].Boxes3a-b_ReadOrder[0].c1_1",
+          optionFields: { llc: ["f1_03"], other: ["f1_04"] },
           rect: { page: 1, x: 73, y: 553.97, w: 320, h: 60 },
           options: [
             {
