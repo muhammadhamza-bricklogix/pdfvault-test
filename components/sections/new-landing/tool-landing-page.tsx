@@ -103,7 +103,7 @@ export function ToolLandingPage({
           <div className="pv-container flex flex-col items-center text-center">
             <h1
               {...fenceProps}
-              className={`pv-display max-w-[820px] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
+              className={`font-bold leading-[1.05] tracking-[-0.03em] whitespace-nowrap text-[clamp(15px,5.5vw,56px)] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
             >
               {heroTitle}
             </h1>
