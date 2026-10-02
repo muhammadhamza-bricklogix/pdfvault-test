@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -12,6 +11,8 @@ import {
 } from "@/lib/shared/constants/footer";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+
+import { LocaleNavLink } from "./locale-nav-link";
 
 type FooterLink = { label: string; href: string; localised?: boolean };
 type FooterColumn = { heading: string; links: FooterLink[] };
@@ -248,7 +249,7 @@ export function LandingFooter() {
               <ul className="pv-footer-link-list mt-6 flex min-w-0 flex-col gap-[18px]">
                 {column.links.map((link) => (
                   <li key={link.label} className="min-w-0 max-w-full">
-                    <Link
+                    <LocaleNavLink
                       // Fence next-intl-sourced labels from Weglot so
                       // its cached EN→translated mapping doesn't
                       // overwrite our authored German copy. Un-migrated
@@ -258,7 +259,7 @@ export function LandingFooter() {
                       translate={link.localised ? "no" : undefined}
                     >
                       {link.label}
-                    </Link>
+                    </LocaleNavLink>
                   </li>
                 ))}
               </ul>
@@ -273,15 +274,17 @@ export function LandingFooter() {
         */}
         <div className="mt-14 border-t border-white/10 px-2 pb-14 pt-8 md:absolute md:left-10 md:right-10 md:top-[438px] md:mt-0 md:px-4 md:pb-0 md:pt-6 lg:px-6">
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            {/* CSS content: Weglot rebuilt this line and dropped the Arabic digits. */}
             <p className="text-start text-[11px] text-white/60 sm:text-[14px]">
-              © 2026,{" "}
               <span
-                className="notranslate wg-notranslate font-semibold text-white/90"
-                translate="no"
-              >
-                PDFVault
-              </span>{" "}
-              All rights reserved.
+                className="after:content-[attr(data-label)]"
+                data-label={tFooter("copyrightYear")}
+              />{" "}
+              <span className="font-semibold text-white/90 after:content-['PDFVault']" />{" "}
+              <span
+                className="after:content-[attr(data-label)]"
+                data-label={tFooter("rightsReserved")}
+              />
             </p>
             {/* Legal entity + short-form address required by Solidgate
                 compliance (EU-visible footer). Full postal address lives in

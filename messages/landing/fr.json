@@ -11,7 +11,9 @@
   },
   "footer": {
     "convert": "Convert",
-    "doNotSell": "Do Not Sell or Share My Data"
+    "doNotSell": "Do Not Sell or Share My Data",
+    "copyrightYear": "© 2026,",
+    "rightsReserved": "Tous droits réservés."
   },
   "tools": {
     "sign": {
@@ -20,7 +22,7 @@
     }
   },
   "upload": {
-    "maxFileSize": "Max file size: 100 MB"
+    "maxFileSize": "Taille maximale du fichier : 100 Mo"
   },
   "brand": {
     "name": "PDFVault"
@@ -35,7 +37,34 @@
     "description": "Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
   },
   "allToolsCatalog": {
-    "heading": "Every PDFVault tool"
+    "heading": "Every PDFVault tool",
+    "categories": {
+      "pdfComposer": "PDF COMPOSER",
+      "convertToPdf": "CONVERTIR EN PDF",
+      "convertFromPdf": "CONVERTIR À PARTIR D'UN FICHIER PDF",
+      "others": "AUTRES"
+    },
+    "tools": {
+      "editSign": "Modifier et signer",
+      "compress": "Compresser",
+      "organizePages": "Organiser les pages",
+      "mergePdf": "Fusionner des fichiers PDF",
+      "splitExtractPages": "Diviser et extraire des pages",
+      "passwordProtect": "Protection par mot de passe",
+      "unlockPdf": "Déverrouiller le PDF",
+      "rotatePages": "Faire pivoter les pages",
+      "deletePages": "Supprimer des pages",
+      "wordToPdf": "Word vers PDF",
+      "pngToPdf": "PNG vers PDF",
+      "jpgToPdf": "JPG vers PDF",
+      "pdfToWord": "PDF vers WORD",
+      "pdfToPng": "PDF vers PNG",
+      "pdfToJpg": "PDF vers JPG",
+      "extractImages": "Extraire des images",
+      "removeAnnotations": "Supprimer les annotations",
+      "watermark": "Filigrane",
+      "formsW9": "Formulaires (W-9)"
+    }
   },
   "steps": {
     "sectionTitle": "Get started in three simple steps",
@@ -68,5 +97,9 @@
   "about": {
     "filesLine": "We treat every file with the same care — they are held securely, encrypted in transit and at rest.",
     "hashingLine": "Passwords are stored as hashed values so we never see your plain-text password."
+  },
+  "banner": {
+    "createVault": "Créez votre coffre-fort gratuit",
+    "managePdfs": "Gérer vos fichiers PDF"
   }
 }

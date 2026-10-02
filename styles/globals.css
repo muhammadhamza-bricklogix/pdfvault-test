@@ -368,3 +368,13 @@ body {
   }
 }
 
+
+/* Long unbroken strings (e.g. file names) wrap inside toasts instead of overflowing. */
+.toast__content {
+  min-width: 0;
+}
+
+.toast__title,
+.toast__description {
+  overflow-wrap: anywhere;
+}
