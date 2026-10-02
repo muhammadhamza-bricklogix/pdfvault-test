@@ -71,7 +71,7 @@ export default async function ConvertPage({
             <h1 className="font-bold leading-[1.05] tracking-[-0.03em] whitespace-nowrap text-[clamp(15px,5.5vw,56px)] text-[#121212]">
               {route.heroTitle ?? route.title}
             </h1>
-            <p className="mt-6 max-w-[560px] text-[18px] leading-relaxed font-medium text-[var(--pv-gray-8)]">
+            <p className="mt-6 font-medium leading-relaxed whitespace-nowrap text-[clamp(11px,2.3vw,20px)] text-[var(--pv-gray-8)]">
               {route.heroSubtitle ?? route.description}
             </p>
           </div>

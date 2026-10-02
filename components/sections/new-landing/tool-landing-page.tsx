@@ -109,7 +109,7 @@ export function ToolLandingPage({
             </h1>
             <p
               {...fenceProps}
-              className={`mt-6 max-w-[560px] text-[18px] leading-relaxed font-medium text-[var(--pv-gray-8)] ${fenceProps.className ?? ""}`.trim()}
+              className={`mt-6 font-medium leading-relaxed whitespace-nowrap text-[clamp(11px,2.3vw,20px)] text-[var(--pv-gray-8)] ${fenceProps.className ?? ""}`.trim()}
             >
               {heroDescription}
             </p>
