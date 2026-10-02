@@ -57,7 +57,8 @@
       "removeAnnotations": "Anmerkungen entfernen",
       "watermark": "Wasserzeichen",
       "formsW9": "Formulare (W-9)",
-      "forms1099Nec": "Formulare (1099-NEC)"
+      "forms1099Nec": "Formulare (1099-NEC)",
+      "formsDs11": "Formulare (DS-11)"
     }
   },
   "steps": {
