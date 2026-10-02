@@ -1,10 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
 import { LandingFooter } from "./landing-footer";
+import { LandingFreshStart } from "./landing-fresh-start";
 import { LandingHeader } from "./landing-header";
+import { LandingSteps } from "./landing-steps";
+import { LandingTestimonials } from "./landing-testimonials";
 import { UploadWorkspace } from "./upload-workspace";
+
+// Below-fold client sections — mirror the root `/` landing's dynamic imports
+// so each tool landing ships the full page (hero → steps → tools → banner →
+// testimonials → FAQ → footer) with the same chunking strategy.
+const LandingTools = dynamic(() =>
+  import("./landing-tools").then((m) => m.LandingTools),
+);
+const LandingBanner = dynamic(() =>
+  import("./landing-banner").then((m) => m.LandingBanner),
+);
+const LandingFAQ = dynamic(() =>
+  import("./landing-faq").then((m) => m.LandingFAQ),
+);
 
 interface ToolLandingPageProps {
   /** Hero headline shown at the top of the page. */
@@ -79,6 +96,7 @@ export function ToolLandingPage({
 
   return (
     <div id="top">
+      <LandingFreshStart />
       <LandingHeader />
       <main>
         <section className="bg-white pt-14 pb-8 sm:pt-20 sm:pb-10">
@@ -107,6 +125,11 @@ export function ToolLandingPage({
             />
           </div>
         </section>
+        <LandingSteps />
+        <LandingTools />
+        <LandingBanner />
+        <LandingTestimonials />
+        <LandingFAQ />
       </main>
       <LandingFooter />
     </div>
