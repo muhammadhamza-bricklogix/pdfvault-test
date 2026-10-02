@@ -49,8 +49,9 @@ function isChecked(raw: string | undefined): boolean {
   return raw === "true" || raw === "on" || raw === "1";
 }
 
-export async function stampNecPreview(
+async function stampNec(
   values: Record<string, string>,
+  { singlePage }: { singlePage: boolean },
 ): Promise<Uint8Array> {
   const res = await fetch(ROUTES.STATIC.NEC_1099_BLANK_PDF, {
     cache: "force-cache",
@@ -91,10 +92,24 @@ export async function stampNecPreview(
 
   form.flatten();
 
+  if (!singlePage) return pdfDoc.save();
+
   const preview = await PDFDocument.create();
   const [copyA] = await preview.copyPages(pdfDoc, [COPY_A_PAGE_INDEX]);
 
   if (copyA) preview.addPage(copyA);
 
   return preview.save();
+}
+
+export async function stampNecPreview(
+  values: Record<string, string>,
+): Promise<Uint8Array> {
+  return stampNec(values, { singlePage: true });
+}
+
+export async function stampNecDocument(
+  values: Record<string, string>,
+): Promise<Uint8Array> {
+  return stampNec(values, { singlePage: false });
 }

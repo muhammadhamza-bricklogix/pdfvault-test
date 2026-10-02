@@ -29,7 +29,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
             "topmostSubform[0].CopyA[0].PgHeader[0].CalendarYear[0].f1_1[0]",
           maxLength: 4,
           rect: { page: 2, x: 417.6, y: 687, w: 28.8, h: 9 },
-          overlayFontSize: 8,
         },
         {
           id: "is_void",
@@ -63,7 +62,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_2[0]",
           multiline: true,
           rect: { page: 2, x: 52.4, y: 720, w: 241.8, h: 24 },
-          overlayFontSize: 11,
         },
         {
           id: "payer_street",
@@ -72,7 +70,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_3[0]",
           rect: { page: 2, x: 52.4, y: 696, w: 155.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_suite",
@@ -81,7 +78,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_4[0]",
           rect: { page: 2, x: 209.8, y: 696, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_city",
@@ -90,7 +86,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_5[0]",
           rect: { page: 2, x: 52.4, y: 672, w: 155.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_phone",
@@ -99,7 +94,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_6[0]",
           rect: { page: 2, x: 209.8, y: 672, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_state",
@@ -109,7 +103,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_7[0]",
           maxLength: 2,
           rect: { page: 2, x: 52.4, y: 648, w: 119.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_country",
@@ -119,7 +112,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_8[0]",
           maxLength: 2,
           rect: { page: 2, x: 173.8, y: 648, w: 34, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_zip",
@@ -128,7 +120,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_9[0]",
           rect: { page: 2, x: 209.8, y: 648, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "payer_tin",
@@ -138,7 +129,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_10[0]",
           maxLength: 11,
           rect: { page: 2, x: 52.4, y: 612, w: 119.4, h: 24 },
-          overlayFontSize: 11,
         },
       ],
     },
@@ -156,7 +146,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_11[0]",
           maxLength: 11,
           rect: { page: 2, x: 173.8, y: 612, w: 120.4, h: 24 },
-          overlayFontSize: 11,
         },
         {
           id: "recipient_name",
@@ -166,7 +155,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_12[0]",
           multiline: true,
           rect: { page: 2, x: 52.4, y: 576, w: 241.8, h: 24 },
-          overlayFontSize: 11,
         },
         {
           id: "recipient_street",
@@ -175,7 +163,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_13[0]",
           rect: { page: 2, x: 52.4, y: 552, w: 191.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "recipient_apt",
@@ -184,7 +171,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_14[0]",
           rect: { page: 2, x: 245.8, y: 552, w: 48.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "recipient_city",
@@ -193,7 +179,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_15[0]",
           rect: { page: 2, x: 52.4, y: 528, w: 241.8, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "recipient_state",
@@ -203,7 +188,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_16[0]",
           maxLength: 2,
           rect: { page: 2, x: 52.4, y: 504, w: 119.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "recipient_country",
@@ -213,7 +197,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_17[0]",
           maxLength: 2,
           rect: { page: 2, x: 173.8, y: 504, w: 34, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "recipient_zip",
@@ -222,7 +205,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_18[0]",
           rect: { page: 2, x: 209.8, y: 504, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "account_number",
@@ -232,7 +214,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_19[0]",
           maxLength: 44,
           rect: { page: 2, x: 52.4, y: 432, w: 198.6, h: 24 },
-          overlayFontSize: 11,
         },
         {
           id: "second_tin_notice",
@@ -257,7 +238,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_20[0]",
           rect: { page: 2, x: 309.6, y: 648, w: 185.2, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box1b_cash_tips",
@@ -267,7 +247,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef:
             "topmostSubform[0].CopyA[0].RightCol[0].Box1b_ReadOrder[0].f1_21[0]",
           rect: { page: 2, x: 309.6, y: 612, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box1c_ttoc",
@@ -277,7 +256,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_22[0]",
           maxLength: 3,
           rect: { page: 2, x: 397.5, y: 612, w: 47.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box1c_ttoc_2",
@@ -287,7 +265,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_23[0]",
           maxLength: 3,
           rect: { page: 2, x: 447.9, y: 612, w: 47.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box1d_overtime",
@@ -296,7 +273,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_24[0]",
           rect: { page: 2, x: 309.6, y: 576, w: 185.2, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box2_direct_sales",
@@ -314,7 +290,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_25[0]",
           rect: { page: 2, x: 309.6, y: 504, w: 185.2, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box4_fed_tax_withheld",
@@ -323,7 +298,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_26[0]",
           rect: { page: 2, x: 309.6, y: 468, w: 185.2, h: 12 },
-          overlayFontSize: 10,
         },
       ],
     },
@@ -341,7 +315,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef:
             "topmostSubform[0].CopyA[0].RightCol[0].Box5_ReadOrder[0].f1_27[0]",
           rect: { page: 2, x: 309.6, y: 444, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box6_state_no_1",
@@ -351,7 +324,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef:
             "topmostSubform[0].CopyA[0].RightCol[0].Box6_ReadOrder[0].f1_29[0]",
           rect: { page: 2, x: 397, y: 444, w: 97.8, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box7_state_income_1",
@@ -360,7 +332,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_31[0]",
           rect: { page: 2, x: 511.2, y: 444, w: 64.8, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box5_state_tax_2",
@@ -370,7 +341,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef:
             "topmostSubform[0].CopyA[0].RightCol[0].Box5_ReadOrder[0].f1_28[0]",
           rect: { page: 2, x: 309.6, y: 432, w: 84.4, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box6_state_no_2",
@@ -380,7 +350,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           pdfRef:
             "topmostSubform[0].CopyA[0].RightCol[0].Box6_ReadOrder[0].f1_30[0]",
           rect: { page: 2, x: 397, y: 432, w: 97.8, h: 12 },
-          overlayFontSize: 10,
         },
         {
           id: "box7_state_income_2",
@@ -389,7 +358,6 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].RightCol[0].f1_32[0]",
           rect: { page: 2, x: 511.2, y: 432, w: 64.8, h: 12 },
-          overlayFontSize: 10,
         },
       ],
     },
