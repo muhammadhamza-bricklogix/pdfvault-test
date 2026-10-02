@@ -38,6 +38,12 @@ const FORM_CARDS: readonly FormCardEntry[] = [
     href: ROUTES.FORMS.NEC_1099,
     icon: File01Icon,
   },
+  {
+    title: "Form DS-11",
+    description: "Apply for a U.S. passport book or passport card.",
+    href: ROUTES.FORMS.DS11,
+    icon: File01Icon,
+  },
 ];
 
 const FORM_CARD_CLASSNAME =
