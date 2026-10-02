@@ -1,11 +1,31 @@
 import type { Metadata } from "next";
 
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
+import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
 import { LandingHeader } from "@/components/sections/new-landing/landing-header";
+import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
+import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 import { UploadWorkspace } from "@/components/sections/new-landing/upload-workspace";
 import { CONVERT_ROUTES } from "@/lib/shared/constants/convert-routes";
+
+const LandingTools = dynamic(() =>
+  import("@/components/sections/new-landing/landing-tools").then(
+    (m) => m.LandingTools,
+  ),
+);
+const LandingBanner = dynamic(() =>
+  import("@/components/sections/new-landing/landing-banner").then(
+    (m) => m.LandingBanner,
+  ),
+);
+const LandingFAQ = dynamic(() =>
+  import("@/components/sections/new-landing/landing-faq").then(
+    (m) => m.LandingFAQ,
+  ),
+);
 
 interface Params {
   slug: string;
@@ -43,6 +63,7 @@ export default async function ConvertPage({
 
   return (
     <div id="top">
+      <LandingFreshStart />
       <LandingHeader />
       <main>
         <section className="bg-white pb-8 pt-14 sm:pb-10 sm:pt-20">
@@ -64,6 +85,11 @@ export default async function ConvertPage({
             />
           </div>
         </section>
+        <LandingSteps />
+        <LandingTools />
+        <LandingBanner />
+        <LandingTestimonials />
+        <LandingFAQ />
       </main>
       <LandingFooter />
     </div>
