@@ -57,11 +57,7 @@ import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
-import {
-  ROUTES,
-  isNec1099EditorRoute,
-  isTaxFormEditorRoute,
-} from "@/lib/shared/constants/routes";
+import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { EditableFilenameField } from "./EditableFilenameField";
@@ -337,7 +333,6 @@ function TopAppBar() {
   // direct `===` comparison would flip false on non-EN locales,
   // leaving the composer HamburgerMenu + Tool row visible on W-9 in
   const showW9Save = isTaxFormEditorRoute(pathname);
-  const canSaveOnNavigate = isNec1099EditorRoute(pathname);
   const file = usePdfEditorStore((s) => s.file);
   const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
@@ -482,8 +477,8 @@ function TopAppBar() {
   const handleBack = () => {
     const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
-    if (showW9Save && !canSaveOnNavigate) {
-      // W-9 Back is plain navigation. Do not dispatch
+    if (showW9Save) {
+      // Form editors navigate away plainly. Do not dispatch
       // `editor:w9-save-and-continue` here because that path finalizes the
       // W-9 and can open the paywall; payment stays tied to explicit
       // Save/Done/Download actions.
@@ -504,7 +499,6 @@ function TopAppBar() {
         detail: {
           url: targetUrl,
           clearFileAfter: true,
-          force: canSaveOnNavigate,
         },
       }),
     );
@@ -529,8 +523,8 @@ function TopAppBar() {
 
     const targetUrl = ROUTES.PUBLIC.HOME;
 
-    if (showW9Save && !canSaveOnNavigate) {
-      // W-9 Logo is plain navigation, matching the Back button. Do not
+    if (showW9Save) {
+      // Logo is plain navigation, matching the Back button. Do not
       // dispatch `editor:w9-save-and-continue` because that finalizes the
       // form and can open the paywall.
       clearFile();
@@ -656,13 +650,19 @@ function TopAppBar() {
         {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
             fit-to-text sizing (no more `flex-1` stretch), click-to-edit
             via pencil icon, tick button to save, blank-name guarded. */}
-        <EditableFilenameField
-          className="min-w-0 max-w-[50vw] flex-shrink"
-          disabled={!file}
-          fontSizeClass="text-[14px]"
-          value={displayName}
-          onCommit={commitRename}
-        />
+        {showW9Save ? (
+          <span className="min-w-0 max-w-[50vw] flex-shrink truncate text-[14px] font-medium text-[var(--color-foreground)]">
+            {displayName}
+          </span>
+        ) : (
+          <EditableFilenameField
+            className="min-w-0 max-w-[50vw] flex-shrink"
+            disabled={!file}
+            fontSizeClass="text-[14px]"
+            value={displayName}
+            onCommit={commitRename}
+          />
+        )}
       </div>
 
       {/* ── RIGHT SECTION: view controls + actions ──────────────────── */}

@@ -30,6 +30,22 @@ export function getNecInstanceId(): string | null {
   return activeInstanceId;
 }
 
+function readActiveKey(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(ACTIVE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** The library row this draft is already bound to, if it has one. */
+export function getNecBoundDocumentId(): string | null {
+  const id = activeInstanceId ?? readActiveKey();
+
+  return id && id.startsWith("doc:") ? id.slice(4) : null;
+}
+
 export function readNecDraft(
   instanceId: string | null,
 ): Record<string, string> | null {
