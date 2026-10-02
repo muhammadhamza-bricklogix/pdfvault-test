@@ -11,7 +11,9 @@
   },
   "footer": {
     "convert": "Convert",
-    "doNotSell": "Do Not Sell or Share My Data"
+    "doNotSell": "Do Not Sell or Share My Data",
+    "copyrightYear": "© ٢٠٢٦،",
+    "rightsReserved": "جميع الحقوق محفوظة."
   },
   "tools": {
     "sign": {
@@ -20,7 +22,7 @@
     }
   },
   "upload": {
-    "maxFileSize": "Max file size: 100 MB"
+    "maxFileSize": "الحجم الأقصى للملف: ١٠٠ ميغابايت"
   },
   "brand": {
     "name": "PDFVault"
@@ -61,10 +63,7 @@
       "extractImages": "استخراج الصور",
       "removeAnnotations": "إزالة التعليقات التوضيحية",
       "watermark": "العلامة المائية",
-      "formsW9": "النماذج (W-9)",
-      "forms1099Nec": "النماذج (1099-NEC)",
-      "formsDs11": "النماذج (DS-11)",
-      "formsDs82": "النماذج (DS-82)"
+      "formsW9": "النماذج (W-9)"
     }
   },
   "steps": {
@@ -98,5 +97,9 @@
   "about": {
     "filesLine": "We treat every file with the same care — they are held securely, encrypted in transit and at rest.",
     "hashingLine": "Passwords are stored as hashed values so we never see your plain-text password."
+  },
+  "banner": {
+    "createVault": "أنشئ خزانتك المجانية",
+    "managePdfs": "إدارة ملفات PDF الخاصة بك"
   }
 }

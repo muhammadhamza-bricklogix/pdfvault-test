@@ -11,7 +11,9 @@
   },
   "footer": {
     "convert": "Convert",
-    "doNotSell": "Do Not Sell or Share My Data"
+    "doNotSell": "Do Not Sell or Share My Data",
+    "copyrightYear": "© 2026,",
+    "rightsReserved": "Todos los derechos reservados."
   },
   "tools": {
     "sign": {
@@ -20,7 +22,7 @@
     }
   },
   "upload": {
-    "maxFileSize": "Max file size: 100 MB"
+    "maxFileSize": "Tamaño máximo del archivo: 100 MB"
   },
   "brand": {
     "name": "PDFVault"
@@ -61,10 +63,7 @@
       "extractImages": "Extraer imágenes",
       "removeAnnotations": "Eliminar anotaciones",
       "watermark": "Marca de agua",
-      "formsW9": "Formularios (W-9)",
-      "forms1099Nec": "Formularios (1099-NEC)",
-      "formsDs11": "Formularios (DS-11)",
-      "formsDs82": "Formularios (DS-82)"
+      "formsW9": "Formularios (W-9)"
     }
   },
   "steps": {
@@ -98,5 +97,9 @@
   "about": {
     "filesLine": "We treat every file with the same care — they are held securely, encrypted in transit and at rest.",
     "hashingLine": "Passwords are stored as hashed values so we never see your plain-text password."
+  },
+  "banner": {
+    "createVault": "Crea tu caja fuerte gratuita",
+    "managePdfs": "Gestiona tus archivos PDF"
   }
 }

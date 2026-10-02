@@ -11,7 +11,9 @@
   },
   "footer": {
     "convert": "Umwandeln",
-    "doNotSell": "Meine Daten nicht verkaufen oder weitergeben"
+    "doNotSell": "Meine Daten nicht verkaufen oder weitergeben",
+    "copyrightYear": "© 2026,",
+    "rightsReserved": "Alle Rechte vorbehalten."
   },
   "tools": {
     "sign": {
@@ -61,10 +63,7 @@
       "extractImages": "Bilder extrahieren",
       "removeAnnotations": "Anmerkungen entfernen",
       "watermark": "Wasserzeichen",
-      "formsW9": "Formulare (W-9)",
-      "forms1099Nec": "Formulare (1099-NEC)",
-      "formsDs11": "Formulare (DS-11)",
-      "formsDs82": "Formulare (DS-82)"
+      "formsW9": "Formulare (W-9)"
     }
   },
   "steps": {
@@ -98,5 +97,9 @@
   "about": {
     "filesLine": "Wir behandeln alle Dateien mit derselben Sorgfalt — sie werden sicher aufbewahrt und sowohl bei der Übertragung als auch im Ruhezustand verschlüsselt.",
     "hashingLine": "Passwörter werden als Hashwerte gespeichert, sodass wir Ihr Klartext-Passwort niemals sehen."
+  },
+  "banner": {
+    "createVault": "Erstellen Sie Ihren kostenlosen Tresor",
+    "managePdfs": "Verwalten Sie Ihre PDF-Dateien"
   }
 }

@@ -1075,7 +1075,7 @@ export function UploadWorkspace({
               {file ? (
                 <div className="flex flex-col items-center">
                   <HeroFolderIcon />
-                  <p className="mt-6 text-[18px] font-semibold text-[#121212]">
+                  <p className="mt-6 max-w-full text-center text-[18px] font-semibold text-[#121212] [overflow-wrap:anywhere]">
                     {file.name}
                   </p>
                   <p className="mt-1 text-[14px] text-[#818285]">
@@ -1133,7 +1133,11 @@ export function UploadWorkspace({
                     className="notranslate wg-notranslate mt-5 text-[14px] text-[#8A8A8A]"
                     translate="no"
                   >
-                    {tUpload("maxFileSize")}
+                    {/* CSS content: Weglot re-translated this line and dropped the locale digits. */}
+                    <span
+                      className="after:content-[attr(data-label)]"
+                      data-label={tUpload("maxFileSize")}
+                    />
                   </p>
                 </div>
               )}
@@ -1293,7 +1297,7 @@ export function UploadWorkspace({
                     src="/landing/upload-image.png"
                     width={180}
                   />
-                  <p className="mt-6 text-[18px] font-semibold text-[var(--pv-text-primary)]">
+                  <p className="mt-6 max-w-full text-center text-[18px] font-semibold text-[var(--pv-text-primary)] [overflow-wrap:anywhere]">
                     {file.name}
                   </p>
                   <p className="mt-1 text-[14px] text-[var(--pv-text-secondary)]">
