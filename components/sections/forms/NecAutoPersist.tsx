@@ -23,10 +23,23 @@ export function readPendingNecState(): Record<string, string> | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
+}
+
+// A finalized session rejects PATCH, so the autosave mirror retires once
+// the form has been stamped.
+let necSessionFinalized = false;
+
+export function markNecSessionFinalized() {
+  necSessionFinalized = true;
+}
+
+export function resetNecSessionFinalized() {
+  necSessionFinalized = false;
 }
 
 export function NecAutoPersist() {
@@ -51,12 +64,10 @@ export function NecAutoPersist() {
       }
       const { sessionId } = useFormEditorStore.getState();
 
-      if (!sessionId) return;
-      formsService
-        .patchFormSession(sessionId, latest)
-        .catch((err: unknown) => {
-          logger.captureError(err, "nec.auto_persist_patch", { sessionId });
-        });
+      if (!sessionId || necSessionFinalized) return;
+      formsService.patchFormSession(sessionId, latest).catch((err: unknown) => {
+        logger.captureError(err, "nec.auto_persist_patch", { sessionId });
+      });
     };
 
     const flushLocalDebounced = () => {
@@ -68,12 +79,10 @@ export function NecAutoPersist() {
       dbTimeout = null;
       const { sessionId } = useFormEditorStore.getState();
 
-      if (!sessionId) return;
-      formsService
-        .patchFormSession(sessionId, latest)
-        .catch((err: unknown) => {
-          logger.captureError(err, "nec.auto_persist_patch", { sessionId });
-        });
+      if (!sessionId || necSessionFinalized) return;
+      formsService.patchFormSession(sessionId, latest).catch((err: unknown) => {
+        logger.captureError(err, "nec.auto_persist_patch", { sessionId });
+      });
     };
 
     const unsub = useFormEditorStore.subscribe((state, prev) => {
@@ -103,7 +112,20 @@ export function NecAutoPersist() {
       unsub();
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("beforeunload", onPageHide);
-      latest = snap();
+
+      // Do not re-read the store here: the parent's cleanup resets it
+      // first, so `latest` from the subscription is the last real value.
+      const hasValues = Object.values(latest).some(
+        (v) => typeof v === "string" && v.trim() !== "",
+      );
+
+      if (!hasValues) {
+        if (localTimeout !== null) window.clearTimeout(localTimeout);
+        if (dbTimeout !== null) window.clearTimeout(dbTimeout);
+
+        return;
+      }
+
       flushLocalNow();
       flushDbNow();
     };

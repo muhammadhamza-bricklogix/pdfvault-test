@@ -23,7 +23,7 @@ export function TextField({ field, mode, page }: FieldProps) {
 
     const css = pdfRectToCss(field.rect, page);
 
-    if (css.height >= 30) {
+    if (field.multiline) {
       return (
         <textarea
           aria-invalid={Boolean(error)}

@@ -17,7 +17,7 @@ const HERO_SUB =
   "Easily complete, review, and download your official IRS Form 1099-NEC for nonemployee compensation directly in your browser — no printing, scanning, or software installation needed.";
 const HERO_CTA_LABEL = "Open the 1099-NEC Template";
 const HERO_CTA_NOTE =
-  "Instant access. Edit your fields directly and download your clean, printable PDF.";
+  "No account needed to start. Sign in only when you're ready to save or download.";
 
 const HOW_TO_STEPS = [
   {
@@ -487,6 +487,14 @@ export function NecLandingContent() {
               <GetFormCta />
             </div>
           </section>
+
+          <p className="text-xs italic leading-6 text-default-500">
+            Disclaimer: This page is provided for general informational purposes
+            only and does not constitute tax, legal, or accounting advice. Tax
+            rules can change and may vary based on your individual circumstances
+            — consult a qualified tax professional or the IRS for guidance
+            specific to your situation.
+          </p>
         </article>
       </div>
     </div>

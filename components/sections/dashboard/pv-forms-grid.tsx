@@ -15,7 +15,7 @@ interface FormCardEntry {
 
 // Grid mirrors `PvToolsGrid`'s tile pattern so Forms and Tools read as
 // siblings under the same dashboard nav bar. Extend `FORM_CARDS` when
-// additional forms (W-4, 1099-NEC, W-7) become fillable.
+// additional forms (W-4, W-7) become fillable.
 const FORM_CARDS: readonly FormCardEntry[] = [
   {
     title: "IRS Form W-9",
@@ -30,6 +30,12 @@ const FORM_CARDS: readonly FormCardEntry[] = [
     // `ROUTES.FORMS.W9_SHORT` (`/w-9-form`) which skipped straight
     // into the editor.
     href: ROUTES.FORMS.W9,
+    icon: File01Icon,
+  },
+  {
+    title: "IRS Form 1099-NEC",
+    description: "Report nonemployee compensation of $600 or more.",
+    href: ROUTES.FORMS.NEC_1099,
     icon: File01Icon,
   },
 ];

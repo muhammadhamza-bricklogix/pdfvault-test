@@ -54,6 +54,9 @@ export type FormField = {
   format?: string;
   maxLength?: number;
   helpText?: string;
+  /** Mirrors the AcroForm widget's Multiline flag — `TextField` renders a
+   * `<textarea>` when true, an `<input>` otherwise. */
+  multiline?: boolean;
   /**
    * Overlay-only font size override in CSS px. When set, TextField skips
    * the height-derived font-size formula (`h * 0.65`) and uses this
