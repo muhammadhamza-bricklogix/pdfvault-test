@@ -64,7 +64,8 @@
       "removeAnnotations": "Supprimer les annotations",
       "watermark": "Filigrane",
       "formsW9": "Formulaires (W-9)",
-      "forms1099Nec": "Formulaires (1099-NEC)"
+      "forms1099Nec": "Formulaires (1099-NEC)",
+      "formsDs11": "Formulaires (DS-11)"
     }
   },
   "steps": {
