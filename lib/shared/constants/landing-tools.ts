@@ -284,6 +284,7 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       },
       {
         label: "Forms (1099-NEC)",
+        i18nKey: "forms1099Nec",
         icon: { kind: "line", id: "forms" },
         href: "/forms/1099-nec",
       },

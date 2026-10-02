@@ -63,7 +63,8 @@
       "extractImages": "Extract Images",
       "removeAnnotations": "Remove Annotations",
       "watermark": "Watermark",
-      "formsW9": "Forms (W-9)"
+      "formsW9": "Forms (W-9)",
+      "forms1099Nec": "Forms (1099-NEC)"
     }
   },
   "steps": {

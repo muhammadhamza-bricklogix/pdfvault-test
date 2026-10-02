@@ -63,7 +63,8 @@
       "extractImages": "Extraer imágenes",
       "removeAnnotations": "Eliminar anotaciones",
       "watermark": "Marca de agua",
-      "formsW9": "Formularios (W-9)"
+      "formsW9": "Formularios (W-9)",
+      "forms1099Nec": "Formularios (1099-NEC)"
     }
   },
   "steps": {
