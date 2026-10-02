@@ -43,11 +43,17 @@ export function BulkDeleteDocumentsModal({
         <Modal.Dialog className="sm:max-w-[440px]">
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Heading>Delete {count} documents?</Modal.Heading>
+            <Modal.Heading>
+              {count === 1
+                ? "Delete 1 document?"
+                : `Delete ${count} documents?`}
+            </Modal.Heading>
           </Modal.Header>
           <Modal.Body>
             <p className="text-sm text-default-500">
-              This cannot be undone. The following files will be removed:
+              {count === 1
+                ? "This cannot be undone. The following file will be removed:"
+                : "This cannot be undone. The following files will be removed:"}
             </p>
             <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[var(--color-foreground)]">
               {preview.map((doc) => (

@@ -426,7 +426,40 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     }
     /* eslint-enable react-hooks/immutability */
 
-    const handleMouseDown = async (opt: TPointerEventInfo) => {
+    // A tap just past either end of an extracted line (outside its glyph box) edits that line.
+    const findEditTextBesidePointer = (opt: TPointerEventInfo) => {
+      const isTouch =
+        typeof TouchEvent !== "undefined" && opt.e instanceof TouchEvent;
+      const tolerance = (isTouch ? 24 : 8) / (fc.getZoom() || 1);
+      const point = fc.getScenePoint(opt.e);
+      let nearest: FabricObject | null = null;
+      let nearestGap = Infinity;
+
+      for (const obj of fc.getObjects()) {
+        if ((obj as { editorType?: string }).editorType !== "editModeText") {
+          continue;
+        }
+        if (!obj.visible) continue;
+
+        const box = obj.getBoundingRect();
+
+        if (point.y < box.top || point.y > box.top + box.height) continue;
+
+        const gap =
+          point.x < box.left
+            ? box.left - point.x
+            : point.x - (box.left + box.width);
+
+        if (gap >= 0 && gap <= tolerance && gap < nearestGap) {
+          nearest = obj;
+          nearestGap = gap;
+        }
+      }
+
+      return nearest;
+    };
+
+    const handleEditTap = async (opt: TPointerEventInfo) => {
       // Edit Text tool — tap any IText sentence to start editing it.
       // Without this handler users would need Fabric's default
       // select-then-click sequence, which feels broken on touch.
@@ -434,19 +467,25 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         const target = opt.target as
           | (import("fabric").FabricObject & { editorType?: string })
           | null;
+        const lineTarget =
+          target?.editorType === "editModeText"
+            ? target
+            : target
+              ? null
+              : findEditTextBesidePointer(opt);
 
-        if (target && target.editorType === "editModeText") {
+        if (lineTarget) {
           // Structural check — extracted text is now a Textbox (extends
           // IText). `enterEditing` exists on both, so the instanceof
           // check we previously had against IText would miss Textbox.
-          const editable = target as unknown as {
+          const editable = lineTarget as unknown as {
             enterEditing?: (e?: Event) => void;
             setCursorByClick?: (e?: Event) => void;
             initDelayedCursor?: (restart?: boolean) => void;
           };
 
           if (typeof editable.enterEditing === "function") {
-            fc.setActiveObject(target);
+            fc.setActiveObject(lineTarget);
             editable.enterEditing(opt.e);
             // Position the caret at the tapped glyph. `enterEditing()` only
             // flips editing on — it leaves selectionStart at 0, so the first
@@ -569,6 +608,83 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       fc.renderAll();
     };
 
+    // Touch acts on release, and only for a tap, so a swipe scrolls instead of adding a box.
+    const TAP_SLOP_PX = 10;
+    const scroller = fc.upperCanvasEl.closest<HTMLElement>(
+      "[data-pdf-viewer-scroll]",
+    );
+    let pendingTouchTap: {
+      opt: TPointerEventInfo;
+      x: number;
+      y: number;
+      scrollLeft: number;
+      scrollTop: number;
+    } | null = null;
+
+    const touchPoint = (e: Event) => {
+      if (typeof TouchEvent === "undefined" || !(e instanceof TouchEvent)) {
+        return null;
+      }
+      const touch = e.touches[0] ?? e.changedTouches[0];
+
+      return touch ? { x: touch.clientX, y: touch.clientY } : null;
+    };
+
+    const handleMouseDown = (opt: TPointerEventInfo) => {
+      pendingTouchTap = null;
+      if (activeTool !== "editText" && activeTool !== "text") return;
+
+      const start = touchPoint(opt.e);
+
+      if (!start) {
+        void handleEditTap(opt);
+
+        return;
+      }
+      if ((opt.e as TouchEvent).touches.length > 1) return;
+
+      pendingTouchTap = {
+        opt,
+        ...start,
+        scrollLeft: scroller?.scrollLeft ?? 0,
+        scrollTop: scroller?.scrollTop ?? 0,
+      };
+    };
+
+    const handleMouseUp = (opt: TPointerEventInfo) => {
+      const pending = pendingTouchTap;
+
+      pendingTouchTap = null;
+      if (!pending) return;
+
+      const end = touchPoint(opt.e);
+      const isTap =
+        !!end &&
+        Math.hypot(end.x - pending.x, end.y - pending.y) <= TAP_SLOP_PX &&
+        (scroller?.scrollLeft ?? 0) === pending.scrollLeft &&
+        (scroller?.scrollTop ?? 0) === pending.scrollTop;
+
+      if (isTap) {
+        void handleEditTap(pending.opt);
+
+        return;
+      }
+
+      // Fabric selected the touched line on touchstart; clear it so the next swipe still scrolls.
+      const touched = pending.opt.target as
+        | (FabricObject & { editorType?: string; isEditing?: boolean })
+        | undefined;
+
+      if (
+        touched?.editorType === "editModeText" &&
+        !touched.isEditing &&
+        fc.getActiveObject() === touched
+      ) {
+        fc.discardActiveObject();
+        fc.requestRenderAll();
+      }
+    };
+
     // Resize handles must change the bounding box, NOT the rendered font
     // size. Fabric's default behaviour multiplies the visible glyphs by
     // scaleX/scaleY when the user drags corners — the user perceives this
@@ -606,6 +722,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     };
 
     fc.on("mouse:down", handleMouseDown);
+    fc.on("mouse:up", handleMouseUp);
     fc.on("object:scaling", handleScaling);
     fc.on("object:modified", handleScaling);
 
@@ -630,6 +747,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     return () => {
       fc.off("mouse:down", handleMouseDown);
+      fc.off("mouse:up", handleMouseUp);
       fc.off("object:scaling", handleScaling);
       fc.off("object:modified", handleScaling);
       fc.off("mouse:move", handleMouseMove);

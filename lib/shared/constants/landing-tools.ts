@@ -48,6 +48,8 @@ export type LandingToolIcon =
 
 export interface LandingTool {
   label: string;
+  /** Key under `allToolsCatalog.tools` in messages/landing. */
+  i18nKey: string;
   icon: LandingToolIcon;
   href: string;
 }
@@ -55,6 +57,8 @@ export interface LandingTool {
 export interface LandingToolCategory {
   id: string;
   heading: string;
+  /** Key under `allToolsCatalog.categories` in messages/landing. */
+  i18nKey: string;
   tools: LandingTool[];
 }
 
@@ -66,6 +70,8 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
     // relabeled "Edit & Sign" (title case) — the swap the design
     // review asked for. Same href — tile still opens the PDF editor.
     heading: "PDF COMPOSER",
+
+    i18nKey: "pdfComposer",
     tools: [
       // Each composer tool routes to its own marketing landing page
       // (`/edit`, `/compress`, `/organize-pdf`, …) that renders the shared
@@ -76,46 +82,64 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
       // under the hood.
       {
         label: "Edit & Sign",
+
+        i18nKey: "editSign",
         icon: { kind: "line", id: "editor" },
         href: "/edit",
       },
       {
         label: "Compress",
+
+        i18nKey: "compress",
         icon: { kind: "line", id: "compress" },
         href: "/compress",
       },
       {
         label: "Organize Pages",
+
+        i18nKey: "organizePages",
         icon: { kind: "line", id: "organize" },
         href: "/organize-pdf",
       },
       {
         label: "Merge PDF",
+
+        i18nKey: "mergePdf",
         icon: { kind: "line", id: "merge" },
         href: "/merge-pdf",
       },
       {
         label: "Split & Extract Pages",
+
+        i18nKey: "splitExtractPages",
         icon: { kind: "line", id: "split" },
         href: "/split-pdf",
       },
       {
         label: "Password Protect",
+
+        i18nKey: "passwordProtect",
         icon: { kind: "line", id: "password" },
         href: "/password-protect-pdf",
       },
       {
         label: "Unlock PDF",
+
+        i18nKey: "unlockPdf",
         icon: { kind: "line", id: "unlock" },
         href: "/unlock-pdf",
       },
       {
         label: "Rotate Pages",
+
+        i18nKey: "rotatePages",
         icon: { kind: "line", id: "rotate" },
         href: "/rotate-pdf",
       },
       {
         label: "Delete Pages",
+
+        i18nKey: "deletePages",
         icon: { kind: "line", id: "delete" },
         href: "/delete-pages",
       },
@@ -124,19 +148,27 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
   {
     id: "convert-to-pdf",
     heading: "CONVERT TO PDF",
+
+    i18nKey: "convertToPdf",
     tools: [
       {
         label: "Word to PDF",
+
+        i18nKey: "wordToPdf",
         icon: { kind: "badge", variant: "orange", badge: "DOC" },
         href: convert("word-to-pdf"),
       },
       {
         label: "PNG to PDF",
+
+        i18nKey: "pngToPdf",
         icon: { kind: "badge", variant: "orange", badge: "PNG" },
         href: convert("png-to-pdf"),
       },
       {
         label: "JPG to PDF",
+
+        i18nKey: "jpgToPdf",
         icon: { kind: "badge", variant: "orange", badge: "JPG" },
         href: convert("jpg-to-pdf"),
       },
@@ -164,19 +196,27 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
   {
     id: "convert-from-pdf",
     heading: "CONVERT FROM PDF",
+
+    i18nKey: "convertFromPdf",
     tools: [
       {
         label: "PDF to WORD",
+
+        i18nKey: "pdfToWord",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
         href: convert("pdf-to-word"),
       },
       {
         label: "PDF to PNG",
+
+        i18nKey: "pdfToPng",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
         href: convert("pdf-to-png"),
       },
       {
         label: "PDF to JPG",
+
+        i18nKey: "pdfToJpg",
         icon: { kind: "badge", variant: "blue", badge: "PDF" },
         href: convert("pdf-to-jpg"),
       },
@@ -208,27 +248,37 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
   {
     id: "others",
     heading: "OTHERS",
+
+    i18nKey: "others",
     // Edit Metadata / Crop / OCR / Repair PDF / Create Bookmarks removed —
     // not offered yet. Only kept features with a live backend or editor
     // implementation.
     tools: [
       {
         label: "Extract Images",
+
+        i18nKey: "extractImages",
         icon: { kind: "line", id: "extract-images" },
         href: "/extract-images",
       },
       {
         label: "Remove Annotations",
+
+        i18nKey: "removeAnnotations",
         icon: { kind: "line", id: "remove-annotations" },
         href: "/remove-annotations",
       },
       {
         label: "Watermark",
+
+        i18nKey: "watermark",
         icon: { kind: "line", id: "watermark" },
         href: "/watermark-pdf",
       },
       {
         label: "Forms (W-9)",
+
+        i18nKey: "formsW9",
         icon: { kind: "line", id: "forms" },
         href: "/forms/w-9",
       },

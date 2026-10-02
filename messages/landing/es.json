@@ -11,7 +11,9 @@
   },
   "footer": {
     "convert": "Convert",
-    "doNotSell": "Do Not Sell or Share My Data"
+    "doNotSell": "Do Not Sell or Share My Data",
+    "copyrightYear": "© 2026,",
+    "rightsReserved": "Todos los derechos reservados."
   },
   "tools": {
     "sign": {
@@ -20,7 +22,7 @@
     }
   },
   "upload": {
-    "maxFileSize": "Max file size: 100 MB"
+    "maxFileSize": "Tamaño máximo del archivo: 100 MB"
   },
   "brand": {
     "name": "PDFVault"
@@ -35,7 +37,34 @@
     "description": "Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
   },
   "allToolsCatalog": {
-    "heading": "Every PDFVault tool"
+    "heading": "Every PDFVault tool",
+    "categories": {
+      "pdfComposer": "PDF COMPOSER",
+      "convertToPdf": "CONVERTIR A PDF",
+      "convertFromPdf": "CONVERTIR DESDE PDF",
+      "others": "OTROS"
+    },
+    "tools": {
+      "editSign": "Editar y firmar",
+      "compress": "Comprimir",
+      "organizePages": "Organizar páginas",
+      "mergePdf": "Combinar archivos PDF",
+      "splitExtractPages": "Dividir y extraer páginas",
+      "passwordProtect": "Proteger con contraseña",
+      "unlockPdf": "Desbloquear PDF",
+      "rotatePages": "Girar páginas",
+      "deletePages": "Eliminar páginas",
+      "wordToPdf": "De Word a PDF",
+      "pngToPdf": "De PNG a PDF",
+      "jpgToPdf": "De JPG a PDF",
+      "pdfToWord": "De PDF a WORD",
+      "pdfToPng": "De PDF a PNG",
+      "pdfToJpg": "De PDF a JPG",
+      "extractImages": "Extraer imágenes",
+      "removeAnnotations": "Eliminar anotaciones",
+      "watermark": "Marca de agua",
+      "formsW9": "Formularios (W-9)"
+    }
   },
   "steps": {
     "sectionTitle": "Get started in three simple steps",
@@ -68,5 +97,9 @@
   "about": {
     "filesLine": "We treat every file with the same care — they are held securely, encrypted in transit and at rest.",
     "hashingLine": "Passwords are stored as hashed values so we never see your plain-text password."
+  },
+  "banner": {
+    "createVault": "Crea tu caja fuerte gratuita",
+    "managePdfs": "Gestiona tus archivos PDF"
   }
 }

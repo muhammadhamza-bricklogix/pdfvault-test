@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+import { localizeHref, useRouteLocale } from "./locale-nav-link";
 import { SectionHeading } from "./section-heading";
 
 /**
@@ -333,6 +334,7 @@ const MOBILE_INITIAL_COUNT = 4;
 
 export function LandingTools() {
   const { isSignedIn } = useAuth();
+  const routeLocale = useRouteLocale();
   const [activeTab, setActiveTab] = useState<TabId>("edit");
   const [expanded, setExpanded] = useState(false);
   // Localised tile labels — opt-in via `i18nKey` on individual tiles.
@@ -492,10 +494,13 @@ export function LandingTools() {
               >
                 <a
                   {...fenceProps}
-                  href={resolveToolHref(
-                    tool.href,
-                    tool.toolSlug,
-                    Boolean(isSignedIn),
+                  href={localizeHref(
+                    resolveToolHref(
+                      tool.href,
+                      tool.toolSlug,
+                      Boolean(isSignedIn),
+                    ),
+                    routeLocale,
                   )}
                 >
                   <span className="mx-auto flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">

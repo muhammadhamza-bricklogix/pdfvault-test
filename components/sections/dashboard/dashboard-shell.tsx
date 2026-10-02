@@ -409,13 +409,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <aside
         aria-hidden={!isMobileOpen}
         aria-label="Primary navigation"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-[var(--pv-canvas)] shadow-xl transition-transform duration-200 ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 start-0 z-50 flex w-[260px] flex-col bg-[var(--pv-canvas)] shadow-xl transition-transform duration-200 ${
+          isMobileOpen
+            ? "translate-x-0"
+            : "-translate-x-full rtl:translate-x-full"
         }`}
       >
         <button
           aria-label="Close navigation"
-          className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full text-[var(--pv-text-body)] hover:bg-[var(--pv-nav-active)]"
+          className="absolute end-3 top-3 flex size-8 items-center justify-center rounded-full text-[var(--pv-text-body)] hover:bg-[var(--pv-nav-active)]"
           type="button"
           onClick={() => setIsMobileOpen(false)}
         >

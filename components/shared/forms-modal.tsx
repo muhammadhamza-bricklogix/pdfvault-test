@@ -3,10 +3,10 @@
 import { ArrowRight02Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Modal } from "@heroui/react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { LocaleNavLink } from "@/components/sections/new-landing/locale-nav-link";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -130,7 +130,7 @@ export function FormsModal({ isOpen, onOpenChange }: FormsModalProps) {
 
                 return (
                   <li key={form.slug}>
-                    <Link
+                    <LocaleNavLink
                       className="group flex items-center gap-3 rounded-[12px] border border-[var(--pv-hairline,#EAEAEA)] bg-white p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--pv-hairline-strong,#D6D6D6)] hover:shadow-[0_10px_24px_-18px_rgba(23,23,23,0.35)]"
                       href={form.href}
                       onClick={(e) => {
@@ -142,7 +142,7 @@ export function FormsModal({ isOpen, onOpenChange }: FormsModalProps) {
                       }}
                     >
                       {inner}
-                    </Link>
+                    </LocaleNavLink>
                   </li>
                 );
               })}
