@@ -3,11 +3,14 @@
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
-import { markNecSessionFinalized } from "@/components/sections/forms/NecAutoPersist";
-import { NEC_LIBRARY_FILENAME } from "@/components/sections/forms/NecEditorBootstrap";
+import {
+  bindNecDraftToDocument,
+  markNecSessionFinalized,
+} from "@/components/sections/forms/NecAutoPersist";
+import { necLibraryFilename } from "@/components/sections/forms/NecEditorBootstrap";
 import { stampNecPreview } from "@/lib/client/forms/stamp-nec-client";
 import { validate1099Nec } from "@/lib/client/forms/validate-1099-nec";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
@@ -104,6 +107,17 @@ export function NecFinalizeIntercept() {
   );
   const sessionId = useFormEditorStore((s) => s.sessionId);
 
+  // Refs keep the listener registration stable; see W9FinalizeIntercept.
+  const isLoadedRef = useRef(isLoaded);
+  const isSignedInRef = useRef(isSignedIn);
+  const queryClientRef = useRef(queryClient);
+
+  useEffect(() => {
+    isLoadedRef.current = isLoaded;
+    isSignedInRef.current = isSignedIn;
+    queryClientRef.current = queryClient;
+  }, [isLoaded, isSignedIn, queryClient]);
+
   useEffect(() => {
     if (autoLaunchedRef.current) return;
     if (!isLoaded || !isSignedIn) return;
@@ -137,7 +151,7 @@ export function NecFinalizeIntercept() {
     return () => window.clearTimeout(timeoutId);
   }, [isLoaded, isSignedIn, sessionId, searchParams, pathname, router]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const finalizeGated = async (
       targetFilename: string,
     ): Promise<string | null> => {
@@ -155,7 +169,7 @@ export function NecFinalizeIntercept() {
         return null;
       }
 
-      if (!isLoaded) {
+      if (!isLoadedRef.current) {
         toast.error({
           title: "Just a sec",
           description: "Signing you in — try Download again in a moment.",
@@ -164,7 +178,7 @@ export function NecFinalizeIntercept() {
         return null;
       }
 
-      if (!isSignedIn) {
+      if (!isSignedInRef.current) {
         dispatchEmailFirstModal({
           redirectUrl: `${ROUTES.FORMS.NEC_1099_EDIT}?export=pdf&filename=${encodeURIComponent(targetFilename)}`,
           title: "Download your 1099-NEC",
@@ -251,7 +265,7 @@ export function NecFinalizeIntercept() {
           );
         }
         const blob = await res.blob();
-        const stampedFile = new File([blob], NEC_LIBRARY_FILENAME, {
+        const stampedFile = new File([blob], necLibraryFilename(values), {
           type: "application/pdf",
         });
         const editorState = JSON.stringify({ v: 1, nec: { values } });
@@ -265,9 +279,12 @@ export function NecFinalizeIntercept() {
           id: savedDoc.id,
           name: savedDoc.filename,
         });
+        bindNecDraftToDocument(savedDoc.id);
 
         try {
-          queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
+          queryClientRef.current.invalidateQueries({
+            queryKey: documentKeys.lists(),
+          });
         } catch {
           /* non-fatal */
         }
@@ -366,7 +383,7 @@ export function NecFinalizeIntercept() {
       });
 
       try {
-        const downloadUrl = await finalizeGated(NEC_LIBRARY_FILENAME);
+        const downloadUrl = await finalizeGated(necLibraryFilename(values));
 
         if (!downloadUrl) {
           toast.close(saveLoadingKey);
@@ -416,7 +433,7 @@ export function NecFinalizeIntercept() {
         return;
       }
 
-      if (!isLoaded || !isSignedIn) {
+      if (!isLoadedRef.current || !isSignedInRef.current) {
         detail.onComplete({ ok: true, reason: "not-signed-in" });
 
         return;
@@ -430,7 +447,7 @@ export function NecFinalizeIntercept() {
 
       void (async () => {
         try {
-          const downloadUrl = await finalizeGated(NEC_LIBRARY_FILENAME);
+          const downloadUrl = await finalizeGated(necLibraryFilename(values));
 
           if (!downloadUrl) {
             detail.onComplete({ ok: false, reason: "cancelled" });
@@ -438,7 +455,18 @@ export function NecFinalizeIntercept() {
             return;
           }
 
-          await saveToLibrary(downloadUrl, values);
+          const saved = await saveToLibrary(downloadUrl, values);
+
+          if (!saved) {
+            toast.error({
+              title: "Couldn’t save to My PDFs",
+              description:
+                "Your 1099-NEC was generated but not added to your library. Your work is kept here — try Save again.",
+            });
+            detail.onComplete({ ok: false, reason: "error" });
+
+            return;
+          }
           detail.onComplete({ ok: true });
         } catch (err) {
           logger.captureError(err, "1099-nec.save_and_continue");
@@ -470,7 +498,7 @@ export function NecFinalizeIntercept() {
         true,
       );
     };
-  }, [isLoaded, isSignedIn, queryClient]);
+  }, []);
 
   return null;
 }

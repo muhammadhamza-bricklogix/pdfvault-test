@@ -6,32 +6,134 @@ import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
-const STORAGE_KEY = "pv_nec_1099_pending";
+const DRAFT_PREFIX = "pv_nec_1099_draft:";
+const ACTIVE_KEY = "pv_nec_1099_active";
 const LOCAL_DEBOUNCE_MS = 400;
 const DB_DEBOUNCE_MS = 1200;
 
-export function savePendingNecState(values: Record<string, string>) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
-  } catch {
-    // Ignore storage quota errors
-  }
+let activeInstanceId: string | null = null;
+
+function newInstanceId(): string {
+  const rand =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
+  return `new:${rand}`;
 }
 
-export function readPendingNecState(): Record<string, string> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+function draftKey(instanceId: string): string {
+  return `${DRAFT_PREFIX}${instanceId}`;
+}
 
-    return raw ? JSON.parse(raw) : null;
+export function getNecInstanceId(): string | null {
+  return activeInstanceId;
+}
+
+export function readNecDraft(
+  instanceId: string | null,
+): Record<string, string> | null {
+  if (typeof window === "undefined" || !instanceId) return null;
+  try {
+    const raw = localStorage.getItem(draftKey(instanceId));
+
+    return raw ? (JSON.parse(raw) as Record<string, string>) : null;
   } catch {
     return null;
   }
 }
 
-// A finalized session rejects PATCH, so the autosave mirror retires once
-// the form has been stamped.
+export function writeNecDraft(
+  instanceId: string | null,
+  values: Record<string, string>,
+) {
+  if (typeof window === "undefined" || !instanceId) return;
+  try {
+    localStorage.setItem(draftKey(instanceId), JSON.stringify(values));
+    localStorage.setItem(ACTIVE_KEY, instanceId);
+  } catch {
+    // Ignore storage quota / access errors
+  }
+}
+
+export function clearNecDraft(instanceId: string | null) {
+  if (typeof window === "undefined" || !instanceId) return;
+  try {
+    localStorage.removeItem(draftKey(instanceId));
+    if (localStorage.getItem(ACTIVE_KEY) === instanceId) {
+      localStorage.removeItem(ACTIVE_KEY);
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+}
+
+/** Wipes every 1099-NEC draft. Used on sign-out so TINs do not outlive the session. */
+export function clearAllNecDrafts() {
+  if (typeof window === "undefined") return;
+  try {
+    const doomed: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+
+      if (k && (k.startsWith(DRAFT_PREFIX) || k === ACTIVE_KEY)) doomed.push(k);
+    }
+    doomed.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // Ignore storage access errors
+  }
+  activeInstanceId = null;
+}
+
+export function beginNecDraft(opts: {
+  resumeDocId?: string | null;
+  forceNew?: boolean;
+}): string {
+  if (opts.resumeDocId) {
+    activeInstanceId = `doc:${opts.resumeDocId}`;
+  } else if (opts.forceNew) {
+    activeInstanceId = newInstanceId();
+  } else {
+    let existing: string | null = null;
+
+    try {
+      existing = localStorage.getItem(ACTIVE_KEY);
+    } catch {
+      existing = null;
+    }
+    activeInstanceId = existing ?? newInstanceId();
+  }
+
+  try {
+    localStorage.setItem(ACTIVE_KEY, activeInstanceId);
+  } catch {
+    // Ignore storage access errors
+  }
+
+  return activeInstanceId;
+}
+
+export function bindNecDraftToDocument(documentId: string) {
+  const previous = activeInstanceId;
+  const next = `doc:${documentId}`;
+
+  if (previous === next) return;
+
+  const carried = readNecDraft(previous);
+
+  activeInstanceId = next;
+  if (carried) writeNecDraft(next, carried);
+  if (previous) clearNecDraft(previous);
+
+  try {
+    localStorage.setItem(ACTIVE_KEY, next);
+  } catch {
+    // Ignore storage access errors
+  }
+}
+
+// Only the server mirror retires on finalize; the local draft keeps updating.
 let necSessionFinalized = false;
 
 export function markNecSessionFinalized() {
@@ -49,12 +151,23 @@ export function NecAutoPersist() {
     const snap = () => useFormEditorStore.getState().values;
     let latest = snap();
 
+    const writeLocal = () => writeNecDraft(activeInstanceId, latest);
+
     const flushLocalNow = () => {
       if (localTimeout !== null) {
         window.clearTimeout(localTimeout);
         localTimeout = null;
       }
-      savePendingNecState(latest);
+      writeLocal();
+    };
+
+    const patchDb = () => {
+      const { sessionId } = useFormEditorStore.getState();
+
+      if (!sessionId || necSessionFinalized) return;
+      formsService.patchFormSession(sessionId, latest).catch((err: unknown) => {
+        logger.captureError(err, "nec.auto_persist_patch", { sessionId });
+      });
     };
 
     const flushDbNow = () => {
@@ -62,27 +175,17 @@ export function NecAutoPersist() {
         window.clearTimeout(dbTimeout);
         dbTimeout = null;
       }
-      const { sessionId } = useFormEditorStore.getState();
-
-      if (!sessionId || necSessionFinalized) return;
-      formsService.patchFormSession(sessionId, latest).catch((err: unknown) => {
-        logger.captureError(err, "nec.auto_persist_patch", { sessionId });
-      });
+      patchDb();
     };
 
     const flushLocalDebounced = () => {
       localTimeout = null;
-      savePendingNecState(latest);
+      writeLocal();
     };
 
     const flushDbDebounced = () => {
       dbTimeout = null;
-      const { sessionId } = useFormEditorStore.getState();
-
-      if (!sessionId || necSessionFinalized) return;
-      formsService.patchFormSession(sessionId, latest).catch((err: unknown) => {
-        logger.captureError(err, "nec.auto_persist_patch", { sessionId });
-      });
+      patchDb();
     };
 
     const unsub = useFormEditorStore.subscribe((state, prev) => {
@@ -102,7 +205,7 @@ export function NecAutoPersist() {
 
     const onPageHide = () => {
       latest = snap();
-      savePendingNecState(latest);
+      writeLocal();
     };
 
     window.addEventListener("pagehide", onPageHide);
