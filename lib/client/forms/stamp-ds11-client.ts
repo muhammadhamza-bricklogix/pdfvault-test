@@ -184,7 +184,10 @@ async function stampDs11(
 
   await stampFields(form, values);
   removeClearButton(form);
-  form.flatten();
+  // Deliberately NOT flattened (product decision 2026-10-04): the applicant
+  // should be able to correct the form in their reader after downloading it.
+  // The Clear button is still stripped above, so a live form cannot be wiped
+  // in one click.
 
   if (!applicationPagesOnly) return pdfDoc.save();
 
