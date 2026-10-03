@@ -5,7 +5,7 @@ import type { EncryptKeyLength } from "@/lib/shared/types/pdf-tools.types";
 import { useAuth } from "@clerk/nextjs";
 import { Button, Label, Modal } from "@heroui/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
@@ -30,11 +30,18 @@ export function PasswordModal() {
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
   const setPdfSourceUrl = usePdfEditorStore((s) => s.setPdfSourceUrl);
+  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const documentPassword = usePdfEditorStore((s) => s.documentPassword);
   const documentPasswordFileKey = usePdfEditorStore(
     (s) => s.documentPasswordFileKey,
   );
   const setDocumentPassword = usePdfEditorStore((s) => s.setDocumentPassword);
+  // Tracks whether a successful unlock happened before close. On
+  // unlock-only variant close WITHOUT this ref flipping, the editor
+  // behind the modal is still holding the encrypted file + a null
+  // pdfDocument → user sees a blank page with no way back. We clear
+  // the file so the shell's `!file` branch redirects away. QA row 38.
+  const didUnlockRef = useRef(false);
   const { isSignedIn } = useAuth();
   const tPw = useTranslations("passwordModal");
 
@@ -72,6 +79,23 @@ export function PasswordModal() {
     setMismatchError(false);
     setUnprotectError(null);
     setIsOpen(false);
+
+    // Row 38: cancelling the unlock-only modal with no successful unlock
+    // leaves the editor with an encrypted file + null pdfDocument, which
+    // renders as a blank page the user can't recover from. Reset the
+    // editor so the shell's `!file` guard routes them back to the
+    // dashboard / landing page with a friendly toast.
+    if (isUnlockOnly && !didUnlockRef.current) {
+      clearFile();
+      toast.info({
+        title: "Password required",
+        description:
+          "The PDF stays protected. Open it again and enter the password to continue.",
+      });
+    }
+    // Reset for the next open — fresh modal instance may follow a
+    // different flow.
+    didUnlockRef.current = false;
   };
 
   // Mirrors the Compress / Export flow: save the working PDF to IDB, pop
@@ -188,6 +212,9 @@ export function PasswordModal() {
           // them keep editing. QA 2026-08-26: users hit the unlock
           // screen with an already-unlocked PDF and had no way through.
           if (isUnlockOnly) {
+            // File isn't actually encrypted — flag so the cancel guard
+            // doesn't wipe it on close.
+            didUnlockRef.current = true;
             toast.info({
               title: "PDF is already unlocked",
               description: "You can start editing straight away.",
@@ -255,6 +282,9 @@ export function PasswordModal() {
       // Protection is gone — forget the remembered password so a
       // second Remove attempt correctly falls back to pdf.js checks.
       setDocumentPassword(null);
+      // Mark success BEFORE handleClose so the unlock-only cancel
+      // guard doesn't wipe the just-unlocked file.
+      didUnlockRef.current = true;
       toast.success({
         title: "PDF unlocked",
         description:
