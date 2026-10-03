@@ -339,6 +339,31 @@ export const DS_11_SCHEMA: FormSchema = {
     },
 
     {
+      id: "page2_header",
+      title: "Page 2 Header",
+      description:
+        "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
+      fields: [
+        {
+          id: "applicant_name_page2",
+          label: "Name of Applicant (Last, First, & Middle)",
+          type: "text",
+          required: false,
+          pdfRef: "Name of Applicant 2",
+          rect: { page: 6, x: 27.62, y: 737.47, w: 414.61, h: 21.11 },
+        },
+        {
+          id: "applicant_dob_page2",
+          label: "Date of Birth (MM/DD/YYYY)",
+          type: "text",
+          required: false,
+          pdfRef: "Applicant DOB 2",
+          rect: { page: 6, x: 455.67, y: 738.07, w: 130.36, h: 21.35 },
+        },
+      ],
+    },
+
+    {
       id: "parents",
       title: "10. Parental Information",
       description: "Both parents, as named at their own birth.",
