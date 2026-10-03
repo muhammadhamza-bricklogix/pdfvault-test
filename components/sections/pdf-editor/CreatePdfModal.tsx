@@ -60,16 +60,21 @@ const PAGE_COUNT_MAX = 50;
 
 // ─── Conversion helpers ───────────────────────────────────────────────────────
 
+// Keep 0.01pt precision: rounding to whole points made small in/cm steps snap back.
+function roundPt(pt: number): number {
+  return Math.round(pt * 100) / 100;
+}
+
 function toPt(value: number, unit: Unit): number {
   switch (unit) {
     case "cm":
-      return Math.round((value * 72) / 2.54);
+      return roundPt((value * 72) / 2.54);
     case "in":
-      return Math.round(value * 72);
+      return roundPt(value * 72);
     case "mm":
-      return Math.round((value * 72) / 25.4);
+      return roundPt((value * 72) / 25.4);
     case "pt":
-      return Math.round(value);
+      return roundPt(value);
   }
 }
 
@@ -332,7 +337,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     };
 
     if (proportionsLocked && widthPt > 0) {
-      updates.heightPt = Math.max(1, Math.round(newW * (heightPt / widthPt)));
+      updates.heightPt = Math.max(1, roundPt(newW * (heightPt / widthPt)));
     }
 
     patch(updates);
@@ -348,7 +353,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
     };
 
     if (proportionsLocked && heightPt > 0) {
-      updates.widthPt = Math.max(1, Math.round(newH * (widthPt / heightPt)));
+      updates.widthPt = Math.max(1, roundPt(newH * (widthPt / heightPt)));
     }
 
     patch(updates);
