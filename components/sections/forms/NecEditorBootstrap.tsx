@@ -119,7 +119,13 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     const resumedPromise = resumeDocId
       ? (async () => {
           try {
-            return await documentsService.getDocument(resumeDocId);
+            const doc = await documentsService.getDocument(resumeDocId);
+
+            // Only adopt a row that really is a saved 1099-NEC. Mirrors the
+            // W-9 guard: without it a stray `?resumeDocId=<non-nec-id>` lets
+            // the next Save upsert a stamped 1099-NEC on top of an unrelated
+            // user document, and names the editor's File after it.
+            return parseNecValues(doc.editorState) ? doc : null;
           } catch (err) {
             logger.captureError(err, "1099-nec.resume_from_library");
 

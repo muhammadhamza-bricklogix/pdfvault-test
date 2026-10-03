@@ -20,7 +20,6 @@ import {
   stampNecDocument,
   stampNecPreview,
 } from "@/lib/client/forms/stamp-nec-client";
-import { validate1099Nec } from "@/lib/client/forms/validate-1099-nec";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
@@ -225,31 +224,11 @@ export function NecFinalizeIntercept() {
         return lastFinalizeRef.current.downloadUrl;
       }
 
-      // Validation runs BEFORE the entitlement gate. The W-9 has no
-      // client-side validation on this path, so leaving it after the
-      // paywall made the 1099-NEC fail where the W-9 downloaded — and it
-      // asked a user to pay before telling them the form was unusable.
-      const errors = validate1099Nec({ values });
-      const errorIds = Object.keys(errors);
-
-      if (errorIds.length > 0) {
-        state.setErrors(errors);
-        toast.error({
-          title: "Check your 1099-NEC",
-          description:
-            errorIds.length === 1
-              ? errors[errorIds[0]!]
-              : `${errorIds.length} fields need attention — the first is: ${errors[errorIds[0]!]}`,
-        });
-
-        const firstEl = document.getElementById(`field-input-${errorIds[0]}`);
-
-        firstEl?.scrollIntoView({ block: "center", behavior: "smooth" });
-        (firstEl as HTMLInputElement | null)?.focus?.();
-
-        return null;
-      }
-
+      // A partially-filled 1099-NEC is downloadable, matching the W-9:
+      // users explicitly asked to be able to take away whatever they have
+      // so far. Client-side validation therefore no longer BLOCKS — the
+      // server filler still validates, and `finalizeOrStampLocally` below
+      // falls back to the local stamper when it refuses.
       state.setErrors({});
 
       const entitled = await ensureFreshEntitlement();
@@ -271,11 +250,33 @@ export function NecFinalizeIntercept() {
         }
       }
 
-      const { downloadUrl } = await formsService.finalizeFormSession({
-        sessionId: currentSessionId,
-        values,
-        signatureKey: null,
-      });
+      // The server filler rejects an incomplete form (422). That is the
+      // right guard for an official filing, but it must not stop the user
+      // taking away a draft — so stamp it locally instead, exactly as the
+      // W-9 does with `stampW9Client`. The local stamper fills all four
+      // copies and flattens, so the file is the same shape either way.
+      // Blob URLs are not cached: re-stamping is local and cheap, and a
+      // cached URL would outlive its revoke.
+      let downloadUrl: string;
+
+      try {
+        ({ downloadUrl } = await formsService.finalizeFormSession({
+          sessionId: currentSessionId,
+          values,
+          signatureKey: null,
+        }));
+      } catch (finalizeErr) {
+        logger.captureError(finalizeErr, "1099-nec.finalize_fallback_local");
+
+        const bytes = await stampNecDocument(values);
+        const blobUrl = URL.createObjectURL(
+          new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }),
+        );
+
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
+
+        return blobUrl;
+      }
 
       markNecSessionFinalized();
       lastFinalizeRef.current = { key: cacheKey, downloadUrl };

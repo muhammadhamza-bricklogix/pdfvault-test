@@ -334,6 +334,7 @@ function TopAppBar() {
   const showW9Save = isTaxFormEditorRoute(pathname);
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const currentDocumentName = usePdfEditorStore((s) => s.currentDocumentName);
@@ -550,6 +551,11 @@ function TopAppBar() {
     setFile(renamed);
 
     if (currentDocumentId) {
+      // Keep the store's document name in step with the File. The desktop
+      // top bar and both library-save helpers read `currentDocumentName`
+      // FIRST, so leaving it stale makes the next save re-upload under the
+      // old name and the backend renames the row straight back.
+      setCurrentDocument({ id: currentDocumentId, name: withExt });
       renameDoc.mutate({ filename: withExt, id: currentDocumentId });
     }
   };
