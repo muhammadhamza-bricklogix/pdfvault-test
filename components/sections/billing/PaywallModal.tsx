@@ -393,6 +393,58 @@ export function PaywallModal({
     return () => observer.disconnect();
   }, [isOpen]);
 
+  // Mobile keyboard open: follow the visible viewport so the focused field (e.g. the card iframe) isn't hidden.
+  const [keyboardViewport, setKeyboardViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+
+    if (!viewport) return;
+
+    let last: { height: number; top: number } | null = null;
+
+    const sync = () => {
+      // Pinch-zoom also shrinks the visual viewport; only react at scale 1 (keyboard).
+      const keyboardOpen =
+        Math.abs(viewport.scale - 1) < 0.01 &&
+        viewport.height < window.innerHeight - 80;
+      const next = keyboardOpen
+        ? {
+            height: Math.floor(viewport.height),
+            top: Math.max(0, Math.floor(viewport.offsetTop)),
+          }
+        : null;
+
+      // Skip state updates (and re-renders of the payment form) when nothing changed.
+      if (next?.height === last?.height && next?.top === last?.top) return;
+      const shouldReveal = next !== null && next.height !== last?.height;
+
+      last = next;
+      setKeyboardViewport(next);
+      if (!shouldReveal) return;
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+
+        if (active instanceof HTMLElement && active.closest(".modal__dialog")) {
+          active.scrollIntoView({ block: "center", inline: "nearest" });
+        }
+      });
+    };
+
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+
+    return () => {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      setKeyboardViewport(null);
+    };
+  }, [isOpen]);
+
   // Pause Weglot for the paywall's lifetime.
   //
   // The `translate="no"` + `notranslate` + `wg-notranslate` markers on
@@ -1146,6 +1198,11 @@ export function PaywallModal({
     <Modal.Backdrop
       isDismissable={false}
       isOpen={isOpen}
+      style={
+        keyboardViewport
+          ? { transform: `translate3d(0, ${keyboardViewport.top}px, 0)` }
+          : undefined
+      }
       onOpenChange={(open) => {
         if (!open) {
           // Success step: `onPaymentSuccess` already fired on mount and
@@ -1187,6 +1244,11 @@ export function PaywallModal({
                   : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
             " notranslate wg-notranslate"
+          }
+          style={
+            keyboardViewport
+              ? { maxHeight: `${keyboardViewport.height - 32}px` }
+              : undefined
           }
           translate="no"
         >
@@ -1429,7 +1491,7 @@ function PlanStep({
           existing `strings.ready.*` per-file-type entries. */}
       <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
+          <h2 className="pv-heading text-center text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-start md:text-[36px]">
             Choose a plan to download your file
           </h2>
         </div>
