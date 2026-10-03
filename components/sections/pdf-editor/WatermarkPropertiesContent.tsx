@@ -162,7 +162,7 @@ export function WatermarkPropertiesContent({
     <div
       className={
         scrollContainer
-          ? "flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? "flex max-h-[calc(100dvh-11rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : "flex min-w-48 max-w-full flex-col gap-4 overflow-x-hidden px-3 pb-4 sm:px-4"
       }
     >
