@@ -153,7 +153,14 @@ export function usePageNumbersEditor(fabricCanvas: FabricCanvas | null) {
           liveCanvas.add(textObj);
         }
 
-        appendOverlayToStoredJson(p, label, props);
+        // Row 98 QA 2026-10-04: non-current pages had their fresh JSON
+        // created WITHOUT width/height, so (a) `parseFabricJson` in
+        // the merge pipeline returned null and skipped the overlay on
+        // export, and (b) `loadFromJSON` on page navigation left the
+        // Fabric canvas at default dimensions and the IText rendered
+        // off-screen. Pass the real pdf.js page dimensions so stored
+        // JSON round-trips correctly through both merge and loadFromJSON.
+        appendOverlayToStoredJson(p, label, props, pageWidth, pageHeight);
         added += 1;
       }
 
@@ -324,6 +331,8 @@ function appendOverlayToStoredJson(
   displayPage: number,
   text: string,
   props: Record<string, unknown>,
+  pageWidth: number,
+  pageHeight: number,
 ): void {
   const store = usePdfEditorStore.getState();
   const existing = store.getFabricJson(displayPage);
@@ -342,11 +351,18 @@ function appendOverlayToStoredJson(
 
   if (!existing) {
     // No prior canvas state for this page — write a fresh minimal
-    // doc that the merge pipeline can read. Width/height of 0 would
-    // cause parseFabricJson to return null — leave them undefined
-    // and merge falls back to source dims.
+    // doc with REAL width/height (not undefined). parseFabricJson
+    // explicitly returns null on `!parsed.width || !parsed.height`
+    // (see save-utils.ts:173), which is what made page numbers
+    // appear only on the current page before — Fabric's live
+    // addition always had dimensions, but non-current pages wrote
+    // dimension-less JSON that both the merge pipeline and the
+    // on-navigate loadFromJSON silently dropped. Row 98 QA
+    // 2026-10-04.
     const fresh = JSON.stringify({
       version: "6.0.0",
+      width: pageWidth,
+      height: pageHeight,
       objects: [itextObject],
     });
 
@@ -357,18 +373,29 @@ function appendOverlayToStoredJson(
 
   try {
     const parsed = JSON.parse(existing) as {
+      width?: number;
+      height?: number;
       objects?: unknown[];
       [key: string]: unknown;
     };
 
     parsed.objects = [...(parsed.objects ?? []), itextObject];
+    // Backfill width/height if the existing JSON predates the row
+    // 98 fix and would still null-out in parseFabricJson.
+    if (!parsed.width) parsed.width = pageWidth;
+    if (!parsed.height) parsed.height = pageHeight;
     store.saveFabricJson(displayPage, JSON.stringify(parsed));
   } catch {
     // Bad JSON in store — overwrite with a fresh doc that at least
     // carries the new overlay.
     store.saveFabricJson(
       displayPage,
-      JSON.stringify({ version: "6.0.0", objects: [itextObject] }),
+      JSON.stringify({
+        version: "6.0.0",
+        width: pageWidth,
+        height: pageHeight,
+        objects: [itextObject],
+      }),
     );
   }
 }
