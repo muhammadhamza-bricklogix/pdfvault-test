@@ -376,8 +376,8 @@ export function EditorInfoBar() {
       <div className="flex flex-col gap-1 px-2 py-1 sm:min-h-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1 sm:py-1 lg:px-3">
         {/* Action row: left actions + right save/theme. Doubles as the only
             row on sm+ where the page nav sits between them. */}
-        <div className="flex items-center justify-between gap-2 sm:flex-1">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2 max-sm:gap-1 sm:flex-1 max-sm:[&_.button]:!size-8 max-sm:[&_.button]:!min-w-8">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             {/* Back - desktop/tablet only in this legacy responsive bar. */}
             <div className="hidden sm:flex sm:items-center sm:gap-1">
               <Tooltip delay={300}>
@@ -414,8 +414,40 @@ export function EditorInfoBar() {
             */}
             {isW9Route ? null : <HamburgerMenu />}
 
+            {/* Zoom first, matching the desktop top bar order. */}
+            <div className="flex items-center gap-0.5 sm:hidden">
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Zoom out"
+                  isDisabled={zoom <= ZOOM_PRESETS[0]}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={zoomOut}
+                >
+                  <HugeiconsIcon icon={SearchMinusIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Zoom out</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Zoom in"
+                  isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={zoomIn}
+                >
+                  <HugeiconsIcon icon={SearchAddIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Zoom in</p>
+                </Tooltip.Content>
+              </Tooltip>
+            </div>
+
             {/* Undo + Redo — mobile only */}
-            <div className="flex items-center gap-1 sm:hidden">
+            <div className="flex items-center gap-0.5 sm:hidden">
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -473,7 +505,7 @@ export function EditorInfoBar() {
           </div>
 
           {/* Right: zoom (sm+ only) + save + export trio + theme. */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <div className="hidden sm:block">{zoomNav}</div>
 
             <Separator
@@ -505,9 +537,9 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* Export controls — Search / Print / Zoom / Share / Done.
-                Search opens Find & Replace. Print/Done open the format
-                modal; the middle controls zoom the page. */}
+            {/* Export controls — Search / Print / Share / Done.
+                Search toggles the search bar (same as desktop). Print/Done
+                open the format modal. */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Search"
@@ -536,36 +568,6 @@ export function EditorInfoBar() {
                 <p>Print</p>
               </Tooltip.Content>
             </Tooltip>
-            <div className="flex items-center gap-1 sm:hidden">
-              <Tooltip delay={300}>
-                <Button
-                  aria-label="Zoom out"
-                  isDisabled={zoom <= ZOOM_PRESETS[0]}
-                  size="sm"
-                  variant="tertiary"
-                  onPress={zoomOut}
-                >
-                  <HugeiconsIcon icon={SearchMinusIcon} size={16} />
-                </Button>
-                <Tooltip.Content>
-                  <p>Zoom out</p>
-                </Tooltip.Content>
-              </Tooltip>
-              <Tooltip delay={300}>
-                <Button
-                  aria-label="Zoom in"
-                  isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
-                  size="sm"
-                  variant="tertiary"
-                  onPress={zoomIn}
-                >
-                  <HugeiconsIcon icon={SearchAddIcon} size={16} />
-                </Button>
-                <Tooltip.Content>
-                  <p>Zoom in</p>
-                </Tooltip.Content>
-              </Tooltip>
-            </div>
             <Button
               aria-label="Share"
               isDisabled={!canShare}
