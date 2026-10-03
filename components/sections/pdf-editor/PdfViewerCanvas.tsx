@@ -560,8 +560,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const pageW = fc.getWidth();
       const rightMargin = 16;
       const minWidth = 80;
-      const preferredWidth = 240;
+      // Row 56: previous default was `preferredWidth = 240`, which wrapped
+      // any sentence longer than ~30 characters onto a second line even
+      // when the page had plenty of horizontal room. Default to the full
+      // horizontal budget from the pointer to the right margin so a typed
+      // sentence stays one line as long as it fits on the page.
+      // `splitByGrapheme: true` still prevents horizontal overflow if the
+      // user keeps typing past that budget — the box simply wraps at that
+      // point instead of eagerly at 240pt.
       const usableWidth = Math.max(0, pageW - rightMargin);
+      const preferredWidth = Math.max(
+        minWidth,
+        Math.floor(usableWidth - Math.max(0, pointer.x)),
+      );
 
       // Width: as much as fits, capped at preferredWidth. If usable
       // space is smaller than minWidth (edge case), width collapses
