@@ -1,3 +1,6 @@
+import type { FormField } from "@/lib/shared/types/forms.types";
+import type { PDFDocument, PDFForm } from "pdf-lib";
+
 import { NEC_1099_SCHEMA } from "@/lib/client/forms/1099-nec-schema";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
@@ -106,6 +109,96 @@ function buildCopyRefIndex(
   };
 }
 
+/**
+ * Leave the downloaded PDF editable, but make Copy A the only place to type.
+ *
+ * Product decision 2026-10-04, reversing the earlier "downloads are flattened
+ * and read-only" rule: the recipient should be able to correct the form in
+ * their reader. The 1099-NEC prints the same data four times, so every value is
+ * stamped onto all four copies in the loop above, and then the three carbon
+ * copies are locked and given a calculate action that reads Copy A's value.
+ *
+ * IMPORTANT, and the reason the values are stamped onto every copy first:
+ * calculate actions are PDF JavaScript. Acrobat and Reader run them, so there
+ * editing Copy A updates Copy 1, Copy B and Copy 2 live. Chrome, Edge, Firefox
+ * and macOS Preview ignore PDF JavaScript entirely — in those viewers the
+ * carbon copies keep the values stamped at download time and stay read-only,
+ * rather than appearing blank.
+ */
+async function lockCarbonCopiesToCopyA(
+  pdfDoc: PDFDocument,
+  form: PDFForm,
+  copyRefs: (ref: string) => string[],
+  fields: FormField[],
+): Promise<void> {
+  const { PDFDict, PDFName, PDFNumber, PDFString } = await import("pdf-lib");
+  /** Bit 1 of /Ff. A field flag, not a widget flag — see the note above. */
+  const READ_ONLY = 1;
+  const calculationOrder = [];
+
+  for (const field of fields) {
+    // No widget to lock; drawn onto the page further down.
+    if (field.freeText) continue;
+
+    const refs = copyRefs(field.pdfRef);
+    const master = refs.find((ref) => copySubform(ref) === "CopyA");
+
+    if (!master) continue;
+
+    // The IRS ships Copy A with every field flagged ReadOnly — it is the
+    // scannable copy meant to be filed, not typed into. Our download is a
+    // working document rather than a filing, and Copy A is the master the
+    // other three read from, so it has to be unlocked explicitly.
+    try {
+      const masterDict = form.getField(master).acroField.dict;
+      const masterFf = masterDict.lookup(PDFName.of("Ff"));
+      const masterFlags =
+        masterFf instanceof PDFNumber ? masterFf.asNumber() : 0;
+
+      masterDict.set(PDFName.of("Ff"), PDFNumber.of(masterFlags & ~READ_ONLY));
+    } catch {
+      /* master widget absent on this field — nothing to unlock */
+    }
+
+    for (const ref of refs) {
+      if (ref === master) continue;
+
+      let target;
+
+      try {
+        target = form.getField(ref);
+      } catch {
+        continue; // widget absent on this copy
+      }
+
+      const dict = target.acroField.dict;
+      const existing = dict.lookup(PDFName.of("Ff"));
+      const flags = existing instanceof PDFNumber ? existing.asNumber() : 0;
+
+      dict.set(PDFName.of("Ff"), PDFNumber.of(flags | READ_ONLY));
+      dict.set(
+        PDFName.of("AA"),
+        pdfDoc.context.obj({
+          C: {
+            S: PDFName.of("JavaScript"),
+            JS: PDFString.of(
+              `event.value = this.getField(${JSON.stringify(master)}).value;`,
+            ),
+          },
+        }),
+      );
+      calculationOrder.push(target.ref);
+    }
+  }
+
+  if (calculationOrder.length === 0) return;
+
+  // Acrobat only runs calculate actions for fields listed in /CO, in order.
+  const acroForm = pdfDoc.catalog.lookup(PDFName.of("AcroForm"), PDFDict);
+
+  acroForm.set(PDFName.of("CO"), pdfDoc.context.obj(calculationOrder));
+}
+
 async function stampNec(
   values: Record<string, string>,
   { singlePage }: { singlePage: boolean },
@@ -158,7 +251,7 @@ async function stampNec(
     }
   }
 
-  form.flatten();
+  await lockCarbonCopiesToCopyA(pdfDoc, form, copyRefs, fields);
 
   const freeTextFields = fields.filter((f) => f.freeText && values[f.id]);
 
