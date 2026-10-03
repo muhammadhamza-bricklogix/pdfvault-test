@@ -48,6 +48,7 @@ export type LandingToolIcon =
 
 export interface LandingTool {
   label: string;
+  i18nKey?: string;
   icon: LandingToolIcon;
   href: string;
 }
