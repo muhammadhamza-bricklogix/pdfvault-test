@@ -540,9 +540,9 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
             </Modal.Header>
 
             <Modal.Body className="overflow-hidden p-0">
-              <div className="flex max-h-[min(520px,calc(85vh-12rem))] flex-col md:flex-row">
+              <div className="flex max-h-[min(520px,calc(85vh-12rem))] flex-col max-md:overflow-y-auto max-md:overscroll-contain md:flex-row">
                 {/* ── Left: preset grid ──────────────────────────────────── */}
-                <div className="flex shrink-0 flex-col gap-3 overflow-y-auto p-5 md:w-[42%]">
+                <div className="flex shrink-0 flex-col gap-3 overflow-y-auto p-5 max-md:overflow-visible md:w-[42%]">
                   <SectionHeading>Select page size</SectionHeading>
 
                   <div className="grid grid-cols-2 gap-3 pb-1">
@@ -600,7 +600,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                 <div className="hidden shrink-0 bg-default-200/70 md:block md:w-px" />
 
                 {/* ── Right: options ─────────────────────────────────────── */}
-                <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
+                <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 max-md:flex-none max-md:overflow-visible">
                   {/* Document Name */}
                   <div className="space-y-1.5">
                     <SectionHeading>Document name</SectionHeading>
@@ -637,8 +637,8 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                     {/* Width / Height with proportions lock */}
                     <div className="space-y-1.5">
                       <p className="text-xs text-default-500">Dimensions</p>
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1">
+                      <div className="flex items-end gap-2 max-sm:grid max-sm:grid-cols-[1fr_auto] max-sm:gap-x-2 max-sm:gap-y-3">
+                        <div className="flex-1 max-sm:col-start-1 max-sm:row-start-1">
                           <NumberField
                             aria-label="Width"
                             formatOptions={formatOptions}
@@ -674,7 +674,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                                 : "Lock proportions"
                             }
                             aria-pressed={proportionsLocked}
-                            className="mb-0.5 shrink-0"
+                            className="mb-0.5 shrink-0 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:mb-0 max-sm:self-center"
                             size="sm"
                             variant={proportionsLocked ? "secondary" : "ghost"}
                             onPress={() =>
@@ -697,7 +697,7 @@ export function CreatePdfModal({ isOpen, onClose }: Props) {
                           </Tooltip.Content>
                         </Tooltip>
 
-                        <div className="flex-1">
+                        <div className="flex-1 max-sm:col-start-1 max-sm:row-start-2">
                           <NumberField
                             aria-label="Height"
                             formatOptions={formatOptions}
