@@ -45,6 +45,7 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { ComposerI18nProvider } from "@/lib/client/i18n/composer-i18n-provider";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { BottomDock } from "./BottomDock";
@@ -331,10 +332,26 @@ function EditorLayout() {
           historyByPage: remapped.historyByPage,
           historyIndexByPage: remapped.historyIndexByPage,
         });
-      } catch {
+      } catch (err) {
+        // QA row 50: the bare `catch {}` previously silenced the exact
+        // throw that killed Manage Pages save after a rotation. Capture
+        // the error with its original message + stack so we can see which
+        // step (sanitize bytes → buildPdfFromDraft → remap → applyManage)
+        // actually blew up, and surface a snippet to the user instead of
+        // a generic "try again".
+        logger.captureError(err, "handleManagePagesSave", {
+          currentPage,
+          pageCount: snapshot.pages.length,
+          hasFabricCanvas: Boolean(fabricCanvas),
+        });
+        const message =
+          err instanceof Error && err.message
+            ? err.message.slice(0, 160)
+            : "Saving your page edits failed. Please try again.";
+
         toast.error({
           title: "Could not apply page changes",
-          description: "Saving your page edits failed. Please try again.",
+          description: message,
         });
       }
     },

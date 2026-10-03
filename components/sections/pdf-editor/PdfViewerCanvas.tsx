@@ -326,30 +326,32 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     let timer: ReturnType<typeof setTimeout> | null = null;
 
+    const snapshotNow = () => {
+      const pdfCanvas = canvasRef.current;
+      const fabricLower = fabricCanvas.lowerCanvasEl as
+        | HTMLCanvasElement
+        | undefined;
+
+      if (!pdfCanvas || !fabricLower) return;
+
+      const tmp = document.createElement("canvas");
+
+      tmp.width = pdfCanvas.width;
+      tmp.height = pdfCanvas.height;
+      const ctx = tmp.getContext("2d");
+
+      if (!ctx) return;
+      ctx.drawImage(pdfCanvas, 0, 0);
+      ctx.drawImage(fabricLower, 0, 0);
+      const dataUrl = tmp.toDataURL("image/jpeg", 0.7);
+      const page = usePdfEditorStore.getState().currentPage;
+
+      usePdfEditorStore.getState().setThumbnailSnapshot(page, dataUrl);
+    };
+
     const capture = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        const pdfCanvas = canvasRef.current;
-        const fabricLower = fabricCanvas.lowerCanvasEl as
-          | HTMLCanvasElement
-          | undefined;
-
-        if (!pdfCanvas || !fabricLower) return;
-
-        const tmp = document.createElement("canvas");
-
-        tmp.width = pdfCanvas.width;
-        tmp.height = pdfCanvas.height;
-        const ctx = tmp.getContext("2d");
-
-        if (!ctx) return;
-        ctx.drawImage(pdfCanvas, 0, 0);
-        ctx.drawImage(fabricLower, 0, 0);
-        const dataUrl = tmp.toDataURL("image/jpeg", 0.7);
-        const page = usePdfEditorStore.getState().currentPage;
-
-        usePdfEditorStore.getState().setThumbnailSnapshot(page, dataUrl);
-      }, 500);
+      timer = setTimeout(snapshotNow, 500);
     };
 
     fabricCanvas.on("object:modified", capture);
@@ -358,7 +360,16 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     fabricCanvas.on("text:changed", capture);
 
     return () => {
-      if (timer) clearTimeout(timer);
+      // Row 58: if the user edits a page and immediately navigates (or
+      // switches tools, closes the editor, etc.) within the 500 ms debounce
+      // window, the previous cleanup just called `clearTimeout(timer)` and
+      // the thumbnail never updated — the sidebar stayed at the pre-edit
+      // snapshot. Flush synchronously on unmount so the final state is
+      // always captured.
+      if (timer) {
+        clearTimeout(timer);
+        snapshotNow();
+      }
       fabricCanvas.off("object:modified", capture);
       fabricCanvas.off("object:added", capture);
       fabricCanvas.off("object:removed", capture);
@@ -560,8 +571,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const pageW = fc.getWidth();
       const rightMargin = 16;
       const minWidth = 80;
-      const preferredWidth = 240;
+      // Row 56: previous default was `preferredWidth = 240`, which wrapped
+      // any sentence longer than ~30 characters onto a second line even
+      // when the page had plenty of horizontal room. Default to the full
+      // horizontal budget from the pointer to the right margin so a typed
+      // sentence stays one line as long as it fits on the page.
+      // `splitByGrapheme: true` still prevents horizontal overflow if the
+      // user keeps typing past that budget — the box simply wraps at that
+      // point instead of eagerly at 240pt.
       const usableWidth = Math.max(0, pageW - rightMargin);
+      const preferredWidth = Math.max(
+        minWidth,
+        Math.floor(usableWidth - Math.max(0, pointer.x)),
+      );
 
       // Width: as much as fits, capped at preferredWidth. If usable
       // space is smaller than minWidth (edge case), width collapses
