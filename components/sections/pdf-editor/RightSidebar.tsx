@@ -675,25 +675,25 @@ export function ShapePropertiesContent({
     </div>
   );
 
+  // Panel visibility is `activeTool === "shape" || hasSelectedShape`.
+  // Just flipping `activeTool` back to "select" leaves the panel up
+  // when a shape is still selected (X button appears to do nothing).
+  // Discard the active object too so both branches of the visibility
+  // gate turn off and `selectedProps` clears on the resulting
+  // `selection:cleared` event.
+  const handleFloatingClose = () => {
+    if (fabricCanvas) {
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.requestRenderAll();
+    }
+    usePdfEditorStore.getState().setActiveTool("select");
+  };
+
   if (variant === "floating") {
     // Only show the floating panel when a shape tool is active or a shape
     // object is selected. Text/image selections have their own toolbars
     // (FloatingTextToolbar, etc.) and must not trigger this panel.
     if (!showShapePanel) return null;
-
-    // Panel visibility is `activeTool === "shape" || hasSelectedShape`.
-    // Just flipping `activeTool` back to "select" leaves the panel up
-    // when a shape is still selected (X button appears to do nothing).
-    // Discard the active object too so both branches of the visibility
-    // gate turn off and `selectedProps` clears on the resulting
-    // `selection:cleared` event.
-    const handleFloatingClose = () => {
-      if (fabricCanvas) {
-        fabricCanvas.discardActiveObject();
-        fabricCanvas.requestRenderAll();
-      }
-      usePdfEditorStore.getState().setActiveTool("select");
-    };
 
     return (
       <>
@@ -717,7 +717,8 @@ export function ShapePropertiesContent({
     if (!showShapePanel) return null;
 
     return (
-      <div className="border-b border-default-200/70 bg-default-50/70 px-3 py-2">
+      <div className="relative border-b border-default-200/70 bg-default-50/70 py-2 pl-3 pr-10">
+        <FloatingPanelCloseButton onPress={handleFloatingClose} />
         {body}
       </div>
     );
