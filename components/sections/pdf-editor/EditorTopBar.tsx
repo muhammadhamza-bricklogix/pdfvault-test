@@ -394,16 +394,27 @@ export function EditorInfoBar() {
               </Tooltip>
             </div>
 
-            {/* Back + Undo + Redo — mobile only */}
+            {/* Back — mobile only */}
+            <Button
+              aria-label="Back to dashboard"
+              className="sm:hidden"
+              size="sm"
+              variant="tertiary"
+              onPress={handleBack}
+            >
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+            </Button>
+
+            {/*
+              Same menu as desktop, next to Back like the desktop top bar.
+              HamburgerMenu gates its visible trigger on `isSignedIn`, but
+              remains mounted for guests so editor bridge listeners keep
+              working.
+            */}
+            {isW9Route ? null : <HamburgerMenu />}
+
+            {/* Undo + Redo — mobile only */}
             <div className="flex items-center gap-1 sm:hidden">
-              <Button
-                aria-label="Back to dashboard"
-                size="sm"
-                variant="tertiary"
-                onPress={handleBack}
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-              </Button>
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -427,14 +438,6 @@ export function EditorInfoBar() {
                 <HugeiconsIcon icon={RedoIcon} size={16} />
               </Button>
             </div>
-
-            {/*
-              Same menu as desktop, in the old mobile grid-icon slot.
-              HamburgerMenu gates its visible trigger on `isSignedIn`, but
-              remains mounted for guests so editor bridge listeners keep
-              working.
-            */}
-            {isW9Route ? null : <HamburgerMenu />}
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
