@@ -6,12 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
-import {
-  describeFieldErrors,
-  extractApiFieldErrors,
-  labelFieldErrors,
-} from "@/lib/client/forms/api-field-errors";
-import { DS_11_SCHEMA } from "@/lib/client/forms/ds-11-schema";
+import { invalidateLibraryIndex } from "@/lib/client/documents/library-filename-index";
+import { resolveFilenameConflict } from "@/lib/client/documents/resolve-filename-conflict";
+import { isDuplicatePromptOpen } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
 import { downloadStampedFormAsImages } from "@/lib/client/forms/download-form-images";
 import {
   bindDs11DraftToDocument,
@@ -23,7 +20,6 @@ import {
   stampDs11Document,
   stampDs11Preview,
 } from "@/lib/client/forms/stamp-ds11-client";
-import { validateDs11 } from "@/lib/client/forms/validate-ds-11";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
@@ -38,6 +34,9 @@ const EXPORT_EVENT = "editor:export";
 const SAVE_EVENT = "editor:save";
 const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
 const SAVE_AND_CONTINUE_EVENT = "editor:w9-save-and-continue";
+const AUTOSAVE_EVENT = "editor:form-autosave";
+
+type SaveOutcome = "saved" | "cancelled" | "failed";
 
 type SaveBeforeActionDetail = {
   onComplete?: (result: { ok: boolean }) => void;
@@ -46,7 +45,12 @@ type SaveBeforeActionDetail = {
 type SaveAndContinueDetail = {
   onComplete: (result: {
     ok: boolean;
-    reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
+    reason?:
+      | "error"
+      | "not-signed-in"
+      | "cancelled"
+      | "cancelled-duplicate"
+      | "not-ready";
   }) => void;
 };
 
@@ -81,31 +85,12 @@ async function triggerDownload(downloadUrl: string, filename = "ds-11.pdf") {
   }
 }
 
-const LIBRARY_PAGE_SIZE = 100;
-const LIBRARY_MAX_PAGES = 100;
-
-async function findDs11LibraryDocumentId(
-  filename: string,
-): Promise<string | null> {
-  const needle = filename.toLowerCase();
-  let lastPage = 1;
-
-  for (let page = 1; page <= Math.min(lastPage, LIBRARY_MAX_PAGES); page += 1) {
-    const response = await documentsService.listDocuments({
-      page,
-      pageSize: LIBRARY_PAGE_SIZE,
-    });
-    const match = response.items.find(
-      (doc) => doc.filename.toLowerCase() === needle,
-    );
-
-    if (match) return match.id;
-    lastPage = response.pagination.totalPages;
-  }
-
-  return null;
-}
-
+/**
+ * Anything typed is real user input: unlike the 1099-NEC, whose bootstrap
+ * seeds `calendar_year` on every open, the DS-11 bootstrap seeds nothing. So
+ * this doubles as the autosave's "is the form still blank?" guard and no
+ * NEC-style `hasUserInput` variant is needed.
+ */
 function hasAnyValue(values: Record<string, string>): boolean {
   return Object.values(values ?? {}).some(
     (v) => typeof v === "string" && v.trim() !== "",
@@ -227,14 +212,19 @@ export function Ds11FinalizeIntercept() {
         return null;
       }
 
-      const errors = validateDs11({ values });
-      const errorIds = Object.keys(errors);
-
       const cacheKey = `${currentSessionId}::${JSON.stringify(values)}::${targetFilename}`;
 
       if (lastFinalizeRef.current?.key === cacheKey) {
         return lastFinalizeRef.current.downloadUrl;
       }
+
+      // A partially-filled DS-11 is downloadable, matching the W-9 and the
+      // 1099-NEC: an application is gathered over several sittings, and users
+      // explicitly asked to be able to take away whatever they have so far.
+      // `validateDs11` therefore no longer BLOCKS here — the server filler
+      // still validates, and the local-stamp fallback below covers the form
+      // it refuses.
+      state.setErrors({});
 
       const entitled = await ensureFreshEntitlement();
 
@@ -255,31 +245,34 @@ export function Ds11FinalizeIntercept() {
         }
       }
 
-      if (errorIds.length > 0) {
-        state.setErrors(errors);
-        toast.error({
-          title: "Check your application",
-          description:
-            errorIds.length === 1
-              ? errors[errorIds[0]!]
-              : `${errorIds.length} fields need attention — the first is: ${errors[errorIds[0]!]}`,
-        });
+      // The server filler rejects an incomplete application (422). That is
+      // the right guard for a document an acceptance agent will read, but it
+      // must not stop the user taking away a draft — so stamp it locally
+      // instead, exactly as the 1099-NEC does. `stampDs11Document` already
+      // flattens, so the partial file is just as non-editable as a finalized
+      // one.
+      // Blob URLs are not cached: re-stamping is local and cheap, and a
+      // cached URL would outlive its revoke.
+      let downloadUrl: string;
 
-        const firstEl = document.getElementById(`field-input-${errorIds[0]}`);
+      try {
+        ({ downloadUrl } = await formsService.finalizeFormSession({
+          sessionId: currentSessionId,
+          values,
+          signatureKey: null,
+        }));
+      } catch (finalizeErr) {
+        logger.captureError(finalizeErr, "ds-11.finalize_fallback_local");
 
-        firstEl?.scrollIntoView({ block: "center", behavior: "smooth" });
-        (firstEl as HTMLInputElement | null)?.focus?.();
+        const bytes = await stampDs11Document(values);
+        const blobUrl = URL.createObjectURL(
+          new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }),
+        );
 
-        return null;
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
+
+        return blobUrl;
       }
-
-      state.setErrors({});
-
-      const { downloadUrl } = await formsService.finalizeFormSession({
-        sessionId: currentSessionId,
-        values,
-        signatureKey: null,
-      });
 
       markDs11SessionFinalized();
       lastFinalizeRef.current = { key: cacheKey, downloadUrl };
@@ -287,23 +280,60 @@ export function Ds11FinalizeIntercept() {
       return downloadUrl;
     };
 
-    const uploadToLibrary = async (
+    /**
+     * Saves run one at a time.
+     *
+     * Without this, clicking the logo while an autosave is still uploading
+     * starts a second save that cannot yet see the row the first one is
+     * creating — so it asks about the filename all over again. Queueing
+     * means the second save observes `currentDocumentId` and simply
+     * updates that row.
+     */
+    let saveQueue: Promise<unknown> = Promise.resolve();
+
+    /**
+     * "cancelled" is the user declining the filename prompt, which must not
+     * be reported as a failure — nothing is wrong and nothing was lost.
+     */
+    const uploadToLibrary = (
       blob: Blob,
       values: Record<string, string>,
-    ): Promise<boolean> => {
-      const { currentDocumentId } = usePdfEditorStore.getState();
-      const filename = ds11LibraryFilename();
-      let targetId = currentDocumentId ?? getDs11BoundDocumentId();
+    ): Promise<SaveOutcome> => {
+      const run = saveQueue
+        .catch(() => undefined)
+        .then(() => uploadToLibraryNow(blob, values));
 
-      if (!targetId) {
-        try {
-          targetId = await findDs11LibraryDocumentId(filename);
-        } catch (lookupErr) {
-          logger.captureError(lookupErr, "ds-11.library_lookup");
+      saveQueue = run.catch(() => undefined);
 
-          return false;
-        }
-      }
+      return run;
+    };
+
+    const uploadToLibraryNow = async (
+      blob: Blob,
+      values: Record<string, string>,
+    ): Promise<SaveOutcome> => {
+      // The filename is resolved HERE, inside the queued work, never in the
+      // caller. A save queued behind an open prompt would otherwise carry
+      // the name it read before the prompt, and the backend would rename the
+      // row the first save had just created straight back — the bug we hit
+      // on the W-9.
+      //
+      // The remembered row id is the stable identity that stops a reload
+      // silently creating a second row. Read lazily: if another save is
+      // mid-prompt, it may create the row while we wait, and we should then
+      // update that row rather than ask again.
+      const resolution = await resolveFilenameConflict({
+        filename: ds11LibraryFilename(),
+        getOwnedDocumentId: () =>
+          usePdfEditorStore.getState().currentDocumentId ??
+          getDs11BoundDocumentId(),
+      });
+
+      if (resolution.kind === "cancel") return "cancelled";
+
+      const filename = resolution.filename;
+      const targetId =
+        resolution.kind === "replace" ? resolution.documentId : undefined;
 
       try {
         const stampedFile = new File([blob], filename, {
@@ -316,6 +346,9 @@ export function Ds11FinalizeIntercept() {
             documentId,
             editorState,
           });
+        // The remembered row can have been deleted from My PDFs, which the
+        // backend answers with a 404. Retry once as a fresh row so the user
+        // is not stuck unable to save.
         const savedDoc = targetId
           ? await upload(targetId).catch(() => upload(undefined))
           : await upload(undefined);
@@ -325,6 +358,7 @@ export function Ds11FinalizeIntercept() {
           name: savedDoc.filename,
         });
         bindDs11DraftToDocument(savedDoc.id);
+        invalidateLibraryIndex();
 
         try {
           queryClientRef.current.invalidateQueries({
@@ -334,18 +368,18 @@ export function Ds11FinalizeIntercept() {
           /* non-fatal */
         }
 
-        return true;
+        return "saved";
       } catch (saveErr) {
         logger.captureError(saveErr, "ds-11.library_save");
 
-        return false;
+        return "failed";
       }
     };
 
     const saveToLibrary = async (
       downloadUrl: string,
       values: Record<string, string>,
-    ): Promise<boolean> => {
+    ): Promise<SaveOutcome> => {
       try {
         const res = await fetch(downloadUrl);
 
@@ -359,13 +393,13 @@ export function Ds11FinalizeIntercept() {
       } catch (saveErr) {
         logger.captureError(saveErr, "ds-11.library_save_fetch");
 
-        return false;
+        return "failed";
       }
     };
 
     const saveDraftToLibrary = async (
       values: Record<string, string>,
-    ): Promise<boolean> => {
+    ): Promise<SaveOutcome> => {
       try {
         const bytes = await stampDs11Document(values);
         const blob = new Blob([bytes.buffer as ArrayBuffer], {
@@ -376,7 +410,7 @@ export function Ds11FinalizeIntercept() {
       } catch (stampErr) {
         logger.captureError(stampErr, "ds-11.draft_stamp");
 
-        return false;
+        return "failed";
       }
     };
 
@@ -404,14 +438,50 @@ export function Ds11FinalizeIntercept() {
       return true;
     };
 
+    // Autosave loop guards. `inFlight` keeps overlapping saves out;
+    // `suppressed` latches when the user cancels the filename prompt, so
+    // the next debounce does not re-open it every few seconds. An explicit
+    // Save or Download clears it — that is the user asking deliberately.
+    let autosaveInFlight = false;
+    let autosaveSuppressed = false;
+
+    // Reached from the F5 / Ctrl+R reload prompt ("Save & reload"). It used
+    // to answer OK without saving, so that button silently reloaded and lost
+    // the work it promised to keep — on a DS-11 that is an evening of
+    // transcribing names, dates and parents' details. Saves for real now,
+    // surfacing the Replace / Save-as-new prompt when the name is taken.
     const saveBeforeActionHandler = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
 
-      detail?.onComplete?.({ ok: true });
+      void (async () => {
+        const values = useFormEditorStore.getState().values;
+
+        if (
+          !hasAnyValue(values) ||
+          !isLoadedRef.current ||
+          !isSignedInRef.current
+        ) {
+          detail?.onComplete?.({ ok: true });
+
+          return;
+        }
+
+        try {
+          const saved = await saveDraftToLibrary(values);
+
+          // A cancel must not block the action the user asked for — their
+          // work stays in the local draft either way.
+          detail?.onComplete?.({ ok: saved !== "failed" });
+        } catch (err) {
+          logger.captureError(err, "ds-11.save_before_action");
+          detail?.onComplete?.({ ok: false });
+        }
+      })();
     };
 
     const onExport = async (e: Event) => {
+      autosaveSuppressed = false;
       e.stopImmediatePropagation();
       e.preventDefault();
 
@@ -465,46 +535,30 @@ export function Ds11FinalizeIntercept() {
 
         toast.success({
           title: "DS-11 ready — do not sign it yet",
-          description: saved
-            ? "Downloaded and saved to My PDFs. Sign it only when the acceptance agent asks you to."
-            : "Downloaded. We couldn't add it to My PDFs — try Save to retry.",
+          description:
+            saved === "saved"
+              ? "Downloaded and saved to My PDFs. Sign it only when the acceptance agent asks you to."
+              : saved === "cancelled"
+                ? "Downloaded. Not added to My PDFs — you cancelled the name prompt. Sign it only when the acceptance agent asks you to."
+                : "Downloaded. We couldn't add it to My PDFs — try Save to retry.",
         });
       } catch (err) {
         toast.close(loadingKey);
         logger.captureError(err, "ds-11.finalize");
-
-        const apiErrors = extractApiFieldErrors(err);
-
-        if (apiErrors.length > 0) {
-          const labelled = labelFieldErrors(apiErrors, DS_11_SCHEMA);
-
-          useFormEditorStore.getState().setErrors(labelled);
-          toast.error({
-            title: "Check your application",
-            description: describeFieldErrors(labelled),
-          });
-
-          const firstEl = document.getElementById(
-            `field-input-${apiErrors[0]!.field}`,
-          );
-
-          firstEl?.scrollIntoView({ block: "center", behavior: "smooth" });
-          (firstEl as HTMLInputElement | null)?.focus?.();
-        } else {
-          toast.error({
-            title: "Finalization failed",
-            description:
-              err instanceof Error
-                ? err.message
-                : "Could not finalize the form. Please try again.",
-          });
-        }
+        toast.error({
+          title: "Finalization failed",
+          description:
+            err instanceof Error
+              ? err.message
+              : "Could not finalize the form. Please try again.",
+        });
       } finally {
         inFlightRef.current = false;
       }
     };
 
     const onSave = async (e: Event) => {
+      autosaveSuppressed = false;
       e.stopImmediatePropagation();
       e.preventDefault();
 
@@ -534,10 +588,17 @@ export function Ds11FinalizeIntercept() {
 
         toast.close(saveLoadingKey);
 
-        if (saved) {
+        if (saved === "saved") {
           toast.success({
             title: "Saved",
-            description: "Your DS-11 is in My PDFs.",
+            description: "Your DS-11 in My PDFs is up to date.",
+          });
+        } else if (saved === "cancelled") {
+          // Not an error — the user declined the name prompt. Their work is
+          // still here and still in the local draft.
+          toast.info({
+            title: "Not saved",
+            description: "Choose Replace or a new name to save it to My PDFs.",
           });
         } else {
           toast.error({
@@ -557,14 +618,78 @@ export function Ds11FinalizeIntercept() {
       }
     };
 
-    // Navigating away never writes a library row, matching the W-9 and
-    // the 1099-NEC. Answers the caller so navigation does not stall on its
-    // 30s timeout.
+    // Autosave: write the application to My PDFs shortly after typing stops.
+    // No paywall gate and no finalize — this is the user's own draft, stamped
+    // locally, so keeping it safe never costs them anything.
+    const onAutosave = (event: Event) => {
+      event.stopImmediatePropagation();
+
+      if (autosaveInFlight || autosaveSuppressed) return;
+      if (!isLoadedRef.current || !isSignedInRef.current) return;
+      // Never stack a second prompt on an open one.
+      if (isDuplicatePromptOpen()) return;
+
+      const values = useFormEditorStore.getState().values;
+
+      if (!hasAnyValue(values)) return;
+
+      autosaveInFlight = true;
+      void (async () => {
+        try {
+          const saved = await saveDraftToLibrary(values);
+
+          // Only a deliberate cancel latches. A transient failure should
+          // be retried on the next burst of typing.
+          if (saved === "cancelled") autosaveSuppressed = true;
+        } catch (err) {
+          logger.captureError(err, "ds-11.autosave");
+        } finally {
+          autosaveInFlight = false;
+        }
+      })();
+    };
+
+    // Back / logo persists the partial application before leaving. Uses the
+    // client stamper (no finalize, no paywall) so simply navigating away
+    // never asks anyone to pay, and surfaces the Replace / Save-as-new
+    // prompt through uploadToLibrary when the name is already taken.
+    // `cancelled-duplicate` is what keeps the user on the page: the
+    // navigation hook reads it as "declined, stay put" rather than an error.
     const onSaveAndContinue = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveAndContinueDetail>).detail;
 
-      detail?.onComplete?.({ ok: true, reason: "not-ready" });
+      void (async () => {
+        const values = useFormEditorStore.getState().values;
+
+        if (!hasAnyValue(values)) {
+          detail?.onComplete?.({ ok: true, reason: "not-ready" });
+
+          return;
+        }
+        if (!isLoadedRef.current || !isSignedInRef.current) {
+          // Never open the sign-in modal from a navigation — the user is
+          // on their way out, and the local draft already survives.
+          detail?.onComplete?.({ ok: true, reason: "not-signed-in" });
+
+          return;
+        }
+
+        try {
+          const saved = await saveDraftToLibrary(values);
+
+          detail?.onComplete?.(
+            saved === "saved"
+              ? { ok: true }
+              : saved === "cancelled"
+                ? { ok: false, reason: "cancelled-duplicate" }
+                : { ok: false, reason: "error" },
+          );
+        } catch (err) {
+          logger.captureError(err, "ds-11.save_and_continue");
+          detail?.onComplete?.({ ok: false, reason: "error" });
+        }
+      })();
     };
 
     window.addEventListener(
@@ -575,6 +700,7 @@ export function Ds11FinalizeIntercept() {
     window.addEventListener(EXPORT_EVENT, onExport, true);
     window.addEventListener(SAVE_EVENT, onSave, true);
     window.addEventListener(SAVE_AND_CONTINUE_EVENT, onSaveAndContinue, true);
+    window.addEventListener(AUTOSAVE_EVENT, onAutosave, true);
 
     return () => {
       window.removeEventListener(
@@ -589,6 +715,7 @@ export function Ds11FinalizeIntercept() {
         onSaveAndContinue,
         true,
       );
+      window.removeEventListener(AUTOSAVE_EVENT, onAutosave, true);
     };
   }, []);
 

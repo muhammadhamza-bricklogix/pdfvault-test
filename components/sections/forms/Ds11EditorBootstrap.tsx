@@ -26,10 +26,23 @@ export const DS11_LIBRARY_FILENAME = "Form DS-11 Passport Application.pdf";
 
 /**
  * One file per applicant, not one per user — a household often files several.
- * The name keeps them apart in My PDFs.
+ * The name keeps them apart in My PDFs, so this is the editor's current
+ * filename (user-editable again), not a fixed constant.
  */
 export function ds11LibraryFilename(): string {
-  return DS11_LIBRARY_FILENAME;
+  // Prefer the SAVED row name over the template file name. After the user
+  // picks "Save as a new file", the row is called e.g. "... (2).pdf" while
+  // store.file is still the template; without this the next autosave would
+  // re-upload under the default name and the backend would rename the row
+  // straight back.
+  const { currentDocumentName, file } = usePdfEditorStore.getState();
+  const current = (currentDocumentName ?? file?.name)?.trim();
+
+  if (!current) return DS11_LIBRARY_FILENAME;
+
+  return /\.pdf$/i.test(current)
+    ? current
+    : `${current.replace(/\.[^./\\]+$/, "")}.pdf`;
 }
 
 type Ds11ResumeEnvelope = {
@@ -71,7 +84,20 @@ export function Ds11EditorBootstrap({ children }: Ds11EditorBootstrapProps) {
     resetDs11SessionFinalized();
     useFormEditorStore.getState().reset();
 
+    // On ?new=1 this mints a fresh instance id, which leaves the draft
+    // carried over from the last visit behind instead of re-opening it.
     const instanceId = beginDs11Draft({ resumeDocId, forceNew });
+
+    // One-shot: a reload re-sends the same query, so strip ?new=1 now or
+    // every refresh would wipe the draft we just started. Uses
+    // history.replaceState, not router.replace, because forceNew is in this
+    // effect's deps and a re-render would re-run the whole bootstrap.
+    if (forceNew && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+
+      url.searchParams.delete("new");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
 
     // SYNC restore FIRST — restores any typed values immediately from
     // localStorage so the user never perceives data loss on reload or back.
@@ -84,6 +110,28 @@ export function Ds11EditorBootstrap({ children }: Ds11EditorBootstrapProps) {
     usePdfEditorStore.getState().clearFile();
     usePdfEditorStore.getState().setAutoPersistDisabled(true);
     usePdfEditorStore.getState().setDisableAutoTextExtract(true);
+
+    // Fetched ONCE and shared: the template needs this row's filename
+    // so `file.name` is truthful from the first paint, and the restore
+    // below needs its values.
+    const resumedPromise = resumeDocId
+      ? (async () => {
+          try {
+            const doc = await documentsService.getDocument(resumeDocId);
+
+            // Only adopt a row that really is a saved DS-11 — it has to
+            // carry the `ds11` marker `Ds11FinalizeIntercept` writes into
+            // editorState. Without this a stray `?resumeDocId=<other-id>`
+            // lets the next save upsert a stamped DS-11 on top of an
+            // unrelated user document, and names the editor's File after it.
+            return parseDs11Values(doc.editorState) ? doc : null;
+          } catch (err) {
+            logger.captureError(err, "ds-11.resume_from_library");
+
+            return null;
+          }
+        })()
+      : Promise.resolve(null);
 
     const templatePromise = (async () => {
       await Promise.resolve();
@@ -99,7 +147,35 @@ export function Ds11EditorBootstrap({ children }: Ds11EditorBootstrapProps) {
       const blob = await res.blob();
 
       if (!isActiveRun()) return;
-      const file = new File([blob], "ds-11.pdf", { type: "application/pdf" });
+
+      // Name it after the row being resumed, not the generic library
+      // constant. `file.name` is what the export modal offers as the
+      // download name and duplicate-checks against My PDFs, so a stale
+      // name there downloads under the default name and flags a false
+      // clash against the ORIGINAL row. Resolved before the only setFile
+      // so the name is right from the first paint: use-pdf-loader keys its
+      // reload on `file.name`, so swapping the File in afterwards would
+      // tear the overlay layer down again.
+      // Bounded: a slow or hung document fetch must not hold the template
+      // — and with it the whole editor — behind the loading shell. On
+      // timeout we paint under the default name; the resume below still
+      // claims the row and the save paths read `currentDocumentName`, so
+      // only the export modal's pre-filled name would be stale in that
+      // rare case.
+      let nameTimer = 0;
+      const resumedName = await Promise.race([
+        resumedPromise.then((r) => r?.filename ?? null),
+        new Promise<null>((resolve) => {
+          nameTimer = window.setTimeout(() => resolve(null), 4_000);
+        }),
+      ]);
+
+      window.clearTimeout(nameTimer);
+
+      if (!isActiveRun()) return;
+      const file = new File([blob], resumedName ?? DS11_LIBRARY_FILENAME, {
+        type: "application/pdf",
+      });
 
       setFile(file);
       usePdfEditorStore.getState().setCurrentPage(DS11_FIRST_FORM_PAGE);
@@ -130,29 +206,22 @@ export function Ds11EditorBootstrap({ children }: Ds11EditorBootstrapProps) {
     });
 
     const resumePromise = (async () => {
-      await Promise.resolve();
-      if (!isActiveRun() || !resumeDocId) return;
+      const doc = await resumedPromise;
 
-      try {
-        const doc = await documentsService.getDocument(resumeDocId);
+      if (!isActiveRun() || !doc) return;
 
-        if (!isActiveRun()) return;
+      const restored = parseDs11Values(doc.editorState);
 
-        const restored = parseDs11Values(doc.editorState);
+      usePdfEditorStore.getState().setCurrentDocument({
+        id: doc.id,
+        name: doc.filename,
+      });
 
-        usePdfEditorStore.getState().setCurrentDocument({
-          id: doc.id,
-          name: doc.filename,
-        });
+      const hasLocalDraft =
+        earlyPending && Object.keys(earlyPending).length > 0;
 
-        const hasLocalDraft =
-          earlyPending && Object.keys(earlyPending).length > 0;
-
-        if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
-          useFormEditorStore.getState().setValues(restored);
-        }
-      } catch (err) {
-        logger.captureError(err, "ds-11.resume_from_library");
+      if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
+        useFormEditorStore.getState().setValues(restored);
       }
     })();
 
