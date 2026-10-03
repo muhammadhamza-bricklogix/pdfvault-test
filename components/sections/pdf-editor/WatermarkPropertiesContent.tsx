@@ -142,7 +142,20 @@ export function WatermarkPropertiesContent({
           // Save the image bytes AND make sure the watermark is enabled +
           // type-switched to "image", so users who upload before flipping
           // the toggles still get a visible watermark on save/export.
-          setConfig({ enabled: true, imageData: dataUrl, type: "image" });
+          // Row 74/80: text watermark default rotation is -45° (slanted
+          // "CONFIDENTIAL" across the page — standard print convention).
+          // Image watermarks (logos, stamps) read best upright, and
+          // inheriting the -45° default when switching to image means
+          // the uploaded logo slants over whatever the user inserted —
+          // perceived as "the watermark rotated unexpectedly." Reset
+          // rotation to 0 at image upload. The Rotation controls below
+          // still let users dial in a non-zero angle after upload.
+          setConfig({
+            enabled: true,
+            imageData: dataUrl,
+            rotation: 0,
+            type: "image",
+          });
         } catch (err) {
           logger.captureError(err, "watermark.compress", {
             filename: file.name,
