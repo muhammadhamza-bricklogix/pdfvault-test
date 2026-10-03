@@ -397,6 +397,16 @@ function SignatureModalContent({
       top: centerY,
     });
 
+    // QA 2026-10-03 row 3: stamp editorType BEFORE serializing /
+    // adding so the live FabricImage instance carries the same
+    // metadata as the JSON spliced into other pages. Previously only
+    // the JSON copy had `editorType: "signature"` — the live `img`
+    // had no editorType, which left same-session signatures
+    // inconsistent with reloaded ones through
+    // `stripBakedOverlaysForSave`, `applyPristineSweep`, and any
+    // future editorType-aware filter.
+    (img as unknown as { editorType?: string }).editorType = "signature";
+
     // Serialize the placed signature once — reused for every non-current
     // target page. The current page still gets the live FabricImage
     // instance so the user can drag/resize immediately.
