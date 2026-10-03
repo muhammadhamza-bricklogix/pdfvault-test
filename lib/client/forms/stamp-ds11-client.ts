@@ -91,16 +91,30 @@ function isPrefixedGroup(field: FormField): boolean {
 }
 
 function stampPageTwoHeader(form: PDFForm, values: Record<string, string>) {
-  const name = [values.last_name, values.first_name, values.middle_name]
-    .map((v) => (v ?? "").trim())
-    .filter(Boolean)
-    .join(", ");
-  const dob = [values.dob_month, values.dob_day, values.dob_year].map((v) =>
-    (v ?? "").trim(),
-  );
+  // Both widgets are now editable in their own right (schema section
+  // "page2_header"), so anything typed there has already been written by
+  // `stampFields` and must win. Mirroring page 1 is only the fallback for
+  // when the user leaves them blank — the printed form repeats the
+  // applicant's name and date of birth at the top of page 2.
+  const typedName = (values.applicant_name_page2 ?? "").trim();
+  const typedDob = (values.applicant_dob_page2 ?? "").trim();
 
-  if (name) setText(form, MIRRORED_NAME, name);
-  if (dob.every(Boolean)) setText(form, MIRRORED_DOB, dob.join("/"));
+  if (!typedName) {
+    const name = [values.last_name, values.first_name, values.middle_name]
+      .map((v) => (v ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+
+    if (name) setText(form, MIRRORED_NAME, name);
+  }
+
+  if (!typedDob) {
+    const dob = [values.dob_month, values.dob_day, values.dob_year].map((v) =>
+      (v ?? "").trim(),
+    );
+
+    if (dob.every(Boolean)) setText(form, MIRRORED_DOB, dob.join("/"));
+  }
 }
 
 async function stampFields(form: PDFForm, values: Record<string, string>) {
