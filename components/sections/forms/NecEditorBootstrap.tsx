@@ -113,6 +113,21 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     usePdfEditorStore.getState().setAutoPersistDisabled(true);
     usePdfEditorStore.getState().setDisableAutoTextExtract(true);
 
+    // Fetched ONCE and shared: the template needs this row's filename
+    // so `file.name` is truthful from the first paint, and the restore
+    // below needs its values.
+    const resumedPromise = resumeDocId
+      ? (async () => {
+          try {
+            return await documentsService.getDocument(resumeDocId);
+          } catch (err) {
+            logger.captureError(err, "1099-nec.resume_from_library");
+
+            return null;
+          }
+        })()
+      : Promise.resolve(null);
+
     // Parallel bootstrap: template fetch + form session
     const templatePromise = (async () => {
       await Promise.resolve();
@@ -130,7 +145,31 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
       const blob = await res.blob();
 
       if (!isActiveRun()) return;
-      const file = new File([blob], NEC_LIBRARY_FILENAME, {
+
+      // Name it after the row being resumed, not the generic library
+      // constant. `file.name` is what the export modal offers as the
+      // download name and duplicate-checks against My PDFs, so a stale
+      // name there downloads under the default name and flags a false
+      // clash against the ORIGINAL row (QA 2026-10-04). Resolved before
+      // the only setFile so the name is right from the first paint — no
+      // second File swap to race the overlays or reset the page.
+      // Bounded: a slow document fetch must not hold the template — and
+      // with it the whole editor — off-screen. On timeout we paint under
+      // the default name; the resume below still claims the row and the
+      // save paths read `currentDocumentName`, so only the export modal's
+      // pre-filled name would be stale in that rare case.
+      let nameTimer = 0;
+      const resumedName = await Promise.race([
+        resumedPromise.then((r) => r?.filename ?? null),
+        new Promise<null>((resolve) => {
+          nameTimer = window.setTimeout(() => resolve(null), 4_000);
+        }),
+      ]);
+
+      window.clearTimeout(nameTimer);
+
+      if (!isActiveRun()) return;
+      const file = new File([blob], resumedName ?? NEC_LIBRARY_FILENAME, {
         type: "application/pdf",
       });
 
@@ -167,29 +206,22 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     });
 
     const resumePromise = (async () => {
-      await Promise.resolve();
-      if (!isActiveRun() || !resumeDocId) return;
+      const doc = await resumedPromise;
 
-      try {
-        const doc = await documentsService.getDocument(resumeDocId);
+      if (!isActiveRun() || !doc) return;
 
-        if (!isActiveRun()) return;
+      const restored = parseNecValues(doc.editorState);
 
-        const restored = parseNecValues(doc.editorState);
+      usePdfEditorStore.getState().setCurrentDocument({
+        id: doc.id,
+        name: doc.filename,
+      });
 
-        usePdfEditorStore.getState().setCurrentDocument({
-          id: doc.id,
-          name: doc.filename,
-        });
+      const hasLocalDraft =
+        earlyPending && Object.keys(earlyPending).length > 0;
 
-        const hasLocalDraft =
-          earlyPending && Object.keys(earlyPending).length > 0;
-
-        if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
-          useFormEditorStore.getState().setValues(restored);
-        }
-      } catch (err) {
-        logger.captureError(err, "1099-nec.resume_from_library");
+      if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
+        useFormEditorStore.getState().setValues(restored);
       }
     })();
 

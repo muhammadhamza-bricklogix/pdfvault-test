@@ -125,6 +125,42 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
     // defaults to false + resets on unmount.
     usePdfEditorStore.getState().setDisableAutoTextExtract(true);
 
+    // Fetched ONCE and shared: the template needs this row's filename
+    // so `file.name` is truthful from the first paint, and the restore
+    // below needs its values. Only claim the row if it really is a saved
+    // W-9 (has a `w9` marker in `editorState`) — without that check a
+    // stray `?resumeDocId=<non-w9-id>` could cause the next Save to
+    // upsert a stamped W-9 on top of an unrelated user document.
+    type ResumeEnvelope = {
+      w9?: {
+        values?: Record<string, string>;
+        signaturePreview?: string | null;
+      };
+    };
+
+    const resumedPromise = resumeDocId
+      ? (async () => {
+          try {
+            const doc = await documentsService.getDocument(resumeDocId);
+            let parsed: ResumeEnvelope | null = null;
+
+            if (doc.editorState) {
+              try {
+                parsed = JSON.parse(doc.editorState) as ResumeEnvelope;
+              } catch {
+                parsed = null;
+              }
+            }
+
+            return parsed?.w9 ? { doc, w9: parsed.w9 } : null;
+          } catch (err) {
+            logger.captureError(err, "w9.resume_from_dashboard");
+
+            return null;
+          }
+        })()
+      : Promise.resolve(null);
+
     // Parallel bootstrap: template fetch + form session. Neither
     // depends on the other so we don't want them serialized.
     const templatePromise = (async () => {
@@ -141,7 +177,32 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
       const blob = await res.blob();
 
       if (!isActiveRun()) return;
-      const file = new File([blob], W9_LIBRARY_FILENAME, {
+
+      // Name it after the row being resumed, not the generic library
+      // constant. `file.name` is what the export modal offers as the
+      // download name and duplicate-checks against My PDFs, so a stale
+      // name there downloads "IRS Form W-9.pdf" for a row actually called
+      // "IRS Form W-9 (5).pdf" and flags a false clash against the
+      // ORIGINAL row (QA 2026-10-04). Resolved before the only setFile so
+      // the name is right from the first paint — no second File swap to
+      // race the overlays.
+      // Bounded: a slow document fetch must not hold the template — and
+      // with it the whole editor — off-screen. On timeout we paint under
+      // the default name; the resume below still claims the row and the
+      // save paths read `currentDocumentName`, so only the export modal's
+      // pre-filled name would be stale in that rare case.
+      let nameTimer = 0;
+      const resumedName = await Promise.race([
+        resumedPromise.then((r) => r?.doc.filename ?? null),
+        new Promise<null>((resolve) => {
+          nameTimer = window.setTimeout(() => resolve(null), 4_000);
+        }),
+      ]);
+
+      window.clearTimeout(nameTimer);
+
+      if (!isActiveRun()) return;
+      const file = new File([blob], resumedName ?? W9_LIBRARY_FILENAME, {
         type: "application/pdf",
       });
 
@@ -195,67 +256,37 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
 
     const resumePromise = resumeDocId
       ? (async () => {
-          await Promise.resolve();
-          if (!isActiveRun()) return;
+          const resumed = await resumedPromise;
 
-          try {
-            const doc = await documentsService.getDocument(resumeDocId);
+          if (!isActiveRun() || !resumed) return;
 
-            if (!isActiveRun()) return;
+          usePdfEditorStore.getState().setCurrentDocument({
+            id: resumed.doc.id,
+            name: resumed.doc.filename,
+          });
 
-            // Only claim ownership of this document row if it's really
-            // a saved W-9 (has a `w9` marker in `editorState`). Without
-            // this check a stray `?resumeDocId=<non-w9-id>` link could
-            // cause the next Save to upsert a stamped W-9 on top of an
-            // unrelated user document → silent data loss.
-            type ResumeEnvelope = {
-              w9?: {
-                values?: Record<string, string>;
-                signaturePreview?: string | null;
-              };
-            };
-            let parsed: ResumeEnvelope | null = null;
+          const values = resumed.w9.values;
 
-            if (doc.editorState) {
-              try {
-                parsed = JSON.parse(doc.editorState) as ResumeEnvelope;
-              } catch {
-                parsed = null;
-              }
-            }
+          if (values && typeof values === "object") {
+            // `sessionPromise` may still be in flight — the store
+            // action merges into `values` so the order is safe
+            // (each `setValues` spreads into the previous map).
+            useFormEditorStore.getState().setValues(values);
+          }
 
-            if (!parsed?.w9) return;
+          // Restore the signature IMAGE (data URL) so the yellow
+          // "Sign here" placeholder is replaced by the previously
+          // drawn ink on reopen. Signature KEY is intentionally
+          // still null — the fresh session's S3 namespace won't
+          // accept the old key. If the user hits Done → Download
+          // without re-signing, `W9FinalizeIntercept` re-uploads
+          // this preview to the new session before finalizing.
+          const signaturePreview = resumed.w9.signaturePreview;
 
-            usePdfEditorStore.getState().setCurrentDocument({
-              id: doc.id,
-              name: doc.filename,
-            });
-
-            const values = parsed.w9.values;
-
-            if (values && typeof values === "object") {
-              // `sessionPromise` may still be in flight — the store
-              // action merges into `values` so the order is safe
-              // (each `setValues` spreads into the previous map).
-              useFormEditorStore.getState().setValues(values);
-            }
-
-            // Restore the signature IMAGE (data URL) so the yellow
-            // "Sign here" placeholder is replaced by the previously
-            // drawn ink on reopen. Signature KEY is intentionally
-            // still null — the fresh session's S3 namespace won't
-            // accept the old key. If the user hits Done → Download
-            // without re-signing, `W9FinalizeIntercept` re-uploads
-            // this preview to the new session before finalizing.
-            const signaturePreview = parsed.w9.signaturePreview;
-
-            if (typeof signaturePreview === "string" && signaturePreview) {
-              useFormEditorStore
-                .getState()
-                .setSignaturePreview(signaturePreview);
-            }
-          } catch (err) {
-            logger.captureError(err, "w9.resume_from_dashboard");
+          if (typeof signaturePreview === "string" && signaturePreview) {
+            useFormEditorStore
+              .getState()
+              .setSignaturePreview(signaturePreview);
           }
         })()
       : Promise.resolve();
