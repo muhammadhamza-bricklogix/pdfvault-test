@@ -3,12 +3,20 @@
 import { useEffect } from "react";
 
 import { formsService } from "@/lib/shared/api/services/forms.service";
-import { useFormEditorStore } from "@/lib/client/stores";
+import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
 const DRAFT_PREFIX = "pv_nec_1099_draft:";
 const ACTIVE_KEY = "pv_nec_1099_active";
 const LOCAL_DEBOUNCE_MS = 400;
+/**
+ * How long typing must settle before the form is written to My PDFs.
+ * Longer than the local/DB debounces because this one can open the
+ * Replace / Save-as-new prompt, and interrupting mid-sentence is jarring.
+ */
+const LIBRARY_DEBOUNCE_MS = 2500;
+
+export const FORM_AUTOSAVE_EVENT = "editor:form-autosave";
 const DB_DEBOUNCE_MS = 1200;
 
 let activeInstanceId: string | null = null;
@@ -164,6 +172,7 @@ export function NecAutoPersist() {
   useEffect(() => {
     let localTimeout: number | null = null;
     let dbTimeout: number | null = null;
+    let libraryTimeout: number | null = null;
     const snap = () => useFormEditorStore.getState().values;
     let latest = snap();
 
@@ -204,9 +213,26 @@ export function NecAutoPersist() {
       patchDb();
     };
 
+    // The finalize intercept owns the actual save — it already has the
+    // stamper, the auth refs and the filename-conflict gate. This only
+    // asks it to run.
+    const flushLibraryDebounced = () => {
+      libraryTimeout = null;
+      window.dispatchEvent(new CustomEvent(FORM_AUTOSAVE_EVENT));
+    };
+
     const unsub = useFormEditorStore.subscribe((state, prev) => {
       if (state.values === prev.values) return;
       latest = snap();
+
+      // Mark the editor dirty so the shared unload guards engage. Without
+      // this, forms never set hasUnsavedChanges, so a reload or tab close
+      // blew straight through with no warning at all:
+      //   - beforeunload  -> native "Leave site?" (toolbar reload, tab close)
+      //   - F5 / Ctrl+R   -> our own ReloadConfirmModal, which CAN save first
+      if (!usePdfEditorStore.getState().hasUnsavedChanges) {
+        usePdfEditorStore.setState({ hasUnsavedChanges: true });
+      }
 
       if (localTimeout === null) {
         localTimeout = window.setTimeout(
@@ -217,7 +243,53 @@ export function NecAutoPersist() {
       if (dbTimeout === null) {
         dbTimeout = window.setTimeout(flushDbDebounced, DB_DEBOUNCE_MS);
       }
+      // Only real input is worth saving. The NEC bootstrap seeds
+      // calendar_year, and that seeding is itself a change — without this a
+      // blank form would arm the save and pop the filename dialog before the
+      // user typed anything.
+      if (hasRealInput(latest)) {
+        // Restarted on every keystroke so the save lands once typing stops,
+        // rather than repeatedly mid-sentence.
+        if (libraryTimeout !== null) window.clearTimeout(libraryTimeout);
+        libraryTimeout = window.setTimeout(
+          flushLibraryDebounced,
+          LIBRARY_DEBOUNCE_MS,
+        );
+      }
     });
+
+    // A navigation save is about to run and will persist the same values.
+    // Drop any pending autosave so the two do not race — without this the
+    // debounce could fire mid-navigation and open a second prompt.
+    const cancelPendingAutosave = () => {
+      if (libraryTimeout !== null) {
+        window.clearTimeout(libraryTimeout);
+        libraryTimeout = null;
+      }
+    };
+
+    window.addEventListener(
+      "editor:w9-save-and-continue",
+      cancelPendingAutosave,
+      true,
+    );
+
+    const hasRealInput = (v: Record<string, string>) =>
+      Object.entries(v ?? {}).some(
+        ([key, value]) =>
+          key !== "calendar_year" && String(value ?? "").trim() !== "",
+      );
+
+    // A toolbar reload cannot save on the way out — the PDF stamp is async
+    // and the upload dies with the page. So finish the job on the way back
+    // in: a restored draft arms the save once on mount, which is what makes
+    // the filename prompt appear right after the reload instead of never.
+    if (hasRealInput(snap())) {
+      libraryTimeout = window.setTimeout(
+        flushLibraryDebounced,
+        LIBRARY_DEBOUNCE_MS,
+      );
+    }
 
     const onPageHide = () => {
       latest = snap();
@@ -229,6 +301,12 @@ export function NecAutoPersist() {
 
     return () => {
       unsub();
+      if (libraryTimeout !== null) window.clearTimeout(libraryTimeout);
+      window.removeEventListener(
+        "editor:w9-save-and-continue",
+        cancelPendingAutosave,
+        true,
+      );
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("beforeunload", onPageHide);
 

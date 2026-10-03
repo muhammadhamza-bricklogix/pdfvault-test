@@ -44,7 +44,12 @@ const MIN_OVERLAY_PX = 8;
 export function overlayFontSize(
   rect: { h: number },
   scale: number,
-  { ratio = 1, maxPt = 15, override, allowOverflow = false }: OverlayFontOptions = {},
+  {
+    ratio = 1,
+    maxPt = 15,
+    override,
+    allowOverflow = false,
+  }: OverlayFontOptions = {},
 ) {
   const basePt = override ?? Math.min(rect.h * ratio, maxPt);
   const px = Math.max(basePt * scale, MIN_OVERLAY_PX);
