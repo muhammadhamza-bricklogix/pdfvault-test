@@ -605,20 +605,26 @@ function TopAppBar() {
     // pill; that's now redundant and removed.
     <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--pv-hairline,rgb(235,235,235))] bg-white px-4 py-2">
       {/* ── LEFT SECTION: navigation + document identity ────────────── */}
+      {/* QA mobile 2026-10-03: HamburgerMenu is the leftmost item on
+          mobile per product; Back button sits after it. Desktop keeps
+          the original Back → Hamburger order. Tailwind `order-*` on
+          flex children does the swap without duplicating the markup. */}
       <div className="flex min-w-0 items-center gap-3">
-        <Tooltip delay={300}>
-          <button
-            aria-label={t("backToDashboard")}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
-            type="button"
-            onClick={handleBack}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
-          </button>
-          <Tooltip.Content>
-            <p>{t("backToDashboard")}</p>
-          </Tooltip.Content>
-        </Tooltip>
+        <div className="order-2 flex md:order-1">
+          <Tooltip delay={300}>
+            <button
+              aria-label={t("backToDashboard")}
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-default-600 transition-colors hover:bg-default-100 hover:text-default-800"
+              type="button"
+              onClick={handleBack}
+            >
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
+            </button>
+            <Tooltip.Content>
+              <p>{t("backToDashboard")}</p>
+            </Tooltip.Content>
+          </Tooltip>
+        </div>
 
         {/* Hamburger hidden on `/w-9-form` per product 2026-09-01 —
             the W-9 flow has its own Back → save-and-continue path and
@@ -632,11 +638,13 @@ function TopAppBar() {
             them. Unmounting the whole component for guests silently
             drops those listeners and the toolbar buttons appear idle
             (QA 2026-09-06). */}
-        {showW9Save ? null : <HamburgerMenu />}
+        <div className="order-1 flex md:order-2">
+          {showW9Save ? null : <HamburgerMenu />}
+        </div>
 
         <Link
           aria-label={t("home")}
-          className="flex shrink-0 items-center gap-2"
+          className="order-3 flex shrink-0 items-center gap-2"
           href={ROUTES.PUBLIC.HOME}
           onClick={handleLogoClick}
         >
@@ -649,13 +657,16 @@ function TopAppBar() {
           />
         </Link>
 
-        <span aria-hidden className="mx-1 h-6 w-px bg-default-200" />
+        <span
+          aria-hidden
+          className="order-4 mx-1 h-6 w-px bg-default-200"
+        />
 
         {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
             fit-to-text sizing (no more `flex-1` stretch), click-to-edit
             via pencil icon, tick button to save, blank-name guarded. */}
         <EditableFilenameField
-          className="min-w-0 max-w-[50vw] flex-shrink"
+          className="order-5 min-w-0 max-w-[50vw] flex-shrink"
           disabled={!file}
           fontSizeClass="text-[14px]"
           value={displayName}

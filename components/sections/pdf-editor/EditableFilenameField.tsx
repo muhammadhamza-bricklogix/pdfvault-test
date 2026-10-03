@@ -19,11 +19,58 @@ import { useLayoutEffect, useRef, useState } from "react";
  *   - Escape → discard the change, return to view mode
  *   - Empty (trimmed) input disables the tick button so the name
  *     can never be persisted blank
+ *   - QA 2026-10-03: validation also blocks commit on characters that
+ *     break common filesystems (`/\\:*?"<>|`), control characters, and
+ *     names longer than 200 chars (reserves headroom under the 255-char
+ *     POSIX cap for the backend's `.pdf` extension and any
+ *     collision suffixes). Invalid drafts show a red border, an
+ *     `aria-invalid` state, a native `title` tooltip explaining why,
+ *     and the tick button is disabled.
  *
  * `onCommit` is called with the trimmed new name. Extension handling
  * (e.g. re-appending `.pdf`) is the caller's responsibility — matches
  * the existing `commitRename` handlers.
  */
+
+// Windows reserves these characters at the filesystem API level and
+// macOS forbids `/`. Spaces, dashes, dots, and Unicode letters/digits
+// remain allowed so users can type real-world document names like
+// "My Document - 2024". Control chars (0x00-0x1F) are rejected too.
+// eslint-disable-next-line no-control-regex
+const FORBIDDEN_FILENAME_CHARS = /[\\/:*?"<>|\x00-\x1f]/;
+const MAX_FILENAME_LENGTH = 200;
+
+type FilenameValidation = { valid: true } | { valid: false; reason: string };
+
+function validateFilename(name: string): FilenameValidation {
+  const trimmed = name.trim();
+
+  if (!trimmed) {
+    return { reason: "Name cannot be empty", valid: false };
+  }
+  if (trimmed.length > MAX_FILENAME_LENGTH) {
+    return {
+      reason: `Name is too long (max ${MAX_FILENAME_LENGTH} characters)`,
+      valid: false,
+    };
+  }
+  if (FORBIDDEN_FILENAME_CHARS.test(trimmed)) {
+    return {
+      reason: `Name cannot contain any of: \\ / : * ? " < > |`,
+      valid: false,
+    };
+  }
+  // Trailing dots / spaces trip Windows filesystems silently; backend
+  // strips them, user ends up with a different name than they typed.
+  if (/[. ]+$/.test(trimmed)) {
+    return {
+      reason: "Name cannot end with a space or dot",
+      valid: false,
+    };
+  }
+
+  return { valid: true };
+}
 export function EditableFilenameField({
   value,
   disabled,
@@ -83,15 +130,25 @@ export function EditableFilenameField({
     setIsEditing(false);
   };
 
+  const validation = validateFilename(draft);
+  const canCommit = validation.valid;
+  const validationReason = validation.valid ? null : validation.reason;
+
   const commit = () => {
     const trimmed = draft.trim();
 
-    // Empty guard — never persist a blank name. Silently cancel;
-    // the tick button is also disabled below so this branch is a
-    // belt-and-braces for the Enter-key path.
+    // Blank + invalid guard — never persist a bad name. Silently
+    // cancel on blank (preserves the original value); keep the user
+    // in edit mode on validation failure so they can see the red
+    // border + tooltip and fix the name. The tick button is also
+    // disabled when `canCommit === false`, so this handles the
+    // Enter-key path.
     if (!trimmed) {
       cancelEdit();
 
+      return;
+    }
+    if (!validation.valid) {
       return;
     }
 
@@ -101,17 +158,20 @@ export function EditableFilenameField({
     setIsEditing(false);
   };
 
-  const canCommit = draft.trim().length > 0;
+  const showInvalid = isEditing && !canCommit && draft.length > 0;
 
   return (
     <div
       className={`inline-flex items-center gap-1.5 rounded-md border bg-white px-2 py-1 transition-colors ${
-        isEditing
-          ? "border-[#f12c23]"
-          : disabled
-            ? "border-default-200"
-            : "border-default-300 hover:border-default-400"
+        showInvalid
+          ? "border-rose-500"
+          : isEditing
+            ? "border-[#f12c23]"
+            : disabled
+              ? "border-default-200"
+              : "border-default-300 hover:border-default-400"
       } ${disabled ? "opacity-50" : ""} ${className}`}
+      title={validationReason ?? undefined}
     >
       {/* Invisible sizer that mirrors input styles + content so we can
           measure natural text width and apply it back to the input.
@@ -129,9 +189,15 @@ export function EditableFilenameField({
       {isEditing ? (
         <input
           ref={inputRef}
+          aria-invalid={showInvalid || undefined}
           aria-label={ariaLabel}
-          className={`min-w-0 bg-transparent font-medium text-[var(--color-foreground)] outline-none ${fontSizeClass}`}
+          className={`min-w-0 bg-transparent font-medium outline-none ${fontSizeClass} ${
+            showInvalid
+              ? "text-rose-700"
+              : "text-[var(--color-foreground)]"
+          }`}
           disabled={disabled}
+          maxLength={MAX_FILENAME_LENGTH + 50}
           style={{ width: inputWidth ?? undefined }}
           type="text"
           value={draft}

@@ -455,7 +455,17 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
         const box = obj.getBoundingRect();
 
-        if (point.y < box.top || point.y > box.top + box.height) continue;
+        // Y tolerance mirrors the X tolerance so touches landing a few pixels
+        // above or below the glyph line still edit the existing text. iOS
+        // taps land ~10-15px below the visible finger contact and glyph box
+        // heights at 11-16pt fonts are ~11-16px, so a tap "at end of line"
+        // used to fall past box.height and drop through to the empty-space
+        // Textbox-creation path (BUG-006).
+        if (
+          point.y < box.top - tolerance ||
+          point.y > box.top + box.height + tolerance
+        )
+          continue;
 
         const gap =
           point.x < box.left
