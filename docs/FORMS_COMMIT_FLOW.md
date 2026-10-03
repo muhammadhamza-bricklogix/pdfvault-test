@@ -38,13 +38,18 @@ In this order, onto a fresh branch from `main`:
 | 2 | `6b55d55` | 2026-10-03 | `feat(landing): list Form DS-11 in the All Tools catalog` |
 | 3 | `48a15d0` | 2026-10-04 | `feat(ds-11): give DS-11 the same save behaviour as the W-9 and 1099-NEC` |
 | 4 | `aaa8878` | 2026-10-04 | `fix(ds-11): make the page-2 name and date of birth editable` |
+| 5 | `be7969c` | 2026-10-04 | `feat(forms): downloaded PDFs stay editable` — not DS-11-only; it touches all three stampers, but it is on this branch and not on `main`, so it has to come along |
 
 ```bash
 git checkout main
 git pull
 git checkout -b feature/ds-11-on-main
-git cherry-pick 76780ba 6b55d55 48a15d0 aaa8878
+git cherry-pick 76780ba 6b55d55 48a15d0 aaa8878 be7969c
 ```
+
+`be7969c` also edits `stamp-w9-client.ts` and `stamp-nec-client.ts`, which `main`
+already has, so expect it to apply cleanly but review it — it reverses the
+flattening that PR #206 introduced.
 
 ### Conflicts to expect
 
@@ -152,10 +157,14 @@ local client stamper (which works, but is not the server-stamped path).
       lands with the server's name instead of the one chosen in the export modal.
       The 1099-NEC already does this correctly (fetch → Blob → named object URL);
       the fix is to copy that shape.
-- [ ] **Editable downloads.** A decision has been taken to reverse the
-      "downloads are flattened / read-only" behaviour so users can edit the PDF
-      after downloading, for all three forms. Not yet implemented. Note the
-      1099-NEC constraint in §7.
+- [x] **Editable downloads** — done in `be7969c`, for the **client** stampers.
+      Option 3 from §7 was chosen: Copy A editable, the other copies read-only
+      with Acrobat calculate actions, limitation accepted.
+- [ ] **Backend fillers still flatten.** `w9.filler.ts:371` and
+      `1099-nec.filler.ts:565` both call `form.flatten()`, so a server-stamped
+      download is still read-only. They need the same treatment as `be7969c`,
+      including unsetting Copy A's ReadOnly flag and adding the calculate
+      actions. Until then, only the client-stamped path produces an editable PDF.
 - [ ] **Backend `fillPageTwoHeader`** needs the same "typed value wins" change
       that `stamp-ds11-client.ts` received in `aaa8878`, otherwise a
       server-stamped DS-11 will overwrite a user-typed page-2 header.
@@ -187,3 +196,8 @@ Practical options:
 2. **Copy A editable, other copies flattened** — the black copies are frozen at
    whatever was stamped at download time and do not follow later edits.
 3. **PDF JavaScript** — matches the request exactly but only in Acrobat.
+
+**Chosen: option 3**, with the limitation understood and accepted. Implemented in
+`be7969c`. Because non-Acrobat viewers ignore the scripts, every value is still
+stamped onto all four copies at download time, so the carbon copies are correct
+there — they just stop following later edits to Copy A.
