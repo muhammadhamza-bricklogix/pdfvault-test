@@ -431,13 +431,6 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     }
     /* eslint-enable react-hooks/immutability */
 
-    // Loaded up front so a new text box is created and focused inside the tap (iOS only opens the keyboard then).
-    let TextboxClass: typeof Textbox | null = null;
-
-    void import("fabric").then((m) => {
-      TextboxClass = m.Textbox;
-    });
-
     // A tap just past either end of an extracted line (outside its glyph box) edits that line.
     const findEditTextBesidePointer = (opt: TPointerEventInfo) => {
       const isTouch =
@@ -455,7 +448,17 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
         const box = obj.getBoundingRect();
 
-        if (point.y < box.top || point.y > box.top + box.height) continue;
+        // Y tolerance mirrors the X tolerance so touches landing a few pixels
+        // above or below the glyph line still edit the existing text. iOS
+        // taps land ~10-15px below the visible finger contact and glyph box
+        // heights at 11-16pt fonts are ~11-16px, so a tap "at end of line"
+        // used to fall past box.height and drop through to the empty-space
+        // Textbox-creation path (BUG-006).
+        if (
+          point.y < box.top - tolerance ||
+          point.y > box.top + box.height + tolerance
+        )
+          continue;
 
         const gap =
           point.x < box.left
@@ -667,24 +670,6 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const pending = pendingTouchTap;
 
       pendingTouchTap = null;
-
-      // Closing the iOS keyboard only blurs Fabric's hidden textarea; re-focus it when the editing text is tapped again.
-      const tapped = opt.target as
-        | (FabricObject & {
-            hiddenTextarea?: HTMLTextAreaElement | null;
-            isEditing?: boolean;
-          })
-        | undefined;
-
-      if (
-        touchPoint(opt.e) &&
-        tapped?.isEditing &&
-        tapped.hiddenTextarea &&
-        document.activeElement !== tapped.hiddenTextarea
-      ) {
-        tapped.hiddenTextarea.focus();
-      }
-
       if (!pending) return;
 
       const end = touchPoint(opt.e);
