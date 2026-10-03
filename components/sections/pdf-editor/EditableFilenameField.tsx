@@ -4,6 +4,8 @@ import { PencilEdit01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useLayoutEffect, useRef, useState } from "react";
 
+import { validateRenameBaseName } from "@/lib/shared/schemas/documents/rename.schema";
+
 /**
  * Click-to-edit filename field with fit-to-text sizing.
  *
@@ -19,11 +21,14 @@ import { useLayoutEffect, useRef, useState } from "react";
  *   - Escape → discard the change, return to view mode
  *   - Empty (trimmed) input disables the tick button so the name
  *     can never be persisted blank
+ *   - Invalid names (same rules as the My PDFs rename dialog) show a red
+ *     border and a visible message below the field; the tick is disabled.
  *
  * `onCommit` is called with the trimmed new name. Extension handling
  * (e.g. re-appending `.pdf`) is the caller's responsibility — matches
  * the existing `commitRename` handlers.
  */
+
 export function EditableFilenameField({
   value,
   disabled,
@@ -83,6 +88,11 @@ export function EditableFilenameField({
     setIsEditing(false);
   };
 
+  // An unchanged name is always allowed so existing odd names never get stuck.
+  const validationReason =
+    draft.trim() === value ? null : validateRenameBaseName(draft);
+  const canCommit = validationReason === null;
+
   const commit = () => {
     const trimmed = draft.trim();
 
@@ -94,6 +104,9 @@ export function EditableFilenameField({
 
       return;
     }
+    if (!canCommit) {
+      return;
+    }
 
     if (trimmed !== value) {
       onCommit(trimmed);
@@ -101,16 +114,18 @@ export function EditableFilenameField({
     setIsEditing(false);
   };
 
-  const canCommit = draft.trim().length > 0;
+  const showInvalid = isEditing && !canCommit;
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-md border bg-white px-2 py-1 transition-colors ${
-        isEditing
-          ? "border-[#f12c23]"
-          : disabled
-            ? "border-default-200"
-            : "border-default-300 hover:border-default-400"
+      className={`relative inline-flex items-center gap-1.5 rounded-md border bg-white px-2 py-1 transition-colors ${
+        showInvalid
+          ? "border-rose-500"
+          : isEditing
+            ? "border-[#f12c23]"
+            : disabled
+              ? "border-default-200"
+              : "border-default-300 hover:border-default-400"
       } ${disabled ? "opacity-50" : ""} ${className}`}
     >
       {/* Invisible sizer that mirrors input styles + content so we can
@@ -130,8 +145,11 @@ export function EditableFilenameField({
         <input
           ref={inputRef}
           aria-label={ariaLabel}
-          className={`min-w-0 bg-transparent font-medium text-[var(--color-foreground)] outline-none ${fontSizeClass}`}
+          className={`min-w-0 bg-transparent font-medium outline-none ${fontSizeClass} ${
+            showInvalid ? "text-rose-700" : "text-[var(--color-foreground)]"
+          }`}
           disabled={disabled}
+          maxLength={300}
           style={{ width: inputWidth ?? undefined }}
           type="text"
           value={draft}
@@ -185,6 +203,15 @@ export function EditableFilenameField({
           <HugeiconsIcon icon={PencilEdit01Icon} size={14} strokeWidth={1.8} />
         </button>
       )}
+
+      {showInvalid ? (
+        <p
+          className="absolute start-0 top-full z-50 mt-1 w-max max-w-[min(18rem,calc(100vw-2rem))] whitespace-normal rounded-md bg-rose-600 px-2 py-1 text-[12px] font-medium leading-snug text-white shadow-md"
+          role="alert"
+        >
+          {validationReason}
+        </p>
+      ) : null}
     </div>
   );
 }
