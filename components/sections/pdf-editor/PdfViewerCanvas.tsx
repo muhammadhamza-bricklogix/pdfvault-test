@@ -383,7 +383,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   useShapeTool({ fabricCanvas });
   const { handleModalClose } = useSignatureTool({ fabricCanvas });
 
-  useWatermarkTool({ fabricCanvas });
+  useWatermarkTool({
+    fabricCanvas,
+    pageSizeKey: renderedSize
+      ? `${Math.round(renderedSize.width / renderedSize.zoom)}x${Math.round(renderedSize.height / renderedSize.zoom)}`
+      : null,
+  });
 
   const isSignatureModalOpen = usePdfEditorStore((s) => s.isSignatureModalOpen);
 
@@ -425,6 +430,13 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       fc.isDrawingMode = false;
     }
     /* eslint-enable react-hooks/immutability */
+
+    // Loaded up front so a new text box is created and focused inside the tap (iOS only opens the keyboard then).
+    let TextboxClass: typeof Textbox | null = null;
+
+    void import("fabric").then((m) => {
+      TextboxClass = m.Textbox;
+    });
 
     // A tap just past either end of an extracted line (outside its glyph box) edits that line.
     const findEditTextBesidePointer = (opt: TPointerEventInfo) => {
@@ -524,7 +536,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       if (activeObj) return;
 
       const pointer = fc.getScenePoint(opt.e);
-      const { Textbox: FabricTextbox } = await import("fabric");
+      const FabricTextbox = TextboxClass ?? (await import("fabric")).Textbox;
 
       // Default new text boxes to ~240pt wide (a comfortable paragraph
       // width on US Letter / A4), but ensure the box always fits
@@ -655,6 +667,24 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const pending = pendingTouchTap;
 
       pendingTouchTap = null;
+
+      // Closing the iOS keyboard only blurs Fabric's hidden textarea; re-focus it when the editing text is tapped again.
+      const tapped = opt.target as
+        | (FabricObject & {
+            hiddenTextarea?: HTMLTextAreaElement | null;
+            isEditing?: boolean;
+          })
+        | undefined;
+
+      if (
+        touchPoint(opt.e) &&
+        tapped?.isEditing &&
+        tapped.hiddenTextarea &&
+        document.activeElement !== tapped.hiddenTextarea
+      ) {
+        tapped.hiddenTextarea.focus();
+      }
+
       if (!pending) return;
 
       const end = touchPoint(opt.e);
