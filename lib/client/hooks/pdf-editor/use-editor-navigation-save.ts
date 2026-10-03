@@ -290,6 +290,20 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           // convinced the edits were persisted. Surface each reason
           // explicitly and abort the navigation so the user can retry.
           if (result.reason === "error") {
+            // Row 87 QA 2026-10-04: force-navigate paths (logo-click,
+            // Back) run this handler regardless of
+            // `hasUnsavedChanges`, so a user who already saved and
+            // then clicks Back/Logo can still hit a backend conflict
+            // on the second (force) save and see the scary "try Save
+            // first" toast even though NOTHING is at risk. If the
+            // dirty flag reads false at this moment there's no user
+            // data to lose — swallow the error and proceed. Toast
+            // only when the user truly has unsaved edits.
+            if (!usePdfEditorStore.getState().hasUnsavedChanges) {
+              navigate();
+
+              return;
+            }
             toast.error({
               title: "Could not save",
               description:
@@ -339,11 +353,19 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         navigate();
       } catch (err) {
         toast.close(loadingKey);
-        toast.error({
-          title: "Could not save",
-          description:
-            "We couldn't save your PDF before leaving. Please try Save first.",
-        });
+        // Row 87 QA 2026-10-04: same dirty-flag guard as the
+        // result.reason === "error" branch above. A force-nav with no
+        // actual pending edits shouldn't scare the user with a
+        // "try Save first" toast when there was nothing to save.
+        if (usePdfEditorStore.getState().hasUnsavedChanges) {
+          toast.error({
+            title: "Could not save",
+            description:
+              "We couldn't save your PDF before leaving. Please try Save first.",
+          });
+        } else {
+          navigate();
+        }
         throw err;
       } finally {
         isNavigatingRef.current = false;
