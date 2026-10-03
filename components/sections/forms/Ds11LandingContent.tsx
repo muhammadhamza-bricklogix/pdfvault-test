@@ -152,7 +152,10 @@ function GetFormCta({ label = HERO_CTA_LABEL }: { label?: string }) {
   return (
     <Link
       className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--color-accent)] px-7 py-3 text-sm font-bold text-white shadow-md shadow-red-500/25 transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 sm:text-base"
-      href={ROUTES.FORMS.DS11_EDIT}
+      // ?new=1 — arriving from the landing always starts a blank form.
+      // Returning to a saved one goes through My PDFs, which links with
+      // ?resumeDocId instead.
+      href={`${ROUTES.FORMS.DS11_EDIT}?new=1`}
     >
       {label}
       <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
