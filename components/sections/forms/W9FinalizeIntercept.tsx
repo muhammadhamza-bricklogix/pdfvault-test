@@ -689,8 +689,17 @@ async function uploadW9ToLibraryNow(input: {
   editorState: string;
   file: File;
 }) {
+  // Resolve the name HERE, inside the queue — not in the caller.
+  //
+  // Callers build their File before queueing, so a save waiting behind the
+  // one showing the prompt still carries the pre-prompt name. It would then
+  // upsert the row the first save just created while uploading under the old
+  // name, and the backend rewrites the row filename from the upload — silently
+  // undoing "Save as a new file". Re-reading after the queue picks up the name
+  // the previous save settled on.
+  const desired = normalizeLibraryFilename(undefined);
   const resolution = await resolveFilenameConflict({
-    filename: input.file.name,
+    filename: desired,
     getOwnedDocumentId: () =>
       input.currentDocumentId ?? usePdfEditorStore.getState().currentDocumentId,
   });
