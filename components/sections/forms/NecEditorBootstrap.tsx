@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -9,6 +10,7 @@ import {
   readNecDraft,
   resetNecSessionFinalized,
 } from "@/components/sections/forms/NecAutoPersist";
+import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
@@ -50,6 +52,7 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
   const searchParams = useSearchParams();
   const resumeDocId = searchParams.get("resumeDocId");
   const forceNew = searchParams.get("new") === "1";
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
 
   const bootstrapRunIdRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +178,69 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
       useFormEditorStore.getState().reset();
     };
   }, [setFile, resumeDocId, forceNew]);
+
+  // Implicit resume from the saved 1099-NEC row belonging to the signed-in
+  // user. The W-9 has always done this; the 1099-NEC only honoured an
+  // explicit ?resumeDocId, so a form saved on a phone opened blank on web.
+  //
+  // Pure read (listDocuments + getDocument), so no row is created and
+  // nothing new appears in My PDFs. A row still arrives only on an explicit
+  // Save or Download, exactly as before.
+  //
+  // Deliberately its own effect keyed on auth. Adding isSignedIn to the
+  // bootstrap effect above would re-fetch the template and POST a second
+  // form session; keeping it separate also lets the restore fire after a
+  // logged-out user signs in and comes back.
+  useEffect(() => {
+    if (!authLoaded || !isSignedIn) return;
+    // An explicit resume target already covers this, and ?new=1 means the
+    // user deliberately asked for a blank form.
+    if (resumeDocId || forceNew) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const existing = await findDuplicateByFilename(NEC_LIBRARY_FILENAME);
+
+        if (cancelled || !existing) return;
+
+        const doc = await documentsService.getDocument(existing.id);
+
+        if (cancelled) return;
+
+        // Only adopt the row when the editorState marker is present — that
+        // is the signal it came from the 1099-NEC flow, not an unrelated
+        // PDF the user happened to give the same name.
+        const restored = parseNecValues(doc.editorState);
+
+        if (!restored || Object.keys(restored).length === 0) return;
+
+        usePdfEditorStore.getState().setCurrentDocument({
+          id: doc.id,
+          name: doc.filename,
+        });
+
+        // Anything already typed wins. calendar_year is seeded by the
+        // bootstrap above, so it does not count as real input.
+        const current = useFormEditorStore.getState().values;
+        const hasLocalInput = Object.entries(current).some(
+          ([key, value]) => key !== "calendar_year" && Boolean(value),
+        );
+
+        if (hasLocalInput) return;
+
+        useFormEditorStore.getState().setValues(restored);
+      } catch (err) {
+        // Non-fatal: a flaky list call must not block the template opening.
+        logger.captureError(err, "1099-nec.auto_resume_from_library");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoaded, isSignedIn, resumeDocId, forceNew]);
 
   if (error) {
     return (

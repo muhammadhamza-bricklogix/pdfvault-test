@@ -3,6 +3,9 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 
 const COPY_A_PAGE_INDEX = 1;
 
+/** Copy A, Copy 1, Copy B, Copy 2 — pages 2, 3, 4 and 6, zero-indexed. */
+const COPY_PAGE_INDEXES = [1, 2, 3, 5];
+
 const CURRENCY_FIELDS = new Set([
   "box1_nec",
   "box1b_cash_tips",
@@ -73,6 +76,9 @@ async function stampNec(
 
     if (!raw) continue;
 
+    // Drawn after the loop: there is no widget to write into.
+    if (field.freeText) continue;
+
     if (field.type === "checkbox") {
       if (!isChecked(raw)) continue;
       try {
@@ -91,6 +97,35 @@ async function stampNec(
   }
 
   form.flatten();
+
+  const freeTextFields = fields.filter((f) => f.freeText && values[f.id]);
+
+  if (freeTextFields.length > 0) {
+    const { StandardFonts, rgb } = await import("pdf-lib");
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const pages = pdfDoc.getPages();
+
+    for (const field of freeTextFields) {
+      const size = field.overlayFontSize ?? 8;
+      const pad = 2;
+
+      for (const index of COPY_PAGE_INDEXES) {
+        const page = pages[index];
+
+        if (!page) continue;
+        page.drawText(values[field.id]!, {
+          x: field.rect.x + pad,
+          // drawText anchors the first baseline, so start one line down.
+          y: field.rect.y + field.rect.h - size - pad,
+          size,
+          font,
+          color: rgb(0, 0, 0),
+          maxWidth: field.rect.w - pad * 2,
+          lineHeight: size * 1.25,
+        });
+      }
+    }
+  }
 
   if (!singlePage) return pdfDoc.save();
 

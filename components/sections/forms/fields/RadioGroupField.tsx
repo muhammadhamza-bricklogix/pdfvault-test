@@ -6,7 +6,7 @@ import { Label } from "@heroui/react";
 
 import { useFormEditorStore } from "@/lib/client/stores";
 
-import { pdfRectToCss } from "./types";
+import { overlayFontSize, pdfRectToCss } from "./types";
 
 /**
  * Renders the 7-way W-9 federal tax classification.
@@ -65,7 +65,16 @@ export function RadioGroupField({ field, mode, page }: FieldProps) {
               onClick={() => handleChange(opt.id)}
             >
               {isChecked ? (
-                <span className="text-[11px] font-bold leading-none text-black">
+                <span
+                  className="font-bold leading-none text-black"
+                  style={{
+                    fontSize: overlayFontSize(opt.rect, css.scale, {
+                      allowOverflow: true,
+                      maxPt: 12,
+                      ratio: 1.35,
+                    }),
+                  }}
+                >
                   ✓
                 </span>
               ) : null}

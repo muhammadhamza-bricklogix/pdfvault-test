@@ -233,25 +233,10 @@ export function NecFinalizeIntercept() {
         return lastFinalizeRef.current.downloadUrl;
       }
 
-      const entitled = await ensureFreshEntitlement();
-
-      if (!entitled) {
-        const previewObjectUrl = await buildNecPaywallPreviewUrl(values);
-
-        try {
-          const outcome = await requestPaywall({
-            filename: targetFilename,
-            sourceExt: "pdf",
-            targetExt,
-            ...(previewObjectUrl ? { previewObjectUrl } : {}),
-          });
-
-          if (outcome !== "success") return null;
-        } finally {
-          if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
-        }
-      }
-
+      // Validation runs BEFORE the entitlement gate. The W-9 has no
+      // client-side validation on this path, so leaving it after the
+      // paywall made the 1099-NEC fail where the W-9 downloaded — and it
+      // asked a user to pay before telling them the form was unusable.
       const errors = validate1099Nec({ values });
       const errorIds = Object.keys(errors);
 
@@ -274,6 +259,25 @@ export function NecFinalizeIntercept() {
       }
 
       state.setErrors({});
+
+      const entitled = await ensureFreshEntitlement();
+
+      if (!entitled) {
+        const previewObjectUrl = await buildNecPaywallPreviewUrl(values);
+
+        try {
+          const outcome = await requestPaywall({
+            filename: targetFilename,
+            sourceExt: "pdf",
+            targetExt,
+            ...(previewObjectUrl ? { previewObjectUrl } : {}),
+          });
+
+          if (outcome !== "success") return null;
+        } finally {
+          if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+        }
+      }
 
       const { downloadUrl } = await formsService.finalizeFormSession({
         sessionId: currentSessionId,
