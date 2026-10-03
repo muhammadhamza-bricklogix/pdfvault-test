@@ -39,14 +39,15 @@ export function FloatingShapeToolbar({
     const showToolbar = () => {
       const obj = fabricCanvas.getActiveObject();
 
-      if (!isShapeObject(obj)) {
+      // Images get this toolbar too so they can be deleted without a keyboard.
+      if (!isShapeObject(obj) && obj?.type !== "image") {
         setToolbarState(null);
         activeObjRef.current = null;
 
         return;
       }
 
-      activeObjRef.current = obj;
+      activeObjRef.current = obj as ShapeFabricObject;
 
       const bound = obj.getBoundingRect();
       const container = canvasContainerRef.current;
@@ -61,7 +62,8 @@ export function FloatingShapeToolbar({
         ? canvasRect.top - (containerRect?.top ?? 0)
         : 0;
 
-      const isAspectLocked = obj.shapeAspectLocked ?? true;
+      const isAspectLocked =
+        (obj as ShapeFabricObject).shapeAspectLocked ?? true;
 
       if (obj.canvas) {
         obj.canvas.uniformScaling = isAspectLocked;
