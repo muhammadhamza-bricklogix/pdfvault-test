@@ -721,10 +721,86 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       });
     };
 
+    // Row 15/16/17: keep shapes, redactions, and whiteouts inside the page
+    // bounds while the user drags or resizes them. Fabric lets any shape
+    // leave the canvas by default — the user asked that drag + scale be
+    // constrained to the page. editModeText (Textbox) has its own scaling
+    // handler above (fold scale into width/height) and is intentionally
+    // skipped. Also skips objects without known shape type so signatures
+    // / images / IText keep their current behaviour until QA asks for them.
+    const CLAMPABLE_EDITOR_TYPES = new Set(["redaction", "whiteout"]);
+    const CLAMPABLE_TYPES = new Set([
+      "ellipse",
+      "group",
+      "line",
+      "rect",
+      "triangle",
+    ]);
+    const isClampable = (obj: FabricObject | undefined | null) => {
+      if (!obj) return false;
+      const editorType = (obj as FabricObject & { editorType?: string })
+        .editorType;
+
+      if (editorType === "editModeText") return false;
+      if (editorType && CLAMPABLE_EDITOR_TYPES.has(editorType)) return true;
+
+      return CLAMPABLE_TYPES.has(obj.type ?? "");
+    };
+
+    const clampObjectPosition = (opt: { target?: FabricObject }) => {
+      const t = opt.target;
+
+      if (!isClampable(t) || !t) return;
+      const canvasW = fc.getWidth();
+      const canvasH = fc.getHeight();
+      const scaleX = (t.scaleX as number) ?? 1;
+      const scaleY = (t.scaleY as number) ?? 1;
+      const w = ((t.width as number) ?? 0) * scaleX;
+      const h = ((t.height as number) ?? 0) * scaleY;
+      const left = Math.max(0, Math.min(canvasW - w, (t.left as number) ?? 0));
+      const top = Math.max(0, Math.min(canvasH - h, (t.top as number) ?? 0));
+
+      if (left !== t.left || top !== t.top) {
+        t.set({ left, top });
+        t.setCoords();
+      }
+    };
+
+    const clampObjectSize = (opt: { target?: FabricObject }) => {
+      const t = opt.target;
+
+      if (!isClampable(t) || !t) return;
+      const canvasW = fc.getWidth();
+      const canvasH = fc.getHeight();
+      const left = (t.left as number) ?? 0;
+      const top = (t.top as number) ?? 0;
+      const baseW = (t.width as number) ?? 0;
+      const baseH = (t.height as number) ?? 0;
+
+      if (baseW <= 0 || baseH <= 0) return;
+
+      // Cap scale so the far edge never crosses the page boundary.
+      const maxScaleX = Math.max(0.01, (canvasW - Math.max(0, left)) / baseW);
+      const maxScaleY = Math.max(0.01, (canvasH - Math.max(0, top)) / baseH);
+      const scaleX = Math.min((t.scaleX as number) ?? 1, maxScaleX);
+      const scaleY = Math.min((t.scaleY as number) ?? 1, maxScaleY);
+
+      if (scaleX !== t.scaleX || scaleY !== t.scaleY) {
+        t.set({ scaleX, scaleY });
+      }
+
+      // Also clamp position in case the handle being dragged is the top-
+      // left (which both resizes and moves the object).
+      clampObjectPosition(opt);
+    };
+
     fc.on("mouse:down", handleMouseDown);
     fc.on("mouse:up", handleMouseUp);
     fc.on("object:scaling", handleScaling);
     fc.on("object:modified", handleScaling);
+    fc.on("object:moving", clampObjectPosition);
+    fc.on("object:scaling", clampObjectSize);
+    fc.on("object:modified", clampObjectPosition);
 
     // Track the last pointer position in BASE coords so tools that open
     // a modal (signature, image) can drop their object where the user
@@ -750,6 +826,9 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       fc.off("mouse:up", handleMouseUp);
       fc.off("object:scaling", handleScaling);
       fc.off("object:modified", handleScaling);
+      fc.off("object:moving", clampObjectPosition);
+      fc.off("object:scaling", clampObjectSize);
+      fc.off("object:modified", clampObjectPosition);
       fc.off("mouse:move", handleMouseMove);
     };
   }, [activeTool, fabricCanvas]);
