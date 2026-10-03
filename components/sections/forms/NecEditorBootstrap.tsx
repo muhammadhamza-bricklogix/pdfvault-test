@@ -21,8 +21,25 @@ type NecEditorBootstrapProps = {
 
 export const NEC_LIBRARY_FILENAME = "IRS Form 1099-NEC.pdf";
 
+/**
+ * The name a 1099-NEC save lands under — the editor's current filename,
+ * which is user-editable again. Falls back to the constant before the
+ * template has loaded.
+ */
 export function necLibraryFilename(): string {
-  return NEC_LIBRARY_FILENAME;
+  // Prefer the SAVED row name over the template file name. After the user
+  // picks "Save as a new file", the row is called e.g. "... (2).pdf" while
+  // store.file is still the template; without this the next autosave would
+  // re-upload under the default name and the backend would rename the row
+  // straight back.
+  const { currentDocumentName, file } = usePdfEditorStore.getState();
+  const current = (currentDocumentName ?? file?.name)?.trim();
+
+  if (!current) return NEC_LIBRARY_FILENAME;
+
+  return /\.pdf$/i.test(current)
+    ? current
+    : `${current.replace(/\.[^./\\]+$/, "")}.pdf`;
 }
 
 type NecResumeEnvelope = {
@@ -66,6 +83,17 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
 
     const instanceId = beginNecDraft({ resumeDocId, forceNew });
 
+    // One-shot: a reload re-sends the same query, so strip ?new=1 now or
+    // every refresh would wipe the draft we just started. Uses
+    // history.replaceState, not router.replace, because forceNew is in this
+    // effect's deps and a re-render would re-run the whole bootstrap.
+    if (forceNew && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+
+      url.searchParams.delete("new");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+
     // SYNC restore FIRST — restores any typed values immediately from
     // localStorage so the user never perceives data loss on reload or back.
     const earlyPending = readNecDraft(instanceId);
@@ -85,6 +113,27 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     usePdfEditorStore.getState().setAutoPersistDisabled(true);
     usePdfEditorStore.getState().setDisableAutoTextExtract(true);
 
+    // Fetched ONCE and shared: the template needs this row's filename
+    // so `file.name` is truthful from the first paint, and the restore
+    // below needs its values.
+    const resumedPromise = resumeDocId
+      ? (async () => {
+          try {
+            const doc = await documentsService.getDocument(resumeDocId);
+
+            // Only adopt a row that really is a saved 1099-NEC. Mirrors the
+            // W-9 guard: without it a stray `?resumeDocId=<non-nec-id>` lets
+            // the next Save upsert a stamped 1099-NEC on top of an unrelated
+            // user document, and names the editor's File after it.
+            return parseNecValues(doc.editorState) ? doc : null;
+          } catch (err) {
+            logger.captureError(err, "1099-nec.resume_from_library");
+
+            return null;
+          }
+        })()
+      : Promise.resolve(null);
+
     // Parallel bootstrap: template fetch + form session
     const templatePromise = (async () => {
       await Promise.resolve();
@@ -102,7 +151,31 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
       const blob = await res.blob();
 
       if (!isActiveRun()) return;
-      const file = new File([blob], "1099-nec.pdf", {
+
+      // Name it after the row being resumed, not the generic library
+      // constant. `file.name` is what the export modal offers as the
+      // download name and duplicate-checks against My PDFs, so a stale
+      // name there downloads under the default name and flags a false
+      // clash against the ORIGINAL row (QA 2026-10-04). Resolved before
+      // the only setFile so the name is right from the first paint — no
+      // second File swap to race the overlays or reset the page.
+      // Bounded: a slow document fetch must not hold the template — and
+      // with it the whole editor — off-screen. On timeout we paint under
+      // the default name; the resume below still claims the row and the
+      // save paths read `currentDocumentName`, so only the export modal's
+      // pre-filled name would be stale in that rare case.
+      let nameTimer = 0;
+      const resumedName = await Promise.race([
+        resumedPromise.then((r) => r?.filename ?? null),
+        new Promise<null>((resolve) => {
+          nameTimer = window.setTimeout(() => resolve(null), 4_000);
+        }),
+      ]);
+
+      window.clearTimeout(nameTimer);
+
+      if (!isActiveRun()) return;
+      const file = new File([blob], resumedName ?? NEC_LIBRARY_FILENAME, {
         type: "application/pdf",
       });
 
@@ -139,29 +212,22 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
     });
 
     const resumePromise = (async () => {
-      await Promise.resolve();
-      if (!isActiveRun() || !resumeDocId) return;
+      const doc = await resumedPromise;
 
-      try {
-        const doc = await documentsService.getDocument(resumeDocId);
+      if (!isActiveRun() || !doc) return;
 
-        if (!isActiveRun()) return;
+      const restored = parseNecValues(doc.editorState);
 
-        const restored = parseNecValues(doc.editorState);
+      usePdfEditorStore.getState().setCurrentDocument({
+        id: doc.id,
+        name: doc.filename,
+      });
 
-        usePdfEditorStore.getState().setCurrentDocument({
-          id: doc.id,
-          name: doc.filename,
-        });
+      const hasLocalDraft =
+        earlyPending && Object.keys(earlyPending).length > 0;
 
-        const hasLocalDraft =
-          earlyPending && Object.keys(earlyPending).length > 0;
-
-        if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
-          useFormEditorStore.getState().setValues(restored);
-        }
-      } catch (err) {
-        logger.captureError(err, "1099-nec.resume_from_library");
+      if (!hasLocalDraft && restored && Object.keys(restored).length > 0) {
+        useFormEditorStore.getState().setValues(restored);
       }
     })();
 
@@ -175,6 +241,12 @@ export function NecEditorBootstrap({ children }: NecEditorBootstrapProps) {
       useFormEditorStore.getState().reset();
     };
   }, [setFile, resumeDocId, forceNew]);
+
+  // No implicit resume. Opening the form is always a fresh start; the only
+  // way back into a saved 1099-NEC is the explicit ?resumeDocId link that
+  // "My PDFs" produces (lib/client/utils/open-document-in-editor.ts). The
+  // in-progress localStorage draft still survives a reload — see
+  // `beginNecDraft` above, which only mints a new instance on ?new=1.
 
   if (error) {
     return (

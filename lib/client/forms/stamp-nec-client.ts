@@ -3,6 +3,9 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 
 const COPY_A_PAGE_INDEX = 1;
 
+/** Copy A, Copy 1, Copy B, Copy 2 — pages 2, 3, 4 and 6, zero-indexed. */
+const COPY_PAGE_INDEXES = [1, 2, 3, 5];
+
 const CURRENCY_FIELDS = new Set([
   "box1_nec",
   "box1b_cash_tips",
@@ -49,6 +52,60 @@ function isChecked(raw: string | undefined): boolean {
   return raw === "true" || raw === "on" || raw === "1";
 }
 
+/**
+ * Every value belongs on all four copies, but the schema only carries the
+ * Copy A `pdfRef`. The IRS names the same widget identically across copies
+ * apart from the subform it hangs off — `CopyA[0].LeftCol[0].f1_2[0]` is
+ * `Copy1[0].LeftCol[0].f2_2[0]`, `CopyB[0]...f2_2[0]`, `Copy2[0]...f2_2[0]`.
+ * The `f<n>_` digit tracks the XFA page, NOT the copy (B and 2 both use
+ * `f2_`), so the only stable identity is the trailing `<kind><slot>[widget]`
+ * plus the copy subform. Resolved from the loaded document rather than a
+ * hardcoded table so it cannot drift from the asset.
+ *
+ * Four widgets legitimately exist on Copy A only (the second-TIN notice, and
+ * CORRECTED on Copy B) — those simply resolve to fewer targets.
+ */
+const COPY_SUBFORMS = ["CopyA", "Copy1", "CopyB", "Copy2"] as const;
+
+function widgetKey(ref: string): string | null {
+  const terminal = ref.split(".").pop() ?? "";
+  const m = terminal.match(/^([fc])\d+_(\d+)\[(\d+)\]$/);
+
+  return m ? `${m[1]}|${m[2]}|${m[3]}` : null;
+}
+
+function copySubform(ref: string): string | null {
+  return (
+    ref.match(/topmostSubform\[0\]\.(CopyA|Copy1|CopyB|Copy2)\[0\]/)?.[1] ?? null
+  );
+}
+
+function buildCopyRefIndex(
+  form: { getFields: () => { getName: () => string }[] },
+): (ref: string) => string[] {
+  const index = new Map<string, string>();
+
+  for (const field of form.getFields()) {
+    const name = field.getName();
+    const copy = copySubform(name);
+    const key = widgetKey(name);
+
+    if (copy && key) index.set(`${copy}|${key}`, name);
+  }
+
+  return (ref) => {
+    const key = widgetKey(ref);
+
+    if (!key) return [ref];
+
+    const refs = COPY_SUBFORMS.map((copy) => index.get(`${copy}|${key}`)).filter(
+      (name): name is string => !!name,
+    );
+
+    return refs.length > 0 ? refs : [ref];
+  };
+}
+
 async function stampNec(
   values: Record<string, string>,
   { singlePage }: { singlePage: boolean },
@@ -68,29 +125,69 @@ async function stampNec(
 
   const fields = NEC_1099_SCHEMA.sections.flatMap((s) => s.fields);
 
+  const copyRefs = buildCopyRefIndex(form);
+
   for (const field of fields) {
     const raw = values[field.id];
 
     if (!raw) continue;
 
+    // Drawn after the loop: there is no widget to write into.
+    if (field.freeText) continue;
+
     if (field.type === "checkbox") {
       if (!isChecked(raw)) continue;
-      try {
-        form.getCheckBox(field.pdfRef).check();
-      } catch {
-        /* widget absent on this copy — skip */
+      for (const ref of copyRefs(field.pdfRef)) {
+        try {
+          form.getCheckBox(ref).check();
+        } catch {
+          /* widget absent on this copy — skip */
+        }
       }
       continue;
     }
 
-    try {
-      form.getTextField(field.pdfRef).setText(formatValue(field.id, raw));
-    } catch {
-      /* not a text widget — skip */
+    const text = formatValue(field.id, raw);
+
+    for (const ref of copyRefs(field.pdfRef)) {
+      try {
+        form.getTextField(ref).setText(text);
+      } catch {
+        /* not a text widget — skip */
+      }
     }
   }
 
   form.flatten();
+
+  const freeTextFields = fields.filter((f) => f.freeText && values[f.id]);
+
+  if (freeTextFields.length > 0) {
+    const { StandardFonts, rgb } = await import("pdf-lib");
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const pages = pdfDoc.getPages();
+
+    for (const field of freeTextFields) {
+      const size = field.overlayFontSize ?? 8;
+      const pad = 2;
+
+      for (const index of COPY_PAGE_INDEXES) {
+        const page = pages[index];
+
+        if (!page) continue;
+        page.drawText(values[field.id]!, {
+          x: field.rect.x + pad,
+          // drawText anchors the first baseline, so start one line down.
+          y: field.rect.y + field.rect.h - size - pad,
+          size,
+          font,
+          color: rgb(0, 0, 0),
+          maxWidth: field.rect.w - pad * 2,
+          lineHeight: size * 1.25,
+        });
+      }
+    }
+  }
 
   if (!singlePage) return pdfDoc.save();
 

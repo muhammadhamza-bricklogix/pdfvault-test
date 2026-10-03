@@ -66,13 +66,21 @@ export type FormField = {
    * `<textarea>` when true, an `<input>` otherwise. */
   multiline?: boolean;
   /**
-   * Overlay-only font size override in CSS px. When set, TextField skips
-   * the height-derived font-size formula (`h * 0.65`) and uses this
-   * value verbatim. Needed for tall multi-line rects (e.g. the W-9
-   * requester address block, h: 38) where the auto-scaled font would
-   * dwarf the neighbouring one-liners.
+   * Overlay-only font size override in PDF points. When set, TextField
+   * skips the height-derived formula and uses this as the base size,
+   * still multiplying by the page scale so the text zooms with the page.
+   * Needed for tall multi-line rects (e.g. the W-9 requester address
+   * block, h: 38) where the auto-scaled font would dwarf the
+   * neighbouring one-liners.
    */
   overlayFontSize?: number;
+  /**
+   * Field with no AcroForm widget behind it. The IRS leaves two blocks on
+   * the 1099-NEC shaded and blank, so there is nothing to `setText` into;
+   * both stampers draw the value onto the page instead. Keep `pdfRef`
+   * empty for these.
+   */
+  freeText?: boolean;
 };
 
 export type FormSection = {

@@ -31,6 +31,22 @@ export const NEC_1099_SCHEMA: FormSchema = {
           rect: { page: 2, x: 417.6, y: 687, w: 28.8, h: 9 },
         },
         {
+          id: "additional_info",
+          label: "Additional information",
+          type: "text",
+          required: false,
+          // The IRS shades this block and leaves it blank — there is no
+          // AcroForm widget anywhere inside it, so there is nothing to set
+          // text into. Both stampers draw the value on instead.
+          pdfRef: "",
+          freeText: true,
+          multiline: true,
+          maxLength: 140,
+          overlayFontSize: 8,
+          helpText: "Optional note. Not an official IRS field.",
+          rect: { page: 2, x: 295.2, y: 684, w: 100.8, h: 72 },
+        },
+        {
           id: "is_void",
           label: "VOID",
           type: "checkbox",
@@ -61,6 +77,11 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_2[0]",
           multiline: true,
+          // The IRS widget carries the Multiline flag, so this renders as a
+          // textarea and would otherwise take the small multi-line ratio —
+          // 10.8pt against the 15pt TIN box in an identically sized 24pt
+          // cell below it. Pin it to sit with its neighbours.
+          overlayFontSize: 13,
           rect: { page: 2, x: 52.4, y: 720, w: 241.8, h: 24 },
         },
         {
@@ -154,6 +175,11 @@ export const NEC_1099_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "topmostSubform[0].CopyA[0].LeftCol[0].f1_12[0]",
           multiline: true,
+          // The IRS widget carries the Multiline flag, so this renders as a
+          // textarea and would otherwise take the small multi-line ratio —
+          // 10.8pt against the 15pt TIN box in an identically sized 24pt
+          // cell below it. Pin it to sit with its neighbours.
+          overlayFontSize: 13,
           rect: { page: 2, x: 52.4, y: 576, w: 241.8, h: 24 },
         },
         {

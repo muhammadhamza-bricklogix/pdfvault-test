@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
+import { isDuplicatePromptOpen } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { logger } from "@/lib/shared/utils/logger";
@@ -143,11 +144,30 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
 
         const w9Result = await new Promise<{
           ok: boolean;
-          reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
+          reason?:
+            | "error"
+            | "not-signed-in"
+            | "cancelled"
+            | "cancelled-duplicate"
+            | "not-ready";
         }>((resolve) => {
-          const timeoutId = window.setTimeout(() => {
-            resolve({ ok: false, reason: "error" });
-          }, 30_000);
+          // Re-arm rather than fail while a duplicate-filename prompt is
+          // open: a user thinking about Replace vs Save-as-new for 30s
+          // would otherwise get "Could not save your form" with the modal
+          // still on screen.
+          let timeoutId = 0;
+          const arm = () => {
+            timeoutId = window.setTimeout(() => {
+              if (isDuplicatePromptOpen()) {
+                arm();
+
+                return;
+              }
+              resolve({ ok: false, reason: "error" });
+            }, 30_000);
+          };
+
+          arm();
 
           window.dispatchEvent(
             new CustomEvent("editor:w9-save-and-continue", {
@@ -158,6 +178,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
                     | "error"
                     | "not-signed-in"
                     | "cancelled"
+                    | "cancelled-duplicate"
                     | "not-ready";
                 }) => {
                   window.clearTimeout(timeoutId);
@@ -181,6 +202,19 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
             });
           }
           navigate();
+
+          return;
+        }
+
+        if (w9Result.reason === "cancelled-duplicate") {
+          // The user declined the filename prompt. Nothing is wrong and
+          // nothing is lost, but they pressed Back and we are deliberately
+          // NOT leaving — say so, or the click looks broken.
+          toast.info({
+            title: "Not saved — still on your form",
+            description:
+              "Nothing was lost. Choose Replace or a new name to save it, or use your browser's Back button to leave without saving.",
+          });
 
           return;
         }

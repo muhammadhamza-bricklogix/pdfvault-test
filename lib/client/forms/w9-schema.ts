@@ -180,9 +180,9 @@ export const W9_SCHEMA: FormSchema = {
           multiline: true,
           rect: { page: 1, x: 389.8, y: 467.97, w: 186.2, h: 38 },
           // Rect is tall (multi-line block on the printed form) so the
-          // default `h * 0.65` sizing overshoots to ~25px vs the ~10px
-          // used by neighbouring address / name inputs. Pin the overlay
-          // font to match those inputs.
+          // height-derived sizing overshoots versus the neighbouring
+          // address / name inputs. Pin the base size, in points, to match
+          // them; the overlay still scales it with the page zoom.
           overlayFontSize: 10,
         },
         {

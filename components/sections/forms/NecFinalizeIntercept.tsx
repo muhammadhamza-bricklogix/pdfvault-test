@@ -6,12 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
-import {
-  describeFieldErrors,
-  extractApiFieldErrors,
-  labelFieldErrors,
-} from "@/lib/client/forms/api-field-errors";
-import { NEC_1099_SCHEMA } from "@/lib/client/forms/1099-nec-schema";
+import { invalidateLibraryIndex } from "@/lib/client/documents/library-filename-index";
+import { resolveFilenameConflict } from "@/lib/client/documents/resolve-filename-conflict";
+import { isDuplicatePromptOpen } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
 import { downloadStampedFormAsImages } from "@/lib/client/forms/download-form-images";
 import {
   bindNecDraftToDocument,
@@ -23,7 +20,6 @@ import {
   stampNecDocument,
   stampNecPreview,
 } from "@/lib/client/forms/stamp-nec-client";
-import { validate1099Nec } from "@/lib/client/forms/validate-1099-nec";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
@@ -38,6 +34,9 @@ const EXPORT_EVENT = "editor:export";
 const SAVE_EVENT = "editor:save";
 const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
 const SAVE_AND_CONTINUE_EVENT = "editor:w9-save-and-continue";
+const AUTOSAVE_EVENT = "editor:form-autosave";
+
+type SaveOutcome = "saved" | "cancelled" | "failed";
 
 type SaveBeforeActionDetail = {
   onComplete?: (result: { ok: boolean }) => void;
@@ -46,7 +45,12 @@ type SaveBeforeActionDetail = {
 type SaveAndContinueDetail = {
   onComplete: (result: {
     ok: boolean;
-    reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
+    reason?:
+      | "error"
+      | "not-signed-in"
+      | "cancelled"
+      | "cancelled-duplicate"
+      | "not-ready";
   }) => void;
 };
 
@@ -81,40 +85,21 @@ async function triggerDownload(downloadUrl: string, filename = "1099-nec.pdf") {
   }
 }
 
-const LIBRARY_PAGE_SIZE = 100;
-const LIBRARY_MAX_PAGES = 100;
-
-/**
- * Finds the one 1099-NEC row by name. Walks the real page count rather than a
- * fixed number of pages, so a large library cannot hide the row and cause a
- * duplicate. Throws on a failed request so the caller can refuse to save
- * rather than guess that no row exists.
- */
-async function findNecLibraryDocumentId(
-  filename: string,
-): Promise<string | null> {
-  const needle = filename.toLowerCase();
-  let lastPage = 1;
-
-  for (let page = 1; page <= Math.min(lastPage, LIBRARY_MAX_PAGES); page += 1) {
-    const response = await documentsService.listDocuments({
-      page,
-      pageSize: LIBRARY_PAGE_SIZE,
-    });
-    const match = response.items.find(
-      (doc) => doc.filename.toLowerCase() === needle,
-    );
-
-    if (match) return match.id;
-    lastPage = response.pagination.totalPages;
-  }
-
-  return null;
-}
-
 function hasAnyValue(values: Record<string, string>): boolean {
   return Object.values(values ?? {}).some(
     (v) => typeof v === "string" && v.trim() !== "",
+  );
+}
+
+/**
+ * Real user input, ignoring `calendar_year` — the bootstrap seeds it on
+ * every open, so counting it meant a completely blank form armed the
+ * autosave and popped the filename dialog before the user typed anything.
+ */
+function hasUserInput(values: Record<string, string>): boolean {
+  return Object.entries(values ?? {}).some(
+    ([key, v]) =>
+      key !== "calendar_year" && typeof v === "string" && v.trim() !== "",
   );
 }
 
@@ -239,6 +224,13 @@ export function NecFinalizeIntercept() {
         return lastFinalizeRef.current.downloadUrl;
       }
 
+      // A partially-filled 1099-NEC is downloadable, matching the W-9:
+      // users explicitly asked to be able to take away whatever they have
+      // so far. Client-side validation therefore no longer BLOCKS — the
+      // server filler still validates, and `finalizeOrStampLocally` below
+      // falls back to the local stamper when it refuses.
+      state.setErrors({});
+
       const entitled = await ensureFreshEntitlement();
 
       if (!entitled) {
@@ -258,34 +250,33 @@ export function NecFinalizeIntercept() {
         }
       }
 
-      const errors = validate1099Nec({ values });
-      const errorIds = Object.keys(errors);
+      // The server filler rejects an incomplete form (422). That is the
+      // right guard for an official filing, but it must not stop the user
+      // taking away a draft — so stamp it locally instead, exactly as the
+      // W-9 does with `stampW9Client`. The local stamper fills all four
+      // copies and flattens, so the file is the same shape either way.
+      // Blob URLs are not cached: re-stamping is local and cheap, and a
+      // cached URL would outlive its revoke.
+      let downloadUrl: string;
 
-      if (errorIds.length > 0) {
-        state.setErrors(errors);
-        toast.error({
-          title: "Check your 1099-NEC",
-          description:
-            errorIds.length === 1
-              ? errors[errorIds[0]!]
-              : `${errorIds.length} fields need attention — the first is: ${errors[errorIds[0]!]}`,
-        });
+      try {
+        ({ downloadUrl } = await formsService.finalizeFormSession({
+          sessionId: currentSessionId,
+          values,
+          signatureKey: null,
+        }));
+      } catch (finalizeErr) {
+        logger.captureError(finalizeErr, "1099-nec.finalize_fallback_local");
 
-        const firstEl = document.getElementById(`field-input-${errorIds[0]}`);
+        const bytes = await stampNecDocument(values);
+        const blobUrl = URL.createObjectURL(
+          new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" }),
+        );
 
-        firstEl?.scrollIntoView({ block: "center", behavior: "smooth" });
-        (firstEl as HTMLInputElement | null)?.focus?.();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
 
-        return null;
+        return blobUrl;
       }
-
-      state.setErrors({});
-
-      const { downloadUrl } = await formsService.finalizeFormSession({
-        sessionId: currentSessionId,
-        values,
-        signatureKey: null,
-      });
 
       markNecSessionFinalized();
       lastFinalizeRef.current = { key: cacheKey, downloadUrl };
@@ -293,25 +284,54 @@ export function NecFinalizeIntercept() {
       return downloadUrl;
     };
 
-    const uploadToLibrary = async (
+    /**
+     * Saves run one at a time.
+     *
+     * Without this, clicking the logo while an autosave is still uploading
+     * starts a second save that cannot yet see the row the first one is
+     * creating — so it asks about the filename all over again. Queueing
+     * means the second save observes `currentDocumentId` and simply
+     * updates that row.
+     */
+    let saveQueue: Promise<unknown> = Promise.resolve();
+
+    /**
+     * "cancelled" is the user declining the filename prompt, which must not
+     * be reported as a failure — nothing is wrong and nothing was lost.
+     */
+    const uploadToLibrary = (
       blob: Blob,
       values: Record<string, string>,
-    ): Promise<boolean> => {
-      const { currentDocumentId } = usePdfEditorStore.getState();
-      const filename = necLibraryFilename();
-      let targetId = currentDocumentId ?? getNecBoundDocumentId();
+    ): Promise<SaveOutcome> => {
+      const run = saveQueue
+        .catch(() => undefined)
+        .then(() => uploadToLibraryNow(blob, values));
 
-      if (!targetId) {
-        try {
-          targetId = await findNecLibraryDocumentId(filename);
-        } catch (lookupErr) {
-          // Refuse to save rather than risk a second row: a failed lookup
-          // is not evidence that no row exists.
-          logger.captureError(lookupErr, "1099-nec.library_lookup");
+      saveQueue = run.catch(() => undefined);
 
-          return false;
-        }
-      }
+      return run;
+    };
+
+    const uploadToLibraryNow = async (
+      blob: Blob,
+      values: Record<string, string>,
+    ): Promise<SaveOutcome> => {
+      // The remembered row id is the stable identity that stops a reload
+      // silently creating a second row. Read lazily: if another save is
+      // mid-prompt, it may create the row while we wait, and we should then
+      // update that row rather than ask again.
+      const resolution = await resolveFilenameConflict({
+        filename: necLibraryFilename(),
+        getOwnedDocumentId: () =>
+          usePdfEditorStore.getState().currentDocumentId ??
+          getNecBoundDocumentId(),
+      });
+
+      if (resolution.kind === "cancel") return "cancelled";
+
+      const filename = resolution.filename;
+      const targetId =
+        resolution.kind === "replace" ? resolution.documentId : undefined;
 
       try {
         const stampedFile = new File([blob], filename, {
@@ -336,6 +356,7 @@ export function NecFinalizeIntercept() {
           name: savedDoc.filename,
         });
         bindNecDraftToDocument(savedDoc.id);
+        invalidateLibraryIndex();
 
         try {
           queryClientRef.current.invalidateQueries({
@@ -345,18 +366,18 @@ export function NecFinalizeIntercept() {
           /* non-fatal */
         }
 
-        return true;
+        return "saved";
       } catch (saveErr) {
         logger.captureError(saveErr, "1099-nec.library_save");
 
-        return false;
+        return "failed";
       }
     };
 
     const saveToLibrary = async (
       downloadUrl: string,
       values: Record<string, string>,
-    ): Promise<boolean> => {
+    ): Promise<SaveOutcome> => {
       try {
         const res = await fetch(downloadUrl);
 
@@ -370,13 +391,13 @@ export function NecFinalizeIntercept() {
       } catch (saveErr) {
         logger.captureError(saveErr, "1099-nec.library_save_fetch");
 
-        return false;
+        return "failed";
       }
     };
 
     const saveDraftToLibrary = async (
       values: Record<string, string>,
-    ): Promise<boolean> => {
+    ): Promise<SaveOutcome> => {
       try {
         const bytes = await stampNecDocument(values);
         const blob = new Blob([bytes.buffer as ArrayBuffer], {
@@ -387,7 +408,7 @@ export function NecFinalizeIntercept() {
       } catch (stampErr) {
         logger.captureError(stampErr, "1099-nec.draft_stamp");
 
-        return false;
+        return "failed";
       }
     };
 
@@ -415,14 +436,42 @@ export function NecFinalizeIntercept() {
       return true;
     };
 
+    // Reached from the F5 / Ctrl+R reload prompt ("Save & reload"). It used
+    // to answer OK without saving, so that button silently reloaded and lost
+    // the work it promised to keep. Saves for real now, surfacing the
+    // Replace / Save-as-new prompt when the name is taken.
     const saveBeforeActionHandler = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
 
-      detail?.onComplete?.({ ok: true });
+      void (async () => {
+        const values = useFormEditorStore.getState().values;
+
+        if (
+          !hasAnyValue(values) ||
+          !isLoadedRef.current ||
+          !isSignedInRef.current
+        ) {
+          detail?.onComplete?.({ ok: true });
+
+          return;
+        }
+
+        try {
+          const saved = await saveDraftToLibrary(values);
+
+          // A cancel must not block the action the user asked for — their
+          // work stays in the local draft either way.
+          detail?.onComplete?.({ ok: saved !== "failed" });
+        } catch (err) {
+          logger.captureError(err, "1099-nec.save_before_action");
+          detail?.onComplete?.({ ok: false });
+        }
+      })();
     };
 
     const onExport = async (e: Event) => {
+      autosaveSuppressed = false;
       e.stopImmediatePropagation();
       e.preventDefault();
 
@@ -476,46 +525,37 @@ export function NecFinalizeIntercept() {
 
         toast.success({
           title: "1099-NEC ready",
-          description: saved
-            ? "Downloaded and saved to My PDFs."
-            : "Downloaded. We couldn't add it to My PDFs — try Save to retry.",
+          description:
+            saved === "saved"
+              ? "Downloaded and saved to My PDFs."
+              : saved === "cancelled"
+                ? "Downloaded. Not added to My PDFs — you cancelled the name prompt."
+                : "Downloaded. We couldn't add it to My PDFs — try Save to retry.",
         });
       } catch (err) {
         toast.close(loadingKey);
         logger.captureError(err, "1099-nec.finalize");
-
-        const apiErrors = extractApiFieldErrors(err);
-
-        if (apiErrors.length > 0) {
-          const labelled = labelFieldErrors(apiErrors, NEC_1099_SCHEMA);
-
-          useFormEditorStore.getState().setErrors(labelled);
-          toast.error({
-            title: "Check your 1099-NEC",
-            description: describeFieldErrors(labelled),
-          });
-
-          const firstEl = document.getElementById(
-            `field-input-${apiErrors[0]!.field}`,
-          );
-
-          firstEl?.scrollIntoView({ block: "center", behavior: "smooth" });
-          (firstEl as HTMLInputElement | null)?.focus?.();
-        } else {
-          toast.error({
-            title: "Finalization failed",
-            description:
-              err instanceof Error
-                ? err.message
-                : "Could not finalize the form. Please try again.",
-          });
-        }
+        toast.error({
+          title: "Finalization failed",
+          description:
+            err instanceof Error
+              ? err.message
+              : "Could not finalize the form. Please try again.",
+        });
       } finally {
         inFlightRef.current = false;
       }
     };
 
+    // Autosave loop guards. `inFlight` keeps overlapping saves out;
+    // `suppressed` latches when the user cancels the filename prompt, so
+    // the next debounce does not re-open it every few seconds. An explicit
+    // Save or Download clears it — that is the user asking deliberately.
+    let autosaveInFlight = false;
+    let autosaveSuppressed = false;
+
     const onSave = async (e: Event) => {
+      autosaveSuppressed = false;
       e.stopImmediatePropagation();
       e.preventDefault();
 
@@ -545,10 +585,17 @@ export function NecFinalizeIntercept() {
 
         toast.close(saveLoadingKey);
 
-        if (saved) {
+        if (saved === "saved") {
           toast.success({
             title: "Saved",
             description: "Your 1099-NEC in My PDFs is up to date.",
+          });
+        } else if (saved === "cancelled") {
+          // Not an error — the user declined the name prompt. Their work is
+          // still here and still in the local draft.
+          toast.info({
+            title: "Not saved",
+            description: "Choose Replace or a new name to save it to My PDFs.",
           });
         } else {
           toast.error({
@@ -573,11 +620,80 @@ export function NecFinalizeIntercept() {
     // only an explicit Save or Download touches My PDFs. Answering here
     // rather than ignoring the event keeps navigation from stalling on the
     // caller's 30s timeout.
+    // Autosave: write the form to My PDFs shortly after typing stops.
+    //
+    // Two guards stop this becoming a popup loop. `inFlight` keeps
+    // overlapping saves out, and `suppressed` latches when the user
+    // cancels the filename prompt — otherwise the next debounce would
+    // re-open it every few seconds. An explicit Save or Download clears
+    // the latch, because that is the user asking again deliberately.
+    const onAutosave = (event: Event) => {
+      event.stopImmediatePropagation();
+
+      if (autosaveInFlight || autosaveSuppressed) return;
+      if (!isLoadedRef.current || !isSignedInRef.current) return;
+      // Never stack a second prompt on an open one.
+      if (isDuplicatePromptOpen()) return;
+
+      const values = useFormEditorStore.getState().values;
+
+      if (!hasUserInput(values)) return;
+
+      autosaveInFlight = true;
+      void (async () => {
+        try {
+          const saved = await saveDraftToLibrary(values);
+
+          // Only a deliberate cancel latches. A transient failure should
+          // be retried on the next burst of typing.
+          if (saved === "cancelled") autosaveSuppressed = true;
+        } catch (err) {
+          logger.captureError(err, "1099-nec.autosave");
+        } finally {
+          autosaveInFlight = false;
+        }
+      })();
+    };
+
+    // Back / logo persists the partial form before leaving. Uses the
+    // client stamper (no finalize, no paywall) so simply navigating away
+    // never asks anyone to pay, and surfaces the Replace / Save-as-new
+    // prompt through uploadToLibrary when the name is already taken.
     const onSaveAndContinue = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveAndContinueDetail>).detail;
 
-      detail?.onComplete?.({ ok: true, reason: "not-ready" });
+      void (async () => {
+        const values = useFormEditorStore.getState().values;
+
+        if (!hasAnyValue(values)) {
+          detail?.onComplete?.({ ok: true, reason: "not-ready" });
+
+          return;
+        }
+        if (!isLoadedRef.current || !isSignedInRef.current) {
+          // Never open the sign-in modal from a navigation — the user is
+          // on their way out, and the local draft already survives.
+          detail?.onComplete?.({ ok: true, reason: "not-signed-in" });
+
+          return;
+        }
+
+        try {
+          const saved = await saveDraftToLibrary(values);
+
+          detail?.onComplete?.(
+            saved === "saved"
+              ? { ok: true }
+              : saved === "cancelled"
+                ? { ok: false, reason: "cancelled-duplicate" }
+                : { ok: false, reason: "error" },
+          );
+        } catch (err) {
+          logger.captureError(err, "1099-nec.save_and_continue");
+          detail?.onComplete?.({ ok: false, reason: "error" });
+        }
+      })();
     };
 
     window.addEventListener(
@@ -588,6 +704,7 @@ export function NecFinalizeIntercept() {
     window.addEventListener(EXPORT_EVENT, onExport, true);
     window.addEventListener(SAVE_EVENT, onSave, true);
     window.addEventListener(SAVE_AND_CONTINUE_EVENT, onSaveAndContinue, true);
+    window.addEventListener(AUTOSAVE_EVENT, onAutosave, true);
 
     return () => {
       window.removeEventListener(
@@ -596,6 +713,7 @@ export function NecFinalizeIntercept() {
         true,
       );
       window.removeEventListener(EXPORT_EVENT, onExport, true);
+      window.removeEventListener(AUTOSAVE_EVENT, onAutosave, true);
       window.removeEventListener(SAVE_EVENT, onSave, true);
       window.removeEventListener(
         SAVE_AND_CONTINUE_EVENT,

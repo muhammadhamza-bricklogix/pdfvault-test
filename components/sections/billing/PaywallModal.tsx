@@ -95,11 +95,15 @@ const APPLE_PAY_BUTTON_PARAMS = {
   color: "black",
 } as const;
 // PayPal button params — rendered alongside Apple Pay + Google Pay on
-// the single unified `StablePaymentForm`. Solidgate confirmed
+// the single unified `StablePaymentForm` instance. Solidgate confirmed
 // 2026-10-02 that all payment methods (card + Apple Pay + Google Pay
-// + PayPal + future Worldpay/Adyen MIDs) will live on one channel
-// (`pdfvault`). The earlier dual-channel + dual-form architecture
-// (contentclicks.io main + pdfvault PayPal) was rolled back because
+// + PayPal + future Worldpay/Adyen MIDs) live on one channel
+// (`pdfvault`), so no second form or second channel is needed on our
+// side — the SDK negotiates PayPal activation against the main
+// merchant creds returned by `/billing/checkout-intent`.
+//
+// The earlier dual-channel + dual-form architecture (contentclicks.io
+// main + pdfvault PayPal) was rolled back because
 // `@solidgate/react-sdk` hardcodes its iframe host id, so two
 // `<PaymentForm>` instances collided and the first form's Apple +
 // Google wallet buttons silently stopped rendering.
@@ -1675,12 +1679,12 @@ function PayStep({
     intent.currency,
   );
 
-  // Solidgate renders Apple Pay + Google Pay into detached container
-  // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
-  // mounts. On non-Safari browsers Apple Pay silently no-ops (SDK
-  // hides the container); on non-supporting Android/iOS Google Pay
-  // does the same. Both wallets also require merchant-side dashboard
-  // enablement + domain verification (Apple Pay only).
+  // Solidgate renders Apple Pay + Google Pay + PayPal into detached
+  // container elements — the SDK requires the refs to exist BEFORE
+  // `<PaymentForm>` mounts. On non-Safari browsers Apple Pay silently
+  // no-ops (SDK hides the container); on non-supporting Android/iOS
+  // Google Pay does the same; PayPal silently no-ops when the merchant
+  // channel doesn't have it activated or the buyer geo isn't supported.
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
   // PayPal is rendered by the unified `StablePaymentForm` alongside
@@ -1855,12 +1859,14 @@ function PayStep({
               />
             </div>
             {/* PayPal — rendered by the main `StablePaymentForm` via
-                `paypalButtonParams` + `paypalContainerRef`. Single
-                unified pdfvault channel per Solidgate 2026-10-02 — no
-                second form instance (that caused the iframe-id
-                collision that killed the Apple/Google buttons). Silent
-                no-op on browsers / regions where PayPal isn't
-                supported for this merchant. */}
+                `paypalButtonParams` + `paypalContainerRef`; the SDK
+                injects here and the container stays hidden until
+                mounted. Single unified pdfvault channel per Solidgate
+                2026-10-02 — no second form instance (that caused the
+                iframe-id collision that killed the Apple/Google
+                buttons). Silent no-op when the merchant channel
+                doesn't have PayPal activated or when the buyer geo
+                isn't supported. */}
             <div className="relative">
               {!paypalReady && !walletTimedOut ? (
                 <WalletButtonSkeleton />
