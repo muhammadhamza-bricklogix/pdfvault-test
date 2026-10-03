@@ -115,7 +115,7 @@ export function usePageNumbersEditor(fabricCanvas: FabricCanvas | null) {
           ? measureCtx.measureText(label).width
           : label.length * options.fontSize * 0.55;
 
-        const { left, top } = computeFabricPosition(
+        const { left, top, originX } = computeFabricPosition(
           options.position,
           pageWidth,
           pageHeight,
@@ -134,7 +134,13 @@ export function usePageNumbersEditor(fabricCanvas: FabricCanvas | null) {
           fontStyle: "normal",
           fontWeight: "normal",
           left,
-          originX: "left",
+          // Row 97 QA 2026-10-04: originX varies by chosen alignment so
+          // right/center page numbers anchor on the real page edge
+          // minus margin, instead of relying on an offline
+          // measureText() that often disagrees with Fabric's internal
+          // glyph width (different font fallback → drift of several px
+          // per char at large font sizes).
+          originX,
           originY: "top",
           // Lock scaling so users don't accidentally distort the
           // number by dragging a corner handle.
@@ -299,10 +305,10 @@ function computeFabricPosition(
   position: PageNumberPosition,
   pageWidth: number,
   pageHeight: number,
-  textWidth: number,
+  _textWidth: number,
   fontSize: number,
   margin: number,
-): { left: number; top: number } {
+): { left: number; top: number; originX: "left" | "center" | "right" } {
   // Fabric: Y grows downward (top-left origin). Top edge = margin.
   // Bottom edge = pageHeight - margin - fontSize so the text sits
   // entirely above the margin line.
@@ -310,12 +316,19 @@ function computeFabricPosition(
     ? margin
     : pageHeight - margin - fontSize;
 
-  if (position.endsWith("left")) return { left: margin, top };
+  // Row 97 QA 2026-10-04: switch to origin-based positioning so
+  // Fabric itself anchors the text to the chosen edge. originX="right"
+  // + left=(pageWidth - margin) means Fabric aligns the text's RIGHT
+  // edge exactly `margin` away from the page's right edge, regardless
+  // of browser-canvas text measurement vs Fabric glyph measurement.
+  if (position.endsWith("left")) {
+    return { left: margin, top, originX: "left" };
+  }
   if (position.endsWith("right")) {
-    return { left: Math.max(margin, pageWidth - margin - textWidth), top };
+    return { left: pageWidth - margin, top, originX: "right" };
   }
 
-  return { left: Math.max(margin, (pageWidth - textWidth) / 2), top };
+  return { left: pageWidth / 2, top, originX: "center" };
 }
 
 function rgbToHex(c: { r: number; g: number; b: number }): string {
