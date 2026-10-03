@@ -196,20 +196,34 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           // flipped on. The raw error message is included so users can
           // share it for diagnosis.
           failedPagesRef.current.add(sourcePage);
-          if (usePdfEditorStore.getState().activeTool === "editText") {
+          const activeToolAtFailure = usePdfEditorStore.getState().activeTool;
+
+          if (activeToolAtFailure === "editText") {
             usePdfEditorStore.getState().setActiveTool("select");
           }
 
-          const rawMsg = err instanceof Error ? err.message : String(err ?? "");
-          const truncated =
-            rawMsg.length > 160 ? `${rawMsg.slice(0, 157)}…` : rawMsg;
-
-          toast.error({
-            title: "Text editing not supported on this browser",
-            description: truncated
-              ? `Reason: ${truncated}`
-              : "The text layer couldn't be loaded for this PDF.",
-          });
+          // Row 29: pages inserted via Manage Pages can throw
+          // `getTextContent failed: ... sendWithStream` on first entry to
+          // Edit Text. Prior behaviour showed a scary "Text editing not
+          // supported on this browser" error toast on every page nav where
+          // extraction failed — on a logged-in user editing a freshly
+          // added blank page this disrupts the UI for a transient
+          // per-page failure, not a browser capability issue.
+          //
+          // New policy:
+          //  - Auto-extract on the default Select tool (QA 2026-09-16):
+          //    swallow silently. Native pdf.js text still paints and the
+          //    user never asked for the overlay, so no toast is needed.
+          //  - Explicit Edit Text activation: show a quiet info toast
+          //    telling the user editing isn't available on THIS page, not
+          //    the dire browser-support error.
+          if (activeToolAtFailure === "editText") {
+            toast.info({
+              title: "Text editing unavailable on this page",
+              description:
+                "This page's text layer couldn't be read. Try another page or re-open the file.",
+            });
+          }
 
           return;
         }
