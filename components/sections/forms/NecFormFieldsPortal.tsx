@@ -116,6 +116,7 @@ export function NecFormFieldsPortal() {
       if (f.id === "is_void" && currentPage === 4) {
         return false;
       }
+
       return true;
     })
     .map((f) => {
@@ -126,6 +127,7 @@ export function NecFormFieldsPortal() {
           rect: { ...f.rect, page: currentPage, w: 241.8 },
         };
       }
+
       return {
         ...f,
         rect: { ...f.rect, page: currentPage },

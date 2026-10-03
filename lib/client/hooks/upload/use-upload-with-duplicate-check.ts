@@ -5,7 +5,7 @@ import type { Document } from "@/lib/shared/types/documents.types";
 
 import { useCallback, useState } from "react";
 
-import { documentsService } from "@/lib/shared/api/services/documents.service";
+import { loadLibraryIndex } from "@/lib/client/documents/library-filename-index";
 import {
   formatFileSize,
   MAX_UPLOAD_BYTES,
@@ -14,9 +14,6 @@ import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
 import { useTrackedUpload } from "./use-tracked-upload";
-
-const DUPLICATE_CHECK_PAGE_SIZE = 100;
-const DUPLICATE_CHECK_MAX_PAGES = 10;
 
 type PendingUpload = {
   input: StartUploadInput;
@@ -30,35 +27,52 @@ export type DuplicatePrompt = {
 };
 
 /**
- * Walk the user's documents list looking for an exact filename match.
- * Exported so non-tracked-upload paths (cloud picker, etc.) can run the
- * same duplicate-name guard without depending on the upload hook.
+ * Look up an exact (case-insensitive) filename in the user's library.
+ * Backed by the shared cached index so a Save does not re-walk the whole
+ * library for every question it needs answered.
  */
 export async function findDuplicateByFilename(
   filename: string,
 ): Promise<Document | null> {
-  // Case-INSENSITIVE compare so `report.pdf` matches `Report.pdf` /
-  // `REPORT.PDF` in the library. Users treat filenames case-
-  // insensitively and the backend accepts arbitrary casing on upload,
-  // so a case-strict match here silently missed real duplicates
-  // (QA 2026-08-29: X→PDF convert never triggered the duplicate modal
-  // even when the library had a same-name file).
-  const needle = filename.toLowerCase();
+  const index = await loadLibraryIndex();
 
-  for (let page = 1; page <= DUPLICATE_CHECK_MAX_PAGES; page += 1) {
-    const response = await documentsService.listDocuments({
-      page,
-      pageSize: DUPLICATE_CHECK_PAGE_SIZE,
-    });
-    const match = response.items.find(
-      (d) => d.filename.toLowerCase() === needle,
-    );
+  return index.get(filename.toLowerCase()) ?? null;
+}
 
-    if (match) return match;
-    if (page >= response.pagination.totalPages) return null;
+/** Trailing " (2)" / " (17)" on a base name, so numbering never stacks. */
+const COUNTER_SUFFIX = /\s\((\d+)\)$/;
+
+/**
+ * First free name at or after `desired`, e.g. `IRS Form W-9.pdf` ->
+ * `IRS Form W-9 (2).pdf`. Returns `desired` unchanged when it is free.
+ *
+ * Fetches the library once and scans in memory rather than probing each
+ * candidate over the network, and strips any existing " (n)" so a second
+ * pass yields "(3)" rather than "(2) (2)".
+ */
+export async function nextAvailableFilename(desired: string): Promise<string> {
+  const index = await loadLibraryIndex();
+  const taken = new Set(index.keys());
+
+  if (!taken.has(desired.toLowerCase())) return desired;
+
+  // `lastIndexOf` rather than a regex so "v1.2 report.pdf" keeps its dots.
+  const dot = desired.lastIndexOf(".");
+  const hasExt = dot > 0;
+  const ext = hasExt ? desired.slice(dot) : "";
+  const base = (hasExt ? desired.slice(0, dot) : desired).replace(
+    COUNTER_SUFFIX,
+    "",
+  );
+
+  for (let n = 2; n <= 999; n += 1) {
+    const candidate = `${base} (${n})${ext}`;
+
+    if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 
-  return null;
+  // Unreachable in practice — 998 same-named files. Still never collide.
+  return `${base} (${Date.now()})${ext}`;
 }
 
 export function useUploadWithDuplicateCheck() {
