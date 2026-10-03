@@ -453,6 +453,21 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       // so the user never sees a blank frame between "native pdf.js text
       // disappears" and "Fabric IText appears".
       usePdfEditorStore.getState().markPageExtracted(sourcePage);
+      // QA 2026-10-03 row 1: snapshot handler for `object:added` in
+      // `use-editor-history.ts` skips `editorType === "editModeText"` so
+      // extraction doesn't flood the undo stack. But the mount-time
+      // baseline captured by the history hook ran BEFORE extraction
+      // (empty canvas). Replace it with the post-extraction state so
+      // undoing all the way back lands on "extracted text visible, no
+      // user edits" instead of wiping extracted text to an empty canvas.
+      // Guard (`IfVirgin`) ensures a user edit landed before extraction
+      // completed is not overwritten.
+      usePdfEditorStore
+        .getState()
+        .resetHistoryBaselineIfVirgin(
+          usePdfEditorStore.getState().currentPage,
+          JSON.stringify(fabricCanvas.toJSON()),
+        );
       logger.info("[PDFedits] text: drew IText", {
         sourcePage,
         count: blocks.length,
