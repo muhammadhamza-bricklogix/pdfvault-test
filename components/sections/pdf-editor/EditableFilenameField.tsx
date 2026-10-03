@@ -4,6 +4,8 @@ import { PencilEdit01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useLayoutEffect, useRef, useState } from "react";
 
+import { validateRenameBaseName } from "@/lib/shared/schemas/documents/rename.schema";
+
 /**
  * Click-to-edit filename field with fit-to-text sizing.
  *
@@ -19,58 +21,14 @@ import { useLayoutEffect, useRef, useState } from "react";
  *   - Escape → discard the change, return to view mode
  *   - Empty (trimmed) input disables the tick button so the name
  *     can never be persisted blank
- *   - QA 2026-10-03: validation also blocks commit on characters that
- *     break common filesystems (`/\\:*?"<>|`), control characters, and
- *     names longer than 200 chars (reserves headroom under the 255-char
- *     POSIX cap for the backend's `.pdf` extension and any
- *     collision suffixes). Invalid drafts show a red border, an
- *     `aria-invalid` state, a native `title` tooltip explaining why,
- *     and the tick button is disabled.
+ *   - Invalid names (same rules as the My PDFs rename dialog) show a red
+ *     border and a visible message below the field; the tick is disabled.
  *
  * `onCommit` is called with the trimmed new name. Extension handling
  * (e.g. re-appending `.pdf`) is the caller's responsibility — matches
  * the existing `commitRename` handlers.
  */
 
-// Windows reserves these characters at the filesystem API level and
-// macOS forbids `/`. Spaces, dashes, dots, and Unicode letters/digits
-// remain allowed so users can type real-world document names like
-// "My Document - 2024". Control chars (0x00-0x1F) are rejected too.
-// eslint-disable-next-line no-control-regex
-const FORBIDDEN_FILENAME_CHARS = /[\\/:*?"<>|\x00-\x1f]/;
-const MAX_FILENAME_LENGTH = 200;
-
-type FilenameValidation = { valid: true } | { valid: false; reason: string };
-
-function validateFilename(name: string): FilenameValidation {
-  const trimmed = name.trim();
-
-  if (!trimmed) {
-    return { reason: "Name cannot be empty", valid: false };
-  }
-  if (trimmed.length > MAX_FILENAME_LENGTH) {
-    return {
-      reason: `Name is too long (max ${MAX_FILENAME_LENGTH} characters)`,
-      valid: false,
-    };
-  }
-  if (FORBIDDEN_FILENAME_CHARS.test(trimmed)) {
-    return {
-      reason: `Name cannot contain any of: \\ / : * ? " < > |`,
-      valid: false,
-    };
-  }
-  // Trailing dots / spaces trip Windows filesystems silently; backend
-  // strips them, user ends up with a different name than they typed.
-  if (/[. ]+$/.test(trimmed)) {
-    return {
-      reason: "Name cannot end with a space or dot",
-      valid: false,
-    };
-  }
-
-  return { valid: true };
-}
 export function EditableFilenameField({
   value,
   disabled,
@@ -130,9 +88,10 @@ export function EditableFilenameField({
     setIsEditing(false);
   };
 
-  const validation = validateFilename(draft);
-  const canCommit = validation.valid;
-  const validationReason = validation.valid ? null : validation.reason;
+  // An unchanged name is always allowed so existing odd names never get stuck.
+  const validationReason =
+    draft.trim() === value ? null : validateRenameBaseName(draft);
+  const canCommit = validationReason === null;
 
   const commit = () => {
     const trimmed = draft.trim();
@@ -148,7 +107,7 @@ export function EditableFilenameField({
 
       return;
     }
-    if (!validation.valid) {
+    if (!canCommit) {
       return;
     }
 
@@ -158,11 +117,11 @@ export function EditableFilenameField({
     setIsEditing(false);
   };
 
-  const showInvalid = isEditing && !canCommit && draft.length > 0;
+  const showInvalid = isEditing && !canCommit;
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-md border bg-white px-2 py-1 transition-colors ${
+      className={`relative inline-flex items-center gap-1.5 rounded-md border bg-white px-2 py-1 transition-colors ${
         showInvalid
           ? "border-rose-500"
           : isEditing
@@ -192,12 +151,10 @@ export function EditableFilenameField({
           aria-invalid={showInvalid || undefined}
           aria-label={ariaLabel}
           className={`min-w-0 bg-transparent font-medium outline-none ${fontSizeClass} ${
-            showInvalid
-              ? "text-rose-700"
-              : "text-[var(--color-foreground)]"
+            showInvalid ? "text-rose-700" : "text-[var(--color-foreground)]"
           }`}
           disabled={disabled}
-          maxLength={MAX_FILENAME_LENGTH + 50}
+          maxLength={300}
           style={{ width: inputWidth ?? undefined }}
           type="text"
           value={draft}
@@ -251,6 +208,15 @@ export function EditableFilenameField({
           <HugeiconsIcon icon={PencilEdit01Icon} size={14} strokeWidth={1.8} />
         </button>
       )}
+
+      {showInvalid ? (
+        <p
+          className="absolute start-0 top-full z-50 mt-1 w-max max-w-[min(18rem,calc(100vw-2rem))] whitespace-normal rounded-md bg-rose-600 px-2 py-1 text-[12px] font-medium leading-snug text-white shadow-md"
+          role="alert"
+        >
+          {validationReason}
+        </p>
+      ) : null}
     </div>
   );
 }

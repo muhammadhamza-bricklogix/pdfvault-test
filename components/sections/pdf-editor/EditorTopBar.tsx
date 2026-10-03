@@ -55,6 +55,7 @@ import {
   stripLocalePrefix,
 } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { stripPdfExtension } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
@@ -167,7 +168,7 @@ export function EditorInfoBar() {
   const commitRename = (trimmed: string) => {
     if (!file) return;
 
-    const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+    const withExt = `${stripPdfExtension(trimmed).trim()}.pdf`;
 
     if (withExt === file.name) return;
 
