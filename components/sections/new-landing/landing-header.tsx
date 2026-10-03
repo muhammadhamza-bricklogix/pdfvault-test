@@ -4,7 +4,6 @@ import { useAuth, useClerk } from "@clerk/nextjs";
 import { Modal } from "@heroui/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +16,7 @@ import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
+import { LocaleNavLink } from "./locale-nav-link";
 
 // Lazy-loaded: AllToolsCatalog renders only when the user clicks
 // "All PDF Tools" (opens the modal). FormsModal renders only when
@@ -83,6 +83,13 @@ const PRIMARY_LINK_HREFS = [
   { key: "compress", href: "/compress" },
   // { key: "aiSummarizer", href: "/ai-summarizer" },
 ] as const;
+
+// Weglot re-translates already-localised nav text; CSS-generated text is invisible to it.
+function NavLabel({ text }: { text: string }) {
+  return (
+    <span className="after:content-[attr(data-label)]" data-label={text} />
+  );
+}
 
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -254,14 +261,37 @@ export function LandingHeader() {
         >
           {/* Left: logo + primary nav */}
           <div className="flex items-center gap-7">
-            <Link
+            <LocaleNavLink
               aria-label="PDFVault home"
               className="flex shrink-0 items-center"
               href={ROUTES.PUBLIC.HOME}
               // Closes the mobile drawer explicitly: navigating to the same
               // route doesn't change `pathname`, so the auto-close effect
               // above wouldn't otherwise fire.
-              onClick={() => setMobileOpen(false)}
+              onClick={(event) => {
+                setMobileOpen(false);
+                // Already on the homepage: a same-route link does nothing, so scroll to top.
+                const rest =
+                  parseLocalePrefix(pathname ?? "/")?.rest ?? pathname;
+                const plainClick =
+                  event.button === 0 &&
+                  !event.metaKey &&
+                  !event.ctrlKey &&
+                  !event.shiftKey &&
+                  !event.altKey;
+
+                if (plainClick && rest === ROUTES.PUBLIC.HOME) {
+                  event.preventDefault();
+                  const reduceMotion = window.matchMedia(
+                    "(prefers-reduced-motion: reduce)",
+                  ).matches;
+
+                  window.scrollTo({
+                    top: 0,
+                    behavior: reduceMotion ? "auto" : "smooth",
+                  });
+                }
+              }}
             >
               <Image
                 priority
@@ -271,7 +301,7 @@ export function LandingHeader() {
                 src="/landing/logo-with-text.png"
                 width={184}
               />
-            </Link>
+            </LocaleNavLink>
 
             <nav
               aria-label="Primary"
@@ -300,7 +330,9 @@ export function LandingHeader() {
                     fill="currentColor"
                   />
                 </svg>
-                All Tools
+                <span className="notranslate wg-notranslate" translate="no">
+                  <NavLabel text={tNav("allTools")} />
+                </span>
                 <svg
                   aria-hidden
                   className={`transition-transform duration-200 ${toolsModalOpen ? "rotate-180" : ""}`}
@@ -319,23 +351,24 @@ export function LandingHeader() {
                 </svg>
               </button>
               {primaryLinks.map((link) => (
-                <Link
+                <LocaleNavLink
                   key={link.label}
                   className="notranslate wg-notranslate text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
                   href={withLocalePrefix(link.href)}
                   translate="no"
                 >
-                  {link.label}
-                </Link>
+                  <NavLabel text={link.label} />
+                </LocaleNavLink>
               ))}
               <button
                 aria-expanded={formsModalOpen}
                 aria-haspopup="dialog"
-                className="text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+                className="notranslate wg-notranslate text-[14px] font-medium text-[var(--pv-text-primary)] transition-opacity hover:opacity-70"
+                translate="no"
                 type="button"
                 onClick={openFormsModal}
               >
-                Forms
+                <NavLabel text={tNav("forms")} />
               </button>
             </nav>
           </div>
@@ -352,18 +385,20 @@ export function LandingHeader() {
             {showAuthButtons ? (
               isSignedIn ? (
                 <>
-                  <Link
-                    className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
+                  <LocaleNavLink
+                    className="notranslate wg-notranslate pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
                     href={ROUTES.APP.DASHBOARD}
+                    translate="no"
                   >
-                    Dashboard
-                  </Link>
+                    <NavLabel text={tNav("dashboard")} />
+                  </LocaleNavLink>
                   <button
-                    className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                    className="notranslate wg-notranslate pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                    translate="no"
                     type="button"
                     onClick={handleLogOut}
                   >
-                    Log out
+                    <NavLabel text={tNav("logOut")} />
                   </button>
                 </>
               ) : (
@@ -374,7 +409,8 @@ export function LandingHeader() {
                 // upload work; the modal's cards still do the item #15
                 // finalize `window.location.assign(…)` on success.
                 <button
-                  className="pv-btn-primary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                  className="notranslate wg-notranslate pv-btn-primary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
+                  translate="no"
                   type="button"
                   onClick={() =>
                     dispatchAuthModal({
@@ -383,7 +419,7 @@ export function LandingHeader() {
                     })
                   }
                 >
-                  Login
+                  <NavLabel text={tNav("login")} />
                 </button>
               )
             ) : null}
@@ -439,7 +475,12 @@ export function LandingHeader() {
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="flex-1">All Tools</span>
+                  <span
+                    className="notranslate wg-notranslate flex-1"
+                    translate="no"
+                  >
+                    <NavLabel text={tNav("allTools")} />
+                  </span>
                   <svg
                     aria-hidden
                     fill="none"
@@ -459,14 +500,14 @@ export function LandingHeader() {
               </li>
               {primaryLinks.map((link) => (
                 <li key={link.label}>
-                  <Link
+                  <LocaleNavLink
                     className="notranslate wg-notranslate block rounded-lg px-2 py-2.5 text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
                     href={withLocalePrefix(link.href)}
                     translate="no"
                     onClick={() => setMobileOpen(false)}
                   >
-                    {link.label}
-                  </Link>
+                    <NavLabel text={link.label} />
+                  </LocaleNavLink>
                 </li>
               ))}
               <li>
@@ -474,11 +515,12 @@ export function LandingHeader() {
                   // `text-start` (logical) rather than `text-left` so this
                   // matches the sibling links in RTL too — `<button>`
                   // defaults to centered text, unlike `<a>`.
-                  className="block w-full rounded-lg px-2 py-2.5 text-start text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  className="notranslate wg-notranslate block w-full rounded-lg px-2 py-2.5 text-start text-[15px] font-medium text-[var(--pv-text-primary)] hover:bg-white/60"
+                  translate="no"
                   type="button"
                   onClick={openFormsModal}
                 >
-                  Forms
+                  <NavLabel text={tNav("forms")} />
                 </button>
               </li>
               <li className="mt-1 flex items-center gap-3 px-2 py-1">
@@ -491,22 +533,24 @@ export function LandingHeader() {
                 {showAuthButtons ? (
                   isSignedIn ? (
                     <>
-                      <Link
-                        className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      <LocaleNavLink
+                        className="notranslate wg-notranslate pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
                         href={ROUTES.APP.DASHBOARD}
+                        translate="no"
                         onClick={() => setMobileOpen(false)}
                       >
-                        Dashboard
-                      </Link>
+                        <NavLabel text={tNav("dashboard")} />
+                      </LocaleNavLink>
                       <button
-                        className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                        className="notranslate wg-notranslate inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
+                        translate="no"
                         type="button"
                         onClick={() => {
                           setMobileOpen(false);
                           handleLogOut();
                         }}
                       >
-                        Log out
+                        <NavLabel text={tNav("logOut")} />
                       </button>
                     </>
                   ) : (
@@ -515,7 +559,8 @@ export function LandingHeader() {
                     // BEFORE dispatching so the modal renders over the
                     // regular page chrome, not over the drawer scrim.
                     <button
-                      className="pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      className="notranslate wg-notranslate pv-btn-primary inline-flex w-full justify-center px-5 py-2 text-[14px]"
+                      translate="no"
                       type="button"
                       onClick={() => {
                         setMobileOpen(false);
@@ -525,7 +570,7 @@ export function LandingHeader() {
                         });
                       }}
                     >
-                      Login
+                      <NavLabel text={tNav("login")} />
                     </button>
                   )
                 ) : null}
@@ -543,8 +588,11 @@ export function LandingHeader() {
         <Modal.Container className="items-center justify-center p-4">
           <Modal.Dialog className="w-full max-w-[1180px] rounded-2xl">
             <Modal.CloseTrigger />
-            <Modal.Header>
-              <Modal.Heading>All Tools</Modal.Heading>
+            {/* The close button is pinned physically right; keep RTL titles clear of it. */}
+            <Modal.Header className="rtl:pr-10">
+              <Modal.Heading>
+                <NavLabel text={tNav("allTools")} />
+              </Modal.Heading>
             </Modal.Header>
             <div className="relative">
               <Modal.Body
@@ -565,6 +613,8 @@ export function LandingHeader() {
                     as mouse users without a separate onKeyDown here. */}
                 {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
                 <div
+                  // Keeps labels clear of the scroll indicator (inline end side).
+                  className={toolsHasOverflow ? "pe-4" : undefined}
                   onClick={(event) => {
                     if ((event.target as HTMLElement).closest("a")) {
                       setToolsModalOpen(false);
@@ -577,7 +627,7 @@ export function LandingHeader() {
               {toolsHasOverflow ? (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute bottom-4 right-2 top-4 z-10 w-1.5 rounded-full bg-[#ececec] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
+                  className="pointer-events-none absolute bottom-4 end-2 top-4 z-10 w-1.5 rounded-full bg-[#ececec] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
                   data-testid="all-tools-scroll-indicator"
                 >
                   <div

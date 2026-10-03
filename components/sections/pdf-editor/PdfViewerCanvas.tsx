@@ -383,7 +383,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   useShapeTool({ fabricCanvas });
   const { handleModalClose } = useSignatureTool({ fabricCanvas });
 
-  useWatermarkTool({ fabricCanvas });
+  useWatermarkTool({
+    fabricCanvas,
+    pageSizeKey: renderedSize
+      ? `${Math.round(renderedSize.width / renderedSize.zoom)}x${Math.round(renderedSize.height / renderedSize.zoom)}`
+      : null,
+  });
 
   const isSignatureModalOpen = usePdfEditorStore((s) => s.isSignatureModalOpen);
 
@@ -425,6 +430,13 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       fc.isDrawingMode = false;
     }
     /* eslint-enable react-hooks/immutability */
+
+    // Loaded up front so a new text box is created and focused inside the tap (iOS only opens the keyboard then).
+    let TextboxClass: typeof Textbox | null = null;
+
+    void import("fabric").then((m) => {
+      TextboxClass = m.Textbox;
+    });
 
     // A tap just past either end of an extracted line (outside its glyph box) edits that line.
     const findEditTextBesidePointer = (opt: TPointerEventInfo) => {
@@ -534,7 +546,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       if (activeObj) return;
 
       const pointer = fc.getScenePoint(opt.e);
-      const { Textbox: FabricTextbox } = await import("fabric");
+      const FabricTextbox = TextboxClass ?? (await import("fabric")).Textbox;
 
       // Default new text boxes to ~240pt wide (a comfortable paragraph
       // width on US Letter / A4), but ensure the box always fits
@@ -665,6 +677,24 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const pending = pendingTouchTap;
 
       pendingTouchTap = null;
+
+      // Closing the iOS keyboard only blurs Fabric's hidden textarea; re-focus it when the editing text is tapped again.
+      const tapped = opt.target as
+        | (FabricObject & {
+            hiddenTextarea?: HTMLTextAreaElement | null;
+            isEditing?: boolean;
+          })
+        | undefined;
+
+      if (
+        touchPoint(opt.e) &&
+        tapped?.isEditing &&
+        tapped.hiddenTextarea &&
+        document.activeElement !== tapped.hiddenTextarea
+      ) {
+        tapped.hiddenTextarea.focus();
+      }
+
       if (!pending) return;
 
       const end = touchPoint(opt.e);
@@ -1049,10 +1079,19 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       "whiteout",
     ]);
 
+    // Boundary pulls only flip once the page has rested at the edge, so a
+    // fling that just reached the bottom isn't turned by the next swipe.
+    const BOUNDARY_REST_MS = 400;
     let startX = 0;
     let startY = 0;
     let startScrollTop = 0;
     let startMaxScrollTop = 0;
+    let lastScrollAt = 0;
+    let restedAtStart = false;
+
+    const onScroll = () => {
+      lastScrollAt = performance.now();
+    };
     // Track whether the touch started inside the PDF viewer element.
     // The listeners below are attached to `document` so Fabric's own
     // touch handling doesn't swallow them, but that means every touch
@@ -1071,6 +1110,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       startY = e.touches[0].clientY;
       startScrollTop = el.scrollTop;
       startMaxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+      restedAtStart = performance.now() - lastScrollAt >= BOUNDARY_REST_MS;
       const target = e.target as (Node & Element) | null;
       const inViewer = Boolean(target && el.contains(target));
       // FloatingTextToolbar and FloatingShapeToolbar are DOM-nested
@@ -1109,8 +1149,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
       // ── Horizontal swipe (swipe left = next, swipe right = prev) ──────
       const hasHorizontalOverflow = el.scrollWidth > el.clientWidth + 10;
+      const scrolledVertically = Math.abs(el.scrollTop - startScrollTop) > 8;
 
-      if (absDx > absDy && absDx > 50 && !hasHorizontalOverflow) {
+      if (
+        absDx > absDy &&
+        absDx > 50 &&
+        !hasHorizontalOverflow &&
+        !scrolledVertically
+      ) {
         if (dx < 0 && state.currentPage < state.pageCount) {
           navigatePage(state.currentPage + 1, 1);
         } else if (dx > 0 && state.currentPage > 1) {
@@ -1134,6 +1180,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         if (
           dy > 0 &&
           hasScrollablePage &&
+          restedAtStart &&
           startedAtTop &&
           endedAtTop &&
           state.currentPage > 1
@@ -1144,6 +1191,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
         if (
           dy < 0 &&
           hasScrollablePage &&
+          restedAtStart &&
           startedAtBottom &&
           endedAtBottom &&
           state.currentPage < state.pageCount
@@ -1153,10 +1201,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       }
     };
 
+    el.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
+      el.removeEventListener("scroll", onScroll);
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
@@ -1165,7 +1215,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   return (
     <div
       ref={viewerScrollRef}
-      className="flex-1 touch-pan-x touch-pan-y overflow-auto bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex-1 touch-pan-x touch-pan-y overflow-auto overscroll-contain bg-default-100 p-6 pb-40 lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       data-pdf-viewer-scroll=""
     >
       {/*

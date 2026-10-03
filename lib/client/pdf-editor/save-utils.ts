@@ -69,6 +69,8 @@ export function serializeFabricCanvas(canvas: FabricCanvas): string {
       for (const k of [
         "annotationKind",
         "editorType",
+        "noteColor",
+        "noteIcon",
         "noteText",
         "pristine",
         "originalText",

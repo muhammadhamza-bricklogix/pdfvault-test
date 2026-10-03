@@ -34,6 +34,8 @@ interface ToolLandingPageProps {
    * for the full list of valid slugs.
    */
   tool: string;
+  /** Optional `TOOL_HINTS` key when several pages share one tool slug. */
+  hint?: string;
   /**
    * File extensions the picker accepts (without leading dot). Every composer
    * tool takes a PDF by default.
@@ -62,6 +64,7 @@ export function ToolLandingPage({
   title,
   description,
   tool,
+  hint,
   acceptExtensions = ["pdf"],
   i18nKey,
 }: ToolLandingPageProps) {
@@ -116,6 +119,7 @@ export function ToolLandingPage({
           <div className="mx-auto w-full max-w-[880px] px-6">
             <UploadWorkspace
               acceptExtensions={acceptExtensions}
+              hint={hint}
               tool={tool}
               variant="hero"
             />

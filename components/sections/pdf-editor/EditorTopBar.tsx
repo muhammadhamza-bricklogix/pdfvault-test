@@ -57,6 +57,7 @@ import {
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 
 import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
@@ -77,7 +78,9 @@ export function EditorInfoBar() {
   const zoom = usePdfEditorStore((s) => s.zoom);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
-  const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
+  const isSearchOpen = usePdfSearchStore((s) => s.isOpen);
+  const openSearch = usePdfSearchStore((s) => s.open);
+  const closeSearch = usePdfSearchStore((s) => s.close);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
   // Scalar-boolean selectors so the mobile top bar doesn't re-render
   // on every brush stroke (QA 2026-09-15). Same rationale as
@@ -400,16 +403,27 @@ export function EditorInfoBar() {
               </Tooltip>
             </div>
 
-            {/* Back + Undo + Redo — mobile only */}
+            {/* Back — mobile only */}
+            <Button
+              aria-label="Back to dashboard"
+              className="sm:hidden"
+              size="sm"
+              variant="tertiary"
+              onPress={handleBack}
+            >
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+            </Button>
+
+            {/*
+              Same menu as desktop, next to Back like the desktop top bar.
+              HamburgerMenu gates its visible trigger on `isSignedIn`, but
+              remains mounted for guests so editor bridge listeners keep
+              working.
+            */}
+            {isW9Route ? null : <HamburgerMenu />}
+
+            {/* Undo + Redo — mobile only */}
             <div className="flex items-center gap-1 sm:hidden">
-              <Button
-                aria-label="Back to dashboard"
-                size="sm"
-                variant="tertiary"
-                onPress={handleBack}
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-              </Button>
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -433,14 +447,6 @@ export function EditorInfoBar() {
                 <HugeiconsIcon icon={RedoIcon} size={16} />
               </Button>
             </div>
-
-            {/*
-              Same menu as desktop, in the old mobile grid-icon slot.
-              HamburgerMenu gates its visible trigger on `isSignedIn`, but
-              remains mounted for guests so editor bridge listeners keep
-              working.
-            */}
-            {isW9Route ? null : <HamburgerMenu />}
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
@@ -508,20 +514,21 @@ export function EditorInfoBar() {
             />
 
             {/* Export controls — Search / Print / Zoom / Share / Done.
-                Search opens Find & Replace. Print/Done open the format
-                modal; the middle controls zoom the page. */}
+                Search toggles the search bar (same as desktop). Print/Done
+                open the format modal; the middle controls zoom the page. */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Search"
+                aria-pressed={isSearchOpen}
                 isDisabled={!file}
                 size="sm"
                 variant="tertiary"
-                onPress={() => setIsFindReplaceOpen(true)}
+                onPress={() => (isSearchOpen ? closeSearch() : openSearch())}
               >
                 <HugeiconsIcon icon={Search01Icon} size={16} />
               </Button>
               <Tooltip.Content>
-                <p>Find &amp; Replace</p>
+                <p>Search</p>
               </Tooltip.Content>
             </Tooltip>
             <Tooltip delay={300}>

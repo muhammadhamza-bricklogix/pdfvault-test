@@ -1665,6 +1665,10 @@ function PayStep({
   // channel doesn't have it activated or the buyer geo isn't supported.
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // PayPal is rendered by the unified `StablePaymentForm` alongside
+  // Apple + Google Pay (single pdfvault channel per Solidgate
+  // 2026-10-02). Container ref owned here so the skeleton +
+  // MutationObserver live alongside Apple/Google for consistent timing.
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   // Wallet-button loading state (2026-09-06 QA). Solidgate injects the
   // real Apple Pay / Google Pay / PayPal buttons a beat after

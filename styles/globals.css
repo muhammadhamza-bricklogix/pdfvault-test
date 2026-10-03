@@ -368,3 +368,20 @@ body {
   }
 }
 
+
+/* Long unbroken strings (e.g. file names) wrap inside toasts instead of overflowing. */
+.toast__content {
+  min-width: 0;
+}
+
+.toast__title,
+.toast__description {
+  overflow-wrap: anywhere;
+}
+
+/* iOS Safari zooms the page when an input under 16px is focused (Fabric's hidden textarea uses 1px) and keeps that zoom. It is invisible, so 16px changes nothing visually. */
+@media (pointer: coarse) {
+  textarea[data-fabric="textarea"] {
+    font-size: 16px !important;
+  }
+}
