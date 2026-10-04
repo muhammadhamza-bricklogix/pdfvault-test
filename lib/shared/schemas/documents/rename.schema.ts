@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const INVALID_CHARS = /[<>:"/\\|?*\x00-\x1f]/;
 const MAX_FILENAME_LENGTH = 255;
+/** Product limit for a renamed file, counted without the `.pdf` extension. */
+export const MAX_RENAME_NAME_LENGTH = 80;
+const NAME_TOO_LONG = `Name must be ${MAX_RENAME_NAME_LENGTH} characters or fewer`;
 
 export const renameFilenameSchema = z
   .string()
@@ -13,6 +16,10 @@ export const renameFilenameSchema = z
       .max(
         MAX_FILENAME_LENGTH,
         `Name must be ${MAX_FILENAME_LENGTH} characters or fewer`,
+      )
+      .refine(
+        (v) => stripPdfExtension(v).trimEnd().length <= MAX_RENAME_NAME_LENGTH,
+        { message: NAME_TOO_LONG },
       )
       .refine((v) => !INVALID_CHARS.test(v), {
         message: 'Name cannot contain < > : " / \\ | ? *',
@@ -30,8 +37,6 @@ export function validateRenameFilename(input: string): string | null {
   return result.error.issues[0]?.message ?? "Invalid name";
 }
 
-const PDF_EXTENSION = ".pdf";
-
 /** Name part of a PDF filename, without a trailing `.pdf` (case-insensitive). */
 export function stripPdfExtension(filename: string): string {
   return filename.replace(/\.pdf$/i, "");
@@ -48,9 +53,7 @@ export function validateRenameBaseName(input: string): string | null {
   if (!/[\p{L}\p{N}]/u.test(base)) {
     return "Name must contain at least one letter or number";
   }
-  if (base.length + PDF_EXTENSION.length > MAX_FILENAME_LENGTH) {
-    return `Name must be ${MAX_FILENAME_LENGTH - PDF_EXTENSION.length} characters or fewer`;
-  }
+  if (base.length > MAX_RENAME_NAME_LENGTH) return NAME_TOO_LONG;
 
   return validateRenameFilename(base);
 }

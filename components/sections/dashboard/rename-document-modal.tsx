@@ -37,7 +37,11 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
   const isOpen = !!doc;
 
   // Live validation; `error` holds only the save-time duplicate message.
-  const validationError = validateRenameBaseName(name);
+  // An unchanged name is always allowed so existing long names never get stuck.
+  const isUnchanged =
+    stripPdfExtension(name.trim()).trim() ===
+    stripPdfExtension(doc?.filename ?? "");
+  const validationError = isUnchanged ? null : validateRenameBaseName(name);
   const shownError = validationError ?? error;
 
   const handleChange = (val: string) => {
