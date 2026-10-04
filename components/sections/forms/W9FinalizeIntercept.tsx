@@ -15,9 +15,6 @@ import { conversionService } from "@/lib/shared/api/services/conversion.service"
 import { formsService } from "@/lib/shared/api/services/forms.service";
 import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
 import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
-import { invalidateLibraryIndex } from "@/lib/client/documents/library-filename-index";
-import { resolveFilenameConflict } from "@/lib/client/documents/resolve-filename-conflict";
-import { isDuplicatePromptOpen } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -58,7 +55,6 @@ function buildW9ReturnUrl(format?: string, filename?: string): string {
   return query ? `${ROUTES.FORMS.W9_SHORT}?${query}` : ROUTES.FORMS.W9_SHORT;
 }
 const SAVE_EVENT = "editor:save";
-const AUTOSAVE_EVENT = "editor:form-autosave";
 const SAVE_BEFORE_ACTION_EVENT = "editor:save-before-action";
 // Dedicated event for the hamburger Back → My PDFs flow on `/w-9-form`.
 // Keeps the standalone `editor:save` (Save button) and the download
@@ -73,12 +69,7 @@ type SaveBeforeActionDetail = {
 type SaveAndContinueDetail = {
   onComplete: (result: {
     ok: boolean;
-    reason?:
-      | "error"
-      | "not-signed-in"
-      | "cancelled"
-      | "cancelled-duplicate"
-      | "not-ready";
+    reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
   }) => void;
 };
 
@@ -602,125 +593,7 @@ export const W9_LIBRARY_FILENAME = "IRS Form W-9.pdf";
  * expose renaming, it's one place to un-lock.
  */
 function normalizeLibraryFilename(_input: string | undefined): string {
-  // Un-locked 2026-10-04: the filename is user-editable again, so this reads
-  // the editor's current name. The export modal's filename is deliberately
-  // IGNORED — it carries the chosen download extension (.png/.jpg), which
-  // must never name the library row. Collisions are settled by the
-  // Replace / Save-as-new prompt instead of by collapsing onto one row.
-  // Prefer the SAVED row name over the template file name. After the user
-  // picks "Save as a new file", the row is called e.g. "... (2).pdf" while
-  // store.file is still the template; without this the next autosave would
-  // re-upload under the default name and the backend would rename the row
-  // straight back.
-  const { currentDocumentName, file } = usePdfEditorStore.getState();
-  const current = (currentDocumentName ?? file?.name)?.trim();
-
-  if (!current) return W9_LIBRARY_FILENAME;
-
-  return /\.pdf$/i.test(current)
-    ? current
-    : `${current.replace(/\.[^./\\]+$/, "")}.pdf`;
-}
-
-/**
- * Write the current W-9 to My PDFs without finalizing and without touching
- * the paywall — autosave must never ask anyone to pay. Mirrors the partial
- * client-stamp path the explicit Save already falls back to.
- */
-async function autosaveW9ToLibrary(
-  values: Record<string, string>,
-  signaturePreview: string | null,
-): Promise<boolean> {
-  const { currentDocumentId } = usePdfEditorStore.getState();
-  const stampedBytes = await stampW9Client(values, signaturePreview);
-  const file = new File(
-    [stampedBytes.buffer as ArrayBuffer],
-    normalizeLibraryFilename(undefined),
-    { type: "application/pdf" },
-  );
-  const editorState = JSON.stringify({
-    v: 1,
-    w9: { values, signatureKey: null, signaturePreview },
-  });
-  const saved = await uploadW9ToLibrary({
-    currentDocumentId,
-    editorState,
-    file,
-  });
-
-  if (!saved) return false;
-
-  usePdfEditorStore.getState().setCurrentDocument({
-    id: saved.id,
-    name: saved.filename,
-  });
-
-  return true;
-}
-
-/**
- * Upload a stamped W-9, asking the user what to do when the name is already
- * taken. Returns null when they cancel, so callers simply skip the save and
- * leave the user where they are.
- */
-let w9SaveQueue: Promise<unknown> = Promise.resolve();
-
-/**
- * Saves run one at a time — see the NEC note. Clicking the logo mid-autosave
- * would otherwise start a second save that cannot see the row the first is
- * creating, and the filename prompt would appear twice.
- */
-async function uploadW9ToLibrary(input: {
-  currentDocumentId: string | null;
-  editorState: string;
-  file: File;
-}) {
-  const run = w9SaveQueue
-    .catch(() => undefined)
-    .then(() => uploadW9ToLibraryNow(input));
-
-  w9SaveQueue = run.catch(() => undefined);
-
-  return run;
-}
-
-async function uploadW9ToLibraryNow(input: {
-  currentDocumentId: string | null;
-  editorState: string;
-  file: File;
-}) {
-  // Resolve the name HERE, inside the queue — not in the caller.
-  //
-  // Callers build their File before queueing, so a save waiting behind the
-  // one showing the prompt still carries the pre-prompt name. It would then
-  // upsert the row the first save just created while uploading under the old
-  // name, and the backend rewrites the row filename from the upload — silently
-  // undoing "Save as a new file". Re-reading after the queue picks up the name
-  // the previous save settled on.
-  const desired = normalizeLibraryFilename(undefined);
-  const resolution = await resolveFilenameConflict({
-    filename: desired,
-    getOwnedDocumentId: () =>
-      input.currentDocumentId ?? usePdfEditorStore.getState().currentDocumentId,
-  });
-
-  if (resolution.kind === "cancel") return null;
-
-  const file =
-    resolution.filename === input.file.name
-      ? input.file
-      : new File([input.file], resolution.filename, { type: input.file.type });
-
-  const saved = await documentsService.uploadDocument({
-    documentId:
-      resolution.kind === "replace" ? resolution.documentId : undefined,
-    editorState: input.editorState,
-    file,
-  });
-
-  invalidateLibraryIndex();
-
-  return saved;
+  return W9_LIBRARY_FILENAME;
 }
 
 /**
@@ -828,13 +701,11 @@ async function ensureLibrarySave(
         signaturePreview: useFormEditorStore.getState().signaturePreview,
       },
     });
-    const savedDoc = await uploadW9ToLibrary({
-      currentDocumentId,
-      editorState,
+    const savedDoc = await documentsService.uploadDocument({
       file: stampedFile,
+      documentId: currentDocumentId ?? undefined,
+      editorState,
     });
-
-    if (!savedDoc) return false;
 
     usePdfEditorStore.getState().setCurrentDocument({
       id: savedDoc.id,
@@ -1433,36 +1304,11 @@ export function W9FinalizeIntercept() {
     // in for no useful reason since finalize is what actually needs
     // to run). Resolve the save as a no-op success so the modal
     // proceeds to dispatch the export event our other handler catches.
-    // Reached from the F5 / Ctrl+R reload prompt ("Save & reload"). It used
-    // to answer OK without saving — see the NEC note.
     const saveBeforeActionHandler = (event: Event) => {
       event.stopImmediatePropagation();
       const detail = (event as CustomEvent<SaveBeforeActionDetail>).detail;
 
-      void (async () => {
-        const values = useFormEditorStore.getState().values;
-        const hasValues = Object.values(values ?? {}).some((v) =>
-          String(v ?? "").trim(),
-        );
-
-        if (!hasValues || !authLoadedRef.current || !isSignedInRef.current) {
-          detail?.onComplete?.({ ok: true });
-
-          return;
-        }
-
-        try {
-          const saved = await autosaveW9ToLibrary(
-            values,
-            useFormEditorStore.getState().signaturePreview ?? null,
-          );
-
-          detail?.onComplete?.({ ok: saved });
-        } catch (err) {
-          logger.captureError(err, "w9.save_before_action");
-          detail?.onComplete?.({ ok: false });
-        }
-      })();
+      detail?.onComplete?.({ ok: true });
     };
 
     // QA 2026-08-27: `useSaveEditor` would otherwise Fabric-merge the
@@ -1475,11 +1321,7 @@ export function W9FinalizeIntercept() {
     // library. Include the raw form values in `editorState` under a
     // `w9` marker so `openDocumentInEditor` can round-trip the user
     // back to `/w-9-form` with their entries pre-filled.
-    let autosaveInFlight = false;
-    let autosaveSuppressed = false;
-
     const saveHandler = (event: Event) => {
-      autosaveSuppressed = false;
       event.stopImmediatePropagation();
 
       const { sessionId, values, signatureKey } = useFormEditorStore.getState();
@@ -1597,13 +1439,11 @@ export function W9FinalizeIntercept() {
             },
           });
 
-          const document = await uploadW9ToLibrary({
-            currentDocumentId,
-            editorState,
+          const document = await documentsService.uploadDocument({
             file: stampedFile,
+            documentId: currentDocumentId ?? undefined,
+            editorState,
           });
-
-          if (!document) return;
 
           usePdfEditorStore.getState().setCurrentDocument({
             id: document.id,
@@ -1650,13 +1490,11 @@ export function W9FinalizeIntercept() {
                 signaturePreview: previewNow,
               },
             });
-            const savedDoc = await uploadW9ToLibrary({
-              currentDocumentId,
-              editorState: partialEditorState,
+            const savedDoc = await documentsService.uploadDocument({
               file: partialFile,
+              documentId: currentDocumentId ?? undefined,
+              editorState: partialEditorState,
             });
-
-            if (!savedDoc) return;
 
             usePdfEditorStore.getState().setCurrentDocument({
               id: savedDoc.id,
@@ -1805,13 +1643,11 @@ export function W9FinalizeIntercept() {
               signaturePreview: useFormEditorStore.getState().signaturePreview,
             },
           });
-          const document = await uploadW9ToLibrary({
-            currentDocumentId,
-            editorState,
+          const document = await documentsService.uploadDocument({
             file: stampedFile,
+            documentId: currentDocumentId ?? undefined,
+            editorState,
           });
-
-          if (!document) return;
 
           usePdfEditorStore.getState().setCurrentDocument({
             id: document.id,
@@ -1853,13 +1689,11 @@ export function W9FinalizeIntercept() {
                 signaturePreview: previewNow,
               },
             });
-            const savedDoc = await uploadW9ToLibrary({
-              currentDocumentId,
-              editorState: partialEditorState,
+            const savedDoc = await documentsService.uploadDocument({
               file: partialFile,
+              documentId: currentDocumentId ?? undefined,
+              editorState: partialEditorState,
             });
-
-            if (!savedDoc) return;
 
             usePdfEditorStore.getState().setCurrentDocument({
               id: savedDoc.id,
@@ -1890,42 +1724,6 @@ export function W9FinalizeIntercept() {
       })();
     };
 
-    // Autosave: write the form to My PDFs shortly after typing stops.
-    //
-    // `inFlight` keeps overlapping saves out; `suppressed` latches when the
-    // user cancels the filename prompt, so the next debounce does not
-    // re-open it every few seconds. An explicit Save or Download clears it.
-    const onAutosave = (event: Event) => {
-      event.stopImmediatePropagation();
-
-      if (autosaveInFlight || autosaveSuppressed) return;
-      if (!authLoadedRef.current || !isSignedInRef.current) return;
-      if (isDuplicatePromptOpen()) return;
-
-      const values = useFormEditorStore.getState().values;
-
-      if (!Object.values(values ?? {}).some((v) => String(v ?? "").trim())) {
-        return;
-      }
-
-      autosaveInFlight = true;
-      void (async () => {
-        try {
-          const saved = await autosaveW9ToLibrary(
-            values,
-            useFormEditorStore.getState().signaturePreview ?? null,
-          );
-
-          if (!saved) autosaveSuppressed = true;
-        } catch (err) {
-          logger.captureError(err, "w9.autosave");
-        } finally {
-          autosaveInFlight = false;
-        }
-      })();
-    };
-
-    window.addEventListener(AUTOSAVE_EVENT, onAutosave, { capture: true });
     window.addEventListener(SAVE_BEFORE_ACTION_EVENT, saveBeforeActionHandler, {
       capture: true,
     });
@@ -1943,7 +1741,6 @@ export function W9FinalizeIntercept() {
         saveBeforeActionHandler,
         { capture: true },
       );
-      window.removeEventListener(AUTOSAVE_EVENT, onAutosave, { capture: true });
       window.removeEventListener(EXPORT_EVENT, handler, { capture: true });
       window.removeEventListener(SAVE_EVENT, saveHandler, { capture: true });
       window.removeEventListener(

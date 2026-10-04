@@ -6,7 +6,7 @@ import { Checkbox } from "@heroui/react";
 
 import { useFormEditorStore } from "@/lib/client/stores";
 
-import { overlayFontSize, pdfRectToCss } from "./types";
+import { pdfRectToCss } from "./types";
 
 export function CheckboxField({ field, mode, page }: FieldProps) {
   const value = useFormEditorStore((s) => s.values[field.id] ?? "");
@@ -32,7 +32,6 @@ export function CheckboxField({ field, mode, page }: FieldProps) {
             ? "border-[var(--color-accent)]/60 bg-yellow-100/80 hover:bg-yellow-100/90"
             : "border-yellow-500/40 bg-yellow-100/50 hover:bg-yellow-100/70"
         }`}
-        id={`field-input-${field.id}`}
         role="checkbox"
         style={{
           height: css.height,
@@ -44,16 +43,7 @@ export function CheckboxField({ field, mode, page }: FieldProps) {
         onClick={() => handleChange(!isChecked)}
       >
         {isChecked ? (
-          <span
-            className="font-bold leading-none text-black"
-            style={{
-              fontSize: overlayFontSize(field.rect, css.scale, {
-                allowOverflow: true,
-                maxPt: 12,
-                ratio: 1.35,
-              }),
-            }}
-          >
+          <span className="text-[11px] font-bold leading-none text-black">
             ✓
           </span>
         ) : null}

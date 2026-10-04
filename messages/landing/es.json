@@ -30,35 +30,7 @@
     "description": "Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
   },
   "allToolsCatalog": {
-    "heading": "Every PDFVault tool",
-    "categories": {
-      "pdfComposer": "PDF COMPOSER",
-      "convertToPdf": "CONVERTIR A PDF",
-      "convertFromPdf": "CONVERTIR DESDE PDF",
-      "others": "OTROS"
-    },
-    "tools": {
-      "editSign": "Editar y firmar",
-      "compress": "Comprimir",
-      "organizePages": "Organizar páginas",
-      "mergePdf": "Combinar archivos PDF",
-      "splitExtractPages": "Dividir y extraer páginas",
-      "passwordProtect": "Proteger con contraseña",
-      "unlockPdf": "Desbloquear PDF",
-      "rotatePages": "Girar páginas",
-      "deletePages": "Eliminar páginas",
-      "wordToPdf": "De Word a PDF",
-      "pngToPdf": "De PNG a PDF",
-      "jpgToPdf": "De JPG a PDF",
-      "pdfToWord": "De PDF a WORD",
-      "pdfToPng": "De PDF a PNG",
-      "pdfToJpg": "De PDF a JPG",
-      "extractImages": "Extraer imágenes",
-      "removeAnnotations": "Eliminar anotaciones",
-      "watermark": "Marca de agua",
-      "formsW9": "Formularios (W-9)",
-      "forms1099Nec": "Formularios (1099-NEC)"
-    }
+    "heading": "Every PDFVault tool"
   },
   "steps": {
     "sectionTitle": "Get started in three simple steps",

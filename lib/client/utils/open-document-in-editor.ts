@@ -25,19 +25,6 @@ function isW9Document(doc: Pick<Document, "editorState">): boolean {
   }
 }
 
-function isNecDocument(doc: Pick<Document, "editorState">): boolean {
-  const raw = doc.editorState;
-
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw) as { nec?: unknown };
-
-    return typeof parsed === "object" && parsed !== null && Boolean(parsed.nec);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Opens a saved document in the editor.
  *
@@ -66,14 +53,12 @@ export async function openDocumentInEditor(
   // time is worth it: the alternative is silently routing every saved W-9 into
   // the generic composer.
   let w9 = isW9Document(doc);
-  let nec = isNecDocument(doc);
 
-  if (!w9 && !nec && doc.editorState == null) {
+  if (!w9 && doc.editorState == null) {
     try {
       const full = await documentsService.getDocument(doc.id);
 
       w9 = isW9Document(full);
-      nec = isNecDocument(full);
     } catch {
       // Non-fatal: fall through to the composer route.
     }
@@ -83,14 +68,6 @@ export async function openDocumentInEditor(
     const query = new URLSearchParams({ resumeDocId: doc.id });
 
     router.push(`${ROUTES.FORMS.W9_SHORT}?${query.toString()}`);
-
-    return;
-  }
-
-  if (nec) {
-    const query = new URLSearchParams({ resumeDocId: doc.id });
-
-    router.push(`${ROUTES.FORMS.NEC_1099_EDIT}?${query.toString()}`);
 
     return;
   }

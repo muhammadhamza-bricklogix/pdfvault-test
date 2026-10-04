@@ -51,18 +51,11 @@ export function ShareModal(): React.ReactElement {
   // comparing — otherwise Share on `/de/w-9-form` would skip the
   // finalize step and ship a blank template (QA 2026-09-06 pattern).
   const strippedPath = stripLocalePrefix(pathname);
-  const isNecRoute =
-    strippedPath === ROUTES.FORMS.NEC_1099_EDIT ||
-    strippedPath === ROUTES.FORMS.NEC_1099_FORM ||
-    strippedPath.startsWith("/forms/1099-nec");
   const isW9Route =
     strippedPath === ROUTES.FORMS.W9_SHORT ||
     strippedPath === ROUTES.FORMS.W9_FORM ||
     strippedPath === ROUTES.FORMS.W9 ||
-    strippedPath.startsWith(ROUTES.FORMS.W9_EDIT) ||
-    isNecRoute;
-  const formLabel = isNecRoute ? "1099-NEC" : "W-9";
-  const shareFilename = isNecRoute ? "1099-nec.pdf" : "w-9.pdf";
+    strippedPath.startsWith(ROUTES.FORMS.W9_EDIT);
   const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
@@ -175,8 +168,9 @@ export function ShareModal(): React.ReactElement {
       if (!sessionId) {
         setSubmitting(false);
         toast.error({
-          title: `${formLabel} session not ready`,
-          description: `Give it a moment while we start your ${formLabel} session, then try Share again.`,
+          title: "W-9 session not ready",
+          description:
+            "Give it a moment while we start your W-9 session, then try Share again.",
         });
 
         return;
@@ -185,30 +179,25 @@ export function ShareModal(): React.ReactElement {
       try {
         const { downloadUrl } = await formsService.finalizeFormSession({
           sessionId,
-          values: isNecRoute ? values : normalizeW9ValuesForFinalize(values),
-          signatureKey: isNecRoute ? null : signatureKey,
+          values: normalizeW9ValuesForFinalize(values),
+          signatureKey,
         });
         const res = await fetch(downloadUrl, { cache: "no-store" });
 
         if (!res.ok) {
-          throw new Error(
-            `Failed to fetch stamped ${formLabel} (HTTP ${res.status})`,
-          );
+          throw new Error(`Failed to fetch stamped W-9 (HTTP ${res.status})`);
         }
         const stampedBytes = await res.arrayBuffer();
 
-        fileToShare = new File([stampedBytes], shareFilename, {
+        fileToShare = new File([stampedBytes], "w-9.pdf", {
           type: "application/pdf",
         });
-        shareName = shareFilename;
+        shareName = "w-9.pdf";
       } catch (err) {
-        logger.captureError(
-          err,
-          isNecRoute ? "nec.share.finalize" : "w9.share.finalize",
-        );
+        logger.captureError(err, "w9.share.finalize");
         setSubmitting(false);
         toast.error({
-          title: `Couldn't prepare your ${formLabel} for sharing`,
+          title: "Couldn't prepare your W-9 for sharing",
           description:
             err instanceof Error
               ? err.message

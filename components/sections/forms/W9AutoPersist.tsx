@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { savePendingW9State } from "@/lib/client/forms/pending-w9-values";
 import { formsService } from "@/lib/shared/api/services/forms.service";
-import { useFormEditorStore, usePdfEditorStore } from "@/lib/client/stores";
+import { useFormEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
 // Debounce so we're not writing localStorage on every keystroke —
@@ -12,13 +12,6 @@ import { logger } from "@/lib/shared/utils/logger";
 // "user paused mid-word", which is what we want. Users don't perceive
 // the delay; the write is only observable on refresh / return.
 const LOCAL_DEBOUNCE_MS = 400;
-/**
- * How long typing must settle before the form is written to My PDFs.
- * Longer than the local/DB debounces because this one can open the
- * Replace / Save-as-new prompt, and interrupting mid-sentence is jarring.
- */
-const LIBRARY_DEBOUNCE_MS = 2500;
-const FORM_AUTOSAVE_EVENT = "editor:form-autosave";
 // PATCH is a network hop; hold it a bit longer so a burst of typing
 // coalesces into one request. Local storage still writes at 400ms so
 // refresh recovery stays instant.
@@ -100,43 +93,12 @@ export function W9AutoPersist() {
         });
     };
 
-    let libraryTimeout: number | null = null;
-
-    // The finalize intercept owns the actual save — it already has the
-    // stamper, the auth refs and the filename-conflict gate.
-    const flushLibraryDebounced = () => {
-      libraryTimeout = null;
-      window.dispatchEvent(new CustomEvent(FORM_AUTOSAVE_EVENT));
-    };
-
-    // A navigation save is about to run and will persist the same values.
-    // Drop any pending autosave so the two do not race — without this the
-    // debounce could fire mid-navigation and open a second prompt.
-    const cancelPendingAutosave = () => {
-      if (libraryTimeout !== null) {
-        window.clearTimeout(libraryTimeout);
-        libraryTimeout = null;
-      }
-    };
-
-    window.addEventListener(
-      "editor:w9-save-and-continue",
-      cancelPendingAutosave,
-      true,
-    );
-
     const unsub = useFormEditorStore.subscribe((state, prev) => {
       const valuesChanged = state.values !== prev.values;
       const previewChanged = state.signaturePreview !== prev.signaturePreview;
 
       if (!valuesChanged && !previewChanged) return;
       latest = snap();
-
-      // Mark the editor dirty so the shared unload guards engage — see the
-      // NEC note. Without it a reload or tab close gave no warning at all.
-      if (!usePdfEditorStore.getState().hasUnsavedChanges) {
-        usePdfEditorStore.setState({ hasUnsavedChanges: true });
-      }
 
       if (localTimeout === null) {
         localTimeout = window.setTimeout(
@@ -149,19 +111,6 @@ export function W9AutoPersist() {
       if (valuesChanged && dbTimeout === null) {
         dbTimeout = window.setTimeout(flushDbDebounced, DB_DEBOUNCE_MS);
       }
-      // Only real input is worth saving. The NEC bootstrap seeds
-      // calendar_year, and that seeding is itself a change — without this a
-      // blank form would arm the save and pop the filename dialog before the
-      // user typed anything.
-      if (hasRealInput(latest.values)) {
-        // Restarted on every keystroke so the save lands once typing stops,
-        // rather than repeatedly mid-sentence.
-        if (libraryTimeout !== null) window.clearTimeout(libraryTimeout);
-        libraryTimeout = window.setTimeout(
-          flushLibraryDebounced,
-          LIBRARY_DEBOUNCE_MS,
-        );
-      }
     });
 
     // pagehide fires on hard navigations (URL bar, tab close, iOS
@@ -169,20 +118,6 @@ export function W9AutoPersist() {
     // localStorage write only — the DB PATCH is async and would be
     // aborted by the navigation anyway; the local mirror is the one
     // that has to be atomic here.
-    const hasRealInput = (v: Record<string, string>) =>
-      Object.values(v ?? {}).some((value) => String(value ?? "").trim() !== "");
-
-    // A toolbar reload cannot save on the way out — the PDF stamp is async
-    // and the upload dies with the page. So finish the job on the way back
-    // in: a restored draft arms the save once on mount, which is what makes
-    // the filename prompt appear right after the reload instead of never.
-    if (hasRealInput(snap().values)) {
-      libraryTimeout = window.setTimeout(
-        flushLibraryDebounced,
-        LIBRARY_DEBOUNCE_MS,
-      );
-    }
-
     const onPageHide = () => {
       latest = snap();
       savePendingW9State(latest);
@@ -192,12 +127,6 @@ export function W9AutoPersist() {
 
     return () => {
       unsub();
-      if (libraryTimeout !== null) window.clearTimeout(libraryTimeout);
-      window.removeEventListener(
-        "editor:w9-save-and-continue",
-        cancelPendingAutosave,
-        true,
-      );
       window.removeEventListener("pagehide", onPageHide);
       // ALWAYS flush on unmount, not just when a debounce is pending.
       // The user's typed values may already be in localStorage from a

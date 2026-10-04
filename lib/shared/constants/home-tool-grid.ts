@@ -241,7 +241,7 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
   // },
 ];
 
-// Tax forms — the W-9 and 1099-NEC ship today. Other forms (W-4, W-7)
+// Tax forms — only the W-9 ships today. Other forms (W-4, 1099-NEC, W-7)
 // will be added when they go live; placeholders intentionally omitted so
 // the tab stays clean.
 const TAX_FORMS_CARDS: HomeToolCard[] = [
@@ -251,13 +251,6 @@ const TAX_FORMS_CARDS: HomeToolCard[] = [
     href: ROUTES.FORMS.W9_FORM,
     icon: File01Icon,
     title: "W-9 Form",
-  },
-  {
-    description:
-      "Complete and generate your IRS Form 1099-NEC for nonemployee compensation — ready to download and print.",
-    href: ROUTES.FORMS.NEC_1099,
-    icon: File01Icon,
-    title: "1099-NEC Form",
   },
 ];
 
