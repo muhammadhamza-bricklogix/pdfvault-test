@@ -599,6 +599,26 @@ export function PdfEditorShell({
     setIsSignedIn(isSignedIn ?? false);
   }, [isSignedIn, setIsSignedIn]);
 
+  // Row 114/120: Print → Save as PDF reads `document.title` for the
+  // default filename in the system Save dialog. Composer never set it,
+  // so Chrome/Edge/Safari all opened the dialog with an empty filename
+  // field — users had to type the whole name themselves. Mirror the
+  // open file's name into `document.title` while a PDF is loaded;
+  // restore the original title when the file is cleared so the regular
+  // page title comes back on route transitions.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!file) return;
+    const previous = document.title;
+    const base = file.name.replace(/\.[^.]+$/, "") || "document";
+
+    document.title = base;
+
+    return () => {
+      document.title = previous;
+    };
+  }, [file]);
+
   // PRD §7.1 — prefetch the pdf.js legacy build + worker as soon as the
   // editor mounts, so the first file lands into a warm module cache. On a
   // cold session this saves ~200–800ms depending on browser cache state
