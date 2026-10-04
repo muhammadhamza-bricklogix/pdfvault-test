@@ -251,6 +251,17 @@ interface PaywallModalProps {
  * setEntitledSnapshot) is unchanged from the previous shell — only
  * the visual chrome around it moved.
  */
+
+const DIALOG_SCROLLBAR_CLASSES =
+  " [&::-webkit-scrollbar]:w-1.5" +
+  " [&::-webkit-scrollbar-track]:bg-transparent" +
+  " [&::-webkit-scrollbar-thumb]:rounded-full" +
+  " [&::-webkit-scrollbar-thumb]:bg-black/20" +
+  " hover:[&::-webkit-scrollbar-thumb]:bg-black/30" +
+  " dark:[&::-webkit-scrollbar-thumb]:bg-white/20" +
+  " dark:hover:[&::-webkit-scrollbar-thumb]:bg-white/30" +
+  " [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.2)_transparent]";
+
 export function PaywallModal({
   isOpen,
   preview,
@@ -1186,7 +1197,8 @@ export function PaywallModal({
                   ? "max-h-[calc(100dvh-32px)] w-[min(760px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                   : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
-            " notranslate wg-notranslate"
+            " notranslate wg-notranslate" +
+            DIALOG_SCROLLBAR_CLASSES
           }
           translate="no"
         >
@@ -2301,7 +2313,7 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
 
       {/* Document preview — real PDF iframe when available, blurred mock otherwise */}
       {previewObjectUrl ? (
-        <div className="h-[360px] min-h-0 w-full flex-1 overflow-hidden sm:h-[420px] md:h-auto">
+        <div className="aspect-[612/792] min-h-0 w-full overflow-hidden bg-white">
           <iframe
             className="h-full w-full border-none"
             src={`${previewObjectUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}

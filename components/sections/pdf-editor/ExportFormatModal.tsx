@@ -121,9 +121,20 @@ function ExportFormatModalBody({
   // in `W9FinalizeIntercept` after finalize returns the byte-perfect
   // server-stamped PDF. Word / Excel / PPTX are intentionally excluded
   // for now — DOCX was removed per product on 2026-08-28.
-  const isW9Route = useMemo(
-    () => pathname?.startsWith("/w-9-form") ?? false,
+  const isNecRoute = useMemo(
+    () =>
+      Boolean(
+        pathname?.startsWith("/1099-nec-form") ||
+          pathname?.startsWith("/forms/1099-nec"),
+      ),
     [pathname],
+  );
+  const isW9Route = useMemo(
+    () =>
+      Boolean(
+        pathname?.startsWith("/w-9-form") || pathname?.startsWith("/forms/w-9"),
+      ) || isNecRoute,
+    [pathname, isNecRoute],
   );
   const W9_ALLOWED_FORMATS = useMemo(
     () => new Set<FormatOption["id"]>(["pdf", "png", "jpg"]),
