@@ -15,7 +15,6 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
   const activeTool = usePdfEditorStore((s) => s.activeTool);
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const markDocumentDirty = usePdfEditorStore((s) => s.markDocumentDirty);
-  const pushHistory = usePdfEditorStore((s) => s.pushHistory);
   const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
 
   useEffect(() => {
@@ -60,7 +59,6 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
 
       fabricCanvas.remove(target);
       fabricCanvas.discardActiveObject();
-      pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
       // Persist the deletion into the store immediately so the save/export
       // pipeline sees it even if `flushLiveFabricPage` at export time hits
       // a mid-remount live canvas and can't reliably capture state.
@@ -87,7 +85,6 @@ export function useEraserTool({ fabricCanvas }: UseEraserToolParams) {
     currentPage,
     fabricCanvas,
     markDocumentDirty,
-    pushHistory,
     saveFabricJson,
   ]);
 }
