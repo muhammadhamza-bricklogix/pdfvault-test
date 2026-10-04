@@ -14,6 +14,7 @@ import { useIsEntitled } from "@/lib/client/hooks/billing/use-is-entitled";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { clearAllNecDrafts } from "@/components/sections/forms/NecAutoPersist";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
 import { LocaleNavLink } from "./locale-nav-link";
@@ -140,6 +141,7 @@ export function LandingHeader() {
 
   const handleLogOut = () => {
     void usersService.signOutAudit().catch(() => undefined);
+    clearAllNecDrafts();
     void signOut();
   };
 

@@ -63,7 +63,8 @@
       "extractImages": "Extraire des images",
       "removeAnnotations": "Supprimer les annotations",
       "watermark": "Filigrane",
-      "formsW9": "Formulaires (W-9)"
+      "formsW9": "Formulaires (W-9)",
+      "forms1099Nec": "Formulaires (1099-NEC)"
     }
   },
   "steps": {
