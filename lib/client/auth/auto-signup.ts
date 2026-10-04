@@ -4,6 +4,7 @@ import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-nav
 import { getAuthToken } from "@/lib/client/auth/get-auth-token";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { MOBILE_MEDIA_QUERY } from "@/lib/shared/utils/media-queries";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -25,6 +26,25 @@ function appendDocIdToRedirect(redirect: string, docId: string): string {
   const separator = redirect.includes("?") ? "&" : "?";
 
   return `${redirect}${separator}id=${encodeURIComponent(docId)}`;
+}
+
+/**
+ * Mobile is where the pre-nav upload crawls over 4G/LTE and makes
+ * the paywall feel unresponsive for 10–40 s. Desktop upload-pre-nav
+ * finishes in ~1 s on broadband and the baked-docId-in-redirect
+ * flow has been stable for months — leave it alone there.
+ *
+ * Returns false during SSR / when `window.matchMedia` is unavailable
+ * so the desktop (preserve-existing) branch is taken by default.
+ */
+function isMobileClient(): boolean {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia !== "function") return false;
+  try {
+    return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -53,16 +73,20 @@ export async function runAutoSignup(params: {
    */
   fileName?: string;
   /**
-   * PDF with all Fabric edits burned in. When provided, uploaded via
-   * the authenticated `/documents/upload` endpoint AFTER the ticket
-   * sign-in succeeds, and the resulting `docId` is forwarded to
-   * `/auth/quick-signup/notify` so the Customer.io welcome email's
-   * CTA links straight to the composer with the file already loaded.
-   * `?id=<docId>` is also appended to the finalize redirect URL so
-   * the same-session return loads the cloud file directly instead of
-   * relying on the IDB-restore path in the hydrator. Absent → notify
-   * still fires (email lands with the dashboard fallback URL) and
-   * the hydrator's IDB restore takes over on return.
+   * PDF with all Fabric edits burned in. Behaviour splits on
+   * `isMobileClient()` (see body):
+   *   - DESKTOP: uploaded via `/documents/upload` BEFORE
+   *     `signIn.finalize`. Resulting `docId` is forwarded to
+   *     `/auth/quick-signup/notify` AND appended as `?id=<docId>`
+   *     to the finalize redirect so the composer same-session
+   *     return loads from cloud, skipping the IDB-restore path.
+   *   - MOBILE: skipped pre-nav to avoid a 10–40 s cellular stall
+   *     between email submit and paywall. The hydrator's post-nav
+   *     IDB restore + `useEditorAutoPersist` merge-upload handles
+   *     the cloud copy, and the backend's upload-hook sends the
+   *     welcome email at that point.
+   * Not providing `bakedFile` is still supported: desktop skips
+   * its upload branch, mobile is already upload-free.
    */
   bakedFile?: File;
 }): Promise<AutoSignupOutcome> {
@@ -298,96 +322,158 @@ export async function runAutoSignup(params: {
       ? redirectUrl
       : ROUTES.APP.DASHBOARD;
 
+  const onMobile = isMobileClient();
+
   // ─────────────────────────────────────────────────────────────
-  // NEW (2026-09-18): between ticket sign-in and finalize, upload
-  // the pre-baked PDF via the authenticated `/documents/upload`
-  // endpoint and hand the resulting docId to
-  // `POST /auth/quick-signup/notify`. The welcome email then fires
-  // with a `pdf_editor_url` pointing straight at the composer for
-  // this file — same behaviour whether the user opens the email on
-  // the same device or a different one, because the edited bytes
-  // live in cloud storage now (not just IDB). `?id=<docId>` is
-  // appended to the finalize redirect so the same-session return
-  // path also loads from cloud, skipping the IDB-restore path in
-  // the hydrator.
+  // 2026-10-04 — split desktop vs mobile.
   //
-  // Fall-through behaviour when anything in this block fails is
-  // essential: the account exists, the ticket already signed the
-  // user in, and the finalize call still runs. Worst case: the
-  // welcome email lands with the dashboard fallback URL (Liquid
-  // `default:` filter on `pdf_editor_url`) and the hydrator does
-  // its normal IDB rehydrate — exactly the pre-2026-09-18 flow.
+  // DESKTOP (unchanged, proven since 2026-09-18):
+  //   Await `documentsService.uploadDocument(bakedFile)` BEFORE
+  //   `signIn.finalize`, then append `?id=<docId>` to the redirect.
+  //   The hydrator sees the id and skips its IDB restore; the
+  //   cloud loader opens the just-uploaded doc. The welcome email
+  //   fires with the docId. Fast broadband → ~1 s pre-nav, no UX
+  //   impact.
+  //
+  // MOBILE (new):
+  //   Skip the pre-nav upload entirely. On 4G/LTE the baked PDF
+  //   upload crawls at 1–3 MB/s and adds 10–40 s between email
+  //   submit and the full-page nav — the modal appears hung and
+  //   users bail before the paywall. The post-nav path still
+  //   covers everything:
+  //     1. `signIn.finalize` → nav fires IMMEDIATELY.
+  //     2. Hydrator Step 2 (fast-path, 2026-08-28) restores the
+  //        file + Fabric edits + extractedPages from IDB
+  //        synchronously.
+  //     3. `useEditorAutoPersist` runs the merge pipeline once
+  //        pdf.js loads and uploads the authoritative cloud copy.
+  //     4. Backend's `DocumentsController.upload` →
+  //        `checkAndSendAccountCreatedWelcome` detects the fresh
+  //        auto-signup via `privateMetadata.pendingWelcomePassword`
+  //        and sends the welcome email with the fresh docId.
+  //   `/auth/quick-signup/notify` fires client-side here (fire-
+  //   and-forget) as a redundant welcome-email trigger — the
+  //   backend is idempotent on `PENDING_PASSWORD_META_KEY` so
+  //   duplicates aren't possible.
+  //
+  // Fall-through for both branches: upload failure on desktop
+  // falls through to the hydrator's post-nav path identically to
+  // the mobile branch — the ticketed sign-in is never wasted.
   // ─────────────────────────────────────────────────────────────
   let effectiveRedirect = safeRedirect;
   let uploadedDocId: string | null = null;
 
-  try {
-    if (bakedFile) {
-      // Clerk's `signIn.ticket({ ticket })` above sets the session
-      // synchronously — `getAuthToken()` returns the fresh JWT
-      // immediately, so `apiClient` picks it up on the very next
-      // request. No sleep needed.
-      const uploaded = await documentsService.uploadDocument({
-        file: bakedFile,
+  if (!onMobile) {
+    // Desktop — original (awaited) path, byte-for-byte unchanged.
+    try {
+      if (bakedFile) {
+        // Clerk's `signIn.ticket({ ticket })` above sets the session
+        // synchronously — `getAuthToken()` returns the fresh JWT
+        // immediately, so `apiClient` picks it up on the very next
+        // request. No sleep needed.
+        const uploaded = await documentsService.uploadDocument({
+          file: bakedFile,
+        });
+
+        uploadedDocId = uploaded.id;
+        effectiveRedirect = appendDocIdToRedirect(safeRedirect, uploadedDocId);
+
+        logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_OK, "info", {
+          docId: uploadedDocId,
+          sizeBytes: bakedFile.size,
+        });
+      }
+    } catch (uploadErr) {
+      // Upload failure is non-fatal — the hydrator's IDB restore +
+      // `useEditorAutoPersist` merge-upload is the backup path.
+      logger.captureError(uploadErr, "auto-signup.upload", {
+        sizeBytes: bakedFile?.size,
       });
-
-      uploadedDocId = uploaded.id;
-      effectiveRedirect = appendDocIdToRedirect(safeRedirect, uploadedDocId);
-
-      logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_OK, "info", {
-        docId: uploadedDocId,
-        sizeBytes: bakedFile.size,
+      logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_ERROR, "error", {
+        errorMessage:
+          uploadErr instanceof Error ? uploadErr.message : String(uploadErr),
       });
     }
-  } catch (uploadErr) {
-    // Upload failure is non-fatal — see the block header. Log +
-    // fall through so the ticketed sign-in isn't wasted.
-    logger.captureError(uploadErr, "auto-signup.upload", {
-      sizeBytes: bakedFile?.size,
-    });
-    logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_ERROR, "error", {
-      errorMessage:
-        uploadErr instanceof Error ? uploadErr.message : String(uploadErr),
-    });
-  }
 
-  // Fire the welcome email. Always call notify even when the upload
-  // failed (or `bakedFile` was absent) so the user still gets their
-  // sign-in credentials — the CIO template falls back to the
-  // dashboard snippet when `pdf_editor_url` isn't in message_data.
-  try {
-    const token = await getAuthToken();
-    const notifyBody: { fileName?: string; docId?: string } = {};
+    try {
+      const token = await getAuthToken();
+      const notifyBody: { fileName?: string; docId?: string } = {};
 
-    if (fileName) notifyBody.fileName = fileName;
-    if (uploadedDocId) notifyBody.docId = uploadedDocId;
+      if (fileName) notifyBody.fileName = fileName;
+      if (uploadedDocId) notifyBody.docId = uploadedDocId;
 
-    const notifyResponse = await fetch(
-      `${API_BASE_URL}/auth/quick-signup/notify`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      const notifyResponse = await fetch(
+        `${API_BASE_URL}/auth/quick-signup/notify`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(notifyBody),
         },
-        body: JSON.stringify(notifyBody),
-      },
-    );
+      );
 
-    logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_OK, "info", {
-      responseStatus: notifyResponse.status,
-      hadDocId: Boolean(uploadedDocId),
+      logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_OK, "info", {
+        responseStatus: notifyResponse.status,
+        hadDocId: Boolean(uploadedDocId),
+      });
+    } catch (notifyErr) {
+      logger.captureError(notifyErr, "auto-signup.notify", {
+        hadDocId: Boolean(uploadedDocId),
+      });
+      logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_ERROR, "error", {
+        errorMessage:
+          notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+      });
+    }
+  } else {
+    // Mobile — skip the pre-nav upload. Fire notify fire-and-
+    // forget so the welcome email has a redundant trigger (upload-
+    // hook on the hydrator's merge-upload is the primary one).
+    logger.event(EVENTS.AUTH_QUICK_SIGNUP_BEGIN, "info", {
+      ...begin,
+      mobileFastPath: true,
     });
-  } catch (notifyErr) {
-    // Best-effort — same fallback story. The user's account and
-    // session are fine; only the welcome email may not arrive.
-    logger.captureError(notifyErr, "auto-signup.notify", {
-      hadDocId: Boolean(uploadedDocId),
-    });
-    logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_ERROR, "error", {
-      errorMessage:
-        notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
-    });
+
+    const backgroundNotify = (async () => {
+      try {
+        const token = await getAuthToken();
+        const notifyBody: { fileName?: string } = {};
+
+        if (fileName) notifyBody.fileName = fileName;
+
+        const notifyResponse = await fetch(
+          `${API_BASE_URL}/auth/quick-signup/notify`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(notifyBody),
+          },
+        );
+
+        logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_OK, "info", {
+          responseStatus: notifyResponse.status,
+          hadDocId: false,
+        });
+      } catch (notifyErr) {
+        logger.captureError(notifyErr, "auto-signup.notify", {
+          hadDocId: false,
+        });
+        logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_ERROR, "error", {
+          errorMessage:
+            notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+        });
+      }
+    })();
+
+    // Explicitly swallow any rejection on the detached promise so
+    // the browser doesn't surface an "unhandled rejection" after
+    // the full-page nav begins to tear down this context.
+    backgroundNotify.catch(() => undefined);
   }
 
   // Invariant #15: iOS Safari commits the Clerk session cookie during a
