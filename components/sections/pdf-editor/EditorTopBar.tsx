@@ -54,7 +54,7 @@ import {
   parseLocalePrefix,
   stripLocalePrefix,
 } from "@/lib/shared/constants/locale-map";
-import { ROUTES } from "@/lib/shared/constants/routes";
+import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -72,6 +72,7 @@ export function EditorInfoBar() {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const file = usePdfEditorStore((s) => s.file);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const zoom = usePdfEditorStore((s) => s.zoom);
@@ -101,19 +102,7 @@ export function EditorInfoBar() {
   // (Create New / Open File / My PDFs / Version History) surfacing.
   // Back button stays visible.
   const pathname = usePathname();
-  const isW9Route = useMemo(() => {
-    if (!pathname) return false;
-
-    // Strip `/de/`, `/fr/`, etc. before comparing — otherwise the guard
-    // silently flips false on non-EN locales and the HamburgerMenu +
-    // PDF-tool row surface on `/de/w-9-form`, `/fr/w-9-form`, etc.
-    // (QA 2026-09-06).
-    const stripped = stripLocalePrefix(pathname);
-
-    return (
-      stripped === ROUTES.FORMS.W9_SHORT || stripped.startsWith("/forms/w-9")
-    );
-  }, [pathname]);
+  const isW9Route = useMemo(() => isTaxFormEditorRoute(pathname), [pathname]);
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSavingBeforeExport, setIsSavingBeforeExport] = useState(false);
@@ -176,6 +165,11 @@ export function EditorInfoBar() {
     setFile(renamed);
 
     if (currentDocumentId) {
+      // Keep the store's document name in step with the File. The desktop
+      // top bar and both library-save helpers read `currentDocumentName`
+      // FIRST, so leaving it stale makes the next save re-upload under the
+      // old name and the backend renames the row straight back.
+      setCurrentDocument({ id: currentDocumentId, name: withExt });
       renameDoc.mutate({ filename: withExt, id: currentDocumentId });
     }
   };
