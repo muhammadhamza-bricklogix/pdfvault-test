@@ -362,9 +362,14 @@ export function WatermarkPropertiesContent({
                 src={config.imageData}
               />
             )}
-            <div className="flex gap-2 px-1 py-0.5">
+            {/* Row 111/113/119: Change Image + Remove buttons share equal
+                width via `flex-1` on both, with consistent gap-2 and no
+                asymmetric margins. Previously Change Image carried
+                `mx-1 my-1 flex-1` while Remove had no flex / margin, so the
+                two buttons rendered at different widths with an uneven gap. */}
+            <div className="flex items-center gap-2 py-0.5">
               <Button
-                className="mx-1 my-1 flex-1"
+                className="flex-1"
                 size="sm"
                 variant="ghost"
                 onPress={() => imageInputRef.current?.click()}
@@ -372,7 +377,12 @@ export function WatermarkPropertiesContent({
                 {config.imageData ? "Change Image" : "Upload Image"}
               </Button>
               {config.imageData && (
-                <Button size="sm" variant="ghost" onPress={clearImage}>
+                <Button
+                  className="flex-1"
+                  size="sm"
+                  variant="ghost"
+                  onPress={clearImage}
+                >
                   Remove
                 </Button>
               )}
