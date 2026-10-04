@@ -196,20 +196,34 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           // flipped on. The raw error message is included so users can
           // share it for diagnosis.
           failedPagesRef.current.add(sourcePage);
-          if (usePdfEditorStore.getState().activeTool === "editText") {
+          const activeToolAtFailure = usePdfEditorStore.getState().activeTool;
+
+          if (activeToolAtFailure === "editText") {
             usePdfEditorStore.getState().setActiveTool("select");
           }
 
-          const rawMsg = err instanceof Error ? err.message : String(err ?? "");
-          const truncated =
-            rawMsg.length > 160 ? `${rawMsg.slice(0, 157)}…` : rawMsg;
-
-          toast.error({
-            title: "Text editing not supported on this browser",
-            description: truncated
-              ? `Reason: ${truncated}`
-              : "The text layer couldn't be loaded for this PDF.",
-          });
+          // Row 29: pages inserted via Manage Pages can throw
+          // `getTextContent failed: ... sendWithStream` on first entry to
+          // Edit Text. Prior behaviour showed a scary "Text editing not
+          // supported on this browser" error toast on every page nav where
+          // extraction failed — on a logged-in user editing a freshly
+          // added blank page this disrupts the UI for a transient
+          // per-page failure, not a browser capability issue.
+          //
+          // New policy:
+          //  - Auto-extract on the default Select tool (QA 2026-09-16):
+          //    swallow silently. Native pdf.js text still paints and the
+          //    user never asked for the overlay, so no toast is needed.
+          //  - Explicit Edit Text activation: show a quiet info toast
+          //    telling the user editing isn't available on THIS page, not
+          //    the dire browser-support error.
+          if (activeToolAtFailure === "editText") {
+            toast.info({
+              title: "Text editing unavailable on this page",
+              description:
+                "This page's text layer couldn't be read. Try another page or re-open the file.",
+            });
+          }
 
           return;
         }
@@ -235,9 +249,17 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         logger.warn("[PDFedits] text: no blocks (scanned PDF?)", {
           sourcePage,
         });
-        const isCreatedBlank =
-          (file as (File & { __createdBlank?: boolean }) | null)
-            ?.__createdBlank === true;
+        const typedFile = file as
+          | (File & { __createdBlank?: boolean; __createdFromImage?: boolean })
+          | null;
+        const isCreatedBlank = typedFile?.__createdBlank === true;
+        // Row 73/79: image-to-PDF uploads (jpg/png → PDF) are rasterised
+        // pages by design; the "No editable text found" info toast is
+        // misleading on them because the user never asked for editable
+        // text. uploadAsPdf tags the File when it ran a jpg/png
+        // conversion; honour that tag the same way blank-created PDFs
+        // are honoured above.
+        const isCreatedFromImage = typedFile?.__createdFromImage === true;
 
         // Only when the user picked Edit Text; auto-extraction on open/page change stays silent.
         if (!isCreatedBlank && activeTool === "editText") {
@@ -454,6 +476,21 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
       // so the user never sees a blank frame between "native pdf.js text
       // disappears" and "Fabric IText appears".
       usePdfEditorStore.getState().markPageExtracted(sourcePage);
+      // QA 2026-10-03 row 1: snapshot handler for `object:added` in
+      // `use-editor-history.ts` skips `editorType === "editModeText"` so
+      // extraction doesn't flood the undo stack. But the mount-time
+      // baseline captured by the history hook ran BEFORE extraction
+      // (empty canvas). Replace it with the post-extraction state so
+      // undoing all the way back lands on "extracted text visible, no
+      // user edits" instead of wiping extracted text to an empty canvas.
+      // Guard (`IfVirgin`) ensures a user edit landed before extraction
+      // completed is not overwritten.
+      usePdfEditorStore
+        .getState()
+        .resetHistoryBaselineIfVirgin(
+          usePdfEditorStore.getState().currentPage,
+          JSON.stringify(fabricCanvas.toJSON()),
+        );
       logger.info("[PDFedits] text: drew IText", {
         sourcePage,
         count: blocks.length,

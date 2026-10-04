@@ -1,0 +1,37 @@
+{
+  "_comment": "Example plan file for `parallel-claude plan`. Each feature gets its own worktree + branch + Claude session. Keep `files` disjoint across features — the `check` step aborts on overlap unless --force.",
+  "features": [
+    {
+      "name": "paywall-copy",
+      "branch": "feature/paywall-copy-refresh",
+      "description": "Rewrite paywall headline + CTA copy per 2026-10 marketing brief.",
+      "files": [
+        "components/sections/paywall/PaywallModal.tsx",
+        "components/sections/paywall/copy.ts"
+      ],
+      "prompt": "Replace the headline string with the one in docs/paywall-copy.md section 2. Update the CTA button to say 'Unlock PDF tools'. No other changes.",
+      "testCommand": "bun run lint"
+    },
+    {
+      "name": "dashboard-empty-state",
+      "branch": "feature/dashboard-empty-state",
+      "description": "Add an illustrated empty state to the dashboard when the user has zero docs.",
+      "files": [
+        "components/sections/dashboard/EmptyState.tsx",
+        "components/sections/dashboard/DashboardShell.tsx"
+      ],
+      "prompt": "Build a new EmptyState component (text + illustration placeholder + CTA to upload) and wire it into DashboardShell when the docs query returns an empty list.",
+      "testCommand": "bun run lint && bunx tsc --noEmit"
+    },
+    {
+      "name": "upload-progress-aria",
+      "branch": "fix/upload-progress-aria",
+      "description": "Add aria-live region to the upload toast so screen readers announce progress.",
+      "files": [
+        "components/shared/upload-toast-provider.tsx"
+      ],
+      "prompt": "Wrap the progress text in a role='status' aria-live='polite' container. Keep visual styling identical.",
+      "testCommand": "bun run lint"
+    }
+  ]
+}

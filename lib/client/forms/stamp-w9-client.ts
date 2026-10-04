@@ -174,11 +174,11 @@ export async function stampW9Client(
   // leaves it untouched. Matches what the server filler and the 1099-NEC
   // client stamper already do. Guarded: a flatten failure must degrade to
   // the previous behaviour rather than lose the user their download.
-  try {
-    form.flatten();
-  } catch {
-    /* keep the filled-but-unflattened PDF */
-  }
+  // Deliberately NOT flattened (product decision 2026-10-04, reversing the
+  // earlier "downloads are read-only" rule): the recipient should be able to
+  // correct the form in their reader. The signature stays locked regardless —
+  // it is drawn into the page content above, not written into a form field,
+  // so there is no widget for anyone to clear or re-sign.
 
   return pdfDoc.save();
 }

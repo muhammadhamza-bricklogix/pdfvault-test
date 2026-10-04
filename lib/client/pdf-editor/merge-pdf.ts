@@ -262,14 +262,65 @@ function whiteoutSourceText(
   // vertically to cover an ascender's worth above the top and a
   // descender's worth below the bottom of `originalHeight`. Horizontal
   // padding stays small — pdf.js's reported advance width is reliable.
+  //
+  // QA 2026-10-03 row 4 ("upper/start text overlaps on download/flatten"):
+  //   • padTop/padBottom bumped to 0.45 / 0.65 of fontSize so the
+  //     decorative/heading-font ascenders + descenders are fully
+  //     covered (was 0.35 / 0.55).
+  //   • If a Textbox wrap grew the on-canvas height past originalHeight
+  //     (user typed enough to wrap multiple lines), use the wrapped
+  //     height so the whiteout matches the drawn-text extent instead of
+  //     the single-line original. Falls back to originalHeight when the
+  //     object isn't a Textbox / has no textLines.
+  //   • Clamp the final rect so it never extends above the page top
+  //     (fabricTop < 0 would land in pdf-lib clipping territory, cutting
+  //     effective coverage near page edges).
   const fontSize = (o.fontSize as number | undefined) ?? o.originalHeight;
   const padX = 2;
-  const padTop = fontSize * 0.35;
-  const padBottom = fontSize * 0.55;
-  const fabricLeft = o.originalLeft - padX;
-  const fabricTop = o.originalTop - padTop;
+  const padTop = fontSize * 0.45;
+  const padBottom = fontSize * 0.65;
+
+  const wrappedLines =
+    (
+      obj as {
+        _textLines?: unknown[];
+        textLines?: unknown[];
+      }
+    )._textLines?.length ??
+    (
+      obj as {
+        _textLines?: unknown[];
+        textLines?: unknown[];
+      }
+    ).textLines?.length ??
+    1;
+  const lineHeightMult = Math.max(
+    1,
+    (obj as { lineHeight?: number }).lineHeight ?? 1,
+  );
+  const wrappedHeight =
+    wrappedLines > 1 ? fontSize * wrappedLines * lineHeightMult : null;
+  const effectiveHeight =
+    wrappedHeight && wrappedHeight > o.originalHeight
+      ? wrappedHeight
+      : o.originalHeight;
+
+  let fabricLeft = o.originalLeft - padX;
+  let fabricTop = o.originalTop - padTop;
   const fabricWidth = o.originalWidth + padX * 2;
-  const fabricHeight = o.originalHeight + padTop + padBottom;
+  let fabricHeight = effectiveHeight + padTop + padBottom;
+
+  // Clamp whiteout to page bounds so pdf-lib doesn't clip ascender
+  // padding at the top edge (which would leave source text peeking
+  // through on top-of-page edits).
+  if (fabricLeft < 0) {
+    fabricTop = fabricTop; // keep as-is; horizontal shift doesn't help
+    fabricLeft = 0;
+  }
+  if (fabricTop < 0) {
+    fabricHeight = fabricHeight + fabricTop; // shrink by the overhang
+    fabricTop = 0;
+  }
 
   const pdfX = toPdfX(fabricLeft, ctx);
   const pdfW = toPdfDim(fabricWidth, ctx.scaleX);

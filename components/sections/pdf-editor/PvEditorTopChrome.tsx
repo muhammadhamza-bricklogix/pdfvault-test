@@ -56,7 +56,9 @@ import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
+import {
+  parseLocalePrefix,
+} from "@/lib/shared/constants/locale-map";
 import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { stripPdfExtension } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
@@ -645,7 +647,10 @@ function TopAppBar() {
           />
         </Link>
 
-        <span aria-hidden className="order-4 mx-1 h-6 w-px bg-default-200" />
+        <span
+          aria-hidden
+          className="order-4 mx-1 h-6 w-px bg-default-200"
+        />
 
         {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
             fit-to-text sizing (no more `flex-1` stretch), click-to-edit

@@ -1,0 +1,540 @@
+{
+  "config": {
+    "configFile": "D:\\BricksLogix\\pdf-viewer-app\\playwright.config.ts",
+    "rootDir": "D:/BricksLogix/pdf-viewer-app/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "D:/BricksLogix/pdf-viewer-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "setup",
+        "name": "setup",
+        "testDir": "D:/BricksLogix/pdf-viewer-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "D:/BricksLogix/pdf-viewer-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "D:/BricksLogix/pdf-viewer-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "forms\\1099-nec.spec.ts",
+      "file": "forms/1099-nec.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "1099-NEC form editor — happy path",
+          "file": "forms/1099-nec.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "user can fill, review, and finalize 1099-NEC with granular fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f6cc2f14c6649870098e-625da92127bde76ced50",
+              "file": "forms/1099-nec.spec.ts",
+              "line": 12,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "forms\\w-9.spec.ts",
+      "file": "forms/w-9.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "W-9 editor — happy path",
+          "file": "forms/w-9.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "user can fill, sign, and finalize",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4e76b29572d94d88ef65-8fbe740a827329bd9589",
+              "file": "forms/w-9.spec.ts",
+              "line": 14,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pdf-editor\\w9-flow.spec.ts",
+      "file": "pdf-editor/w9-flow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "W-9 Group A — Fresh fill → Save flows",
+          "file": "pdf-editor/w9-flow.spec.ts",
+          "line": 252,
+          "column": 6,
+          "specs": [
+            {
+              "title": "A1 fresh fill → Done → PDF → Download saves + row in dashboard",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-a36311c7e1ab6f51829d",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 253,
+              "column": 3
+            },
+            {
+              "title": "A2 reopen row → values restored, signature is NOT restored",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-aa3c5c4c2561c6f8aae4",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 311,
+              "column": 3
+            },
+            {
+              "title": "A3 Save button (no download) → row + reopen restores values",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-b2e7950cb17ee75b2cdb",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 338,
+              "column": 3
+            },
+            {
+              "title": "A4 hamburger → My PDFs saves + lands on /dashboard + reopen restores",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-fc4fe24545d68c9847de",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 378,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "W-9 Group B — Upsert-in-place",
+          "file": "pdf-editor/w9-flow.spec.ts",
+          "line": 422,
+          "column": 6,
+          "specs": [
+            {
+              "title": "B5 reopen → edit → Done → Download upserts same row",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-cd0608bb3011eb49206e",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 423,
+              "column": 3
+            },
+            {
+              "title": "B6 hamburger Back after edit → same row upserted, no dupe",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-ab96120f32cddd071e01",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 477,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "W-9 Group C — Auth + paywall gates",
+          "file": "pdf-editor/w9-flow.spec.ts",
+          "line": 516,
+          "column": 6,
+          "specs": [
+            {
+              "title": "C9 signed-in not-entitled Done → paywall opens, dismiss preserves fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-a7b49c0c485052957cc8",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 580,
+              "column": 3
+            },
+            {
+              "title": "C10 signed-in not-entitled hamburger Back → paywall, dismiss keeps form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-6e1e5d313eca541f7ee1",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 617,
+              "column": 3
+            }
+          ],
+          "suites": [
+            {
+              "title": "signed-out",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 517,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "C7 signed-out Done → sign-in prompt + pending values restored",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "95a2ade538e3733ff7ec-a04189a44a0bc76630a6",
+                  "file": "pdf-editor/w9-flow.spec.ts",
+                  "line": 520,
+                  "column": 5
+                },
+                {
+                  "title": "C8 signed-out hamburger Back → nav to /dashboard, no save-loss toast",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "95a2ade538e3733ff7ec-ac525dbe75c68a85b34c",
+                  "file": "pdf-editor/w9-flow.spec.ts",
+                  "line": 553,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "W-9 Group D — Idempotency + edge cases",
+          "file": "pdf-editor/w9-flow.spec.ts",
+          "line": 658,
+          "column": 6,
+          "specs": [
+            {
+              "title": "D11 double Download re-uses cache: exactly 1 POST /finalize, 1 upload",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-3e2086bce74c6007921d",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 659,
+              "column": 3
+            },
+            {
+              "title": "D12 hamburger Back with EMPTY form → no finalize, immediate nav, no toast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-c5fb7f1aedd07d71a59a",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 710,
+              "column": 3
+            },
+            {
+              "title": "D13 hamburger Back with finalize aborted → error toast, stays on form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-febc270d1fd89b186705",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 735,
+              "column": 3
+            },
+            {
+              "title": "D14 finalize hangs 30s → timeout error toast + nav to dashboard",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-129e05e72512db13b141",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 761,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "W-9 Group E — Cross-session + reload guard",
+          "file": "pdf-editor/w9-flow.spec.ts",
+          "line": 794,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E15 cross-context: fresh browser sees row + can reopen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-c00f3b970b5d251d547f",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 795,
+              "column": 3
+            },
+            {
+              "title": "E16 typed values → keyboard reload → confirm modal → cancel preserves",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95a2ade538e3733ff7ec-b691d42c7a0aff61ed9f",
+              "file": "pdf-editor/w9-flow.spec.ts",
+              "line": 834,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-01T20:49:10.330Z",
+    "duration": 130.21399999999994,
+    "expected": 0,
+    "skipped": 18,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

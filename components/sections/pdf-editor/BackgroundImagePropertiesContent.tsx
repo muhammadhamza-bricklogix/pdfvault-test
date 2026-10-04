@@ -154,13 +154,12 @@ export function BackgroundImagePropertiesContent({
           )}
           {/* QA 2026-09-08: add horizontal padding so the ghost-button
               focus/hover ring doesn't clip against the Section's edge
-              on narrow sidebar/modal widths. `flex-1` on the Change/
-              Upload button was previously stretching it flush to the
-              container border with only ml-1/mr-1 which was insufficient
-              for the ring outline. */}
-          <div className="flex gap-2 px-1 py-0.5">
+              on narrow sidebar/modal widths.
+              Row 111/113/119: Change + Remove share equal width via
+              `flex-1` on both, consistent gap, no asymmetric margins. */}
+          <div className="flex items-center gap-2 py-0.5">
             <Button
-              className="mx-1 my-1 flex-1"
+              className="flex-1"
               size="sm"
               variant="ghost"
               onPress={() => imageInputRef.current?.click()}
@@ -168,7 +167,12 @@ export function BackgroundImagePropertiesContent({
               {config.imageData ? "Change image" : "Upload image"}
             </Button>
             {config.imageData && (
-              <Button size="sm" variant="ghost" onPress={clearImage}>
+              <Button
+                className="flex-1"
+                size="sm"
+                variant="ghost"
+                onPress={clearImage}
+              >
                 Remove
               </Button>
             )}
