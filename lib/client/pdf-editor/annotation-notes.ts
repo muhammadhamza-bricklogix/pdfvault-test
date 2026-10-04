@@ -218,6 +218,23 @@ export function buildNoteMarker(
     originX: "left",
     originY: "top",
     top: opts.top,
+    // Row 99 QA 2026-10-04: the marker glyph is only 24×24, so Fabric's
+    // default 13 px corner handles cover most of the body — grab + drag
+    // on the icon itself ambiguously registers as a resize or lands on
+    // nothing. Enlarge the overall hit area with `padding` (keeps the
+    // visual marker unchanged while growing the selection ring) and
+    // shrink the corner handles so the body stays clickable for move
+    // + the four corners are still reachable for resize.
+    padding: 10,
+    cornerSize: 10,
+    cornerStyle: "circle",
+    transparentCorners: false,
+    cornerColor: "#2563eb",
+    borderColor: "#2563eb",
+    hasBorders: true,
+    hasControls: true,
+    selectable: true,
+    evented: true,
   }) as NoteFabricObject;
 
   group.set({
