@@ -103,11 +103,17 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       fabricCanvas.setActiveObject(img);
       fabricCanvas.renderAll();
 
-      pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
-      // Persist the image into the store immediately so save/export can't
-      // miss it if `flushLiveFabricPage` at export time hits a stale/empty
-      // live canvas (matches the 2026-07-23 draw/signature persistence
-      // pattern that fixed the same symptom for those tools).
+      // QA 2026-10-04 row 63: do NOT call `pushHistory` here. The
+      // `fabricCanvas.add(img)` above already fires `object:added` →
+      // the snapshotOnAdd listener in `use-editor-history.ts` pushes
+      // a history entry. A second manual push here produces a
+      // duplicate entry — the user needs TWO undos to remove one
+      // image. Unlike use-shape-tool.ts, image tool does NOT set
+      // `isCreatingShape`, so the auto-snapshot handler isn't gated.
+      //
+      // `saveFabricJson` + `markDocumentDirty` are kept as belt-and-
+      // braces (both are also auto-fired by the add listeners) —
+      // idempotent, matches the 2026-07-23 persistence pattern.
       saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
       markDocumentDirty();
 
