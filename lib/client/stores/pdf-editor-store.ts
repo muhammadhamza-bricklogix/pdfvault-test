@@ -312,6 +312,13 @@ type PdfEditorStore = {
   getFabricJson: (page: number) => string | undefined;
   getSourcePageIndex: (displayPage?: number) => number;
   pushHistory: (page: number, json: string) => void;
+  /** Replace the baseline (idx 0) history entry for a page with `json`, but
+   *  only if no user edit has landed yet (history has exactly 1 entry and
+   *  idx is 0). Called by `useEditTextMode` right after async text
+   *  extraction completes so undoing all the way back lands on the
+   *  "extracted text, no user edits" state — not the pre-extraction empty
+   *  canvas that `useEditorHistory`'s mount effect captured. */
+  resetHistoryBaselineIfVirgin: (page: number, json: string) => void;
   reorderPages: (fromDisplay: number, toDisplay: number) => void;
   setPageOrder: (pageOrder: number[]) => void;
   redo: (page: number) => string | undefined;
@@ -723,6 +730,21 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
           ? state.undoActionKindStack
           : [...state.undoActionKindStack, "fabric" as const],
       };
+    }),
+
+  resetHistoryBaselineIfVirgin: (displayPage, json) =>
+    set((state) => {
+      const source = resolveSourcePage(displayPage, state.pageOrder);
+      const history = state.historyByPage.get(source) ?? [];
+      const idx = state.historyIndexByPage.get(source) ?? -1;
+
+      if (history.length !== 1 || idx !== 0) return {};
+
+      const newHistory = new Map(state.historyByPage);
+
+      newHistory.set(source, [json]);
+
+      return { historyByPage: newHistory };
     }),
 
   redo: (displayPage) => {

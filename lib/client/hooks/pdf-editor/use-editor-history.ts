@@ -74,6 +74,24 @@ export function useEditorHistory({
       forceRender((n) => n + 1);
     };
 
+    // `object:added` is also fired by `useEditTextMode` once per extracted
+    // text run (initial extraction loop at `fabricCanvas.add(textObj)` in
+    // `use-edit-text-mode.ts`). Each add pushes a history entry, flooding
+    // the undo stack with phantom steps BEFORE the user's first real edit.
+    // After the user undoes their edits, undo keeps "working" (removing
+    // extracted text objects) instead of greying out. QA 2026-10-03 row 1.
+    // Mirror the exclusion `markDirtyOnAdd` already applies for the add
+    // event; `object:modified` / `object:removed` still trigger snapshot
+    // through the shared handler so user-driven moves/resizes/deletions on
+    // extracted text are still undoable.
+    const snapshotOnAdd = (e: { target: FabricObject }) => {
+      const editorType = (e?.target as FabricObject & { editorType?: string })
+        ?.editorType;
+
+      if (editorType === "editModeText") return;
+      snapshot();
+    };
+
     // Dirty-tracking sibling of `snapshot`. Lives separately so we can skip
     // dirty marks for the IText overlays that `use-edit-text-mode` adds during
     // initial text extraction (those carry `editorType: "editModeText"` and
@@ -150,7 +168,7 @@ export function useEditorHistory({
       });
     };
 
-    fc.on("object:added", snapshot);
+    fc.on("object:added", snapshotOnAdd);
     fc.on("object:modified", snapshot);
     fc.on("object:removed", snapshot);
     fc.on("object:added", markDirtyOnAdd);
@@ -162,7 +180,7 @@ export function useEditorHistory({
     fc.on("text:changed", dirtySourceText);
 
     return () => {
-      fc.off("object:added", snapshot);
+      fc.off("object:added", snapshotOnAdd);
       fc.off("object:modified", snapshot);
       fc.off("object:removed", snapshot);
       fc.off("object:added", markDirtyOnAdd);
