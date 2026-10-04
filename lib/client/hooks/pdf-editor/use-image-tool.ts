@@ -78,6 +78,17 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
         return;
       }
 
+      // Row 110/112/118: persistent loading toast so the UI doesn't go
+      // silent during the FileReader + Fabric decode. Larger images
+      // (several MB) can take 1-2 seconds and the previous version let
+      // the user double-click thinking the first attempt was dropped.
+      // Closed in every exit path (success + each error) so a stuck
+      // loader can't outlive its action.
+      const loadingKey = toast.loading({
+        title: "Loading image…",
+        description: file.name,
+      });
+
       // Row 75: wrap FileReader + FabricImage decode in try/catch so a
       // corrupt / zero-byte / non-decodable file surfaces a clear toast
       // ("Invalid image" / "Couldn't read image") instead of silently
@@ -103,6 +114,7 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
           reader.readAsDataURL(file);
         });
       } catch {
+        toast.close(loadingKey);
         toast.error({
           title: "Couldn't read image",
           description: `"${file.name}" couldn't be opened. The file may be corrupt.`,
@@ -119,6 +131,7 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
 
         img = await FabricImage.fromURL(dataUrl);
       } catch {
+        toast.close(loadingKey);
         toast.error({
           title: "Invalid image",
           description: `"${file.name}" couldn't be decoded. Please pick a valid PNG, JPG, WEBP, or SVG.`,
@@ -133,6 +146,7 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       // by the OS). Treat that as corrupt too so we don't drop a blank
       // overlay on the canvas.
       if (!img.width || !img.height || img.width < 1 || img.height < 1) {
+        toast.close(loadingKey);
         toast.error({
           title: "Invalid image",
           description: `"${file.name}" didn't decode to a usable image.`,
@@ -141,6 +155,8 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
 
         return;
       }
+
+      toast.close(loadingKey);
 
       const canvasW = fabricCanvas.width ?? 600;
       const canvasH = fabricCanvas.height ?? 800;
