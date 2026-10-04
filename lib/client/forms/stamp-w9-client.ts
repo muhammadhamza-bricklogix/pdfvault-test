@@ -21,8 +21,6 @@ import { ROUTES } from "@/lib/shared/constants/routes";
  *
  * Not a full replacement for server finalize:
  *   - No exempt-payee AcroForm dropdowns (rare, ignored)
- *   - No form-flattening (the AcroForm remains editable in some
- *     readers). Acceptable for a "quick partial download" flow.
  */
 export async function stampW9Client(
   values: Record<string, string>,
@@ -168,6 +166,18 @@ export async function stampW9Client(
         /* silent — partial download shouldn't be blocked by a bad preview */
       }
     }
+  }
+
+  // Flatten so the delivered PDF is a finished document, not a form the
+  // recipient can retype (QA 2026-10-04: the downloaded W-9 still had live
+  // input fields). The signature is page content drawn above, so flatten
+  // leaves it untouched. Matches what the server filler and the 1099-NEC
+  // client stamper already do. Guarded: a flatten failure must degrade to
+  // the previous behaviour rather than lose the user their download.
+  try {
+    form.flatten();
+  } catch {
+    /* keep the filled-but-unflattened PDF */
   }
 
   return pdfDoc.save();

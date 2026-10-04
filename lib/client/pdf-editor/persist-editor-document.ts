@@ -4,8 +4,15 @@ import type { Document } from "@/lib/shared/types/documents.types";
 import type { BuildEditedPdfRemappedState } from "@/lib/client/pdf-editor/save-utils";
 
 import { documentsService } from "@/lib/shared/api/services/documents.service";
-import { requestDuplicatePrompt } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
-import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
+import { invalidateLibraryIndex } from "@/lib/client/documents/library-filename-index";
+import {
+  requestDuplicatePrompt,
+  waitForDuplicatePrompt,
+} from "@/lib/client/hooks/documents/duplicate-prompt-bus";
+import {
+  findDuplicateByFilename,
+  nextAvailableFilename,
+} from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { buildEditedPdfBytes } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
@@ -276,6 +283,12 @@ export async function persistEditorDocument({
   // so existing call sites (Manage Pages auto-persist, page-hide
   // background save, etc.) keep behaving exactly as before until they
   // opt in.
+  // Name the upload is written under. "Save as a new file" rewrites this,
+  // and `forceCreate` then stops the `?id=` fallback below from turning the
+  // new row back into an overwrite.
+  let saveFilename = file.name;
+  let forceCreate = false;
+
   if (checkFilenameDuplicate && !currentDocumentId) {
     let existing: Document | null = null;
 
@@ -288,12 +301,25 @@ export async function persistEditorDocument({
     }
 
     if (existing) {
+      let suggestion: string | undefined;
+
+      try {
+        suggestion = await nextAvailableFilename(file.name);
+      } catch (err) {
+        // The modal falls back to the colliding name when there is no
+        // suggestion; the user can still type their own.
+        logger.captureError(err, "save.duplicate_suggestion");
+      }
+
+      await waitForDuplicatePrompt();
+
       const outcome = await requestDuplicatePrompt({
-        filename: existing.filename,
         existing,
+        filename: existing.filename,
+        ...(suggestion ? { suggestion } : {}),
       });
 
-      if (outcome === "cancel") {
+      if (outcome.kind === "cancel") {
         logger.event("save.duplicate_cancelled", "info", {
           filename: existing.filename,
         });
@@ -301,20 +327,40 @@ export async function persistEditorDocument({
         return { ok: false, reason: "cancelled-duplicate" };
       }
 
-      logger.event("save.duplicate_overwrite", "info", {
-        filename: existing.filename,
-        documentId: existing.id,
-      });
-      // Claim the existing row so the upload below versions it via the
-      // backend's documentId branch. `setCurrentDocument` also updates
-      // any downstream selector that keys off the current doc id.
-      usePdfEditorStore.getState().setCurrentDocument({
-        id: existing.id,
-        name: existing.filename,
-      });
-      // Re-point the local variable so `effectiveDocumentId` further
-      // down picks up the just-claimed id.
-      currentDocumentId = existing.id;
+      if (outcome.kind === "rename") {
+        logger.event("save.duplicate_renamed", "info", {
+          filename: outcome.filename,
+          existingFilename: existing.filename,
+        });
+        // Deliberately leaves `currentDocumentId` null so the upload
+        // creates a second row instead of versioning the existing one.
+        //
+        // Do NOT rewrite `store.file` here: `use-pdf-loader` keys its
+        // source on `file.name`, so renaming mid-save nulls `pdfDocument`
+        // and remounts the Fabric canvas — tearing the form overlays down
+        // underneath the bake that is about to run. The name reaches the
+        // store after the upload instead, via `currentDocumentName`.
+        saveFilename = outcome.filename;
+        forceCreate = true;
+      } else {
+        logger.event("save.duplicate_overwrite", "info", {
+          filename: existing.filename,
+          documentId: existing.id,
+        });
+        // Claim the existing row so the upload below versions it via the
+        // backend's documentId branch. `setCurrentDocument` also updates
+        // any downstream selector that keys off the current doc id.
+        usePdfEditorStore.getState().setCurrentDocument({
+          id: existing.id,
+          name: existing.filename,
+        });
+        // The backend writes the uploaded file's name onto the row, so
+        // upload under the existing name or Replace silently renames it.
+        saveFilename = existing.filename;
+        // Re-point the local variable so `effectiveDocumentId` further
+        // down picks up the just-claimed id.
+        currentDocumentId = existing.id;
+      }
     }
   }
 
@@ -412,9 +458,13 @@ export async function persistEditorDocument({
       editorStateMap = swept.map;
     }
 
-    const savedFile = new File([savedBytes.buffer as ArrayBuffer], file.name, {
-      type: "application/pdf",
-    });
+    const savedFile = new File(
+      [savedBytes.buffer as ArrayBuffer],
+      saveFilename,
+      {
+        type: "application/pdf",
+      },
+    );
 
     // `buildEditedPdfBytes` flushes the *current* page into `fabricJsonByPage`
     // and the materialized-reorder path further remaps it, so the state
@@ -437,7 +487,11 @@ export async function persistEditorDocument({
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("id") || undefined
         : undefined;
-    const effectiveDocumentId = currentDocumentId ?? urlDocumentId;
+    // "Save as a new file" must never inherit an id, or the fallback would
+    // turn the intended second row back into an overwrite.
+    const effectiveDocumentId = forceCreate
+      ? undefined
+      : (currentDocumentId ?? urlDocumentId);
 
     logger.info("[PDFedits] save: request", {
       documentId: effectiveDocumentId,
@@ -456,6 +510,9 @@ export async function persistEditorDocument({
       file: savedFile,
       editorState,
     });
+
+    // The library gained a row, so the cached filename index is stale.
+    invalidateLibraryIndex();
 
     logger.info("[PDFedits] save: uploaded", {
       documentId: document.id,

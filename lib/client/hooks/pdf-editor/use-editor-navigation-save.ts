@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 
 import { persistEditorDocument } from "@/lib/client/pdf-editor/persist-editor-document";
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
+import { isDuplicatePromptOpen } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { logger } from "@/lib/shared/utils/logger";
@@ -137,17 +138,36 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
       // background and its own toast will surface the outcome).
       if (usePdfEditorStore.getState().autoPersistDisabled) {
         const w9LoadingKey = toast.loading({
-          title: "Saving your W-9…",
-          description: "Adding your entries to My PDFs.",
+          title: "Saving your form…",
+          description: "Updating your form in My PDFs.",
         });
 
         const w9Result = await new Promise<{
           ok: boolean;
-          reason?: "error" | "not-signed-in" | "cancelled" | "not-ready";
+          reason?:
+            | "error"
+            | "not-signed-in"
+            | "cancelled"
+            | "cancelled-duplicate"
+            | "not-ready";
         }>((resolve) => {
-          const timeoutId = window.setTimeout(() => {
-            resolve({ ok: false, reason: "error" });
-          }, 30_000);
+          // Re-arm rather than fail while a duplicate-filename prompt is
+          // open: a user thinking about Replace vs Save-as-new for 30s
+          // would otherwise get "Could not save your form" with the modal
+          // still on screen.
+          let timeoutId = 0;
+          const arm = () => {
+            timeoutId = window.setTimeout(() => {
+              if (isDuplicatePromptOpen()) {
+                arm();
+
+                return;
+              }
+              resolve({ ok: false, reason: "error" });
+            }, 30_000);
+          };
+
+          arm();
 
           window.dispatchEvent(
             new CustomEvent("editor:w9-save-and-continue", {
@@ -158,6 +178,7 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
                     | "error"
                     | "not-signed-in"
                     | "cancelled"
+                    | "cancelled-duplicate"
                     | "not-ready";
                 }) => {
                   window.clearTimeout(timeoutId);
@@ -171,13 +192,29 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         toast.close(w9LoadingKey);
 
         if (w9Result.ok) {
-          if (w9Result.reason !== "not-ready") {
+          if (
+            w9Result.reason !== "not-ready" &&
+            w9Result.reason !== "not-signed-in"
+          ) {
             toast.success({
               title: "Saved to My PDFs",
-              description: "Your W-9 is in your library.",
+              description: "Your form in My PDFs is up to date.",
             });
           }
           navigate();
+
+          return;
+        }
+
+        if (w9Result.reason === "cancelled-duplicate") {
+          // The user declined the filename prompt. Nothing is wrong and
+          // nothing is lost, but they pressed Back and we are deliberately
+          // NOT leaving — say so, or the click looks broken.
+          toast.info({
+            title: "Not saved — still on your form",
+            description:
+              "Nothing was lost. Choose Replace or a new name to save it, or use your browser's Back button to leave without saving.",
+          });
 
           return;
         }
@@ -190,9 +227,9 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         }
 
         toast.error({
-          title: "Could not save W-9",
+          title: "Could not save your form",
           description:
-            "We couldn't save your W-9 before leaving. Please try Download to save.",
+            "We couldn't save it before leaving. Please try Save again.",
         });
 
         return;

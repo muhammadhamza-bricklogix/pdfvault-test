@@ -63,7 +63,8 @@
       "extractImages": "استخراج الصور",
       "removeAnnotations": "إزالة التعليقات التوضيحية",
       "watermark": "العلامة المائية",
-      "formsW9": "النماذج (W-9)"
+      "formsW9": "النماذج (W-9)",
+      "forms1099Nec": "النماذج (1099-NEC)"
     }
   },
   "steps": {

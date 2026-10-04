@@ -42,7 +42,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -58,9 +58,8 @@ import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import {
   parseLocalePrefix,
-  stripLocalePrefix,
 } from "@/lib/shared/constants/locale-map";
-import { ROUTES } from "@/lib/shared/constants/routes";
+import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { stripPdfExtension } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -324,7 +323,6 @@ function ZoomPill() {
 
 function TopAppBar() {
   const pathname = usePathname();
-  const router = useRouter();
   const t = useTranslations("topChrome");
   // Explicit Save affordance for the W-9 route only. The generic
   // composer's Save button is hidden per product decision, but on
@@ -336,13 +334,13 @@ function TopAppBar() {
   // The raw `usePathname()` returns the locale-prefixed URL and a
   // direct `===` comparison would flip false on non-EN locales,
   // leaving the composer HamburgerMenu + Tool row visible on W-9 in
-  // languages other than English (QA 2026-09-06).
-  const showW9Save = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
+  const showW9Save = isTaxFormEditorRoute(pathname);
   const file = usePdfEditorStore((s) => s.file);
-  const clearFile = usePdfEditorStore((s) => s.clearFile);
   const setFile = usePdfEditorStore((s) => s.setFile);
+  const setCurrentDocument = usePdfEditorStore((s) => s.setCurrentDocument);
   const isSignedIn = usePdfEditorStore((s) => s.isSignedIn);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
+  const currentDocumentName = usePdfEditorStore((s) => s.currentDocumentName);
   // Scalar-boolean selectors so the entire top chrome (tools bar,
   // save/download row, undo/redo) doesn't re-render on every brush
   // stroke (QA 2026-09-15). Reading the full `historyByPage` /
@@ -383,7 +381,7 @@ function TopAppBar() {
   // export flow itself routes them through email-first signin).
   const openExportModalAfterSave = () => {
     if (!file) return;
-    if (!isSignedIn) {
+    if (showW9Save || !isSignedIn) {
       setIsExportModalOpen(true);
 
       return;
@@ -473,7 +471,10 @@ function TopAppBar() {
   // Display name strips `.pdf` because the extension is redundant in
   // an editor that only handles PDFs — commit re-appends it before
   // saving. Input state is fully owned by <EditableFilenameField/>.
-  const displayName = fileName.replace(/\.pdf$/i, "");
+  // Mirror the saved row name once there is one, so the editable field
+  // agrees with what a save will actually write. After "Save as a new
+  // file" the row is "… (2).pdf" while store.file is still the template.
+  const displayName = (currentDocumentName ?? fileName).replace(/\.pdf$/i, "");
 
   // Clear the store BEFORE navigating so re-entry via any path — bare
   // `/pdf-editor`, tool tile, or a landing-page drop that creates a new
@@ -482,18 +483,10 @@ function TopAppBar() {
   const handleBack = () => {
     const targetUrl = isSignedIn ? ROUTES.APP.DASHBOARD : ROUTES.PUBLIC.HOME;
 
-    if (showW9Save) {
-      // W-9 Back is plain navigation. Do not dispatch
-      // `editor:w9-save-and-continue` here because that path finalizes the
-      // W-9 and can open the paywall; payment stays tied to explicit
-      // Save/Done/Download actions.
-      clearFile();
-      router.push(targetUrl);
-
-      return;
-    }
-
-    // Non-W-9 routes: existing save-then-navigate dispatch.
+    // Form routes save here too. `force: true` because typing into the
+    // overlay never flips `hasUnsavedChanges`, so without it the form
+    // branch short-circuits and nothing is written.
+    //
     // `useEditorNavigationSave` handles the "no file / signed out /
     // no unsaved changes" fast paths, so this dispatch is safe from
     // every state. `clearFileAfter: true` preserves the 2026-08-18
@@ -504,6 +497,7 @@ function TopAppBar() {
         detail: {
           url: targetUrl,
           clearFileAfter: true,
+          force: showW9Save,
         },
       }),
     );
@@ -527,16 +521,6 @@ function TopAppBar() {
     e.preventDefault();
 
     const targetUrl = ROUTES.PUBLIC.HOME;
-
-    if (showW9Save) {
-      // W-9 Logo is plain navigation, matching the Back button. Do not
-      // dispatch `editor:w9-save-and-continue` because that finalizes the
-      // form and can open the paywall.
-      clearFile();
-      router.push(targetUrl);
-
-      return;
-    }
 
     // `force: true` — a quick "draw stroke → click logo" sequence can
     // race the `path:created` → `markDocumentDirty` listener, so the
@@ -570,6 +554,11 @@ function TopAppBar() {
     setFile(renamed);
 
     if (currentDocumentId) {
+      // Keep the store's document name in step with the File. The desktop
+      // top bar and both library-save helpers read `currentDocumentName`
+      // FIRST, so leaving it stale makes the next save re-upload under the
+      // old name and the backend renames the row straight back.
+      setCurrentDocument({ id: currentDocumentId, name: withExt });
       renameDoc.mutate({ filename: withExt, id: currentDocumentId });
     }
   };
@@ -922,8 +911,7 @@ function ToolToolbar() {
   const disabled = !file;
   const canManagePages = !!pdfDocument && pageCount > 0;
 
-  // Locale-normalised — see `showW9Save` above for context.
-  const isW9Route = stripLocalePrefix(pathname) === ROUTES.FORMS.W9_SHORT;
+  const isW9Route = isTaxFormEditorRoute(pathname);
 
   // QA 2026-09-06: Secure / Split / Flatten / Manage Pages appeared
   // greyed-out even when a PDF was open, so users thought the tools
