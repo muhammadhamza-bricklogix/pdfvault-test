@@ -1055,6 +1055,13 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       }
     }
 
+    // Row 71: reset to the forward-nav default after each page change so a
+    // subsequent sidebar/thumbnail click — which goes straight through
+    // `setCurrentPage` instead of `navigatePage(_, direction)` — lands at
+    // the top of the clicked page. Without this reset, a prior backward
+    // overscroll would leave the ref sticky at -1 and the next click would
+    // open mid-page instead of showing the page from the top.
+    navDirectionRef.current = 1;
     mobilePageNavRef.current = false;
     // 50 ms lets the new page content render before fading in (slow reveal).
     const t = setTimeout(() => setFading(false), 50);

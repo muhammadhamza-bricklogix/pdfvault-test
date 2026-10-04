@@ -26,6 +26,11 @@ export function useEditorHistory({
   const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
   const undoStore = usePdfEditorStore((s) => s.undo);
   const redoStore = usePdfEditorStore((s) => s.redo);
+  const undoActionKindStack = usePdfEditorStore((s) => s.undoActionKindStack);
+  const popUndoActionKind = usePdfEditorStore((s) => s.popUndoActionKind);
+  const undoBackgroundImageConfig = usePdfEditorStore(
+    (s) => s.undoBackgroundImageConfig,
+  );
   const setIsRestoringHistory = usePdfEditorStore(
     (s) => s.setIsRestoringHistory,
   );
@@ -178,13 +183,29 @@ export function useEditorHistory({
 
   const idx = historyIndexByPage.get(currentPage) ?? -1;
   const history = historyByPage.get(currentPage) ?? [];
-  const canUndo = idx > 0;
+  // Row 77: canUndo also considers the interleaved action-kind stack so
+  // undoing a bg-image add stays reachable even when the current page's
+  // fabric history has no entries yet.
+  const canUndo = idx > 0 || undoActionKindStack.length > 0;
   const canRedo = idx < history.length - 1;
 
   const undo = useCallback(async () => {
     const fc = fabricRef.current;
 
     if (!fc || !canUndo) return;
+
+    // Row 77: route via the interleaved kind stack when it has entries so
+    // undo walks user actions in reverse order regardless of layer. Falls
+    // back to the fabric-only path for pages with legacy history pushed
+    // before the kind stack landed (idx > 0 but kind stack empty).
+    const kind = popUndoActionKind();
+
+    if (kind === "bgImage") {
+      undoBackgroundImageConfig();
+      forceRender((n) => n + 1);
+
+      return;
+    }
 
     const snapshot = undoStore(currentPage);
 
@@ -206,7 +227,9 @@ export function useEditorHistory({
     canUndo,
     currentPage,
     fabricRef,
+    popUndoActionKind,
     saveFabricJson,
+    undoBackgroundImageConfig,
     undoStore,
     setIsRestoringHistory,
   ]);

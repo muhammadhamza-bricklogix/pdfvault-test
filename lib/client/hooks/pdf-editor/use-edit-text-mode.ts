@@ -249,11 +249,19 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         logger.warn("[PDFedits] text: no blocks (scanned PDF?)", {
           sourcePage,
         });
-        const isCreatedBlank =
-          (file as (File & { __createdBlank?: boolean }) | null)
-            ?.__createdBlank === true;
+        const typedFile = file as
+          | (File & { __createdBlank?: boolean; __createdFromImage?: boolean })
+          | null;
+        const isCreatedBlank = typedFile?.__createdBlank === true;
+        // Row 73/79: image-to-PDF uploads (jpg/png → PDF) are rasterised
+        // pages by design; the "No editable text found" info toast is
+        // misleading on them because the user never asked for editable
+        // text. uploadAsPdf tags the File when it ran a jpg/png
+        // conversion; honour that tag the same way blank-created PDFs
+        // are honoured above.
+        const isCreatedFromImage = typedFile?.__createdFromImage === true;
 
-        if (!isCreatedBlank) {
+        if (!isCreatedBlank && !isCreatedFromImage) {
           toast.info({
             description: "This page may be scanned or contain only images.",
             title: "No editable text found",

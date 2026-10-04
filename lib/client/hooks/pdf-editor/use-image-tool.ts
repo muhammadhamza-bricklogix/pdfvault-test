@@ -47,11 +47,23 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
 
     const input = inputRef.current;
 
+    const resetToolAndInput = () => {
+      // Row 76: on every exit path (success, error, cancel) clear the
+      // input + flip back to Select. The previous version left tool stuck
+      // on "image" after a FileReader / FabricImage error — the hidden
+      // input never got a reset event, so the next tool-strip click
+      // registered as a no-op until the user picked a different tool
+      // first ("dead clicks"). Deterministic reset here guarantees the
+      // Image tile responds immediately on the next click.
+      input.value = "";
+      setActiveTool("select");
+    };
+
     const handleChange = async () => {
       const file = input.files?.[0];
 
       if (!file) {
-        setActiveTool("select");
+        resetToolAndInput();
 
         return;
       }
@@ -61,23 +73,74 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
           title: "Image too large",
           description: "Pick an image under 10 MB.",
         });
-        input.value = "";
-        setActiveTool("select");
+        resetToolAndInput();
 
         return;
       }
 
-      // Convert to data URL so the image survives JSON serialization across page switches
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
+      // Row 75: wrap FileReader + FabricImage decode in try/catch so a
+      // corrupt / zero-byte / non-decodable file surfaces a clear toast
+      // ("Invalid image" / "Couldn't read image") instead of silently
+      // failing. Also catches the Fabric v7 case where fromURL resolves
+      // with a 0×0 image for an unreadable src — treated as corrupt.
+      let dataUrl: string;
 
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      try {
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
 
-      const { FabricImage } = await import("fabric");
-      const img = await FabricImage.fromURL(dataUrl);
+          reader.onload = () => {
+            const result = reader.result;
+
+            if (typeof result === "string" && result.length > 0) {
+              resolve(result);
+            } else {
+              reject(new Error("empty-result"));
+            }
+          };
+          reader.onerror = () =>
+            reject(reader.error ?? new Error("reader-error"));
+          reader.readAsDataURL(file);
+        });
+      } catch {
+        toast.error({
+          title: "Couldn't read image",
+          description: `"${file.name}" couldn't be opened. The file may be corrupt.`,
+        });
+        resetToolAndInput();
+
+        return;
+      }
+
+      let img: Awaited<ReturnType<typeof import("fabric").FabricImage.fromURL>>;
+
+      try {
+        const { FabricImage } = await import("fabric");
+
+        img = await FabricImage.fromURL(dataUrl);
+      } catch {
+        toast.error({
+          title: "Invalid image",
+          description: `"${file.name}" couldn't be decoded. Please pick a valid PNG, JPG, WEBP, or SVG.`,
+        });
+        resetToolAndInput();
+
+        return;
+      }
+
+      // Even if fromURL didn't throw, Fabric v7 can resolve with a 0×0
+      // image for a non-image data URL (eg. text misreported as image/png
+      // by the OS). Treat that as corrupt too so we don't drop a blank
+      // overlay on the canvas.
+      if (!img.width || !img.height || img.width < 1 || img.height < 1) {
+        toast.error({
+          title: "Invalid image",
+          description: `"${file.name}" didn't decode to a usable image.`,
+        });
+        resetToolAndInput();
+
+        return;
+      }
 
       const canvasW = fabricCanvas.width ?? 600;
       const canvasH = fabricCanvas.height ?? 800;
@@ -111,8 +174,7 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
       markDocumentDirty();
 
-      setActiveTool("select");
-      input.value = "";
+      resetToolAndInput();
     };
 
     const handleCancel = () => {
