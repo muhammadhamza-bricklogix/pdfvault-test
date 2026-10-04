@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -101,15 +101,24 @@ export function usePdfSearch() {
   // Re-search (debounced) whenever query or index changes.
   // Each effect run captures current query/textIndex; the previous timer
   // is always cancelled before the next fires so no stale closure executes.
+  const navigatedQueryRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const t = setTimeout(() => {
-      setMatches(findAllMatches(query, textIndex, pageCount));
+      const found = findAllMatches(query, textIndex, pageCount);
+
+      setMatches(found);
+      // A new query jumps to its first result; index growth while indexing doesn't.
+      if (found.length > 0 && navigatedQueryRef.current !== query) {
+        navigatedQueryRef.current = query;
+        setCurrentPage(found[0].displayPage);
+      }
     }, 250);
 
     return () => clearTimeout(t);
-  }, [query, textIndex, isOpen, pageCount, setMatches]);
+  }, [query, textIndex, isOpen, pageCount, setMatches, setCurrentPage]);
 
   // Build text index lazily when the search panel opens.
   useEffect(() => {
