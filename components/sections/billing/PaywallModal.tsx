@@ -1262,11 +1262,6 @@ export function PaywallModal({
               ? { maxHeight: `${keyboardViewport.height - 32}px` }
               : undefined
           }
-          style={
-            keyboardViewport
-              ? { maxHeight: `${keyboardViewport.height - 32}px` }
-              : undefined
-          }
           translate="no"
         >
           <Modal.CloseTrigger />
