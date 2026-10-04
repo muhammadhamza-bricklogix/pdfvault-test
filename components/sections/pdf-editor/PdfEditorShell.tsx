@@ -43,7 +43,6 @@ import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-s
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ComposerI18nProvider } from "@/lib/client/i18n/composer-i18n-provider";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { logger } from "@/lib/shared/utils/logger";
 import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
@@ -305,12 +304,46 @@ function EditorLayout() {
         const newFile = new File([Uint8Array.from(bytes)], file.name, {
           type: "application/pdf",
         });
+        // QA 2026-10-04 row 6: collect pre-rotation PDF dims of every source
+        // page referenced by the draft so `remapFabricAfterPageOps` can
+        // rotate overlay (left, top, angle) alongside the content-stream
+        // rotation baked by `appendPdfPage`. Without this, user-added text /
+        // shapes / signatures / drawings stay in their pre-rotation
+        // orientation on top of post-rotation page content.
+        const sourcePageDimensions = new Map<
+          number,
+          { height: number; width: number }
+        >();
+
+        if (pdfDocument) {
+          const referencedSources = new Set<number>();
+
+          snapshot.pages.forEach((p) => {
+            if (p.kind === "source") referencedSources.add(p.sourcePageIndex);
+          });
+
+          for (const sourceIdx of referencedSources) {
+            try {
+              const pageProxy = await pdfDocument.getPage(sourceIdx);
+              const viewport = pageProxy.getViewport({ scale: 1 });
+
+              sourcePageDimensions.set(sourceIdx, {
+                height: viewport.height,
+                width: viewport.width,
+              });
+            } catch {
+              // leave missing — remap falls back to identity for that slot
+            }
+          }
+        }
+
         const remapped = remapFabricAfterPageOps({
           newPages: snapshot.pages,
           oldExtractedPages: extractedPages,
           oldFabricJsonByPage: fabricJsonByPage,
           oldHistoryByPage: historyByPage,
           oldHistoryIndexByPage: historyIndexByPage,
+          sourcePageDimensions,
         });
         // Reordering / deleting / duplicating pages leaves the
         // page-number IText labels stale ("Page 5 of 10" stuck on what
