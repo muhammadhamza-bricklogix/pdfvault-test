@@ -26,6 +26,11 @@ export function useEditorHistory({
   const saveFabricJson = usePdfEditorStore((s) => s.saveFabricJson);
   const undoStore = usePdfEditorStore((s) => s.undo);
   const redoStore = usePdfEditorStore((s) => s.redo);
+  const undoActionKindStack = usePdfEditorStore((s) => s.undoActionKindStack);
+  const popUndoActionKind = usePdfEditorStore((s) => s.popUndoActionKind);
+  const undoBackgroundImageConfig = usePdfEditorStore(
+    (s) => s.undoBackgroundImageConfig,
+  );
   const setIsRestoringHistory = usePdfEditorStore(
     (s) => s.setIsRestoringHistory,
   );
@@ -67,6 +72,24 @@ export function useEditorHistory({
       // per-tool synchronous persistence added 2026-08-19.
       saveFabricJson(currentPage, serializeFabricCanvas(fc));
       forceRender((n) => n + 1);
+    };
+
+    // `object:added` is also fired by `useEditTextMode` once per extracted
+    // text run (initial extraction loop at `fabricCanvas.add(textObj)` in
+    // `use-edit-text-mode.ts`). Each add pushes a history entry, flooding
+    // the undo stack with phantom steps BEFORE the user's first real edit.
+    // After the user undoes their edits, undo keeps "working" (removing
+    // extracted text objects) instead of greying out. QA 2026-10-03 row 1.
+    // Mirror the exclusion `markDirtyOnAdd` already applies for the add
+    // event; `object:modified` / `object:removed` still trigger snapshot
+    // through the shared handler so user-driven moves/resizes/deletions on
+    // extracted text are still undoable.
+    const snapshotOnAdd = (e: { target: FabricObject }) => {
+      const editorType = (e?.target as FabricObject & { editorType?: string })
+        ?.editorType;
+
+      if (editorType === "editModeText") return;
+      snapshot();
     };
 
     // Dirty-tracking sibling of `snapshot`. Lives separately so we can skip
@@ -145,7 +168,7 @@ export function useEditorHistory({
       });
     };
 
-    fc.on("object:added", snapshot);
+    fc.on("object:added", snapshotOnAdd);
     fc.on("object:modified", snapshot);
     fc.on("object:removed", snapshot);
     fc.on("object:added", markDirtyOnAdd);
@@ -157,7 +180,7 @@ export function useEditorHistory({
     fc.on("text:changed", dirtySourceText);
 
     return () => {
-      fc.off("object:added", snapshot);
+      fc.off("object:added", snapshotOnAdd);
       fc.off("object:modified", snapshot);
       fc.off("object:removed", snapshot);
       fc.off("object:added", markDirtyOnAdd);
@@ -178,13 +201,29 @@ export function useEditorHistory({
 
   const idx = historyIndexByPage.get(currentPage) ?? -1;
   const history = historyByPage.get(currentPage) ?? [];
-  const canUndo = idx > 0;
+  // Row 77: canUndo also considers the interleaved action-kind stack so
+  // undoing a bg-image add stays reachable even when the current page's
+  // fabric history has no entries yet.
+  const canUndo = idx > 0 || undoActionKindStack.length > 0;
   const canRedo = idx < history.length - 1;
 
   const undo = useCallback(async () => {
     const fc = fabricRef.current;
 
     if (!fc || !canUndo) return;
+
+    // Row 77: route via the interleaved kind stack when it has entries so
+    // undo walks user actions in reverse order regardless of layer. Falls
+    // back to the fabric-only path for pages with legacy history pushed
+    // before the kind stack landed (idx > 0 but kind stack empty).
+    const kind = popUndoActionKind();
+
+    if (kind === "bgImage") {
+      undoBackgroundImageConfig();
+      forceRender((n) => n + 1);
+
+      return;
+    }
 
     const snapshot = undoStore(currentPage);
 
@@ -206,7 +245,9 @@ export function useEditorHistory({
     canUndo,
     currentPage,
     fabricRef,
+    popUndoActionKind,
     saveFabricJson,
+    undoBackgroundImageConfig,
     undoStore,
     setIsRestoringHistory,
   ]);

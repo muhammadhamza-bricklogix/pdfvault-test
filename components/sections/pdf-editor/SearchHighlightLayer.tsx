@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 
 type Props = {
@@ -47,6 +49,21 @@ function getMeasureCtx(): CanvasRenderingContext2D | null {
 export function SearchHighlightLayer({ currentPage, zoom }: Props) {
   const { isOpen, query, matches, currentMatchIndex, textIndex } =
     usePdfSearchStore();
+  const activeRef = useRef<HTMLDivElement | null>(null);
+
+  // Bring the active match into view when it changes (not on zoom, so manual zoom/scroll is kept).
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = requestAnimationFrame(() => {
+      activeRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    });
+
+    return () => cancelAnimationFrame(id);
+  }, [isOpen, currentMatchIndex, matches, currentPage]);
 
   if (!isOpen || !query.trim()) return null;
 
@@ -114,6 +131,7 @@ export function SearchHighlightLayer({ currentPage, zoom }: Props) {
           return (
             <div
               key={`${globalIdx}-${si}`}
+              ref={isActive && si === 0 ? activeRef : undefined}
               className="absolute rounded-sm"
               style={{
                 height: cssHeight + 4,
