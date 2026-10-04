@@ -335,9 +335,15 @@ export function usePdfSearch() {
   ]);
 
   // Reset index whenever the document changes (new file, save swap, etc.).
+  // Row 123: also close the search bar on file change — leaving it visible
+  // over a freshly-opened file ships stale matches that reference pages
+  // that may no longer exist in the new document (click → crash / wrong page).
+  // `close()` zeroes the query + matches but doesn't clear `textIndex`;
+  // `resetIndex()` does, so call both.
   useEffect(() => {
+    close();
     resetIndex();
-  }, [pdfDocument, resetIndex]);
+  }, [pdfDocument, close, resetIndex]);
 
   const navigateToMatch = useCallback(
     (idx: number) => {
