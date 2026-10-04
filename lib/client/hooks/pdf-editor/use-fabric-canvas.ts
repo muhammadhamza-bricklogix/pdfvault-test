@@ -108,6 +108,8 @@ export function useFabricCanvas({
       for (const property of [
         "annotationKind",
         "editorType",
+        "noteColor",
+        "noteIcon",
         "noteText",
         "linkUrl",
         "pdfTextWidth",

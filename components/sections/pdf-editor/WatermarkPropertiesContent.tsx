@@ -84,6 +84,14 @@ export function WatermarkPropertiesContent({
 
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  const clearImage = useCallback(() => {
+    setConfig({ imageData: null });
+  }, [setConfig]);
+
+  const clearText = useCallback(() => {
+    setConfig({ text: "" });
+  }, [setConfig]);
+
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -195,17 +203,26 @@ export function WatermarkPropertiesContent({
       {config.type === "text" && (
         <>
           <Section title="Text">
-            <Input
-              aria-label="Watermark text"
-              className="text-sm"
-              placeholder="e.g. CONFIDENTIAL"
-              value={config.text}
-              // Auto-enable on first edit so users who type a watermark
-              // without flipping the Switch still get it baked at save time.
-              onChange={(e) =>
-                setConfig({ enabled: true, text: e.target.value })
-              }
-            />
+            <div className="flex flex-col gap-2">
+              <Input
+                aria-label="Watermark text"
+                className="text-sm"
+                placeholder="e.g. CONFIDENTIAL"
+                value={config.text}
+                // Auto-enable on first edit so users who type a watermark
+                // without flipping the Switch still get it baked at save time.
+                onChange={(e) =>
+                  setConfig({ enabled: true, text: e.target.value })
+                }
+              />
+              {config.text && (
+                <div className="flex justify-end px-1 py-0.5">
+                  <Button size="sm" variant="ghost" onPress={clearText}>
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
           </Section>
 
           <Section title="Font">
@@ -327,13 +344,21 @@ export function WatermarkPropertiesContent({
                 src={config.imageData}
               />
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={() => imageInputRef.current?.click()}
-            >
-              {config.imageData ? "Change Image" : "Upload Image"}
-            </Button>
+            <div className="flex gap-2 px-1 py-0.5">
+              <Button
+                className="mx-1 my-1 flex-1"
+                size="sm"
+                variant="ghost"
+                onPress={() => imageInputRef.current?.click()}
+              >
+                {config.imageData ? "Change Image" : "Upload Image"}
+              </Button>
+              {config.imageData && (
+                <Button size="sm" variant="ghost" onPress={clearImage}>
+                  Remove
+                </Button>
+              )}
+            </div>
             <Switch
               isSelected={config.scaleToPage}
               size="sm"

@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 
 import { ROUTES } from "@/lib/shared/constants/routes";
 
+import { localizeHref, useRouteLocale } from "./locale-nav-link";
 import { SectionHeading } from "./section-heading";
 
 /**
@@ -67,7 +68,7 @@ type Tool = {
 const TABS: Tab[] = [
   { id: "edit", label: "PDF Composer" },
   { id: "convert-to", label: "Convert to PDF" },
-  { id: "convert-from", label: "Convert from PDF" },
+  { id: "convert-from", label: "PDF to other formats" },
   { id: "compress", label: "Compress" },
   { id: "others", label: "Others" },
 ];
@@ -333,6 +334,7 @@ const MOBILE_INITIAL_COUNT = 4;
 
 export function LandingTools() {
   const { isSignedIn } = useAuth();
+  const routeLocale = useRouteLocale();
   const [activeTab, setActiveTab] = useState<TabId>("edit");
   const [expanded, setExpanded] = useState(false);
   // Localised tile labels — opt-in via `i18nKey` on individual tiles.
@@ -445,16 +447,15 @@ export function LandingTools() {
         </div>
 
         {/*
-          Tool cards. `key={activeTab}` re-mounts the whole list when the tab
-          changes, which retriggers the CSS enter animation. Each item's
-          `animationDelay` staggers the reveal so the grid cascades rather
-          than blinking in as a slab.
+          Tool cards. Every card stays mounted and tabs only toggle
+          `hidden`: Weglot translates the server-rendered cards once, and
+          re-mounted cards would come back untranslated. Un-hiding restarts
+          the CSS enter animation; `animationDelay` staggers the cascade.
         */}
-        <ul
-          key={activeTab}
-          className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
-        >
-          {visibleTools.map((tool, index) => {
+        <ul className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {TOOLS.map((tool) => {
+            const index = visibleTools.indexOf(tool);
+            const inActiveTab = index !== -1;
             const hideOnMobile = !expanded && index >= MOBILE_INITIAL_COUNT;
             // Prefer localised copy when the tile opts in via `i18nKey`.
             // Fallback to the hardcoded EN string keeps un-migrated tiles
@@ -487,16 +488,19 @@ export function LandingTools() {
             return (
               <li
                 key={tool.title}
-                className={`pv-fade-up ${hideOnMobile ? "hidden sm:block" : ""} ${tool.i18nKey ? "notranslate wg-notranslate" : ""}`.trim()}
-                style={{ animationDelay: `${index * 55}ms` }}
+                className={`pv-fade-up ${!inActiveTab ? "hidden" : hideOnMobile ? "hidden sm:block" : ""} ${tool.i18nKey ? "notranslate wg-notranslate" : ""}`.trim()}
+                style={{ animationDelay: `${Math.max(index, 0) * 55}ms` }}
                 translate={tool.i18nKey ? "no" : undefined}
               >
                 <a
                   {...fenceProps}
-                  href={resolveToolHref(
-                    tool.href,
-                    tool.toolSlug,
-                    Boolean(isSignedIn),
+                  href={localizeHref(
+                    resolveToolHref(
+                      tool.href,
+                      tool.toolSlug,
+                      Boolean(isSignedIn),
+                    ),
+                    routeLocale,
                   )}
                 >
                   <span className="mx-auto flex size-12 items-center justify-center rounded-[12px] bg-[var(--pv-section-gray)] transition-colors duration-300 group-hover:bg-[var(--pv-brand-primary)]/10">
@@ -549,20 +553,27 @@ export function LandingTools() {
           })}
         </ul>
 
-        {visibleTools.length > MOBILE_INITIAL_COUNT && !expanded ? (
-          <div className="mt-6 flex justify-center sm:hidden">
-            <button
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-[var(--pv-card-border)] bg-white px-6 text-[14px] font-semibold text-[var(--pv-text-primary)] shadow-sm transition-colors hover:bg-[var(--pv-section-gray)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
-              type="button"
-              onClick={() => setExpanded(true)}
-            >
-              View more
-              <span className="text-[var(--pv-text-secondary)]">
-                (+{visibleTools.length - MOBILE_INITIAL_COUNT})
-              </span>
-            </button>
-          </div>
-        ) : null}
+        {/* Always mounted (toggled via `hidden`) so Weglot's translation sticks. */}
+        <div
+          className={`mt-6 justify-center sm:hidden ${
+            visibleTools.length > MOBILE_INITIAL_COUNT && !expanded
+              ? "flex"
+              : "hidden"
+          }`}
+        >
+          <button
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-[var(--pv-card-border)] bg-white px-6 text-[14px] font-semibold text-[var(--pv-text-primary)] shadow-sm transition-colors hover:bg-[var(--pv-section-gray)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pv-brand-primary)]"
+            type="button"
+            onClick={() => setExpanded(true)}
+          >
+            <span>View more</span>
+            {/* CSS content: Weglot swaps text nodes, which would freeze the count. */}
+            <span
+              className="text-[var(--pv-text-secondary)] after:content-[attr(data-count)]"
+              data-count={`(+${Math.max(visibleTools.length - MOBILE_INITIAL_COUNT, 0)})`}
+            />
+          </button>
+        </div>
       </div>
     </section>
   );

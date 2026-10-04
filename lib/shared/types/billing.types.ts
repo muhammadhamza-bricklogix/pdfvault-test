@@ -102,6 +102,27 @@ export interface CheckoutIntent {
    * round-trip.
    */
   alternatePlans?: AlternatePlanPricing[];
+  /**
+   * PayPal-channel (pdfvault) merchant-data envelope for the SECOND
+   * embedded `<PaymentForm>` the paywall mounts beneath the main one.
+   * Signed with different credentials from the main `merchant` /
+   * `paymentIntent` fields above. Present only when the backend has
+   * the pdfvault channel configured; absent means the PayPal form is
+   * hidden on the frontend (graceful degradation).
+   */
+  paypal?: PaypalFormIntent;
+}
+
+/**
+ * Separate merchant-data envelope used by the PayPal-only `<PaymentForm>`
+ * on the paywall. Mounted beneath the main card/wallet form with every
+ * non-PayPal button explicitly disabled.
+ */
+export interface PaypalFormIntent {
+  merchant: string;
+  paymentIntent: string;
+  signature: string;
+  orderId: string;
 }
 
 export interface Invoice {

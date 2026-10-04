@@ -110,7 +110,11 @@ export function LanguageSwitcher() {
         size="sm"
         variant="ghost"
       >
-        🌐 {current.short}
+        🌐 {/* CSS content so Weglot can't translate the language code. */}
+        <span
+          className="after:content-[attr(data-label)]"
+          data-label={current.short}
+        />
       </Button>
       {/* Mounted at the bottom of the dashboard sidebar — force the
           popover to open upward so the menu isn't clipped by the
@@ -168,7 +172,12 @@ export function LanguageSwitcher() {
                 });
               }}
             >
-              <Label>{lang.label}</Label>
+              <Label>
+                <span
+                  className="after:content-[attr(data-label)]"
+                  data-label={lang.label}
+                />
+              </Label>
             </Dropdown.Item>
           ))}
         </Dropdown.Menu>
