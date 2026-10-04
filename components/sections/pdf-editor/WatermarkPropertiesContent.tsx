@@ -175,7 +175,12 @@ export function WatermarkPropertiesContent({
     <div
       className={
         scrollContainer
-          ? "flex max-h-[calc(100dvh-11rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? // Row 115/121: `pb-6` keeps the custom-range Input from
+            // clipping against the scroll container's bottom edge when
+            // "Range" is picked. Without it the input corners sat on
+            // the modal's inside bottom border and the scrollbar
+            // couldn't scroll past them.
+            "flex max-h-[calc(100dvh-11rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 pb-6 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : "flex min-w-48 max-w-full flex-col gap-4 overflow-x-hidden px-3 pb-4 sm:px-4"
       }
     >
