@@ -241,7 +241,8 @@ const CONVERT_TO_PDF_CARDS: HomeToolCard[] = [
   // },
 ];
 
-// Tax forms — the W-9 and 1099-NEC ship today. Other forms (W-4, W-7)
+// Forms — W-9, 1099-NEC and DS-11 ship today. The group is no longer
+// tax-only: DS-11 is a State Department passport application. Other forms (W-4, W-7)
 // will be added when they go live; placeholders intentionally omitted so
 // the tab stays clean.
 const TAX_FORMS_CARDS: HomeToolCard[] = [
@@ -258,6 +259,13 @@ const TAX_FORMS_CARDS: HomeToolCard[] = [
     href: ROUTES.FORMS.NEC_1099,
     icon: File01Icon,
     title: "1099-NEC Form",
+  },
+  {
+    description:
+      "Fill out Form DS-11, the U.S. passport application, and download a print-ready PDF to take to your appointment.",
+    href: ROUTES.FORMS.DS11,
+    icon: File01Icon,
+    title: "DS-11 Passport Form",
   },
 ];
 
@@ -286,7 +294,7 @@ export const HOME_TOOL_GRID_TAB_GROUPS: readonly HomeToolGridTabGroup[] = [
   {
     cards: TAX_FORMS_CARDS,
     id: "tax-forms",
-    label: "Tax forms",
+    label: "Forms",
   },
 ];
 

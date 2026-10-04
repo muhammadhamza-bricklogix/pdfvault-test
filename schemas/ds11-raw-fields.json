@@ -1,0 +1,2322 @@
+[
+  {
+    "name": "Address Line 2",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 26.84,
+        "y": 481.43,
+        "width": 553.79,
+        "height": 22.82,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ],
+    "maxLength": 36
+  },
+  {
+    "name": "List all other name you have used",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 190.96,
+        "y": 417.82,
+        "width": 187.77,
+        "height": 19.93,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 13
+  },
+  {
+    "name": "List all other names you have used",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 396.96,
+        "y": 417.8,
+        "width": 185.32,
+        "height": 21.51,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ],
+    "maxLength": 13
+  },
+  {
+    "name": "Hair Color",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 78.38,
+        "y": 456.66,
+        "width": 54.95,
+        "height": 21.34,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Eye Color",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 140,
+        "y": 456.03,
+        "width": 51.82,
+        "height": 21.35,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Emergency Contact Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12582912,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 26.31,
+        "y": 335.58,
+        "width": 225.45,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Emergency Contact Address",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 255.4,
+        "y": 334.92,
+        "width": 271.26,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Emergency Contact City",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 26.7,
+        "y": 301,
+        "width": 190.1,
+        "height": 24.38,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Emergency Contact Zip Code",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 249.57,
+        "y": 301.27,
+        "width": 79.48,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 6
+  },
+  {
+    "name": "Emergency Contact Phone",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 334.01,
+        "y": 301.54,
+        "width": 114.17,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Relationship to Applicant",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 451.5,
+        "y": 303.5,
+        "width": 132.5,
+        "height": 19.15,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Countries to be visited",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 411.23,
+        "y": 456.32,
+        "width": 173.74,
+        "height": 21.11,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Travel Return Date",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 306.84,
+        "y": 456.27,
+        "width": 99.12,
+        "height": 20.9,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Your name as printed on your most recent U.S. passport book and/or passport card",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12582912,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 28.43,
+        "y": 257.18,
+        "width": 127.09,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Selection",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 89.02,
+        "y": 710.51,
+        "width": 12.56,
+        "height": 10.93,
+        "onValue": "Book",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Book",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 5,
+        "x": 212.73,
+        "y": 710.51,
+        "width": 12.56,
+        "height": 10.93,
+        "onValue": "Card",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Card",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 5,
+        "x": 335.96,
+        "y": 710.51,
+        "width": 12.56,
+        "height": 10.93,
+        "onValue": "Both",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Both",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Regular or Large Book",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 112.58,
+        "y": 691.53,
+        "width": 10.8,
+        "height": 10.8,
+        "onValue": "Regular",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Regular",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 5,
+        "x": 243.49,
+        "y": 691.53,
+        "width": 10.8,
+        "height": 10.8,
+        "onValue": "Large",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Large",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Gender",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 242.21,
+        "y": 579.66,
+        "width": 12.76,
+        "height": 12.11,
+        "onValue": "M",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "M",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 5,
+        "x": 259.22,
+        "y": 579.66,
+        "width": 12.76,
+        "height": 12.11,
+        "onValue": "F",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "F",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Parent 1 Gender",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 494.19,
+        "y": 665.66,
+        "width": 8.64,
+        "height": 8.97,
+        "onValue": "F",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "F",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 494.19,
+        "y": 675.16,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "M",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "M",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Parent 2 US Citizen",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 530.37,
+        "y": 608.73,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Yes",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Yes",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 530.44,
+        "y": 599.5,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "No",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "No",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Parent 2 Gender",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 493.24,
+        "y": 610.54,
+        "width": 8.31,
+        "height": 8.64,
+        "onValue": "M",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "M",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 493.24,
+        "y": 600.81,
+        "width": 8.64,
+        "height": 8.97,
+        "onValue": "F",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "F",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Parent 1 US Citizen",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 530.09,
+        "y": 674.2,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Yes",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Yes",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 529.88,
+        "y": 663.07,
+        "width": 8.64,
+        "height": 8.84,
+        "onValue": "No",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "No",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Spouse US Citizen",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 29.75,
+        "y": 535.64,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Yes",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Yes",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 58.84,
+        "y": 535.57,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "No",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "No",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Additional #",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 194.55,
+        "y": 509.39,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Home",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Home",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 194.77,
+        "y": 499.79,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Work",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Work",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 227.79,
+        "y": 508.44,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Cell",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Cell",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 228.08,
+        "y": 499.43,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Other",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Other",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Ever Applied or Issued",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 362.55,
+        "y": 291.86,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Yes",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Yes",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 396.12,
+        "y": 291.35,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "No",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "No",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Ever Married",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 171.86,
+        "y": 589.9,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Yes",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Yes",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 206.84,
+        "y": 589.61,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "No",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "No",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Applicant Place of Birth",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 308.53,
+        "y": 579.95,
+        "width": 277.05,
+        "height": 21.51,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 18
+  },
+  {
+    "name": "Applicant Last Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 70.95,
+        "y": 645.53,
+        "width": 322.91,
+        "height": 20.2,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 21
+  },
+  {
+    "name": "Applicant First Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 71.65,
+        "y": 612.89,
+        "width": 260.68,
+        "height": 20.86,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ],
+    "maxLength": 17
+  },
+  {
+    "name": "Applicant Middle Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 338.05,
+        "y": 612.28,
+        "width": 246.78,
+        "height": 21.51,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 16
+  },
+  {
+    "name": "Applicant DOB M",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 69.38,
+        "y": 579.53,
+        "width": 33.49,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 2
+  },
+  {
+    "name": "Applicant DOB Y",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 139.04,
+        "y": 580.71,
+        "width": 61.64,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 4
+  },
+  {
+    "name": "Applicant SSN 1",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 70.96,
+        "y": 546.02,
+        "width": 46.58,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 3
+  },
+  {
+    "name": "Applicant Address State",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 256.04,
+        "y": 448.84,
+        "width": 33.71,
+        "height": 20.68,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 2
+  },
+  {
+    "name": "Applicant Address Zip Code",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 295.06,
+        "y": 449.17,
+        "width": 87.09,
+        "height": 21.73,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ],
+    "maxLength": 6
+  },
+  {
+    "name": "Applicant Address Country",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 396.4,
+        "y": 449.17,
+        "width": 184.35,
+        "height": 21.07,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 12
+  },
+  {
+    "name": "Applicant Address Street",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 26.18,
+        "y": 514.97,
+        "width": 554.79,
+        "height": 20.38,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ],
+    "maxLength": 36
+  },
+  {
+    "name": "Applicant Phone 3",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 118.7,
+        "y": 417.97,
+        "width": 57.67,
+        "height": 20.16,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 4
+  },
+  {
+    "name": "Applicant SSN 3",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 154.5,
+        "y": 544.9,
+        "width": 62.29,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 4
+  },
+  {
+    "name": "Applicant DOB D",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 105.66,
+        "y": 580.71,
+        "width": 31.53,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 2
+  },
+  {
+    "name": "Applicant SSN 2",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 120.58,
+        "y": 546.06,
+        "width": 31.53,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 2
+  },
+  {
+    "name": "Applicant Phone 1",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 26.35,
+        "y": 417.76,
+        "width": 45.32,
+        "height": 20.16,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 3
+  },
+  {
+    "name": "Applicant Phone 2",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 73.23,
+        "y": 417.53,
+        "width": 43.22,
+        "height": 20.16,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 3
+  },
+  {
+    "name": "Emergency Contact Apartment/Unit",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 532.99,
+        "y": 335.58,
+        "width": 54.61,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Permanent Address City",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12582912,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 28.53,
+        "y": 378.78,
+        "width": 400.21,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Permanent Address Street",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 28.42,
+        "y": 414.21,
+        "width": 476.79,
+        "height": 21.76,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Permanent Address Apartment/Unit",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 518.82,
+        "y": 412.81,
+        "width": 59.96,
+        "height": 23.07,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Permanent Address State",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 439.2,
+        "y": 378.44,
+        "width": 32.18,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 2
+  },
+  {
+    "name": "Permanent Address Zip Code",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 490.09,
+        "y": 378.16,
+        "width": 95.67,
+        "height": 23.31,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 6
+  },
+  {
+    "name": "Applicant DOB 2",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 455.67,
+        "y": 738.07,
+        "width": 130.36,
+        "height": 21.35,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Name of Applicant 2",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 27.62,
+        "y": 737.47,
+        "width": 414.61,
+        "height": 21.11,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 1 FM Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 27.29,
+        "y": 698.05,
+        "width": 309.88,
+        "height": 21.11,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 1 Last Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 340.82,
+        "y": 696.35,
+        "width": 245.74,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 1 DOB",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 27.76,
+        "y": 663.84,
+        "width": 130.36,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 2 FM Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 27.68,
+        "y": 633.7,
+        "width": 309.42,
+        "height": 21.11,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 2 Last Name",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 340.86,
+        "y": 633.84,
+        "width": 244.19,
+        "height": 21.18,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 2 DOB",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 27.4,
+        "y": 600.58,
+        "width": 130.36,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Full Name of Current Spouse or Most Recent Spouse (Last, first, Middle)",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 28.27,
+        "y": 558.07,
+        "width": 292.21,
+        "height": 21.88,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Current Spouse Date of Birth",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 326.43,
+        "y": 557.47,
+        "width": 130.36,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Current Spouse Place of Birth",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12582912,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 462.35,
+        "y": 556.41,
+        "width": 122.57,
+        "height": 23.48,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Date of Marriage (mm/dd/yyyy)",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 152.13,
+        "y": 533.58,
+        "width": 100.1,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Widow/Divorce Date (mm/dd/yyyy)",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 491.4,
+        "y": 533.67,
+        "width": 93.05,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Applicant Additional Contact Phone Numbers",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12582912,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 28.33,
+        "y": 496.59,
+        "width": 143.63,
+        "height": 22.42,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Occupation",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 281.73,
+        "y": 497.84,
+        "width": 141.49,
+        "height": 21.34,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Employer or School",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 429.95,
+        "y": 498.48,
+        "width": 156.55,
+        "height": 21.35,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Height",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 28.75,
+        "y": 456.21,
+        "width": 44.06,
+        "height": 21.35,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Travel Departure Date",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 200.15,
+        "y": 455.74,
+        "width": 100.62,
+        "height": 21.76,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Clear",
+    "type": "PDFButton",
+    "acroType": "PDFAcroPushButton",
+    "flags": {
+      "raw": 65536,
+      "names": [
+        "Pushbutton"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 270,
+        "y": 5.31,
+        "width": 72,
+        "height": 13.45,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ]
+  },
+  {
+    "name": "Circumstances of lost/stolen book/card",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12587008,
+      "names": [
+        "Multiline",
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 29.27,
+        "y": 197.19,
+        "width": 558.26,
+        "height": 35.36,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ],
+    "maxLength": 250
+  },
+  {
+    "name": "Alien Number",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 239.99,
+        "y": 546.19,
+        "width": 146.76,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 9
+  },
+  {
+    "name": "Applicant Email",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 397.38,
+        "y": 544.32,
+        "width": 187.62,
+        "height": 22.32,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Applicant Address City",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 5,
+        "x": 27.05,
+        "y": 448.07,
+        "width": 207.16,
+        "height": 21.56,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 14
+  },
+  {
+    "name": "Name as printed on your most recent passport card",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 12582912,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 310.91,
+        "y": 257,
+        "width": 119.54,
+        "height": 21.23,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 2 Place of Birth",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 170.17,
+        "y": 599.24,
+        "width": 308.82,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Parent 1 Place of Birth",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 169.57,
+        "y": 663.72,
+        "width": 308.22,
+        "height": 22,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ]
+  },
+  {
+    "name": "Divorced",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 308.08,
+        "y": 535.93,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Yes",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Yes",
+            "isRef": true
+          }
+        ]
+      },
+      {
+        "page": 6,
+        "x": 343.28,
+        "y": 535.86,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "No",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "No",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Book Status Submitting",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 159.19,
+        "y": 270.36,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Submitting",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Submitting",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Book Status Stolen",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 159.19,
+        "y": 258.16,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Stolen",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Stolen",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Book Status Lost",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 189.45,
+        "y": 258.16,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Lost",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Lost",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Book Status Possession",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 215.28,
+        "y": 258.16,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Possession",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Possession",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Card Status Submitting",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 434.61,
+        "y": 267.88,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Submitting",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Submitting",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Card Status Stolen",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 434.77,
+        "y": 257.12,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Stolen",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Stolen",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Card Status Lost",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 466.63,
+        "y": 257.12,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Lost",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Lost",
+            "isRef": true
+          },
+          {
+            "state": "Off",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Card Status Possession",
+    "type": "PDFCheckBox",
+    "acroType": "PDFAcroCheckBox",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 492.83,
+        "y": 257.12,
+        "width": 8.64,
+        "height": 8.64,
+        "onValue": "Possession",
+        "normalAppearance": "dict",
+        "appearanceStates": [
+          {
+            "state": "Off",
+            "isRef": true
+          },
+          {
+            "state": "Possession",
+            "isRef": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Emergency Contact State",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 29360128,
+      "names": [
+        "DoNotSpellCheck",
+        "DoNotScroll",
+        "Comb"
+      ]
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 220.19,
+        "y": 301.02,
+        "width": 25.05,
+        "height": 22.7,
+        "onValue": null,
+        "normalAppearance": "none"
+      }
+    ],
+    "maxLength": 2
+  }
+]

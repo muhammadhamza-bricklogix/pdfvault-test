@@ -60,6 +60,7 @@ const EDITOR_ROUTES_NEEDING_SNAPSHOT: ReadonlySet<string> = new Set([
   "/pdf-editor",
   ROUTES.FORMS.W9_SHORT, // "/w-9-form"
   ROUTES.FORMS.NEC_1099_EDIT, // "/forms/1099-nec/edit"
+  ROUTES.FORMS.DS11_EDIT, // "/forms/ds-11/edit"
 ]);
 
 function needsEditorSnapshot(pathname: string): boolean {

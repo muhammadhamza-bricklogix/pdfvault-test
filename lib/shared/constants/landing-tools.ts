@@ -48,6 +48,7 @@ export type LandingToolIcon =
 
 export interface LandingTool {
   label: string;
+  /** Key under `allToolsCatalog.tools` in messages/landing. */
   i18nKey: string;
   icon: LandingToolIcon;
   href: string;
@@ -286,6 +287,12 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         i18nKey: "forms1099Nec",
         icon: { kind: "line", id: "forms" },
         href: "/forms/1099-nec",
+      },
+      {
+        label: "Forms (DS-11)",
+        i18nKey: "formsDs11",
+        icon: { kind: "line", id: "forms" },
+        href: "/forms/ds-11",
       },
     ],
   },
