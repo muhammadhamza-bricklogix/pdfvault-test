@@ -83,10 +83,10 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       mobilePageNavRef.current = true;
       setFading(true);
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
-      // 200 ms fade-out before the canvas content swaps.
+      // Short fade-out before the canvas content swaps.
       fadeTimerRef.current = setTimeout(() => {
         setCurrentPage(targetPage);
-      }, 200);
+      }, 120);
     },
     [setCurrentPage],
   );
@@ -237,6 +237,26 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     renderedSize,
   });
   const { undo, redo } = useEditorHistory({ fabricCanvas, fabricRef });
+
+  // Set while a touch gesture moves/resizes/rotates an object, so it never turns the page.
+  const objectGestureRef = useRef(false);
+
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    const markObjectGesture = () => {
+      objectGestureRef.current = true;
+    };
+
+    fabricCanvas.on("object:moving", markObjectGesture);
+    fabricCanvas.on("object:scaling", markObjectGesture);
+    fabricCanvas.on("object:rotating", markObjectGesture);
+
+    return () => {
+      fabricCanvas.off("object:moving", markObjectGesture);
+      fabricCanvas.off("object:scaling", markObjectGesture);
+      fabricCanvas.off("object:rotating", markObjectGesture);
+    };
+  }, [fabricCanvas]);
 
   // Notify parent when fabricCanvas changes
   useEffect(() => {
@@ -1079,6 +1099,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     // Boundary pulls only flip once the page has rested at the edge, so a
     // fling that just reached the bottom isn't turned by the next swipe.
     const BOUNDARY_REST_MS = 400;
+    // Max scroll (as a share of the viewer height) for a page to count as fitting the screen.
+    const SHORT_PAGE_RATIO = 0.25;
     let startX = 0;
     let startY = 0;
     let startScrollTop = 0;
@@ -1103,6 +1125,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
+      objectGestureRef.current = false;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       startScrollTop = el.scrollTop;
@@ -1138,6 +1161,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       const state = usePdfEditorStore.getState();
 
       if (DRAW_TOOL_SET.has(state.activeTool)) return;
+      // Dragging, resizing or rotating an object is not a page swipe.
+      if (objectGestureRef.current) return;
 
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
@@ -1166,6 +1191,18 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
       // ── Vertical pull at boundary ─────────────────────────────────────
       if (absDy > absDx && absDy > 60) {
         const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+
+        // A page that (nearly) fits the screen has nothing left to read, so one swipe turns it.
+        if (maxScrollTop <= el.clientHeight * SHORT_PAGE_RATIO) {
+          if (dy < 0 && state.currentPage < state.pageCount) {
+            navigatePage(state.currentPage + 1, 1);
+          } else if (dy > 0 && state.currentPage > 1) {
+            navigatePage(state.currentPage - 1, -1);
+          }
+
+          return;
+        }
+
         // Only turn pages on a second boundary pull. If the gesture merely
         // scrolls this page to its top/bottom, keep the current page visible.
         const hasScrollablePage = maxScrollTop > 24;
@@ -1229,8 +1266,8 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
           // Fast fade-out hides old content quickly; slow fade-in gives the new
           // page a gentle reveal that feels like a Google Docs page transition.
           transition: fading
-            ? "opacity 200ms ease-out"
-            : "opacity 350ms ease-in",
+            ? "opacity 120ms ease-out"
+            : "opacity 250ms ease-in",
         }}
       >
         <div className="shadow-lg">
