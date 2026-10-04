@@ -41,7 +41,6 @@ const HIDE_ON_PATHNAMES = [
   // matches the marketing landing page. Bail out here to prevent
   // SiteNavbar stacking on top.
   "/forms/w-9",
-  "/forms/1099-nec",
 ];
 
 // Editor / tool routes where a signed-out user may have a pending file +

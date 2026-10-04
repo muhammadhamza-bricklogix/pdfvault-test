@@ -50,28 +50,9 @@ export const ROUTES = {
     W9_SHORT: "/w-9-form",
     W4: "/forms/w-4",
     NEC_1099: "/forms/1099-nec",
-    NEC_1099_EDIT: "/forms/1099-nec/edit",
-    NEC_1099_FORM: "/1099-nec-form",
     W7: "/forms/w-7",
   },
   STATIC: {
     W9_BLANK_PDF: "/static/forms/fw9.pdf",
-    NEC_1099_BLANK_PDF: "/static/forms/f1099nec.pdf",
   },
 } as const;
-
-export function isTaxFormEditorRoute(
-  pathname: string | null | undefined,
-): boolean {
-  if (!pathname) return false;
-  const stripped =
-    pathname.replace(/^\/[a-z]{2}(-[A-Z]{2})?(?=\/|$)/, "") || "/";
-
-  return (
-    stripped === ROUTES.FORMS.W9_SHORT ||
-    stripped === ROUTES.FORMS.NEC_1099_EDIT ||
-    stripped === ROUTES.FORMS.NEC_1099_FORM ||
-    stripped.startsWith("/forms/1099-nec") ||
-    stripped.startsWith("/forms/w-9")
-  );
-}

@@ -169,6 +169,8 @@ function RowActions({
   onHistory,
   onDelete,
 }: RowActionsProps) {
+  const isProtectedSystemDoc = row.name.toLowerCase() === "irs form w-9.pdf";
+
   return (
     <div className="flex items-center justify-end gap-2">
       <Button
@@ -211,23 +213,27 @@ function RowActions({
               <HugeiconsIcon icon={Time04Icon} size={16} />
               <Label>Version history</Label>
             </Dropdown.Item>
-            <Dropdown.Item
-              id="rename"
-              textValue="Rename"
-              onAction={() => onRename?.(row)}
-            >
-              <HugeiconsIcon icon={FileEditIcon} size={16} />
-              <Label>Rename</Label>
-            </Dropdown.Item>
-            <Dropdown.Item
-              className="text-danger"
-              id="delete"
-              textValue="Delete"
-              onAction={() => onDelete?.(row)}
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={16} />
-              <Label>Delete</Label>
-            </Dropdown.Item>
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item
+                id="rename"
+                textValue="Rename"
+                onAction={() => onRename?.(row)}
+              >
+                <HugeiconsIcon icon={FileEditIcon} size={16} />
+                <Label>Rename</Label>
+              </Dropdown.Item>
+            )}
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item
+                className="text-danger"
+                id="delete"
+                textValue="Delete"
+                onAction={() => onDelete?.(row)}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} />
+                <Label>Delete</Label>
+              </Dropdown.Item>
+            )}
           </Dropdown.Menu>
         </Dropdown.Popover>
       </Dropdown>

@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { VersionHistoryModal } from "@/components/sections/pdf-editor/VersionHistoryModal";
+import { W9_LIBRARY_FILENAME } from "@/components/sections/forms/W9FinalizeIntercept";
 import { openDocumentInEditor } from "@/lib/client/utils/open-document-in-editor";
 import { triggerDocumentDownload } from "@/lib/client/utils/trigger-document-download";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
@@ -39,6 +40,11 @@ export function DocumentActionsMenu({
   // 2026-09-01 (QA): the canonical W-9 row is a "system doc" — the
   // W-9 flow upserts into it forever, so deletion would strand the
   // user's saved W-9 (next open re-adopts the row and loses history).
+  // Hide Delete + Rename for this filename; open / download / version
+  // history stay available.
+  const isProtectedSystemDoc =
+    doc.filename.toLowerCase() === W9_LIBRARY_FILENAME.toLowerCase();
+
   const handleOpen = async () => {
     try {
       await openDocumentInEditor(router, doc);
@@ -108,19 +114,23 @@ export function DocumentActionsMenu({
               <HugeiconsIcon icon={Clock01Icon} size={16} />
               <Label>Version history</Label>
             </Dropdown.Item>
-            <Dropdown.Item id="rename" textValue="Rename" onAction={onRename}>
-              <HugeiconsIcon icon={FileEditIcon} size={16} />
-              <Label>Rename</Label>
-            </Dropdown.Item>
-            <Dropdown.Item
-              className="text-danger"
-              id="delete"
-              textValue="Delete"
-              onAction={onDelete}
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={16} />
-              <Label>Delete</Label>
-            </Dropdown.Item>
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item id="rename" textValue="Rename" onAction={onRename}>
+                <HugeiconsIcon icon={FileEditIcon} size={16} />
+                <Label>Rename</Label>
+              </Dropdown.Item>
+            )}
+            {isProtectedSystemDoc ? null : (
+              <Dropdown.Item
+                className="text-danger"
+                id="delete"
+                textValue="Delete"
+                onAction={onDelete}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} />
+                <Label>Delete</Label>
+              </Dropdown.Item>
+            )}
           </Dropdown.Menu>
         </Dropdown.Popover>
       </Dropdown>

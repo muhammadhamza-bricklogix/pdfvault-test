@@ -59,7 +59,6 @@ const EDITOR_ROUTES_NEEDING_SNAPSHOT: ReadonlySet<string> = new Set([
   ROUTES.TOOLS.PDF_EDITOR, // "/pdf-composer"
   "/pdf-editor",
   ROUTES.FORMS.W9_SHORT, // "/w-9-form"
-  ROUTES.FORMS.NEC_1099_EDIT, // "/forms/1099-nec/edit"
 ]);
 
 function needsEditorSnapshot(pathname: string): boolean {

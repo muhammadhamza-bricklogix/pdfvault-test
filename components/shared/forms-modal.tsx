@@ -27,13 +27,6 @@ const FORMS: readonly FormEntry[] = [
     href: ROUTES.FORMS.W9,
     available: true,
   },
-  {
-    slug: "1099-nec",
-    title: "IRS Form 1099-NEC",
-    description: "Report nonemployee compensation of $600 or more.",
-    href: ROUTES.FORMS.NEC_1099,
-    available: true,
-  },
 ];
 
 interface FormsModalProps {
