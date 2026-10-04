@@ -301,9 +301,15 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
           // convinced the edits were persisted. Surface each reason
           // explicitly and abort the navigation so the user can retry.
           if (result.reason === "error") {
-            // Row 25: only warn when there were unsaved changes coming
-            // in. A clean-store forced re-save that happens to fail has
-            // nothing for the user to recover.
+            // Rows 25 + 87 QA 2026-10-04: force-navigate paths
+            // (logo-click, Back) run this handler regardless of
+            // `hasUnsavedChanges`, so a user who already saved and
+            // then clicks Back/Logo can still hit a backend conflict
+            // on the second (force) save and see the scary "try Save
+            // first" toast even though NOTHING is at risk. Only warn
+            // when there were unsaved changes at entry — a clean-store
+            // forced re-save that happens to fail has nothing for the
+            // user to recover.
             if (hadDirtyChangesOnEntry) {
               toast.error({
                 title: "Could not save",
@@ -357,8 +363,9 @@ export function useEditorNavigationSave(fabricCanvas: FabricCanvas | null) {
         navigate();
       } catch (err) {
         toast.close(loadingKey);
-        // Row 25: same gate as the result.reason === "error" branch —
-        // only alarm the user when their work was actually at risk.
+        // Rows 25 + 87 QA 2026-10-04: same gate as the
+        // result.reason === "error" branch — only alarm the user when
+        // their work was actually at risk.
         if (hadDirtyChangesOnEntry) {
           toast.error({
             title: "Could not save",

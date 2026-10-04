@@ -95,14 +95,12 @@ const APPLE_PAY_BUTTON_PARAMS = {
   color: "black",
 } as const;
 // PayPal button params — rendered alongside Apple Pay + Google Pay on
-// the single unified `StablePaymentForm`. Solidgate confirmed
+// the single unified `StablePaymentForm` instance. Solidgate confirmed
 // 2026-10-02 that all payment methods (card + Apple Pay + Google Pay
-// + PayPal + future Worldpay/Adyen MIDs) will live on one channel
-// (`pdfvault`). The earlier dual-channel + dual-form architecture
-// (contentclicks.io main + pdfvault PayPal) was rolled back because
-// `@solidgate/react-sdk` hardcodes its iframe host id, so two
-// `<PaymentForm>` instances collided and the first form's Apple +
-// Google wallet buttons silently stopped rendering.
+// + PayPal + future Worldpay/Adyen MIDs) live on one channel
+// (`pdfvault`), so no second form or second channel is needed on our
+// side — the SDK negotiates PayPal activation against the main
+// merchant creds returned by `/billing/checkout-intent`.
 //
 // `color: "gold"` is PayPal's recommended default that maximizes
 // recognition. `label: "paypal"` renders the PayPal wordmark only
@@ -393,6 +391,58 @@ export function PaywallModal({
     unInertNewPortals();
 
     return () => observer.disconnect();
+  }, [isOpen]);
+
+  // Mobile keyboard open: follow the visible viewport so the focused field (e.g. the card iframe) isn't hidden.
+  const [keyboardViewport, setKeyboardViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+
+    if (!viewport) return;
+
+    let last: { height: number; top: number } | null = null;
+
+    const sync = () => {
+      // Pinch-zoom also shrinks the visual viewport; only react at scale 1 (keyboard).
+      const keyboardOpen =
+        Math.abs(viewport.scale - 1) < 0.01 &&
+        viewport.height < window.innerHeight - 80;
+      const next = keyboardOpen
+        ? {
+            height: Math.floor(viewport.height),
+            top: Math.max(0, Math.floor(viewport.offsetTop)),
+          }
+        : null;
+
+      // Skip state updates (and re-renders of the payment form) when nothing changed.
+      if (next?.height === last?.height && next?.top === last?.top) return;
+      const shouldReveal = next !== null && next.height !== last?.height;
+
+      last = next;
+      setKeyboardViewport(next);
+      if (!shouldReveal) return;
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+
+        if (active instanceof HTMLElement && active.closest(".modal__dialog")) {
+          active.scrollIntoView({ block: "center", inline: "nearest" });
+        }
+      });
+    };
+
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+
+    return () => {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      setKeyboardViewport(null);
+    };
   }, [isOpen]);
 
   // Pause Weglot for the paywall's lifetime.
@@ -1148,6 +1198,11 @@ export function PaywallModal({
     <Modal.Backdrop
       isDismissable={false}
       isOpen={isOpen}
+      style={
+        keyboardViewport
+          ? { transform: `translate3d(0, ${keyboardViewport.top}px, 0)` }
+          : undefined
+      }
       onOpenChange={(open) => {
         if (!open) {
           // Success step: `onPaymentSuccess` already fired on mount and
@@ -1189,6 +1244,11 @@ export function PaywallModal({
                   : "max-h-[calc(100dvh-32px)] w-[60vw] min-w-[min(900px,calc(100vw-32px))] max-w-[60vw] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] dark:bg-content1"
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
             " notranslate wg-notranslate"
+          }
+          style={
+            keyboardViewport
+              ? { maxHeight: `${keyboardViewport.height - 32}px` }
+              : undefined
           }
           translate="no"
         >
@@ -1419,26 +1479,22 @@ function PlanStep({
 
   return (
     <div className="flex flex-col">
-      {/* Header — big "Choose a plan to download your file" headline on
-          the left with the Continue CTA on the right. Matches the
-          PDFGuru checkout pattern (QA 2026-10-01). Alignment notes:
-          - `md:items-center` keeps the headline + button vertically
-            centered on desktop.
-          - `leading-none` on the h2 trims the default line-height slack
-            so the headline bounding box matches the CTA height more
-            closely — fixes the "misaligned" look where the h2's
-            built-in ascender/descender padding made it visually sit
-            above the button mid-line (QA 2026-10-01 follow-up).
-          - Mobile stacks the CTA full-width below the headline for a
-            larger tap target.
+      {/* Header — two-line left stack (small "Your <X> is ready"
+          eyebrow + big "Choose a plan to download your file" headline)
+          with the Continue CTA on the top-right. Matches the PDFGuru
+          checkout pattern (QA 2026-10-01 hotfix). Mobile stacks the
+          CTA full-width below the text block for a larger tap target.
 
           TODO (i18n debt): big headline is hardcoded EN. Follow-up PR
           should add `strings.choosePlanHeading` with translations for
-          de / es / fr / pt / ar. */}
+          de / es / fr / pt / ar. The eyebrow stays localized via the
+          existing `strings.ready.*` per-file-type entries. */}
       <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
-        <h2 className="pv-heading text-[26px] font-bold leading-none text-[#1a1c21] sm:text-[32px] md:text-[36px]">
-          Choose a plan to download your file
-        </h2>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="pv-heading text-center text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-start md:text-[36px]">
+            Choose a plan to download your file
+          </h2>
+        </div>
         <div className="w-full shrink-0 md:w-auto">{continueButton}</div>
       </div>
 
@@ -1663,12 +1719,12 @@ function PayStep({
     intent.currency,
   );
 
-  // Solidgate renders Apple Pay + Google Pay into detached container
-  // elements — the SDK requires the refs to exist BEFORE `<PaymentForm>`
-  // mounts. On non-Safari browsers Apple Pay silently no-ops (SDK
-  // hides the container); on non-supporting Android/iOS Google Pay
-  // does the same. Both wallets also require merchant-side dashboard
-  // enablement + domain verification (Apple Pay only).
+  // Solidgate renders Apple Pay + Google Pay + PayPal into detached
+  // container elements — the SDK requires the refs to exist BEFORE
+  // `<PaymentForm>` mounts. On non-Safari browsers Apple Pay silently
+  // no-ops (SDK hides the container); on non-supporting Android/iOS
+  // Google Pay does the same; PayPal silently no-ops when the merchant
+  // channel doesn't have it activated or the buyer geo isn't supported.
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
   // PayPal is rendered by the unified `StablePaymentForm` alongside
@@ -1689,10 +1745,10 @@ function PayStep({
   const [paypalReady, setPaypalReady] = useState(false);
   const [walletTimedOut, setWalletTimedOut] = useState(false);
 
-  // Timeout runs on its own effect so it fires regardless of whether the
-  // observer effect below bailed early on a null ref — otherwise a
+  // Timeout runs on its own effect so it fires regardless of whether
+  // the observer effect below bailed early on a null ref — otherwise a
   // missing container would leave the skeletons stuck forever (QA
-  // report 2026-09-30: PayPal "stuck at Loading wallet" on staging).
+  // report 2026-09-30: wallet "stuck at Loading" on staging).
   useEffect(() => {
     const timeout = window.setTimeout(() => setWalletTimedOut(true), 4000);
 
@@ -1842,13 +1898,9 @@ function PayStep({
                 className="empty:hidden w-full [&>*]:!w-full [&_iframe]:!w-full"
               />
             </div>
-            {/* PayPal — rendered by the main `StablePaymentForm` via
-                `paypalButtonParams` + `paypalContainerRef`. Single
-                unified pdfvault channel per Solidgate 2026-10-02 — no
-                second form instance (that caused the iframe-id
-                collision that killed the Apple/Google buttons). Silent
-                no-op on browsers / regions where PayPal isn't
-                supported for this merchant. */}
+            {/* PayPal — SDK injects here; hidden until mounted. Silent
+                no-op when the merchant channel doesn't have PayPal
+                activated or when the buyer geo isn't supported. */}
             <div className="relative">
               {!paypalReady && !walletTimedOut ? (
                 <WalletButtonSkeleton />

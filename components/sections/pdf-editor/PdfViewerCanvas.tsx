@@ -466,14 +466,21 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
         const box = obj.getBoundingRect();
 
-        if (point.y < box.top || point.y > box.top + box.height) continue;
+        // Taps slightly above/below a line still count; the closest line wins.
+        const gapY =
+          point.y < box.top
+            ? box.top - point.y
+            : Math.max(0, point.y - (box.top + box.height));
 
-        const gap =
+        if (gapY > tolerance) continue;
+
+        const gapX =
           point.x < box.left
             ? box.left - point.x
             : point.x - (box.left + box.width);
+        const gap = Math.hypot(gapX, gapY);
 
-        if (gap >= 0 && gap <= tolerance && gap < nearestGap) {
+        if (gapX >= 0 && gapX <= tolerance && gap < nearestGap) {
           nearest = obj;
           nearestGap = gap;
         }
