@@ -13,6 +13,11 @@ export const metadata: Metadata = {
 
 export default function RotatePdfLandingPage() {
   return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="manage" />
+    <ToolLandingPage
+      description={DESCRIPTION}
+      hint="rotate"
+      title={TITLE}
+      tool="manage"
+    />
   );
 }

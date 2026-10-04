@@ -2,11 +2,18 @@
   "nav": {
     "edit": "Bearbeiten",
     "convert": "Umwandeln",
-    "compress": "Komprimieren"
+    "compress": "Komprimieren",
+    "allTools": "Alle Tools",
+    "forms": "Formulare",
+    "login": "Anmelden",
+    "dashboard": "Dashboard",
+    "logOut": "Abmelden"
   },
   "footer": {
     "convert": "Umwandeln",
-    "doNotSell": "Meine Daten nicht verkaufen oder weitergeben"
+    "doNotSell": "Meine Daten nicht verkaufen oder weitergeben",
+    "copyrightYear": "© 2026,",
+    "rightsReserved": "Alle Rechte vorbehalten."
   },
   "tools": {
     "sign": {
@@ -30,7 +37,34 @@
     "description": "Alle Tools, die Sie für den Umgang mit PDFs benötigen — immer griffbereit. Zusammenführen, Teilen, Komprimieren, Umwandeln, Drehen, Entsperren und mit Wasserzeichen versehen — in wenigen Klicks."
   },
   "allToolsCatalog": {
-    "heading": "Alle PDFVault-Tools"
+    "heading": "Alle PDFVault-Tools",
+    "categories": {
+      "pdfComposer": "PDF COMPOSER",
+      "convertToPdf": "IN PDF KONVERTIEREN",
+      "convertFromPdf": "AUS PDF KONVERTIEREN",
+      "others": "SONSTIGES"
+    },
+    "tools": {
+      "editSign": "Bearbeiten & Unterschreiben",
+      "compress": "Komprimieren",
+      "organizePages": "Seiten organisieren",
+      "mergePdf": "PDFs zusammenführen",
+      "splitExtractPages": "Seiten teilen und extrahieren",
+      "passwordProtect": "Mit Passwort schützen",
+      "unlockPdf": "PDF entsperren",
+      "rotatePages": "Seiten drehen",
+      "deletePages": "Seiten löschen",
+      "wordToPdf": "Word in PDF",
+      "pngToPdf": "PNG in PDF",
+      "jpgToPdf": "JPG in PDF",
+      "pdfToWord": "PDF in WORD",
+      "pdfToPng": "PDF in PNG",
+      "pdfToJpg": "PDF in JPG",
+      "extractImages": "Bilder extrahieren",
+      "removeAnnotations": "Anmerkungen entfernen",
+      "watermark": "Wasserzeichen",
+      "formsW9": "Formulare (W-9)"
+    }
   },
   "steps": {
     "sectionTitle": "In drei einfachen Schritten loslegen",
@@ -63,5 +97,9 @@
   "about": {
     "filesLine": "Wir behandeln alle Dateien mit derselben Sorgfalt — sie werden sicher aufbewahrt und sowohl bei der Übertragung als auch im Ruhezustand verschlüsselt.",
     "hashingLine": "Passwörter werden als Hashwerte gespeichert, sodass wir Ihr Klartext-Passwort niemals sehen."
+  },
+  "banner": {
+    "createVault": "Erstellen Sie Ihren kostenlosen Tresor",
+    "managePdfs": "Verwalten Sie Ihre PDF-Dateien"
   }
 }

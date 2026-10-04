@@ -2,11 +2,18 @@
   "nav": {
     "edit": "Edit",
     "convert": "Convert",
-    "compress": "Compress"
+    "compress": "Compress",
+    "allTools": "All Tools",
+    "forms": "Forms",
+    "login": "Login",
+    "dashboard": "Dashboard",
+    "logOut": "Log out"
   },
   "footer": {
     "convert": "Convert",
-    "doNotSell": "Do Not Sell or Share My Data"
+    "doNotSell": "Do Not Sell or Share My Data",
+    "copyrightYear": "© 2026,",
+    "rightsReserved": "All rights reserved."
   },
   "tools": {
     "sign": {
@@ -30,7 +37,34 @@
     "description": "Every tool you need to use PDFs, at your fingertips. Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks."
   },
   "allToolsCatalog": {
-    "heading": "Every PDFVault tool"
+    "heading": "Every PDFVault tool",
+    "categories": {
+      "pdfComposer": "PDF COMPOSER",
+      "convertToPdf": "CONVERT TO PDF",
+      "convertFromPdf": "CONVERT FROM PDF",
+      "others": "OTHERS"
+    },
+    "tools": {
+      "editSign": "Edit & Sign",
+      "compress": "Compress",
+      "organizePages": "Organize Pages",
+      "mergePdf": "Merge PDF",
+      "splitExtractPages": "Split & Extract Pages",
+      "passwordProtect": "Password Protect",
+      "unlockPdf": "Unlock PDF",
+      "rotatePages": "Rotate Pages",
+      "deletePages": "Delete Pages",
+      "wordToPdf": "Word to PDF",
+      "pngToPdf": "PNG to PDF",
+      "jpgToPdf": "JPG to PDF",
+      "pdfToWord": "PDF to WORD",
+      "pdfToPng": "PDF to PNG",
+      "pdfToJpg": "PDF to JPG",
+      "extractImages": "Extract Images",
+      "removeAnnotations": "Remove Annotations",
+      "watermark": "Watermark",
+      "formsW9": "Forms (W-9)"
+    }
   },
   "steps": {
     "sectionTitle": "Get started in three simple steps",
@@ -63,5 +97,9 @@
   "about": {
     "filesLine": "We treat every file with the same care — they are held securely, encrypted in transit and at rest.",
     "hashingLine": "Passwords are stored as hashed values so we never see your plain-text password."
+  },
+  "banner": {
+    "createVault": "Create your free vault",
+    "managePdfs": "Manage your PDFs"
   }
 }

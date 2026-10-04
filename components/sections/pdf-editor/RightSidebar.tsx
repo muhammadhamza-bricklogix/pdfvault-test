@@ -620,18 +620,11 @@ export function ShapePropertiesContent({
 
           <div className={sectionWrapperClass}>
             <Section title="Position">
-              {/* Horizontal strip (mobile bottom dock): stack X over Y in
-                  a single column. Two NumberFields side-by-side in the
-                  ~160px the strip allotted per section were squeezed
-                  below HeroUI's group minimum, causing the increment
-                  buttons to visually bleed into the next field. Vertical
-                  stack at `w-32` keeps each field at full readable width
-                  while staying compact horizontally. Desktop right rail
-                  keeps the 2-col grid since the sidebar is wide enough. */}
+              {/* Mobile strip: side by side at w-60 (fits the steppers) so the row stays short. */}
               <div
                 className={
                   isHorizontal
-                    ? "flex w-32 flex-col gap-2"
+                    ? "grid w-60 grid-cols-2 gap-2"
                     : "grid grid-cols-2 gap-2"
                 }
               >
@@ -658,7 +651,7 @@ export function ShapePropertiesContent({
               <div
                 className={
                   isHorizontal
-                    ? "flex w-32 flex-col gap-2"
+                    ? "grid w-60 grid-cols-2 gap-2"
                     : "grid grid-cols-2 gap-2"
                 }
               >
@@ -682,25 +675,25 @@ export function ShapePropertiesContent({
     </div>
   );
 
+  // Panel visibility is `activeTool === "shape" || hasSelectedShape`.
+  // Just flipping `activeTool` back to "select" leaves the panel up
+  // when a shape is still selected (X button appears to do nothing).
+  // Discard the active object too so both branches of the visibility
+  // gate turn off and `selectedProps` clears on the resulting
+  // `selection:cleared` event.
+  const handleFloatingClose = () => {
+    if (fabricCanvas) {
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.requestRenderAll();
+    }
+    usePdfEditorStore.getState().setActiveTool("select");
+  };
+
   if (variant === "floating") {
     // Only show the floating panel when a shape tool is active or a shape
     // object is selected. Text/image selections have their own toolbars
     // (FloatingTextToolbar, etc.) and must not trigger this panel.
     if (!showShapePanel) return null;
-
-    // Panel visibility is `activeTool === "shape" || hasSelectedShape`.
-    // Just flipping `activeTool` back to "select" leaves the panel up
-    // when a shape is still selected (X button appears to do nothing).
-    // Discard the active object too so both branches of the visibility
-    // gate turn off and `selectedProps` clears on the resulting
-    // `selection:cleared` event.
-    const handleFloatingClose = () => {
-      if (fabricCanvas) {
-        fabricCanvas.discardActiveObject();
-        fabricCanvas.requestRenderAll();
-      }
-      usePdfEditorStore.getState().setActiveTool("select");
-    };
 
     return (
       <>
@@ -724,7 +717,8 @@ export function ShapePropertiesContent({
     if (!showShapePanel) return null;
 
     return (
-      <div className="border-b border-default-200/70 bg-default-50/70 px-3 py-2">
+      <div className="relative border-b border-default-200/70 bg-default-50/70 py-2 pl-3 pr-10">
+        <FloatingPanelCloseButton onPress={handleFloatingClose} />
         {body}
       </div>
     );

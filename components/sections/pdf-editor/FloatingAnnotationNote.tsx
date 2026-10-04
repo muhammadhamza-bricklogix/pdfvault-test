@@ -6,7 +6,17 @@ import { Cancel01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { NoteColorSwatches, NoteIconGlyph } from "./NoteIconGlyph";
+
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
+import {
+  applyNoteColor,
+  buildNoteMarker,
+  getNoteColor,
+  getNoteIcon,
+  NOTE_ICONS,
+  type NoteIconId,
+} from "@/lib/client/pdf-editor/annotation-notes";
 import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 
@@ -18,10 +28,14 @@ type FloatingAnnotationNoteProps = {
 type AnnotationObject = FabricObject & {
   annotationKind?: string;
   editorType?: string;
+  noteColor?: string;
+  noteIcon?: NoteIconId;
   noteText?: string;
 };
 
 type NoteState = {
+  color: string;
+  icon: NoteIconId;
   left: number;
   text: string;
   top: number;
@@ -130,6 +144,8 @@ export function FloatingAnnotationNote({
       }
 
       setNoteState({
+        color: getNoteColor(obj),
+        icon: getNoteIcon(obj),
         left: Math.max(8, left),
         text: typeof obj.noteText === "string" ? obj.noteText : "",
         top: Math.max(8, top),
@@ -193,6 +209,44 @@ export function FloatingAnnotationNote({
     persist();
   };
 
+  const changeColor = (color: string) => {
+    const obj = activeObjRef.current;
+
+    if (!obj || !fabricCanvas) return;
+
+    applyNoteColor(obj, color);
+    fabricCanvas.requestRenderAll();
+    setNoteState((state) => (state ? { ...state, color } : state));
+    persist();
+  };
+
+  const changeIcon = async (icon: NoteIconId) => {
+    const obj = activeObjRef.current;
+
+    if (!obj || !fabricCanvas || getNoteIcon(obj) === icon) return;
+
+    const { Group, Path } = await import("fabric");
+    const next = buildNoteMarker(
+      { Group, Path },
+      {
+        color: getNoteColor(obj),
+        icon,
+        left: obj.left ?? 0,
+        noteText: typeof obj.noteText === "string" ? obj.noteText : "",
+        top: obj.top ?? 0,
+      },
+    );
+    const index = fabricCanvas.getObjects().indexOf(obj);
+
+    fabricCanvas.remove(obj);
+    fabricCanvas.insertAt(Math.max(0, index), next);
+    activeObjRef.current = next;
+    fabricCanvas.setActiveObject(next);
+    fabricCanvas.requestRenderAll();
+    setNoteState((state) => (state ? { ...state, icon } : state));
+    persist();
+  };
+
   const close = () => {
     if (!fabricCanvas) return;
 
@@ -222,15 +276,19 @@ export function FloatingAnnotationNote({
       aria-label="Annotation note"
       className={
         isMobile
-          ? "pointer-events-auto fixed inset-x-3 z-50 flex max-h-[42vh] flex-col rounded-lg bg-[#FFD633] shadow-[0_12px_32px_rgba(15,23,42,0.22)]"
-          : "pointer-events-auto absolute z-50 flex w-[min(420px,calc(100vw-32px))] max-w-[420px] flex-col rounded-lg bg-[#FFD633] shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+          ? "pointer-events-auto fixed inset-x-3 z-50 flex max-h-[50vh] flex-col rounded-lg shadow-[0_12px_32px_rgba(15,23,42,0.22)]"
+          : "pointer-events-auto absolute z-50 flex w-[min(420px,calc(100vw-32px))] max-w-[420px] flex-col rounded-lg shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
       }
       data-editor-overlay=""
       role="region"
       style={
         isMobile
-          ? { bottom: dockOffset }
-          : { left: noteState.left, top: noteState.top }
+          ? { backgroundColor: noteState.color, bottom: dockOffset }
+          : {
+              backgroundColor: noteState.color,
+              left: noteState.left,
+              top: noteState.top,
+            }
       }
       onPointerDown={(event) => event.stopPropagation()}
     >
@@ -248,13 +306,50 @@ export function FloatingAnnotationNote({
       <textarea
         ref={textAreaRef}
         aria-label="Note text"
-        className="min-h-40 flex-1 resize-none bg-transparent px-4 pb-4 text-sm leading-6 text-slate-950 outline-none placeholder:text-slate-700/60"
+        className={`${isMobile ? "min-h-24" : "min-h-40"} flex-1 resize-none bg-transparent px-4 pb-3 text-sm leading-6 text-slate-950 outline-none placeholder:text-slate-700/60`}
         placeholder="Add note"
         value={noteState.text}
         onBlur={commitNote}
         onChange={(event) => updateText(event.target.value)}
       />
-      <div className="flex shrink-0 justify-end px-3 pb-3">
+      <div
+        aria-label="Note shape"
+        className="flex shrink-0 touch-pan-x gap-1.5 overflow-x-auto px-3 py-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="radiogroup"
+      >
+        {NOTE_ICONS.map((icon) => {
+          const selected = icon.id === noteState.icon;
+
+          return (
+            <button
+              key={icon.id}
+              aria-checked={selected}
+              aria-label={icon.label}
+              className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-900 ${
+                selected
+                  ? "bg-white ring-2 ring-slate-900"
+                  : "bg-white/55 hover:bg-white/80"
+              }`}
+              role="radio"
+              title={icon.label}
+              type="button"
+              onClick={() => void changeIcon(icon.id)}
+            >
+              <NoteIconGlyph
+                color={noteState.color}
+                icon={icon.id}
+                size={20}
+              />
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-3">
+        <NoteColorSwatches
+          compact
+          value={noteState.color}
+          onChange={changeColor}
+        />
         <button
           aria-label="Delete annotation note"
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-600 transition hover:bg-black/10 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"

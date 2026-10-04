@@ -1,35 +1,30 @@
 "use client";
 
-import type { Canvas as FabricCanvas, Path } from "fabric";
+import type { Canvas as FabricCanvas } from "fabric";
 
 import { useCallback, useEffect, useRef } from "react";
 
+import {
+  buildNoteMarker,
+  DEFAULT_NOTE_COLOR,
+  DEFAULT_NOTE_ICON,
+  getNoteIconDef,
+  NOTE_MARKER_SIZE,
+  type NoteIconId,
+} from "@/lib/client/pdf-editor/annotation-notes";
 import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 
-export type AnnotationId = "sticky-note";
-
-export type AnnotationDef = {
-  fill: string;
-  id: AnnotationId;
-  label: string;
-};
+export type AnnotationEventDetail = { color?: string; icon?: NoteIconId };
 
 /**
  * PDFGuru-style annotations are sticky notes: the PDF layer gets a small
  * marker, while the note body is edited in a separate DOM popover. Keeping
  * note text off the Fabric text layer prevents it from overlapping extracted
  * PDF text or summoning the text-format toolbar in Edit Text mode.
- */
-export const ANNOTATIONS: ReadonlyArray<AnnotationDef> = [
-  { fill: "#FFD633", id: "sticky-note", label: "Note" },
-];
-
-export type AnnotationEventDetail = { id: AnnotationId };
-
-/**
+ *
  * Listens for `editor:add-annotation` (dispatched by `AnnotationsModal`) and
  * drops a sticky-note marker in the centre of the currently visible viewport.
  * The note body is stored as custom metadata (`noteText`) and edited by
@@ -42,7 +37,7 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
     fabricCanvasRef.current = fabricCanvas;
   }, [fabricCanvas]);
 
-  const handleAdd = useCallback(async (id: AnnotationId) => {
+  const handleAdd = useCallback(async (detail: AnnotationEventDetail) => {
     const liveCanvas = fabricCanvasRef.current;
 
     if (!liveCanvas) {
@@ -54,23 +49,16 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
       return;
     }
 
-    const def = ANNOTATIONS.find((a) => a.id === id);
-
-    if (!def) {
-      logger.warn("Unknown annotation id", { id });
-
-      return;
-    }
+    const def = getNoteIconDef(detail.icon ?? DEFAULT_NOTE_ICON);
+    const color = detail.color ?? DEFAULT_NOTE_COLOR;
 
     try {
-      const { Path: FabricPath } = await import("fabric");
+      const { Group, Path } = await import("fabric");
 
-      // Fabric coords are stored at zoom=1; convert the current visual
-      // viewport centre back into base coords so save/export stays aligned.
       const zoom = liveCanvas.getZoom() || 1;
       const baseWidth = liveCanvas.getWidth() / zoom;
       const baseHeight = liveCanvas.getHeight() / zoom;
-      const markerSize = 24;
+      const markerSize = NOTE_MARKER_SIZE;
       const clamp = (value: number, min: number, max: number) =>
         Math.min(Math.max(value, min), max);
 
@@ -110,29 +98,10 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
         );
       }
 
-      const obj = new FabricPath(
-        "M3 1H21C22.1 1 23 1.9 23 3V16C23 17.1 22.1 18 21 18H13L5 23V18H3C1.9 18 1 17.1 1 16V3C1 1.9 1.9 1 3 1Z",
-        {
-          annotationKind: "sticky-note",
-          editorType: "annotation",
-          fill: def.fill,
-          left,
-          noteText: "",
-          objectCaching: false,
-          originX: "left",
-          originY: "top",
-          stroke: "#E0B400",
-          strokeLineJoin: "round",
-          strokeWidth: 1,
-          top,
-        } as any,
-      ) as Path;
-
-      obj.set({
-        annotationKind: "sticky-note",
-        editorType: "annotation",
-        noteText: "",
-      } as any);
+      const obj = buildNoteMarker(
+        { Group, Path },
+        { color, icon: def.id, left, top },
+      );
 
       liveCanvas.add(obj);
       liveCanvas.setActiveObject(obj);
@@ -148,7 +117,7 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
       window.dispatchEvent(new CustomEvent("editor:focus-annotation-note"));
 
       toast.success({
-        title: `${def.label} added`,
+        title: `${def.label} note added`,
         description: "Add details in the note.",
       });
     } catch (err) {
@@ -164,9 +133,7 @@ export function useAnnotationsEditor(fabricCanvas: FabricCanvas | null) {
     const onAdd = (event: Event) => {
       const detail = (event as CustomEvent<AnnotationEventDetail>).detail;
 
-      if (!detail?.id) return;
-
-      void handleAdd(detail.id);
+      void handleAdd(detail ?? {});
     };
 
     window.addEventListener("editor:add-annotation", onAdd);

@@ -608,13 +608,11 @@ export function ManagePagesModal({
             </Modal.Body>
 
             <div className="flex shrink-0 items-center justify-end gap-2 border-t border-default-200 bg-[var(--color-background)] px-4 py-3">
-              <Button size="sm" variant="tertiary" onPress={onClose}>
+              <Button variant="secondary" onPress={onClose}>
                 Cancel
               </Button>
               <Button
-                className="min-w-24"
                 isDisabled={isSaving || pageTotal === 0}
-                size="sm"
                 variant="primary"
                 onPress={handleSave}
               >

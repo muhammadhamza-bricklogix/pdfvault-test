@@ -382,6 +382,9 @@ type PdfEditorStore = {
    */
   pendingOpenExportModal: boolean;
   setPendingOpenExportModal: (value: boolean) => void;
+  /** One-shot `?tool=` action for HamburgerMenu, which mounts after the PDF loads. */
+  pendingMenuAction: "split" | "flatten" | null;
+  setPendingMenuAction: (value: "split" | "flatten" | null) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
   setIsFormFieldsModalOpen: (value: boolean) => void;
   setIsPageNumbersModalOpen: (value: boolean) => void;
@@ -433,6 +436,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   pendingCloudSaveAfterReload: false,
   postSaveReloadPending: false,
   pendingOpenExportModal: false,
+  pendingMenuAction: null,
   fontDataByLoadedName: new Map(),
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
@@ -856,6 +860,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setPendingOpenExportModal: (value) => set({ pendingOpenExportModal: value }),
+  setPendingMenuAction: (value) => set({ pendingMenuAction: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
   setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),

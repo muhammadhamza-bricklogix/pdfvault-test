@@ -53,7 +53,7 @@ export function DeleteDocumentModal({ document: doc, onClose }: Props) {
             </Button>
             <Button
               isDisabled={remove.isPending}
-              variant="danger"
+              variant="primary"
               onPress={() => void handleConfirm()}
             >
               {remove.isPending ? "Deleting..." : "Delete"}
