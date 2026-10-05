@@ -68,10 +68,10 @@ export default async function ConvertPage({
       <main>
         <section className="bg-white pb-8 pt-14 sm:pb-10 sm:pt-20">
           <div className="pv-container flex flex-col items-center text-center">
-            <h1 className="font-bold leading-[1.05] tracking-[-0.03em] whitespace-nowrap text-[clamp(15px,5.5vw,56px)] text-[#121212]">
+            <h1 className="font-bold leading-[1.05] tracking-[-0.03em] text-balance text-[clamp(15px,5.5vw,56px)] text-[#121212]">
               {route.heroTitle ?? route.title}
             </h1>
-            <p className="mt-6 font-medium leading-relaxed whitespace-nowrap text-[clamp(11px,2.3vw,20px)] text-[var(--pv-gray-8)]">
+            <p className="mt-6 font-medium leading-relaxed text-balance text-[clamp(15px,2.3vw,20px)] text-[var(--pv-gray-8)]">
               {route.heroSubtitle ?? route.description}
             </p>
           </div>

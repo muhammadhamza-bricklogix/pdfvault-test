@@ -212,7 +212,7 @@ export function LandingFooter() {
               logo, tagline, and support email all flush-left within the
               column so the eye reads brand → tagline → contact in a single
               vertical line). */}
-          <div className="pv-footer-brand col-span-2 flex min-w-0 flex-col text-center sm:col-span-4 md:col-span-1 md:pe-16 md:text-start lg:pe-24">
+          <div className="pv-footer-brand col-span-2 flex min-w-0 flex-col items-center text-center sm:col-span-4 md:col-span-1 md:items-start md:pe-16 md:text-start md:rtl:items-end lg:pe-24">
             <Image
               alt="PDFVault"
               className="h-[40px] w-auto brightness-0 invert"
@@ -246,7 +246,7 @@ export function LandingFooter() {
               <h2 className="text-[14px] font-semibold uppercase tracking-[0.04em] text-white">
                 {column.heading}
               </h2>
-              <ul className="pv-footer-link-list mt-6 flex min-w-0 flex-col gap-[18px]">
+              <ul className="pv-footer-link-list mt-6 flex min-w-0 flex-col items-center gap-[18px] md:items-start md:rtl:items-end">
                 {column.links.map((link) => (
                   <li key={link.label} className="min-w-0 max-w-full">
                     <LocaleNavLink
