@@ -43,6 +43,15 @@ const BACKEND_SCHEMA_OUT = path.join(
 const EXPECTED_UNMAPPED = [];
 
 const t = (id, label, pdf, extra = {}) => ({ id, label, pdf, type: "text", ...extra });
+/**
+ * A date field, rendered by DateField with a calendar glyph and a native
+ * picker. The store holds the display string `MM/DD/YYYY`.
+ *
+ * "Book Issue Date" and "Card Issue Date" are comb boxes of 8 cells expecting
+ * MMDDYYYY, so the separators have to come back out before stamping — see
+ * COMB_DATE_FIELDS in stamp-ds82-client.ts and in the backend filler.
+ */
+const d = (id, label, pdf, extra = {}) => ({ id, label, pdf, type: "date", ...extra });
 const choice = (id, label, pdf, options, extra = {}) => ({
   id,
   label,
@@ -133,9 +142,9 @@ const SECTIONS = [
         required: true,
       }),
       t("book_number", "Most recent passport book number", "Book Number"),
-      t("book_issue_date", "Book issue date", "Book Issue Date"),
+      d("book_issue_date", "Book issue date", "Book Issue Date"),
       t("card_number", "Most recent passport card number", "Card Number"),
-      t("card_issue_date", "Card issue date", "Card Issue Date"),
+      d("card_issue_date", "Card issue date", "Card Issue Date"),
     ],
   },
   {
@@ -148,7 +157,7 @@ const SECTIONS = [
         { id: "CourtOrder", label: "Changed by court order" },
       ]),
       t("name_change_place", "Place of name change (city / state)", "Name Change Place"),
-      t("name_change_date", "Date of name change", "Name Change Date"),
+      d("name_change_date", "Date of name change", "Name Change Date"),
     ],
   },
   {
@@ -158,7 +167,7 @@ const SECTIONS = [
       "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
     fields: [
       t("applicant_name_page2", "Name of applicant (last, first & middle)", "Name of Applicant 2"),
-      t("applicant_dob_page2", "Date of birth", "Applicant DOB 2"),
+      d("applicant_dob_page2", "Date of birth", "Applicant DOB 2"),
     ],
   },
   {
@@ -177,17 +186,37 @@ const SECTIONS = [
     title: "17. Additional Contact Phone Numbers",
     fields: [
       t("additional_phone_1", "Additional phone number 1", "Additional Phone 1"),
+      // The printed grid has a fourth, unlabelled box followed by a ruled line
+      // to write the type in, so "Other" pairs with a free-text field.
       choice("additional_phone_1_type", "Phone 1 type", "Additional Phone 1 Type", [
         { id: "Home", label: "Home" },
         { id: "Work", label: "Work" },
         { id: "Cell", label: "Cell" },
+        { id: "Other", label: "Other" },
       ]),
+      // Only live while "Other" is the selected type. The group is
+      // single-select, so picking Home/Work/Cell deselects Other and this
+      // disappears; the store clears it at the same time so a stale value
+      // cannot be stamped into a form that no longer shows the field.
+      t(
+        "additional_phone_1_other",
+        "Phone 1 other type",
+        "Additional Phone 1 Other",
+        { showIf: { additional_phone_1_type: "Other" } },
+      ),
       t("additional_phone_2", "Additional phone number 2", "Additional Phone 2"),
       choice("additional_phone_2_type", "Phone 2 type", "Additional Phone 2 Type", [
         { id: "Home", label: "Home" },
         { id: "Work", label: "Work" },
         { id: "Cell", label: "Cell" },
+        { id: "Other", label: "Other" },
       ]),
+      t(
+        "additional_phone_2_other",
+        "Phone 2 other type",
+        "Additional Phone 2 Other",
+        { showIf: { additional_phone_2_type: "Other" } },
+      ),
     ],
   },
   {
@@ -227,8 +256,8 @@ const SECTIONS = [
     title: "20. Travel Plans",
     description: 'If you have no travel plans, write "none".',
     fields: [
-      t("departure_date", "Departure date", "Departure Date"),
-      t("return_date", "Return date", "Return Date"),
+      d("departure_date", "Departure date", "Departure Date"),
+      d("return_date", "Return date", "Return Date"),
       t("countries_visited", "Countries to be visited", "Countries To Be Visited"),
     ],
   },
@@ -438,7 +467,13 @@ ${resolved.map(renderSection).join("\n")}
 fs.writeFileSync(CLIENT_OUT, clientSchema.replace(/\r?\n/g, "\r\n"));
 
 const all = resolved.flatMap((s) => s.fields);
-const texts = all.filter((f) => f.type === "text");
+// Everything that is not a choice group is a text field as far as the PDF and
+// the backend filler are concerned — "date" is a UI affordance (a picker and a
+// calendar glyph), not a different kind of AcroForm widget. Filtering on
+// `type === "text"` instead silently dropped the six date fields from the
+// backend table, so the server stopped filling them at all. Matches
+// `collectBackendTables` in build-ds11-schema.mjs, which buckets by "not radio".
+const texts = all.filter((f) => f.type !== "radio");
 const choices = all.filter((f) => f.type === "radio");
 
 const backendFields = `/**

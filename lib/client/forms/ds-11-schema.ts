@@ -56,8 +56,7 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 5, x: 335.96, y: 710.51, w: 12.56, h: 10.93 },
             },
           ],
-          helpText:
-            "The passport card is not valid for international air travel.",
+          helpText: "The passport card is not valid for international air travel.",
         },
         {
           id: "book_size",
@@ -78,10 +77,8 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 5, x: 243.49, y: 691.53, w: 10.8, h: 10.8 },
             },
           ],
-          helpText:
-            "The large book is for frequent international travelers who need more visa pages.",
-        },
-      ],
+          helpText: "The large book is for frequent international travelers who need more visa pages.",
+        },      ],
     },
 
     {
@@ -171,8 +168,7 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "Applicant Place of Birth",
           rect: { page: 5, x: 308.53, y: 579.95, w: 277.05, h: 21.51 },
           maxLength: 18,
-          helpText:
-            "City and state if in the U.S., or city and country as it is presently known.",
+          helpText: "City and state if in the U.S., or city and country as it is presently known.",
         },
         {
           id: "ssn_1",
@@ -209,8 +205,7 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "Alien Number",
           rect: { page: 5, x: 239.99, y: 546.19, w: 146.76, h: 22 },
           maxLength: 9,
-          helpText:
-            "Digits only - the form already prints the leading A- for you.",
+          helpText: "Digits only - the form already prints the leading A- for you.",
         },
         {
           id: "email",
@@ -219,10 +214,8 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Applicant Email",
           rect: { page: 5, x: 397.38, y: 544.32, w: 187.62, h: 22.32 },
-          helpText:
-            "Used to check application status at passportstatus.state.gov.",
-        },
-      ],
+          helpText: "Used to check application status at passportstatus.state.gov.",
+        },      ],
     },
 
     {
@@ -238,8 +231,7 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "Applicant Address Street",
           rect: { page: 5, x: 26.18, y: 514.97, w: 554.79, h: 20.38 },
           maxLength: 36,
-          helpText:
-            "Street/RFD#, P.O. Box, or URB. Also include apartment, suite, etc.",
+          helpText: "Street/RFD#, P.O. Box, or URB. Also include apartment, suite, etc.",
         },
         {
           id: "mailing_line2",
@@ -249,8 +241,7 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "Address Line 2",
           rect: { page: 5, x: 26.84, y: 481.43, w: 553.79, h: 22.82 },
           maxLength: 36,
-          helpText:
-            "If the applicant is a child, write In Care Of the parent. Example: In Care Of - Jane Doe.",
+          helpText: "If the applicant is a child, write In Care Of the parent. Example: In Care Of - Jane Doe.",
         },
         {
           id: "mailing_city",
@@ -323,8 +314,7 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "List all other name you have used",
           rect: { page: 5, x: 190.96, y: 417.82, w: 187.77, h: 19.93 },
           maxLength: 13,
-          helpText:
-            "Birth name, maiden name, previous marriage, or legal name change.",
+          helpText: "Birth name, maiden name, previous marriage, or legal name change.",
         },
         {
           id: "other_name_b",
@@ -334,15 +324,13 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "List all other names you have used",
           rect: { page: 5, x: 396.96, y: 417.8, w: 185.32, h: 21.51 },
           maxLength: 13,
-        },
-      ],
+        },      ],
     },
 
     {
       id: "page2_header",
       title: "Page 2 Header",
-      description:
-        "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
+      description: "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
       fields: [
         {
           id: "applicant_name_page2",
@@ -355,12 +343,11 @@ export const DS_11_SCHEMA: FormSchema = {
         {
           id: "applicant_dob_page2",
           label: "Date of Birth (MM/DD/YYYY)",
-          type: "text",
+          type: "date",
           required: false,
           pdfRef: "Applicant DOB 2",
           rect: { page: 6, x: 455.67, y: 738.07, w: 130.36, h: 21.35 },
-        },
-      ],
+        },      ],
     },
 
     {
@@ -511,8 +498,7 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 6, x: 530.44, y: 599.5, w: 8.64, h: 8.64 },
             },
           ],
-        },
-      ],
+        },      ],
     },
 
     {
@@ -541,14 +527,12 @@ export const DS_11_SCHEMA: FormSchema = {
         },
         {
           id: "spouse_name",
-          label:
-            "Full name of current or most recent spouse (Last, First and Middle)",
+          label: "Full name of current or most recent spouse (Last, First and Middle)",
           type: "text",
           required: false,
-          pdfRef:
-            "Full Name of Current Spouse or Most Recent Spouse (Last, first, Middle)",
+          pdfRef: "Full Name of Current Spouse or Most Recent Spouse (Last, first, Middle)",
           rect: { page: 6, x: 28.27, y: 558.07, w: 292.21, h: 21.88 },
-          showIf: { ever_married: "Yes" },
+          showIf: {"ever_married":"Yes"},
         },
         {
           id: "spouse_dob",
@@ -557,7 +541,7 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Current Spouse Date of Birth",
           rect: { page: 6, x: 326.43, y: 557.47, w: 130.36, h: 22 },
-          showIf: { ever_married: "Yes" },
+          showIf: {"ever_married":"Yes"},
         },
         {
           id: "spouse_birthplace",
@@ -566,7 +550,7 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Current Spouse Place of Birth",
           rect: { page: 6, x: 462.35, y: 556.41, w: 122.57, h: 23.48 },
-          showIf: { ever_married: "Yes" },
+          showIf: {"ever_married":"Yes"},
         },
         {
           id: "spouse_us_citizen",
@@ -587,7 +571,7 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 6, x: 58.84, y: 535.57, w: 8.64, h: 8.64 },
             },
           ],
-          showIf: { ever_married: "Yes" },
+          showIf: {"ever_married":"Yes"},
         },
         {
           id: "marriage_date",
@@ -596,7 +580,7 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Date of Marriage (mm/dd/yyyy)",
           rect: { page: 6, x: 152.13, y: 533.58, w: 100.1, h: 22 },
-          showIf: { ever_married: "Yes" },
+          showIf: {"ever_married":"Yes"},
         },
         {
           id: "widowed_divorced",
@@ -617,7 +601,7 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 6, x: 343.28, y: 535.86, w: 8.64, h: 8.64 },
             },
           ],
-          showIf: { ever_married: "Yes" },
+          showIf: {"ever_married":"Yes"},
         },
         {
           id: "widow_divorce_date",
@@ -626,9 +610,8 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Widow/Divorce Date (mm/dd/yyyy)",
           rect: { page: 6, x: 491.4, y: 533.67, w: 93.05, h: 22 },
-          showIf: { ever_married: "Yes", widowed_divorced: "Yes" },
-        },
-      ],
+          showIf: {"ever_married":"Yes","widowed_divorced":"Yes"},
+        },      ],
     },
 
     {
@@ -674,6 +657,15 @@ export const DS_11_SCHEMA: FormSchema = {
           ],
         },
         {
+          id: "additional_phone_other",
+          label: "Additional phone type (other)",
+          type: "text",
+          required: false,
+          pdfRef: "Additional # Other",
+          rect: { page: 6, x: 241.7, y: 501, w: 36, h: 10 },
+          showIf: {"additional_phone_type":"Other"},
+        },
+        {
           id: "occupation",
           label: "13. Occupation (if age 16 or older)",
           type: "text",
@@ -688,8 +680,7 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Employer or School",
           rect: { page: 6, x: 429.95, y: 498.48, w: 156.55, h: 21.35 },
-        },
-      ],
+        },      ],
     },
 
     {
@@ -745,15 +736,13 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Countries to be visited",
           rect: { page: 6, x: 411.23, y: 456.32, w: 173.74, h: 21.11 },
-        },
-      ],
+        },      ],
     },
 
     {
       id: "permanent-address",
       title: "19. Permanent Address",
-      description:
-        "Complete only if a P.O. Box is listed above, or if your residence differs from your mailing address. Do not list a P.O. Box here.",
+      description: "Complete only if a P.O. Box is listed above, or if your residence differs from your mailing address. Do not list a P.O. Box here.",
       fields: [
         {
           id: "permanent_street",
@@ -796,15 +785,13 @@ export const DS_11_SCHEMA: FormSchema = {
           pdfRef: "Permanent Address Zip Code",
           rect: { page: 6, x: 490.09, y: 378.16, w: 95.67, h: 23.31 },
           maxLength: 6,
-        },
-      ],
+        },      ],
     },
 
     {
       id: "emergency",
       title: "20. Emergency Contact",
-      description:
-        "Someone not traveling with you, to be contacted in the event of an emergency.",
+      description: "Someone not traveling with you, to be contacted in the event of an emergency.",
       fields: [
         {
           id: "emergency_name",
@@ -871,8 +858,7 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Relationship to Applicant",
           rect: { page: 6, x: 451.5, y: 303.5, w: 132.5, h: 19.15 },
-        },
-      ],
+        },      ],
     },
 
     {
@@ -881,8 +867,7 @@ export const DS_11_SCHEMA: FormSchema = {
       fields: [
         {
           id: "ever_applied",
-          label:
-            "Have you ever applied for or been issued a U.S. Passport Book or Passport Card?",
+          label: "Have you ever applied for or been issued a U.S. Passport Book or Passport Card?",
           type: "radio",
           required: false,
           pdfRef: "Ever Applied or Issued",
@@ -905,10 +890,9 @@ export const DS_11_SCHEMA: FormSchema = {
           label: "Name printed on your most recent book",
           type: "text",
           required: false,
-          pdfRef:
-            "Your name as printed on your most recent U.S. passport book and/or passport card",
+          pdfRef: "Your name as printed on your most recent U.S. passport book and/or passport card",
           rect: { page: 6, x: 28.43, y: 257.18, w: 127.09, h: 22 },
-          showIf: { ever_applied: "Yes" },
+          showIf: {"ever_applied":"Yes"},
         },
         {
           id: "book_status",
@@ -939,7 +923,7 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 6, x: 215.28, y: 258.16, w: 8.64, h: 8.64 },
             },
           ],
-          showIf: { ever_applied: "Yes" },
+          showIf: {"ever_applied":"Yes"},
         },
         {
           id: "prior_card_name",
@@ -948,7 +932,7 @@ export const DS_11_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Name as printed on your most recent passport card",
           rect: { page: 6, x: 310.91, y: 257, w: 119.54, h: 21.23 },
-          showIf: { ever_applied: "Yes" },
+          showIf: {"ever_applied":"Yes"},
         },
         {
           id: "card_status",
@@ -979,23 +963,20 @@ export const DS_11_SCHEMA: FormSchema = {
               rect: { page: 6, x: 492.83, y: 257.12, w: 8.64, h: 8.64 },
             },
           ],
-          showIf: { ever_applied: "Yes" },
+          showIf: {"ever_applied":"Yes"},
         },
         {
           id: "loss_circumstances",
-          label:
-            "If your most recent book or card was lost or stolen, explain in detail",
+          label: "If your most recent book or card was lost or stolen, explain in detail",
           type: "text",
           required: false,
           pdfRef: "Circumstances of lost/stolen book/card",
           rect: { page: 6, x: 29.27, y: 197.19, w: 558.26, h: 35.36 },
           maxLength: 250,
           multiline: true,
-          showIf: { ever_applied: "Yes" },
-          helpText:
-            "Include the previous book or card number, the date and location of the loss or theft, and whether you filed a police report.",
-        },
-      ],
+          showIf: {"ever_applied":"Yes"},
+          helpText: "Include the previous book or card number, the date and location of the loss or theft, and whether you filed a police report.",
+        },      ],
     },
   ],
 };

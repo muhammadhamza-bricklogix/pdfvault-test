@@ -2318,5 +2318,25 @@
       }
     ],
     "maxLength": 2
+  },
+  {
+    "name": "Additional # Other",
+    "type": "PDFTextField",
+    "acroType": "PDFAcroText",
+    "flags": {
+      "raw": 0,
+      "names": []
+    },
+    "widgets": [
+      {
+        "page": 6,
+        "x": 241.7,
+        "y": 501,
+        "width": 36,
+        "height": 10,
+        "onValue": null,
+        "normalAppearance": "ref"
+      }
+    ]
   }
 ]

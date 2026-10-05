@@ -233,6 +233,33 @@ const SECTIONS = [
     ],
   },
   {
+    // The form repeats the applicant's name and date of birth at the top of
+    // page 2. Both are editable in their own right: `stampPageTwoHeader` in the
+    // client stamper and the backend filler only fall back to mirroring page 1
+    // when these are left blank, so a typed value wins.
+    //
+    // These live here, in the generator, rather than being hand-added to the
+    // generated schema — doing the latter is how they were lost once already,
+    // silently, on the next rebuild.
+    id: "page2_header",
+    title: "Page 2 Header",
+    description:
+      "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
+    fields: [
+      {
+        id: "applicant_name_page2",
+        label: "Name of Applicant (Last, First, & Middle)",
+        pdf: "Name of Applicant 2",
+      },
+      {
+        id: "applicant_dob_page2",
+        label: "Date of Birth (MM/DD/YYYY)",
+        pdf: "Applicant DOB 2",
+        type: "date",
+      },
+    ],
+  },
+  {
     id: "parents",
     title: "10. Parental Information",
     description: "Both parents, as named at their own birth.",
@@ -394,6 +421,19 @@ const SECTIONS = [
         ],
       },
       {
+        // Pairs with the "Other" box above, which prints a ruled line to write
+        // the phone type on. The State Department shipped the checkbox without
+        // a field for the line; scripts/patch-ds11-template.mjs adds it.
+        id: "additional_phone_other",
+        label: "Additional phone type (other)",
+        pdf: "Additional # Other",
+        // Only live while "Other" is the selected type. The group is
+        // single-select, so picking Home/Work/Cell deselects Other and this
+        // disappears; the store clears it at the same time so a stale value
+        // cannot be stamped into a form that no longer shows the field.
+        showIf: { additional_phone_type: "Other" },
+      },
+      {
         id: "occupation",
         label: "13. Occupation (if age 16 or older)",
         pdf: "Occupation",
@@ -552,11 +592,11 @@ const SECTIONS = [
 ];
 
 /** Completed in person by the acceptance agent, or mirrored by the filler. */
-const EXPECTED_UNMAPPED = new Set([
-  "Clear",
-  "Name of Applicant 2",
-  "Applicant DOB 2",
-]);
+// "Name of Applicant 2" and "Applicant DOB 2" used to sit here. They are now
+// mapped by the page2_header section above, so leaving them listed would let a
+// future drop go unnoticed — the guard exists to shout when a field is not
+// reachable from the editor.
+const EXPECTED_UNMAPPED = new Set(["Clear"]);
 
 const raw = JSON.parse(fs.readFileSync(RAW_PATH, "utf8"));
 const byName = new Map(raw.map((f) => [f.name, f]));

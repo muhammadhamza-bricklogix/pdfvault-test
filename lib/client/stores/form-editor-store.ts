@@ -4,6 +4,42 @@ import type { FormSchema, FormSession } from "@/lib/shared/types/forms.types";
 
 import { create } from "zustand";
 
+import { fieldIsVisible } from "@/components/sections/forms/visibility";
+
+/**
+ * Drops the value of any field whose `showIf` is no longer satisfied.
+ *
+ * Hiding a field in the overlay is not enough on its own: the value stays in
+ * the store, gets autosaved, and is stamped into a PDF that no longer shows the
+ * field it came from. Typing a phone type beside "Other" and then picking
+ * "Work" would leave the old text on the printed form.
+ *
+ * Only reached from `setValue`, the user-edit path. `setValues` is deliberately
+ * left alone — it is how a resumed draft is restored, and a dependent value can
+ * legitimately arrive before the field that controls it.
+ */
+function pruneHiddenValues(
+  schema: FormSchema | null,
+  values: Record<string, string>,
+): Record<string, string> {
+  if (!schema) return values;
+
+  let next = values;
+
+  for (const section of schema.sections) {
+    for (const field of section.fields) {
+      if (!field.showIf) continue;
+      if (!next[field.id]) continue;
+      if (fieldIsVisible(field, next)) continue;
+
+      if (next === values) next = { ...values };
+      delete next[field.id];
+    }
+  }
+
+  return next;
+}
+
 type FormEditorState = {
   // Server state
   sessionId: string | null;
@@ -82,7 +118,7 @@ export const useFormEditorStore = create<FormEditorState>()((set) => ({
 
   setValue: (fieldId, value) =>
     set((s) => ({
-      values: { ...s.values, [fieldId]: value },
+      values: pruneHiddenValues(s.schema, { ...s.values, [fieldId]: value }),
       errors: { ...s.errors, [fieldId]: "" },
     })),
 
