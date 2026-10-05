@@ -19,6 +19,7 @@ import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
 import { SentryUserContext } from "@/components/shared/sentry-user-context";
 import { UserSyncBoot } from "@/components/shared/user-sync-boot";
+import { VisualViewportSync } from "@/components/shared/visual-viewport-sync";
 import { UploadToastProvider } from "@/components/ui/upload-toast";
 
 import { QueryProvider } from "./query-provider";
@@ -56,6 +57,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <SentryUserContext />
           <EditorEventsLogger />
           <LangPrefHonor />
+          <VisualViewportSync />
         </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>

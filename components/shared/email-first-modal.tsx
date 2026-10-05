@@ -10,6 +10,7 @@ import Link from "next/link";
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { runAutoSignup } from "@/lib/client/auth/auto-signup";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { useVisualViewportFrame } from "@/lib/client/ui/visual-viewport";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -101,66 +102,9 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [keyboardViewport, setKeyboardViewport] = useState<{
-    height: number;
-    top: number;
-  } | null>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
-
-  const scrollEmailInputIntoView = useCallback(
-    (block: ScrollLogicalPosition = "nearest") => {
-      emailInputRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block,
-        inline: "nearest",
-      });
-    },
-    [],
-  );
-
-  const lastKeyboardViewportRef = useRef<{
-    height: number;
-    top: number;
-  } | null>(null);
-
-  const syncKeyboardViewport = useCallback(() => {
-    const visualViewport = window.visualViewport;
-    const input = emailInputRef.current;
-    let next: { height: number; top: number } | null = null;
-
-    if (
-      visualViewport &&
-      document.activeElement === input &&
-      visualViewport.height < window.innerHeight - 80
-    ) {
-      next = {
-        height: Math.floor(visualViewport.height),
-        top: Math.max(0, Math.floor(visualViewport.offsetTop)),
-      };
-    }
-
-    // Only react when the keyboard opens or resizes; re-scrolling on every viewport scroll loops on iOS.
-    const prev = lastKeyboardViewportRef.current;
-
-    if (next?.height === prev?.height && next?.top === prev?.top) return;
-    const shouldReveal = next !== null && next.height !== prev?.height;
-
-    lastKeyboardViewportRef.current = next;
-    setKeyboardViewport(next);
-    if (shouldReveal) {
-      requestAnimationFrame(() => scrollEmailInputIntoView("center"));
-    }
-  }, [scrollEmailInputIntoView]);
-
-  const focusEmailInputWithoutPageScroll = useCallback(() => {
-    const input = emailInputRef.current;
-
-    if (!input) return;
-
-    input.focus({ preventScroll: true });
-    requestAnimationFrame(syncKeyboardViewport);
-    window.setTimeout(syncKeyboardViewport, 250);
-  }, [syncKeyboardViewport]);
+  // Follows the visible area while the keyboard is open; VisualViewportSync reveals the input.
+  const keyboardViewport = useVisualViewportFrame(detail !== null);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -178,49 +122,15 @@ export function EmailFirstModal() {
     return () => window.removeEventListener("app:email-first-modal", onOpen);
   }, []);
 
-  // Focus without letting the browser scroll the page to bring the input
-  // into view — the modal is already centered via CSS. On mobile the
-  // keyboard opens AFTER focus and shrinks the visible area, which can
-  // push the input above the fold; re-run scrollIntoView (targets the
-  // modal's own scrollable container, not the page) on visualViewport
-  // resize so the input stays reachable once the keyboard settles.
+  // Focus without letting the browser scroll the page; the modal is already centred.
   useEffect(() => {
     if (!detail) return;
-    focusEmailInputWithoutPageScroll();
-    requestAnimationFrame(() => scrollEmailInputIntoView("nearest"));
-    window.setTimeout(() => scrollEmailInputIntoView("center"), 250);
-
-    const vv = window.visualViewport;
-
-    if (!vv) return;
-
-    const handleViewportResize = () => {
-      if (document.activeElement !== emailInputRef.current) return;
-
-      syncKeyboardViewport();
-    };
-
-    vv.addEventListener("resize", handleViewportResize);
-    vv.addEventListener("scroll", handleViewportResize);
-
-    return () => {
-      vv.removeEventListener("resize", handleViewportResize);
-      vv.removeEventListener("scroll", handleViewportResize);
-      lastKeyboardViewportRef.current = null;
-      setKeyboardViewport(null);
-    };
-  }, [
-    detail,
-    focusEmailInputWithoutPageScroll,
-    scrollEmailInputIntoView,
-    syncKeyboardViewport,
-  ]);
+    emailInputRef.current?.focus({ preventScroll: true });
+  }, [detail]);
 
   const close = useCallback(() => {
     setDetail(null);
     setSubmitting(false);
-    lastKeyboardViewportRef.current = null;
-    setKeyboardViewport(null);
   }, []);
 
   useEffect(() => {
@@ -239,19 +149,6 @@ export function EmailFirstModal() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [close, detail]);
-
-  const handleEmailPointerDown = useCallback(() => {
-    window.setTimeout(syncKeyboardViewport, 0);
-  }, [syncKeyboardViewport]);
-
-  const handleEmailBlur = useCallback(() => {
-    window.setTimeout(() => {
-      if (document.activeElement !== emailInputRef.current) {
-        lastKeyboardViewportRef.current = null;
-        setKeyboardViewport(null);
-      }
-    }, 0);
-  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -561,12 +458,6 @@ export function EmailFirstModal() {
                         setEmail(e.target.value);
                         if (error) setError(null);
                       }}
-                      onBlur={handleEmailBlur}
-                      onFocus={() => {
-                        syncKeyboardViewport();
-                        scrollEmailInputIntoView("nearest");
-                      }}
-                      onPointerDown={handleEmailPointerDown}
                     />
                   </div>
                   {error ? (
