@@ -196,20 +196,25 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
           // flipped on. The raw error message is included so users can
           // share it for diagnosis.
           failedPagesRef.current.add(sourcePage);
-          if (usePdfEditorStore.getState().activeTool === "editText") {
+          const activeToolAtFailure = usePdfEditorStore.getState().activeTool;
+
+          if (activeToolAtFailure === "editText") {
             usePdfEditorStore.getState().setActiveTool("select");
           }
 
-          const rawMsg = err instanceof Error ? err.message : String(err ?? "");
-          const truncated =
-            rawMsg.length > 160 ? `${rawMsg.slice(0, 157)}…` : rawMsg;
-
-          toast.error({
-            title: "Text editing not supported on this browser",
-            description: truncated
-              ? `Reason: ${truncated}`
-              : "The text layer couldn't be loaded for this PDF.",
-          });
+          // Auto-extract on Select tool (QA 2026-09-16): swallow silently.
+          // Native pdf.js text still paints and the user never asked for the
+          // overlay, so no toast needed. Blank pages added via Manage Pages
+          // throw `sendWithStream` here — this is per-page, not a browser
+          // capability issue, so show a quiet info toast only when the user
+          // explicitly activated Edit Text.
+          if (activeToolAtFailure === "editText") {
+            toast.info({
+              title: "Text editing unavailable on this page",
+              description:
+                "This page's text layer couldn't be read. Try another page or re-open the file.",
+            });
+          }
 
           return;
         }
@@ -235,11 +240,19 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         logger.warn("[PDFedits] text: no blocks (scanned PDF?)", {
           sourcePage,
         });
-        const isCreatedBlank =
-          (file as (File & { __createdBlank?: boolean }) | null)
-            ?.__createdBlank === true;
+        const typedFile = file as
+          | (File & { __createdBlank?: boolean; __createdFromImage?: boolean })
+          | null;
+        const isCreatedBlank = typedFile?.__createdBlank === true;
+        // Image-to-PDF uploads (jpg/png → PDF) are rasterised by design;
+        // the toast is misleading when the user never asked for editable text.
+        const isCreatedFromImage = typedFile?.__createdFromImage === true;
 
-        if (!isCreatedBlank) {
+        if (
+          !isCreatedBlank &&
+          !isCreatedFromImage &&
+          activeTool === "editText"
+        ) {
           toast.info({
             description: "This page may be scanned or contain only images.",
             title: "No editable text found",
