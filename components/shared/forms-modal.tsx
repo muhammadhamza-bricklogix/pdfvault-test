@@ -41,6 +41,14 @@ const FORMS: readonly FormEntry[] = [
     href: ROUTES.FORMS.DS11,
     available: true,
   },
+  {
+    slug: "ds-82",
+    title: "Form DS-82",
+    description:
+      "Renew a U.S. passport by mail if yours is undamaged and was issued in the last 15 years.",
+    href: ROUTES.FORMS.DS82,
+    available: true,
+  },
 ];
 
 interface FormsModalProps {

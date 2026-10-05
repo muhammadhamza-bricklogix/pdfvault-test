@@ -11,7 +11,5 @@ export type ComposerLocale = keyof typeof messages;
 export type ComposerMessages = typeof en;
 
 export function getComposerMessages(locale: string): ComposerMessages {
-  return (
-    (messages as Record<string, ComposerMessages>)[locale] ?? messages.en
-  );
+  return (messages as Record<string, ComposerMessages>)[locale] ?? messages.en;
 }

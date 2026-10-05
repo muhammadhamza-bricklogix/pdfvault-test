@@ -65,7 +65,8 @@
       "watermark": "Marca de agua",
       "formsW9": "Formularios (W-9)",
       "forms1099Nec": "Formularios (1099-NEC)",
-      "formsDs11": "Formularios (DS-11)"
+      "formsDs11": "Formularios (DS-11)",
+      "formsDs82": "Formularios (DS-82)"
     }
   },
   "steps": {

@@ -32,6 +32,7 @@ import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { clearAllDs11Drafts } from "@/components/sections/forms/Ds11AutoPersist";
+import { clearAllDs82Drafts } from "@/components/sections/forms/Ds82AutoPersist";
 import { clearAllNecDrafts } from "@/components/sections/forms/NecAutoPersist";
 
 import { IdentityPopover } from "./identity-popover";
@@ -165,6 +166,7 @@ function ProfileRow({
     void usersService.signOutAudit().catch(() => undefined);
     clearAllNecDrafts();
     clearAllDs11Drafts();
+    clearAllDs82Drafts();
     void signOut({ redirectUrl: ROUTES.PUBLIC.HOME }).catch(() => {
       window.location.assign(ROUTES.PUBLIC.HOME);
     });
