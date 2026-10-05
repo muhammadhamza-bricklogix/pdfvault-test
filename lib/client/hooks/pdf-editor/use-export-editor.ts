@@ -149,11 +149,23 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   // during the auth-return flow where that sync hasn't run yet. Reading
   // Clerk's hook keeps the export gate honest at the exact moment the
   // event fires.
-  const { isLoaded: authLoaded, isSignedIn: clerkIsSignedIn, userId } = useAuth();
+  const {
+    isLoaded: authLoaded,
+    isSignedIn: clerkIsSignedIn,
+    userId,
+  } = useAuth();
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);
   const pdfDocDeferredAttemptsRef = useRef(0);
+  // QA PDF-287: when `editor:export` fires on a post-signin return
+  // (URL carries `?id=` and/or `?export=`) and Clerk hasn't finished
+  // committing the session cookie yet, `stateRef.current.clerkIsSignedIn`
+  // reads `false` for a tick. Deferring + retrying up to 10 times
+  // (~2.5 s total) lets the cookie commit before we fall back to
+  // re-dispatching EmailFirstModal. Reset to 0 once the signed-in
+  // check passes so a later legitimate signed-out export still works.
+  const signedInDeferAttemptsRef = useRef(0);
   const stateRef = useRef({
     currentPage,
     fabricCanvas,
@@ -369,6 +381,47 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
         // to the same editor with `?export=<fmt>` set, so the export
         // re-fires automatically.
         if (!signedIn) {
+          // QA PDF-287 defensive layer: on a post-signin return
+          // (`runAutoSignup` → `window.location.assign("/pdf-composer?id=X&export=Y")`),
+          // Clerk's session cookie can commit a few ticks AFTER
+          // `isLoaded` flips true. If the auto-launch fires in that
+          // window we read `signedIn === false` and would wrongly
+          // re-open EmailFirstModal, silently losing the paywall on
+          // first attempt. Defer + retry the export event up to 10
+          // times (~2.5 s) when the URL carries the `?id=` marker
+          // appended by `runAutoSignup` — that's the ONLY reliable
+          // signal that a signed-in session is on its way; `?export=`
+          // alone is used by signed-out deep-links too and must not
+          // defer. Only kicks in when `authReady` is already true;
+          // the authReady defer above handles the "Clerk still
+          // loading" case.
+          if (typeof window !== "undefined") {
+            const search = window.location.search;
+            const inPostSigninReturn = search.includes("id=");
+
+            if (inPostSigninReturn) {
+              const attempts = (signedInDeferAttemptsRef.current += 1);
+
+              if (attempts <= 10) {
+                logger.breadcrumb("export", "signedIn.deferred", {
+                  format,
+                  attempts,
+                });
+                isExportingRef.current = false;
+                window.setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent("editor:export", {
+                      detail: { filename: customFilename, format },
+                    }),
+                  );
+                }, 250);
+
+                return;
+              }
+              signedInDeferAttemptsRef.current = 0;
+            }
+          }
+
           logger.event(EVENTS.EXPORT_SIGNIN_REQUIRED, "info", { format });
           try {
             // Persist file + per-page Fabric edits + extractedPages across
@@ -469,6 +522,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
 
           return;
         }
+
+        // Reset the signed-in defer counter — the user is signed in,
+        // so a later signed-OUT export in the same editor session
+        // starts with a fresh retry budget.
+        signedInDeferAttemptsRef.current = 0;
 
         // Now that the auth + hydration checks are behind us, open the
         // "Preparing your <format> file…" toast. This is the point at

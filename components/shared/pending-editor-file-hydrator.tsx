@@ -579,8 +579,7 @@ export function PendingEditorFileHydrator() {
     // deep-links keep firing immediately so the EmailFirstModal
     // path is unchanged. See revert commit 21c896ea for the
     // original diagnosis.
-    const isPostSigninReturn =
-      Boolean(docId) || cameFromWelcomeEmail || isAuthReturn;
+    const isPostSigninReturn = Boolean(docId) || cameFromWelcomeEmail;
 
     if (isPostSigninReturn && !isSignedIn) return;
 
