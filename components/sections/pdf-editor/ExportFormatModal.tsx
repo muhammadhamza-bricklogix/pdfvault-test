@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { revealInDialog } from "@/lib/client/ui/visual-viewport";
 import { validateRenameBaseName } from "@/lib/shared/schemas/documents/rename.schema";
 
 type FormatOption = {
@@ -156,16 +157,10 @@ function ExportFormatModalBody({
   const [isSaving, setIsSaving] = useState(false);
   const fileNameInputRef = useRef<HTMLInputElement>(null);
 
-  const scrollFileNameInputIntoView = useCallback(
-    (block: ScrollLogicalPosition = "nearest") => {
-      fileNameInputRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block,
-        inline: "nearest",
-      });
-    },
-    [],
-  );
+  // Scrolls the dialog only; page scrolling makes iOS hide the modal behind the keyboard.
+  const revealFileNameInput = useCallback(() => {
+    revealInDialog(fileNameInputRef.current);
+  }, []);
 
   const focusFileNameInput = useCallback(() => {
     const input = fileNameInputRef.current;
@@ -174,26 +169,8 @@ function ExportFormatModalBody({
 
     input.focus({ preventScroll: true });
     input.select();
-    requestAnimationFrame(() => scrollFileNameInputIntoView("nearest"));
-    window.setTimeout(() => scrollFileNameInputIntoView("center"), 250);
-  }, [scrollFileNameInputIntoView]);
-
-  useEffect(() => {
-    const visualViewport = window.visualViewport;
-
-    if (!visualViewport) return;
-
-    const handleViewportResize = () => {
-      if (document.activeElement !== fileNameInputRef.current) return;
-
-      scrollFileNameInputIntoView("center");
-    };
-
-    visualViewport.addEventListener("resize", handleViewportResize);
-
-    return () =>
-      visualViewport.removeEventListener("resize", handleViewportResize);
-  }, [scrollFileNameInputIntoView]);
+    requestAnimationFrame(revealFileNameInput);
+  }, [revealFileNameInput]);
 
   // Duplicate-name check against the user's My PDFs library. Only
   // runs on the W-9 route per product ask 2026-08-29 — the shell
@@ -443,7 +420,7 @@ function ExportFormatModalBody({
                 className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
                 id="export-file-name"
                 placeholder="document"
-                onFocus={() => scrollFileNameInputIntoView("nearest")}
+                onFocus={revealFileNameInput}
               />
             </TextField>
             <button
