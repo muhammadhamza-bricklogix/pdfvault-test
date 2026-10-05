@@ -2,6 +2,8 @@
 
 import type { FieldProps } from "./types";
 
+import { Calendar01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FieldError,
   Input,
@@ -52,6 +54,9 @@ export function DateField({ field, mode, page }: FieldProps) {
     const css = pdfRectToCss(field.rect, page);
     const hasValue = Boolean(isoValue);
     const fontSize = Math.max(css.height * 0.55, 11);
+    // Scales with zoom like the text, but clamped: the narrowest date box on
+    // either form is 93pt wide, so the glyph must never crowd out MM/DD/YYYY.
+    const iconSize = Math.round(Math.min(Math.max(css.height * 0.6, 11), 18));
 
     // Two-layer strategy so the picked date is ALWAYS legible:
     //
@@ -66,9 +71,13 @@ export function DateField({ field, mode, page }: FieldProps) {
     //   2. A read-only <span> painted on top renders the formatted
     //      `MM/DD/YYYY` string (or the placeholder) so the visible
     //      value matches `values[field.id]` exactly, regardless of the
-    //      browser's locale-dependent `input[type=date]` render.
+    //      browser's locale-dependent `input[type=date]` render. It also
+    //      carries our own calendar glyph, which is why the native one
+    //      stays hidden: the browser's is unstyleable and differently
+    //      sized per engine, while ours scales with the zoom and is
+    //      clamped to fit the narrowest box on either form.
     //      `pointer-events: none` on the span lets the input underneath
-    //      still receive clicks.
+    //      still receive clicks — including clicks on the icon itself.
     return (
       <div
         className="pointer-events-none absolute"
@@ -105,13 +114,27 @@ export function DateField({ field, mode, page }: FieldProps) {
             }
           }}
         />
-        <span
-          className={`pointer-events-none absolute inset-0 flex items-center justify-center px-1 leading-none tabular-nums ${
-            hasValue ? "text-black" : "italic text-black/55"
-          }`}
-          style={{ fontSize }}
-        >
-          {hasValue ? value : "MM/DD/YYYY"}
+        <span className="pointer-events-none absolute inset-0 flex items-center gap-1 px-1 leading-none">
+          <span
+            className={`min-w-0 flex-1 truncate text-center tabular-nums ${
+              hasValue ? "text-black" : "italic text-black/55"
+            }`}
+            style={{ fontSize }}
+          >
+            {hasValue ? value : "MM/DD/YYYY"}
+          </span>
+          {/* Our own glyph, at a size we control, rather than the browser's.
+              The whole overlay is still one click target — this span is
+              pointer-events-none, so a click on the icon falls through to the
+              input beneath and opens the picker. */}
+          {/* Black, not the accent colour: this sits on the printed form
+              itself, where a brand colour reads as part of the document
+              rather than as a control. */}
+          <HugeiconsIcon
+            className="shrink-0 text-black"
+            icon={Calendar01Icon}
+            size={iconSize}
+          />
         </span>
       </div>
     );
