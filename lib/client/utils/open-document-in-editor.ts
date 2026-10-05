@@ -25,6 +25,36 @@ function isW9Document(doc: Pick<Document, "editorState">): boolean {
   }
 }
 
+function isDs11Document(doc: Pick<Document, "editorState">): boolean {
+  const raw = doc.editorState;
+
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { ds11?: unknown };
+
+    return (
+      typeof parsed === "object" && parsed !== null && Boolean(parsed.ds11)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isDs82Document(doc: Pick<Document, "editorState">): boolean {
+  const raw = doc.editorState;
+
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { ds82?: unknown };
+
+    return (
+      typeof parsed === "object" && parsed !== null && Boolean(parsed.ds82)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isNecDocument(doc: Pick<Document, "editorState">): boolean {
   const raw = doc.editorState;
 
@@ -67,13 +97,17 @@ export async function openDocumentInEditor(
   // the generic composer.
   let w9 = isW9Document(doc);
   let nec = isNecDocument(doc);
+  let ds11 = isDs11Document(doc);
+  let ds82 = isDs82Document(doc);
 
-  if (!w9 && !nec && doc.editorState == null) {
+  if (!w9 && !nec && !ds11 && !ds82 && doc.editorState == null) {
     try {
       const full = await documentsService.getDocument(doc.id);
 
       w9 = isW9Document(full);
       nec = isNecDocument(full);
+      ds11 = isDs11Document(full);
+      ds82 = isDs82Document(full);
     } catch {
       // Non-fatal: fall through to the composer route.
     }
@@ -91,6 +125,22 @@ export async function openDocumentInEditor(
     const query = new URLSearchParams({ resumeDocId: doc.id });
 
     router.push(`${ROUTES.FORMS.NEC_1099_EDIT}?${query.toString()}`);
+
+    return;
+  }
+
+  if (ds11) {
+    const query = new URLSearchParams({ resumeDocId: doc.id });
+
+    router.push(`${ROUTES.FORMS.DS11_EDIT}?${query.toString()}`);
+
+    return;
+  }
+
+  if (ds82) {
+    const query = new URLSearchParams({ resumeDocId: doc.id });
+
+    router.push(`${ROUTES.FORMS.DS82_EDIT}?${query.toString()}`);
 
     return;
   }

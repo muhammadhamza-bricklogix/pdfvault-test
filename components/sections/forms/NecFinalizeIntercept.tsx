@@ -9,6 +9,12 @@ import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { invalidateLibraryIndex } from "@/lib/client/documents/library-filename-index";
 import { resolveFilenameConflict } from "@/lib/client/documents/resolve-filename-conflict";
 import { isDuplicatePromptOpen } from "@/lib/client/hooks/documents/duplicate-prompt-bus";
+import {
+  describeFieldErrors,
+  extractApiFieldErrors,
+  labelFieldErrors,
+} from "@/lib/client/forms/api-field-errors";
+import { NEC_1099_SCHEMA } from "@/lib/client/forms/1099-nec-schema";
 import { downloadStampedFormAsImages } from "@/lib/client/forms/download-form-images";
 import {
   bindNecDraftToDocument,
@@ -535,13 +541,33 @@ export function NecFinalizeIntercept() {
       } catch (err) {
         toast.close(loadingKey);
         logger.captureError(err, "1099-nec.finalize");
-        toast.error({
-          title: "Finalization failed",
-          description:
-            err instanceof Error
-              ? err.message
-              : "Could not finalize the form. Please try again.",
-        });
+
+        const apiErrors = extractApiFieldErrors(err);
+
+        if (apiErrors.length > 0) {
+          const labelled = labelFieldErrors(apiErrors, NEC_1099_SCHEMA);
+
+          useFormEditorStore.getState().setErrors(labelled);
+          toast.error({
+            title: "Check your 1099-NEC",
+            description: describeFieldErrors(labelled),
+          });
+
+          const firstEl = document.getElementById(
+            `field-input-${apiErrors[0]!.field}`,
+          );
+
+          firstEl?.scrollIntoView({ block: "center", behavior: "smooth" });
+          (firstEl as HTMLInputElement | null)?.focus?.();
+        } else {
+          toast.error({
+            title: "Finalization failed",
+            description:
+              err instanceof Error
+                ? err.message
+                : "Could not finalize the form. Please try again.",
+          });
+        }
       } finally {
         inFlightRef.current = false;
       }

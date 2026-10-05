@@ -53,10 +53,16 @@ export const ROUTES = {
     NEC_1099_EDIT: "/forms/1099-nec/edit",
     NEC_1099_FORM: "/1099-nec-form",
     W7: "/forms/w-7",
+    DS11: "/forms/ds-11",
+    DS11_EDIT: "/forms/ds-11/edit",
+    DS82: "/forms/ds-82",
+    DS82_EDIT: "/forms/ds-82/edit",
   },
   STATIC: {
     W9_BLANK_PDF: "/static/forms/fw9.pdf",
     NEC_1099_BLANK_PDF: "/static/forms/f1099nec.pdf",
+    DS11_BLANK_PDF: "/static/forms/ds11.pdf",
+    DS82_BLANK_PDF: "/static/forms/ds82.pdf",
   },
 } as const;
 
@@ -72,6 +78,8 @@ export function isTaxFormEditorRoute(
     stripped === ROUTES.FORMS.NEC_1099_EDIT ||
     stripped === ROUTES.FORMS.NEC_1099_FORM ||
     stripped.startsWith("/forms/1099-nec") ||
-    stripped.startsWith("/forms/w-9")
+    stripped.startsWith("/forms/w-9") ||
+    stripped.startsWith("/forms/ds-11") ||
+    stripped.startsWith("/forms/ds-82")
   );
 }

@@ -1754,18 +1754,67 @@ export function W9FinalizeIntercept() {
         return;
       }
 
+      /**
+       * Stamps the W-9 in the browser and writes it to My PDFs. Touches no
+       * entitlement-gated endpoint, so it cannot trip the paywall — neither
+       * this check nor the axios interceptor's. Shared by the not-entitled
+       * path and the finalize-rejected catch below, which previously each
+       * had their own copy.
+       */
+      const saveClientStampedDraft = async () => {
+        const previewNow =
+          useFormEditorStore.getState().signaturePreview ?? null;
+        const stampedBytes = await stampW9Client(values, previewNow);
+        const partialFile = new File(
+          [stampedBytes.buffer as ArrayBuffer],
+          W9_LIBRARY_FILENAME,
+          { type: "application/pdf" },
+        );
+        const partialEditorState = JSON.stringify({
+          v: 1,
+          w9: { values, signatureKey: null, signaturePreview: previewNow },
+        });
+        const savedDoc = await uploadW9ToLibrary({
+          currentDocumentId,
+          editorState: partialEditorState,
+          file: partialFile,
+        });
+
+        if (!savedDoc) return;
+
+        usePdfEditorStore.getState().setCurrentDocument({
+          id: savedDoc.id,
+          name: savedDoc.filename,
+        });
+        lastSaveRef.current = { key: cacheKey, documentId: savedDoc.id };
+
+        try {
+          queryClientRef.current?.invalidateQueries({
+            queryKey: documentKeys.lists(),
+          });
+        } catch {
+          /* non-fatal */
+        }
+
+        detail.onComplete({ ok: true });
+      };
+
       void (async () => {
         try {
-          // Client-stamped preview so the paywall shows the filled
-          // W-9. Matches the Save + Download entitlement gates.
-          const paywallOk = await ensureW9Entitlement(
-            values,
-            W9_LIBRARY_FILENAME,
-            "pdf",
-          );
-
-          if (!paywallOk) {
-            detail.onComplete({ ok: false, reason: "cancelled" });
+          // Leaving the page must never ask for money. This handler runs on
+          // Back and on the PDFVault logo, where the user is on their way
+          // out — the 1099-NEC, DS-11 and DS-82 all save a client-stamped
+          // draft here and say so in as many words ("never asks anyone to
+          // pay"). The W-9 was the last one still gating this path behind
+          // `ensureW9Entitlement`, so an unsubscribed user got the checkout
+          // modal instead of being saved and sent to My PDFs.
+          //
+          // An entitled user still takes the server finalize below, so the
+          // saved row is what a deliberate Save would have produced.
+          // Everyone else gets the client stamp — the same bytes this
+          // handler already fell back to whenever finalize was rejected.
+          if (!(await ensureFreshEntitlement())) {
+            await saveClientStampedDraft();
 
             return;
           }
@@ -1837,48 +1886,7 @@ export function W9FinalizeIntercept() {
           // PDFs so the back-button save still succeeds. Matches the
           // download + save-button fallbacks so all three paths agree.
           try {
-            const previewNow =
-              useFormEditorStore.getState().signaturePreview ?? null;
-            const stampedBytes = await stampW9Client(values, previewNow);
-            const partialFile = new File(
-              [stampedBytes.buffer as ArrayBuffer],
-              W9_LIBRARY_FILENAME,
-              { type: "application/pdf" },
-            );
-            const partialEditorState = JSON.stringify({
-              v: 1,
-              w9: {
-                values,
-                signatureKey: null,
-                signaturePreview: previewNow,
-              },
-            });
-            const savedDoc = await uploadW9ToLibrary({
-              currentDocumentId,
-              editorState: partialEditorState,
-              file: partialFile,
-            });
-
-            if (!savedDoc) return;
-
-            usePdfEditorStore.getState().setCurrentDocument({
-              id: savedDoc.id,
-              name: savedDoc.filename,
-            });
-            lastSaveRef.current = {
-              key: cacheKey,
-              documentId: savedDoc.id,
-            };
-
-            try {
-              queryClientRef.current?.invalidateQueries({
-                queryKey: documentKeys.lists(),
-              });
-            } catch {
-              /* non-fatal */
-            }
-
-            detail.onComplete({ ok: true });
+            await saveClientStampedDraft();
           } catch (fallbackErr) {
             logger.captureError(
               fallbackErr,

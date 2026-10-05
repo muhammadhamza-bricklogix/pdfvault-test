@@ -38,6 +38,19 @@ const FORM_CARDS: readonly FormCardEntry[] = [
     href: ROUTES.FORMS.NEC_1099,
     icon: File01Icon,
   },
+  {
+    title: "Form DS-11",
+    description: "Apply for a U.S. passport book or passport card.",
+    href: ROUTES.FORMS.DS11,
+    icon: File01Icon,
+  },
+  {
+    title: "Form DS-82",
+    description:
+      "Renew a U.S. passport by mail if yours is undamaged and was issued in the last 15 years.",
+    href: ROUTES.FORMS.DS82,
+    icon: File01Icon,
+  },
 ];
 
 const FORM_CARD_CLASSNAME =

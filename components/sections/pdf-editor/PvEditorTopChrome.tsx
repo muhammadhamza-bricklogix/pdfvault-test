@@ -46,7 +46,6 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { LanguageSwitcher } from "@/components/shared/navigation/language-switcher";
 import { TourHelpButton } from "@/components/shared/product-tour/tour-help-button";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
@@ -676,29 +675,28 @@ function TopAppBar() {
               onClick={() => {
                 if (!isSignedIn) {
                   // Persist file + fabric edits + extractedPages before the
-                  // full-page sign-in redirect so the hydrator restores the
-                  // full editor state on return.
+                  // email-first sign-in redirect so the hydrator restores
+                  // the full editor state on return. Form VALUES are
+                  // handled separately by each form's `*AutoPersist`.
                   void snapshotPendingEditorFile().catch(() => undefined);
-                  // AuthModal (2026-08-28 unify). Cards' finalize does
-                  // the item #15 `window.location.assign` — hydrator
-                  // restores the snapshotted file on return.
-                  // Preserve URL locale in the finalize redirect —
-                  // otherwise the post-signup `window.location.assign`
-                  // (auth chain #15) lands on bare `/pdf-composer` from
-                  // any `/{locale}/pdf-composer` starting point.
-                  dispatchAuthModal({
-                    mode: "signup",
-                    redirectUrl: (() => {
-                      const parsed = parseLocalePrefix(pathname ?? "/");
-
-                      return parsed
-                        ? `/${parsed.locale}${ROUTES.TOOLS.PDF_EDITOR}`
-                        : ROUTES.TOOLS.PDF_EDITOR;
-                    })(),
-                  });
-
-                  return;
                 }
+
+                // QA 2026-10-05: always dispatch, signed in or out. This
+                // button only renders on form routes (`showW9Save`), and
+                // every form intercept (W9 / Nec / Ds11 / Ds82) listens
+                // for `editor:save` and runs its own `requireSignIn()`,
+                // which opens the email-first modal with save-specific
+                // copy ("Save your passport application" → "Save form")
+                // and a redirect back to THAT form.
+                //
+                // Previously this short-circuited to
+                // `dispatchAuthModal({ mode: "signup" })` and returned,
+                // so the intercept never ran: the user got the generic
+                // "Sign up for PDFVault" modal (password + Google) and,
+                // after signing up, landed on `/pdf-composer` instead of
+                // the form they were filling. Do NOT reinstate the early
+                // return — it bypasses the intercept entirely, including
+                // its "Nothing to save yet" empty-form guard.
                 window.dispatchEvent(new CustomEvent("editor:save"));
               }}
             >

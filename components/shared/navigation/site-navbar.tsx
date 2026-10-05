@@ -42,6 +42,8 @@ const HIDE_ON_PATHNAMES = [
   // SiteNavbar stacking on top.
   "/forms/w-9",
   "/forms/1099-nec",
+  "/forms/ds-11",
+  "/forms/ds-82",
 ];
 
 // Editor / tool routes where a signed-out user may have a pending file +
@@ -53,6 +55,9 @@ const AUTH_RETURN_ROUTES = [
   "/pdf-composer",
   "/pdf-editor",
   "/w-9-form",
+  "/forms/1099-nec/edit",
+  "/forms/ds-11/edit",
+  "/forms/ds-82/edit",
   "/convert/",
 ] as const;
 

@@ -51,6 +51,14 @@ export type FormField = {
    */
   segments?: { rect: FormFieldRect; length: number }[];
   showIf?: ShowIf;
+  /**
+   * Field ids that apply only while a given option is selected, keyed by
+   * option id. Switching away from an option clears its dependants so a
+   * stale value is never stamped onto the form. Used by the W-9 federal
+   * tax classification, where the LLC letter and the "other" description
+   * each belong to one choice.
+   */
+  optionFields?: Record<string, string[]>;
   format?: string;
   maxLength?: number;
   helpText?: string;
