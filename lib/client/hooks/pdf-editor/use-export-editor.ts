@@ -149,7 +149,11 @@ export function useExportEditor(fabricCanvas: FabricCanvas | null) {
   // during the auth-return flow where that sync hasn't run yet. Reading
   // Clerk's hook keeps the export gate honest at the exact moment the
   // event fires.
-  const { isLoaded: authLoaded, isSignedIn: clerkIsSignedIn, userId } = useAuth();
+  const {
+    isLoaded: authLoaded,
+    isSignedIn: clerkIsSignedIn,
+    userId,
+  } = useAuth();
   const convert = useConvertFileMutation();
 
   const isExportingRef = useRef(false);

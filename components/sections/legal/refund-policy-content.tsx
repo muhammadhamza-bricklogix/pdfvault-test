@@ -56,10 +56,9 @@ export function RefundPolicyContent() {
               definierten Begriffe"). */}
           Subscription Terms. Terms defined in the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
-          meaning given there. Nothing
-          in this Policy limits or excludes any non-waivable statutory rights
-          you have under the laws of your country of residence, including the
-          rights described in Section 6 below.
+          meaning given there. Nothing in this Policy limits or excludes any
+          non-waivable statutory rights you have under the laws of your country
+          of residence, including the rights described in Section 6 below.
         </p>
         <p className="mt-3">
           The version of this Policy in force on the date of a charge applies to

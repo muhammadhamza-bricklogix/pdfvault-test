@@ -398,8 +398,7 @@ export function LandingTools() {
               translate="no"
             >
               {tToolsSection("titleLineOne")}
-              <br className="hidden sm:block" />{" "}
-              {tToolsSection("titleLineTwo")}
+              <br className="hidden sm:block" /> {tToolsSection("titleLineTwo")}
             </span>
           }
         />

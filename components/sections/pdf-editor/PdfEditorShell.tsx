@@ -43,7 +43,6 @@ import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-s
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ComposerI18nProvider } from "@/lib/client/i18n/composer-i18n-provider";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 

@@ -54,8 +54,8 @@ export function SubscriptionTermsContent() {
               for rationale. */}
           terms defined in the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
-          meaning given there. In the
-          event of a conflict between these Subscription Terms and the{" "}
+          meaning given there. In the event of a conflict between these
+          Subscription Terms and the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> in
           relation to trial and subscription billing, these Subscription Terms
           prevail. Charges are also subject to our{" "}
@@ -66,11 +66,7 @@ export function SubscriptionTermsContent() {
       {/* LEGAL_COUNSEL_PENDING — QA F-41: "Trial" rendered as "Probe"
           in German. "Trial Period" nudges Weglot toward "Testphase"
           which QA suggested. */}
-      <LegalSectionCard
-        icon={Timer01Icon}
-        id="st-1"
-        title="1. TRIAL PERIOD"
-      >
+      <LegalSectionCard icon={Timer01Icon} id="st-1" title="1. TRIAL PERIOD">
         <p>
           Certain features of the Service — including downloading a completed
           file — require a paid trial. When you start a trial, you will be

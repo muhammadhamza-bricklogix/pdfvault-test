@@ -170,7 +170,10 @@ export function FloatingAnnotationNote({
 
     const store = usePdfEditorStore.getState();
 
-    store.saveFabricJson(store.currentPage, serializeFabricCanvas(fabricCanvas));
+    store.saveFabricJson(
+      store.currentPage,
+      serializeFabricCanvas(fabricCanvas),
+    );
     store.markDocumentDirty();
   };
 

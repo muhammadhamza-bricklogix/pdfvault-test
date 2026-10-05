@@ -1,7 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
+
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -128,6 +129,7 @@ export function AuthModal() {
       !dialogRef.current?.contains(active)
     ) {
       setKeyboardViewport(null);
+
       return;
     }
 
@@ -135,6 +137,7 @@ export function AuthModal() {
 
     if (!keyboardIsOpen) {
       setKeyboardViewport(null);
+
       return;
     }
 

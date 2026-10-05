@@ -260,11 +260,10 @@ export function CookiePolicyContent() {
               German rendering ("Helfen Sie uns zu verstehen…") reads as
               a description, not an imperative. */}
           These cookies help us understand how visitors use the Service so we
-          can improve it.
-          These cookies assign a pseudonymous identifier to your browser; we use
-          the resulting data to produce aggregated statistics and do not use it
-          to identify you by name. Analytics cookies are set only with your
-          consent where required by applicable law.
+          can improve it. These cookies assign a pseudonymous identifier to your
+          browser; we use the resulting data to produce aggregated statistics
+          and do not use it to identify you by name. Analytics cookies are set
+          only with your consent where required by applicable law.
         </p>
         <CookieTable
           rows={[
@@ -390,13 +389,13 @@ export function CookiePolicyContent() {
           <strong>EEA and UK visitors</strong> — on your first visit you will
           see a cookie consent banner allowing you to accept or reject
           non-essential cookies before they are set. You can change or withdraw
-          your consent at any time via the &ldquo;Cookie Settings&rdquo; link
-          in the footer of the Service. Withdrawing consent does not affect the
+          your consent at any time via the &ldquo;Cookie Settings&rdquo; link in
+          the footer of the Service. Withdrawing consent does not affect the
           lawfulness of processing before withdrawal.
         </p>
         <p className="mt-3">
-          <strong>US visitors</strong> — where state law grants you the right
-          to opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
+          <strong>US visitors</strong> — where state law grants you the right to
+          opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
           advertising via cookies, you may do so via the &ldquo;Cookie
           Settings&rdquo; link. We honor Global Privacy Control (GPC) browser
           signals where required by law.
