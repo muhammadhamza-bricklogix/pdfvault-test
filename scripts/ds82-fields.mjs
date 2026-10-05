@@ -131,6 +131,11 @@ export const FIELDS = [
   { name: "Employer or School", page: 6, rect: { x: 442, y: 698, w: 138.5, h: 17.5 } },
 
   // ── Page 6 — 17. Additional contact phone numbers ──────────────────────
+  // Each group prints a 2x2 grid of boxes — Home/Cell on the top row,
+  // Work/Other below — where the fourth is unlabelled and followed by a ruled
+  // line to write the type in. "Other" therefore sits in Cell's column on
+  // Work's row, and the write-in field sits on the detected rule (y 658.7,
+  // x 255.7-292.0 and 541.0-577.3).
   { name: "Additional Phone 1", page: 6, rect: { x: 29, y: 658, w: 170, h: 17.5 } },
   {
     name: "Additional Phone 1 Type",
@@ -140,7 +145,13 @@ export const FIELDS = [
       { on: "Home", rect: { x: 214, y: 669.5, w: 7, h: 7 } },
       { on: "Work", rect: { x: 214, y: 658.5, w: 7, h: 6.5 } },
       { on: "Cell", rect: { x: 246, y: 669, w: 7, h: 7.5 } },
+      { on: "Other", rect: { x: 246, y: 658.5, w: 7, h: 6.5 } },
     ],
+  },
+  {
+    name: "Additional Phone 1 Other",
+    page: 6,
+    rect: { x: 255.7, y: 659, w: 36.3, h: 10 },
   },
   { name: "Additional Phone 2", page: 6, rect: { x: 316.5, y: 658, w: 170, h: 17.5 } },
   {
@@ -151,7 +162,13 @@ export const FIELDS = [
       { on: "Home", rect: { x: 490.5, y: 669, w: 7.5, h: 7.5 } },
       { on: "Work", rect: { x: 490.5, y: 658.5, w: 7.5, h: 7 } },
       { on: "Cell", rect: { x: 531, y: 669, w: 7, h: 7.5 } },
+      { on: "Other", rect: { x: 531, y: 658.5, w: 7, h: 7 } },
     ],
+  },
+  {
+    name: "Additional Phone 2 Other",
+    page: 6,
+    rect: { x: 541, y: 659, w: 36.3, h: 10 },
   },
 
   // ── Page 6 — 18. Permanent address ─────────────────────────────────────

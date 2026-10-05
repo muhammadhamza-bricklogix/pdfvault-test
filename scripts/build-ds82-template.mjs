@@ -35,6 +35,20 @@ const PROBE_OUT = path.join(ROOT, "tmp/ds82-probe.pdf");
 
 const probe = process.argv.includes("--probe");
 
+/**
+ * One fixed size for every text field, in points.
+ *
+ * Chosen from the geometry rather than by eye: the widgets are 16.5-20.0pt tall
+ * and the comb cells 14.9-15.3pt wide, so height is the binding constraint and
+ * the ceiling is about 11.6pt. 9pt clears it comfortably on the shortest box and
+ * matches the density of the printed form.
+ *
+ * Keep in step with FIELD_FONT_SIZE in lib/client/forms/stamp-ds82-client.ts and
+ * the backend ds-82 filler: the template governs what the recipient sees when
+ * they type into the downloaded form, the other two what we stamp into it.
+ */
+const FIELD_FONT_SIZE = 9;
+
 // `updateMetadata` defaults to true, which stamps a fresh ModDate on every run
 // and churns 1.6 MB of binary in git for a no-op rebuild.
 const doc = await PDFDocument.load(fs.readFileSync(SOURCE), {
@@ -177,17 +191,19 @@ for (const field of FIELDS) {
     backgroundColor: undefined,
     borderColor: undefined,
     textColor: rgb(0, 0, 0),
-    // 0 = auto-size. The printed boxes vary in height across the form and a
-    // fixed size either overflows the short ones or looks lost in the tall ones.
-    size: 0,
+    // A fixed size, not 0/auto. Auto-size scales each field's text to its own
+    // box height, so the taller boxes rendered visibly larger than the shorter
+    // ones and the filled form looked ragged. The boxes turn out to vary far
+    // less than that choice assumed — every one is 16.5-20.0pt tall — so one
+    // size serves all of them.
+    size: FIELD_FONT_SIZE,
   });
 
-  // `addToPage` writes a /DA carrying whatever size it just laid out with, so
-  // the auto-size intent above has to be restated afterwards or every field
-  // ends up pinned to a concrete size (16pt in a tall box) and clips whatever
-  // the recipient types. /Helv resolves against the AcroForm /DR the source
-  // already ships.
-  text.acroField.setDefaultAppearance("/Helv 0 Tf 0 g");
+  // `addToPage` writes a /DA carrying whatever size it just laid out with. It
+  // happens to agree with us now, but restating it keeps the size in one place
+  // and survives any future change to how addToPage picks a size. /Helv
+  // resolves against the AcroForm /DR the source already ships.
+  text.acroField.setDefaultAppearance(`/Helv ${FIELD_FONT_SIZE} Tf 0 g`);
 
   if (field.cells) {
     // A comb field prints one character per cell. /MaxLen is required for comb
