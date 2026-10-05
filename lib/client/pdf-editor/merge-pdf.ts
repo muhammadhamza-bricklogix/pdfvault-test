@@ -568,6 +568,16 @@ async function processPageObjects(
   liveCanvas?: FabricCanvas | null,
 ): Promise<void> {
   let rasterBatch: number[] = [];
+
+  // `objects` is a filtered subset of `parsed.objects` (same JS references).
+  // Build a ref → original-index map so rasterBatch carries indices into
+  // parsed.objects (which renderFabricSubsetToPng and renderSubsetFromLiveCanvas
+  // expect) rather than indices into the filtered array.
+  const parsedObjects = (parsed.objects ?? []) as FabricObj[];
+  const originalIndexOf = new Map<FabricObj, number>(
+    parsedObjects.map((o, idx) => [o, idx] as [FabricObj, number]),
+  );
+
   // EXPORT-DIAG: accumulators for per-page breakdown of what actually gets
   // drawn vs. rastered vs. failed (silently or with an exception).
   const diag = {
@@ -617,14 +627,14 @@ async function processPageObjects(
       // If the vector drawer couldn't handle it (e.g. unknown group children),
       // fall back to raster for this specific object
       if (!drawn) {
-        rasterBatch.push(i);
+        rasterBatch.push(originalIndexOf.get(obj) ?? i);
         diag.vectorFallbackToRaster += 1;
       } else {
         diag.vectorDrawn += 1;
       }
     } else {
       // Rasterizable object (image, or unknown type)
-      rasterBatch.push(i);
+      rasterBatch.push(originalIndexOf.get(obj) ?? i);
       diag.rasterQueued += 1;
     }
   }
