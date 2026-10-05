@@ -267,6 +267,13 @@ const TAX_FORMS_CARDS: HomeToolCard[] = [
     icon: File01Icon,
     title: "DS-11 Passport Form",
   },
+  {
+    description:
+      "Renew your U.S. passport by mail with Form DS-82 and download a print-ready PDF to post with your current passport.",
+    href: ROUTES.FORMS.DS82,
+    icon: File01Icon,
+    title: "DS-82 Passport Renewal",
+  },
 ];
 
 export type HomeToolGridTabGroup = {

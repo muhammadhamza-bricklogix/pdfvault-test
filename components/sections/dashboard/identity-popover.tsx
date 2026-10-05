@@ -20,6 +20,7 @@ import { useSubscriptionQuery } from "@/lib/client/query/queries/billing.query";
 import { usersService } from "@/lib/shared/api/services/users.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { clearAllDs11Drafts } from "@/components/sections/forms/Ds11AutoPersist";
+import { clearAllDs82Drafts } from "@/components/sections/forms/Ds82AutoPersist";
 import { clearAllNecDrafts } from "@/components/sections/forms/NecAutoPersist";
 
 type IdentityPopoverProps = {
@@ -104,6 +105,7 @@ export function IdentityPopover({
       // cookie invalidated (QA 2026-08-28).
       clearAllNecDrafts();
       clearAllDs11Drafts();
+      clearAllDs82Drafts();
       void signOut({ redirectUrl: ROUTES.PUBLIC.HOME }).catch(() => {
         // Belt-and-braces: if Clerk's signOut promise rejects (rare)
         // force a hard nav so the next page hydrates without a session.
