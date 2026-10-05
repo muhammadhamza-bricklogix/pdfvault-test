@@ -294,6 +294,12 @@ export const LANDING_TOOL_CATEGORIES: LandingToolCategory[] = [
         icon: { kind: "line", id: "forms" },
         href: "/forms/ds-11",
       },
+      {
+        label: "Forms (DS-82)",
+        i18nKey: "formsDs82",
+        icon: { kind: "line", id: "forms" },
+        href: "/forms/ds-82",
+      },
     ],
   },
 ];

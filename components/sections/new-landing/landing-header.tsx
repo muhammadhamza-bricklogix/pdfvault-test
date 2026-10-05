@@ -15,6 +15,7 @@ import { usersService } from "@/lib/shared/api/services/users.service";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { clearAllDs11Drafts } from "@/components/sections/forms/Ds11AutoPersist";
+import { clearAllDs82Drafts } from "@/components/sections/forms/Ds82AutoPersist";
 import { clearAllNecDrafts } from "@/components/sections/forms/NecAutoPersist";
 
 import { LandingLanguageSwitcher } from "./landing-language-switcher";
@@ -146,6 +147,7 @@ export function LandingHeader() {
     void usersService.signOutAudit().catch(() => undefined);
     clearAllNecDrafts();
     clearAllDs11Drafts();
+    clearAllDs82Drafts();
     void signOut();
   };
 

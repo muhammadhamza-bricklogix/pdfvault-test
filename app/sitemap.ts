@@ -58,6 +58,7 @@ const STATIC_ROUTES: StaticRoute[] = [
   { path: "/forms/w-9", changeFrequency: "monthly", priority: 0.8 },
   { path: "/forms/1099-nec", changeFrequency: "monthly", priority: 0.8 },
   { path: "/forms/ds-11", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/forms/ds-82", changeFrequency: "monthly", priority: 0.8 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.7 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacy", changeFrequency: "monthly", priority: 0.4 },

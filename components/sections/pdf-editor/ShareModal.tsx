@@ -56,21 +56,31 @@ export function ShareModal(): React.ReactElement {
     strippedPath === ROUTES.FORMS.NEC_1099_FORM ||
     strippedPath.startsWith("/forms/1099-nec");
   const isDs11Route = strippedPath.startsWith("/forms/ds-11");
-  // Neither form carries a signature field, so both skip the W-9 signature
-  // and value-normalisation steps.
-  const isSignatureFreeForm = isNecRoute || isDs11Route;
+  const isDs82Route = strippedPath.startsWith("/forms/ds-82");
+  // None of these carry a signature field — the passport forms are signed by
+  // hand after printing — so they all skip the W-9 signature and
+  // value-normalisation steps.
+  const isSignatureFreeForm = isNecRoute || isDs11Route || isDs82Route;
   const isW9Route =
     strippedPath === ROUTES.FORMS.W9_SHORT ||
     strippedPath === ROUTES.FORMS.W9_FORM ||
     strippedPath === ROUTES.FORMS.W9 ||
     strippedPath.startsWith(ROUTES.FORMS.W9_EDIT) ||
     isSignatureFreeForm;
-  const formLabel = isDs11Route ? "DS-11" : isNecRoute ? "1099-NEC" : "W-9";
-  const shareFilename = isDs11Route
-    ? "ds-11.pdf"
-    : isNecRoute
-      ? "1099-nec.pdf"
-      : "w-9.pdf";
+  const formLabel = isDs82Route
+    ? "DS-82"
+    : isDs11Route
+      ? "DS-11"
+      : isNecRoute
+        ? "1099-NEC"
+        : "W-9";
+  const shareFilename = isDs82Route
+    ? "ds-82.pdf"
+    : isDs11Route
+      ? "ds-11.pdf"
+      : isNecRoute
+        ? "1099-nec.pdf"
+        : "w-9.pdf";
   const onClose = (): void => setIsOpen(false);
   const [expiry, setExpiry] = useState<ExpiryPreset>("7d");
   const [withPassword, setWithPassword] = useState(false);
