@@ -261,7 +261,8 @@ export function useEditTextMode({ fabricCanvas, page }: UseEditTextModeParams) {
         // are honoured above.
         const isCreatedFromImage = typedFile?.__createdFromImage === true;
 
-        if (!isCreatedBlank && !isCreatedFromImage) {
+        // Only when the user picked Edit Text; auto-extraction on open/page change stays silent.
+        if (!isCreatedBlank && activeTool === "editText") {
           toast.info({
             description: "This page may be scanned or contain only images.",
             title: "No editable text found",

@@ -1,8 +1,7 @@
 "use client";
 
-import type { CSSProperties } from "react";
-
 import dynamic from "next/dynamic";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -119,34 +118,39 @@ export function AuthModal() {
     [],
   );
 
+  const lastKeyboardViewportRef = useRef<{
+    height: number;
+    top: number;
+  } | null>(null);
+
   const syncKeyboardViewport = useCallback(() => {
     const visualViewport = window.visualViewport;
     const active = document.activeElement;
+    let next: { height: number; top: number } | null = null;
 
     if (
-      !visualViewport ||
-      !(active instanceof HTMLElement) ||
-      !dialogRef.current?.contains(active)
+      visualViewport &&
+      active instanceof HTMLElement &&
+      dialogRef.current?.contains(active) &&
+      visualViewport.height < window.innerHeight - 80
     ) {
-      setKeyboardViewport(null);
-
-      return;
+      next = {
+        height: Math.floor(visualViewport.height),
+        top: Math.max(0, Math.floor(visualViewport.offsetTop)),
+      };
     }
 
-    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
+    // Typing / moving between code boxes must not re-scroll: only react when the keyboard opens or resizes.
+    const prev = lastKeyboardViewportRef.current;
 
-    if (!keyboardIsOpen) {
-      setKeyboardViewport(null);
+    if (next?.height === prev?.height && next?.top === prev?.top) return;
+    const shouldReveal = next !== null && next.height !== prev?.height;
 
-      return;
+    lastKeyboardViewportRef.current = next;
+    setKeyboardViewport(next);
+    if (shouldReveal) {
+      requestAnimationFrame(() => scrollActiveElementIntoView("center"));
     }
-
-    setKeyboardViewport({
-      height: Math.floor(visualViewport.height),
-      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
-    });
-
-    requestAnimationFrame(() => scrollActiveElementIntoView("center"));
   }, [scrollActiveElementIntoView]);
 
   useEffect(() => {
@@ -195,6 +199,7 @@ export function AuthModal() {
 
   const close = useCallback(() => {
     logger.event(EVENTS.SIGNIN_PROMPT_CANCELLED, "info");
+    lastKeyboardViewportRef.current = null;
     setKeyboardViewport(null);
     setDetail(null);
   }, []);
@@ -213,6 +218,7 @@ export function AuthModal() {
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      lastKeyboardViewportRef.current = null;
       setKeyboardViewport(null);
     };
   }, [close, detail]);
@@ -226,7 +232,6 @@ export function AuthModal() {
 
     const handleViewportChange = () => {
       syncKeyboardViewport();
-      scrollActiveElementIntoView("center");
     };
 
     visualViewport.addEventListener("resize", handleViewportChange);

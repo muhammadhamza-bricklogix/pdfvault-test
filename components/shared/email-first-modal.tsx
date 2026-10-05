@@ -1,10 +1,9 @@
 "use client";
 
-import type { CSSProperties } from "react";
-
 import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -119,30 +118,38 @@ export function EmailFirstModal() {
     [],
   );
 
+  const lastKeyboardViewportRef = useRef<{
+    height: number;
+    top: number;
+  } | null>(null);
+
   const syncKeyboardViewport = useCallback(() => {
     const visualViewport = window.visualViewport;
     const input = emailInputRef.current;
+    let next: { height: number; top: number } | null = null;
 
-    if (!visualViewport || document.activeElement !== input) {
-      setKeyboardViewport(null);
-
-      return;
+    if (
+      visualViewport &&
+      document.activeElement === input &&
+      visualViewport.height < window.innerHeight - 80
+    ) {
+      next = {
+        height: Math.floor(visualViewport.height),
+        top: Math.max(0, Math.floor(visualViewport.offsetTop)),
+      };
     }
 
-    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
+    // Only react when the keyboard opens or resizes; re-scrolling on every viewport scroll loops on iOS.
+    const prev = lastKeyboardViewportRef.current;
 
-    if (!keyboardIsOpen) {
-      setKeyboardViewport(null);
+    if (next?.height === prev?.height && next?.top === prev?.top) return;
+    const shouldReveal = next !== null && next.height !== prev?.height;
 
-      return;
+    lastKeyboardViewportRef.current = next;
+    setKeyboardViewport(next);
+    if (shouldReveal) {
+      requestAnimationFrame(() => scrollEmailInputIntoView("center"));
     }
-
-    setKeyboardViewport({
-      height: Math.floor(visualViewport.height),
-      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
-    });
-
-    requestAnimationFrame(() => scrollEmailInputIntoView("center"));
   }, [scrollEmailInputIntoView]);
 
   const focusEmailInputWithoutPageScroll = useCallback(() => {
@@ -191,7 +198,6 @@ export function EmailFirstModal() {
       if (document.activeElement !== emailInputRef.current) return;
 
       syncKeyboardViewport();
-      scrollEmailInputIntoView("center");
     };
 
     vv.addEventListener("resize", handleViewportResize);
@@ -200,6 +206,7 @@ export function EmailFirstModal() {
     return () => {
       vv.removeEventListener("resize", handleViewportResize);
       vv.removeEventListener("scroll", handleViewportResize);
+      lastKeyboardViewportRef.current = null;
       setKeyboardViewport(null);
     };
   }, [
@@ -212,6 +219,7 @@ export function EmailFirstModal() {
   const close = useCallback(() => {
     setDetail(null);
     setSubmitting(false);
+    lastKeyboardViewportRef.current = null;
     setKeyboardViewport(null);
   }, []);
 
@@ -239,6 +247,7 @@ export function EmailFirstModal() {
   const handleEmailBlur = useCallback(() => {
     window.setTimeout(() => {
       if (document.activeElement !== emailInputRef.current) {
+        lastKeyboardViewportRef.current = null;
         setKeyboardViewport(null);
       }
     }, 0);
@@ -548,11 +557,11 @@ export function EmailFirstModal() {
                       placeholder="Enter your email"
                       type="email"
                       value={email}
-                      onBlur={handleEmailBlur}
                       onChange={(e) => {
                         setEmail(e.target.value);
                         if (error) setError(null);
                       }}
+                      onBlur={handleEmailBlur}
                       onFocus={() => {
                         syncKeyboardViewport();
                         scrollEmailInputIntoView("nearest");
