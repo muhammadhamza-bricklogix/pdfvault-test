@@ -1,12 +1,25 @@
-import type { PDFDocument, PDFForm } from "pdf-lib";
+import type { PDFDocument, PDFForm, PDFTextField } from "pdf-lib";
 
 import { DS_82_SCHEMA } from "@/lib/client/forms/ds-82-schema";
+import { fieldIsVisible } from "@/components/sections/forms/visibility";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 /** Application pages 1 and 2 are PDF pages 5 and 6; the rest are instructions. */
 const APPLICATION_PAGE_INDEXES = [4, 5];
 
-const MULTILINE_FONT_SIZE = 8;
+/**
+ * One fixed size for every text field, in points.
+ *
+ * Not auto-size (0): that scales each field's text to its own box height, so the
+ * taller boxes came out visibly larger than the shorter ones and the filled form
+ * looked ragged. Derived from the geometry — widgets are 16.5-20.0pt tall and
+ * comb cells 14.9-15.3pt wide, so height binds at roughly 11.6pt and 9pt clears
+ * the shortest box.
+ *
+ * Keep in step with FIELD_FONT_SIZE in scripts/build-ds82-template.mjs and the
+ * backend ds-82 filler.
+ */
+const FIELD_FONT_SIZE = 9;
 
 const MIRRORED_NAME = "Name of Applicant 2";
 const MIRRORED_DOB = "Applicant DOB 2";
@@ -25,7 +38,41 @@ function normalize(raw: string): string {
   return raw.replace(EXPANDING_WHITESPACE, " ").replace(/ {2,}/g, " ").trim();
 }
 
-function setText(form: PDFForm, pdfRef: string, raw: string, max?: number) {
+/**
+ * Pins a field to one size by writing its default appearance outright.
+ *
+ * The template already builds every field at this size, so this is belt and
+ * braces for our own stamping — but it also guards the case `setFontSize` alone
+ * cannot: a field carrying no /DA at all makes pdf-lib throw ("No /DA (default
+ * appearance) entry found") rather than create one. Two DS-11 fields are in
+ * exactly that state, and this mirrors the fix there.
+ *
+ * /Helv matches what build-ds82-template.mjs writes and resolves against the
+ * AcroForm /DR the source PDF ships.
+ */
+async function applyFontSize(field: PDFTextField) {
+  const { PDFName, PDFString } = await import("pdf-lib");
+  const da = PDFString.of(`/Helv ${FIELD_FONT_SIZE} Tf 0 g`);
+
+  field.acroField.dict.set(PDFName.of("DA"), da);
+  // A widget-level /DA overrides the field's (PDF 32000-1 12.7.3.3), so both
+  // have to be written. See the DS-11 stamper, where two widgets carry their
+  // own auto-size /DA and kept rendering at 17 and 18pt when only the field's
+  // was set.
+  for (const widget of field.acroField.getWidgets()) {
+    widget.dict.set(PDFName.of("DA"), da);
+  }
+  // Keeps pdf-lib's own cached size in step with the /DA just written, so the
+  // appearance `save()` regenerates uses this size.
+  field.setFontSize(FIELD_FONT_SIZE);
+}
+
+async function setText(
+  form: PDFForm,
+  pdfRef: string,
+  raw: string,
+  max?: number,
+) {
   const value = normalize(raw);
 
   if (!value) return;
@@ -36,7 +83,7 @@ function setText(form: PDFForm, pdfRef: string, raw: string, max?: number) {
     field.setText(
       typeof limit === "number" && limit > 0 ? value.slice(0, limit) : value,
     );
-    if (field.isMultiline()) field.setFontSize(MULTILINE_FONT_SIZE);
+    await applyFontSize(field);
   } catch {
     /* widget absent — skip */
   }
@@ -74,7 +121,10 @@ async function selectWidget(
   }
 }
 
-function stampPageTwoHeader(form: PDFForm, values: Record<string, string>) {
+async function stampPageTwoHeader(
+  form: PDFForm,
+  values: Record<string, string>,
+) {
   // Both widgets are now editable in their own right (schema section
   // "page2_header"), so anything typed there has already been written by
   // `stampFields` and must win. Mirroring page 1 is only the fallback for
@@ -89,7 +139,7 @@ function stampPageTwoHeader(form: PDFForm, values: Record<string, string>) {
       .filter(Boolean)
       .join(", ");
 
-    if (name) setText(form, MIRRORED_NAME, name);
+    if (name) await setText(form, MIRRORED_NAME, name);
   }
 
   if (!typedDob) {
@@ -97,8 +147,24 @@ function stampPageTwoHeader(form: PDFForm, values: Record<string, string>) {
       (v ?? "").trim(),
     );
 
-    if (dob.every(Boolean)) setText(form, MIRRORED_DOB, dob.join("/"));
+    if (dob.every(Boolean)) await setText(form, MIRRORED_DOB, dob.join("/"));
   }
+}
+
+/**
+ * The two issue-date boxes are combs of exactly 8 cells expecting MMDDYYYY,
+ * while the store holds the display form `MM/DD/YYYY` that the date picker
+ * writes. Slicing that to the field's maxLength would silently produce
+ * "05/01/20", so the separators come out first.
+ *
+ * Mirrors COMB_DATE_FIELDS and `valueForField` in the backend ds-82 filler —
+ * the two must agree, because the same values are stamped by whichever path
+ * runs, and the backend validates the stripped form.
+ */
+const COMB_DATE_FIELDS = ["book_issue_date", "card_issue_date"];
+
+function valueForField(fieldId: string, raw: string): string {
+  return COMB_DATE_FIELDS.includes(fieldId) ? raw.replace(/\D/g, "") : raw;
 }
 
 async function stampFields(form: PDFForm, values: Record<string, string>) {
@@ -108,6 +174,12 @@ async function stampFields(form: PDFForm, values: Record<string, string>) {
     const raw = (values[field.id] ?? "").trim();
 
     if (!raw) continue;
+
+    // A value whose `showIf` no longer holds must never reach the PDF. The
+    // store prunes these as soon as the controlling field changes, but a draft
+    // saved before that guard existed can still carry one, and it would print
+    // beside a box the applicant has since unticked.
+    if (!fieldIsVisible(field, values)) continue;
 
     if (field.type === "radio") {
       // Every DS-82 choice is one field carrying a widget per export value, so
@@ -119,10 +191,15 @@ async function stampFields(form: PDFForm, values: Record<string, string>) {
       continue;
     }
 
-    setText(form, field.pdfRef, raw, field.maxLength);
+    await setText(
+      form,
+      field.pdfRef,
+      valueForField(field.id, raw),
+      field.maxLength,
+    );
   }
 
-  stampPageTwoHeader(form, values);
+  await stampPageTwoHeader(form, values);
 }
 
 async function extractApplicationPages(
