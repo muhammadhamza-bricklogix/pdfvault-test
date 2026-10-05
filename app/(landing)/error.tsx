@@ -13,12 +13,13 @@ export default function Error({
   reset: () => void;
 }) {
   const pathname = usePathname();
-  // QA F-03: Weglot's DE output of the English copy below renders
+  // QA F-03: Weglot translates the English error paragraph as
   // "...Die Seite konnte nicht geladen werden. sie können versuchen,
   // sie erneut zu laden." — the first "sie" starts a new sentence and
-  // must be capitalised (formal address). Render hand-authored German
-  // on /de/* and let Weglot translate the English for the remaining
-  // locales.
+  // must be capitalised (formal address). Weglot's machine output
+  // isn't correctable in the dashboard without an entry per phrase,
+  // so render hand-authored German directly on /de/ and let Weglot
+  // translate the English copy for the remaining locales.
   const isDe = pathname?.split("/")[1] === "de";
 
   useEffect(() => {

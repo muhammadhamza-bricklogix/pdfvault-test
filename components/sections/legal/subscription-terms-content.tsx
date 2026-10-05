@@ -243,7 +243,11 @@ export function SubscriptionTermsContent() {
       <LegalSectionCard
         icon={ShoppingBag01Icon}
         id="st-8"
-        title="8. RIGHT OF WITHDRAWAL FOR EU, EEA AND UK CUSTOMERS"
+        title={
+          <LocaleText de="8. WIDERRUFSRECHT FÜR EINWOHNER DER EU, DES EWR UND DES VEREINIGTEN KÖNIGREICHS">
+            8. RIGHT OF WITHDRAWAL FOR EU, EEA AND UK CUSTOMERS
+          </LocaleText>
+        }
       >
         <p>
           If you are a resident of the European Union, European Economic Area,

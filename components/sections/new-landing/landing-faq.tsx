@@ -14,7 +14,19 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 type FaqItem = { q: string; a: React.ReactNode };
 type FaqGroup = { heading: string; items: FaqItem[] };
 
-const GROUPS: FaqGroup[] = [
+// German visitors see EUR (product decision); others keep USD.
+const TRIAL_PRICE = { de: "€0.99", default: "$0.99" };
+const MONTHLY_PRICE = { de: "€39.99", default: "$39.99" };
+// German-only source phrasing; Weglot turns it into „mit der Sie … erhalten".
+const TRIAL_ACCESS = { de: "with which you get", default: "which gives you" };
+
+// Priced sentences stay single strings so Weglot translates them as one segment.
+const getGroups = (
+  trial: string,
+  monthly: string,
+  trialAccess: string,
+  locale: string,
+): FaqGroup[] => [
   {
     heading: "Getting Started",
     items: [
@@ -55,28 +67,19 @@ const GROUPS: FaqGroup[] = [
     items: [
       {
         q: "How much does PDFVault cost?",
-        // QA F-13: Weglot's machine output rendered the second clause
-        // as „die Ihnen vollen Zugriff … gewährt" (unnatural, legalese
-        // tone). Hand-DE override reads as the natural "mit der Sie
-        // vollen Zugriff … erhalten" phrasing QA requested.
-        a: (
-          <LocaleText
-            de={
-              <>
-                Sie können mit einer 7-tägigen Testphase für 0,99 $ beginnen,
-                mit der Sie vollen Zugriff auf Premium-Funktionen einschließlich
-                Dateidownloads erhalten. Wenn Sie vor Ablauf der Testphase nicht
-                kündigen, wird sie automatisch als monatliches Abonnement zu
-                39,99 $ pro Monat fortgesetzt.
-              </>
-            }
-          >
-            You can start with a 7-day trial for $0.99, which gives you full
-            access to premium features including file downloads. If you
-            don&apos;t cancel before the trial ends, it automatically continues
-            as a monthly subscription at $39.99 per month.
-          </LocaleText>
-        ),
+        // QA F-13: Weglot's machine output renders the second clause as
+        // „die Ihnen vollen Zugriff … gewährt" (unnatural). Hand-author
+        // the DE answer and fence it so Weglot leaves it alone.
+        a:
+          locale === "de" ? (
+            <span className="notranslate wg-notranslate" translate="no">
+              {`Sie können mit einer 7-tägigen Testphase für ${trial} beginnen, mit der Sie vollen Zugriff auf Premium-Funktionen einschließlich Dateidownloads erhalten. Wenn Sie vor Ablauf der Testphase nicht kündigen, wird sie automatisch als monatliches Abonnement zu ${monthly} pro Monat fortgesetzt.`}
+            </span>
+          ) : (
+            <>
+              {`You can start with a 7-day trial for ${trial}, ${trialAccess} full access to premium features including file downloads. If you don't cancel before the trial ends, it automatically continues as a monthly subscription at ${monthly} per month.`}
+            </>
+          ),
       },
       {
         q: "When will I be charged?",
@@ -273,8 +276,8 @@ const GROUPS: FaqGroup[] = [
         q: "What tools are included?",
         a: (
           <>
-            Edit &amp; Sign, Convert to PDF, Convert from PDF, Compress, Merge,
-            Split, Rotate, Unlock, and Watermark, with new tools added
+            Edit &amp; Sign, Convert to PDF, PDF to other formats, Compress,
+            Merge, Split, Rotate, Unlock, and Watermark, with new tools added
             regularly.
           </>
         ),
@@ -346,6 +349,17 @@ export function LandingFAQ() {
   // scroll position predictable; switching tabs collapses everything.
   const [activeTab, setActiveTab] = useState(0);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const locale = useLocale();
+  const GROUPS = useMemo(() => {
+    const key = locale === "de" ? "de" : "default";
+
+    return getGroups(
+      TRIAL_PRICE[key],
+      MONTHLY_PRICE[key],
+      TRIAL_ACCESS[key],
+      locale,
+    );
+  }, [locale]);
 
   const activeGroup = GROUPS[activeTab];
   const tablistId = "faq-tablist";
