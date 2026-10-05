@@ -365,6 +365,15 @@ export function Ds11LandingContent() {
             <BulletList items={SHOULD_USE_DS82} />
             <Prose>
               <p>
+                <Link
+                  className="font-medium text-[var(--color-accent)] underline underline-offset-2"
+                  href={ROUTES.FORMS.DS82}
+                >
+                  Fill out Form DS-82 instead
+                </Link>
+                .
+              </p>
+              <p>
                 Some sites claim renewals never need DS-11. That is wrong, and
                 it sends people to the wrong form. A renewal needs DS-11
                 whenever the previous passport was issued under age 16, is lost,

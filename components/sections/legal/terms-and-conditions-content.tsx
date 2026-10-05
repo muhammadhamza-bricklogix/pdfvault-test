@@ -360,8 +360,10 @@ export function TermsAndConditionsContent() {
             counsel to confirm the rewording does not change enforceable
             meaning before prod. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">3.9</span> User Reviews
-          and Testimonials
+          <span className="notranslate" translate="no">
+            3.9
+          </span>{" "}
+          User Reviews and Testimonials
         </p>
         <p>
           By publishing any review, rating, comment, or testimonial
@@ -479,7 +481,10 @@ export function TermsAndConditionsContent() {
             section number "5.3" as the German decimal "5,3 Credits".
             Fencing the numeric segment with `notranslate` locks it. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">5.3</span> Credits
+          <span className="notranslate" translate="no">
+            5.3
+          </span>{" "}
+          Credits
         </p>
         <p>
           The Service may employ a credit-based system to enable access to
@@ -692,8 +697,10 @@ export function TermsAndConditionsContent() {
             Legal counsel to confirm the reworded lead-in is
             equivalent for enforceability. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">6.1</span> Prohibited
-          Conduct
+          <span className="notranslate" translate="no">
+            6.1
+          </span>{" "}
+          Prohibited Conduct
         </p>
         <p>You agree that you will not:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">

@@ -65,7 +65,8 @@
       "watermark": "Watermark",
       "formsW9": "Forms (W-9)",
       "forms1099Nec": "Forms (1099-NEC)",
-      "formsDs11": "Forms (DS-11)"
+      "formsDs11": "Forms (DS-11)",
+      "formsDs82": "Forms (DS-82)"
     }
   },
   "steps": {

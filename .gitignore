@@ -186,3 +186,6 @@ vite.config.ts.timestamp-*
 /.clerk/
 
 .agents
+
+# scratch renders from the DS-82 template tooling
+tmp/

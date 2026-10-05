@@ -129,7 +129,8 @@ function ExportFormatModalBody({
       Boolean(
         pathname?.startsWith("/1099-nec-form") ||
           pathname?.startsWith("/forms/1099-nec") ||
-          pathname?.startsWith("/forms/ds-11"),
+          pathname?.startsWith("/forms/ds-11") ||
+          pathname?.startsWith("/forms/ds-82"),
       ),
     [pathname],
   );
