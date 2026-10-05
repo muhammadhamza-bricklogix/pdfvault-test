@@ -564,6 +564,23 @@ export function PendingEditorFileHydrator() {
     if (!tool && !exportFormat && !cameFromWelcomeEmail) return;
     if (!authLoaded) return;
 
+    // QA PDF-287: on a post-signin return the Clerk session cookie
+    // can lag a few ms behind `authLoaded` after
+    // `window.location.assign` (iOS Safari is the worst offender,
+    // but desktop hits it too). Firing `editor:export` while
+    // `isSignedIn === false` makes `useExportEditor` take the
+    // signed-out branch, re-dispatch EmailFirstModal, and the
+    // paywall silently misses on the first attempt. Wait for
+    // `isSignedIn` ONLY when the URL carries a post-signin signal
+    // (`?id=` from `runAutoSignup`'s appended docId, or the
+    // welcome-email UTM markers). Pure signed-out `?export=`
+    // deep-links keep firing immediately so the EmailFirstModal
+    // path is unchanged. See revert commit 21c896ea for the
+    // original diagnosis.
+    const isPostSigninReturn = Boolean(docId) || cameFromWelcomeEmail;
+
+    if (isPostSigninReturn && !isSignedIn) return;
+
     launchedRef.current = true;
     logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
       tool,
