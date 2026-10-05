@@ -19,6 +19,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const termsTocEntries: LegalTocEntry[] = [
@@ -365,7 +366,30 @@ export function TermsAndConditionsContent() {
           </span>{" "}
           User Reviews and Testimonials
         </p>
-        <p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Durch die Veröffentlichung einer Bewertung, Rezension, eines
+              Kommentars oder Erfahrungsberichts („Bewertung&ldquo;) über den
+              Dienst auf einer beliebigen Plattform gewähren Sie dem Unternehmen
+              ein nicht-exklusives, weltweites, unbefristetes, unwiderrufliches,
+              lizenzgebührenfreies, unterlizenzierbares und übertragbares Recht,
+              diese Bewertung für jeden rechtmäßigen Zweck zu nutzen, zu
+              vervielfältigen, zu bearbeiten, zu veröffentlichen, zu übersetzen,
+              zu verbreiten und daraus abgeleitete Werke zu erstellen,
+              einschließlich für Marketing- und Produktentwicklungszwecke, ohne
+              weitere Benachrichtigung, Namensnennung oder Vergütung. Das
+              Unternehmen ist nicht verpflichtet, Bewertungen zu nutzen oder zu
+              pflegen, und kann Bewertungen nach eigenem Ermessen entfernen oder
+              bearbeiten; es ist nicht verantwortlich für den Inhalt von
+              Bewertungen oder die darin geäußerten Meinungen. Um die Entfernung
+              einer von Ihnen eingereichten Bewertung anzufordern, wenden Sie
+              sich an{" "}
+              <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
+            </>
+          }
+        >
           By publishing any review, rating, comment, or testimonial
           (&ldquo;Review&rdquo;) about the Service on any platform, you grant
           the Company a non-exclusive, worldwide, perpetual, irrevocable,
@@ -378,7 +402,7 @@ export function TermsAndConditionsContent() {
           responsible for the content of Reviews or the opinions expressed in
           them. To request removal of a Review you submitted, contact{" "}
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
-        </p>
+        </LocaleText>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           3.10 Customer Support
@@ -484,9 +508,24 @@ export function TermsAndConditionsContent() {
           <span className="notranslate" translate="no">
             5.3
           </span>{" "}
-          Credits
+          <LocaleText de="Credits">Credits</LocaleText>
         </p>
-        <p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Der Dienst kann ein Credit-basiertes System einsetzen, um den
+              Zugriff auf bestimmte Funktionen oder Aktionen zu ermöglichen.
+              Credits sind eine virtuelle Zugriffseinheit und stellen weder eine
+              Währung noch ein Finanzinstrument dar; sie können ausschließlich
+              innerhalb des Dienstes verwendet werden und haben außerhalb des
+              Dienstes keinen monetären Wert. Credits sind nicht Ihr Eigentum
+              und dürfen nicht verkauft, übertragen oder getauscht werden.
+              Gewährte Aktions- oder Bonus-Credits sind nicht übertragbar und
+              nicht erstattungsfähig.
+            </>
+          }
+        >
           The Service may employ a credit-based system to enable access to
           certain features or actions. Credits are a virtual unit of access and
           do not represent currency or any financial instrument; they can only
@@ -494,7 +533,7 @@ export function TermsAndConditionsContent() {
           Credits are not your property and may not be sold, transferred, or
           exchanged. Any promotional or bonus credits granted are
           non-transferable and non-refundable.
-        </p>
+        </LocaleText>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           5.4 Auto-Renewal and Subscription Continuity
@@ -672,7 +711,11 @@ export function TermsAndConditionsContent() {
       <LegalSectionCard
         icon={UserCircleIcon}
         id="t-2-6"
-        title="6. User Representations and Restrictions"
+        title={
+          <LocaleText de="6. Zusicherungen des Nutzers und Einschränkungen">
+            6. User Representations and Restrictions
+          </LocaleText>
+        }
       >
         <p>
           By accessing or using the Service, you confirm that: you have the
