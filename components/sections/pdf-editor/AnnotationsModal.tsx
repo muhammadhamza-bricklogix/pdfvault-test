@@ -3,14 +3,14 @@
 import { Button, Modal } from "@heroui/react";
 import { useState } from "react";
 
-import { NoteColorSwatches, NoteIconGlyph } from "./NoteIconGlyph";
-
 import {
   DEFAULT_NOTE_COLOR,
   DEFAULT_NOTE_ICON,
   NOTE_ICONS,
   type NoteIconId,
 } from "@/lib/client/pdf-editor/annotation-notes";
+
+import { NoteColorSwatches, NoteIconGlyph } from "./NoteIconGlyph";
 
 type AnnotationsModalProps = {
   isOpen: boolean;

@@ -6,8 +6,6 @@ import { Cancel01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { NoteColorSwatches, NoteIconGlyph } from "./NoteIconGlyph";
-
 import { useIsMobile } from "@/lib/client/hooks/use-is-mobile";
 import {
   applyNoteColor,
@@ -19,6 +17,8 @@ import {
 } from "@/lib/client/pdf-editor/annotation-notes";
 import { serializeFabricCanvas } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
+
+import { NoteColorSwatches, NoteIconGlyph } from "./NoteIconGlyph";
 
 type FloatingAnnotationNoteProps = {
   canvasContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -186,7 +186,10 @@ export function FloatingAnnotationNote({
 
     const store = usePdfEditorStore.getState();
 
-    store.saveFabricJson(store.currentPage, serializeFabricCanvas(fabricCanvas));
+    store.saveFabricJson(
+      store.currentPage,
+      serializeFabricCanvas(fabricCanvas),
+    );
     store.markDocumentDirty();
   };
 
@@ -335,11 +338,7 @@ export function FloatingAnnotationNote({
               type="button"
               onClick={() => void changeIcon(icon.id)}
             >
-              <NoteIconGlyph
-                color={noteState.color}
-                icon={icon.id}
-                size={20}
-              />
+              <NoteIconGlyph color={noteState.color} icon={icon.id} size={20} />
             </button>
           );
         })}
