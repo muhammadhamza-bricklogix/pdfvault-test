@@ -73,6 +73,12 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // Tracks whether the last navigation was forward (1) or backward (-1) so the
   // scroll-reset effect can land at the top vs bottom of the incoming page.
   const navDirectionRef = useRef<1 | -1>(1);
+  // QA F-05: suppresses the swipe-nav effect's `lastScrollAt` update for the
+  // one `onScroll` fired by the programmatic `el.scrollTop = 0` after a page
+  // change. Without this, the next user touch within 400 ms incorrectly
+  // reports `restedAtStart = false` and the backward boundary pull is
+  // silently blocked.
+  const programmaticScrollRef = useRef(false);
 
   // Fade out → change page → fade in. direction=1 (forward) resets scroll to
   // top; direction=-1 (backward) lands at the bottom of the previous page so
@@ -1069,25 +1075,25 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // Reset scroll to top on every page change so arriving on a new page always
   // starts at the top. Also clears the navigation guard so the scroll handler
   // is ready for the next bottom-reach.
+  //
+  // QA F-05: previously backward navigation landed at the BOTTOM of the new
+  // page ("reading continuity"), but on multi-screen pages that forced the
+  // user to scroll back to the top before another swipe-down could flip to
+  // the next earlier page — so after a few page changes the backward gesture
+  // appeared to stop responding. Landing at top in both directions keeps
+  // bulk navigation (swipe → swipe → swipe) fluid.
   useEffect(() => {
     const el = viewerScrollRef.current;
 
     if (el) {
-      if (navDirectionRef.current === -1) {
-        // Backward navigation → land at the bottom so the gesture feels like
-        // the user scrolled back up into the previous page.
-        el.scrollTop = 999999; // browser clamps to actual scrollHeight
-      } else {
-        el.scrollTop = 0;
-      }
+      programmaticScrollRef.current = true;
+      el.scrollTop = 0;
     }
 
     // Row 71: reset to the forward-nav default after each page change so a
     // subsequent sidebar/thumbnail click — which goes straight through
     // `setCurrentPage` instead of `navigatePage(_, direction)` — lands at
-    // the top of the clicked page. Without this reset, a prior backward
-    // overscroll would leave the ref sticky at -1 and the next click would
-    // open mid-page instead of showing the page from the top.
+    // the top of the clicked page.
     navDirectionRef.current = 1;
     mobilePageNavRef.current = false;
     // 50 ms lets the new page content render before fading in (slow reveal).
@@ -1217,6 +1223,13 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     let restedAtStart = false;
 
     const onScroll = () => {
+      // Skip the single `scroll` event triggered by the programmatic
+      // `el.scrollTop = 0` after a page change (QA F-05).
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+
+        return;
+      }
       lastScrollAt = performance.now();
     };
     // Track whether the touch started inside the PDF viewer element.

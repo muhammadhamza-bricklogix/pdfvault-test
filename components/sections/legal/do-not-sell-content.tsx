@@ -15,6 +15,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const doNotSellTocEntries: LegalTocEntry[] = [
@@ -115,18 +116,38 @@ export function DoNotSellContent() {
               space after "Cookie-Einstellungen:" ("Cookie-Einstellungen:Nutzen").
               Using " — " (em dash with spaces) instead of ":" survives
               Weglot's translation pass with the separator intact. */}
-          <li>
+          <LocaleText
+            as="li"
+            de={
+              <>
+                <strong>Cookie-Einstellungen</strong> — nutzen Sie den Link
+                „Cookie-Einstellungen&ldquo; im Footer oder besuchen Sie unsere{" "}
+                <Link href={ROUTES.LEGAL.COOKIES}>Cookie-Richtlinie</Link>, um
+                Analyse- und Werbe-Cookies zu deaktivieren.
+              </>
+            }
+          >
             <strong>Cookie Settings</strong> — use the &ldquo;Cookie
             Settings&rdquo; link in the footer, or visit our{" "}
             <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>, to disable
             analytics and advertising cookies.
-          </li>
-          <li>
+          </LocaleText>
+          <LocaleText
+            as="li"
+            de={
+              <>
+                <strong>E-Mail</strong> — schreiben Sie an{" "}
+                <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> mit dem
+                Betreff „CCPA Opt-Out Request&ldquo; und der mit Ihrem Konto
+                verknüpften E-Mail-Adresse.
+              </>
+            }
+          >
             <strong>Email</strong> — write to{" "}
             <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> with the
             subject line &ldquo;CCPA Opt-Out Request&rdquo; and the email
             address associated with your account.
-          </li>
+          </LocaleText>
         </ul>
       </LegalSectionCard>
 
