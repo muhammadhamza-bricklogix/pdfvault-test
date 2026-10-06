@@ -101,15 +101,32 @@ function PdfVaultLogo() {
         width={24}
       />
       {/* QA F-02: brand must render as "PDFVault" on both landing and
-          dashboard. Weglot was translating "Vault" → "Tresor" on /de/,
-          creating a "PDFvault / PDFtresor" inconsistency. Fenced with
-          wg-notranslate + translate="no" to lock it. */}
+          dashboard. Earlier revision used `after:content-['Vault']` so
+          Weglot never saw the word, but Tailwind's arbitrary-value
+          class dropped out of some prod builds and Weglot still
+          produced "PDFTresor". Switch to real text + Weglot's full
+          triple-fence (class + data-wg-notranslate + translate="no") —
+          same pattern that rescued the Cookie Policy provider cells
+          after QA F-48 / F-49. */}
       <span
         className="notranslate wg-notranslate pv-heading text-[17px] font-semibold leading-none"
+        data-wg-notranslate=""
         translate="no"
       >
-        <span className="text-[var(--pv-brand-red-logo)]">PDF</span>
-        <span className="text-[var(--pv-text-muted)]">Vault</span>
+        <span
+          className="notranslate wg-notranslate text-[var(--pv-brand-red-logo)]"
+          data-wg-notranslate=""
+          translate="no"
+        >
+          PDF
+        </span>
+        <span
+          className="notranslate wg-notranslate text-[var(--pv-text-muted)]"
+          data-wg-notranslate=""
+          translate="no"
+        >
+          Vault
+        </span>
       </span>
     </div>
   );
@@ -419,13 +436,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <aside
         aria-hidden={!isMobileOpen}
         aria-label="Primary navigation"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-[var(--pv-canvas)] shadow-xl transition-transform duration-200 ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 start-0 z-50 flex w-[260px] flex-col bg-[var(--pv-canvas)] shadow-xl transition-transform duration-200 ${
+          isMobileOpen
+            ? "translate-x-0"
+            : "-translate-x-full rtl:translate-x-full"
         }`}
       >
         <button
           aria-label="Close navigation"
-          className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full text-[var(--pv-text-body)] hover:bg-[var(--pv-nav-active)]"
+          className="absolute end-3 top-3 flex size-8 items-center justify-center rounded-full text-[var(--pv-text-body)] hover:bg-[var(--pv-nav-active)]"
           type="button"
           onClick={() => setIsMobileOpen(false)}
         >
