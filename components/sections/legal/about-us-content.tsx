@@ -113,10 +113,10 @@ export function AboutUsContent() {
           de={
             <>
               Wir bauen und verfeinern unser Toolkit kontinuierlich auf Basis
-              dessen, was unsere Nutzer tatsächlich brauchen, und wir
-              behandeln alle Dateien mit derselben Sorgfalt, die wir für
-              unsere eigenen wünschen würden — sie werden im Arbeitsspeicher
-              verarbeitet, nie gelesen und nie verkauft.
+              dessen, was unsere Nutzer tatsächlich brauchen, und behandeln wir
+              alle Dateien mit derselben Sorgfalt, die wir für unsere eigenen
+              wünschen würden — sie werden im Arbeitsspeicher verarbeitet, nie
+              gelesen und nie verkauft.
             </>
           }
         >
@@ -241,13 +241,13 @@ export function AboutUsContent() {
           className="mt-3 text-[15px] leading-relaxed text-[var(--pv-text-body)]"
           de={
             <>
-              Wir verwenden branchenübliche Sicherheitsmaßnahmen,
-              einschließlich TLS-Verschlüsselung bei der Übertragung und
-              gehashte Passwörter, und wir verkaufen Ihre persönlichen Daten
-              niemals. Die Inhalte Ihrer hochgeladenen Dateien werden nie
-              erfasst — sie werden im Arbeitsspeicher verarbeitet und
-              gelöscht, sobald Ihre Sitzung endet, es sei denn, Sie
-              entscheiden sich, sie in Ihrem Konto zu speichern.
+              Wir verwenden branchenübliche Sicherheitsmaßnahmen, einschließlich
+              TLS-Verschlüsselung bei der Übertragung und gehashte Passwörter,
+              und wir verkaufen Ihre persönlichen Daten niemals. Die Inhalte
+              Ihrer hochgeladenen Dateien werden nie erfasst — sie werden im
+              Arbeitsspeicher verarbeitet und gelöscht, sobald Ihre Sitzung
+              endet, es sei denn, Sie entscheiden sich, sie in Ihrem Konto zu
+              speichern.
             </>
           }
         >
