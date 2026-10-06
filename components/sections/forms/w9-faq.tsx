@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Accordion } from "@heroui/react";
@@ -7,7 +9,10 @@ import { Accordion } from "@heroui/react";
 export type FaqEntry = {
   id: string;
   question: string;
+  /** Plain-text answer, used by JSON-LD schema serialisation. */
   answer: string;
+  /** Optional rich render override — takes precedence in the UI when present. */
+  answerNode?: ReactNode;
 };
 
 type W9FaqProps = {
@@ -39,7 +44,7 @@ export function W9Faq({ items }: W9FaqProps) {
           </Accordion.Heading>
           <Accordion.Panel>
             <Accordion.Body className="px-5 pb-4 pt-0 text-sm leading-relaxed text-default-600 dark:text-default-400">
-              {item.answer}
+              {item.answerNode ?? item.answer}
             </Accordion.Body>
           </Accordion.Panel>
         </Accordion.Item>
