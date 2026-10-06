@@ -55,7 +55,7 @@
       "pdfToPng": "PDF to PNG",
       "pdfToJpg": "PDF to JPG",
       "extractImages": "Extract Images",
-      "removeAnnotations": "Flatten Annotations",
+      "removeAnnotations": "Remove Annotations",
       "watermark": "Watermark",
       "formsW9": "Forms (W-9)",
       "forms1099Nec": "Forms (1099-NEC)",
@@ -83,8 +83,8 @@
       "description": "Pick your pages in seconds — then download the new PDF right away."
     },
     "removeAnnotations": {
-      "title": "Flatten annotations in a PDF",
-      "description": "Embed highlights, comments, and form fields directly into the page so these annotations become part of the page itself and can no longer be edited or removed individually."
+      "title": "Remove Annotations from a PDF",
+      "description": "Delete highlights, comments, and form fields in one pass."
     },
     "edit": {
       "title": "Edit Any PDF in Seconds",
