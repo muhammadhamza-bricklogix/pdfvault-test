@@ -29,19 +29,14 @@ const HERO_CTA_LABEL = "Open the W-9 Template";
 const HERO_CTA_NOTE =
   "No account needed to start. Sign in only when you're ready to save or download.";
 
-// QA F-55 / F-56 / F-57: previous copy mixed verb-first bullets
+// QA F-55 / F-56 / F-57 / F-DE: previous copy mixed verb-first bullets
 // ("Start freelance work…") with "Are onboarded…" and noun-phrase
 // bullets ("A freelancer…"), which Weglot then translated
 // inconsistently in German (verb-first infinitives + grammatically
 // incomplete "Ein Freiberufler…, der …" clauses missing a verb).
-// Rewriting every bullet as a full "You + verb" sentence gives Weglot
-// a consistent template — each bullet becomes "Sie + verb …" in
-// German. The lead-in paragraphs below have been reworded to match.
-// Each item is `[english, german]`. Hand-authored German bypasses
-// Weglot for QA F-55 / F-56 / F-57, which flagged bullets rendered
-// with missing verbs ("Ein Freiberufler, der …") or awkward
-// imperatives ("Werden als Anbieter aufgenommen"). The DE version
-// keeps the "Sie + verb" structure that reads naturally.
+// Each tuple is [english, german]. Hand-authored German bypasses
+// Weglot so the DE output keeps full "Sie + verb" sentences — the
+// Weglot machine-translation drifted into bullets with missing verbs.
 type BulletPair = readonly [string, string];
 
 const TYPICAL_REQUESTS: BulletPair[] = [
@@ -273,7 +268,13 @@ function GetFormCta({ label = "Open the W-9 Template" }: { label?: string }) {
   );
 }
 
-function SectionHeading({ id, children }: { id: string; children: string }) {
+function SectionHeading({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   return (
     <h2
       className="scroll-mt-24 text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl"
@@ -346,20 +347,29 @@ export function W9LandingContent() {
             aria-label="On this page"
             className="sticky top-24 flex flex-col gap-2 border-l border-default-200 pl-4 text-base dark:border-default-700"
           >
-            {[
-              ["What is Form W-9?", "what-is-w9"],
-              ["Do you need to fill one out?", "need-one"],
-              ["What you'll need before you start", "before-start"],
-              ["How to fill out a W-9 in PDFVault", "how-to-fill"],
-              ["Signing and sending your completed form", "signing"],
-              ["FAQ", "faq"],
-            ].map(([label, id]) => (
+            {(
+              [
+                ["What is Form W-9?", "what-is-w9"],
+                ["Do you need to fill one out?", "need-one"],
+                ["What you'll need before you start", "before-start"],
+                ["How to fill out a W-9 in PDFVault", "how-to-fill"],
+                // QA F-DE: pair this with the matching hand-DE on the
+                // section heading below so TOC + heading always render
+                // the same German string.
+                [
+                  "Signing and sending your completed form",
+                  "signing",
+                  "Formular unterschreiben und senden",
+                ],
+                ["FAQ", "faq"],
+              ] as const
+            ).map(([label, id, de]) => (
               <Link
                 key={id}
                 className="rounded px-2 py-1.5 font-medium leading-6 text-default-700 transition-colors hover:bg-default-100 hover:text-[var(--color-accent)] dark:text-default-300 dark:hover:bg-default-800"
                 href={`#${id}`}
               >
-                {label}
+                {de ? <LocaleText de={de}>{label}</LocaleText> : label}
               </Link>
             ))}
           </nav>
@@ -481,7 +491,9 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="signing">
-              Signing and sending your completed form
+              <LocaleText de="Formular unterschreiben und senden">
+                Signing and sending your completed form
+              </LocaleText>
             </SectionHeading>
             <Prose>
               <p>
