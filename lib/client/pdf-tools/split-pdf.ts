@@ -105,6 +105,16 @@ export function buildEveryNRanges(
   if (!Number.isFinite(chunkSize) || chunkSize < 1) {
     return { ok: false, error: "Enter a page count of at least 1." };
   }
+  // Row 122: reject decimals explicitly instead of silently flooring. A user
+  // typing "5.5" was previously getting 5-page chunks with no feedback, so
+  // the input looked valid but didn't match the intent. Whole-number pages
+  // are the only meaningful input for an every-N split.
+  if (!Number.isInteger(chunkSize)) {
+    return {
+      ok: false,
+      error: "Pages per file must be a whole number.",
+    };
+  }
   if (chunkSize > MAX_CHUNK_SIZE) {
     return {
       ok: false,
@@ -112,7 +122,7 @@ export function buildEveryNRanges(
     };
   }
 
-  const size = Math.floor(chunkSize);
+  const size = chunkSize;
   const ranges: PageRange[] = [];
 
   for (let start = 1; start <= pageCount; start += size) {

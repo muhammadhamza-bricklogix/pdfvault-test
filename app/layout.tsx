@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from "next";
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";
-import { Playfair_Display } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
 

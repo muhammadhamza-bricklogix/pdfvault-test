@@ -127,4 +127,100 @@ test.describe("Editor export — signed-out flow", () => {
     expect(page.url()).toContain("/pdf-composer");
     expect(page.url()).not.toContain("/sign-in");
   });
+
+  // QA PDF-287 (regression guard — paywall misses on first return).
+  //
+  // Full-flow Playwright coverage is blocked by Clerk's inability
+  // to be fully mocked (fake tickets are rejected, real tickets
+  // can't be synthesised in-browser). This guard checks the
+  // observable JS surface instead: the hydrator Step 4 effect
+  // reads `isSignedIn` from `useAuth()`, and when the URL carries
+  // a `?id=` marker (post-signin return from `runAutoSignup`) it
+  // must NOT fire `editor:export` until `isSignedIn === true`.
+  //
+  // Manual repro (requires staging Clerk account on a real device):
+  //   1. Signed-out → upload a PDF → Edit → Done → Download → DOCX.
+  //   2. EmailFirstModal opens. Submit a fresh email.
+  //   3. `runAutoSignup` finishes → `window.location.assign(
+  //      "/pdf-composer?id=X&export=docx")`.
+  //   4. Expect: paywall opens on this FIRST return.
+  //   5. Before fix: EmailFirstModal re-dispatched on the return,
+  //      paywall only opens on the SECOND manual Download click.
+  //
+  // Code-level guard here: the hydrator source must contain the
+  // gate that reads `isSignedIn` when `isPostSigninReturn`. If a
+  // future refactor drops this check the test fails and names the
+  // regression explicitly. Not a substitute for manual QA — just
+  // the fastest-possible static tripwire.
+  test("PDF-287: hydrator Step 4 source must gate the auto-launch on `isSignedIn` when `?id=` is in URL", async ({
+    page,
+  }) => {
+    const response = await page.request.get(
+      "http://localhost:3001/_next/static/..",
+      { failOnStatusCode: false },
+    );
+    // Expected: dev server reachable. Not strict — the hydrator
+    // source is read from the filesystem via a `page.evaluate` of
+    // a fetch to the compiled bundle below.
+    expect(response.status()).toBeGreaterThanOrEqual(200);
+
+    // Fetch the hydrator source from the running dev server via its
+    // static file route. In production the file is compiled, so
+    // this test is dev-only — use the environment variable
+    // `PLAYWRIGHT_SKIP_SOURCE_GUARDS=1` to skip in CI builds.
+    if (process.env.PLAYWRIGHT_SKIP_SOURCE_GUARDS === "1") {
+      test.skip();
+    }
+
+    const fs = await import("node:fs/promises");
+    const file = await fs.readFile(
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "shared",
+        "pending-editor-file-hydrator.tsx",
+      ),
+      "utf8",
+    );
+
+    // Must contain the gate the fix introduced.
+    expect(file, "hydrator must declare an `isPostSigninReturn` signal").toMatch(
+      /isPostSigninReturn\s*=/,
+    );
+    expect(
+      file,
+      "hydrator Step 4 must bail when post-signin return AND !isSignedIn",
+    ).toMatch(/isPostSigninReturn\s*&&\s*!isSignedIn/);
+  });
+
+  test("PDF-287: useExportEditor source must defer when `?id=` is in URL and signedIn is false", async ({}) => {
+    if (process.env.PLAYWRIGHT_SKIP_SOURCE_GUARDS === "1") {
+      test.skip();
+    }
+    const fs = await import("node:fs/promises");
+    const file = await fs.readFile(
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "lib",
+        "client",
+        "hooks",
+        "pdf-editor",
+        "use-export-editor.ts",
+      ),
+      "utf8",
+    );
+
+    expect(
+      file,
+      "handleExport must defer when a post-signin ?id= is present and signedIn is still false",
+    ).toMatch(/inPostSigninReturn\s*=\s*search\.includes\("id="\)/);
+    expect(
+      file,
+      "defer counter must reset once signedIn flips to true",
+    ).toMatch(/signedInDeferAttemptsRef\.current\s*=\s*0/);
+  });
 });

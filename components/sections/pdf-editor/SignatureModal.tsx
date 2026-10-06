@@ -348,67 +348,44 @@ function SignatureModalContent({
 
     // Fabric JSON is stored in BASE coordinates (zoom = 1). The
     // canvas' `.width` / `.height` are the rendered (post-zoom) size.
-    // Placement priority (QA feedback 2026-07-29 — signatures "landing
-    // in unexpected spots"):
+    // Placement priority (QA 2026-10-03 row 2 reworked — signatures
+    // were landing in a page CORNER on mobile taps and when the user
+    // had scrolled so only a corner of the current page was visible):
     //   1. Last known pointer position on THIS page (`last-pointer.ts`),
     //      set by PdfViewerCanvas's mouse:move listener. Desktop users
     //      get the signature where they were hovering.
-    //   2. Intersection of the canvas rect with the scroll container —
-    //      if the user has scrolled or zoomed in, drop it in the
-    //      currently VISIBLE region so it doesn't land off-screen.
-    //   3. Raw page centre — mobile without a scrolled viewport.
+    //   2. Fallback: raw page centre. The prior visible-rect
+    //      intersection fallback caused the "corner" bug — when only a
+    //      corner slice of the page is in viewport, its midpoint IS
+    //      near a page corner.
+    // After resolving, we clamp the resolved center so the scaled image
+    // bbox stays inside page bounds, so no part of the signature ends
+    // up outside the page (the "partially cut off" variant).
     const zoom = fabricCanvas.getZoom() || 1;
-    let centerX = (fabricCanvas.width ?? 600) / (2 * zoom);
-    let centerY = (fabricCanvas.height ?? 800) / (2 * zoom);
+    const pageW = (fabricCanvas.width ?? 600) / zoom;
+    const pageH = (fabricCanvas.height ?? 800) / zoom;
+    let centerX = pageW / 2;
+    let centerY = pageH / 2;
 
     const lastPointer = getLastPointer();
 
     if (lastPointer && lastPointer.page === currentPage) {
       centerX = lastPointer.x;
       centerY = lastPointer.y;
-    } else {
-      try {
-        const canvasEl = fabricCanvas.getElement();
-        const canvasRect = canvasEl.getBoundingClientRect();
-        let scrollEl: HTMLElement | null = canvasEl.parentElement;
-
-        while (scrollEl && scrollEl !== document.body) {
-          const style = getComputedStyle(scrollEl);
-          const yScroll = style.overflowY;
-          const xScroll = style.overflowX;
-
-          if (
-            yScroll === "auto" ||
-            yScroll === "scroll" ||
-            xScroll === "auto" ||
-            xScroll === "scroll"
-          ) {
-            break;
-          }
-          scrollEl = scrollEl.parentElement;
-        }
-        const scrollRect = scrollEl?.getBoundingClientRect() ?? {
-          top: 0,
-          left: 0,
-          right: window.innerWidth,
-          bottom: window.innerHeight,
-        };
-        const vLeft = Math.max(canvasRect.left, scrollRect.left);
-        const vRight = Math.min(canvasRect.right, scrollRect.right);
-        const vTop = Math.max(canvasRect.top, scrollRect.top);
-        const vBottom = Math.min(canvasRect.bottom, scrollRect.bottom);
-
-        if (vRight > vLeft && vBottom > vTop) {
-          const localX = (vLeft + vRight) / 2 - canvasRect.left;
-          const localY = (vTop + vBottom) / 2 - canvasRect.top;
-
-          centerX = localX / zoom;
-          centerY = localY / zoom;
-        }
-      } catch {
-        // fall back to page centre
-      }
     }
+
+    const scaledW = (img.width ?? 0) * scale;
+    const scaledH = (img.height ?? 0) * scale;
+    const minX = scaledW / 2;
+    const maxX = pageW - scaledW / 2;
+    const minY = scaledH / 2;
+    const maxY = pageH - scaledH / 2;
+
+    // When signature is larger than the page in either axis the
+    // clamp window collapses (min > max). Pin to the lower bound
+    // (= stick to the top/left edge) so the user still sees it.
+    centerX = maxX >= minX ? Math.min(Math.max(centerX, minX), maxX) : minX;
+    centerY = maxY >= minY ? Math.min(Math.max(centerY, minY), maxY) : minY;
 
     img.set({
       left: centerX,
@@ -419,6 +396,16 @@ function SignatureModalContent({
       scaleY: scale,
       top: centerY,
     });
+
+    // QA 2026-10-03 row 3: stamp editorType BEFORE serializing /
+    // adding so the live FabricImage instance carries the same
+    // metadata as the JSON spliced into other pages. Previously only
+    // the JSON copy had `editorType: "signature"` — the live `img`
+    // had no editorType, which left same-session signatures
+    // inconsistent with reloaded ones through
+    // `stripBakedOverlaysForSave`, `applyPristineSweep`, and any
+    // future editorType-aware filter.
+    (img as unknown as { editorType?: string }).editorType = "signature";
 
     // Serialize the placed signature once — reused for every non-current
     // target page. The current page still gets the live FabricImage

@@ -367,31 +367,50 @@ export function PasswordModal() {
                   )}
                 </div>
                 <div>
-                  <Label className="mb-1 block text-xs text-default-500">
+                  <Label className="mb-2 block text-xs text-default-500">
                     Encryption
                   </Label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
+                  <div className="flex flex-col gap-2">
+                    {/* Rows 86/93/94 QA 2026-10-04: previous UI had one
+                     shared description line below both buttons; users
+                     read it as applying only to AES-256 while RC4 looked
+                     undescribed (QA perceived the shared text as "RC4
+                     shows AES-256 description"). Each option now carries
+                     its own distinct description tied to its radio card
+                     so AES-256 and RC4-128 are unambiguous. */}
+                    <button
                       aria-pressed={keyLength === "256"}
-                      size="sm"
-                      variant={keyLength === "256" ? "secondary" : "ghost"}
-                      onPress={() => setKeyLength("256")}
+                      className={`flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                        keyLength === "256"
+                          ? "border-primary bg-primary/5"
+                          : "border-default-200 bg-background hover:bg-default-50"
+                      }`}
+                      type="button"
+                      onClick={() => setKeyLength("256")}
                     >
-                      AES-256 (recommended)
-                    </Button>
-                    <Button
+                      <span className="font-medium">AES-256 (recommended)</span>
+                      <span className="text-[11px] text-default-500">
+                        Modern 256-bit encryption. Opens in current Adobe
+                        Reader, Preview, and all mainstream PDF apps.
+                      </span>
+                    </button>
+                    <button
                       aria-pressed={keyLength === "128"}
-                      size="sm"
-                      variant={keyLength === "128" ? "secondary" : "ghost"}
-                      onPress={() => setKeyLength("128")}
+                      className={`flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                        keyLength === "128"
+                          ? "border-primary bg-primary/5"
+                          : "border-default-200 bg-background hover:bg-default-50"
+                      }`}
+                      type="button"
+                      onClick={() => setKeyLength("128")}
                     >
-                      RC4-128 (legacy)
-                    </Button>
+                      <span className="font-medium">RC4-128 (legacy)</span>
+                      <span className="text-[11px] text-default-500">
+                        Older 128-bit cipher. Only use for compatibility with
+                        pre-2008 PDF viewers; weaker than AES-256.
+                      </span>
+                    </button>
                   </div>
-                  <p className="mt-1 text-[11px] text-default-400">
-                    AES-256 is the modern standard. Pick RC4-128 only if the
-                    file must open in older PDF viewers.
-                  </p>
                 </div>
               </div>
             ) : (

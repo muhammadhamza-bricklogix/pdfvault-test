@@ -64,6 +64,10 @@ export function HamburgerMenu() {
     (s) => s.setIsCompressModalOpen,
   );
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
+
+  // Subscribed so a flag set after mount re-runs the bridge effect below.
+  usePdfEditorStore((s) => s.pendingMenuAction);
+  const setPendingMenuAction = usePdfEditorStore((s) => s.setPendingMenuAction);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // ShareModal lives at shell-level (see comment there); open state is in
   // the store so it survives the EditorLayout unmount that happens during
@@ -386,10 +390,23 @@ export function HamburgerMenu() {
       window.addEventListener(event, handler);
     }
 
+    const pending = usePdfEditorStore.getState().pendingMenuAction;
+    const pendingTimer =
+      pending && file
+        ? window.setTimeout(() => {
+            if (usePdfEditorStore.getState().pendingMenuAction !== pending) {
+              return;
+            }
+            setPendingMenuAction(null);
+            void handleAction(pending);
+          }, 0)
+        : undefined;
+
     return () => {
       for (const [event, handler] of handlers) {
         window.removeEventListener(event, handler);
       }
+      if (pendingTimer !== undefined) window.clearTimeout(pendingTimer);
     };
     // handleAction is redefined per render — that's fine, the listeners are
     // reattached in sync with the closure that owns the current file /
@@ -481,10 +498,7 @@ export function HamburgerMenu() {
                   <HugeiconsIcon icon={NoteIcon} size={14} />
                   <Label>{t("myPdfs")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item
-                  id="find-replace"
-                  textValue={t("findReplace")}
-                >
+                <Dropdown.Item id="find-replace" textValue={t("findReplace")}>
                   <HugeiconsIcon icon={Search01Icon} size={14} />
                   <Label>{t("findReplace")}</Label>
                 </Dropdown.Item>

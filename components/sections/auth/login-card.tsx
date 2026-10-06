@@ -2,7 +2,7 @@
 
 import { useClerk, useSignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { OtpBoxes } from "@/components/ui/form/otp-boxes";
@@ -86,6 +86,13 @@ function readClerkError(err: unknown, fallback: string): string {
   const raw = first?.longMessage ?? first?.message ?? "";
 
   return humaniseClerkMessage(raw, first?.code) || fallback;
+}
+
+function isSessionExistsError(err: unknown): boolean {
+  return (
+    (err as { errors?: { code?: string }[] })?.errors?.[0]?.code ===
+    "session_exists"
+  );
 }
 
 function humaniseClerkMessage(raw: string, code?: string): string {
@@ -298,6 +305,12 @@ export function LoginCard({
     [redirectUrl, searchParams],
   );
 
+  // A session can already exist (e.g. signed in from another tab); continue instead of erroring.
+  const continueAsSignedIn = () => {
+    suppressNextUnload();
+    window.location.assign(afterSignInPath);
+  };
+
   // Post-verify navigation. Invariant #15: iOS Safari commits the Clerk
   // session cookie during a full-page navigation; router.push outruns the
   // commit and lands on middleware that reads the user as signed-out,
@@ -469,8 +482,15 @@ export function LoginCard({
       const message = (error as { errors?: { message?: string }[] })
         ?.errors?.[0]?.message;
 
-      // Clerk returns 422 `verification_already_sent` (or a variant
-      // like `session_exists`) when we hit sendCode a second time in
+      // Must run before the "already exists" recovery below, which would otherwise match it.
+      if (code === "session_exists") {
+        continueAsSignedIn();
+
+        return false;
+      }
+
+      // Clerk returns 422 `verification_already_sent` (or a similar
+      // variant) when we hit sendCode a second time in
       // the same flow — e.g. React StrictMode's dev double-mount,
       // fast double-click on Resend, or the user reopening the modal
       // while a code is still valid. The code IS in the user's
@@ -565,6 +585,11 @@ export function LoginCard({
   ) => {
     event.preventDefault();
     if (!signIn) return;
+    if (clerk?.isSignedIn) {
+      continueAsSignedIn();
+
+      return;
+    }
 
     const trimmedEmail = email.trim();
 
@@ -618,7 +643,7 @@ export function LoginCard({
         logger.event(EVENTS.SIGNIN_CODE_SENT, "info");
         setCode("");
         setStep("codeVerify");
-        setNotice(`We sent a 6-digit code to ${trimmedEmail}.`);
+        setNotice(`We sent a 6-digit code to ${maskEmail(trimmedEmail)}.`);
         setSubmitting(false);
 
         return;
@@ -651,6 +676,11 @@ export function LoginCard({
       });
 
       if (createError) {
+        if (isSessionExistsError(createError)) {
+          continueAsSignedIn();
+
+          return;
+        }
         const msg = readClerkError(
           createError,
           "Couldn't sign you in. Please try again.",
@@ -697,6 +727,11 @@ export function LoginCard({
       setErrors({ form: "Sign-in didn't finish. Please try again." });
       setSubmitting(false);
     } catch (err) {
+      if (isSessionExistsError(err)) {
+        continueAsSignedIn();
+
+        return;
+      }
       logger.captureError(err, "signin.credentials");
       setErrors({
         form: readClerkError(err, "Couldn't sign you in. Please try again."),
@@ -723,6 +758,11 @@ export function LoginCard({
   const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!signIn) return;
+    if (clerk?.isSignedIn) {
+      continueAsSignedIn();
+
+      return;
+    }
 
     const trimmedCode = code.trim();
 
@@ -744,6 +784,11 @@ export function LoginCard({
         });
 
         if (attemptError) {
+          if (isSessionExistsError(attemptError)) {
+            continueAsSignedIn();
+
+            return;
+          }
           setErrors({
             code: readClerkError(
               attemptError,
@@ -791,6 +836,11 @@ export function LoginCard({
       const attemptError = verifyResult?.error ?? null;
 
       if (attemptError) {
+        if (isSessionExistsError(attemptError)) {
+          continueAsSignedIn();
+
+          return;
+        }
         setErrors({
           code: readClerkError(
             attemptError,
@@ -814,6 +864,11 @@ export function LoginCard({
       setErrors({ code: "Verification didn't finish. Try again." });
       setSubmitting(false);
     } catch (err) {
+      if (isSessionExistsError(err)) {
+        continueAsSignedIn();
+
+        return;
+      }
       logger.captureError(err, "signin.code_verify", {
         step,
         strategy: secondFactorStrategy,
@@ -835,7 +890,7 @@ export function LoginCard({
         const sent = await sendEmailCode(email);
 
         if (sent) {
-          setNotice(`A new code was sent to ${email}.`);
+          setNotice(`A new code was sent to ${maskEmail(email)}.`);
         }
 
         return;
@@ -912,16 +967,55 @@ export function LoginCard({
   // Ref-SS 3 style: "Enter the code to log in" + masked email subtitle.
   // Phone 2FA keeps a generic subtitle since we don't have the number.
   const codeStepTitle = "Enter the code to log in";
+  // QA F-29 / F-30 / F-32 / F-33: same wg-notranslate strategy as the
+  // signup card. Picking per-locale copy manually keeps every field
+  // stable in whatever language the URL prefix declares; Weglot can't
+  // re-translate on the password-visibility toggle.
+  const pathname = usePathname();
+  const isDe = pathname?.split("/")[1] === "de";
+  const t = {
+    welcomeBack: isDe ? "Willkommen zurück" : "Welcome back",
+    logInWithPassword: isDe ? "Mit Passwort anmelden" : "Log in with password",
+    continueWithGoogle: isDe ? "Mit Google fortfahren" : "Continue with Google",
+    connectingGoogle: isDe ? "Verbindung zu Google…" : "Connecting to Google…",
+    or: isDe ? "ODER" : "OR",
+    email: isDe ? "E-Mail" : "Email",
+    emailPlaceholder: isDe
+      ? "Geben Sie Ihre E-Mail-Adresse ein"
+      : "Enter Your Email",
+    password: isDe ? "Passwort" : "Password",
+    passwordPlaceholder: isDe
+      ? "Geben Sie Ihr Passwort ein"
+      : "Enter Your Password",
+    forgotPassword: isDe ? "Passwort vergessen?" : "Forgot password?",
+    logIn: isDe ? "Anmelden" : "Log in",
+    logInWithEmail: isDe ? "Mit E-Mail anmelden" : "Log in with email",
+    signingIn: isDe ? "Anmeldung läuft…" : "Signing in…",
+    switchToPassword: isDe
+      ? "Stattdessen mit Passwort anmelden"
+      : "Log in with password instead",
+    switchToCode: isDe
+      ? "Stattdessen mit Code anmelden"
+      : "Log in with a code instead",
+    noAccount: isDe ? "Noch kein Konto?" : "Do not have an account yet?",
+    signUp: isDe ? "Registrieren" : "Sign up",
+    checkEmail: isDe
+      ? `Bitte überprüfen Sie Ihre E-Mail ${maskEmail(email)}.`
+      : `Please check your email ${maskEmail(email)}.`,
+    checkPhone: isDe
+      ? "Wir haben einen 6-stelligen Code an Ihr Telefon gesendet."
+      : "We sent a 6-digit code to your phone.",
+  };
   const codeStepSubtitle =
     step === "codeVerify"
-      ? `Please check your email ${maskEmail(email)}.`
+      ? t.checkEmail
       : secondFactorStrategy === "phone_code"
-        ? "We sent a 6-digit code to your phone."
-        : `Please check your email ${maskEmail(email)}.`;
+        ? t.checkPhone
+        : t.checkEmail;
   // Ref-SS 1 (initial) shows just "Welcome back" with no subtitle.
   // Ref-SS 2 (password mode) shows "Log in with password".
   const credentialsTitle =
-    mode === "password" ? "Log in with password" : "Welcome back";
+    mode === "password" ? t.logInWithPassword : t.welcomeBack;
   const showResendLink =
     step === "codeVerify" ||
     secondFactorStrategy === "email_code" ||
@@ -930,7 +1024,9 @@ export function LoginCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(446px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+      className="notranslate wg-notranslate box-border w-[min(446px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+      data-wg-notranslate
+      translate="no"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
@@ -966,12 +1062,17 @@ export function LoginCard({
             <span className="h-px bg-[#d9d9d9]" />
           </div>
 
-          <form noValidate className="mt-6" onSubmit={onSubmitCredentials}>
+          <form
+            noValidate
+            className="notranslate wg-notranslate mt-6"
+            translate="no"
+            onSubmit={onSubmitCredentials}
+          >
             <label
               className="block text-[14px] text-[#5f5f5f]"
               htmlFor={emailId}
             >
-              Email
+              {t.email}
               <span aria-hidden className="text-[#f12c23]">
                 *
               </span>
@@ -985,7 +1086,7 @@ export function LoginCard({
               id={emailId}
               inputMode="email"
               name="email"
-              placeholder="Enter Your Email"
+              placeholder={t.emailPlaceholder}
               spellCheck={false}
               type="email"
               value={email}
@@ -1012,7 +1113,7 @@ export function LoginCard({
                   className="mt-4 block text-[14px] text-[#5f5f5f]"
                   htmlFor={passwordId}
                 >
-                  Password
+                  {t.password}
                   <span aria-hidden className="text-[#f12c23]">
                     *
                   </span>
@@ -1028,7 +1129,7 @@ export function LoginCard({
                     className="h-[52px] w-full rounded-[12px] bg-[#f7f7f7] px-3 pr-11 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40"
                     id={passwordId}
                     name="password"
-                    placeholder="Enter Your Password"
+                    placeholder={t.passwordPlaceholder}
                     type={passwordRevealed ? "text" : "password"}
                     value={password}
                     onChange={(event) => {
@@ -1077,14 +1178,14 @@ export function LoginCard({
                       type="button"
                       onClick={onForgotPassword}
                     >
-                      Forgot password?
+                      {t.forgotPassword}
                     </button>
                   ) : (
                     <Link
                       className="text-[#5f5f5f] underline-offset-2 hover:text-[#f12c23] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
                       href={forgotPasswordHref}
                     >
-                      Forgot password?
+                      {t.forgotPassword}
                     </Link>
                   )}
                 </div>
@@ -1117,12 +1218,12 @@ export function LoginCard({
               {submitting
                 ? mode === "code"
                   ? "Sending code…"
-                  : "Signing in…"
+                  : t.signingIn
                 : mode === "code"
                   ? // Ref-SS 1: primary CTA on the code / email-only
                     // step reads "Log in with email".
-                    "Log in with email"
-                  : "Log in"}
+                    t.logInWithEmail
+                  : t.logIn}
             </button>
 
             {/* Mode toggle. Default is code; user can switch to password
@@ -1133,14 +1234,17 @@ export function LoginCard({
               type="button"
               onClick={() => switchMode(mode === "code" ? "password" : "code")}
             >
-              {mode === "code"
-                ? "Log in with password instead"
-                : "Log in with a code instead"}
+              {mode === "code" ? t.switchToPassword : t.switchToCode}
             </button>
           </form>
         </>
       ) : (
-        <form noValidate className="mt-8" onSubmit={onSubmitCode}>
+        <form
+          noValidate
+          className="notranslate wg-notranslate mt-8"
+          translate="no"
+          onSubmit={onSubmitCode}
+        >
           <button
             className="mb-4 inline-flex cursor-pointer items-center gap-1 text-[13px] text-[#666666] hover:text-[#1a1c21]"
             type="button"
@@ -1204,14 +1308,17 @@ export function LoginCard({
           </button>
 
           {showResendLink ? (
-            <button
-              className="mt-3 block w-full text-center text-[13px] text-[#666666] hover:text-[#1a1c21] disabled:opacity-60"
-              disabled={resending}
-              type="button"
-              onClick={() => void onResendCode()}
-            >
-              {resending ? "Sending…" : "Didn't get it? Resend code"}
-            </button>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-1 text-[13px] text-[#666666]">
+              <p>Didn&apos;t get it?</p>
+              <button
+                className="cursor-pointer py-1 text-[#f12c23] underline underline-offset-2 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={resending}
+                type="button"
+                onClick={() => void onResendCode()}
+              >
+                {resending ? "Sending…" : "Resend code"}
+              </button>
+            </div>
           ) : null}
         </form>
       )}
@@ -1225,7 +1332,7 @@ export function LoginCard({
 
       {step === "credentials" ? (
         <p className="mt-6 text-center text-[15px] text-[#5f5f5f]">
-          Do not have an account yet?{" "}
+          {t.noAccount}{" "}
           {onSwitchToSignup ? (
             // Modal mode — switch tabs inside the AuthModal instead of
             // navigating to the standalone /sign-up page (which would
@@ -1236,14 +1343,14 @@ export function LoginCard({
               type="button"
               onClick={onSwitchToSignup}
             >
-              Sign up
+              {t.signUp}
             </button>
           ) : (
             <Link
               className="text-[#f12c23] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
               href={signUpHref}
             >
-              Sign up
+              {t.signUp}
             </Link>
           )}
         </p>

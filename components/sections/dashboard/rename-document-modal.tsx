@@ -7,7 +7,10 @@ import { useState } from "react";
 
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
-import { validateRenameFilename } from "@/lib/shared/schemas/documents/rename.schema";
+import {
+  stripPdfExtension,
+  validateRenameBaseName,
+} from "@/lib/shared/schemas/documents/rename.schema";
 
 type Props = {
   document: Document | null;
@@ -15,7 +18,8 @@ type Props = {
 };
 
 export function RenameDocumentModal({ document: doc, onClose }: Props) {
-  const [name, setName] = useState(doc?.filename ?? "");
+  // The field edits the name only; `.pdf` is a fixed suffix appended on save.
+  const [name, setName] = useState(stripPdfExtension(doc?.filename ?? ""));
   const [error, setError] = useState<string | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   // React docs' "adjust state during render" pattern — resets `name` whenever
@@ -25,12 +29,20 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
 
   if ((doc?.id ?? null) !== lastDocId) {
     setLastDocId(doc?.id ?? null);
-    setName(doc?.filename ?? "");
+    setName(stripPdfExtension(doc?.filename ?? ""));
     setError(null);
   }
 
   const rename = useRenameDocumentMutation();
   const isOpen = !!doc;
+
+  // Live validation; `error` holds only the save-time duplicate message.
+  // An unchanged name is always allowed so existing long names never get stuck.
+  const isUnchanged =
+    stripPdfExtension(name.trim()).trim() ===
+    stripPdfExtension(doc?.filename ?? "");
+  const validationError = isUnchanged ? null : validateRenameBaseName(name);
+  const shownError = validationError ?? error;
 
   const handleChange = (val: string) => {
     setName(val);
@@ -38,19 +50,11 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!doc) return;
-    const trimmed = name.trim();
+    if (!doc || validationError) return;
+    const trimmed = `${stripPdfExtension(name.trim()).trim()}.pdf`;
 
-    if (!trimmed || trimmed === doc.filename) {
+    if (trimmed === doc.filename) {
       onClose();
-
-      return;
-    }
-
-    const validationError = validateRenameFilename(trimmed);
-
-    if (validationError) {
-      setError(validationError);
 
       return;
     }
@@ -105,13 +109,25 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
             >
               <TextField
                 autoFocus
-                isInvalid={!!error}
+                isInvalid={!!shownError}
                 value={name}
                 onChange={handleChange}
               >
                 <Label>Name</Label>
-                <Input placeholder="Document name" />
-                {error ? <p className="text-xs text-danger">{error}</p> : null}
+                <div className="flex items-center gap-2">
+                  <Input
+                    className="min-w-0 flex-1"
+                    placeholder="Document name"
+                  />
+                  <span className="shrink-0 text-sm text-default-500">
+                    .pdf
+                  </span>
+                </div>
+                {shownError ? (
+                  <p className="text-xs text-danger" role="alert">
+                    {shownError}
+                  </p>
+                ) : null}
               </TextField>
             </form>
           </Modal.Body>
@@ -120,7 +136,7 @@ export function RenameDocumentModal({ document: doc, onClose }: Props) {
               Cancel
             </Button>
             <Button
-              isDisabled={busy || !name.trim()}
+              isDisabled={busy || !!validationError}
               onPress={() => void handleSubmit()}
             >
               {busy ? "Saving..." : "Save"}

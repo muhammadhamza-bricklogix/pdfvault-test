@@ -27,12 +27,26 @@ export function usePdfLoader() {
   //   2. `file` arrives later (bg DL) → sourceKey unchanged  → no re-load
   //
   // After Save (applyPostSaveReset clears pdfSourceUrl and sets a new File):
-  //   sourceKey = "<name>:<size>:<lastModified>" → effect re-runs → ArrayBuffer load
+  //   sourceKey = "<size>:<lastModified>" → effect re-runs → ArrayBuffer load
   //
   // Local drops: pdfSourceUrl is always null → sourceKey = file identity
+  //
+  // Row 96 QA 2026-10-04: file.name is deliberately NOT in the key.
+  // Rename (commitRename in Pv/EditorTopChrome / EditorTopBar) builds a
+  // new File with identical bytes + lastModified and ONLY a different
+  // name — previously that flipped the sourceKey and tore down pdf.js
+  // for a parse that was going to produce the identical PDFDocument.
+  // During the gap, pdfDocument reverted to null, so back-pages
+  // (anything the user had scrolled past) rendered blank for the ~1 s
+  // it took pdf.js to re-parse. Keying on size+lastModified alone
+  // avoids the unnecessary reload. A new File with the SAME size +
+  // lastModified but different bytes is practically impossible — the
+  // browser derives lastModified from the OS file timestamp at
+  // sub-millisecond precision, and real content changes come through
+  // save paths that bump size.
   const sourceKey = useMemo<string | null>(() => {
     if (pdfSourceUrl) return pdfSourceUrl;
-    if (file) return `${file.name}:${file.size}:${file.lastModified}`;
+    if (file) return `${file.size}:${file.lastModified}`;
 
     return null;
   }, [pdfSourceUrl, file]);

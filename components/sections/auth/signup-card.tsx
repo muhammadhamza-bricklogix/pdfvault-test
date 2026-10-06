@@ -2,7 +2,7 @@
 
 import { useClerk, useSignUp } from "@clerk/nextjs";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
@@ -68,6 +68,13 @@ function readClerkError(err: unknown, fallback: string): string {
   const raw = first?.longMessage ?? first?.message ?? "";
 
   return humaniseClerkMessage(raw, first?.code) || fallback;
+}
+
+function isSessionExistsError(err: unknown): boolean {
+  return (
+    (err as { errors?: { code?: string }[] })?.errors?.[0]?.code ===
+    "session_exists"
+  );
 }
 
 function humaniseClerkMessage(raw: string, code?: string): string {
@@ -254,6 +261,60 @@ export function SignupCard({
   const submittingCredentialsRef = useRef(false);
   const submittingCodeRef = useRef(false);
 
+  // QA F-29 / F-30 / F-32 / F-33: form labels + placeholders drifted
+  // between German and English because Weglot's MutationObserver
+  // re-translated DOM nodes on each password-visibility toggle. Fencing
+  // the whole form from Weglot and picking per-locale copy manually
+  // keeps every field stable in whatever language the URL prefix
+  // declares. Non-/de/ locales keep the English source; Weglot can't
+  // see past the fence either way.
+  const pathname = usePathname();
+  const isDe = pathname?.split("/")[1] === "de";
+  const t = {
+    createAccount: isDe
+      ? "Erstellen Sie ein Konto, um es herunterzuladen."
+      : "Create an account to download it.",
+    continueWithGoogle: isDe ? "Mit Google fortfahren" : "Continue with Google",
+    connectingGoogle: isDe ? "Verbindung zu Google…" : "Connecting to Google…",
+    or: isDe ? "ODER" : "OR",
+    email: isDe ? "E-Mail" : "Email",
+    emailPlaceholder: isDe
+      ? "Geben Sie Ihre E-Mail-Adresse ein"
+      : "Enter Your Email",
+    password: isDe ? "Passwort" : "Password",
+    passwordPlaceholder: isDe
+      ? "Geben Sie Ihr Passwort ein"
+      : "Enter Your Password",
+    passwordHelper: isDe
+      ? "Das Passwort muss mindestens 8 Zeichen enthalten"
+      : "Password must contain at least 8 characters",
+    signUp: isDe ? "Konto erstellen" : "Sign up",
+    signingUp: isDe ? "Konto wird erstellt…" : "Signing up…",
+    sendCode: isDe ? "Bestätigungscode senden" : "Send verification code",
+    sendingCode: isDe ? "Code wird gesendet…" : "Sending code…",
+    switchToPassword: isDe
+      ? "Stattdessen mit Passwort registrieren"
+      : "Sign up with password instead",
+    switchToCode: isDe
+      ? "Stattdessen mit Code registrieren"
+      : "Sign up with a code instead",
+    yourFileReady: isDe ? "Ihre Datei ist bereit" : "Your file is ready",
+    signUpForPDFVault: isDe
+      ? "Für PDFVault registrieren"
+      : "Sign up for PDFVault",
+    enterCodeToSignUp: isDe
+      ? "Geben Sie den Code ein, um sich zu registrieren"
+      : "Enter the code to sign up",
+    checkEmailMasked: (masked: string) =>
+      isDe
+        ? `Bitte überprüfen Sie Ihre E-Mail ${masked}.`
+        : `Please check your email ${masked}.`,
+    alreadyHaveAccount: isDe
+      ? "Sie haben bereits ein Konto?"
+      : "Already have an account?",
+    logIn: isDe ? "Anmelden" : "Log In",
+  };
+
   const headingId = useId();
   const emailId = useId();
   const passwordId = useId();
@@ -269,6 +330,12 @@ export function SignupCard({
       ),
     [redirectUrl, searchParams],
   );
+
+  // A session can already exist (e.g. signed in from another tab); continue instead of erroring.
+  const continueAsSignedIn = () => {
+    suppressNextUnload();
+    window.location.assign(afterSignUpPath);
+  };
 
   // Enables/disables the primary CTA. In code mode only the email
   // needs to look valid; in password mode we run the full schema —
@@ -327,6 +394,11 @@ export function SignupCard({
   ) => {
     event.preventDefault();
     if (!signUp) return;
+    if (clerk?.isSignedIn) {
+      continueAsSignedIn();
+
+      return;
+    }
     // Sync double-submit guard — see refs above.
     if (submittingCredentialsRef.current) return;
     submittingCredentialsRef.current = true;
@@ -410,6 +482,11 @@ export function SignupCard({
         });
 
         if (createError) {
+          if (isSessionExistsError(createError)) {
+            continueAsSignedIn();
+
+            return;
+          }
           const errorCode = (createError as { errors?: { code?: string }[] })
             ?.errors?.[0]?.code;
           const msg = readClerkError(
@@ -449,6 +526,11 @@ export function SignupCard({
         });
 
         if (passwordError) {
+          if (isSessionExistsError(passwordError)) {
+            continueAsSignedIn();
+
+            return;
+          }
           const errorCode = (passwordError as { errors?: { code?: string }[] })
             ?.errors?.[0]?.code;
           const msg = readClerkError(
@@ -477,6 +559,11 @@ export function SignupCard({
       });
 
       if (sendCode.error) {
+        if (isSessionExistsError(sendCode.error)) {
+          continueAsSignedIn();
+
+          return;
+        }
         setErrors({
           form: readClerkError(
             sendCode.error,
@@ -491,6 +578,11 @@ export function SignupCard({
       setCode("");
       logger.event(EVENTS.SIGNUP_CODE_SENT, "info");
     } catch (err) {
+      if (isSessionExistsError(err)) {
+        continueAsSignedIn();
+
+        return;
+      }
       logger.captureError(err, "signup.credentials");
       setErrors({
         form: readClerkError(
@@ -556,6 +648,11 @@ export function SignupCard({
         const errorCode = (verifyError as { errors?: { code?: string }[] })
           ?.errors?.[0]?.code;
 
+        if (errorCode === "session_exists") {
+          continueAsSignedIn();
+
+          return;
+        }
         if (errorCode === "verification_already_verified") {
           logger.warn(
             "signup.verify_email_code: already verified — falling through to finalize",
@@ -831,7 +928,9 @@ export function SignupCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-6 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:px-8 sm:pb-7 sm:pt-[38px]"
+      className="notranslate wg-notranslate box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-6 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:px-8 sm:pb-7 sm:pt-[38px]"
+      data-wg-notranslate
+      translate="no"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
@@ -848,9 +947,9 @@ export function SignupCard({
             // (no initialEmail) keep the neutral "Sign up for
             // PDFVault" heading.
             initialEmail
-            ? "Your file is ready"
-            : "Sign up for PDFVault"
-          : "Enter the code to sign up"}
+            ? t.yourFileReady
+            : t.signUpForPDFVault
+          : t.enterCodeToSignUp}
       </h1>
       {/* Subtitle only on the verify step per the reference SS.
           Credentials step (SS4) shows the heading alone; the file-
@@ -858,12 +957,12 @@ export function SignupCard({
           the "why am I signing up?" question is answered. */}
       {step === "credentials" && initialEmail ? (
         <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
-          Create an account to download it.
+          {t.createAccount}
         </p>
       ) : null}
       {step === "verify" ? (
         <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
-          {`Please check your email ${maskEmailAddress(email)}.`}
+          {t.checkEmailMasked(maskEmailAddress(email))}
         </p>
       ) : null}
 
@@ -877,20 +976,25 @@ export function SignupCard({
               onClick={onGoogle}
             >
               <GoogleIcon />
-              {oauthLoading ? "Connecting to Google…" : "Continue with Google"}
+              {oauthLoading ? t.connectingGoogle : t.continueWithGoogle}
             </button>
           </div>
 
           <div className="mx-[5px] mt-[30px] grid grid-cols-[1fr_auto_1fr] items-center gap-4">
             <span className="h-px bg-[#9d9d9d]" />
-            <span className="text-[16px] text-[#9d9d9d]">OR</span>
+            <span className="text-[16px] text-[#9d9d9d]">{t.or}</span>
             <span className="h-px bg-[#9d9d9d]" />
           </div>
 
-          <form noValidate className="mt-[30px]" onSubmit={onSubmitCredentials}>
+          <form
+            noValidate
+            className="notranslate wg-notranslate mt-[30px]"
+            translate="no"
+            onSubmit={onSubmitCredentials}
+          >
             <div>
               <label className={LABEL_CLASS} htmlFor={emailId}>
-                Email
+                {t.email}
                 <span aria-hidden className="text-[#f12c23]">
                   *
                 </span>
@@ -903,7 +1007,7 @@ export function SignupCard({
                 id={emailId}
                 inputMode="email"
                 name="email"
-                placeholder="Enter Your Email"
+                placeholder={t.emailPlaceholder}
                 spellCheck={false}
                 type="email"
                 value={email}
@@ -919,7 +1023,7 @@ export function SignupCard({
             {mode === "password" ? (
               <div className="mt-[8px]">
                 <label className={LABEL_CLASS} htmlFor={passwordId}>
-                  Password
+                  {t.password}
                   <span aria-hidden className="text-[#f12c23]">
                     *
                   </span>
@@ -935,7 +1039,7 @@ export function SignupCard({
                     className={`${INPUT_CLASS} mt-0 pr-11`}
                     id={passwordId}
                     name="password"
-                    placeholder="Enter Your Password"
+                    placeholder={t.passwordPlaceholder}
                     type={passwordRevealed ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -954,7 +1058,7 @@ export function SignupCard({
                     className="mt-2 text-[13px] text-[#7a7a7a]"
                     id={passwordHelperId}
                   >
-                    Password must contain at least 8 characters
+                    {t.passwordHelper}
                   </p>
                 )}
               </div>
@@ -979,11 +1083,11 @@ export function SignupCard({
             >
               {submitting
                 ? mode === "code"
-                  ? "Sending code…"
-                  : "Signing up…"
+                  ? t.sendingCode
+                  : t.signingUp
                 : mode === "code"
-                  ? "Send verification code"
-                  : "Sign up"}
+                  ? t.sendCode
+                  : t.signUp}
             </button>
 
             <button
@@ -991,14 +1095,17 @@ export function SignupCard({
               type="button"
               onClick={() => switchMode(mode === "code" ? "password" : "code")}
             >
-              {mode === "code"
-                ? "Sign up with password instead"
-                : "Sign up with a code instead"}
+              {mode === "code" ? t.switchToPassword : t.switchToCode}
             </button>
           </form>
         </>
       ) : (
-        <form noValidate className="mt-8" onSubmit={onSubmitCode}>
+        <form
+          noValidate
+          className="notranslate wg-notranslate mt-8"
+          translate="no"
+          onSubmit={onSubmitCode}
+        >
           <label className={LABEL_CLASS} htmlFor={codeId}>
             Verification code
             <span aria-hidden className="text-[#f12c23]">
@@ -1033,13 +1140,15 @@ export function SignupCard({
             {submitting ? "Verifying…" : "Verify & Continue"}
           </button>
 
-          <button
-            className="mt-3 w-full cursor-pointer text-center text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
-            type="button"
-            onClick={() => void onResendCode()}
-          >
-            Resend code
-          </button>
+          <div className="mt-3 flex justify-center">
+            <button
+              className="cursor-pointer py-1 text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+              type="button"
+              onClick={() => void onResendCode()}
+            >
+              Resend code
+            </button>
+          </div>
         </form>
       )}
 
@@ -1051,7 +1160,7 @@ export function SignupCard({
       ) : null}
 
       <p className="mt-[28px] text-center text-[16px] text-[#4c4c4c]">
-        Already have an account?{" "}
+        {t.alreadyHaveAccount}{" "}
         {onSwitchToLogin ? (
           // Modal mode — switch tabs inside the AuthModal instead of
           // navigating to /sign-in (which would unmount the modal and
@@ -1061,7 +1170,7 @@ export function SignupCard({
             type="button"
             onClick={onSwitchToLogin}
           >
-            Log In
+            {t.logIn}
           </button>
         ) : (
           <Link
@@ -1072,7 +1181,7 @@ export function SignupCard({
                 : ROUTES.AUTH.SIGN_IN
             }
           >
-            Log In
+            {t.logIn}
           </Link>
         )}
       </p>
@@ -1084,23 +1193,25 @@ export function SignupCard({
           verification-code CTA. */}
       {step === "credentials" ? (
         <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
-          By proceeding, you confirm that you have read and agreed to the{" "}
+          {isDe
+            ? "Mit dem Fortfahren bestätigen Sie, dass Sie unsere "
+            : "By proceeding, you confirm that you have read and agreed to the "}
           <Link
             className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
             href={ROUTES.LEGAL.TERMS}
             target="_blank"
           >
-            Terms and Conditions
-          </Link>{" "}
-          and{" "}
+            {isDe ? "AGB" : "Terms and Conditions"}
+          </Link>
+          {isDe ? " und " : " and "}
           <Link
             className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
             href={ROUTES.LEGAL.PRIVACY}
             target="_blank"
           >
-            Privacy Policy
+            {isDe ? "Datenschutzrichtlinie" : "Privacy Policy"}
           </Link>
-          .
+          {isDe ? " gelesen haben und ihnen zustimmen." : "."}
         </p>
       ) : null}
     </section>

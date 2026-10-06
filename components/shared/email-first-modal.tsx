@@ -1,15 +1,17 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { dispatchLoginToDownloadModal } from "@/components/shared/login-to-download-modal";
 import { runAutoSignup } from "@/lib/client/auth/auto-signup";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { useVisualViewportFrame } from "@/lib/client/ui/visual-viewport";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
@@ -101,56 +103,9 @@ export function EmailFirstModal() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [keyboardViewport, setKeyboardViewport] = useState<{
-    height: number;
-    top: number;
-  } | null>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
-
-  const scrollEmailInputIntoView = useCallback(
-    (block: ScrollLogicalPosition = "nearest") => {
-      emailInputRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block,
-        inline: "nearest",
-      });
-    },
-    [],
-  );
-
-  const syncKeyboardViewport = useCallback(() => {
-    const visualViewport = window.visualViewport;
-    const input = emailInputRef.current;
-
-    if (!visualViewport || document.activeElement !== input) {
-      setKeyboardViewport(null);
-      return;
-    }
-
-    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
-
-    if (!keyboardIsOpen) {
-      setKeyboardViewport(null);
-      return;
-    }
-
-    setKeyboardViewport({
-      height: Math.floor(visualViewport.height),
-      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
-    });
-
-    requestAnimationFrame(() => scrollEmailInputIntoView("center"));
-  }, [scrollEmailInputIntoView]);
-
-  const focusEmailInputWithoutPageScroll = useCallback(() => {
-    const input = emailInputRef.current;
-
-    if (!input) return;
-
-    input.focus({ preventScroll: true });
-    requestAnimationFrame(syncKeyboardViewport);
-    window.setTimeout(syncKeyboardViewport, 250);
-  }, [syncKeyboardViewport]);
+  // Follows the visible area while the keyboard is open; VisualViewportSync reveals the input.
+  const keyboardViewport = useVisualViewportFrame(detail !== null);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -168,48 +123,15 @@ export function EmailFirstModal() {
     return () => window.removeEventListener("app:email-first-modal", onOpen);
   }, []);
 
-  // Focus without letting the browser scroll the page to bring the input
-  // into view — the modal is already centered via CSS. On mobile the
-  // keyboard opens AFTER focus and shrinks the visible area, which can
-  // push the input above the fold; re-run scrollIntoView (targets the
-  // modal's own scrollable container, not the page) on visualViewport
-  // resize so the input stays reachable once the keyboard settles.
+  // Focus without letting the browser scroll the page; the modal is already centred.
   useEffect(() => {
     if (!detail) return;
-    focusEmailInputWithoutPageScroll();
-    requestAnimationFrame(() => scrollEmailInputIntoView("nearest"));
-    window.setTimeout(() => scrollEmailInputIntoView("center"), 250);
-
-    const vv = window.visualViewport;
-
-    if (!vv) return;
-
-    const handleViewportResize = () => {
-      if (document.activeElement !== emailInputRef.current) return;
-
-      syncKeyboardViewport();
-      scrollEmailInputIntoView("center");
-    };
-
-    vv.addEventListener("resize", handleViewportResize);
-    vv.addEventListener("scroll", handleViewportResize);
-
-    return () => {
-      vv.removeEventListener("resize", handleViewportResize);
-      vv.removeEventListener("scroll", handleViewportResize);
-      setKeyboardViewport(null);
-    };
-  }, [
-    detail,
-    focusEmailInputWithoutPageScroll,
-    scrollEmailInputIntoView,
-    syncKeyboardViewport,
-  ]);
+    emailInputRef.current?.focus({ preventScroll: true });
+  }, [detail]);
 
   const close = useCallback(() => {
     setDetail(null);
     setSubmitting(false);
-    setKeyboardViewport(null);
   }, []);
 
   useEffect(() => {
@@ -228,18 +150,6 @@ export function EmailFirstModal() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [close, detail]);
-
-  const handleEmailPointerDown = useCallback(() => {
-    window.setTimeout(syncKeyboardViewport, 0);
-  }, [syncKeyboardViewport]);
-
-  const handleEmailBlur = useCallback(() => {
-    window.setTimeout(() => {
-      if (document.activeElement !== emailInputRef.current) {
-        setKeyboardViewport(null);
-      }
-    }, 0);
-  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -466,11 +376,7 @@ export function EmailFirstModal() {
       }}
       onPointerDownCapture={(event) => event.stopPropagation()}
     >
-      <div
-        aria-hidden
-        className={styles.backdropHitbox}
-        onClick={close}
-      />
+      <div aria-hidden className={styles.backdropHitbox} onClick={close} />
       <div
         className={containerClassName}
         onClick={(event) => event.stopPropagation()}
@@ -479,124 +385,120 @@ export function EmailFirstModal() {
           className={`${styles.frame} flex w-full items-center justify-center overflow-hidden`}
           style={viewportFrameStyle}
         >
-        <div className={`${styles.dialog} w-fit max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none`}>
-          <div className="relative">
-            <button
-              aria-label="Close"
-              className="absolute right-4 top-4 z-10 inline-flex size-8 items-center justify-center rounded-md text-[#8a8a8a] transition-colors hover:bg-default-100 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
-              type="button"
-              onClick={close}
-            >
-              <svg
-                aria-hidden
-                fill="none"
-                height="20"
-                viewBox="0 0 20 20"
-                width="20"
+          <div
+            className={`${styles.dialog} w-fit max-w-[min(680px,calc(100vw-32px))] overflow-visible bg-transparent p-0 shadow-none`}
+          >
+            <div className="relative">
+              <button
+                aria-label="Close"
+                className="absolute right-4 top-4 z-10 inline-flex size-8 items-center justify-center rounded-md text-[#8a8a8a] transition-colors hover:bg-default-100 hover:text-[#1a1c21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23]"
+                type="button"
+                onClick={close}
               >
-                <path
-                  d="M5 5l10 10M15 5L5 15"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeWidth="1.75"
-                />
-              </svg>
-            </button>
-
-            <section
-              aria-labelledby="email-first-heading"
-              className={`${styles.cardSurface} box-border max-h-[calc(100dvh-32px)] w-[min(620px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]`}
-              style={cardStyle}
-            >
-              <h1
-                className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
-                id="email-first-heading"
-              >
-                {detail?.title ?? "Welcome back"}
-              </h1>
-              {detail?.subtitle ? (
-                <p className="mt-2 text-center text-[15px] leading-[20px] text-[#6f6f6f]">
-                  {detail.subtitle}
-                </p>
-              ) : null}
-
-              <form noValidate className="mt-6" onSubmit={handleSubmit}>
-                <label
-                  className="block text-[14px] leading-[18px] text-[#6f6f6f]"
-                  htmlFor="email-first-input"
+                <svg
+                  aria-hidden
+                  fill="none"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  width="20"
                 >
-                  Email
-                </label>
-                <div className="relative mt-2">
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6f6f6f]"
-                  >
-                    <HugeiconsIcon icon={Mail01Icon} size={18} />
-                  </span>
-                  <input
-                    ref={emailInputRef}
-                    required
-                    aria-invalid={error ? true : undefined}
-                    autoComplete="email"
-                    className={`h-[52px] w-full rounded-[10px] bg-[#f7f7f7] pl-10 pr-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40 ${
-                      error ? "ring-2 ring-[#f12c23]/50" : ""
-                    }`}
-                    id="email-first-input"
-                    inputMode="email"
-                    placeholder="Enter your email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (error) setError(null);
-                    }}
-                    onBlur={handleEmailBlur}
-                    onFocus={() => {
-                      syncKeyboardViewport();
-                      scrollEmailInputIntoView("nearest");
-                    }}
-                    onPointerDown={handleEmailPointerDown}
+                  <path
+                    d="M5 5l10 10M15 5L5 15"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.75"
                   />
-                </div>
-                {error ? (
-                  <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
-                    {error}
+                </svg>
+              </button>
+
+              <section
+                aria-labelledby="email-first-heading"
+                className={`${styles.cardSurface} box-border max-h-[calc(100dvh-32px)] w-[min(620px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]`}
+                style={cardStyle}
+              >
+                <h1
+                  className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"
+                  id="email-first-heading"
+                >
+                  {detail?.title ?? "Welcome back"}
+                </h1>
+                {detail?.subtitle ? (
+                  <p className="mt-2 text-center text-[15px] leading-[20px] text-[#6f6f6f]">
+                    {detail.subtitle}
                   </p>
                 ) : null}
 
-                <button
-                  className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
-                  disabled={submitting}
-                  type="submit"
-                >
-                  {submitting
-                    ? "Checking…"
-                    : (detail?.submitLabel ?? "Log in with email")}
-                </button>
-                <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
-                  By creating an account, you agree to our{" "}
-                  <Link
-                    className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
-                    href={ROUTES.LEGAL.TERMS}
-                    target="_blank"
+                <form noValidate className="mt-6" onSubmit={handleSubmit}>
+                  <label
+                    className="block text-[14px] leading-[18px] text-[#6f6f6f]"
+                    htmlFor="email-first-input"
                   >
-                    Terms and Conditions
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
-                    href={ROUTES.LEGAL.PRIVACY}
-                    target="_blank"
+                    Email
+                  </label>
+                  <div className="relative mt-2">
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6f6f6f]"
+                    >
+                      <HugeiconsIcon icon={Mail01Icon} size={18} />
+                    </span>
+                    <input
+                      ref={emailInputRef}
+                      required
+                      aria-invalid={error ? true : undefined}
+                      autoComplete="email"
+                      className={`h-[52px] w-full rounded-[10px] bg-[#f7f7f7] pl-10 pr-3 text-[16px] text-[#5f5f5f] outline-none placeholder:text-[#9a9a9a] focus-visible:ring-2 focus-visible:ring-[#f12c23]/40 ${
+                        error ? "ring-2 ring-[#f12c23]/50" : ""
+                      }`}
+                      id="email-first-input"
+                      inputMode="email"
+                      placeholder="Enter your email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (error) setError(null);
+                      }}
+                    />
+                  </div>
+                  {error ? (
+                    <p className="mt-2 text-[13px] text-[#f12c23]" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+
+                  <button
+                    className="mt-5 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] bg-[#f12c23] text-[16px] font-semibold text-white transition-colors hover:bg-[#d21f17] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f12c23] active:translate-y-px"
+                    disabled={submitting}
+                    type="submit"
                   >
-                    Privacy Policy
-                  </Link>
-                  .
-                </p>
-              </form>
-            </section>
+                    {submitting
+                      ? "Checking…"
+                      : (detail?.submitLabel ?? "Log in with email")}
+                  </button>
+                  <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
+                    By creating an account, you agree to our{" "}
+                    <Link
+                      className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
+                      href={ROUTES.LEGAL.TERMS}
+                      target="_blank"
+                    >
+                      Terms and Conditions
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
+                      href={ROUTES.LEGAL.PRIVACY}
+                      target="_blank"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                  </p>
+                </form>
+              </section>
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
