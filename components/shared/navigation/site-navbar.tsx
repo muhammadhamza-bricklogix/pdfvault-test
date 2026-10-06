@@ -10,7 +10,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
-import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -208,15 +207,7 @@ export function SiteNavbar() {
                           });
                         }}
                       >
-                        <LocaleText
-                  ar="تسجيل الدخول"
-                  de="Anmelden"
-                  es="Iniciar sesión"
-                  fr="Se connecter"
-                  pt="Entrar"
-                >
-                  Login
-                </LocaleText>
+                        Login
                       </Button>
                     ) : null}
 
@@ -303,15 +294,7 @@ export function SiteNavbar() {
                 })
               }
             >
-              <LocaleText
-                ar="تسجيل الدخول"
-                de="Anmelden"
-                es="Iniciar sesión"
-                fr="Se connecter"
-                pt="Entrar"
-              >
-                Login
-              </LocaleText>
+              Login
             </Button>
           ) : null}
 

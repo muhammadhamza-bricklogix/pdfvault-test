@@ -391,7 +391,7 @@ export function LandingHeader() {
                     })
                   }
                 >
-                  {tNav("login")}
+                  Login
                 </button>
               )
             ) : null}

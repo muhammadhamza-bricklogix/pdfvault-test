@@ -17,7 +17,6 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
-import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const privacyTocEntries: LegalTocEntry[] = [
@@ -588,29 +587,14 @@ export function PrivacyPolicyContent() {
         id="p-3-13"
         title="Security"
       >
-        <LocaleText
-          as="p"
-          de={
-            <>
-              Wir setzen branchenübliche Sicherheitsmaßnahmen ein,
-              einschließlich TLS-Verschlüsselung bei der Übertragung,
-              Verschlüsselung im Ruhezustand, gehashte Passwörter,
-              Zugriffskontrollen und regelmäßige Sicherheitsprüfungen. Kein
-              System ist vollständig sicher; wir können keine absolute
-              Sicherheit garantieren. Im Falle einer Verletzung des Schutzes
-              personenbezogener Daten benachrichtigen wir die betroffenen
-              Nutzer und die Aufsichtsbehörden, soweit dies gesetzlich
-              vorgeschrieben ist.
-            </>
-          }
-        >
+        <p>
           We implement industry-standard security measures, including TLS
           encryption in transit, encryption at rest, hashed passwords, access
           controls, and regular security reviews. No system is completely
           secure; we cannot guarantee absolute security. If a personal data
           breach occurs, we will notify affected users and regulators where
           required by law.
-        </LocaleText>
+        </p>
       </LegalSectionCard>
 
       <LegalSectionCard icon={Mail01Icon} id="p-3-14" title="Contact">

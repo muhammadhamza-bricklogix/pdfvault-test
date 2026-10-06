@@ -171,7 +171,9 @@ export function PasswordModal() {
     try {
       if (hasRememberedPassword) {
         if (unprotectPassword !== documentPassword) {
-          setUnprotectError(tPw("incorrectPassword"));
+          setUnprotectError(
+            "Incorrect password. Enter the password currently set on this PDF.",
+          );
 
           return;
         }
@@ -187,8 +189,8 @@ export function PasswordModal() {
           // screen with an already-unlocked PDF and had no way through.
           if (isUnlockOnly) {
             toast.info({
-              title: tPw("alreadyUnlockedTitle"),
-              description: tPw("alreadyUnlockedBody"),
+              title: "PDF is already unlocked",
+              description: "You can start editing straight away.",
             });
             handleClose();
 
@@ -199,19 +201,23 @@ export function PasswordModal() {
           return;
         }
         if (verdict.status === "incorrect-password") {
-          setUnprotectError(tPw("incorrectPassword"));
+          setUnprotectError(
+            "Incorrect password. Enter the password currently set on this PDF.",
+          );
 
           return;
         }
         if (verdict.status === "load-failed") {
-          setUnprotectError(tPw("loadFailed"));
+          setUnprotectError(
+            "Couldn't read this PDF to verify the password. It may be corrupt.",
+          );
 
           return;
         }
       }
     } catch (err) {
       logger.warn("password verification threw", err);
-      setUnprotectError(tPw("verifyFailed"));
+      setUnprotectError("Couldn't verify the password. Please try again.");
 
       return;
     } finally {
@@ -415,7 +421,8 @@ export function PasswordModal() {
                   <p className="mt-1 text-xs text-red-500">{unprotectError}</p>
                 )}
                 <p className="mt-1 text-[11px] text-default-400">
-                  {tPw("removeProtectionHint")}
+                  The password you set on the PDF is required to remove
+                  protection.
                 </p>
               </div>
             )}
@@ -423,7 +430,7 @@ export function PasswordModal() {
 
           <Modal.Footer>
             <Button isDisabled={isBusy} slot="close" variant="secondary">
-              {tPw("cancel")}
+              Cancel
             </Button>
             <Button
               isDisabled={
