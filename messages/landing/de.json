@@ -2,7 +2,8 @@
   "nav": {
     "edit": "Bearbeiten",
     "convert": "Umwandeln",
-    "compress": "Komprimieren"
+    "compress": "Komprimieren",
+    "login": "Anmelden"
   },
   "footer": {
     "convert": "Umwandeln",
@@ -82,8 +83,8 @@
       "description": "Teilen Sie eine PDF-Datei in kleinere Dateien auf oder extrahieren Sie nur die Seiten, die Sie brauchen — Seitenbereich auswählen und in Sekunden herunterladen."
     },
     "removeAnnotations": {
-      "title": "Anmerkungen aus PDF flach einbetten",
-      "description": "Betten Sie Markierungen, Kommentare und Formularfelder fest in die Seite ein, sodass sie nicht mehr bearbeitet oder entfernt werden können."
+      "title": "Anmerkungen aus einer PDF entfernen",
+      "description": "Löschen Sie Markierungen, Kommentare und Formularfelder in einem Durchgang."
     },
     "edit": {
       "title": "PDF online bearbeiten",

@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 
 export const cookieTocEntries: LegalTocEntry[] = [
   { id: "c-4-1", label: "1. What Are Cookies" },
@@ -45,7 +46,9 @@ function CookieTable({
                 ("1 year", "6 months") not expiry dates, so the German
                 translation "Ablaufdatum" is misleading. "Retention"
                 → Weglot: "Speicherdauer" / "Aufbewahrungsdauer". */}
-            <th className="py-2 font-semibold text-[#121212]">Retention</th>
+            <th className="py-2 font-semibold text-[#121212]">
+              <LocaleText de="Speicherdauer">Retention</LocaleText>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -56,14 +59,26 @@ function CookieTable({
             >
               {/* Cookie identifier + provider brand name: fence from Weglot
                   so brand names (e.g. "Clerk") and cookie names (e.g.
-                  "OptanonConsent") aren't mistranslated. QA F-48 / F-49. */}
+                  "OptanonConsent") aren't mistranslated.
+                  QA F-48 / F-49: `notranslate` alone was ignored by
+                  Weglot on prod (prod STILL rendered "Sachbearbeiter
+                  (Beglaubigung)" for "Clerk (authentication)"). Add the
+                  `wg-notranslate` class + `data-wg-notranslate` attr —
+                  Weglot's own documented fence combination — so the
+                  provider cell is skipped regardless of excluded-blocks
+                  selector drift. */}
               <td
-                className="notranslate py-2 pr-3 font-mono text-[13px]"
+                data-wg-notranslate
+                className="notranslate wg-notranslate py-2 pr-3 font-mono text-[13px]"
                 translate="no"
               >
                 {r.name}
               </td>
-              <td className="notranslate py-2 pr-3" translate="no">
+              <td
+                data-wg-notranslate
+                className="notranslate wg-notranslate py-2 pr-3"
+                translate="no"
+              >
                 {r.provider}
               </td>
               <td className="py-2 pr-3">{r.purpose}</td>
@@ -260,11 +275,10 @@ export function CookiePolicyContent() {
               German rendering ("Helfen Sie uns zu verstehen…") reads as
               a description, not an imperative. */}
           These cookies help us understand how visitors use the Service so we
-          can improve it.
-          These cookies assign a pseudonymous identifier to your browser; we use
-          the resulting data to produce aggregated statistics and do not use it
-          to identify you by name. Analytics cookies are set only with your
-          consent where required by applicable law.
+          can improve it. These cookies assign a pseudonymous identifier to your
+          browser; we use the resulting data to produce aggregated statistics
+          and do not use it to identify you by name. Analytics cookies are set
+          only with your consent where required by applicable law.
         </p>
         <CookieTable
           rows={[
@@ -382,25 +396,57 @@ export function CookiePolicyContent() {
         title="5. Your Choices and Consent"
       >
         {/* LEGAL_COUNSEL_PENDING — QA F-51: Weglot dropped the space
-            after "Königreich:Bei…" / "USA:Sofern…". Rewording each
-            leader from "<strong>X:</strong> Y" to "<strong>X</strong>
-            — Y" survives Weglot's translation pass with the em-dash
-            separator intact. */}
-        <p>
+            after "Königreich: Bei …" / "USA: Sofern …". The hand-DE
+            override below carries the colon + explicit space inside
+            the `<strong>` and starts the follow-up word with a
+            capital so DE reads "Besucher aus den USA: Sofern …". The
+            English fallback keeps the em-dash so Weglot can't collapse
+            the separator on non-/de/* locales. */}
+        <LocaleText
+          as="p"
+          de={
+            <>
+              <strong>
+                Besucher aus dem EWR und dem Vereinigten Königreich:
+              </strong>{" "}
+              Bei Ihrem ersten Besuch sehen Sie ein Cookie-Zustimmungs-Banner,
+              über das Sie nicht notwendige Cookies annehmen oder ablehnen
+              können, bevor diese gesetzt werden. Sie können Ihre Einwilligung
+              jederzeit über den Link „Cookie-Einstellungen&ldquo; im Footer des
+              Dienstes ändern oder widerrufen. Der Widerruf berührt nicht die
+              Rechtmäßigkeit der Verarbeitung vor dem Widerruf.
+            </>
+          }
+        >
           <strong>EEA and UK visitors</strong> — on your first visit you will
           see a cookie consent banner allowing you to accept or reject
           non-essential cookies before they are set. You can change or withdraw
-          your consent at any time via the &ldquo;Cookie Settings&rdquo; link
-          in the footer of the Service. Withdrawing consent does not affect the
+          your consent at any time via the &ldquo;Cookie Settings&rdquo; link in
+          the footer of the Service. Withdrawing consent does not affect the
           lawfulness of processing before withdrawal.
-        </p>
-        <p className="mt-3">
-          <strong>US visitors</strong> — where state law grants you the right
-          to opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
+        </LocaleText>
+        <LocaleText
+          as="p"
+          className="mt-3"
+          de={
+            <>
+              <strong>Besucher aus den USA:</strong>{" "}
+              Sofern das jeweilige
+              einzelstaatliche Recht Ihnen das Recht einräumt, dem
+              „Verkauf&ldquo;, dem „Teilen&ldquo; oder zielgerichteter Werbung
+              über Cookies zu widersprechen, können Sie dies über den Link
+              „Cookie-Einstellungen&ldquo; tun. Wir berücksichtigen Global
+              Privacy Control (GPC)-Browsersignale, soweit dies gesetzlich
+              vorgeschrieben ist.
+            </>
+          }
+        >
+          <strong>US visitors</strong> — where state law grants you the right to
+          opt out of &ldquo;sales,&rdquo; &ldquo;sharing,&rdquo; or targeted
           advertising via cookies, you may do so via the &ldquo;Cookie
           Settings&rdquo; link. We honor Global Privacy Control (GPC) browser
           signals where required by law.
-        </p>
+        </LocaleText>
         <p className="mt-3">
           You can also control cookies through your browser settings (Chrome,
           Firefox, Safari, and Edge each provide cookie controls under their

@@ -2,7 +2,8 @@
   "nav": {
     "edit": "Edit",
     "convert": "Convert",
-    "compress": "Compress"
+    "compress": "Compress",
+    "login": "Entrar"
   },
   "footer": {
     "convert": "Convert",

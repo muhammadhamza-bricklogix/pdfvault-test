@@ -19,6 +19,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const termsTocEntries: LegalTocEntry[] = [
@@ -352,18 +353,44 @@ export function TermsAndConditionsContent() {
           and ensure all features work correctly.
         </p>
 
-        {/* LEGAL_COUNSEL_PENDING — QA F-34: original opened with two
-            gerunds ("Indem Sie … veröffentlichen, gewähren Sie …") that
-            read awkwardly in German. Reworded the English source to a
-            single lead-in clause so Weglot's German lands with a clean
-            "Indem Sie … veröffentlichen, gewähren Sie …" pattern. Legal
-            counsel to confirm the rewording does not change enforceable
-            meaning before prod. */}
+        {/* LEGAL_COUNSEL_PENDING — QA F-34: Weglot's auto-translation of
+            the English source opened with awkward "Indem Sie … gewähren
+            Sie …" doubled gerunds. The hand-DE override below uses a
+            single lead-in clause ("Durch die Veröffentlichung …
+            gewähren Sie …") so the DE copy on /de/* is grammatical and
+            matches the enforceable English above. Legal counsel to
+            confirm the rewording does not change the licence scope. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">3.9</span> User Reviews
-          and Testimonials
+          <span className="notranslate" translate="no">
+            3.9
+          </span>{" "}
+          User Reviews and Testimonials
         </p>
-        <p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Indem Sie auf einer beliebigen Plattform eine Bewertung,
+              Rezension, einen Kommentar oder Erfahrungsbericht
+              („Bewertung&ldquo;) über den Dienst veröffentlichen, gewähren
+              Sie dem Unternehmen ein nicht-exklusives, weltweites,
+              unbefristetes, unwiderrufliches, lizenzgebührenfreies,
+              unterlizenzierbares und übertragbares Recht, diese Bewertung
+              für jeden rechtmäßigen Zweck zu nutzen, zu vervielfältigen, zu
+              bearbeiten, zu veröffentlichen, zu übersetzen, zu verbreiten
+              und daraus abgeleitete Werke zu erstellen, einschließlich für
+              Marketing- und Produktentwicklungszwecke, ohne weitere
+              Benachrichtigung, Namensnennung oder Vergütung. Das Unternehmen
+              ist nicht verpflichtet, Bewertungen zu nutzen oder zu pflegen,
+              und kann Bewertungen nach eigenem Ermessen entfernen oder
+              bearbeiten; es ist nicht verantwortlich für den Inhalt von
+              Bewertungen oder die darin geäußerten Meinungen. Um die
+              Entfernung einer von Ihnen eingereichten Bewertung anzufordern,
+              wenden Sie sich an{" "}
+              <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
+            </>
+          }
+        >
           By publishing any review, rating, comment, or testimonial
           (&ldquo;Review&rdquo;) about the Service on any platform, you grant
           the Company a non-exclusive, worldwide, perpetual, irrevocable,
@@ -376,7 +403,7 @@ export function TermsAndConditionsContent() {
           responsible for the content of Reviews or the opinions expressed in
           them. To request removal of a Review you submitted, contact{" "}
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
-        </p>
+        </LocaleText>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           3.10 Customer Support
@@ -477,11 +504,35 @@ export function TermsAndConditionsContent() {
 
         {/* LEGAL_COUNSEL_PENDING — QA F-35: Weglot re-formatted the
             section number "5.3" as the German decimal "5,3 Credits".
-            Fencing the numeric segment with `notranslate` locks it. */}
+            Belt-and-braces fence — class + `data-wg-notranslate` + the
+            `translate="no"` HTML attribute — because the class-only
+            fence drifted on prod (F-48 / F-49 class). */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">5.3</span> Credits
+          <span
+            className="notranslate wg-notranslate"
+            data-wg-notranslate=""
+            translate="no"
+          >
+            5.3
+          </span>{" "}
+          <LocaleText de="Credits">Credits</LocaleText>
         </p>
-        <p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Der Dienst kann ein Credit-basiertes System einsetzen, um den
+              Zugriff auf bestimmte Funktionen oder Aktionen zu ermöglichen.
+              Credits sind eine virtuelle Zugriffseinheit und stellen weder eine
+              Währung noch ein Finanzinstrument dar; sie können ausschließlich
+              innerhalb des Dienstes verwendet werden und haben außerhalb des
+              Dienstes keinen monetären Wert. Credits sind nicht Ihr Eigentum
+              und dürfen nicht verkauft, übertragen oder getauscht werden.
+              Gewährte Aktions- oder Bonus-Credits sind nicht übertragbar und
+              nicht erstattungsfähig.
+            </>
+          }
+        >
           The Service may employ a credit-based system to enable access to
           certain features or actions. Credits are a virtual unit of access and
           do not represent currency or any financial instrument; they can only
@@ -489,7 +540,7 @@ export function TermsAndConditionsContent() {
           Credits are not your property and may not be sold, transferred, or
           exchanged. Any promotional or bonus credits granted are
           non-transferable and non-refundable.
-        </p>
+        </LocaleText>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           5.4 Auto-Renewal and Subscription Continuity
@@ -692,8 +743,10 @@ export function TermsAndConditionsContent() {
             Legal counsel to confirm the reworded lead-in is
             equivalent for enforceability. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">6.1</span> Prohibited
-          Conduct
+          <span className="notranslate" translate="no">
+            6.1
+          </span>{" "}
+          Prohibited Conduct
         </p>
         <p>You agree that you will not:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">

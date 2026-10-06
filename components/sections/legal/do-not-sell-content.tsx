@@ -15,6 +15,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const doNotSellTocEntries: LegalTocEntry[] = [
@@ -111,22 +112,43 @@ export function DoNotSellContent() {
         title="How to Opt Out"
       >
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          {/* LEGAL_COUNSEL_PENDING — QA F-54: Weglot dropped the
-              space after "Cookie-Einstellungen:" ("Cookie-Einstellungen:Nutzen").
-              Using " — " (em dash with spaces) instead of ":" survives
-              Weglot's translation pass with the separator intact. */}
-          <li>
+          {/* LEGAL_COUNSEL_PENDING — QA F-54 (follow-up): hand-DE now
+              uses "<strong>…:</strong> Capitalised …" so the colon and
+              space land cleanly on /de/*. English fallback keeps the
+              em-dash so Weglot's non-/de/* output still has a safe
+              separator it can't collapse into "Cookie-Einstellungen:Nutzen". */}
+          <LocaleText
+            as="li"
+            de={
+              <>
+                <strong>Cookie-Einstellungen:</strong> Nutzen Sie den Link
+                „Cookie-Einstellungen&ldquo; im Footer oder besuchen Sie unsere{" "}
+                <Link href={ROUTES.LEGAL.COOKIES}>Cookie-Richtlinie</Link>, um
+                Analyse- und Werbe-Cookies zu deaktivieren.
+              </>
+            }
+          >
             <strong>Cookie Settings</strong> — use the &ldquo;Cookie
             Settings&rdquo; link in the footer, or visit our{" "}
             <Link href={ROUTES.LEGAL.COOKIES}>Cookie Policy</Link>, to disable
             analytics and advertising cookies.
-          </li>
-          <li>
+          </LocaleText>
+          <LocaleText
+            as="li"
+            de={
+              <>
+                <strong>E-Mail:</strong> Schreiben Sie an{" "}
+                <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> mit dem
+                Betreff „CCPA Opt-Out Request&ldquo; und der mit Ihrem Konto
+                verknüpften E-Mail-Adresse.
+              </>
+            }
+          >
             <strong>Email</strong> — write to{" "}
             <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> with the
             subject line &ldquo;CCPA Opt-Out Request&rdquo; and the email
             address associated with your account.
-          </li>
+          </LocaleText>
         </ul>
       </LegalSectionCard>
 
@@ -214,7 +236,11 @@ export function DoNotSellContent() {
       <LegalSectionCard
         icon={JudgeIcon}
         id="d-6-9"
-        title="Rights for Residents of Other US States"
+        title={
+          <LocaleText de="Rechte von Einwohnern anderer US-Bundesstaaten">
+            Rights for Residents of Other US States
+          </LocaleText>
+        }
       >
         <p>
           Residents of Virginia (VCDPA), Colorado (CPA), Connecticut (CTDPA),

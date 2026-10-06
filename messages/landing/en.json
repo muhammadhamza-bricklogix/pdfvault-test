@@ -2,7 +2,8 @@
   "nav": {
     "edit": "Edit",
     "convert": "Convert",
-    "compress": "Compress"
+    "compress": "Compress",
+    "login": "Login"
   },
   "footer": {
     "convert": "Convert",
@@ -82,8 +83,8 @@
       "description": "Pick your pages in seconds — then download the new PDF right away."
     },
     "removeAnnotations": {
-      "title": "Flatten annotations in a PDF",
-      "description": "Embed highlights, comments, and form fields into the page so they can no longer be edited or removed."
+      "title": "Remove Annotations from a PDF",
+      "description": "Delete highlights, comments, and form fields in one pass."
     },
     "edit": {
       "title": "Edit Any PDF in Seconds",
