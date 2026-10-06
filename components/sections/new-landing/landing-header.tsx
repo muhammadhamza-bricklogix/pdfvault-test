@@ -427,7 +427,7 @@ export function LandingHeader() {
                     })
                   }
                 >
-                  <NavLabel text={tNav("login")} />
+                  {tNav("login")}
                 </button>
               )
             ) : null}
