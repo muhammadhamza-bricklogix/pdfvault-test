@@ -21,6 +21,7 @@ import {
   stampDs82Preview,
 } from "@/lib/client/forms/stamp-ds82-client";
 import { ensureFreshEntitlement } from "@/lib/client/hooks/billing/ensure-entitlement";
+import { AUTH_RETURN_PARAM } from "@/lib/client/auth/auto-signup";
 import { requestPaywall } from "@/lib/client/hooks/billing/paywall-bus";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { formsService } from "@/lib/shared/api/services/forms.service";
@@ -150,7 +151,9 @@ export function Ds82FinalizeIntercept() {
     autoLaunchedRef.current = true;
     const filenameParam = searchParams.get("filename");
 
+    let fired = false;
     const timeoutId = window.setTimeout(() => {
+      fired = true;
       window.dispatchEvent(
         new CustomEvent(EXPORT_EVENT, {
           detail: {
@@ -164,12 +167,17 @@ export function Ds82FinalizeIntercept() {
 
       cleaned.delete("export");
       cleaned.delete("filename");
+      cleaned.delete(AUTH_RETURN_PARAM);
       const nextQuery = cleaned.toString();
 
       router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
     }, 400);
 
-    return () => window.clearTimeout(timeoutId);
+    // Re-arm if a dependency change cancels the launch before it fires.
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (!fired) autoLaunchedRef.current = false;
+    };
   }, [isLoaded, isSignedIn, sessionId, searchParams, pathname, router]);
 
   useLayoutEffect(() => {

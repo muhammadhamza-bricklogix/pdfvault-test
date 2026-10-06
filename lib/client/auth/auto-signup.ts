@@ -28,6 +28,19 @@ function appendDocIdToRedirect(redirect: string, docId: string): string {
 }
 
 /**
+ * Marks the finalize redirect as a post-signup return, so the destination
+ * waits for the Clerk session before auto-launching the export/paywall
+ * (the `?id=` marker is missing whenever the pre-finalize upload fails).
+ */
+export const AUTH_RETURN_PARAM = "signedup";
+
+function appendAuthReturnMarker(redirect: string): string {
+  const separator = redirect.includes("?") ? "&" : "?";
+
+  return `${redirect}${separator}${AUTH_RETURN_PARAM}=1`;
+}
+
+/**
  * Editor Download flow (2026-08-31): hand the email off to the NestJS
  * backend. Backend does everything blocking:
  *   - Clerk lookup (409 → we return `exists` and caller falls back to
@@ -318,7 +331,7 @@ export async function runAutoSignup(params: {
   // `default:` filter on `pdf_editor_url`) and the hydrator does
   // its normal IDB rehydrate — exactly the pre-2026-09-18 flow.
   // ─────────────────────────────────────────────────────────────
-  let effectiveRedirect = safeRedirect;
+  let effectiveRedirect = appendAuthReturnMarker(safeRedirect);
   let uploadedDocId: string | null = null;
 
   try {
@@ -332,7 +345,10 @@ export async function runAutoSignup(params: {
       });
 
       uploadedDocId = uploaded.id;
-      effectiveRedirect = appendDocIdToRedirect(safeRedirect, uploadedDocId);
+      effectiveRedirect = appendDocIdToRedirect(
+        effectiveRedirect,
+        uploadedDocId,
+      );
 
       logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_OK, "info", {
         docId: uploadedDocId,

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { AUTH_RETURN_PARAM } from "@/lib/client/auth/auto-signup";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import {
   clearPendingEditorFile,
@@ -125,6 +126,8 @@ export function PendingEditorFileHydrator() {
   const utmMedium = searchParams.get("utm_medium");
   const cameFromWelcomeEmail =
     utmSource === "customer.io" && utmMedium === "email_action";
+  // Set by runAutoSignup on the finalize redirect, even when the `?id=` upload failed.
+  const isAuthReturn = searchParams.get(AUTH_RETURN_PARAM) === "1";
   // Flow 1 (spec 2026-09-09) post-signup landing: guest dropped a
   // non-PDF on /convert/*, silent-signed-up, was routed to
   // `/pdf-composer?convert-pending=1`. `<FlowOneConvertPendingOverlay/>`
@@ -581,7 +584,8 @@ export function PendingEditorFileHydrator() {
     // deep-links keep firing immediately so the EmailFirstModal
     // path is unchanged. See revert commit 21c896ea for the
     // original diagnosis.
-    const isPostSigninReturn = Boolean(docId) || cameFromWelcomeEmail;
+    const isPostSigninReturn =
+      Boolean(docId) || cameFromWelcomeEmail || isAuthReturn;
 
     if (isPostSigninReturn && !isSignedIn) return;
 
@@ -789,6 +793,10 @@ export function PendingEditorFileHydrator() {
         }
         if (cleaned.has("hint")) {
           cleaned.delete("hint");
+          mutated = true;
+        }
+        if (cleaned.has(AUTH_RETURN_PARAM)) {
+          cleaned.delete(AUTH_RETURN_PARAM);
           mutated = true;
         }
         // UTM params from the welcome-email click. Strip them after
