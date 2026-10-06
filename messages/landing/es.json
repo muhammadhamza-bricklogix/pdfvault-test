@@ -3,7 +3,11 @@
     "edit": "Edit",
     "convert": "Convert",
     "compress": "Compress",
-    "login": "Iniciar sesión"
+    "allTools": "All Tools",
+    "forms": "Forms",
+    "login": "Iniciar sesión",
+    "dashboard": "Dashboard",
+    "logOut": "Log out"
   },
   "footer": {
     "convert": "Convert",
