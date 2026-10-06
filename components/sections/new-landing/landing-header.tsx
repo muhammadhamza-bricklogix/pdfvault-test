@@ -364,14 +364,14 @@ export function LandingHeader() {
                     className="pv-btn-primary inline-flex px-5 py-1.5 text-[14px]"
                     href={ROUTES.APP.DASHBOARD}
                   >
-                    Dashboard
+                    {tNav("dashboard")}
                   </Link>
                   <button
                     className="pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
                     type="button"
                     onClick={handleLogOut}
                   >
-                    Log out
+                    {tNav("logOut")}
                   </button>
                 </>
               ) : (
@@ -504,7 +504,7 @@ export function LandingHeader() {
                         href={ROUTES.APP.DASHBOARD}
                         onClick={() => setMobileOpen(false)}
                       >
-                        Dashboard
+                        {tNav("dashboard")}
                       </Link>
                       <button
                         className="inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
@@ -514,7 +514,7 @@ export function LandingHeader() {
                           handleLogOut();
                         }}
                       >
-                        Log out
+                        {tNav("logOut")}
                       </button>
                     </>
                   ) : (
