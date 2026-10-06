@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useLocale } from "next-intl";
+import { useMemo, useState } from "react";
 
 import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
