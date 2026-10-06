@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ThemeToggle } from "@/components/ui/theme/theme-toggle";
 import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -207,7 +208,7 @@ export function SiteNavbar() {
                           });
                         }}
                       >
-                        Login
+                        <LocaleText de="Anmelden">Login</LocaleText>
                       </Button>
                     ) : null}
 
@@ -294,7 +295,7 @@ export function SiteNavbar() {
                 })
               }
             >
-              Login
+              <LocaleText de="Anmelden">Login</LocaleText>
             </Button>
           ) : null}
 
