@@ -63,7 +63,8 @@ export function DuplicateFilenameModal() {
   const filename = request?.filename ?? "";
   const trimmed = name.trim();
   const formatError = trimmed ? validateRenameFilename(trimmed) : null;
-  const blocked = mode === "rename" && (!trimmed || !!formatError || !!takenError);
+  const blocked =
+    mode === "rename" && (!trimmed || !!formatError || !!takenError);
 
   const confirm = useCallback(async () => {
     if (mode === "replace") {
@@ -167,7 +168,11 @@ export function DuplicateFilenameModal() {
                 variant="primary"
                 onPress={() => void confirm()}
               >
-                {checking ? "Checking…" : mode === "replace" ? "Replace" : "Save"}
+                {checking
+                  ? "Checking…"
+                  : mode === "replace"
+                    ? "Replace"
+                    : "Save"}
               </Button>
             </div>
           </div>

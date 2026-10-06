@@ -643,10 +643,7 @@ function TopAppBar() {
           />
         </Link>
 
-        <span
-          aria-hidden
-          className="order-4 mx-1 h-6 w-px bg-default-200"
-        />
+        <span aria-hidden className="order-4 mx-1 h-6 w-px bg-default-200" />
 
         {/* QA 2026-09-08: filename now uses <EditableFilenameField/> —
             fit-to-text sizing (no more `flex-1` stretch), click-to-edit
