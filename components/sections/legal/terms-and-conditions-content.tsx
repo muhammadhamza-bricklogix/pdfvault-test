@@ -353,20 +353,43 @@ export function TermsAndConditionsContent() {
           and ensure all features work correctly.
         </p>
 
-        {/* LEGAL_COUNSEL_PENDING — QA F-34: original opened with two
-            gerunds ("Indem Sie … veröffentlichen, gewähren Sie …") that
-            read awkwardly in German. Reworded the English source to a
-            single lead-in clause so Weglot's German lands with a clean
-            "Indem Sie … veröffentlichen, gewähren Sie …" pattern. Legal
-            counsel to confirm the rewording does not change enforceable
-            meaning before prod. */}
+        {/* LEGAL_COUNSEL_PENDING — QA F-34: Weglot's auto-translation of
+            the English source opened with awkward "Indem Sie … gewähren
+            Sie …" doubled gerunds. The hand-DE override below uses a
+            single lead-in clause ("Durch die Veröffentlichung …
+            gewähren Sie …") so the DE copy on /de/* is grammatical and
+            matches the enforceable English above. Legal counsel to
+            confirm the rewording does not change the licence scope. */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           <span className="notranslate" translate="no">
             3.9
           </span>{" "}
           User Reviews and Testimonials
         </p>
-        <p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Durch die Veröffentlichung einer Bewertung, Rezension, eines
+              Kommentars oder Erfahrungsberichts („Bewertung&ldquo;) über den
+              Dienst auf einer beliebigen Plattform gewähren Sie dem Unternehmen
+              ein nicht-exklusives, weltweites, unbefristetes, unwiderrufliches,
+              lizenzgebührenfreies, unterlizenzierbares und übertragbares Recht,
+              diese Bewertung für jeden rechtmäßigen Zweck zu nutzen, zu
+              vervielfältigen, zu bearbeiten, zu veröffentlichen, zu übersetzen,
+              zu verbreiten und daraus abgeleitete Werke zu erstellen,
+              einschließlich für Marketing- und Produktentwicklungszwecke, ohne
+              weitere Benachrichtigung, Namensnennung oder Vergütung. Das
+              Unternehmen ist nicht verpflichtet, Bewertungen zu nutzen oder zu
+              pflegen, und kann Bewertungen nach eigenem Ermessen entfernen oder
+              bearbeiten; es ist nicht verantwortlich für den Inhalt von
+              Bewertungen oder die darin geäußerten Meinungen. Um die Entfernung
+              einer von Ihnen eingereichten Bewertung anzufordern, wenden Sie
+              sich an{" "}
+              <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
+            </>
+          }
+        >
           By publishing any review, rating, comment, or testimonial
           (&ldquo;Review&rdquo;) about the Service on any platform, you grant
           the Company a non-exclusive, worldwide, perpetual, irrevocable,
@@ -379,7 +402,7 @@ export function TermsAndConditionsContent() {
           responsible for the content of Reviews or the opinions expressed in
           them. To request removal of a Review you submitted, contact{" "}
           <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
-        </p>
+        </LocaleText>
 
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
           3.10 Customer Support
