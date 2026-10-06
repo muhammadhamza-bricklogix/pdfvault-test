@@ -10,6 +10,7 @@ import Link from "next/link";
 
 import { W9Faq } from "@/components/sections/forms/w9-faq";
 import { W9PreviewScroller } from "@/components/sections/forms/W9PreviewScroller";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 // ---------------------------------------------------------------------------
@@ -36,23 +37,60 @@ const HERO_CTA_NOTE =
 // Rewriting every bullet as a full "You + verb" sentence gives Weglot
 // a consistent template — each bullet becomes "Sie + verb …" in
 // German. The lead-in paragraphs below have been reworded to match.
-const TYPICAL_REQUESTS = [
-  "You start freelance or contract work for a U.S. business",
-  "You open certain financial or investment accounts",
-  "You receive rent, royalty, or other reportable payments",
-  "You are onboarded as a vendor or supplier",
+// Each item is `[english, german]`. Hand-authored German bypasses
+// Weglot for QA F-55 / F-56 / F-57, which flagged bullets rendered
+// with missing verbs ("Ein Freiberufler, der …") or awkward
+// imperatives ("Werden als Anbieter aufgenommen"). The DE version
+// keeps the "Sie + verb" structure that reads naturally.
+type BulletPair = readonly [string, string];
+
+const TYPICAL_REQUESTS: BulletPair[] = [
+  [
+    "You start freelance or contract work for a U.S. business",
+    "Sie beginnen mit freiberuflicher oder vertraglicher Arbeit für ein US-Unternehmen",
+  ],
+  [
+    "You open certain financial or investment accounts",
+    "Sie eröffnen bestimmte Finanz- oder Anlagekonten",
+  ],
+  [
+    "You receive rent, royalty, or other reportable payments",
+    "Sie erhalten Miet-, Lizenz- oder andere meldepflichtige Zahlungen",
+  ],
+  [
+    "You are onboarded as a vendor or supplier",
+    "Sie werden als Anbieter oder Lieferant aufgenommen",
+  ],
 ];
 
-const NEEDS_ONE = [
-  "You are a freelancer or independent contractor invoicing a U.S. business",
-  "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
-  "You are a landlord, vendor, or account holder that a company needs to report payments to",
+const NEEDS_ONE: BulletPair[] = [
+  [
+    "You are a freelancer or independent contractor invoicing a U.S. business",
+    "Sie sind ein Freiberufler oder unabhängiger Auftragnehmer, der einem US-Unternehmen Rechnungen stellt",
+  ],
+  [
+    "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
+    "Sie sind ein Einzelunternehmer, eine LLC, eine Personengesellschaft oder eine Kapitalgesellschaft, die von einem Kunden oder einer Plattform bezahlt wird",
+  ],
+  [
+    "You are a landlord, vendor, or account holder that a company needs to report payments to",
+    "Sie sind ein Vermieter, Anbieter oder Kontoinhaber, dessen Zahlungen ein Unternehmen melden muss",
+  ],
 ];
 
-const DOES_NOT_NEED = [
-  "You are a W-2 employee (your employer uses Form W-4 instead)",
-  "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
-  "You are not currently paid by or contracted with the entity requesting it",
+const DOES_NOT_NEED: BulletPair[] = [
+  [
+    "You are a W-2 employee (your employer uses Form W-4 instead)",
+    "Sie sind ein W-2-Angestellter (Ihr Arbeitgeber verwendet stattdessen Formular W-4)",
+  ],
+  [
+    "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
+    "Sie sind keine US-Person und haben keine US-Steuermeldepflicht — in der Regel ist stattdessen ein W-8BEN oder W-8BEN-E das richtige Formular",
+  ],
+  [
+    "You are not currently paid by or contracted with the entity requesting it",
+    "Sie werden derzeit weder von der anfragenden Stelle bezahlt noch sind Sie mit dieser vertraglich verbunden",
+  ],
 ];
 
 const BEFORE_YOU_START = [
@@ -202,11 +240,13 @@ function Prose({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function BulletList({ items }: { items: readonly BulletPair[] }) {
   return (
     <ul className="mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-default-700 dark:text-default-300">
-      {items.map((item) => (
-        <li key={item}>{item}</li>
+      {items.map(([en, de]) => (
+        <li key={en}>
+          <LocaleText de={de}>{en}</LocaleText>
+        </li>
       ))}
     </ul>
   );
