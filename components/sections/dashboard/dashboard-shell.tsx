@@ -101,16 +101,32 @@ function PdfVaultLogo() {
         width={24}
       />
       {/* QA F-02: brand must render as "PDFVault" on both landing and
-          dashboard. Weglot was translating "Vault" → "Tresor" on /de/,
-          creating a "PDFvault / PDFtresor" inconsistency. Fenced with
-          wg-notranslate + translate="no" to lock it. */}
+          dashboard. Earlier revision used `after:content-['Vault']` so
+          Weglot never saw the word, but Tailwind's arbitrary-value
+          class dropped out of some prod builds and Weglot still
+          produced "PDFTresor". Switch to real text + Weglot's full
+          triple-fence (class + data-wg-notranslate + translate="no") —
+          same pattern that rescued the Cookie Policy provider cells
+          after QA F-48 / F-49. */}
       <span
         className="notranslate wg-notranslate pv-heading text-[17px] font-semibold leading-none"
+        data-wg-notranslate=""
         translate="no"
       >
-        <span className="text-[var(--pv-brand-red-logo)]">PDF</span>
-        {/* CSS content so Weglot can't translate the brand ("Vault" -> "Tresor"). */}
-        <span className="text-[var(--pv-text-muted)] after:content-['Vault']" />
+        <span
+          className="notranslate wg-notranslate text-[var(--pv-brand-red-logo)]"
+          data-wg-notranslate=""
+          translate="no"
+        >
+          PDF
+        </span>
+        <span
+          className="notranslate wg-notranslate text-[var(--pv-text-muted)]"
+          data-wg-notranslate=""
+          translate="no"
+        >
+          Vault
+        </span>
       </span>
     </div>
   );
