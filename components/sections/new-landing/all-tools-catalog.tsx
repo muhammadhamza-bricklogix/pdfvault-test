@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { LANDING_TOOL_CATEGORIES } from "@/lib/shared/constants/landing-tools";
 
 import { AllToolsIcon } from "./all-tools-icon";
+import { LocaleNavLink } from "./locale-nav-link";
 
 /**
  * The 4-column tool catalog. Column widths and gaps match the Figma
@@ -54,7 +54,7 @@ export function AllToolsCatalog() {
               <ul className="mt-[43px] flex flex-col gap-[27px]">
                 {column.tools.map((tool) => (
                   <li key={tool.label}>
-                    <Link
+                    <LocaleNavLink
                       className="group flex items-center gap-[10px] text-[16px] leading-[21px] tracking-[-0.03em] text-[#121212] transition-colors duration-200 hover:text-[var(--pv-brand-primary)]"
                       href={tool.href}
                     >
@@ -64,7 +64,7 @@ export function AllToolsCatalog() {
                       <span className="transition-transform duration-200 group-hover:translate-x-0.5">
                         {tool.label}
                       </span>
-                    </Link>
+                    </LocaleNavLink>
                   </li>
                 ))}
               </ul>
