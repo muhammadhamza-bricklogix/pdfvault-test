@@ -23,7 +23,7 @@
   },
   "upload": {
     "maxFileSize": "الحجم الأقصى للملف: ١٠٠ ميغابايت",
-    "dragDrop": "Drag &amp; drop file to edit",
+    "dragDrop": "Drag & drop file to edit",
     "or": "OR",
     "uploadFile": "Click to Upload Your File"
   },
