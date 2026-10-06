@@ -23,7 +23,7 @@
   },
   "upload": {
     "maxFileSize": "Max file size: 100 MB",
-    "dragDrop": "Drag &amp; drop file to edit",
+    "dragDrop": "Drag & drop file to edit",
     "or": "OR",
     "uploadFile": "Click to Upload Your File"
   },
