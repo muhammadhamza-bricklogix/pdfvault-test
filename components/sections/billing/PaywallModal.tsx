@@ -1581,8 +1581,8 @@ function PlanStep({
             )}
           </div>
 
-          {/* Right — plan cards column */}
-          <div className="flex flex-col gap-4 p-6 md:p-8">
+          {/* Right — plan cards column (phones: shown above the preview) */}
+          <div className="flex flex-col gap-4 p-6 max-md:order-first md:p-8">
             <PlanCards
               annualAvailable={annualAvailable}
               annualFullPrice={annualFullPrice}
