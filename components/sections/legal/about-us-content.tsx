@@ -11,7 +11,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 const ShieldIcon = Shield01Icon;
@@ -219,27 +218,13 @@ export function AboutUsContent() {
         <h2 className="mt-2 text-[28px] font-bold leading-tight text-[var(--pv-text-strong)] sm:text-[32px]">
           Protecting your files, every step of the way.
         </h2>
-        <LocaleText
-          as="p"
-          className="mt-3 text-[15px] leading-relaxed text-[var(--pv-text-body)]"
-          de={
-            <>
-              Wir verwenden branchenübliche Sicherheitsmaßnahmen,
-              einschließlich TLS-Verschlüsselung bei der Übertragung und
-              gehashte Passwörter, und wir verkaufen Ihre persönlichen Daten
-              niemals. Die Inhalte Ihrer hochgeladenen Dateien werden nie
-              erfasst — sie werden im Arbeitsspeicher verarbeitet und
-              gelöscht, sobald Ihre Sitzung endet, es sei denn, Sie
-              entscheiden sich, sie in Ihrem Konto zu speichern.
-            </>
-          }
-        >
+        <p className="mt-3 text-[15px] leading-relaxed text-[var(--pv-text-body)]">
           We use industry-standard security measures, including TLS encryption
           in transit and hashed passwords, and we never sell your personal data.
           The contents of your uploaded files are never collected — they&apos;re
           processed in memory and cleared once your session ends, unless you
           choose to save them to your account.
-        </LocaleText>
+        </p>
         <div className="mt-5 flex flex-wrap gap-2">
           {TRUST_TAGS.map((tag) => (
             <span

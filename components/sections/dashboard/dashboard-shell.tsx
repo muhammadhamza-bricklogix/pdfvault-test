@@ -100,14 +100,7 @@ function PdfVaultLogo() {
         src="/PDFVault_stacked_layers.png"
         width={24}
       />
-      {/* QA F-02: brand must render as "PDFVault" on both landing and
-          dashboard. Weglot was translating "Vault" → "Tresor" on /de/,
-          creating a "PDFvault / PDFtresor" inconsistency. Fenced with
-          wg-notranslate + translate="no" to lock it. */}
-      <span
-        className="notranslate wg-notranslate pv-heading text-[17px] font-semibold leading-none"
-        translate="no"
-      >
+      <span className="pv-heading text-[17px] font-semibold leading-none">
         <span className="text-[var(--pv-brand-red-logo)]">PDF</span>
         <span className="text-[var(--pv-text-muted)]">Vault</span>
       </span>

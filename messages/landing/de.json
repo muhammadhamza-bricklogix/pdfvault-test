@@ -54,7 +54,7 @@
       "pdfToPng": "PDF in PNG",
       "pdfToJpg": "PDF in JPG",
       "extractImages": "Bilder extrahieren",
-      "removeAnnotations": "Anmerkungen fixieren",
+      "removeAnnotations": "Anmerkungen entfernen",
       "watermark": "Wasserzeichen",
       "formsW9": "Formulare (W-9)",
       "forms1099Nec": "Formulare (1099-NEC)",
@@ -82,8 +82,8 @@
       "description": "Teilen Sie eine PDF-Datei in kleinere Dateien auf oder extrahieren Sie nur die Seiten, die Sie brauchen — Seitenbereich auswählen und in Sekunden herunterladen."
     },
     "removeAnnotations": {
-      "title": "Anmerkungen in PDF fest einbetten",
-      "description": "Betten Sie Markierungen, Kommentare und Formularfelder fest in die Seite ein, sodass diese Anmerkungen Bestandteil der Seite werden und nicht mehr einzeln bearbeitet oder entfernt werden können."
+      "title": "Anmerkungen aus PDF flach einbetten",
+      "description": "Betten Sie Markierungen, Kommentare und Formularfelder fest in die Seite ein, sodass sie nicht mehr bearbeitet oder entfernt werden können."
     },
     "edit": {
       "title": "PDF online bearbeiten",

@@ -10,7 +10,6 @@ import Link from "next/link";
 
 import { W9Faq } from "@/components/sections/forms/w9-faq";
 import { W9PreviewScroller } from "@/components/sections/forms/W9PreviewScroller";
-import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 // ---------------------------------------------------------------------------
@@ -37,60 +36,23 @@ const HERO_CTA_NOTE =
 // Rewriting every bullet as a full "You + verb" sentence gives Weglot
 // a consistent template — each bullet becomes "Sie + verb …" in
 // German. The lead-in paragraphs below have been reworded to match.
-// Each item is `[english, german]`. Hand-authored German bypasses
-// Weglot for QA F-55 / F-56 / F-57, which flagged bullets rendered
-// with missing verbs ("Ein Freiberufler, der …") or awkward
-// imperatives ("Werden als Anbieter aufgenommen"). The DE version
-// keeps the "Sie + verb" structure that reads naturally.
-type BulletPair = readonly [string, string];
-
-const TYPICAL_REQUESTS: BulletPair[] = [
-  [
-    "You start freelance or contract work for a U.S. business",
-    "Sie beginnen mit freiberuflicher oder vertraglicher Arbeit für ein US-Unternehmen",
-  ],
-  [
-    "You open certain financial or investment accounts",
-    "Sie eröffnen bestimmte Finanz- oder Anlagekonten",
-  ],
-  [
-    "You receive rent, royalty, or other reportable payments",
-    "Sie erhalten Miet-, Lizenz- oder andere meldepflichtige Zahlungen",
-  ],
-  [
-    "You are onboarded as a vendor or supplier",
-    "Sie werden als Anbieter oder Lieferant aufgenommen",
-  ],
+const TYPICAL_REQUESTS = [
+  "You start freelance or contract work for a U.S. business",
+  "You open certain financial or investment accounts",
+  "You receive rent, royalty, or other reportable payments",
+  "You are onboarded as a vendor or supplier",
 ];
 
-const NEEDS_ONE: BulletPair[] = [
-  [
-    "You are a freelancer or independent contractor invoicing a U.S. business",
-    "Sie sind ein Freiberufler oder unabhängiger Auftragnehmer, der einem US-Unternehmen Rechnungen stellt",
-  ],
-  [
-    "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
-    "Sie sind ein Einzelunternehmer, eine LLC, eine Personengesellschaft oder eine Kapitalgesellschaft, die von einem Kunden oder einer Plattform bezahlt wird",
-  ],
-  [
-    "You are a landlord, vendor, or account holder that a company needs to report payments to",
-    "Sie sind ein Vermieter, Anbieter oder Kontoinhaber, dessen Zahlungen ein Unternehmen melden muss",
-  ],
+const NEEDS_ONE = [
+  "You are a freelancer or independent contractor invoicing a U.S. business",
+  "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
+  "You are a landlord, vendor, or account holder that a company needs to report payments to",
 ];
 
-const DOES_NOT_NEED: BulletPair[] = [
-  [
-    "You are a W-2 employee (your employer uses Form W-4 instead)",
-    "Sie sind ein W-2-Angestellter (Ihr Arbeitgeber verwendet stattdessen Formular W-4)",
-  ],
-  [
-    "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
-    "Sie sind keine US-Person und haben keine US-Steuermeldepflicht — in der Regel ist stattdessen ein W-8BEN oder W-8BEN-E das richtige Formular",
-  ],
-  [
-    "You are not currently paid by or contracted with the entity requesting it",
-    "Derzeit weder von der anfragenden Stelle bezahlt werden noch mit dieser vertraglich verbunden sind",
-  ],
+const DOES_NOT_NEED = [
+  "You are a W-2 employee (your employer uses Form W-4 instead)",
+  "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
+  "You are not currently paid by or contracted with the entity requesting it",
 ];
 
 const BEFORE_YOU_START = [
@@ -106,21 +68,7 @@ const BEFORE_YOU_START = [
     label: "Address & Taxpayer ID",
     items: [
       "The mailing address where you'd like to receive tax documents like a 1099",
-      // QA F-58: Weglot flipped between "Unternehmensidentifikationsnummer"
-      // and "Arbeitgeberidentifikationsnummer" for EIN. Hand-DE locks
-      // the term to "Arbeitgeberidentifikationsnummer (EIN)".
-      <LocaleText
-        key="ssn-or-ein"
-        de={
-          <>
-            Ihre Sozialversicherungsnummer (SSN — Einzelpersonen) oder
-            Arbeitgeberidentifikationsnummer (EIN — Unternehmen)
-          </>
-        }
-      >
-        Your Social Security Number (SSN — individuals) or Employer
-        Identification Number (EIN — businesses)
-      </LocaleText>,
+      "Your Social Security Number (SSN — individuals) or Employer Identification Number (EIN — businesses)",
     ],
   },
   {
@@ -146,25 +94,7 @@ const HOW_TO_STEPS = [
   {
     n: "3",
     title: "Add your address and TIN",
-    // Plain-text form used by the JSON-LD HowTo schema (step.text must
-    // be a string). The React render uses the hand-DE override below
-    // so visible copy says "Arbeitgeberidentifikationsnummer (EIN)".
     body: "Fill in your mailing address, then enter your SSN or EIN in the taxpayer ID section.",
-    // QA F-58: hand-DE keeps the EIN term consistent with other mentions.
-    bodyNode: (
-      <LocaleText
-        de={
-          <>
-            Geben Sie Ihre Postanschrift ein und tragen Sie dann Ihre SSN oder
-            Arbeitgeberidentifikationsnummer (EIN) im Abschnitt zur
-            Steueridentifikationsnummer ein.
-          </>
-        }
-      >
-        Fill in your mailing address, then enter your SSN or EIN in the taxpayer
-        ID section.
-      </LocaleText>
-    ),
   },
   {
     n: "4",
@@ -211,28 +141,8 @@ const FAQ: FaqEntry[] = [
   {
     id: "no-ein-yet",
     question: "What if I don't have an EIN yet?",
-    // Plain-text form used by the FAQPage JSON-LD schema. The React
-    // render uses answerNode below so the visible copy says
-    // "Arbeitgeberidentifikationsnummer (EIN)" consistently (QA F-58).
     answer:
       "Individuals and sole proprietors can generally use their Social Security Number instead. If you need an EIN for a registered business, you can apply for one through the IRS before completing the form.",
-    answerNode: (
-      <LocaleText
-        de={
-          <>
-            Einzelpersonen und Einzelunternehmer können in der Regel stattdessen
-            ihre Sozialversicherungsnummer verwenden. Wenn Sie für ein
-            eingetragenes Unternehmen eine Arbeitgeberidentifikationsnummer
-            (EIN) benötigen, können Sie diese vor dem Ausfüllen des Formulars
-            beim IRS beantragen.
-          </>
-        }
-      >
-        Individuals and sole proprietors can generally use their Social Security
-        Number instead. If you need an EIN for a registered business, you can
-        apply for one through the IRS before completing the form.
-      </LocaleText>
-    ),
   },
   {
     id: "fill-from-phone",
@@ -273,13 +183,7 @@ function GetFormCta({ label = "Open the W-9 Template" }: { label?: string }) {
   );
 }
 
-function SectionHeading({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) {
+function SectionHeading({ id, children }: { id: string; children: string }) {
   return (
     <h2
       className="scroll-mt-24 text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl"
@@ -298,13 +202,11 @@ function Prose({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BulletList({ items }: { items: readonly BulletPair[] }) {
+function BulletList({ items }: { items: string[] }) {
   return (
     <ul className="mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-default-700 dark:text-default-300">
-      {items.map(([en, de]) => (
-        <li key={en}>
-          <LocaleText de={de}>{en}</LocaleText>
-        </li>
+      {items.map((item) => (
+        <li key={item}>{item}</li>
       ))}
     </ul>
   );
@@ -352,29 +254,20 @@ export function W9LandingContent() {
             aria-label="On this page"
             className="sticky top-24 flex flex-col gap-2 border-l border-default-200 pl-4 text-base dark:border-default-700"
           >
-            {(
-              [
-                ["What is Form W-9?", "what-is-w9"],
-                ["Do you need to fill one out?", "need-one"],
-                ["What you'll need before you start", "before-start"],
-                ["How to fill out a W-9 in PDFVault", "how-to-fill"],
-                // QA F-DE: pair this with the matching hand-DE on the
-                // section heading below so TOC + heading always render
-                // the same German string.
-                [
-                  "Signing and sending your completed form",
-                  "signing",
-                  "Formular unterschreiben und senden",
-                ],
-                ["FAQ", "faq"],
-              ] as const
-            ).map(([label, id, de]) => (
+            {[
+              ["What is Form W-9?", "what-is-w9"],
+              ["Do you need to fill one out?", "need-one"],
+              ["What you'll need before you start", "before-start"],
+              ["How to fill out a W-9 in PDFVault", "how-to-fill"],
+              ["Signing and sending your completed form", "signing"],
+              ["FAQ", "faq"],
+            ].map(([label, id]) => (
               <Link
                 key={id}
                 className="rounded px-2 py-1.5 font-medium leading-6 text-default-700 transition-colors hover:bg-default-100 hover:text-[var(--color-accent)] dark:text-default-300 dark:hover:bg-default-800"
                 href={`#${id}`}
               >
-                {de ? <LocaleText de={de}>{label}</LocaleText> : label}
+                {label}
               </Link>
             ))}
           </nav>
@@ -445,10 +338,8 @@ export function W9LandingContent() {
                     {group.label}
                   </p>
                   <ul className="mt-2 list-disc space-y-2 pl-6 text-sm leading-6 text-default-600 dark:text-default-400">
-                    {group.items.map((item, idx) => (
-                      <li key={typeof item === "string" ? item : `item-${idx}`}>
-                        {item}
-                      </li>
+                    {group.items.map((item) => (
+                      <li key={item}>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -483,7 +374,7 @@ export function W9LandingContent() {
                       Step {step.n}. {step.title}.
                     </p>
                     <p className="mt-1 text-sm leading-6 text-default-600 dark:text-default-400">
-                      {"bodyNode" in step ? step.bodyNode : step.body}
+                      {step.body}
                     </p>
                   </div>
                 </li>
@@ -496,9 +387,7 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="signing">
-              <LocaleText de="Formular unterschreiben und senden">
-                Signing and sending your completed form
-              </LocaleText>
+              Signing and sending your completed form
             </SectionHeading>
             <Prose>
               <p>

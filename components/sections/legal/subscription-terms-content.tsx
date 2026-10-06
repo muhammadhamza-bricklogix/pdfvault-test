@@ -15,7 +15,6 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
-import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const subscriptionTermsTocEntries: LegalTocEntry[] = [
@@ -55,8 +54,8 @@ export function SubscriptionTermsContent() {
               for rationale. */}
           terms defined in the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
-          meaning given there. In the event of a conflict between these
-          Subscription Terms and the{" "}
+          meaning given there. In the
+          event of a conflict between these Subscription Terms and the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> in
           relation to trial and subscription billing, these Subscription Terms
           prevail. Charges are also subject to our{" "}
@@ -67,7 +66,11 @@ export function SubscriptionTermsContent() {
       {/* LEGAL_COUNSEL_PENDING — QA F-41: "Trial" rendered as "Probe"
           in German. "Trial Period" nudges Weglot toward "Testphase"
           which QA suggested. */}
-      <LegalSectionCard icon={Timer01Icon} id="st-1" title="1. TRIAL PERIOD">
+      <LegalSectionCard
+        icon={Timer01Icon}
+        id="st-1"
+        title="1. TRIAL PERIOD"
+      >
         <p>
           Certain features of the Service — including downloading a completed
           file — require a paid trial. When you start a trial, you will be
@@ -125,41 +128,10 @@ export function SubscriptionTermsContent() {
         id="st-4"
         title="4. TERMINATION AND CANCELLATION"
       >
-        <LocaleText
-          as="p"
-          de={
-            <>
-              Sie können Ihre Testphase oder Ihr Abonnement jederzeit auf eine
-              der folgenden Weisen kündigen:
-            </>
-          }
-        >
-          You may cancel your trial or subscription at any time:
-        </LocaleText>
+        <p>You may cancel your trial or subscription at any time:</p>
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          <LocaleText
-            as="li"
-            de={
-              <>über Ihre Kontoeinstellungen unter „Abonnement&ldquo;, oder</>
-            }
-          >
-            In your account settings, under Subscription.
-          </LocaleText>
-          <LocaleText
-            as="li"
-            de={
-              <>
-                per E-Mail an{" "}
-                <a
-                  className="text-[var(--pv-brand-red,#f12c23)]"
-                  href="mailto:support@pdfvault.ai"
-                >
-                  support@pdfvault.ai
-                </a>{" "}
-                vor dem nächsten Verlängerungsdatum.
-              </>
-            }
-          >
+          <li>In your account settings, under Subscription.</li>
+          <li>
             By emailing{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)]"
@@ -168,7 +140,7 @@ export function SubscriptionTermsContent() {
               support@pdfvault.ai
             </a>{" "}
             before your next renewal date.
-          </LocaleText>
+          </li>
         </ul>
         <p className="mt-3">
           Cancelling disables automatic renewal. If you cancel during your 7-day
