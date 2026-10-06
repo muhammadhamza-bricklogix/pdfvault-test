@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import dynamic from "next/dynamic";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
 
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
@@ -10,7 +10,9 @@ import { LandingHeader } from "@/components/sections/new-landing/landing-header"
 import { LandingSteps } from "@/components/sections/new-landing/landing-steps";
 import { LandingTestimonials } from "@/components/sections/new-landing/landing-testimonials";
 import { UploadWorkspace } from "@/components/sections/new-landing/upload-workspace";
+import { getLandingMessages } from "@/lib/client/i18n/landing-messages";
 import { CONVERT_ROUTES } from "@/lib/shared/constants/convert-routes";
+import { LOCALE_HEADER } from "@/lib/shared/constants/locale-map";
 
 const LandingTools = dynamic(() =>
   import("@/components/sections/new-landing/landing-tools").then(
@@ -62,22 +64,38 @@ export default async function ConvertPage({
 
   if (!route) notFound();
 
-  // Localised hero copy. Next-intl returns the key path when a key is
-  // missing — fall back to the hardcoded English in that case so a new
-  // slug added to CONVERT_ROUTES without a matching translation entry
-  // still renders readable copy instead of leaking the key path.
-  const t = await getTranslations("convertRoutes");
-  const safe = (key: string, fallback: string) => {
-    const value = t(key);
-
-    return value === `convertRoutes.${key}` ? fallback : value;
+  // Server-side locale resolution via the middleware's locale header.
+  // `getTranslations()` would be ergonomic, but next-intl in this
+  // project is wired through a `"use client"` provider
+  // (`LandingI18nProvider`) with no `getRequestConfig`; calling
+  // `getTranslations` from a server component throws at render time
+  // and surfaces as a 500 (`/de/convert/word-to-pdf` incident
+  // 2026-10-07). Reading messages JSON directly stays within the
+  // existing architecture.
+  const h = await headers();
+  const locale = h.get(LOCALE_HEADER) ?? "en";
+  const messages = getLandingMessages(locale) as unknown as {
+    convertRoutes?: Record<
+      string,
+      {
+        title?: string;
+        description?: string;
+        heroTitle?: string;
+        heroSubtitle?: string;
+      }
+    >;
   };
-  const heroTitle = route.heroTitle
-    ? safe(`${slug}.heroTitle`, route.heroTitle)
-    : safe(`${slug}.title`, route.title);
-  const heroSubtitle = route.heroSubtitle
-    ? safe(`${slug}.heroSubtitle`, route.heroSubtitle)
-    : safe(`${slug}.description`, route.description);
+  const convertEntry = messages.convertRoutes?.[slug];
+  const heroTitle =
+    (route.heroTitle ? convertEntry?.heroTitle : convertEntry?.title) ??
+    route.heroTitle ??
+    route.title;
+  const heroSubtitle =
+    (route.heroSubtitle
+      ? convertEntry?.heroSubtitle
+      : convertEntry?.description) ??
+    route.heroSubtitle ??
+    route.description;
 
   return (
     <div id="top">
