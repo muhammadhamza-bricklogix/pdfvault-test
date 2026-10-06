@@ -67,6 +67,7 @@
     "alreadyUnlockedTitle": "ملف PDF مفتوح بالفعل",
     "alreadyUnlockedBody": "يمكنك البدء بالتحرير فوراً.",
     "removeProtectionHint": "كلمة المرور التي عيّنتها على ملف PDF مطلوبة لإزالة الحماية.",
+    "currentPassword": "كلمة المرور الحالية",
     "cancel": "إلغاء"
   }
 }
