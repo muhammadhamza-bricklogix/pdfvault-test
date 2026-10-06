@@ -67,6 +67,7 @@
     "alreadyUnlockedTitle": "PDF is already unlocked",
     "alreadyUnlockedBody": "You can start editing straight away.",
     "removeProtectionHint": "The password you set on the PDF is required to remove protection.",
+    "currentPassword": "Current password",
     "cancel": "Cancel"
   }
 }

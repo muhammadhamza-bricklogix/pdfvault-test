@@ -1103,7 +1103,7 @@ export function UploadWorkspace({
                 <div className="flex flex-col items-center">
                   <HeroFolderIcon />
                   <h2 className="mt-6 text-[22px] font-semibold leading-[28px] text-[#121212] sm:text-[24px] sm:leading-[30px]">
-                    Drag &amp; drop file to edit
+                    {tUpload("dragDrop")}
                   </h2>
 
                   <div className="mt-6 flex w-full max-w-[360px] items-center gap-3 text-[13px] font-medium uppercase tracking-[0.08em] text-[var(--pv-brand-primary)]">
@@ -1111,7 +1111,7 @@ export function UploadWorkspace({
                       aria-hidden
                       className="h-px flex-1 bg-[var(--pv-brand-primary)]/40"
                     />
-                    <span>OR</span>
+                    <span>{tUpload("or")}</span>
                     <span
                       aria-hidden
                       className="h-px flex-1 bg-[var(--pv-brand-primary)]/40"
@@ -1126,7 +1126,7 @@ export function UploadWorkspace({
                       openPicker();
                     }}
                   >
-                    Click to Upload Your File
+                    {tUpload("uploadFile")}
                   </button>
 
                   <p

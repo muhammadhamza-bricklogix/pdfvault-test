@@ -16,7 +16,52 @@
     }
   },
   "upload": {
-    "maxFileSize": "Max file size: 100 MB"
+    "maxFileSize": "Max file size: 100 MB",
+    "dragDrop": "Drag & drop file to edit",
+    "or": "OR",
+    "uploadFile": "Click to Upload Your File"
+  },
+  "convertRoutes": {
+    "file-to-pdf": {
+      "title": "Convert File to PDF",
+      "description": "Supported formats: Word, JPG, PNG."
+    },
+    "word-to-pdf": {
+      "title": "Convert Word to PDF",
+      "description": "Upload a .doc or .docx and get a clean PDF ready to sign or share."
+    },
+    "png-to-pdf": {
+      "title": "Convert PNG to PDF",
+      "description": "Drop one or more PNGs and we'll bundle them into a single PDF."
+    },
+    "jpg-to-pdf": {
+      "title": "Convert JPG to PDF",
+      "description": "Turn JPG photos or scans into a single, tidy PDF.",
+      "heroTitle": "Turn JPG into PDF Instantly",
+      "heroSubtitle": "Convert in seconds — then download your PDF as soon as it’s ready."
+    },
+    "pdf-to-word": {
+      "title": "Convert PDF to Word",
+      "description": "Turn a PDF into an editable .docx so you can keep working in Word.",
+      "heroTitle": "Convert PDF to Word in Seconds",
+      "heroSubtitle": "Convert in moments — then download your editable Word file right away."
+    },
+    "pdf-to-png": {
+      "title": "Convert PDF to PNG",
+      "description": "Export every page of a PDF as a high-quality PNG image."
+    },
+    "pdf-to-jpg": {
+      "title": "Convert PDF to JPG",
+      "description": "Export every page of a PDF as a JPG image."
+    },
+    "pdf-to-excel": {
+      "title": "Convert PDF to Excel",
+      "description": "Pull tables out of a PDF and drop them into a ready-to-edit Excel file."
+    },
+    "pdf-to-powerpoint": {
+      "title": "Convert PDF to PowerPoint",
+      "description": "Turn a PDF into an editable .pptx deck with each page as its own slide."
+    }
   },
   "brand": {
     "name": "PDFVault"
