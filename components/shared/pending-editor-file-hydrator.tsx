@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { AUTH_RETURN_PARAM } from "@/lib/client/auth/auto-signup";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import {
   clearPendingEditorFile,
@@ -120,6 +121,8 @@ export function PendingEditorFileHydrator() {
   const utmMedium = searchParams.get("utm_medium");
   const cameFromWelcomeEmail =
     utmSource === "customer.io" && utmMedium === "email_action";
+  // Set by runAutoSignup on the finalize redirect, even when the `?id=` upload failed.
+  const isAuthReturn = searchParams.get(AUTH_RETURN_PARAM) === "1";
   // Flow 1 (spec 2026-09-09) post-signup landing: guest dropped a
   // non-PDF on /convert/*, silent-signed-up, was routed to
   // `/pdf-composer?convert-pending=1`. `<FlowOneConvertPendingOverlay/>`
@@ -563,6 +566,24 @@ export function PendingEditorFileHydrator() {
     if (!tool && !exportFormat && !cameFromWelcomeEmail) return;
     if (!authLoaded) return;
 
+    // QA PDF-287: on a post-signin return the Clerk session cookie
+    // can lag a few ms behind `authLoaded` after
+    // `window.location.assign` (iOS Safari is the worst offender,
+    // but desktop hits it too). Firing `editor:export` while
+    // `isSignedIn === false` makes `useExportEditor` take the
+    // signed-out branch, re-dispatch EmailFirstModal, and the
+    // paywall silently misses on the first attempt. Wait for
+    // `isSignedIn` ONLY when the URL carries a post-signin signal
+    // (`?id=` from `runAutoSignup`'s appended docId, or the
+    // welcome-email UTM markers). Pure signed-out `?export=`
+    // deep-links keep firing immediately so the EmailFirstModal
+    // path is unchanged. See revert commit 21c896ea for the
+    // original diagnosis.
+    const isPostSigninReturn =
+      Boolean(docId) || cameFromWelcomeEmail || isAuthReturn;
+
+    if (isPostSigninReturn && !isSignedIn) return;
+
     launchedRef.current = true;
     logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
       tool,
@@ -745,6 +766,14 @@ export function PendingEditorFileHydrator() {
         }
         if (cleaned.has("fresh")) {
           cleaned.delete("fresh");
+          mutated = true;
+        }
+        if (cleaned.has("hint")) {
+          cleaned.delete("hint");
+          mutated = true;
+        }
+        if (cleaned.has(AUTH_RETURN_PARAM)) {
+          cleaned.delete(AUTH_RETURN_PARAM);
           mutated = true;
         }
         // UTM params from the welcome-email click. Strip them after
