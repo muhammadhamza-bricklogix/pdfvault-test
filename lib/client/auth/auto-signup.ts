@@ -299,102 +299,105 @@ export async function runAutoSignup(params: {
       : ROUTES.APP.DASHBOARD;
 
   // ─────────────────────────────────────────────────────────────
-  // NEW (2026-09-18): between ticket sign-in and finalize, upload
-  // the pre-baked PDF via the authenticated `/documents/upload`
-  // endpoint and hand the resulting docId to
-  // `POST /auth/quick-signup/notify`. The welcome email then fires
-  // with a `pdf_editor_url` pointing straight at the composer for
-  // this file — same behaviour whether the user opens the email on
-  // the same device or a different one, because the edited bytes
-  // live in cloud storage now (not just IDB). `?id=<docId>` is
-  // appended to the finalize redirect so the same-session return
-  // path also loads from cloud, skipping the IDB-restore path in
-  // the hydrator.
+  // 2026-10-06 — mobile new-user paywall fix. The baked-file upload
+  // and `/auth/quick-signup/notify` call BOTH run inside finalize's
+  // `navigate` callback (which Clerk awaits) rather than between
+  // `signIn.ticket` and `signIn.finalize`.
   //
-  // Fall-through behaviour when anything in this block fails is
-  // essential: the account exists, the ticket already signed the
-  // user in, and the finalize call still runs. Worst case: the
-  // welcome email lands with the dashboard fallback URL (Liquid
-  // `default:` filter on `pdf_editor_url`) and the hydrator does
-  // its normal IDB rehydrate — exactly the pre-2026-09-18 flow.
+  // Why: in Clerk's Future SDK, `signIn.ticket({ ticket })` creates
+  // the session on the Clerk server but does NOT call setActive —
+  // that happens inside `finalize()`. For a brand-new user there is
+  // no previously-active session, so `window.Clerk.session` is null
+  // between ticket and finalize → `getAuthToken()` returns null →
+  // the authenticated `/documents/upload` POST ships with no bearer
+  // token → NestJS 401 → the catch swallows it → `uploadedDocId`
+  // stays null → no `?id=` on the redirect → destination page falls
+  // back to the fragile IDB-restore path. On mobile iOS Safari the
+  // cookie-commit lag + `isRestoringSession` flipping off before
+  // `file` is set lets the Shell's shouldRedirectAway effect fire
+  // (`isSignedIn=true`, `!file`, `!pendingDocumentId`) and the user
+  // lands on /dashboard with no file (upload also 401'd server-side,
+  // so nothing persisted). Original revert `21c896ea` and
+  // follow-up `c9ca0baf` (PDF-287) documented but did not close
+  // this specific no-`?id=` branch.
+  //
+  // By moving both calls inside `navigate`, Clerk's setActive has
+  // run before our code executes, `clerk.session` is the new user's
+  // session, `getAuthToken()` returns a fresh JWT, upload succeeds,
+  // and `?id=<newDocId>` is appended to the final redirect. The
+  // destination page uses the cloud-loader path on all platforms.
+  //
+  // Fall-through behaviour is preserved: a failed upload still
+  // reaches `window.location.assign` with `safeRedirect` so the
+  // user is never stranded mid-navigation. Invariant #15
+  // (`window.location.assign` for iOS Safari cookie commit) is
+  // honored — it's still the final call in the callback.
   // ─────────────────────────────────────────────────────────────
-  let effectiveRedirect = safeRedirect;
-  let uploadedDocId: string | null = null;
-
-  try {
-    if (bakedFile) {
-      // Clerk's `signIn.ticket({ ticket })` above sets the session
-      // synchronously — `getAuthToken()` returns the fresh JWT
-      // immediately, so `apiClient` picks it up on the very next
-      // request. No sleep needed.
-      const uploaded = await documentsService.uploadDocument({
-        file: bakedFile,
-      });
-
-      uploadedDocId = uploaded.id;
-      effectiveRedirect = appendDocIdToRedirect(safeRedirect, uploadedDocId);
-
-      logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_OK, "info", {
-        docId: uploadedDocId,
-        sizeBytes: bakedFile.size,
-      });
-    }
-  } catch (uploadErr) {
-    // Upload failure is non-fatal — see the block header. Log +
-    // fall through so the ticketed sign-in isn't wasted.
-    logger.captureError(uploadErr, "auto-signup.upload", {
-      sizeBytes: bakedFile?.size,
-    });
-    logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_ERROR, "error", {
-      errorMessage:
-        uploadErr instanceof Error ? uploadErr.message : String(uploadErr),
-    });
-  }
-
-  // Fire the welcome email. Always call notify even when the upload
-  // failed (or `bakedFile` was absent) so the user still gets their
-  // sign-in credentials — the CIO template falls back to the
-  // dashboard snippet when `pdf_editor_url` isn't in message_data.
-  try {
-    const token = await getAuthToken();
-    const notifyBody: { fileName?: string; docId?: string } = {};
-
-    if (fileName) notifyBody.fileName = fileName;
-    if (uploadedDocId) notifyBody.docId = uploadedDocId;
-
-    const notifyResponse = await fetch(
-      `${API_BASE_URL}/auth/quick-signup/notify`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(notifyBody),
-      },
-    );
-
-    logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_OK, "info", {
-      responseStatus: notifyResponse.status,
-      hadDocId: Boolean(uploadedDocId),
-    });
-  } catch (notifyErr) {
-    // Best-effort — same fallback story. The user's account and
-    // session are fine; only the welcome email may not arrive.
-    logger.captureError(notifyErr, "auto-signup.notify", {
-      hadDocId: Boolean(uploadedDocId),
-    });
-    logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_ERROR, "error", {
-      errorMessage:
-        notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
-    });
-  }
-
-  // Invariant #15: iOS Safari commits the Clerk session cookie during a
-  // full-page nav; router.push races the cookie. suppressNextUnload keeps
-  // the editor's beforeunload guard quiet during the redirect.
   const { error: finalizeError } = await signIn.finalize({
-    navigate: ({ decorateUrl }) => {
+    navigate: async ({ decorateUrl }) => {
+      let uploadedDocId: string | null = null;
+      let effectiveRedirect = safeRedirect;
+
+      try {
+        if (bakedFile) {
+          const uploaded = await documentsService.uploadDocument({
+            file: bakedFile,
+          });
+
+          uploadedDocId = uploaded.id;
+          effectiveRedirect = appendDocIdToRedirect(
+            safeRedirect,
+            uploadedDocId,
+          );
+
+          logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_OK, "info", {
+            docId: uploadedDocId,
+            sizeBytes: bakedFile.size,
+          });
+        }
+      } catch (uploadErr) {
+        logger.captureError(uploadErr, "auto-signup.upload", {
+          sizeBytes: bakedFile?.size,
+        });
+        logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_ERROR, "error", {
+          errorMessage:
+            uploadErr instanceof Error ? uploadErr.message : String(uploadErr),
+        });
+      }
+
+      try {
+        const token = await getAuthToken();
+        const notifyBody: { fileName?: string; docId?: string } = {};
+
+        if (fileName) notifyBody.fileName = fileName;
+        if (uploadedDocId) notifyBody.docId = uploadedDocId;
+
+        const notifyResponse = await fetch(
+          `${API_BASE_URL}/auth/quick-signup/notify`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(notifyBody),
+          },
+        );
+
+        logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_OK, "info", {
+          responseStatus: notifyResponse.status,
+          hadDocId: Boolean(uploadedDocId),
+        });
+      } catch (notifyErr) {
+        logger.captureError(notifyErr, "auto-signup.notify", {
+          hadDocId: Boolean(uploadedDocId),
+        });
+        logger.event(EVENTS.AUTH_QUICK_SIGNUP_NOTIFY_ERROR, "error", {
+          errorMessage:
+            notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+        });
+      }
+
       suppressNextUnload();
       window.location.assign(decorateUrl(effectiveRedirect));
     },
