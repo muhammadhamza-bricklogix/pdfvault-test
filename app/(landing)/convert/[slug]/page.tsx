@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { LandingFooter } from "@/components/sections/new-landing/landing-footer";
 import { LandingFreshStart } from "@/components/sections/new-landing/landing-fresh-start";
@@ -61,6 +62,23 @@ export default async function ConvertPage({
 
   if (!route) notFound();
 
+  // Localised hero copy. Next-intl returns the key path when a key is
+  // missing — fall back to the hardcoded English in that case so a new
+  // slug added to CONVERT_ROUTES without a matching translation entry
+  // still renders readable copy instead of leaking the key path.
+  const t = await getTranslations("convertRoutes");
+  const safe = (key: string, fallback: string) => {
+    const value = t(key);
+
+    return value === `convertRoutes.${key}` ? fallback : value;
+  };
+  const heroTitle = route.heroTitle
+    ? safe(`${slug}.heroTitle`, route.heroTitle)
+    : safe(`${slug}.title`, route.title);
+  const heroSubtitle = route.heroSubtitle
+    ? safe(`${slug}.heroSubtitle`, route.heroSubtitle)
+    : safe(`${slug}.description`, route.description);
+
   return (
     <div id="top">
       <LandingFreshStart />
@@ -68,11 +86,11 @@ export default async function ConvertPage({
       <main>
         <section className="bg-white pb-8 pt-14 sm:pb-10 sm:pt-20">
           <div className="pv-container flex flex-col items-center text-center">
-            <h1 className="font-bold leading-[1.05] tracking-[-0.03em] whitespace-nowrap text-[clamp(15px,5.5vw,56px)] text-[#121212]">
-              {route.heroTitle ?? route.title}
+            <h1 className="font-bold leading-[1.05] tracking-[-0.03em] text-balance text-[clamp(15px,5.5vw,56px)] text-[#121212]">
+              {heroTitle}
             </h1>
-            <p className="mt-6 font-medium leading-relaxed whitespace-nowrap text-[clamp(11px,2.3vw,20px)] text-[var(--pv-gray-8)]">
-              {route.heroSubtitle ?? route.description}
+            <p className="mt-6 font-medium leading-relaxed text-balance text-[clamp(15px,2.3vw,20px)] text-[var(--pv-gray-8)]">
+              {heroSubtitle}
             </p>
           </div>
         </section>
