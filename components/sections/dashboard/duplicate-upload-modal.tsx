@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Modal } from "@heroui/react";
+import { useState } from "react";
 
 type Props = {
   filename: string | null;
@@ -14,6 +15,10 @@ export function DuplicateUploadModal({
   onOverwrite,
 }: Props) {
   const isOpen = !!filename;
+  // Keep body text mounted through the close animation; removing Weglot-rewritten nodes crashes React.
+  const [shownFilename, setShownFilename] = useState(filename);
+
+  if (filename && filename !== shownFilename) setShownFilename(filename);
 
   return (
     <Modal.Backdrop
@@ -30,11 +35,11 @@ export function DuplicateUploadModal({
           </Modal.Header>
           <Modal.Body>
             <p className="text-sm text-default-500">
-              {filename ? (
+              {shownFilename ? (
                 <>
                   A document named{" "}
                   <span className="font-medium text-[var(--color-foreground)]">
-                    {filename}
+                    {shownFilename}
                   </span>{" "}
                   already exists in your library. Overwrite it with the new
                   upload, or ignore this upload to keep your existing file.

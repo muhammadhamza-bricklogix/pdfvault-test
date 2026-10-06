@@ -43,7 +43,7 @@ import { sanitizeSourceBytesForPdfLib } from "@/lib/client/pdf-editor/sanitize-s
 import { flushLiveFabricPage } from "@/lib/client/pdf-editor/save-utils";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { ComposerI18nProvider } from "@/lib/client/i18n/composer-i18n-provider";
-import { stripLocalePrefix } from "@/lib/shared/constants/locale-map";
+import { logger } from "@/lib/shared/utils/logger";
 import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { toast } from "@/lib/shared/utils/toast";
 
@@ -330,10 +330,26 @@ function EditorLayout() {
           historyByPage: remapped.historyByPage,
           historyIndexByPage: remapped.historyIndexByPage,
         });
-      } catch {
+      } catch (err) {
+        // QA row 50: the bare `catch {}` previously silenced the exact
+        // throw that killed Manage Pages save after a rotation. Capture
+        // the error with its original message + stack so we can see which
+        // step (sanitize bytes → buildPdfFromDraft → remap → applyManage)
+        // actually blew up, and surface a snippet to the user instead of
+        // a generic "try again".
+        logger.captureError(err, "handleManagePagesSave", {
+          currentPage,
+          pageCount: snapshot.pages.length,
+          hasFabricCanvas: Boolean(fabricCanvas),
+        });
+        const message =
+          err instanceof Error && err.message
+            ? err.message.slice(0, 160)
+            : "Saving your page edits failed. Please try again.";
+
         toast.error({
           title: "Could not apply page changes",
-          description: "Saving your page edits failed. Please try again.",
+          description: message,
         });
       }
     },
@@ -581,6 +597,26 @@ export function PdfEditorShell({
   useEffect(() => {
     setIsSignedIn(isSignedIn ?? false);
   }, [isSignedIn, setIsSignedIn]);
+
+  // Row 114/120: Print → Save as PDF reads `document.title` for the
+  // default filename in the system Save dialog. Composer never set it,
+  // so Chrome/Edge/Safari all opened the dialog with an empty filename
+  // field — users had to type the whole name themselves. Mirror the
+  // open file's name into `document.title` while a PDF is loaded;
+  // restore the original title when the file is cleared so the regular
+  // page title comes back on route transitions.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!file) return;
+    const previous = document.title;
+    const base = file.name.replace(/\.[^.]+$/, "") || "document";
+
+    document.title = base;
+
+    return () => {
+      document.title = previous;
+    };
+  }, [file]);
 
   // PRD §7.1 — prefetch the pdf.js legacy build + worker as soon as the
   // editor mounts, so the first file lands into a warm module cache. On a

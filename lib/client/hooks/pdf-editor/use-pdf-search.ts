@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
 import { usePdfEditorStore } from "@/lib/client/stores";
@@ -10,10 +10,116 @@ import {
   type SearchPageData,
 } from "@/lib/client/stores/pdf-search-store";
 
+type OcclusionRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type FabricJsonRect = Record<string, unknown> & {
+  type?: string;
+  editorType?: string;
+};
+
+/**
+ * Parse whiteout + redaction rectangles out of a page's serialized Fabric
+ * JSON. Returns bounding boxes in Fabric base coordinates (zoom=1, top-left
+ * origin), the same space `viewport.convertToViewportPoint(scale=1)`
+ * returns, so text-item bboxes can be compared directly against them.
+ *
+ * Assumes axis-aligned rects (angle=0); the whiteout + redact tools in
+ * `use-shape-tool.ts` create rects at angle 0 and the editor never rotates
+ * them.
+ */
+function occlusionRectsFromJson(json: string | undefined): OcclusionRect[] {
+  if (!json) return [];
+
+  let parsed: { objects?: FabricJsonRect[] };
+
+  try {
+    parsed = JSON.parse(json) as { objects?: FabricJsonRect[] };
+  } catch {
+    return [];
+  }
+
+  const rects: OcclusionRect[] = [];
+  const objects = parsed.objects ?? [];
+
+  for (const o of objects) {
+    const type = (o.type as string | undefined)?.toLowerCase();
+    const editorType = o.editorType as string | undefined;
+
+    if (type !== "rect") continue;
+    if (editorType !== "whiteout" && editorType !== "redaction") continue;
+
+    const left = Number(o.left ?? 0);
+    const top = Number(o.top ?? 0);
+    const width = Number(o.width ?? 0) * Number(o.scaleX ?? 1);
+    const height = Number(o.height ?? 0) * Number(o.scaleY ?? 1);
+
+    if (width > 0 && height > 0) {
+      rects.push({ height, left, top, width });
+    }
+  }
+
+  return rects;
+}
+
+/**
+ * Returns true if the text-item bbox is fully contained inside any of the
+ * occlusion rects. Partial coverage (text peeks past a rect edge) returns
+ * false, so visibly-readable text stays searchable per the row-21 spec.
+ */
+function itemFullyCovered(
+  bbox: OcclusionRect,
+  rects: OcclusionRect[],
+): boolean {
+  if (rects.length === 0) return false;
+  const right = bbox.left + bbox.width;
+  const bottom = bbox.top + bbox.height;
+
+  for (const r of rects) {
+    if (
+      bbox.left >= r.left &&
+      bbox.top >= r.top &&
+      right <= r.left + r.width &&
+      bottom <= r.top + r.height
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function itemBbox(
+  item: SearchPageData["items"][number],
+  pageHeight: number,
+): OcclusionRect | null {
+  const transform = item.transform;
+
+  if (!Array.isArray(transform) || transform.length < 6) return null;
+  const tx = Number(transform[4]);
+  const ty = Number(transform[5]);
+
+  if (!Number.isFinite(tx) || !Number.isFinite(ty)) return null;
+
+  // At viewport scale=1, convertToViewportPoint(tx, ty) → (tx, pageHeight - ty).
+  const vpLeft = tx;
+  const vpBaseline = pageHeight - ty;
+  const height = item.height > 0 ? item.height : 1;
+  const width = item.width > 0 ? item.width : 1;
+
+  return { height, left: vpLeft, top: vpBaseline - height, width };
+}
+
 function findAllMatches(
   query: string,
   textIndex: Map<number, SearchPageData>,
   totalPages: number,
+  pageOrder: number[],
+  fabricJsonByPage: Map<number, string>,
 ): SearchMatch[] {
   if (!query.trim()) return [];
 
@@ -25,13 +131,33 @@ function findAllMatches(
 
     if (!pageData) continue;
 
+    const sourcePage =
+      pageOrder.length > 0 ? (pageOrder[page - 1] ?? page) : page;
+    const occlusion = occlusionRectsFromJson(fabricJsonByPage.get(sourcePage));
+    const hasOcclusion = occlusion.length > 0;
+
     // Build a flat page-level string, tracking where each item starts.
+    // Items fully covered by whiteout/redaction contribute an EMPTY string
+    // so matches cannot land inside them, but their index stays in place so
+    // `SearchHighlightLayer`'s `span.itemIndex` indexing is unaffected.
     let pageText = "";
     const itemOffsets: number[] = [];
+    const itemLens: number[] = [];
 
     for (const item of pageData.items) {
       itemOffsets.push(pageText.length);
-      pageText += item.str;
+      let covered = false;
+
+      if (hasOcclusion) {
+        const bbox = itemBbox(item, pageData.pageHeight);
+
+        if (bbox && itemFullyCovered(bbox, occlusion)) covered = true;
+      }
+
+      const str = covered ? "" : item.str;
+
+      itemLens.push(str.length);
+      pageText += str;
     }
 
     const lowerText = pageText.toLowerCase();
@@ -47,15 +173,16 @@ function findAllMatches(
 
       for (let i = 0; i < pageData.items.length; i++) {
         const itemStart = itemOffsets[i];
-        const itemEnd = itemStart + pageData.items[i].str.length;
+        const itemEnd = itemStart + itemLens[i];
 
         if (itemEnd <= idx) continue;
         if (itemStart >= matchEnd) break;
+        if (itemLens[i] === 0) continue;
 
         spans.push({
           itemIndex: i,
           charStart: Math.max(0, idx - itemStart),
-          charEnd: Math.min(pageData.items[i].str.length, matchEnd - itemStart),
+          charEnd: Math.min(itemLens[i], matchEnd - itemStart),
         });
       }
 
@@ -77,6 +204,7 @@ export function usePdfSearch() {
   const pdfDocument = usePdfEditorStore((s) => s.pdfDocument);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const pageOrder = usePdfEditorStore((s) => s.pageOrder);
+  const fabricJsonByPage = usePdfEditorStore((s) => s.fabricJsonByPage);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
 
   const {
@@ -98,18 +226,43 @@ export function usePdfSearch() {
     resetIndex,
   } = usePdfSearchStore();
 
-  // Re-search (debounced) whenever query or index changes.
+  // Re-search (debounced) whenever query, index, or occlusion rects change.
   // Each effect run captures current query/textIndex; the previous timer
   // is always cancelled before the next fires so no stale closure executes.
+  const navigatedQueryRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const t = setTimeout(() => {
-      setMatches(findAllMatches(query, textIndex, pageCount));
+      const found = findAllMatches(
+        query,
+        textIndex,
+        pageCount,
+        pageOrder,
+        fabricJsonByPage,
+      );
+
+      setMatches(found);
+      // A new query jumps to its first result; index growth while
+      // indexing doesn't.
+      if (found.length > 0 && navigatedQueryRef.current !== query) {
+        navigatedQueryRef.current = query;
+        setCurrentPage(found[0].displayPage);
+      }
     }, 250);
 
     return () => clearTimeout(t);
-  }, [query, textIndex, isOpen, pageCount, setMatches]);
+  }, [
+    query,
+    textIndex,
+    isOpen,
+    pageCount,
+    pageOrder,
+    fabricJsonByPage,
+    setMatches,
+    setCurrentPage,
+  ]);
 
   // Build text index lazily when the search panel opens.
   useEffect(() => {
@@ -182,9 +335,15 @@ export function usePdfSearch() {
   ]);
 
   // Reset index whenever the document changes (new file, save swap, etc.).
+  // Row 123: also close the search bar on file change — leaving it visible
+  // over a freshly-opened file ships stale matches that reference pages
+  // that may no longer exist in the new document (click → crash / wrong page).
+  // `close()` zeroes the query + matches but doesn't clear `textIndex`;
+  // `resetIndex()` does, so call both.
   useEffect(() => {
+    close();
     resetIndex();
-  }, [pdfDocument, resetIndex]);
+  }, [pdfDocument, close, resetIndex]);
 
   const navigateToMatch = useCallback(
     (idx: number) => {

@@ -140,7 +140,19 @@ export async function uploadAsPdf(
   const baseName = file.name.replace(/\.[^.]+$/, "") || "document";
   const arrayBuffer = await result.blob.arrayBuffer();
 
-  return new File([arrayBuffer], `${baseName}.pdf`, {
+  const pdfFile = new File([arrayBuffer], `${baseName}.pdf`, {
     type: "application/pdf",
-  });
+  }) as File & { __createdFromImage?: boolean };
+
+  // Row 73/79: image-to-PDF (jpg_to_pdf / png_to_pdf) produces a PDF
+  // whose page is a rasterised image — there is no editable text layer
+  // by design. Tag the resulting File so `use-edit-text-mode` can
+  // suppress the "No editable text found" info toast for this flow;
+  // the toast is accurate for scanned PDFs but misleading when the
+  // user explicitly asked for an image → PDF conversion.
+  if (type === "jpg_to_pdf" || type === "png_to_pdf") {
+    pdfFile.__createdFromImage = true;
+  }
+
+  return pdfFile;
 }

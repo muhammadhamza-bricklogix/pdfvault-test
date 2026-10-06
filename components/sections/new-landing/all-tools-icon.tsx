@@ -195,31 +195,30 @@ function FileBadge({ variant, label }: BadgeProps) {
   const softFill = variant === "blue" ? "#DBEAFE" : "#FFEDD5";
 
   return (
-    <svg
-      aria-hidden
-      fill="none"
-      height="20"
-      viewBox="0 0 20 24"
-      width="18"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M2 3a2 2 0 0 1 2-2h9l5 5v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3Z"
-        fill={softFill}
-      />
-      <path d="M13 1v3a2 2 0 0 0 2 2h3" fill={fill} opacity="0.85" />
-      <rect fill={fill} height="6" rx="1" width="14" x="3" y="12" />
-      <text
-        fill="#ffffff"
-        fontFamily="Geist, system-ui, sans-serif"
-        fontSize="4.6"
-        fontWeight="700"
-        textAnchor="middle"
-        x="10"
-        y="16.1"
+    <span className="relative inline-flex">
+      <svg
+        aria-hidden
+        fill="none"
+        height="20"
+        viewBox="0 0 20 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        {label}
-      </text>
-    </svg>
+        <path
+          d="M2 3a2 2 0 0 1 2-2h9l5 5v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3Z"
+          fill={softFill}
+        />
+        <path d="M13 1v3a2 2 0 0 0 2 2h3" fill={fill} opacity="0.85" />
+        <rect fill={fill} height="6" rx="1" width="14" x="3" y="12" />
+      </svg>
+      {/* CSS-generated label over the band (viewBox scale 0.833): Weglot
+          translated an SVG "PNG" text node as a country name. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-[10px] flex h-[5px] items-center justify-center text-[3.83px] font-bold leading-none text-white after:content-[attr(data-label)]"
+        data-label={label}
+        style={{ fontFamily: "Geist, system-ui, sans-serif" }}
+      />
+    </span>
   );
 }

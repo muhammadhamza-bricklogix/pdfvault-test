@@ -16,6 +16,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { findDuplicateByFilename } from "@/lib/client/hooks/upload/use-upload-with-duplicate-check";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { revealInDialog } from "@/lib/client/ui/visual-viewport";
+import { validateRenameBaseName } from "@/lib/shared/schemas/documents/rename.schema";
 
 type FormatOption = {
   id: Extract<ExportFormat, "pdf" | "docx" | "xlsx" | "pptx" | "jpg" | "png">;
@@ -104,10 +106,12 @@ type ExportFormatModalProps = {
 
 function ExportFormatModalBody({
   fileName,
+  nameError,
   setFileName,
   onClose,
 }: {
   fileName: string;
+  nameError: string | null;
   setFileName: (name: string) => void;
   onClose: () => void;
 }) {
@@ -153,16 +157,10 @@ function ExportFormatModalBody({
   const [isSaving, setIsSaving] = useState(false);
   const fileNameInputRef = useRef<HTMLInputElement>(null);
 
-  const scrollFileNameInputIntoView = useCallback(
-    (block: ScrollLogicalPosition = "nearest") => {
-      fileNameInputRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block,
-        inline: "nearest",
-      });
-    },
-    [],
-  );
+  // Scrolls the dialog only; page scrolling makes iOS hide the modal behind the keyboard.
+  const revealFileNameInput = useCallback(() => {
+    revealInDialog(fileNameInputRef.current);
+  }, []);
 
   const focusFileNameInput = useCallback(() => {
     const input = fileNameInputRef.current;
@@ -171,26 +169,8 @@ function ExportFormatModalBody({
 
     input.focus({ preventScroll: true });
     input.select();
-    requestAnimationFrame(() => scrollFileNameInputIntoView("nearest"));
-    window.setTimeout(() => scrollFileNameInputIntoView("center"), 250);
-  }, [scrollFileNameInputIntoView]);
-
-  useEffect(() => {
-    const visualViewport = window.visualViewport;
-
-    if (!visualViewport) return;
-
-    const handleViewportResize = () => {
-      if (document.activeElement !== fileNameInputRef.current) return;
-
-      scrollFileNameInputIntoView("center");
-    };
-
-    visualViewport.addEventListener("resize", handleViewportResize);
-
-    return () =>
-      visualViewport.removeEventListener("resize", handleViewportResize);
-  }, [scrollFileNameInputIntoView]);
+    requestAnimationFrame(revealFileNameInput);
+  }, [revealFileNameInput]);
 
   // Duplicate-name check against the user's My PDFs library. Only
   // runs on the W-9 route per product ask 2026-08-29 — the shell
@@ -423,7 +403,7 @@ function ExportFormatModalBody({
           </label>
           <div
             className={`flex items-center gap-2 rounded-xl border bg-default-50 px-3 py-2.5 ${
-              duplicateExists
+              duplicateExists || nameError
                 ? "border-danger-500 bg-danger-50"
                 : "border-default-200"
             }`}
@@ -435,12 +415,12 @@ function ExportFormatModalBody({
             >
               <Input
                 ref={fileNameInputRef}
-                aria-invalid={duplicateExists}
+                aria-invalid={duplicateExists || !!nameError}
                 aria-label="File name"
                 className="w-full truncate bg-transparent text-[15px] font-medium text-default-800 outline-none placeholder:text-default-400"
                 id="export-file-name"
                 placeholder="document"
-                onFocus={() => scrollFileNameInputIntoView("nearest")}
+                onFocus={revealFileNameInput}
               />
             </TextField>
             <button
@@ -452,7 +432,11 @@ function ExportFormatModalBody({
               <HugeiconsIcon icon={PencilEdit01Icon} size={15} />
             </button>
           </div>
-          {isW9Route && duplicateExists ? (
+          {nameError ? (
+            <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
+              {nameError}
+            </p>
+          ) : isW9Route && duplicateExists ? (
             <p className="mt-1.5 px-1 text-[12px] text-danger" role="alert">
               A file named <span className="font-semibold">{fullFilename}</span>{" "}
               already exists in My PDFs. Rename to keep both copies.
@@ -479,7 +463,7 @@ function ExportFormatModalBody({
         </Button>
         <Button
           className="flex-1"
-          isDisabled={!file || isSaving || duplicateExists}
+          isDisabled={!file || isSaving || duplicateExists || !!nameError}
           onPress={handleDownload}
         >
           {!isSaving && (
@@ -500,6 +484,9 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
   // fileName is lifted to this parent (not ExportFormatModalBody) so a typed rename
   // survives the body remounting on each open/close of the same file.
   const [fileName, setFileName] = useState(initialName);
+  // An unchanged name is always allowed so existing odd names never get stuck.
+  const nameError =
+    fileName.trim() === initialName ? null : validateRenameBaseName(fileName);
   const lastFileRef = useRef(file);
 
   // Only reset fileName when the file itself changes, not on every open. Done in an
@@ -519,7 +506,12 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
       const nextFileName = toEditorPdfName(nextName);
       const currentFile = usePdfEditorStore.getState().file;
 
-      if (!currentFile || !nextFileName || currentFile.name === nextFileName) {
+      if (
+        !currentFile ||
+        !nextFileName ||
+        currentFile.name === nextFileName ||
+        validateRenameBaseName(nextName) !== null
+      ) {
         return;
       }
 
@@ -545,6 +537,7 @@ export function ExportFormatModal({ isOpen, onClose }: ExportFormatModalProps) {
           <ExportFormatModalBody
             key={`${file?.size ?? 0}::${file?.lastModified ?? 0}::${isOpen}`}
             fileName={fileName}
+            nameError={nameError}
             setFileName={syncFileName}
             onClose={onClose}
           />

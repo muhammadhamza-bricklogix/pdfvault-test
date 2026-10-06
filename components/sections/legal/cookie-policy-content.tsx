@@ -430,8 +430,7 @@ export function CookiePolicyContent() {
           className="mt-3"
           de={
             <>
-              <strong>Besucher aus den USA:</strong>{" "}
-              Sofern das jeweilige
+              <strong>Besucher aus den USA:</strong> Sofern das jeweilige
               einzelstaatliche Recht Ihnen das Recht einräumt, dem
               „Verkauf&ldquo;, dem „Teilen&ldquo; oder zielgerichteter Werbung
               über Cookies zu widersprechen, können Sie dies über den Link

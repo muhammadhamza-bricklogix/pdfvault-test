@@ -129,7 +129,24 @@ export function usePageRenderer({
 
             textIndices = getTextOpIndices(page, opList);
           }
-          operationsFilter = (i: number) => !textIndices.has(i);
+          // Check the list pdf.js is drawing: getOperatorList() is unoptimized, so its indices can drift.
+          operationsFilter = (i: number) => {
+            const drawnOps = (
+              renderTask as unknown as {
+                _internalRenderTask?: {
+                  operatorList?: { fnArray?: ArrayLike<number> };
+                };
+              } | null
+            )?._internalRenderTask?.operatorList?.fnArray;
+
+            if (drawnOps) {
+              const op = drawnOps[i];
+
+              return op < TEXT_OPS_MIN || op > TEXT_OPS_MAX;
+            }
+
+            return !textIndices.has(i);
+          };
         }
 
         renderTask = page.render({

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { AUTH_RETURN_PARAM } from "@/lib/client/auth/auto-signup";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import {
   clearPendingEditorFile,
@@ -19,6 +20,7 @@ import {
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { documentKeys } from "@/lib/shared/constants/query-keys";
 import { ROUTES } from "@/lib/shared/constants/routes";
+import { getToolHint } from "@/lib/shared/constants/tool-hints";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
@@ -73,6 +75,10 @@ export function PendingEditorFileHydrator() {
   const resetRef = useRef(false);
   const redirectRef = useRef(false);
   const launchedRef = useRef(false);
+  // Step 4 reads the pending-compress flag once, on its first schedule.
+  // Kept across re-schedules so a retry after `CompressModal` cleared the
+  // flag doesn't open a second modal over the running compression.
+  const pendingCompressRef = useRef<boolean | null>(null);
   const autoSavedRef = useRef(false);
   // Tracks whether `currentFile` has ever been truthy in this session.
   // The mirror effect below uses this to decide whether a `null`
@@ -120,6 +126,8 @@ export function PendingEditorFileHydrator() {
   const utmMedium = searchParams.get("utm_medium");
   const cameFromWelcomeEmail =
     utmSource === "customer.io" && utmMedium === "email_action";
+  // Set by runAutoSignup on the finalize redirect, even when the `?id=` upload failed.
+  const isAuthReturn = searchParams.get(AUTH_RETURN_PARAM) === "1";
   // Flow 1 (spec 2026-09-09) post-signup landing: guest dropped a
   // non-PDF on /convert/*, silent-signed-up, was routed to
   // `/pdf-composer?convert-pending=1`. `<FlowOneConvertPendingOverlay/>`
@@ -563,12 +571,25 @@ export function PendingEditorFileHydrator() {
     if (!tool && !exportFormat && !cameFromWelcomeEmail) return;
     if (!authLoaded) return;
 
+    // QA PDF-287: on a post-signin return the Clerk session cookie
+    // can lag a few ms behind `authLoaded` after
+    // `window.location.assign` (iOS Safari is the worst offender,
+    // but desktop hits it too). Firing `editor:export` while
+    // `isSignedIn === false` makes `useExportEditor` take the
+    // signed-out branch, re-dispatch EmailFirstModal, and the
+    // paywall silently misses on the first attempt. Wait for
+    // `isSignedIn` ONLY when the URL carries a post-signin signal
+    // (`?id=` from `runAutoSignup`'s appended docId, or the
+    // welcome-email UTM markers). Pure signed-out `?export=`
+    // deep-links keep firing immediately so the EmailFirstModal
+    // path is unchanged. See revert commit 21c896ea for the
+    // original diagnosis.
+    const isPostSigninReturn =
+      Boolean(docId) || cameFromWelcomeEmail || isAuthReturn;
+
+    if (isPostSigninReturn && !isSignedIn) return;
+
     launchedRef.current = true;
-    logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
-      tool,
-      exportFormat,
-      cameFromWelcomeEmail,
-    });
 
     // Snapshot the pending-compress flag NOW, before the 400 ms
     // setTimeout below. `CompressModal`'s own auto-fire effect races us:
@@ -579,28 +600,41 @@ export function PendingEditorFileHydrator() {
     // treat the flag as active when the user is signed-in — a signed-
     // out visit with a stale flag should still see the modal so they
     // can retry (fallback for closed-then-reopened email-first modal).
-    let hasPendingCompress = false;
+    // Read once per URL: a re-schedule (see the cleanup below) reuses
+    // the first snapshot for the same reason.
+    if (pendingCompressRef.current === null) {
+      let pendingCompress = false;
 
-    if (isSignedIn) {
-      try {
-        hasPendingCompress = Boolean(
-          window.sessionStorage.getItem("pdfvault:pendingCompress"),
-        );
-      } catch {
-        // sessionStorage disabled — assume no pending config.
+      if (isSignedIn) {
+        try {
+          pendingCompress = Boolean(
+            window.sessionStorage.getItem("pdfvault:pendingCompress"),
+          );
+        } catch {
+          // sessionStorage disabled — assume no pending config.
+        }
       }
+      pendingCompressRef.current = pendingCompress;
     }
+    const hasPendingCompress = pendingCompressRef.current;
 
     const willTourRun = willTourAutoLaunch("editor");
 
     let toolTimeoutId: number | undefined;
     let fallbackTimeoutId: number | undefined;
     let tourEndedHandler: (() => void) | undefined;
+    let fired = false;
 
     const runAutoLaunch = () => {
       // 400 ms lead-in so the file-load pipeline (Fabric mount +
       // pdf.js hydrate) settles before the tool modal opens on top.
       toolTimeoutId = window.setTimeout(() => {
+        fired = true;
+        logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
+          tool,
+          exportFormat,
+          cameFromWelcomeEmail,
+        });
         if (tool) {
           switch (tool) {
             case "compress":
@@ -630,7 +664,7 @@ export function PendingEditorFileHydrator() {
               setIsManagePagesOpen(true);
               break;
             case "split":
-              window.dispatchEvent(new CustomEvent("editor:open-split"));
+              usePdfEditorStore.getState().setPendingMenuAction("split");
               break;
             case "merge": {
               // Open the merge modal DIRECTLY via store state instead of
@@ -691,7 +725,7 @@ export function PendingEditorFileHydrator() {
               window.dispatchEvent(new CustomEvent("editor:extract-images"));
               break;
             case "flatten":
-              window.dispatchEvent(new CustomEvent("editor:open-flatten"));
+              usePdfEditorStore.getState().setPendingMenuAction("flatten");
               break;
             case "export":
               // Welcome-email button lands users here — opens
@@ -707,6 +741,16 @@ export function PendingEditorFileHydrator() {
               break;
             default:
               logger.warn(`unknown auto-launch tool: ${tool}`);
+          }
+
+          const hint = getToolHint(searchParams.get("hint") ?? tool);
+
+          // Delayed so it doesn't clash with the tool's own toast animations.
+          if (hint) {
+            window.setTimeout(
+              () => toast.info({ ...hint, timeout: 8000 }),
+              1000,
+            );
           }
         }
         if (exportFormat) {
@@ -745,6 +789,14 @@ export function PendingEditorFileHydrator() {
         }
         if (cleaned.has("fresh")) {
           cleaned.delete("fresh");
+          mutated = true;
+        }
+        if (cleaned.has("hint")) {
+          cleaned.delete("hint");
+          mutated = true;
+        }
+        if (cleaned.has(AUTH_RETURN_PARAM)) {
+          cleaned.delete(AUTH_RETURN_PARAM);
           mutated = true;
         }
         // UTM params from the welcome-email click. Strip them after
@@ -805,6 +857,15 @@ export function PendingEditorFileHydrator() {
       if (tourEndedHandler) {
         window.removeEventListener(TOUR_ENDED_EVENT, tourEndedHandler);
       }
+      // The effect was torn down before the 400 ms timer ran — React
+      // re-running it (dev Strict Mode does this on every mount) or a
+      // dependency changing during the lead-in, e.g. `file` being
+      // swapped right after the upload. Release the one-shot so the
+      // next run schedules the launch again. Without this the `?tool=`
+      // launch was dropped: the Unlock PDF tool opened a PDF that has
+      // an owner password but no open password without its unlock
+      // dialog (German QA F-64).
+      if (!fired) launchedRef.current = false;
     };
   }, [
     authLoaded,

@@ -376,7 +376,7 @@ export function DocumentsTable() {
               </Button>
               <Button
                 size="sm"
-                variant="danger"
+                variant="primary"
                 onPress={() => setBulkDeleteTargets([...selectedDocuments])}
               >
                 Delete

@@ -47,11 +47,23 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
 
     const input = inputRef.current;
 
+    const resetToolAndInput = () => {
+      // Row 76: on every exit path (success, error, cancel) clear the
+      // input + flip back to Select. The previous version left tool stuck
+      // on "image" after a FileReader / FabricImage error — the hidden
+      // input never got a reset event, so the next tool-strip click
+      // registered as a no-op until the user picked a different tool
+      // first ("dead clicks"). Deterministic reset here guarantees the
+      // Image tile responds immediately on the next click.
+      input.value = "";
+      setActiveTool("select");
+    };
+
     const handleChange = async () => {
       const file = input.files?.[0];
 
       if (!file) {
-        setActiveTool("select");
+        resetToolAndInput();
 
         return;
       }
@@ -61,23 +73,90 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
           title: "Image too large",
           description: "Pick an image under 10 MB.",
         });
-        input.value = "";
-        setActiveTool("select");
+        resetToolAndInput();
 
         return;
       }
 
-      // Convert to data URL so the image survives JSON serialization across page switches
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+      // Row 110/112/118: persistent loading toast so the UI doesn't go
+      // silent during the FileReader + Fabric decode. Larger images
+      // (several MB) can take 1-2 seconds and the previous version let
+      // the user double-click thinking the first attempt was dropped.
+      // Closed in every exit path (success + each error) so a stuck
+      // loader can't outlive its action.
+      const loadingKey = toast.loading({
+        title: "Loading image…",
+        description: file.name,
       });
 
-      const { FabricImage } = await import("fabric");
-      const img = await FabricImage.fromURL(dataUrl);
+      // Row 75: wrap FileReader + FabricImage decode in try/catch so a
+      // corrupt / zero-byte / non-decodable file surfaces a clear toast
+      // ("Invalid image" / "Couldn't read image") instead of silently
+      // failing. Also catches the Fabric v7 case where fromURL resolves
+      // with a 0×0 image for an unreadable src — treated as corrupt.
+      let dataUrl: string;
+
+      try {
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onload = () => {
+            const result = reader.result;
+
+            if (typeof result === "string" && result.length > 0) {
+              resolve(result);
+            } else {
+              reject(new Error("empty-result"));
+            }
+          };
+          reader.onerror = () =>
+            reject(reader.error ?? new Error("reader-error"));
+          reader.readAsDataURL(file);
+        });
+      } catch {
+        toast.close(loadingKey);
+        toast.error({
+          title: "Couldn't read image",
+          description: `"${file.name}" couldn't be opened. The file may be corrupt.`,
+        });
+        resetToolAndInput();
+
+        return;
+      }
+
+      let img: Awaited<ReturnType<typeof import("fabric").FabricImage.fromURL>>;
+
+      try {
+        const { FabricImage } = await import("fabric");
+
+        img = await FabricImage.fromURL(dataUrl);
+      } catch {
+        toast.close(loadingKey);
+        toast.error({
+          title: "Invalid image",
+          description: `"${file.name}" couldn't be decoded. Please pick a valid PNG, JPG, WEBP, or SVG.`,
+        });
+        resetToolAndInput();
+
+        return;
+      }
+
+      // Even if fromURL didn't throw, Fabric v7 can resolve with a 0×0
+      // image for a non-image data URL (eg. text misreported as image/png
+      // by the OS). Treat that as corrupt too so we don't drop a blank
+      // overlay on the canvas.
+      if (!img.width || !img.height || img.width < 1 || img.height < 1) {
+        toast.close(loadingKey);
+        toast.error({
+          title: "Invalid image",
+          description: `"${file.name}" didn't decode to a usable image.`,
+        });
+        resetToolAndInput();
+
+        return;
+      }
+
+      toast.close(loadingKey);
 
       const canvasW = fabricCanvas.width ?? 600;
       const canvasH = fabricCanvas.height ?? 800;
@@ -103,16 +182,21 @@ export function useImageTool({ fabricCanvas }: UseImageToolParams) {
       fabricCanvas.setActiveObject(img);
       fabricCanvas.renderAll();
 
-      pushHistory(currentPage, JSON.stringify(fabricCanvas.toJSON()));
-      // Persist the image into the store immediately so save/export can't
-      // miss it if `flushLiveFabricPage` at export time hits a stale/empty
-      // live canvas (matches the 2026-07-23 draw/signature persistence
-      // pattern that fixed the same symptom for those tools).
+      // QA 2026-10-04 row 63: do NOT call `pushHistory` here. The
+      // `fabricCanvas.add(img)` above already fires `object:added` →
+      // the snapshotOnAdd listener in `use-editor-history.ts` pushes
+      // a history entry. A second manual push here produces a
+      // duplicate entry — the user needs TWO undos to remove one
+      // image. Unlike use-shape-tool.ts, image tool does NOT set
+      // `isCreatingShape`, so the auto-snapshot handler isn't gated.
+      //
+      // `saveFabricJson` + `markDocumentDirty` are kept as belt-and-
+      // braces (both are also auto-fired by the add listeners) —
+      // idempotent, matches the 2026-07-23 persistence pattern.
       saveFabricJson(currentPage, serializeFabricCanvas(fabricCanvas));
       markDocumentDirty();
 
-      setActiveTool("select");
-      input.value = "";
+      resetToolAndInput();
     };
 
     const handleCancel = () => {

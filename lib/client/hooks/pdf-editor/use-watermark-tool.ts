@@ -12,6 +12,8 @@ import {
 
 type UseWatermarkToolParams = {
   fabricCanvas: Canvas | null;
+  /** Base page size (e.g. "612x792"); re-lays out the preview when a page is rotated/resized. */
+  pageSizeKey?: string | null;
 };
 
 const WATERMARK_EDITOR_TYPE = "watermarkPreview";
@@ -40,7 +42,10 @@ function clearWatermarkPreviews(canvas: Canvas) {
   setIsRestoringHistory(false);
 }
 
-export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
+export function useWatermarkTool({
+  fabricCanvas,
+  pageSizeKey = null,
+}: UseWatermarkToolParams) {
   const currentPage = usePdfEditorStore((s) => s.currentPage);
   const pageCount = usePdfEditorStore((s) => s.pageCount);
   const watermarkConfig = usePdfEditorStore((s) => s.watermarkConfig);
@@ -168,7 +173,7 @@ export function useWatermarkTool({ fabricCanvas }: UseWatermarkToolParams) {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, fabricCanvas, pageCount, watermarkConfig]);
+  }, [currentPage, fabricCanvas, pageCount, pageSizeKey, watermarkConfig]);
 }
 
 // ---------------------------------------------------------------------------

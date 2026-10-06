@@ -50,13 +50,12 @@ import { dispatchAuthModal } from "@/components/shared/auth-modal";
 import { useRenameDocumentMutation } from "@/lib/client/query/mutations/documents.mutation";
 import { saveBeforeAction } from "@/lib/client/pdf-editor/save-before-action";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
-import {
-  parseLocalePrefix,
-  stripLocalePrefix,
-} from "@/lib/shared/constants/locale-map";
+import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
+import { stripPdfExtension } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
 import { usePdfEditorStore } from "@/lib/client/stores";
+import { usePdfSearchStore } from "@/lib/client/stores/pdf-search-store";
 
 import { EditableFilenameField } from "./EditableFilenameField";
 import { ExportFormatModal } from "./ExportFormatModal";
@@ -78,7 +77,9 @@ export function EditorInfoBar() {
   const zoom = usePdfEditorStore((s) => s.zoom);
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
   const setCurrentPage = usePdfEditorStore((s) => s.setCurrentPage);
-  const setIsFindReplaceOpen = usePdfEditorStore((s) => s.setIsFindReplaceOpen);
+  const isSearchOpen = usePdfSearchStore((s) => s.isOpen);
+  const openSearch = usePdfSearchStore((s) => s.open);
+  const closeSearch = usePdfSearchStore((s) => s.close);
   const setZoom = usePdfEditorStore((s) => s.setZoom);
   // Scalar-boolean selectors so the mobile top bar doesn't re-render
   // on every brush stroke (QA 2026-09-15). Same rationale as
@@ -153,7 +154,7 @@ export function EditorInfoBar() {
   const commitRename = (trimmed: string) => {
     if (!file) return;
 
-    const withExt = /\.[^./\\]+$/.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+    const withExt = `${stripPdfExtension(trimmed).trim()}.pdf`;
 
     if (withExt === file.name) return;
 
@@ -375,8 +376,8 @@ export function EditorInfoBar() {
       <div className="flex flex-col gap-1 px-2 py-1 sm:min-h-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1 sm:py-1 lg:px-3">
         {/* Action row: left actions + right save/theme. Doubles as the only
             row on sm+ where the page nav sits between them. */}
-        <div className="flex items-center justify-between gap-2 sm:flex-1">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2 max-sm:gap-1 sm:flex-1 max-sm:[&_.button]:!size-8 max-sm:[&_.button]:!min-w-8">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             {/* Back - desktop/tablet only in this legacy responsive bar. */}
             <div className="hidden sm:flex sm:items-center sm:gap-1">
               <Tooltip delay={300}>
@@ -394,16 +395,59 @@ export function EditorInfoBar() {
               </Tooltip>
             </div>
 
-            {/* Back + Undo + Redo — mobile only */}
-            <div className="flex items-center gap-1 sm:hidden">
-              <Button
-                aria-label="Back to dashboard"
-                size="sm"
-                variant="tertiary"
-                onPress={handleBack}
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-              </Button>
+            {/* Back — mobile only */}
+            <Button
+              aria-label="Back to dashboard"
+              className="sm:hidden"
+              size="sm"
+              variant="tertiary"
+              onPress={handleBack}
+            >
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+            </Button>
+
+            {/*
+              Same menu as desktop, next to Back like the desktop top bar.
+              HamburgerMenu gates its visible trigger on `isSignedIn`, but
+              remains mounted for guests so editor bridge listeners keep
+              working.
+            */}
+            {isW9Route ? null : <HamburgerMenu />}
+
+            {/* Zoom first, matching the desktop top bar order. */}
+            <div className="flex items-center gap-0.5 sm:hidden">
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Zoom out"
+                  isDisabled={zoom <= ZOOM_PRESETS[0]}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={zoomOut}
+                >
+                  <HugeiconsIcon icon={SearchMinusIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Zoom out</p>
+                </Tooltip.Content>
+              </Tooltip>
+              <Tooltip delay={300}>
+                <Button
+                  aria-label="Zoom in"
+                  isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+                  size="sm"
+                  variant="tertiary"
+                  onPress={zoomIn}
+                >
+                  <HugeiconsIcon icon={SearchAddIcon} size={16} />
+                </Button>
+                <Tooltip.Content>
+                  <p>Zoom in</p>
+                </Tooltip.Content>
+              </Tooltip>
+            </div>
+
+            {/* Undo + Redo — mobile only */}
+            <div className="flex items-center gap-0.5 sm:hidden">
               <Button
                 aria-label="Undo"
                 isDisabled={!canUndo}
@@ -427,14 +471,6 @@ export function EditorInfoBar() {
                 <HugeiconsIcon icon={RedoIcon} size={16} />
               </Button>
             </div>
-
-            {/*
-              Same menu as desktop, in the old mobile grid-icon slot.
-              HamburgerMenu gates its visible trigger on `isSignedIn`, but
-              remains mounted for guests so editor bridge listeners keep
-              working.
-            */}
-            {isW9Route ? null : <HamburgerMenu />}
           </div>
 
           {/* Filename + page nav — sits in the middle on sm+, hidden on
@@ -469,7 +505,7 @@ export function EditorInfoBar() {
           </div>
 
           {/* Right: zoom (sm+ only) + save + export trio + theme. */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <div className="hidden sm:block">{zoomNav}</div>
 
             <Separator
@@ -501,21 +537,22 @@ export function EditorInfoBar() {
               orientation="vertical"
             />
 
-            {/* Export controls — Search / Print / Zoom / Share / Done.
-                Search opens Find & Replace. Print/Done open the format
-                modal; the middle controls zoom the page. */}
+            {/* Export controls — Search / Print / Share / Done.
+                Search toggles the search bar (same as desktop). Print/Done
+                open the format modal. */}
             <Tooltip delay={300}>
               <Button
                 aria-label="Search"
+                aria-pressed={isSearchOpen}
                 isDisabled={!file}
                 size="sm"
                 variant="tertiary"
-                onPress={() => setIsFindReplaceOpen(true)}
+                onPress={() => (isSearchOpen ? closeSearch() : openSearch())}
               >
                 <HugeiconsIcon icon={Search01Icon} size={16} />
               </Button>
               <Tooltip.Content>
-                <p>Find &amp; Replace</p>
+                <p>Search</p>
               </Tooltip.Content>
             </Tooltip>
             <Tooltip delay={300}>
@@ -532,36 +569,6 @@ export function EditorInfoBar() {
                 <p>Print</p>
               </Tooltip.Content>
             </Tooltip>
-            <div className="flex items-center gap-1 sm:hidden">
-              <Tooltip delay={300}>
-                <Button
-                  aria-label="Zoom out"
-                  isDisabled={zoom <= ZOOM_PRESETS[0]}
-                  size="sm"
-                  variant="tertiary"
-                  onPress={zoomOut}
-                >
-                  <HugeiconsIcon icon={SearchMinusIcon} size={16} />
-                </Button>
-                <Tooltip.Content>
-                  <p>Zoom out</p>
-                </Tooltip.Content>
-              </Tooltip>
-              <Tooltip delay={300}>
-                <Button
-                  aria-label="Zoom in"
-                  isDisabled={zoom >= ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
-                  size="sm"
-                  variant="tertiary"
-                  onPress={zoomIn}
-                >
-                  <HugeiconsIcon icon={SearchAddIcon} size={16} />
-                </Button>
-                <Tooltip.Content>
-                  <p>Zoom in</p>
-                </Tooltip.Content>
-              </Tooltip>
-            </div>
             <Button
               aria-label="Share"
               isDisabled={!canShare}

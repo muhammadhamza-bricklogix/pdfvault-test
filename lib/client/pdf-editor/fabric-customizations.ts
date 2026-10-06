@@ -38,6 +38,18 @@ const CUSTOM_PROPS = [
   "originalWidth",
   "originalHeight",
   "pdfTextWidth",
+  // Row 99/100 QA 2026-10-04: sticky-note metadata. Without these on
+  // the universal CUSTOM_PROPS list, any `canvas.toJSON()` call that
+  // doesn't route through `serializeFabricCanvas` drops them —
+  // including the loadFromJSON cycles used by the merge pipeline's
+  // offscreen renderer and the per-page restore on navigation. That
+  // left annotations undetectable to `FloatingAnnotationNote` (no
+  // `annotationKind`), unrecolourable (no `noteColor`), and blanked
+  // out their body text (no `noteText`) after a save/reload.
+  "annotationKind",
+  "noteColor",
+  "noteIcon",
+  "noteText",
 ] as const;
 
 let installed = false;

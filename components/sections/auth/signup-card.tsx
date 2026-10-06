@@ -70,6 +70,13 @@ function readClerkError(err: unknown, fallback: string): string {
   return humaniseClerkMessage(raw, first?.code) || fallback;
 }
 
+function isSessionExistsError(err: unknown): boolean {
+  return (
+    (err as { errors?: { code?: string }[] })?.errors?.[0]?.code ===
+    "session_exists"
+  );
+}
+
 function humaniseClerkMessage(raw: string, code?: string): string {
   const s = raw.toLowerCase();
 
@@ -324,6 +331,12 @@ export function SignupCard({
     [redirectUrl, searchParams],
   );
 
+  // A session can already exist (e.g. signed in from another tab); continue instead of erroring.
+  const continueAsSignedIn = () => {
+    suppressNextUnload();
+    window.location.assign(afterSignUpPath);
+  };
+
   // Enables/disables the primary CTA. In code mode only the email
   // needs to look valid; in password mode we run the full schema —
   // which is now just `min(8)` — so the helper text stays truthful.
@@ -381,6 +394,11 @@ export function SignupCard({
   ) => {
     event.preventDefault();
     if (!signUp) return;
+    if (clerk?.isSignedIn) {
+      continueAsSignedIn();
+
+      return;
+    }
     // Sync double-submit guard — see refs above.
     if (submittingCredentialsRef.current) return;
     submittingCredentialsRef.current = true;
@@ -464,6 +482,11 @@ export function SignupCard({
         });
 
         if (createError) {
+          if (isSessionExistsError(createError)) {
+            continueAsSignedIn();
+
+            return;
+          }
           const errorCode = (createError as { errors?: { code?: string }[] })
             ?.errors?.[0]?.code;
           const msg = readClerkError(
@@ -503,6 +526,11 @@ export function SignupCard({
         });
 
         if (passwordError) {
+          if (isSessionExistsError(passwordError)) {
+            continueAsSignedIn();
+
+            return;
+          }
           const errorCode = (passwordError as { errors?: { code?: string }[] })
             ?.errors?.[0]?.code;
           const msg = readClerkError(
@@ -531,6 +559,11 @@ export function SignupCard({
       });
 
       if (sendCode.error) {
+        if (isSessionExistsError(sendCode.error)) {
+          continueAsSignedIn();
+
+          return;
+        }
         setErrors({
           form: readClerkError(
             sendCode.error,
@@ -545,6 +578,11 @@ export function SignupCard({
       setCode("");
       logger.event(EVENTS.SIGNUP_CODE_SENT, "info");
     } catch (err) {
+      if (isSessionExistsError(err)) {
+        continueAsSignedIn();
+
+        return;
+      }
       logger.captureError(err, "signup.credentials");
       setErrors({
         form: readClerkError(
@@ -610,6 +648,11 @@ export function SignupCard({
         const errorCode = (verifyError as { errors?: { code?: string }[] })
           ?.errors?.[0]?.code;
 
+        if (errorCode === "session_exists") {
+          continueAsSignedIn();
+
+          return;
+        }
         if (errorCode === "verification_already_verified") {
           logger.warn(
             "signup.verify_email_code: already verified — falling through to finalize",
@@ -1097,13 +1140,15 @@ export function SignupCard({
             {submitting ? "Verifying…" : "Verify & Continue"}
           </button>
 
-          <button
-            className="mt-3 w-full cursor-pointer text-center text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
-            type="button"
-            onClick={() => void onResendCode()}
-          >
-            Resend code
-          </button>
+          <div className="mt-3 flex justify-center">
+            <button
+              className="cursor-pointer py-1 text-[13px] text-[#f12c23] underline underline-offset-2 hover:opacity-80"
+              type="button"
+              onClick={() => void onResendCode()}
+            >
+              Resend code
+            </button>
+          </div>
         </form>
       )}
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useLocale } from "next-intl";
+import { useMemo, useState } from "react";
 
 import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -14,7 +15,19 @@ import { ROUTES } from "@/lib/shared/constants/routes";
 type FaqItem = { q: string; a: React.ReactNode };
 type FaqGroup = { heading: string; items: FaqItem[] };
 
-const GROUPS: FaqGroup[] = [
+// German visitors see EUR (product decision); others keep USD.
+const TRIAL_PRICE = { de: "€0.99", default: "$0.99" };
+const MONTHLY_PRICE = { de: "€39.99", default: "$39.99" };
+// German-only source phrasing; Weglot turns it into „mit der Sie … erhalten".
+const TRIAL_ACCESS = { de: "with which you get", default: "which gives you" };
+
+// Priced sentences stay single strings so Weglot translates them as one segment.
+const getGroups = (
+  trial: string,
+  monthly: string,
+  trialAccess: string,
+  locale: string,
+): FaqGroup[] => [
   {
     heading: "Getting Started",
     items: [
@@ -82,9 +95,7 @@ const GROUPS: FaqGroup[] = [
         q: "When will I be charged?",
         a: (
           <>
-            You&apos;re charged $0.99 when you start your trial, and then $39.99
-            every month after your trial ends, unless you cancel before your
-            trial expires or before the next renewal date.
+            {`You're charged ${trial} when you start your trial, and then ${monthly} every month after your trial ends, unless you cancel before your trial expires or before the next renewal date.`}
           </>
         ),
       },
@@ -151,7 +162,7 @@ const GROUPS: FaqGroup[] = [
         ),
       },
       {
-        q: "Can I get a refund on the $0.99 trial charge or a $39.99 renewal?",
+        q: `Can I get a refund on the ${trial} trial charge or a ${monthly} renewal?`,
         a: (
           <>
             Purchases are generally non-refundable, but we&apos;ll review
@@ -273,8 +284,8 @@ const GROUPS: FaqGroup[] = [
         q: "What tools are included?",
         a: (
           <>
-            Edit &amp; Sign, Convert to PDF, Convert from PDF, Compress, Merge,
-            Split, Rotate, Unlock, and Watermark, with new tools added
+            Edit &amp; Sign, Convert to PDF, PDF to other formats, Compress,
+            Merge, Split, Rotate, Unlock, and Watermark, with new tools added
             regularly.
           </>
         ),
@@ -346,6 +357,17 @@ export function LandingFAQ() {
   // scroll position predictable; switching tabs collapses everything.
   const [activeTab, setActiveTab] = useState(0);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const locale = useLocale();
+  const GROUPS = useMemo(() => {
+    const key = locale === "de" ? "de" : "default";
+
+    return getGroups(
+      TRIAL_PRICE[key],
+      MONTHLY_PRICE[key],
+      TRIAL_ACCESS[key],
+      locale,
+    );
+  }, [locale]);
 
   const activeGroup = GROUPS[activeTab];
   const tablistId = "faq-tablist";

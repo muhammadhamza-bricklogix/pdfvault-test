@@ -29,19 +29,14 @@ const HERO_CTA_LABEL = "Open the W-9 Template";
 const HERO_CTA_NOTE =
   "No account needed to start. Sign in only when you're ready to save or download.";
 
-// QA F-55 / F-56 / F-57: previous copy mixed verb-first bullets
+// QA F-55 / F-56 / F-57 / F-DE: previous copy mixed verb-first bullets
 // ("Start freelance work…") with "Are onboarded…" and noun-phrase
 // bullets ("A freelancer…"), which Weglot then translated
 // inconsistently in German (verb-first infinitives + grammatically
 // incomplete "Ein Freiberufler…, der …" clauses missing a verb).
-// Rewriting every bullet as a full "You + verb" sentence gives Weglot
-// a consistent template — each bullet becomes "Sie + verb …" in
-// German. The lead-in paragraphs below have been reworded to match.
-// Each item is `[english, german]`. Hand-authored German bypasses
-// Weglot for QA F-55 / F-56 / F-57, which flagged bullets rendered
-// with missing verbs ("Ein Freiberufler, der …") or awkward
-// imperatives ("Werden als Anbieter aufgenommen"). The DE version
-// keeps the "Sie + verb" structure that reads naturally.
+// Each tuple is [english, german]. Hand-authored German bypasses
+// Weglot so the DE output keeps full "Sie + verb" sentences — the
+// Weglot machine-translation drifted into bullets with missing verbs.
 type BulletPair = readonly [string, string];
 
 const TYPICAL_REQUESTS: BulletPair[] = [

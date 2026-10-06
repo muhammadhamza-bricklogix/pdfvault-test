@@ -284,9 +284,7 @@ export function W9EditorBootstrap({ children }: W9EditorBootstrapProps) {
           const signaturePreview = resumed.w9.signaturePreview;
 
           if (typeof signaturePreview === "string" && signaturePreview) {
-            useFormEditorStore
-              .getState()
-              .setSignaturePreview(signaturePreview);
+            useFormEditorStore.getState().setSignaturePreview(signaturePreview);
           }
         })()
       : Promise.resolve();

@@ -33,6 +33,9 @@ import { billingKeys } from "@/lib/shared/constants/query-keys";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { formatMinor } from "@/lib/shared/utils/currency";
 import { persistUserCurrency } from "@/lib/client/billing/user-currency";
+import { loadPdfJs } from "@/lib/client/pdf-editor/load-pdfjs";
+import { PDFJS_WORKER_SRC } from "@/lib/client/pdf-editor/pdfjs-worker";
+import { mediaBelow } from "@/lib/shared/utils/media-queries";
 import { logger } from "@/lib/shared/utils/logger";
 import { toast } from "@/lib/shared/utils/toast";
 import {
@@ -402,6 +405,58 @@ export function PaywallModal({
     unInertNewPortals();
 
     return () => observer.disconnect();
+  }, [isOpen]);
+
+  // Mobile keyboard open: follow the visible viewport so the focused field (e.g. the card iframe) isn't hidden.
+  const [keyboardViewport, setKeyboardViewport] = useState<{
+    height: number;
+    top: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+
+    if (!viewport) return;
+
+    let last: { height: number; top: number } | null = null;
+
+    const sync = () => {
+      // Pinch-zoom also shrinks the visual viewport; only react at scale 1 (keyboard).
+      const keyboardOpen =
+        Math.abs(viewport.scale - 1) < 0.01 &&
+        viewport.height < window.innerHeight - 80;
+      const next = keyboardOpen
+        ? {
+            height: Math.floor(viewport.height),
+            top: Math.max(0, Math.floor(viewport.offsetTop)),
+          }
+        : null;
+
+      // Skip state updates (and re-renders of the payment form) when nothing changed.
+      if (next?.height === last?.height && next?.top === last?.top) return;
+      const shouldReveal = next !== null && next.height !== last?.height;
+
+      last = next;
+      setKeyboardViewport(next);
+      if (!shouldReveal) return;
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+
+        if (active instanceof HTMLElement && active.closest(".modal__dialog")) {
+          active.scrollIntoView({ block: "center", inline: "nearest" });
+        }
+      });
+    };
+
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+
+    return () => {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      setKeyboardViewport(null);
+    };
   }, [isOpen]);
 
   // Pause Weglot for the paywall's lifetime.
@@ -1157,6 +1212,11 @@ export function PaywallModal({
     <Modal.Backdrop
       isDismissable={false}
       isOpen={isOpen}
+      style={
+        keyboardViewport
+          ? { transform: `translate3d(0, ${keyboardViewport.top}px, 0)` }
+          : undefined
+      }
       onOpenChange={(open) => {
         if (!open) {
           // Success step: `onPaymentSuccess` already fired on mount and
@@ -1199,6 +1259,11 @@ export function PaywallModal({
                 : "max-h-[calc(100dvh-32px)] w-[min(920px,calc(100vw-32px))] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(23,23,23,0.35)] sm:!max-w-[920px] dark:bg-content1") +
             " notranslate wg-notranslate" +
             DIALOG_SCROLLBAR_CLASSES
+          }
+          style={
+            keyboardViewport
+              ? { maxHeight: `${keyboardViewport.height - 32}px` }
+              : undefined
           }
           translate="no"
         >
@@ -1441,7 +1506,7 @@ function PlanStep({
           existing `strings.ready.*` per-file-type entries. */}
       <div className="flex flex-col gap-4 border-b border-[#ececec] p-6 md:flex-row md:items-center md:justify-between md:gap-6 md:p-8">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="pv-heading text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-[36px]">
+          <h2 className="pv-heading text-center text-[26px] font-bold leading-tight text-[#1a1c21] sm:text-[32px] md:text-start md:text-[36px]">
             Choose a plan to download your file
           </h2>
         </div>
@@ -1510,8 +1575,8 @@ function PlanStep({
             )}
           </div>
 
-          {/* Right — plan cards column */}
-          <div className="flex flex-col gap-4 p-6 md:p-8">
+          {/* Right — plan cards column (phones: shown above the preview) */}
+          <div className="flex flex-col gap-4 p-6 max-md:order-first md:p-8">
             <PlanCards
               annualAvailable={annualAvailable}
               annualFullPrice={annualFullPrice}
@@ -1677,6 +1742,10 @@ function PayStep({
   // channel doesn't have it activated or the buyer geo isn't supported.
   const applePayContainerRef = useRef<HTMLDivElement>(null);
   const googlePayContainerRef = useRef<HTMLDivElement>(null);
+  // PayPal is rendered by the unified `StablePaymentForm` alongside
+  // Apple + Google Pay (single pdfvault channel per Solidgate
+  // 2026-10-02). Container ref owned here so the skeleton +
+  // MutationObserver live alongside Apple/Google for consistent timing.
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   // Wallet-button loading state (2026-09-06 QA). Solidgate injects the
   // real Apple Pay / Google Pay / PayPal buttons a beat after
@@ -2284,6 +2353,92 @@ function BrandLogo() {
   );
 }
 
+const PHONE_QUERY = mediaBelow("md");
+
+// Paywall content only renders client-side (modal is closed on SSR).
+function useIsPhone(): boolean {
+  const [isPhone, setIsPhone] = useState(
+    () =>
+      typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(PHONE_QUERY);
+    const update = () => setIsPhone(mql.matches);
+
+    mql.addEventListener("change", update);
+
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
+  return isPhone;
+}
+
+// Phones: an iframe PDF is cropped (iOS) or blank (Android), so draw page 1 ourselves.
+function usePdfFirstPageImage(
+  url: string | undefined,
+  enabled: boolean,
+): { src: string | null; failed: boolean } {
+  const [result, setResult] = useState<{
+    url: string;
+    src: string | null;
+    failed: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !url) return;
+
+    let cancelled = false;
+
+    (async () => {
+      let pdf: { destroy: () => Promise<void> } | null = null;
+
+      try {
+        const pdfjs = await loadPdfJs();
+
+        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+          pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
+        }
+
+        const doc = await pdfjs.getDocument({ url }).promise;
+
+        pdf = doc;
+        const page = await doc.getPage(1);
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({
+          scale: 600 / Math.max(base.width, base.height),
+        });
+        const canvas = window.document.createElement("canvas");
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) throw new Error("Canvas context unavailable");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+        const src = canvas.toDataURL("image/jpeg", 0.85);
+
+        if (!cancelled) setResult({ url, src, failed: false });
+      } catch (err) {
+        logger.warn("[PaywallModal] preview render failed", err);
+        if (!cancelled) setResult({ url, src: null, failed: true });
+      } finally {
+        await pdf?.destroy().catch(() => undefined);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, url]);
+
+  return result && result.url === url
+    ? { src: result.src, failed: result.failed }
+    : { src: null, failed: false };
+}
+
 /**
  * Preview panel shown at the top of the plan step when the caller
  * passed a `PaywallPreview`. Renders a blurred, mock document card
@@ -2294,6 +2449,10 @@ function BrandLogo() {
  */
 function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
   const { filename, sourceExt, targetExt, previewObjectUrl } = preview;
+  const isPhone = useIsPhone();
+  const phoneImage = usePdfFirstPageImage(previewObjectUrl, isPhone);
+  const showPhoneImage =
+    isPhone && Boolean(previewObjectUrl) && !phoneImage.failed;
   const badgeColor = (ext: string): string => {
     const normalized = ext.toLowerCase();
 
@@ -2314,9 +2473,9 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
     filename.length > 32 ? `${filename.slice(0, 29)}…` : filename;
 
   return (
-    <div className="flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)] md:min-h-0 md:flex-1">
-      {/* File type badge header */}
-      <div className="flex items-center justify-end bg-[#f7f7f9] px-4 py-2.5">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white shadow-[0_4px_16px_-8px_rgba(0,0,0,0.15)] md:min-h-0 md:flex-1">
+      {/* File type badge header (phones: the footer row already shows it) */}
+      <div className="flex items-center justify-end bg-[#f7f7f9] px-4 py-2.5 max-md:hidden">
         <span
           className="inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[10px] font-bold text-white"
           style={{ backgroundColor: targetBadge }}
@@ -2325,8 +2484,21 @@ function PreviewFileCard({ preview }: { preview: PaywallPreview }) {
         </span>
       </div>
 
-      {/* Document preview — real PDF iframe when available, blurred mock otherwise */}
-      {previewObjectUrl ? (
+      {/* Document preview — compact page image on phones, PDF iframe on desktop, blurred mock otherwise */}
+      {showPhoneImage ? (
+        <div className="flex h-[150px] items-center justify-center bg-[#f7f7f9] p-3">
+          {phoneImage.src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={filename}
+              className="h-full w-auto max-w-full rounded-sm object-contain shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
+              src={phoneImage.src}
+            />
+          ) : (
+            <div className="aspect-[612/792] h-full animate-pulse rounded-sm bg-white" />
+          )}
+        </div>
+      ) : previewObjectUrl && !isPhone ? (
         <div className="aspect-[612/792] min-h-0 w-full overflow-hidden bg-white">
           <iframe
             className="h-full w-full border-none"
