@@ -1024,7 +1024,9 @@ export function LoginCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(446px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+      className="notranslate wg-notranslate box-border w-[min(446px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-8 pb-6 pt-[38px] shadow-[0_8px_24px_rgba(28,46,51,0.08)]"
+      data-wg-notranslate
+      translate="no"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[30px] text-[#1a1c21]"

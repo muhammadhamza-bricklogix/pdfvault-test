@@ -298,6 +298,21 @@ export function SignupCard({
     switchToCode: isDe
       ? "Stattdessen mit Code registrieren"
       : "Sign up with a code instead",
+    yourFileReady: isDe ? "Ihre Datei ist bereit" : "Your file is ready",
+    signUpForPDFVault: isDe
+      ? "Für PDFVault registrieren"
+      : "Sign up for PDFVault",
+    enterCodeToSignUp: isDe
+      ? "Geben Sie den Code ein, um sich zu registrieren"
+      : "Enter the code to sign up",
+    checkEmailMasked: (masked: string) =>
+      isDe
+        ? `Bitte überprüfen Sie Ihre E-Mail ${masked}.`
+        : `Please check your email ${masked}.`,
+    alreadyHaveAccount: isDe
+      ? "Sie haben bereits ein Konto?"
+      : "Already have an account?",
+    logIn: isDe ? "Anmelden" : "Log In",
   };
 
   const headingId = useId();
@@ -913,7 +928,9 @@ export function SignupCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-6 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:px-8 sm:pb-7 sm:pt-[38px]"
+      className="notranslate wg-notranslate box-border w-[min(447px,calc(100vw-32px))] rounded-[18px] border border-[#e1ebed] bg-white px-5 pb-6 pt-10 shadow-[0_8px_24px_rgba(28,46,51,0.08)] sm:px-8 sm:pb-7 sm:pt-[38px]"
+      data-wg-notranslate
+      translate="no"
     >
       <h1
         className="text-center text-[24px] font-semibold leading-[29px] text-black"
@@ -930,9 +947,9 @@ export function SignupCard({
             // (no initialEmail) keep the neutral "Sign up for
             // PDFVault" heading.
             initialEmail
-            ? "Your file is ready"
-            : "Sign up for PDFVault"
-          : "Enter the code to sign up"}
+            ? t.yourFileReady
+            : t.signUpForPDFVault
+          : t.enterCodeToSignUp}
       </h1>
       {/* Subtitle only on the verify step per the reference SS.
           Credentials step (SS4) shows the heading alone; the file-
@@ -945,7 +962,7 @@ export function SignupCard({
       ) : null}
       {step === "verify" ? (
         <p className="mt-2.5 text-center text-[14px] leading-5 text-[#666666]">
-          {`Please check your email ${maskEmailAddress(email)}.`}
+          {t.checkEmailMasked(maskEmailAddress(email))}
         </p>
       ) : null}
 
@@ -1143,7 +1160,7 @@ export function SignupCard({
       ) : null}
 
       <p className="mt-[28px] text-center text-[16px] text-[#4c4c4c]">
-        Already have an account?{" "}
+        {t.alreadyHaveAccount}{" "}
         {onSwitchToLogin ? (
           // Modal mode — switch tabs inside the AuthModal instead of
           // navigating to /sign-in (which would unmount the modal and
@@ -1153,7 +1170,7 @@ export function SignupCard({
             type="button"
             onClick={onSwitchToLogin}
           >
-            Log In
+            {t.logIn}
           </button>
         ) : (
           <Link
@@ -1164,7 +1181,7 @@ export function SignupCard({
                 : ROUTES.AUTH.SIGN_IN
             }
           >
-            Log In
+            {t.logIn}
           </Link>
         )}
       </p>
@@ -1176,23 +1193,25 @@ export function SignupCard({
           verification-code CTA. */}
       {step === "credentials" ? (
         <p className="mt-4 text-center text-[13px] leading-5 text-[#7a7a7a]">
-          By proceeding, you confirm that you have read and agreed to the{" "}
+          {isDe
+            ? "Mit dem Fortfahren bestätigen Sie, dass Sie unsere "
+            : "By proceeding, you confirm that you have read and agreed to the "}
           <Link
             className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
             href={ROUTES.LEGAL.TERMS}
             target="_blank"
           >
-            Terms and Conditions
-          </Link>{" "}
-          and{" "}
+            {isDe ? "AGB" : "Terms and Conditions"}
+          </Link>
+          {isDe ? " und " : " and "}
           <Link
             className="text-[#7a7a7a] underline underline-offset-2 hover:text-[#1a1c21]"
             href={ROUTES.LEGAL.PRIVACY}
             target="_blank"
           >
-            Privacy Policy
+            {isDe ? "Datenschutzrichtlinie" : "Privacy Policy"}
           </Link>
-          .
+          {isDe ? " gelesen haben und ihnen zustimmen." : "."}
         </p>
       ) : null}
     </section>
