@@ -10,6 +10,7 @@ import Link from "next/link";
 
 import { W9Faq } from "@/components/sections/forms/w9-faq";
 import { W9PreviewScroller } from "@/components/sections/forms/W9PreviewScroller";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 // ---------------------------------------------------------------------------
@@ -28,31 +29,63 @@ const HERO_CTA_LABEL = "Open the W-9 Template";
 const HERO_CTA_NOTE =
   "No account needed to start. Sign in only when you're ready to save or download.";
 
-// QA F-55 / F-56 / F-57: previous copy mixed verb-first bullets
+// QA F-55 / F-56 / F-57 / F-DE: previous copy mixed verb-first bullets
 // ("Start freelance work…") with "Are onboarded…" and noun-phrase
 // bullets ("A freelancer…"), which Weglot then translated
 // inconsistently in German (verb-first infinitives + grammatically
 // incomplete "Ein Freiberufler…, der …" clauses missing a verb).
-// Rewriting every bullet as a full "You + verb" sentence gives Weglot
-// a consistent template — each bullet becomes "Sie + verb …" in
-// German. The lead-in paragraphs below have been reworded to match.
-const TYPICAL_REQUESTS = [
-  "You start freelance or contract work for a U.S. business",
-  "You open certain financial or investment accounts",
-  "You receive rent, royalty, or other reportable payments",
-  "You are onboarded as a vendor or supplier",
+// Each tuple is [english, german]. Hand-authored German bypasses
+// Weglot so the DE output keeps full "Sie + verb" sentences — the
+// Weglot machine-translation drifted into bullets with missing verbs.
+type BulletPair = readonly [string, string];
+
+const TYPICAL_REQUESTS: BulletPair[] = [
+  [
+    "You start freelance or contract work for a U.S. business",
+    "Sie beginnen mit freiberuflicher oder vertraglicher Arbeit für ein US-Unternehmen",
+  ],
+  [
+    "You open certain financial or investment accounts",
+    "Sie eröffnen bestimmte Finanz- oder Anlagekonten",
+  ],
+  [
+    "You receive rent, royalty, or other reportable payments",
+    "Sie erhalten Miet-, Lizenz- oder andere meldepflichtige Zahlungen",
+  ],
+  [
+    "You are onboarded as a vendor or supplier",
+    "Sie werden als Anbieter oder Lieferant aufgenommen",
+  ],
 ];
 
-const NEEDS_ONE = [
-  "You are a freelancer or independent contractor invoicing a U.S. business",
-  "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
-  "You are a landlord, vendor, or account holder that a company needs to report payments to",
+const NEEDS_ONE: BulletPair[] = [
+  [
+    "You are a freelancer or independent contractor invoicing a U.S. business",
+    "Sie sind ein Freiberufler oder unabhängiger Auftragnehmer, der einem US-Unternehmen Rechnungen stellt",
+  ],
+  [
+    "You are a sole proprietor, LLC, partnership, or corporation being paid by a client or platform",
+    "Sie sind ein Einzelunternehmer, eine LLC, eine Personengesellschaft oder eine Kapitalgesellschaft, die von einem Kunden oder einer Plattform bezahlt wird",
+  ],
+  [
+    "You are a landlord, vendor, or account holder that a company needs to report payments to",
+    "Sie sind ein Vermieter, Anbieter oder Kontoinhaber, dessen Zahlungen ein Unternehmen melden muss",
+  ],
 ];
 
-const DOES_NOT_NEED = [
-  "You are a W-2 employee (your employer uses Form W-4 instead)",
-  "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
-  "You are not currently paid by or contracted with the entity requesting it",
+const DOES_NOT_NEED: BulletPair[] = [
+  [
+    "You are a W-2 employee (your employer uses Form W-4 instead)",
+    "Sie sind ein W-2-Angestellter (Ihr Arbeitgeber verwendet stattdessen Formular W-4)",
+  ],
+  [
+    "You are a non-U.S. person with no U.S. tax reporting obligation — a W-8BEN or W-8BEN-E is usually the correct form instead",
+    "Sie sind keine US-Person und haben keine US-Steuermeldepflicht — in der Regel ist stattdessen ein W-8BEN oder W-8BEN-E das richtige Formular",
+  ],
+  [
+    "You are not currently paid by or contracted with the entity requesting it",
+    "Sie werden derzeit weder von der anfragenden Stelle bezahlt noch sind Sie mit dieser vertraglich verbunden",
+  ],
 ];
 
 const BEFORE_YOU_START = [
@@ -183,7 +216,13 @@ function GetFormCta({ label = "Open the W-9 Template" }: { label?: string }) {
   );
 }
 
-function SectionHeading({ id, children }: { id: string; children: string }) {
+function SectionHeading({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   return (
     <h2
       className="scroll-mt-24 text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl"
@@ -202,11 +241,13 @@ function Prose({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function BulletList({ items }: { items: readonly BulletPair[] }) {
   return (
     <ul className="mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-default-700 dark:text-default-300">
-      {items.map((item) => (
-        <li key={item}>{item}</li>
+      {items.map(([en, de]) => (
+        <li key={en}>
+          <LocaleText de={de}>{en}</LocaleText>
+        </li>
       ))}
     </ul>
   );
@@ -254,20 +295,29 @@ export function W9LandingContent() {
             aria-label="On this page"
             className="sticky top-24 flex flex-col gap-2 border-l border-default-200 pl-4 text-base dark:border-default-700"
           >
-            {[
-              ["What is Form W-9?", "what-is-w9"],
-              ["Do you need to fill one out?", "need-one"],
-              ["What you'll need before you start", "before-start"],
-              ["How to fill out a W-9 in PDFVault", "how-to-fill"],
-              ["Signing and sending your completed form", "signing"],
-              ["FAQ", "faq"],
-            ].map(([label, id]) => (
+            {(
+              [
+                ["What is Form W-9?", "what-is-w9"],
+                ["Do you need to fill one out?", "need-one"],
+                ["What you'll need before you start", "before-start"],
+                ["How to fill out a W-9 in PDFVault", "how-to-fill"],
+                // QA F-DE: pair this with the matching hand-DE on the
+                // section heading below so TOC + heading always render
+                // the same German string.
+                [
+                  "Signing and sending your completed form",
+                  "signing",
+                  "Formular unterschreiben und senden",
+                ],
+                ["FAQ", "faq"],
+              ] as const
+            ).map(([label, id, de]) => (
               <Link
                 key={id}
                 className="rounded px-2 py-1.5 font-medium leading-6 text-default-700 transition-colors hover:bg-default-100 hover:text-[var(--color-accent)] dark:text-default-300 dark:hover:bg-default-800"
                 href={`#${id}`}
               >
-                {label}
+                {de ? <LocaleText de={de}>{label}</LocaleText> : label}
               </Link>
             ))}
           </nav>
@@ -387,7 +437,9 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="signing">
-              Signing and sending your completed form
+              <LocaleText de="Formular unterschreiben und senden">
+                Signing and sending your completed form
+              </LocaleText>
             </SectionHeading>
             <Prose>
               <p>

@@ -398,8 +398,7 @@ export function LandingTools() {
               translate="no"
             >
               {tToolsSection("titleLineOne")}
-              <br className="hidden sm:block" />{" "}
-              {tToolsSection("titleLineTwo")}
+              <br className="hidden sm:block" /> {tToolsSection("titleLineTwo")}
             </span>
           }
         />
@@ -525,6 +524,7 @@ export function LandingTools() {
                       </h3>
                       <p
                         className="notranslate wg-notranslate mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]"
+                        title={localisedDescription}
                         translate="no"
                       >
                         {localisedDescription}
@@ -535,7 +535,10 @@ export function LandingTools() {
                       <h3 className="mt-5 text-[18px] font-bold text-[var(--pv-text-primary)]">
                         {localisedTitle}
                       </h3>
-                      <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]">
+                      <p
+                        className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--pv-text-secondary)]"
+                        title={localisedDescription}
+                      >
                         {localisedDescription}
                       </p>
                     </>
