@@ -59,7 +59,7 @@ import {
   parseLocalePrefix,
   stripLocalePrefix,
 } from "@/lib/shared/constants/locale-map";
-import { ROUTES } from "@/lib/shared/constants/routes";
+import { ROUTES, isTaxFormEditorRoute } from "@/lib/shared/constants/routes";
 import { stripPdfExtension } from "@/lib/shared/schemas/documents/rename.schema";
 import { toast } from "@/lib/shared/utils/toast";
 

@@ -471,6 +471,14 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     }
     /* eslint-enable react-hooks/immutability */
 
+    // Loaded up front so a new text box is created and focused inside
+    // the tap (iOS only opens the keyboard then).
+    let TextboxClass: typeof Textbox | null = null;
+
+    void import("fabric").then((m) => {
+      TextboxClass = m.Textbox;
+    });
+
     // A tap just past either end of an extracted line (outside its glyph box) edits that line.
     const findEditTextBesidePointer = (opt: TPointerEventInfo) => {
       const isTouch =
