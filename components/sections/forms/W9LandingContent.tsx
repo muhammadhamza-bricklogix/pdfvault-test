@@ -89,7 +89,7 @@ const DOES_NOT_NEED: BulletPair[] = [
   ],
   [
     "You are not currently paid by or contracted with the entity requesting it",
-    "Sie werden derzeit weder von der anfragenden Stelle bezahlt noch sind Sie mit dieser vertraglich verbunden",
+    "Derzeit weder von der anfragenden Stelle bezahlt werden noch mit dieser vertraglich verbunden sind",
   ],
 ];
 

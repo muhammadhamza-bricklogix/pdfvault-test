@@ -60,6 +60,13 @@
     "versionHistory": "Historique des versions"
   },
   "passwordModal": {
-    "notPasswordProtected": "Ce PDF n'est pas protégé par mot de passe — il n'y a rien à supprimer."
+    "notPasswordProtected": "Ce PDF n'est pas protégé par mot de passe — il n'y a rien à supprimer.",
+    "incorrectPassword": "Mot de passe incorrect. Saisissez le mot de passe actuellement défini sur ce PDF.",
+    "loadFailed": "Impossible de lire ce PDF pour vérifier le mot de passe. Il est peut-être corrompu.",
+    "verifyFailed": "Impossible de vérifier le mot de passe. Veuillez réessayer.",
+    "alreadyUnlockedTitle": "Le PDF est déjà déverrouillé",
+    "alreadyUnlockedBody": "Vous pouvez commencer à éditer tout de suite.",
+    "removeProtectionHint": "Le mot de passe que vous avez défini sur le PDF est requis pour supprimer la protection.",
+    "cancel": "Annuler"
   }
 }
