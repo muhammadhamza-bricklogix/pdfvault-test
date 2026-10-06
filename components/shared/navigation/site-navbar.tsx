@@ -208,7 +208,15 @@ export function SiteNavbar() {
                           });
                         }}
                       >
-                        <LocaleText de="Anmelden">Login</LocaleText>
+                        <LocaleText
+                  ar="تسجيل الدخول"
+                  de="Anmelden"
+                  es="Iniciar sesión"
+                  fr="Se connecter"
+                  pt="Entrar"
+                >
+                  Login
+                </LocaleText>
                       </Button>
                     ) : null}
 
@@ -295,7 +303,15 @@ export function SiteNavbar() {
                 })
               }
             >
-              <LocaleText de="Anmelden">Login</LocaleText>
+              <LocaleText
+                ar="تسجيل الدخول"
+                de="Anmelden"
+                es="Iniciar sesión"
+                fr="Se connecter"
+                pt="Entrar"
+              >
+                Login
+              </LocaleText>
             </Button>
           ) : null}
 
