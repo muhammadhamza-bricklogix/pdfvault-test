@@ -14,6 +14,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { LegalSectionCard } from "@/components/sections/legal/legal-section-card";
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 export const refundTocEntries: LegalTocEntry[] = [
@@ -56,10 +57,9 @@ export function RefundPolicyContent() {
               definierten Begriffe"). */}
           Subscription Terms. Terms defined in the{" "}
           <Link href={ROUTES.LEGAL.TERMS}>Terms and Conditions</Link> keep the
-          meaning given there. Nothing
-          in this Policy limits or excludes any non-waivable statutory rights
-          you have under the laws of your country of residence, including the
-          rights described in Section 6 below.
+          meaning given there. Nothing in this Policy limits or excludes any
+          non-waivable statutory rights you have under the laws of your country
+          of residence, including the rights described in Section 6 below.
         </p>
         <p className="mt-3">
           The version of this Policy in force on the date of a charge applies to
@@ -136,13 +136,25 @@ export function RefundPolicyContent() {
           </span>
         }
       >
-        <p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Credits, die genutzt oder verbraucht wurden, sind nicht
+              erstattungsfähig. Aktions- oder Bonus-Credits haben keinen
+              monetären Wert und sind unter keinen Umständen erstattungsfähig,
+              wie in den Allgemeinen Geschäftsbedingungen festgelegt. Nicht
+              genutzte, erworbene Credits werden nur dann erstattet, wenn der
+              Kauf, zu dem sie gehören, gemäß dieser Richtlinie erstattet wird.
+            </>
+          }
+        >
           Credits that have been used or consumed are non-refundable.
           Promotional or bonus credits have no monetary value and are
           non-refundable in all circumstances, as set out in the Terms and
           conditions. Unused purchased credits are refunded only where the
           purchase that included them is refunded under this Policy.
-        </p>
+        </LocaleText>
         <p className="mt-3">
           One-time add-on purchases are refundable within 14 days of the charge
           if the add-on has not been used. Recurring add-ons are treated as
