@@ -79,13 +79,14 @@ function widgetKey(ref: string): string | null {
 
 function copySubform(ref: string): string | null {
   return (
-    ref.match(/topmostSubform\[0\]\.(CopyA|Copy1|CopyB|Copy2)\[0\]/)?.[1] ?? null
+    ref.match(/topmostSubform\[0\]\.(CopyA|Copy1|CopyB|Copy2)\[0\]/)?.[1] ??
+    null
   );
 }
 
-function buildCopyRefIndex(
-  form: { getFields: () => { getName: () => string }[] },
-): (ref: string) => string[] {
+function buildCopyRefIndex(form: {
+  getFields: () => { getName: () => string }[];
+}): (ref: string) => string[] {
   const index = new Map<string, string>();
 
   for (const field of form.getFields()) {
@@ -101,9 +102,9 @@ function buildCopyRefIndex(
 
     if (!key) return [ref];
 
-    const refs = COPY_SUBFORMS.map((copy) => index.get(`${copy}|${key}`)).filter(
-      (name): name is string => !!name,
-    );
+    const refs = COPY_SUBFORMS.map((copy) =>
+      index.get(`${copy}|${key}`),
+    ).filter((name): name is string => !!name);
 
     return refs.length > 0 ? refs : [ref];
   };

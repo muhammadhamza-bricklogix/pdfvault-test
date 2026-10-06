@@ -58,7 +58,8 @@ export const DS_82_SCHEMA: FormSchema = {
               rect: { page: 5, x: 331.5, y: 720.5, w: 9, h: 9 },
             },
           ],
-          helpText: "The passport card is not valid for international air travel.",
+          helpText:
+            "The passport card is not valid for international air travel.",
         },
         {
           id: "book_size",
@@ -79,7 +80,8 @@ export const DS_82_SCHEMA: FormSchema = {
               rect: { page: 5, x: 237, y: 695.5, w: 8.5, h: 8.5 },
             },
           ],
-          helpText: "The large book is for frequent international travelers who need more visa pages.",
+          helpText:
+            "The large book is for frequent international travelers who need more visa pages.",
         },
       ],
     },
@@ -205,7 +207,8 @@ export const DS_82_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Email",
           rect: { page: 5, x: 222, y: 551.5, w: 196.5, h: 19 },
-          helpText: "Used to check application status at passportstatus.state.gov.",
+          helpText:
+            "Used to check application status at passportstatus.state.gov.",
         },
         {
           id: "primary_phone",
@@ -281,7 +284,8 @@ export const DS_82_SCHEMA: FormSchema = {
     {
       id: "other_names",
       title: "9. Other Names Used",
-      description: "Birth name, maiden name, previous marriage or legal name change.",
+      description:
+        "Birth name, maiden name, previous marriage or legal name change.",
       fields: [
         {
           id: "other_name_a",
@@ -306,7 +310,8 @@ export const DS_82_SCHEMA: FormSchema = {
     {
       id: "passport",
       title: "10. U.S. Passport Information",
-      description: "The most recent passport book and/or card you are renewing.",
+      description:
+        "The most recent passport book and/or card you are renewing.",
       fields: [
         {
           id: "passport_name",
@@ -358,7 +363,8 @@ export const DS_82_SCHEMA: FormSchema = {
     {
       id: "name_change",
       title: "11. Name Change Information",
-      description: "Complete only if your name differs from your most recent passport.",
+      description:
+        "Complete only if your name differs from your most recent passport.",
       fields: [
         {
           id: "name_change_reason",
@@ -401,7 +407,8 @@ export const DS_82_SCHEMA: FormSchema = {
     {
       id: "page2_header",
       title: "Page 2 Header",
-      description: "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
+      description:
+        "Repeated at the top of page 2. Left blank, these are filled from your details on page 1.",
       fields: [
         {
           id: "applicant_name_page2",
@@ -516,7 +523,7 @@ export const DS_82_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Additional Phone 1 Other",
           rect: { page: 6, x: 255.7, y: 659, w: 36.3, h: 10 },
-          showIf: {"additional_phone_1_type":"Other"},
+          showIf: { additional_phone_1_type: "Other" },
         },
         {
           id: "additional_phone_2",
@@ -563,14 +570,15 @@ export const DS_82_SCHEMA: FormSchema = {
           required: false,
           pdfRef: "Additional Phone 2 Other",
           rect: { page: 6, x: 541, y: 659, w: 36.3, h: 10 },
-          showIf: {"additional_phone_2_type":"Other"},
+          showIf: { additional_phone_2_type: "Other" },
         },
       ],
     },
     {
       id: "permanent_address",
       title: "18. Permanent Address",
-      description: "Complete if a P.O. Box is listed as your mailing address, or if you live elsewhere. Do not list a P.O. Box.",
+      description:
+        "Complete if a P.O. Box is listed as your mailing address, or if you live elsewhere. Do not list a P.O. Box.",
       fields: [
         {
           id: "permanent_street",
@@ -625,7 +633,8 @@ export const DS_82_SCHEMA: FormSchema = {
     {
       id: "emergency_contact",
       title: "19. Emergency Contact",
-      description: "Someone not travelling with you, to be contacted in the event of an emergency.",
+      description:
+        "Someone not travelling with you, to be contacted in the event of an emergency.",
       fields: [
         {
           id: "emergency_name",
@@ -712,7 +721,7 @@ export const DS_82_SCHEMA: FormSchema = {
     {
       id: "travel_plans",
       title: "20. Travel Plans",
-      description: "If you have no travel plans, write \"none\".",
+      description: 'If you have no travel plans, write "none".',
       fields: [
         {
           id: "departure_date",

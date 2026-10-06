@@ -64,11 +64,10 @@ export function HamburgerMenu() {
     (s) => s.setIsCompressModalOpen,
   );
   const currentDocumentId = usePdfEditorStore((s) => s.currentDocumentId);
+
   // Subscribed so a flag set after mount re-runs the bridge effect below.
   usePdfEditorStore((s) => s.pendingMenuAction);
-  const setPendingMenuAction = usePdfEditorStore(
-    (s) => s.setPendingMenuAction,
-  );
+  const setPendingMenuAction = usePdfEditorStore((s) => s.setPendingMenuAction);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // ShareModal lives at shell-level (see comment there); open state is in
   // the store so it survives the EditorLayout unmount that happens during
@@ -499,10 +498,7 @@ export function HamburgerMenu() {
                   <HugeiconsIcon icon={NoteIcon} size={14} />
                   <Label>{t("myPdfs")}</Label>
                 </Dropdown.Item>
-                <Dropdown.Item
-                  id="find-replace"
-                  textValue={t("findReplace")}
-                >
+                <Dropdown.Item id="find-replace" textValue={t("findReplace")}>
                   <HugeiconsIcon icon={Search01Icon} size={14} />
                   <Label>{t("findReplace")}</Label>
                 </Dropdown.Item>

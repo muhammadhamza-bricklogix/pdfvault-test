@@ -21,6 +21,7 @@ import { USERS } from "@/lib/shared/constants/endpoints";
  */
 async function ensureMe(): Promise<void> {
   const attribution = getStoredAcquisition();
+
   await apiClient.post(USERS.ME, attribution ?? {});
 }
 
@@ -41,4 +42,3 @@ export const usersService = {
   ensureMe,
   signOutAudit,
 };
-

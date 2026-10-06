@@ -1,7 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
+
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useVisualViewportFrame } from "@/lib/client/ui/visual-viewport";

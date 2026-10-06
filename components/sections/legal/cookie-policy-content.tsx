@@ -59,14 +59,26 @@ function CookieTable({
             >
               {/* Cookie identifier + provider brand name: fence from Weglot
                   so brand names (e.g. "Clerk") and cookie names (e.g.
-                  "OptanonConsent") aren't mistranslated. QA F-48 / F-49. */}
+                  "OptanonConsent") aren't mistranslated.
+                  QA F-48 / F-49: `notranslate` alone was ignored by
+                  Weglot on prod (prod STILL rendered "Sachbearbeiter
+                  (Beglaubigung)" for "Clerk (authentication)"). Add the
+                  `wg-notranslate` class + `data-wg-notranslate` attr —
+                  Weglot's own documented fence combination — so the
+                  provider cell is skipped regardless of excluded-blocks
+                  selector drift. */}
               <td
-                className="notranslate py-2 pr-3 font-mono text-[13px]"
+                data-wg-notranslate
+                className="notranslate wg-notranslate py-2 pr-3 font-mono text-[13px]"
                 translate="no"
               >
                 {r.name}
               </td>
-              <td className="notranslate py-2 pr-3" translate="no">
+              <td
+                data-wg-notranslate
+                className="notranslate wg-notranslate py-2 pr-3"
+                translate="no"
+              >
                 {r.provider}
               </td>
               <td className="py-2 pr-3">{r.purpose}</td>
