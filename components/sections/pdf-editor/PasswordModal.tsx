@@ -391,7 +391,7 @@ export function PasswordModal() {
             ) : (
               <div>
                 <Label className="mb-1 block text-xs text-default-500">
-                  Current password
+                  {tPw("currentPassword")}
                 </Label>
                 <div className="relative">
                   <input

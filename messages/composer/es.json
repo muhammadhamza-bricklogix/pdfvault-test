@@ -67,6 +67,7 @@
     "alreadyUnlockedTitle": "El PDF ya está desbloqueado",
     "alreadyUnlockedBody": "Puedes empezar a editar enseguida.",
     "removeProtectionHint": "La contraseña que estableciste en el PDF es necesaria para quitar la protección.",
+    "currentPassword": "Contraseña actual",
     "cancel": "Cancelar"
   }
 }
