@@ -372,21 +372,20 @@ export function TermsAndConditionsContent() {
             <>
               Indem Sie auf einer beliebigen Plattform eine Bewertung,
               Rezension, einen Kommentar oder Erfahrungsbericht
-              („Bewertung&ldquo;) über den Dienst veröffentlichen, gewähren
-              Sie dem Unternehmen ein nicht-exklusives, weltweites,
-              unbefristetes, unwiderrufliches, lizenzgebührenfreies,
-              unterlizenzierbares und übertragbares Recht, diese Bewertung
-              für jeden rechtmäßigen Zweck zu nutzen, zu vervielfältigen, zu
-              bearbeiten, zu veröffentlichen, zu übersetzen, zu verbreiten
-              und daraus abgeleitete Werke zu erstellen, einschließlich für
-              Marketing- und Produktentwicklungszwecke, ohne weitere
-              Benachrichtigung, Namensnennung oder Vergütung. Das Unternehmen
-              ist nicht verpflichtet, Bewertungen zu nutzen oder zu pflegen,
-              und kann Bewertungen nach eigenem Ermessen entfernen oder
-              bearbeiten; es ist nicht verantwortlich für den Inhalt von
-              Bewertungen oder die darin geäußerten Meinungen. Um die
-              Entfernung einer von Ihnen eingereichten Bewertung anzufordern,
-              wenden Sie sich an{" "}
+              („Bewertung&ldquo;) über den Dienst veröffentlichen, gewähren Sie
+              dem Unternehmen ein nicht-exklusives, weltweites, unbefristetes,
+              unwiderrufliches, lizenzgebührenfreies, unterlizenzierbares und
+              übertragbares Recht, diese Bewertung für jeden rechtmäßigen Zweck
+              zu nutzen, zu vervielfältigen, zu bearbeiten, zu veröffentlichen,
+              zu übersetzen, zu verbreiten und daraus abgeleitete Werke zu
+              erstellen, einschließlich für Marketing- und
+              Produktentwicklungszwecke, ohne weitere Benachrichtigung,
+              Namensnennung oder Vergütung. Das Unternehmen ist nicht
+              verpflichtet, Bewertungen zu nutzen oder zu pflegen, und kann
+              Bewertungen nach eigenem Ermessen entfernen oder bearbeiten; es
+              ist nicht verantwortlich für den Inhalt von Bewertungen oder die
+              darin geäußerten Meinungen. Um die Entfernung einer von Ihnen
+              eingereichten Bewertung anzufordern, wenden Sie sich an{" "}
               <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
             </>
           }
@@ -718,7 +717,11 @@ export function TermsAndConditionsContent() {
       <LegalSectionCard
         icon={UserCircleIcon}
         id="t-2-6"
-        title="6. User Representations and Restrictions"
+        title={
+          <LocaleText de="6. Zusicherungen des Nutzers und Einschränkungen">
+            6. User Representations and Restrictions
+          </LocaleText>
+        }
       >
         <p>
           By accessing or using the Service, you confirm that: you have the
