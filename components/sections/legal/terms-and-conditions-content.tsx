@@ -503,9 +503,15 @@ export function TermsAndConditionsContent() {
 
         {/* LEGAL_COUNSEL_PENDING — QA F-35: Weglot re-formatted the
             section number "5.3" as the German decimal "5,3 Credits".
-            Fencing the numeric segment with `notranslate` locks it. */}
+            Belt-and-braces fence — class + `data-wg-notranslate` + the
+            `translate="no"` HTML attribute — because the class-only
+            fence drifted on prod (F-48 / F-49 class). */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">
+          <span
+            className="notranslate wg-notranslate"
+            data-wg-notranslate=""
+            translate="no"
+          >
             5.3
           </span>{" "}
           <LocaleText de="Credits">Credits</LocaleText>
