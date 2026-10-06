@@ -60,6 +60,13 @@
     "versionHistory": "Histórico de versões"
   },
   "passwordModal": {
-    "notPasswordProtected": "Este PDF não está protegido por senha — não há nada para remover."
+    "notPasswordProtected": "Este PDF não está protegido por senha — não há nada para remover.",
+    "incorrectPassword": "Senha incorreta. Digite a senha atualmente definida neste PDF.",
+    "loadFailed": "Não foi possível ler este PDF para verificar a senha. Pode estar corrompido.",
+    "verifyFailed": "Não foi possível verificar a senha. Por favor, tente novamente.",
+    "alreadyUnlockedTitle": "O PDF já está desbloqueado",
+    "alreadyUnlockedBody": "Você pode começar a editar imediatamente.",
+    "removeProtectionHint": "A senha que você definiu no PDF é necessária para remover a proteção.",
+    "cancel": "Cancelar"
   }
 }
