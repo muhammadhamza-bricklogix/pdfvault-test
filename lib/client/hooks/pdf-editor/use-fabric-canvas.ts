@@ -443,12 +443,28 @@ export function useFabricCanvas({
     // the page (German QA F-05). Release a selection the gesture itself
     // made once the finger lifts after moving; a tap still selects the
     // line, as before.
+    //
+    // A touch on the line that is ALREADY selected is different: Fabric
+    // keeps that gesture for itself (it blocks the browser's scroll so the
+    // object can be dragged). On a zoomed page that meant a swipe didn't
+    // scroll and dragged the source text out of place instead. Extracted
+    // text is tap-to-edit on mobile, not drag-to-move, so for that touch the
+    // line is locked for the gesture and the page follows the finger once
+    // it moves past the tap slop. A tap on it still enters editing.
     const TAP_SLOP_PX = 10;
     let touchOnText: {
       target: FabricObject;
       wasActive: boolean;
       x: number;
       y: number;
+      // Set only for a touch on the already selected line.
+      held?: {
+        locks: { x: boolean; y: boolean };
+        scroller: HTMLElement | null;
+        scrollLeft: number;
+        scrollTop: number;
+        panning: boolean;
+      };
     } | null = null;
 
     const touchPoint = (ev: Event) => {
@@ -460,8 +476,16 @@ export function useFabricCanvas({
       return touch ? { x: touch.clientX, y: touch.clientY } : null;
     };
 
+    const releaseHold = (gesture: NonNullable<typeof touchOnText>) => {
+      if (!gesture.held) return;
+      gesture.target.lockMovementX = gesture.held.locks.x;
+      gesture.target.lockMovementY = gesture.held.locks.y;
+      gesture.held = undefined;
+    };
+
     // `mouse:down:before` fires before Fabric selects the target.
     const onMouseDownBefore = (opt: TPointerEventInfo) => {
+      if (touchOnText) releaseHold(touchOnText);
       touchOnText = null;
       const start = touchPoint(opt.e);
       const target = opt.target as
@@ -470,36 +494,85 @@ export function useFabricCanvas({
 
       if (!start || target?.editorType !== "editModeText") return;
       if (target.isEditing) return;
-      touchOnText = {
-        target,
-        wasActive: fc.getActiveObject() === target,
-        ...start,
+      const wasActive = fc.getActiveObject() === target;
+
+      touchOnText = { target, wasActive, ...start };
+      // Drawing tools own every touch; only the scrollable tools pan here.
+      if (!wasActive || !fc.allowTouchScrolling) return;
+      const scroller = upper.closest<HTMLElement>("[data-pdf-viewer-scroll]");
+
+      touchOnText.held = {
+        locks: { x: target.lockMovementX, y: target.lockMovementY },
+        scroller,
+        scrollLeft: scroller?.scrollLeft ?? 0,
+        scrollTop: scroller?.scrollTop ?? 0,
+        panning: false,
       };
+      target.lockMovementX = true;
+      target.lockMovementY = true;
     };
 
+    // Registered before Fabric adds its own touchmove listener (on every
+    // touchstart), so the page moves before Fabric handles the same event.
+    const onTouchMove = (e: TouchEvent) => {
+      const held = touchOnText?.held;
+
+      if (!touchOnText || !held?.scroller || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - touchOnText.x;
+      const dy = e.touches[0].clientY - touchOnText.y;
+
+      if (!held.panning && Math.hypot(dx, dy) <= TAP_SLOP_PX) return;
+      held.panning = true;
+      held.scroller.scrollLeft = held.scrollLeft - dx;
+      held.scroller.scrollTop = held.scrollTop - dy;
+    };
+
+    // Fabric fires the canvas `mouse:up` before the text object's own
+    // `mouseup` handler, which is where a tap on a selected line enters
+    // editing — so a swipe can still be told apart from that tap here.
     const onMouseUp = (opt: TPointerEventInfo) => {
       const start = touchOnText;
 
       touchOnText = null;
-      if (!start || start.wasActive) return;
+      if (!start) return;
+      releaseHold(start);
       const end = touchPoint(opt.e);
 
       if (!end) return;
       if (Math.hypot(end.x - start.x, end.y - start.y) <= TAP_SLOP_PX) return;
-      if (fc.getActiveObject() !== start.target) return;
-      if ((start.target as { isEditing?: boolean }).isEditing) return;
+      const target = start.target as FabricObject & {
+        isEditing?: boolean;
+        selected?: boolean;
+      };
+
+      if (target.isEditing) return;
+      // Not a second tap, so the line must not switch into editing.
+      if (start.wasActive) target.selected = false;
+      if (fc.getActiveObject() !== target) return;
       fc.discardActiveObject();
       fc.requestRenderAll();
     };
 
+    // Fabric doesn't fire `mouse:up` for a cancelled touch.
+    const onTouchCancel = () => {
+      if (touchOnText) releaseHold(touchOnText);
+      touchOnText = null;
+    };
+
     upper.addEventListener("touchstart", onTouchStart, { passive: false });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchcancel", onTouchCancel, { passive: true });
     fc.on("mouse:down:before", onMouseDownBefore);
     fc.on("mouse:up", onMouseUp);
 
     return () => {
       upper.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchcancel", onTouchCancel);
       fc.off("mouse:down:before", onMouseDownBefore);
       fc.off("mouse:up", onMouseUp);
+      if (touchOnText) releaseHold(touchOnText);
+      touchOnText = null;
     };
   }, [fabricCanvas]);
 
