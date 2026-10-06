@@ -396,10 +396,12 @@ export function CookiePolicyContent() {
         title="5. Your Choices and Consent"
       >
         {/* LEGAL_COUNSEL_PENDING — QA F-51: Weglot dropped the space
-            after "Königreich:Bei…" / "USA:Sofern…". Rewording each
-            leader from "<strong>X:</strong> Y" to "<strong>X</strong>
-            — Y" survives Weglot's translation pass with the em-dash
-            separator intact. */}
+            after "Königreich: Bei …" / "USA: Sofern …". The hand-DE
+            override below carries the colon + explicit space inside
+            the `<strong>` and starts the follow-up word with a
+            capital so DE reads "Besucher aus den USA: Sofern …". The
+            English fallback keeps the em-dash so Weglot can't collapse
+            the separator on non-/de/* locales. */}
         <LocaleText
           as="p"
           de={
