@@ -238,10 +238,55 @@ export function FloatingTextToolbar({
     if (!isEditTextMode) activeObjRef.current = null;
   }, [isEditTextMode]);
 
+  // Switching page mounts a new Fabric canvas with nothing selected, and
+  // the old canvas never fires `selection:cleared`. Close a panel opened
+  // for the previous page's text so it doesn't stay over the bottom of
+  // the viewer, where it also swallowed page swipes on mobile (German QA
+  // F-05). Same "adjust state during render" pattern as above.
+  const [prevFabricCanvas, setPrevFabricCanvas] = useState(fabricCanvas);
+
+  if (prevFabricCanvas !== fabricCanvas) {
+    setPrevFabricCanvas(fabricCanvas);
+    setHasTextSelection(false);
+  }
+
   useEffect(() => {
     if (!fabricCanvas) return;
 
+    activeObjRef.current = null;
+
+    // On touch, Fabric selects the text under the finger on touchstart,
+    // before it's known whether the gesture is a tap or a swipe. Showing
+    // the panel right away put it under the finger mid-swipe — it then
+    // took the gesture over, so the page didn't scroll — and a swipe left
+    // it open. Wait for the finger to lift: by then a swipe has released
+    // its selection (use-fabric-canvas) and a tap still opens the panel.
+    let touching = false;
+    let showAfterTouch = false;
+    let afterTouchTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onTouchStart = () => {
+      touching = true;
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length > 0) return;
+      clearTimeout(afterTouchTimer);
+      // Next task, so Fabric's own touchend handling has run first.
+      afterTouchTimer = setTimeout(() => {
+        touching = false;
+        if (!showAfterTouch) return;
+        showAfterTouch = false;
+        showToolbar();
+      }, 0);
+    };
+
     const showToolbar = () => {
+      if (touching) {
+        showAfterTouch = true;
+
+        return;
+      }
       const obj = fabricCanvas.getActiveObject();
 
       // Fabric's Textbox reports type "textbox"; IText reports "i-text";
@@ -274,10 +319,20 @@ export function FloatingTextToolbar({
     fabricCanvas.on("selection:updated", showToolbar);
     fabricCanvas.on("selection:cleared", hideToolbar);
 
+    const touchOpts = { capture: true, passive: true } as const;
+
+    document.addEventListener("touchstart", onTouchStart, touchOpts);
+    document.addEventListener("touchend", onTouchEnd, touchOpts);
+    document.addEventListener("touchcancel", onTouchEnd, touchOpts);
+
     return () => {
       fabricCanvas.off("selection:created", showToolbar);
       fabricCanvas.off("selection:updated", showToolbar);
       fabricCanvas.off("selection:cleared", hideToolbar);
+      document.removeEventListener("touchstart", onTouchStart, touchOpts);
+      document.removeEventListener("touchend", onTouchEnd, touchOpts);
+      document.removeEventListener("touchcancel", onTouchEnd, touchOpts);
+      clearTimeout(afterTouchTimer);
     };
   }, [fabricCanvas]);
 
