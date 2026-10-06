@@ -17,17 +17,6 @@ type Props = {
   children: ReactNode;
 };
 
-/**
- * Renders a per-locale override wrapped in a `wg-notranslate` fence so
- * Weglot leaves it untouched. For locales without an override the
- * children are rendered as-is, letting Weglot's SDK produce its machine
- * translation like it does everywhere else.
- *
- * Use when Weglot's machine output has a QA-flagged defect that can't
- * be corrected on the merchant dashboard: write the correct phrase in
- * German (or whichever locale) and pass it via the `de` prop while
- * leaving the English source in `children` for everyone else.
- */
 export function LocaleText({
   ar,
   as: As = "span",
