@@ -405,15 +405,14 @@ export function CookiePolicyContent() {
           de={
             <>
               <strong>
-                Besucher aus dem EWR und dem Vereinigten Königreich
+                Besucher aus dem EWR und dem Vereinigten Königreich:
               </strong>{" "}
-              — bei Ihrem ersten Besuch sehen Sie ein Cookie-Zustimmungs-
-              Banner, über das Sie nicht notwendige Cookies annehmen oder
-              ablehnen können, bevor diese gesetzt werden. Sie können Ihre
-              Einwilligung jederzeit über den Link „Cookie-Einstellungen&ldquo;
-              im Footer des Dienstes ändern oder widerrufen. Der Widerruf
-              berührt nicht die Rechtmäßigkeit der Verarbeitung vor dem
-              Widerruf.
+              Bei Ihrem ersten Besuch sehen Sie ein Cookie-Zustimmungs-Banner,
+              über das Sie nicht notwendige Cookies annehmen oder ablehnen
+              können, bevor diese gesetzt werden. Sie können Ihre Einwilligung
+              jederzeit über den Link „Cookie-Einstellungen&ldquo; im Footer
+              des Dienstes ändern oder widerrufen. Der Widerruf berührt nicht
+              die Rechtmäßigkeit der Verarbeitung vor dem Widerruf.
             </>
           }
         >
@@ -429,7 +428,7 @@ export function CookiePolicyContent() {
           className="mt-3"
           de={
             <>
-              <strong>Besucher aus den USA</strong> — sofern das jeweilige
+              <strong>Besucher aus den USA:</strong> Sofern das jeweilige
               einzelstaatliche Recht Ihnen das Recht einräumt, dem
               „Verkauf&ldquo;, dem „Teilen&ldquo; oder zielgerichteter Werbung
               über Cookies zu widersprechen, können Sie dies über den Link

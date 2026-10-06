@@ -60,6 +60,13 @@
     "versionHistory": "Versionsverlauf"
   },
   "passwordModal": {
-    "notPasswordProtected": "Diese PDF-Datei ist nicht passwortgeschützt – es gibt kein Passwort zu entfernen."
+    "notPasswordProtected": "Diese PDF-Datei ist nicht passwortgeschützt – es gibt kein Passwort zu entfernen.",
+    "incorrectPassword": "Falsches Passwort. Geben Sie das Passwort ein, das derzeit für diese PDF-Datei festgelegt ist.",
+    "loadFailed": "Die PDF-Datei konnte zur Passwortprüfung nicht gelesen werden. Möglicherweise ist sie beschädigt.",
+    "verifyFailed": "Passwort konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
+    "alreadyUnlockedTitle": "PDF ist bereits entsperrt",
+    "alreadyUnlockedBody": "Sie können direkt mit der Bearbeitung beginnen.",
+    "removeProtectionHint": "Das für die PDF-Datei festgelegte Passwort ist erforderlich, um den Schutz aufzuheben.",
+    "cancel": "Abbrechen"
   }
 }
