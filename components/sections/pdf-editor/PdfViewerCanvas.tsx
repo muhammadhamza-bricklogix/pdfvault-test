@@ -35,6 +35,17 @@ import { FloatingShapeToolbar } from "./FloatingShapeToolbar";
 import { SearchHighlightLayer } from "./SearchHighlightLayer";
 import { SignatureModal } from "./SignatureModal";
 
+// Zoom floors exist so pages never render tiny (iOS overlay issue below
+// 50%). Wide pages (images become 1px = 1pt) only get a lower floor down
+// to the on-screen size of a US Letter page at 50%, so they can fit.
+const MIN_ON_SCREEN_PAGE_WIDTH = 306;
+
+function minZoomForPageWidth(floor: number, pageWidth: number): number {
+  if (!(pageWidth > 0)) return floor;
+
+  return Math.min(floor, MIN_ON_SCREEN_PAGE_WIDTH / pageWidth);
+}
+
 type PdfViewerCanvasProps = {
   onFabricCanvasReady?: (canvas: import("fabric").Canvas | null) => void;
 };
@@ -133,6 +144,15 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
   // the store's `pdfDocument` clears.
   const effectivePage = pdfDocument ? page : null;
 
+  // Base (zoom 1) width of the shown page, read by the pinch/wheel clamps.
+  const pageBaseWidthRef = useRef(0);
+
+  useEffect(() => {
+    pageBaseWidthRef.current = effectivePage
+      ? effectivePage.getViewport({ scale: 1 }).width
+      : 0;
+  }, [effectivePage]);
+
   // Fit-to-width on first open of every file (mobile + desktop). PDF
   // pages (e.g. 612pt-wide US Letter) leave the user staring at white
   // margins at zoom=1.0 on any viewport that isn't roughly page-sized.
@@ -163,7 +183,7 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
     // 0.95 leaves a small visual breathing margin so the page doesn't butt
     // against the scroll-area edge.
     const fitZoom = (available / baseViewport.width) * 0.95;
-    const MIN_ZOOM = 0.5;
+    const MIN_ZOOM = minZoomForPageWidth(0.5, baseViewport.width);
     const MAX_ZOOM = 1;
     const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitZoom));
 
@@ -1011,14 +1031,24 @@ export function PdfViewerCanvas({ onFabricCanvasReady }: PdfViewerCanvasProps) {
 
     const MIN_ZOOM = 0.25;
     const MAX_ZOOM = 4;
-    const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+    const clamp = (z: number) =>
+      Math.min(
+        MAX_ZOOM,
+        Math.max(minZoomForPageWidth(MIN_ZOOM, pageBaseWidthRef.current), z),
+      );
     // Pinch-zoom (mobile) is clamped tighter: below ~0.5 on iOS Safari the
     // Fabric IText overlay stops rendering and the page goes blank, so we
     // keep the mobile floor at the toolbar's preset minimum.
     const PINCH_MIN_ZOOM = 0.5;
     const PINCH_MAX_ZOOM = 2;
     const clampPinch = (z: number) =>
-      Math.min(PINCH_MAX_ZOOM, Math.max(PINCH_MIN_ZOOM, z));
+      Math.min(
+        PINCH_MAX_ZOOM,
+        Math.max(
+          minZoomForPageWidth(PINCH_MIN_ZOOM, pageBaseWidthRef.current),
+          z,
+        ),
+      );
 
     // Latest zoom is read off the store at gesture-start time so we don't
     // close over a stale React-snapshot value.
