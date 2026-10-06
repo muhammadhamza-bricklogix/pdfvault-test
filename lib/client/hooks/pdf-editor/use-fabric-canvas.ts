@@ -1,7 +1,7 @@
 "use client";
 
 import type { ActiveTool } from "@/lib/client/stores/pdf-editor-store";
-import type { Canvas } from "fabric";
+import type { Canvas, FabricObject, TPointerEventInfo } from "fabric";
 import type { RefObject } from "react";
 
 import { useEffect, useRef, useState } from "react";
@@ -392,12 +392,22 @@ export function useFabricCanvas({
       const t = e.touches[0];
 
       if (!t) return;
-      // Fabric v6's `findTarget` reads clientX/Y off the event arg.
-      // Synthesising a partial MouseEvent is enough — it doesn't need a
-      // full event object.
-      const target = (
+      // `findTarget` reads clientX/Y off the event arg, so a partial
+      // MouseEvent is enough. Fabric 7 returns a targets-info object
+      // (`{ target, subTargets, container, … }`), never the object itself
+      // and never undefined — the object under the finger is `.target`.
+      // Reading the info object as the target made EVERY touch on the page
+      // look like a touch on a selectable object, so `preventDefault()` ran
+      // for all of them and one-finger scrolling of the page was blocked on
+      // mobile. A page taller than the screen then couldn't be scrolled to
+      // its top/bottom edge, which is where the vertical page swipe turns
+      // the page — so swiping to the previous/next page stopped responding
+      // (German QA F-05).
+      const { target } = (
         fc as unknown as {
-          findTarget: (e: { clientX: number; clientY: number }) => unknown;
+          findTarget: (e: { clientX: number; clientY: number }) => {
+            target?: unknown;
+          };
         }
       ).findTarget({ clientX: t.clientX, clientY: t.clientY });
 
@@ -426,10 +436,70 @@ export function useFabricCanvas({
       }
     };
 
+    // A swipe that starts on a line of extracted text scrolls the page or
+    // turns it, but Fabric has already selected that line on touchstart.
+    // The selection opened the text toolbar over the bottom of the viewer
+    // and left it there, and swipes starting on the toolbar don't turn
+    // the page (German QA F-05). Release a selection the gesture itself
+    // made once the finger lifts after moving; a tap still selects the
+    // line, as before.
+    const TAP_SLOP_PX = 10;
+    let touchOnText: {
+      target: FabricObject;
+      wasActive: boolean;
+      x: number;
+      y: number;
+    } | null = null;
+
+    const touchPoint = (ev: Event) => {
+      if (typeof TouchEvent === "undefined" || !(ev instanceof TouchEvent)) {
+        return null;
+      }
+      const touch = ev.touches[0] ?? ev.changedTouches[0];
+
+      return touch ? { x: touch.clientX, y: touch.clientY } : null;
+    };
+
+    // `mouse:down:before` fires before Fabric selects the target.
+    const onMouseDownBefore = (opt: TPointerEventInfo) => {
+      touchOnText = null;
+      const start = touchPoint(opt.e);
+      const target = opt.target as
+        | (FabricObject & { editorType?: string; isEditing?: boolean })
+        | undefined;
+
+      if (!start || target?.editorType !== "editModeText") return;
+      if (target.isEditing) return;
+      touchOnText = {
+        target,
+        wasActive: fc.getActiveObject() === target,
+        ...start,
+      };
+    };
+
+    const onMouseUp = (opt: TPointerEventInfo) => {
+      const start = touchOnText;
+
+      touchOnText = null;
+      if (!start || start.wasActive) return;
+      const end = touchPoint(opt.e);
+
+      if (!end) return;
+      if (Math.hypot(end.x - start.x, end.y - start.y) <= TAP_SLOP_PX) return;
+      if (fc.getActiveObject() !== start.target) return;
+      if ((start.target as { isEditing?: boolean }).isEditing) return;
+      fc.discardActiveObject();
+      fc.requestRenderAll();
+    };
+
     upper.addEventListener("touchstart", onTouchStart, { passive: false });
+    fc.on("mouse:down:before", onMouseDownBefore);
+    fc.on("mouse:up", onMouseUp);
 
     return () => {
       upper.removeEventListener("touchstart", onTouchStart);
+      fc.off("mouse:down:before", onMouseDownBefore);
+      fc.off("mouse:up", onMouseUp);
     };
   }, [fabricCanvas]);
 
