@@ -125,10 +125,41 @@ export function SubscriptionTermsContent() {
         id="st-4"
         title="4. TERMINATION AND CANCELLATION"
       >
-        <p>You may cancel your trial or subscription at any time:</p>
+        <LocaleText
+          as="p"
+          de={
+            <>
+              Sie können Ihre Testphase oder Ihr Abonnement jederzeit auf eine
+              der folgenden Weisen kündigen:
+            </>
+          }
+        >
+          You may cancel your trial or subscription at any time:
+        </LocaleText>
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          <li>In your account settings, under Subscription.</li>
-          <li>
+          <LocaleText
+            as="li"
+            de={
+              <>über Ihre Kontoeinstellungen unter „Abonnement&ldquo;, oder</>
+            }
+          >
+            In your account settings, under Subscription.
+          </LocaleText>
+          <LocaleText
+            as="li"
+            de={
+              <>
+                per E-Mail an{" "}
+                <a
+                  className="text-[var(--pv-brand-red,#f12c23)]"
+                  href="mailto:support@pdfvault.ai"
+                >
+                  support@pdfvault.ai
+                </a>{" "}
+                vor dem nächsten Verlängerungsdatum.
+              </>
+            }
+          >
             By emailing{" "}
             <a
               className="text-[var(--pv-brand-red,#f12c23)]"
@@ -137,7 +168,7 @@ export function SubscriptionTermsContent() {
               support@pdfvault.ai
             </a>{" "}
             before your next renewal date.
-          </li>
+          </LocaleText>
         </ul>
         <p className="mt-3">
           Cancelling disables automatic renewal. If you cancel during your 7-day

@@ -38,10 +38,10 @@ const HERO_CTA_NOTE =
 // a consistent template — each bullet becomes "Sie + verb …" in
 // German. The lead-in paragraphs below have been reworded to match.
 // Each item is `[english, german]`. Hand-authored German bypasses
-// Weglot for QA F-55 / F-56 / F-57, which flagged bullets rendered with
-// missing verbs ("Ein Freiberufler, der …") or awkward imperatives
-// ("Werden als Anbieter aufgenommen"). The DE version keeps the "Sie
-// + verb" structure that reads naturally.
+// Weglot for QA F-55 / F-56 / F-57, which flagged bullets rendered
+// with missing verbs ("Ein Freiberufler, der …") or awkward
+// imperatives ("Werden als Anbieter aufgenommen"). The DE version
+// keeps the "Sie + verb" structure that reads naturally.
 type BulletPair = readonly [string, string];
 
 const TYPICAL_REQUESTS: BulletPair[] = [

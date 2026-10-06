@@ -2134,14 +2134,20 @@ function SuccessStep({
   }, [onFireQueuedAction]);
 
   // Fire Google Ads "Trial Start Signal" conversion on payment success.
+  // Report the full recurring subscription value (amountRenewMinor), not
+  // the trial token (amountTodayMinor = $0.99 / $1.99) — Smart Bidding
+  // optimises against the value we send, so the trial token starves the
+  // auction and underbids on good keywords.
   useEffect(() => {
     if (typeof window.gtag === "function") {
       window.gtag("event", "conversion", {
         send_to: "AW-18226423046/31lDCOKzxeccEIbKhPND",
-        transaction_id: "",
+        value: intent.amountRenewMinor / 100,
+        currency: intent.currency,
+        transaction_id: intent.orderId,
       });
     }
-  }, []);
+  }, [intent.amountRenewMinor, intent.currency, intent.orderId]);
 
   // Push a dedicated `trial_started` event to the GTM dataLayer so tags
   // configured in the container can trigger on a purpose-built event
@@ -2153,6 +2159,11 @@ function SuccessStep({
     const userEmail = user?.primaryEmailAddress?.emailAddress || null;
     const userPhone = user?.primaryPhoneNumber?.phoneNumber || null;
 
+    // GA4 keeps `price` = today's charge (trial token) so the trial
+    // funnel reflects what the user was actually billed. Bing UET gets
+    // the recurring subscription value (`bingRevenueValue`) so Smart
+    // Bidding optimises against real customer value, not the $0.99 /
+    // $1.99 trial token.
     trackTrialStart({
       plan_name:
         selectedPlan === "annual"
@@ -2161,6 +2172,7 @@ function SuccessStep({
             ? "Limited Access · 7-Day Trial"
             : "Full Access · 7-Day Trial",
       price: intent.amountTodayMinor / 100,
+      bingRevenueValue: intent.amountRenewMinor / 100,
       currency: intent.currency,
       orderId: intent.orderId,
       user: {
@@ -2175,12 +2187,14 @@ function SuccessStep({
       orderId: intent.orderId,
       plan: selectedPlan,
       value: intent.amountTodayMinor / 100,
+      recurringValue: intent.amountRenewMinor / 100,
     });
     if (userEmail || userPhone) {
       void setBingUserData({ email: userEmail, phone: userPhone });
     }
   }, [
     intent.amountTodayMinor,
+    intent.amountRenewMinor,
     intent.currency,
     intent.orderId,
     selectedPlan,

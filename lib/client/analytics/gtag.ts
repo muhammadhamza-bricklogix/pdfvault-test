@@ -10,12 +10,16 @@ export const GA_MEASUREMENT_ID =
 /**
  * Safely fire an event to Google Analytics (GA4) via gtag.js.
  */
-export function trackEvent(name: string, params?: Record<string, unknown>): void {
+export function trackEvent(
+  name: string,
+  params?: Record<string, unknown>,
+): void {
   if (typeof window === "undefined") {
     return;
   }
 
   const gtag = window.gtag;
+
   if (typeof gtag !== "function") {
     return;
   }
@@ -29,7 +33,6 @@ export function trackEvent(name: string, params?: Record<string, unknown>): void
     }
   }
 }
-
 
 /**
  * 1. sign_up
@@ -72,10 +75,17 @@ export function trackAddPaymentInfo(params: {
  * 3. trial_start
  * Custom event: triggered when the 7-day trial officially starts upon payment confirmation.
  * Simultaneously fires Bing UET purchase conversion with dynamic revenue_value and currency.
+ *
+ * `price` is today's charge (trial token, e.g. $0.99 / $1.99) — used for GA4's
+ * `trial_start` event so the trial funnel reflects what the user was actually
+ * billed. `bingRevenueValue` is the full subscription value (e.g. $25 / $39.99 /
+ * $300) sent to Bing UET so Smart Bidding optimises against real customer value
+ * instead of the trial token. Defaults to `price` for backwards compatibility.
  */
 export function trackTrialStart(params: {
   plan_name: string;
   price: number;
+  bingRevenueValue?: number;
   currency: string;
   orderId?: string;
   user?: { email?: string | null; phone?: string | null };
@@ -87,9 +97,10 @@ export function trackTrialStart(params: {
     value: params.price,
   });
 
-  // Mirror purchase conversion to Bing UET
+  // Mirror purchase conversion to Bing UET. Send the subscription's recurring
+  // value, not the trial token — Smart Bidding needs real customer value.
   trackBingPurchase({
-    revenue_value: params.price,
+    revenue_value: params.bingRevenueValue ?? params.price,
     currency: params.currency,
     orderId: params.orderId,
   });
@@ -108,7 +119,12 @@ export function trackPurchase(params: {
   transaction_id: string;
   value: number;
   currency: string;
-  items?: Array<{ item_id: string; item_name: string; price: number; quantity?: number }>;
+  items?: Array<{
+    item_id: string;
+    item_name: string;
+    price: number;
+    quantity?: number;
+  }>;
   user?: { email?: string | null; phone?: string | null };
 }): void {
   trackEvent("purchase", {
@@ -135,10 +151,16 @@ export function trackPurchase(params: {
  * Gated per user in localStorage so repeat downloads by the same user do not inflate activation counts,
  * while allowing different users on the same shared browser to each activate independently.
  */
-export function trackActivation(feature_name: string, userId?: string | null): void {
+export function trackActivation(
+  feature_name: string,
+  userId?: string | null,
+): void {
   if (typeof window !== "undefined") {
     try {
-      const key = userId ? `pv_activation_fired_${userId}` : "pv_activation_fired_anon";
+      const key = userId
+        ? `pv_activation_fired_${userId}`
+        : "pv_activation_fired_anon";
+
       if (localStorage.getItem(key)) {
         return;
       }
@@ -158,7 +180,9 @@ export function trackActivation(feature_name: string, userId?: string | null): v
  * 5. subscription_cancel
  * Custom event: triggered when the user cancels during or immediately after trial.
  */
-export function trackSubscriptionCancel(params?: { cancel_reason?: string }): void {
+export function trackSubscriptionCancel(params?: {
+  cancel_reason?: string;
+}): void {
   trackEvent("subscription_cancel", {
     cancel_reason: params?.cancel_reason || "other",
   });
@@ -177,10 +201,12 @@ export function getGaClientId(): Promise<string | null> {
   const readCookieClientId = (): string | null => {
     if (typeof document === "undefined") return null;
     const match = document.cookie.match(/_ga=(?:GA\d+\.\d+\.)?(\d+\.\d+)/);
+
     return match ? match[1] : null;
   };
 
   const gtag = window.gtag;
+
   if (typeof gtag !== "function") {
     return Promise.resolve(readCookieClientId());
   }

@@ -235,7 +235,11 @@ export function DoNotSellContent() {
       <LegalSectionCard
         icon={JudgeIcon}
         id="d-6-9"
-        title="Rights for Residents of Other US States"
+        title={
+          <LocaleText de="Rechte von Einwohnern anderer US-Bundesstaaten">
+            Rights for Residents of Other US States
+          </LocaleText>
+        }
       >
         <p>
           Residents of Virginia (VCDPA), Colorado (CPA), Connecticut (CTDPA),
