@@ -89,8 +89,8 @@
       "description": "Teilen Sie eine PDF-Datei in kleinere Dateien auf oder extrahieren Sie nur die Seiten, die Sie brauchen — Seitenbereich auswählen und in Sekunden herunterladen."
     },
     "removeAnnotations": {
-      "title": "Anmerkungen in PDF fest einbetten",
-      "description": "Betten Sie Markierungen, Kommentare und Formularfelder fest in die Seite ein, sodass diese Anmerkungen Bestandteil der Seite werden und nicht mehr einzeln bearbeitet oder entfernt werden können."
+      "title": "Anmerkungen aus einer PDF entfernen",
+      "description": "Löschen Sie Markierungen, Kommentare und Formularfelder in einem Durchgang."
     },
     "edit": {
       "title": "PDF online bearbeiten",

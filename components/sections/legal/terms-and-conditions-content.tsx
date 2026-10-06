@@ -370,22 +370,22 @@ export function TermsAndConditionsContent() {
           as="p"
           de={
             <>
-              Durch die Veröffentlichung einer Bewertung, Rezension, eines
-              Kommentars oder Erfahrungsberichts („Bewertung&ldquo;) über den
-              Dienst auf einer beliebigen Plattform gewähren Sie dem Unternehmen
-              ein nicht-exklusives, weltweites, unbefristetes, unwiderrufliches,
-              lizenzgebührenfreies, unterlizenzierbares und übertragbares Recht,
-              diese Bewertung für jeden rechtmäßigen Zweck zu nutzen, zu
-              vervielfältigen, zu bearbeiten, zu veröffentlichen, zu übersetzen,
-              zu verbreiten und daraus abgeleitete Werke zu erstellen,
-              einschließlich für Marketing- und Produktentwicklungszwecke, ohne
-              weitere Benachrichtigung, Namensnennung oder Vergütung. Das
-              Unternehmen ist nicht verpflichtet, Bewertungen zu nutzen oder zu
-              pflegen, und kann Bewertungen nach eigenem Ermessen entfernen oder
-              bearbeiten; es ist nicht verantwortlich für den Inhalt von
-              Bewertungen oder die darin geäußerten Meinungen. Um die Entfernung
-              einer von Ihnen eingereichten Bewertung anzufordern, wenden Sie
-              sich an{" "}
+              Indem Sie auf einer beliebigen Plattform eine Bewertung,
+              Rezension, einen Kommentar oder Erfahrungsbericht
+              („Bewertung&ldquo;) über den Dienst veröffentlichen, gewähren Sie
+              dem Unternehmen ein nicht-exklusives, weltweites, unbefristetes,
+              unwiderrufliches, lizenzgebührenfreies, unterlizenzierbares und
+              übertragbares Recht, diese Bewertung für jeden rechtmäßigen Zweck
+              zu nutzen, zu vervielfältigen, zu bearbeiten, zu veröffentlichen,
+              zu übersetzen, zu verbreiten und daraus abgeleitete Werke zu
+              erstellen, einschließlich für Marketing- und
+              Produktentwicklungszwecke, ohne weitere Benachrichtigung,
+              Namensnennung oder Vergütung. Das Unternehmen ist nicht
+              verpflichtet, Bewertungen zu nutzen oder zu pflegen, und kann
+              Bewertungen nach eigenem Ermessen entfernen oder bearbeiten; es
+              ist nicht verantwortlich für den Inhalt von Bewertungen oder die
+              darin geäußerten Meinungen. Um die Entfernung einer von Ihnen
+              eingereichten Bewertung anzufordern, wenden Sie sich an{" "}
               <a href="mailto:support@pdfvault.ai">support@pdfvault.ai</a>.
             </>
           }
@@ -503,9 +503,15 @@ export function TermsAndConditionsContent() {
 
         {/* LEGAL_COUNSEL_PENDING — QA F-35: Weglot re-formatted the
             section number "5.3" as the German decimal "5,3 Credits".
-            Fencing the numeric segment with `notranslate` locks it. */}
+            Belt-and-braces fence — class + `data-wg-notranslate` + the
+            `translate="no"` HTML attribute — because the class-only
+            fence drifted on prod (F-48 / F-49 class). */}
         <p className="mt-4 font-semibold text-[var(--legal-burgundy)]">
-          <span className="notranslate" translate="no">
+          <span
+            className="notranslate wg-notranslate"
+            data-wg-notranslate=""
+            translate="no"
+          >
             5.3
           </span>{" "}
           <LocaleText de="Credits">Credits</LocaleText>

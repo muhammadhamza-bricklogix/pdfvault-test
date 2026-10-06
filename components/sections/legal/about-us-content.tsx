@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 const ShieldIcon = Shield01Icon;
@@ -101,12 +102,29 @@ export function AboutUsContent() {
           No downloads, no steep learning curve, no unnecessary steps between
           you and the file you need.
         </p>
-        <p className="mt-4 text-[15px] leading-relaxed text-[var(--pv-text-body)]">
+        {/* QA DE: Weglot auto-translation produced "behandeln wir jede
+            Datei … – sie werden …" (singular "jede Datei" paired with
+            plural "sie werden" — grammatical mismatch). Hand-DE
+            override normalises both halves to plural ("alle Dateien" +
+            "sie werden") so the subject + verb agree on /de/*. */}
+        <LocaleText
+          as="p"
+          className="mt-4 text-[15px] leading-relaxed text-[var(--pv-text-body)]"
+          de={
+            <>
+              Wir bauen und verfeinern unser Toolkit kontinuierlich auf Basis
+              dessen, was unsere Nutzer tatsächlich brauchen, und behandeln wir
+              alle Dateien mit derselben Sorgfalt, die wir für unsere eigenen
+              wünschen würden — sie werden im Arbeitsspeicher verarbeitet, nie
+              gelesen und nie verkauft.
+            </>
+          }
+        >
           We&apos;re continually building and refining the toolkit based on what
           our users actually need, and we handle every file with the same care
           we&apos;d want for our own — processed in memory, never read, and
           never sold.
-        </p>
+        </LocaleText>
       </section>
 
       {/* Pillars */}
@@ -218,13 +236,27 @@ export function AboutUsContent() {
         <h2 className="mt-2 text-[28px] font-bold leading-tight text-[var(--pv-text-strong)] sm:text-[32px]">
           Protecting your files, every step of the way.
         </h2>
-        <p className="mt-3 text-[15px] leading-relaxed text-[var(--pv-text-body)]">
+        <LocaleText
+          as="p"
+          className="mt-3 text-[15px] leading-relaxed text-[var(--pv-text-body)]"
+          de={
+            <>
+              Wir verwenden branchenübliche Sicherheitsmaßnahmen, einschließlich
+              TLS-Verschlüsselung bei der Übertragung und gehashte Passwörter,
+              und wir verkaufen Ihre persönlichen Daten niemals. Die Inhalte
+              Ihrer hochgeladenen Dateien werden nie erfasst — sie werden im
+              Arbeitsspeicher verarbeitet und gelöscht, sobald Ihre Sitzung
+              endet, es sei denn, Sie entscheiden sich, sie in Ihrem Konto zu
+              speichern.
+            </>
+          }
+        >
           We use industry-standard security measures, including TLS encryption
           in transit and hashed passwords, and we never sell your personal data.
           The contents of your uploaded files are never collected — they&apos;re
           processed in memory and cleared once your session ends, unless you
           choose to save them to your account.
-        </p>
+        </LocaleText>
         <div className="mt-5 flex flex-wrap gap-2">
           {TRUST_TAGS.map((tag) => (
             <span

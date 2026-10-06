@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useLocale } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { LocaleText } from "@/components/shared/i18n/locale-text";
 import { ROUTES } from "@/lib/shared/constants/routes";
 
 // Content mirrors public/PDFVault - FAQs.pdf. When copy changes, update
@@ -67,19 +68,28 @@ const getGroups = (
     items: [
       {
         q: "How much does PDFVault cost?",
-        // QA F-13: Weglot's machine output renders the second clause as
-        // „die Ihnen vollen Zugriff … gewährt" (unnatural). Hand-author
-        // the DE answer and fence it so Weglot leaves it alone.
-        a:
-          locale === "de" ? (
-            <span className="notranslate wg-notranslate" translate="no">
-              {`Sie können mit einer 7-tägigen Testphase für ${trial} beginnen, mit der Sie vollen Zugriff auf Premium-Funktionen einschließlich Dateidownloads erhalten. Wenn Sie vor Ablauf der Testphase nicht kündigen, wird sie automatisch als monatliches Abonnement zu ${monthly} pro Monat fortgesetzt.`}
-            </span>
-          ) : (
-            <>
-              {`You can start with a 7-day trial for ${trial}, ${trialAccess} full access to premium features including file downloads. If you don't cancel before the trial ends, it automatically continues as a monthly subscription at ${monthly} per month.`}
-            </>
-          ),
+        // QA F-13: Weglot's machine output rendered the second clause
+        // as „die Ihnen vollen Zugriff … gewährt" (unnatural, legalese
+        // tone). Hand-DE override reads as the natural "mit der Sie
+        // vollen Zugriff … erhalten" phrasing QA requested.
+        a: (
+          <LocaleText
+            de={
+              <>
+                Sie können mit einer 7-tägigen Testphase für 0,99 $ beginnen,
+                mit der Sie vollen Zugriff auf Premium-Funktionen einschließlich
+                Dateidownloads erhalten. Wenn Sie vor Ablauf der Testphase nicht
+                kündigen, wird sie automatisch als monatliches Abonnement zu
+                39,99 $ pro Monat fortgesetzt.
+              </>
+            }
+          >
+            You can start with a 7-day trial for $0.99, which gives you full
+            access to premium features including file downloads. If you
+            don&apos;t cancel before the trial ends, it automatically continues
+            as a monthly subscription at $39.99 per month.
+          </LocaleText>
+        ),
       },
       {
         q: "When will I be charged?",
@@ -220,12 +230,27 @@ const getGroups = (
       },
       {
         q: "Is my data secure?",
+        // QA F-28: Weglot flipped "hashed passwords" between
+        // „gehashtes Passwort", „Hash-verschlüsselte Passwörter", and
+        // „Hash-Passwörter" (last two are technically inaccurate —
+        // hashing ≠ encryption). Hand-DE locks the natural
+        // „gehashte Passwörter" term.
         a: (
-          <>
+          <LocaleText
+            de={
+              <>
+                Wir verwenden branchenübliche Sicherheitsmaßnahmen,
+                einschließlich TLS-Verschlüsselung bei der Übertragung und
+                gehashte Passwörter. Kein System ist vollständig sicher, aber
+                der Schutz Ihrer Daten hat beim Aufbau des Dienstes höchste
+                Priorität.
+              </>
+            }
+          >
             We use industry-standard security measures, including TLS encryption
             in transit and hashed passwords. No system is completely secure, but
             protecting your data is a priority in how we build the Service.
-          </>
+          </LocaleText>
         ),
       },
       {
