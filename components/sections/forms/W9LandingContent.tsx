@@ -273,7 +273,13 @@ function GetFormCta({ label = "Open the W-9 Template" }: { label?: string }) {
   );
 }
 
-function SectionHeading({ id, children }: { id: string; children: string }) {
+function SectionHeading({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   return (
     <h2
       className="scroll-mt-24 text-2xl font-bold tracking-tight text-[var(--color-foreground)] sm:text-3xl"
@@ -346,20 +352,29 @@ export function W9LandingContent() {
             aria-label="On this page"
             className="sticky top-24 flex flex-col gap-2 border-l border-default-200 pl-4 text-base dark:border-default-700"
           >
-            {[
-              ["What is Form W-9?", "what-is-w9"],
-              ["Do you need to fill one out?", "need-one"],
-              ["What you'll need before you start", "before-start"],
-              ["How to fill out a W-9 in PDFVault", "how-to-fill"],
-              ["Signing and sending your completed form", "signing"],
-              ["FAQ", "faq"],
-            ].map(([label, id]) => (
+            {(
+              [
+                ["What is Form W-9?", "what-is-w9"],
+                ["Do you need to fill one out?", "need-one"],
+                ["What you'll need before you start", "before-start"],
+                ["How to fill out a W-9 in PDFVault", "how-to-fill"],
+                // QA F-DE: pair this with the matching hand-DE on the
+                // section heading below so TOC + heading always render
+                // the same German string.
+                [
+                  "Signing and sending your completed form",
+                  "signing",
+                  "Formular unterschreiben und senden",
+                ],
+                ["FAQ", "faq"],
+              ] as const
+            ).map(([label, id, de]) => (
               <Link
                 key={id}
                 className="rounded px-2 py-1.5 font-medium leading-6 text-default-700 transition-colors hover:bg-default-100 hover:text-[var(--color-accent)] dark:text-default-300 dark:hover:bg-default-800"
                 href={`#${id}`}
               >
-                {label}
+                {de ? <LocaleText de={de}>{label}</LocaleText> : label}
               </Link>
             ))}
           </nav>
@@ -481,7 +496,9 @@ export function W9LandingContent() {
 
           <section>
             <SectionHeading id="signing">
-              Signing and sending your completed form
+              <LocaleText de="Formular unterschreiben und senden">
+                Signing and sending your completed form
+              </LocaleText>
             </SectionHeading>
             <Prose>
               <p>
