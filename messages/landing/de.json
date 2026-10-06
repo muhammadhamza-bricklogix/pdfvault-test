@@ -17,7 +17,7 @@
   },
   "upload": {
     "maxFileSize": "Maximale Dateigröße: 100 MB",
-    "dragDrop": "Datei per Drag &amp; Drop zum Bearbeiten ablegen",
+    "dragDrop": "Datei per Drag & Drop zum Bearbeiten ablegen",
     "or": "ODER",
     "uploadFile": "Klicken Sie, um Ihre Datei hochzuladen"
   },
