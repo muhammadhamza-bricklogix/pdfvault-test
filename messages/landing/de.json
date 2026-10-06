@@ -22,7 +22,52 @@
     }
   },
   "upload": {
-    "maxFileSize": "Maximale Dateigröße: 100 MB"
+    "maxFileSize": "Maximale Dateigröße: 100 MB",
+    "dragDrop": "Datei per Drag &amp; Drop zum Bearbeiten ablegen",
+    "or": "ODER",
+    "uploadFile": "Klicken Sie, um Ihre Datei hochzuladen"
+  },
+  "convertRoutes": {
+    "file-to-pdf": {
+      "title": "Datei in PDF umwandeln",
+      "description": "Unterstützte Formate: Word, JPG, PNG."
+    },
+    "word-to-pdf": {
+      "title": "Word in PDF umwandeln",
+      "description": "Laden Sie eine .doc- oder .docx-Datei hoch und erhalten Sie ein sauberes PDF — bereit zum Unterschreiben oder Teilen."
+    },
+    "png-to-pdf": {
+      "title": "PNG in PDF umwandeln",
+      "description": "Legen Sie ein oder mehrere PNGs ab, und wir fassen sie zu einer einzigen PDF-Datei zusammen."
+    },
+    "jpg-to-pdf": {
+      "title": "JPG in PDF umwandeln",
+      "description": "Verwandeln Sie JPG-Fotos oder Scans in ein einziges, aufgeräumtes PDF.",
+      "heroTitle": "JPG sofort in PDF umwandeln",
+      "heroSubtitle": "In Sekunden konvertieren — und das PDF sofort herunterladen, sobald es bereit ist."
+    },
+    "pdf-to-word": {
+      "title": "PDF in Word umwandeln",
+      "description": "Verwandeln Sie eine PDF-Datei in eine bearbeitbare .docx — damit Sie in Word weiterarbeiten können.",
+      "heroTitle": "PDF in Sekunden in Word umwandeln",
+      "heroSubtitle": "In Momenten konvertieren — und die bearbeitbare Word-Datei sofort herunterladen."
+    },
+    "pdf-to-png": {
+      "title": "PDF in PNG umwandeln",
+      "description": "Exportieren Sie jede Seite eines PDFs als hochwertiges PNG-Bild."
+    },
+    "pdf-to-jpg": {
+      "title": "PDF in JPG umwandeln",
+      "description": "Exportieren Sie jede Seite eines PDFs als JPG-Bild."
+    },
+    "pdf-to-excel": {
+      "title": "PDF in Excel umwandeln",
+      "description": "Extrahieren Sie Tabellen aus einem PDF und übertragen Sie sie in eine bearbeitbare Excel-Datei."
+    },
+    "pdf-to-powerpoint": {
+      "title": "PDF in PowerPoint umwandeln",
+      "description": "Verwandeln Sie eine PDF-Datei in eine bearbeitbare .pptx-Präsentation — jede Seite als eigene Folie."
+    }
   },
   "brand": {
     "name": "PDFVault"
