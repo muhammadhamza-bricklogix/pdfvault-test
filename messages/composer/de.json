@@ -67,6 +67,7 @@
     "alreadyUnlockedTitle": "PDF ist bereits entsperrt",
     "alreadyUnlockedBody": "Sie können direkt mit der Bearbeitung beginnen.",
     "removeProtectionHint": "Das für die PDF-Datei festgelegte Passwort ist erforderlich, um den Schutz aufzuheben.",
+    "currentPassword": "Aktuelles Passwort",
     "cancel": "Abbrechen"
   }
 }
