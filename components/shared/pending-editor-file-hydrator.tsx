@@ -73,6 +73,10 @@ export function PendingEditorFileHydrator() {
   const resetRef = useRef(false);
   const redirectRef = useRef(false);
   const launchedRef = useRef(false);
+  // Step 4 reads the pending-compress flag once, on its first schedule.
+  // Kept across re-schedules so a retry after `CompressModal` cleared the
+  // flag doesn't open a second modal over the running compression.
+  const pendingCompressRef = useRef<boolean | null>(null);
   const autoSavedRef = useRef(false);
   // Tracks whether `currentFile` has ever been truthy in this session.
   // The mirror effect below uses this to decide whether a `null`
@@ -564,11 +568,6 @@ export function PendingEditorFileHydrator() {
     if (!authLoaded) return;
 
     launchedRef.current = true;
-    logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
-      tool,
-      exportFormat,
-      cameFromWelcomeEmail,
-    });
 
     // Snapshot the pending-compress flag NOW, before the 400 ms
     // setTimeout below. `CompressModal`'s own auto-fire effect races us:
@@ -579,28 +578,41 @@ export function PendingEditorFileHydrator() {
     // treat the flag as active when the user is signed-in — a signed-
     // out visit with a stale flag should still see the modal so they
     // can retry (fallback for closed-then-reopened email-first modal).
-    let hasPendingCompress = false;
+    // Read once per URL: a re-schedule (see the cleanup below) reuses
+    // the first snapshot for the same reason.
+    if (pendingCompressRef.current === null) {
+      let pendingCompress = false;
 
-    if (isSignedIn) {
-      try {
-        hasPendingCompress = Boolean(
-          window.sessionStorage.getItem("pdfvault:pendingCompress"),
-        );
-      } catch {
-        // sessionStorage disabled — assume no pending config.
+      if (isSignedIn) {
+        try {
+          pendingCompress = Boolean(
+            window.sessionStorage.getItem("pdfvault:pendingCompress"),
+          );
+        } catch {
+          // sessionStorage disabled — assume no pending config.
+        }
       }
+      pendingCompressRef.current = pendingCompress;
     }
+    const hasPendingCompress = pendingCompressRef.current;
 
     const willTourRun = willTourAutoLaunch("editor");
 
     let toolTimeoutId: number | undefined;
     let fallbackTimeoutId: number | undefined;
     let tourEndedHandler: (() => void) | undefined;
+    let fired = false;
 
     const runAutoLaunch = () => {
       // 400 ms lead-in so the file-load pipeline (Fabric mount +
       // pdf.js hydrate) settles before the tool modal opens on top.
       toolTimeoutId = window.setTimeout(() => {
+        fired = true;
+        logger.event(EVENTS.HYDRATOR_AUTO_LAUNCH, "info", {
+          tool,
+          exportFormat,
+          cameFromWelcomeEmail,
+        });
         if (tool) {
           switch (tool) {
             case "compress":
@@ -805,6 +817,15 @@ export function PendingEditorFileHydrator() {
       if (tourEndedHandler) {
         window.removeEventListener(TOUR_ENDED_EVENT, tourEndedHandler);
       }
+      // The effect was torn down before the 400 ms timer ran — React
+      // re-running it (dev Strict Mode does this on every mount) or a
+      // dependency changing during the lead-in, e.g. `file` being
+      // swapped right after the upload. Release the one-shot so the
+      // next run schedules the launch again. Without this the `?tool=`
+      // launch was dropped: the Unlock PDF tool opened a PDF that has
+      // an owner password but no open password without its unlock
+      // dialog (German QA F-64).
+      if (!fired) launchedRef.current = false;
     };
   }, [
     authLoaded,
