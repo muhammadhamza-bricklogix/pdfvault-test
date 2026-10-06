@@ -76,18 +76,29 @@ export const CONVERT_ROUTES: Record<string, ConvertRoute> = {
       "Convert in seconds — then download your PDF as soon as it’s ready.",
     accept: ["jpg", "jpeg"],
   },
-  "excel-to-pdf": {
-    title: "Convert Excel to PDF",
-    description:
-      "Upload an .xls or .xlsx and get a print-ready PDF with your formatting intact.",
-    accept: ["xls", "xlsx"],
-  },
-  "powerpoint-to-pdf": {
-    title: "Convert PowerPoint to PDF",
-    description:
-      "Turn .ppt or .pptx decks into shareable PDF slides in seconds.",
-    accept: ["ppt", "pptx"],
-  },
+  // excel-to-pdf + powerpoint-to-pdf hidden 2026-08-28 pending pipeline
+  // work. The UI tiles (components/sections/new-landing/landing-tools.tsx)
+  // + the ToolsModal catalog (components/sections/pdf-editor/ToolsModal.tsx
+  // → HIDDEN_TOOL_IDS) were already commented out, but the dynamic
+  // `/convert/[slug]` route kept these entries alive — direct URL navigation
+  // let users drop an .xlsx / .pptx that the backend then rejects with
+  // "Datei konnte nicht geöffnet werden, Dateityp wird nicht unterstützt."
+  // (QA DE High). Commenting the entries here makes the route 404 via
+  // `notFound()` in app/(landing)/convert/[slug]/page.tsx. Restore by
+  // uncommenting (and re-enabling the matching UI tiles) when the
+  // conversion pipeline is ready.
+  // "excel-to-pdf": {
+  //   title: "Convert Excel to PDF",
+  //   description:
+  //     "Upload an .xls or .xlsx and get a print-ready PDF with your formatting intact.",
+  //   accept: ["xls", "xlsx"],
+  // },
+  // "powerpoint-to-pdf": {
+  //   title: "Convert PowerPoint to PDF",
+  //   description:
+  //     "Turn .ppt or .pptx decks into shareable PDF slides in seconds.",
+  //   accept: ["ppt", "pptx"],
+  // },
   // txt-to-pdf hidden 2026-08-29 (PM: PDF/Word/PNG/JPG only). Restore
   // the entry (and its landing-tools tile) to re-enable.
   // "txt-to-pdf": {
