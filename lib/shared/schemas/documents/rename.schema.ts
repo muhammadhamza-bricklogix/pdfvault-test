@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const INVALID_CHARS = /[<>:"/\\|?*\x00-\x1f]/;
 const MAX_FILENAME_LENGTH = 255;
+
 /** Product limit for a renamed file, counted without the `.pdf` extension. */
 export const MAX_RENAME_NAME_LENGTH = 80;
 const NAME_TOO_LONG = `Name must be ${MAX_RENAME_NAME_LENGTH} characters or fewer`;

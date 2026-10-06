@@ -1,9 +1,10 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import { useSignIn } from "@clerk/nextjs";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
