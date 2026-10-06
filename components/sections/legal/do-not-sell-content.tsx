@@ -112,15 +112,16 @@ export function DoNotSellContent() {
         title="How to Opt Out"
       >
         <ul className="mt-2 list-disc space-y-2 pl-5">
-          {/* LEGAL_COUNSEL_PENDING — QA F-54: Weglot dropped the
-              space after "Cookie-Einstellungen:" ("Cookie-Einstellungen:Nutzen").
-              Using " — " (em dash with spaces) instead of ":" survives
-              Weglot's translation pass with the separator intact. */}
+          {/* LEGAL_COUNSEL_PENDING — QA F-54 (follow-up): hand-DE now
+              uses "<strong>…:</strong> Capitalised …" so the colon and
+              space land cleanly on /de/*. English fallback keeps the
+              em-dash so Weglot's non-/de/* output still has a safe
+              separator it can't collapse into "Cookie-Einstellungen:Nutzen". */}
           <LocaleText
             as="li"
             de={
               <>
-                <strong>Cookie-Einstellungen</strong> — nutzen Sie den Link
+                <strong>Cookie-Einstellungen:</strong> Nutzen Sie den Link
                 „Cookie-Einstellungen&ldquo; im Footer oder besuchen Sie unsere{" "}
                 <Link href={ROUTES.LEGAL.COOKIES}>Cookie-Richtlinie</Link>, um
                 Analyse- und Werbe-Cookies zu deaktivieren.
@@ -136,7 +137,7 @@ export function DoNotSellContent() {
             as="li"
             de={
               <>
-                <strong>E-Mail</strong> — schreiben Sie an{" "}
+                <strong>E-Mail:</strong> Schreiben Sie an{" "}
                 <a href="mailto:dpo@pdfvault.ai">dpo@pdfvault.ai </a> mit dem
                 Betreff „CCPA Opt-Out Request&ldquo; und der mit Ihrem Konto
                 verknüpften E-Mail-Adresse.
