@@ -102,12 +102,29 @@ export function AboutUsContent() {
           No downloads, no steep learning curve, no unnecessary steps between
           you and the file you need.
         </p>
-        <p className="mt-4 text-[15px] leading-relaxed text-[var(--pv-text-body)]">
+        {/* QA DE: Weglot auto-translation produced "behandeln wir jede
+            Datei … – sie werden …" (singular "jede Datei" paired with
+            plural "sie werden" — grammatical mismatch). Hand-DE
+            override normalises both halves to plural ("alle Dateien" +
+            "sie werden") so the subject + verb agree on /de/*. */}
+        <LocaleText
+          as="p"
+          className="mt-4 text-[15px] leading-relaxed text-[var(--pv-text-body)]"
+          de={
+            <>
+              Wir bauen und verfeinern unser Toolkit kontinuierlich auf Basis
+              dessen, was unsere Nutzer tatsächlich brauchen, und wir
+              behandeln alle Dateien mit derselben Sorgfalt, die wir für
+              unsere eigenen wünschen würden — sie werden im Arbeitsspeicher
+              verarbeitet, nie gelesen und nie verkauft.
+            </>
+          }
+        >
           We&apos;re continually building and refining the toolkit based on what
           our users actually need, and we handle every file with the same care
           we&apos;d want for our own — processed in memory, never read, and
           never sold.
-        </p>
+        </LocaleText>
       </section>
 
       {/* Pillars */}
