@@ -312,6 +312,13 @@ type PdfEditorStore = {
   getFabricJson: (page: number) => string | undefined;
   getSourcePageIndex: (displayPage?: number) => number;
   pushHistory: (page: number, json: string) => void;
+  /** Replace the baseline (idx 0) history entry for a page with `json`, but
+   *  only if no user edit has landed yet (history has exactly 1 entry and
+   *  idx is 0). Called by `useEditTextMode` right after async text
+   *  extraction completes so undoing all the way back lands on the
+   *  "extracted text, no user edits" state — not the pre-extraction empty
+   *  canvas that `useEditorHistory`'s mount effect captured. */
+  resetHistoryBaselineIfVirgin: (page: number, json: string) => void;
   reorderPages: (fromDisplay: number, toDisplay: number) => void;
   setPageOrder: (pageOrder: number[]) => void;
   redo: (page: number) => string | undefined;
@@ -382,6 +389,9 @@ type PdfEditorStore = {
    */
   pendingOpenExportModal: boolean;
   setPendingOpenExportModal: (value: boolean) => void;
+  /** One-shot `?tool=` action for HamburgerMenu, which mounts after the PDF loads. */
+  pendingMenuAction: "split" | "flatten" | null;
+  setPendingMenuAction: (value: "split" | "flatten" | null) => void;
   setIsFindReplaceOpen: (value: boolean) => void;
   setIsFormFieldsModalOpen: (value: boolean) => void;
   setIsPageNumbersModalOpen: (value: boolean) => void;
@@ -414,6 +424,28 @@ type PdfEditorStore = {
   setThumbnailSnapshot: (displayPage: number, dataUrl: string) => void;
   clearThumbnailSnapshots: () => void;
   undo: (page: number) => string | undefined;
+
+  /**
+   * Row 77: Interleaved undo log for actions that aren't captured by the
+   * per-page Fabric history. Each push records the KIND of action most
+   * recently performed so the editor can walk it in reverse order and
+   * undo either a Fabric canvas edit (per `historyByPage`) or a global
+   * `backgroundImageConfig` change — matching the user's mental model
+   * that Ctrl+Z reverses "whatever I just did" regardless of layer.
+   *
+   *   • `backgroundImageUndoStack` keeps the PREVIOUS `backgroundImageConfig`
+   *     snapshot before each signature-touching mutation, so a pop restores
+   *     the state the user saw before applying the background image.
+   *   • `undoActionKindStack` is a chronological log of action kinds. On
+   *     undo the top entry picks whether to pop a background config or
+   *     call the Fabric per-page undo. Baseline Fabric snapshots (the
+   *     one `useEditorHistory` pushes on mount) are NOT recorded here —
+   *     only user-driven edits.
+   */
+  backgroundImageUndoStack: BackgroundImageConfig[];
+  undoActionKindStack: Array<"fabric" | "bgImage">;
+  undoBackgroundImageConfig: () => boolean;
+  popUndoActionKind: () => "fabric" | "bgImage" | undefined;
 };
 
 export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
@@ -433,6 +465,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   pendingCloudSaveAfterReload: false,
   postSaveReloadPending: false,
   pendingOpenExportModal: false,
+  pendingMenuAction: null,
   fontDataByLoadedName: new Map(),
   historyByPage: new Map(),
   historyIndexByPage: new Map(),
@@ -469,6 +502,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   thumbnailSnapshots: new Map(),
   watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
   backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
+  backgroundImageUndoStack: [],
+  undoActionKindStack: [],
   pageNumbersConfig: { ...DEFAULT_PAGE_NUMBERS_CONFIG },
   zoom: 1.0,
 
@@ -591,6 +626,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       thumbnailSnapshots: new Map(),
       watermarkConfig: { ...DEFAULT_WATERMARK_CONFIG },
       backgroundImageConfig: { ...DEFAULT_BACKGROUND_IMAGE_CONFIG },
+      backgroundImageUndoStack: [],
+      undoActionKindStack: [],
       pageNumbersConfig: { ...DEFAULT_PAGE_NUMBERS_CONFIG },
       zoom: 1.0,
     }),
@@ -671,6 +708,12 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       const idx = state.historyIndexByPage.get(source) ?? -1;
       // Discard any redo states ahead of current index
       const trimmed = history.slice(0, idx + 1);
+      // Row 77: a baseline push (page's first-ever history entry) is NOT a
+      // user action — it's `useEditorHistory`'s mount-time snapshot. Only
+      // real edits (push onto an existing stack) belong in the interleaved
+      // undo kind log so a lone bg-image add doesn't get hidden behind an
+      // empty baseline fabric pop.
+      const isBaselinePush = trimmed.length === 0;
 
       trimmed.push(json);
       if (trimmed.length > MAX_HISTORY) trimmed.shift();
@@ -680,7 +723,28 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
       newHistory.set(source, trimmed);
       newIndex.set(source, trimmed.length - 1);
 
-      return { historyByPage: newHistory, historyIndexByPage: newIndex };
+      return {
+        historyByPage: newHistory,
+        historyIndexByPage: newIndex,
+        undoActionKindStack: isBaselinePush
+          ? state.undoActionKindStack
+          : [...state.undoActionKindStack, "fabric" as const],
+      };
+    }),
+
+  resetHistoryBaselineIfVirgin: (displayPage, json) =>
+    set((state) => {
+      const source = resolveSourcePage(displayPage, state.pageOrder);
+      const history = state.historyByPage.get(source) ?? [];
+      const idx = state.historyIndexByPage.get(source) ?? -1;
+
+      if (history.length !== 1 || idx !== 0) return {};
+
+      const newHistory = new Map(state.historyByPage);
+
+      newHistory.set(source, [json]);
+
+      return { historyByPage: newHistory };
     }),
 
   redo: (displayPage) => {
@@ -856,6 +920,7 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setPdfSourceUrl: (url) => set({ pdfSourceUrl: url }),
   setIsCompressModalOpen: (value) => set({ isCompressModalOpen: value }),
   setPendingOpenExportModal: (value) => set({ pendingOpenExportModal: value }),
+  setPendingMenuAction: (value) => set({ pendingMenuAction: value }),
   setIsFindReplaceOpen: (value) => set({ isFindReplaceOpen: value }),
   setIsFormFieldsModalOpen: (value) => set({ isFormFieldsModalOpen: value }),
   setIsPageNumbersModalOpen: (value) => set({ isPageNumbersModalOpen: value }),
@@ -932,6 +997,20 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
   setBackgroundImageConfig: (config) =>
     set((state) => {
       const touchesSignature = Object.keys(config).some((k) => k !== "enabled");
+      // Row 77: capture the pre-change config so a subsequent Undo can
+      // restore it. Only snapshot when the mutation actually changes the
+      // image / fit / scope / opacity payload — enabled-only toggles
+      // (used for in-session preview flicker) are not user intent to
+      // "add a background".
+      const nextUndoStack = touchesSignature
+        ? [
+            ...state.backgroundImageUndoStack,
+            { ...state.backgroundImageConfig },
+          ]
+        : state.backgroundImageUndoStack;
+      const nextKindStack = touchesSignature
+        ? [...state.undoActionKindStack, "bgImage" as const]
+        : state.undoActionKindStack;
 
       return {
         backgroundImageConfig: {
@@ -944,6 +1023,8 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
         // Same dirty-flip as the watermark setter — without this the upload
         // is silently skipped by the hasUnsavedChanges short-circuit.
         ...(touchesSignature ? { hasUnsavedChanges: true } : {}),
+        backgroundImageUndoStack: nextUndoStack,
+        undoActionKindStack: nextKindStack,
       };
     }),
   setPageNumbersConfig: (config) =>
@@ -981,5 +1062,44 @@ export const usePdfEditorStore = create<PdfEditorStore>((set, get) => ({
     });
 
     return history[newIdx];
+  },
+
+  // Row 77: pops the most recently-recorded action kind so the editor
+  // history hook can route the next undo correctly. Returns undefined
+  // when nothing is reversible — the hook falls through to its own
+  // canUndo short-circuit in that case.
+  popUndoActionKind: () => {
+    const stack = get().undoActionKindStack;
+
+    if (stack.length === 0) return undefined;
+    const top = stack[stack.length - 1];
+
+    set((s) => ({
+      undoActionKindStack: s.undoActionKindStack.slice(0, -1),
+    }));
+
+    return top;
+  },
+
+  // Pops the previous background-image config off the stack and sets it as
+  // the current config. Returns true when a restore happened so the caller
+  // can skip the fabric-undo codepath. Used by `useEditorHistory.undo` when
+  // the top of `undoActionKindStack` is "bgImage".
+  undoBackgroundImageConfig: () => {
+    const stack = get().backgroundImageUndoStack;
+
+    if (stack.length === 0) return false;
+    const prev = stack[stack.length - 1];
+
+    set((s) => ({
+      backgroundImageConfig: { ...prev },
+      backgroundImageUndoStack: s.backgroundImageUndoStack.slice(0, -1),
+      // Reset the baked-signature so the next save re-bakes with the
+      // restored config instead of thinking it already matches.
+      lastBakedBackgroundImageSignature: null,
+      hasUnsavedChanges: true,
+    }));
+
+    return true;
   },
 }));

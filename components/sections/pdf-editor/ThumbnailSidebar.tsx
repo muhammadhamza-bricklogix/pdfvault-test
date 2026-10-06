@@ -78,6 +78,20 @@ function Thumbnail({
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
+  // Row 95 QA 2026-10-04: after Add Page (and any programmatic page nav),
+  // scroll the newly-active thumbnail into view so users see where the
+  // insertion landed instead of having to hunt for it in the sidebar.
+  // `block: "nearest"` avoids yanking the sidebar when the active page
+  // is already visible, and skips when the DndKit dragging-overlay copy
+  // transiently sets isActive on its own.
+  useEffect(() => {
+    if (!isActive || isDragging) return;
+    const el = containerRef.current;
+
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [isActive, isDragging]);
+
   const isBlank = draftPage?.kind === "blank";
   const isImported = draftPage?.kind === "imported";
 

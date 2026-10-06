@@ -34,6 +34,8 @@ interface ToolLandingPageProps {
    * for the full list of valid slugs.
    */
   tool: string;
+  /** Optional `TOOL_HINTS` key when several pages share one tool slug. */
+  hint?: string;
   /**
    * File extensions the picker accepts (without leading dot). Every composer
    * tool takes a PDF by default.
@@ -62,6 +64,7 @@ export function ToolLandingPage({
   title,
   description,
   tool,
+  hint,
   acceptExtensions = ["pdf"],
   i18nKey,
 }: ToolLandingPageProps) {
@@ -100,13 +103,13 @@ export function ToolLandingPage({
           <div className="pv-container flex flex-col items-center text-center">
             <h1
               {...fenceProps}
-              className={`font-bold leading-[1.05] tracking-[-0.03em] whitespace-nowrap text-[clamp(15px,5.5vw,56px)] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
+              className={`font-bold leading-[1.05] tracking-[-0.03em] text-balance text-[clamp(15px,5.5vw,56px)] text-[#121212] ${fenceProps.className ?? ""}`.trim()}
             >
               {heroTitle}
             </h1>
             <p
               {...fenceProps}
-              className={`mt-6 font-medium leading-relaxed whitespace-nowrap text-[clamp(11px,2.3vw,20px)] text-[var(--pv-gray-8)] ${fenceProps.className ?? ""}`.trim()}
+              className={`mt-6 font-medium leading-relaxed text-balance text-[clamp(15px,2.3vw,20px)] text-[var(--pv-gray-8)] ${fenceProps.className ?? ""}`.trim()}
             >
               {heroDescription}
             </p>
@@ -116,6 +119,7 @@ export function ToolLandingPage({
           <div className="mx-auto w-full max-w-[880px] px-6">
             <UploadWorkspace
               acceptExtensions={acceptExtensions}
+              hint={hint}
               tool={tool}
               variant="hero"
             />

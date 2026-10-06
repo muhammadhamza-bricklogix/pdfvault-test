@@ -245,6 +245,8 @@ interface UploadWorkspaceProps {
   /** Editor tool slug to auto-launch after the file loads
    *  (e.g. `"password"`, `"compress"`, `"manage"`). */
   tool?: string;
+  /** `TOOL_HINTS` key forwarded as `?hint=` (see `ToolLandingPage`). */
+  hint?: string;
   /** Export format to auto-fire once the file loads in the editor
    *  (e.g. `"docx"` for /convert/pdf-to-word). */
   exportFormat?: string;
@@ -264,6 +266,7 @@ interface UploadWorkspaceProps {
 export function UploadWorkspace({
   acceptExtensions,
   exportFormat,
+  hint,
   tool,
   variant = "full",
 }: UploadWorkspaceProps = {}) {
@@ -378,13 +381,60 @@ export function UploadWorkspace({
 
       if (documentId) query.set("id", documentId);
       if (tool) query.set("tool", tool);
+      if (tool && hint) query.set("hint", hint);
       if (exportFormat && !opts?.skipExport) query.set("export", exportFormat);
       const q = query.toString();
       const base = withLocalePrefix(ROUTES.TOOLS.PDF_EDITOR);
 
       return q ? `${base}?${q}` : base;
     },
-    [tool, exportFormat, withLocalePrefix],
+    [tool, hint, exportFormat, withLocalePrefix],
+  );
+
+  // Signed-in backend upload/conversion, then open the saved doc in composer.
+  const convertAndOpenInComposer = useCallback(
+    async (
+      tempId: string,
+      source: File,
+      filename: string,
+      existingDocId?: string,
+    ) => {
+      usePendingConversionsStore.getState().add({
+        tempId,
+        file: source,
+        filename,
+        sizeBytes: source.size,
+      });
+      setOpening(true);
+      const loadingKey = toast.loading({
+        title: isPdf(source) ? "Saving to My PDFs" : "Converting to PDF",
+        description: filename,
+      });
+
+      try {
+        const created = await runPendingConversion(
+          tempId,
+          source,
+          existingDocId,
+        );
+
+        if (!created) {
+          toast.error({
+            title: "Conversion failed",
+            description: "We couldn't convert your document. Please try again.",
+          });
+          setOpening(false);
+
+          return;
+        }
+
+        usePdfEditorStore.getState().clearFile();
+        router.push(buildComposerHref(created.id));
+      } finally {
+        toast.close(loadingKey);
+      }
+    },
+    [buildComposerHref, router],
   );
 
   const openFileInEditor = useCallback(
@@ -569,15 +619,9 @@ export function UploadWorkspace({
 
       // Convert routes for signed-in users. Two branches by direction:
       //
-      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): register a pending
-      //     conversion in the Zustand store, fire the convert+save runner
-      //     as a background promise, then navigate to `/dashboard`
-      //     immediately. The dashboard file table renders a "Preparing
-      //     your document…" placeholder row driven by the store while the
-      //     runner works. No toast on this page — the placeholder row on
-      //     the dashboard is the only progress affordance. No paywall
-      //     either; that gate fires when the user clicks Download / Open
-      //     on the completed row.
+      //   • X→PDF (`!exportFormat`, e.g. word-to-pdf): convert + save via
+      //     the backend, then open the saved doc in composer. No paywall
+      //     here; that gate fires on Download.
       //
       //   • PDF→X (`exportFormat` set, e.g. pdf-to-word): no early
       //     paywall here. Save + open editor with `?export=<format>`;
@@ -640,21 +684,13 @@ export function UploadWorkspace({
             return;
           }
 
-          usePendingConversionsStore.getState().add({
-            tempId,
-            file: picked,
-            filename: pdfName,
-            sizeBytes: picked.size,
-          });
-
           logger.event(EVENTS.UPLOAD_OPEN_EDITOR, "info", {
             documentId: null,
             tool: null,
             exportFormat: null,
           });
 
-          void runPendingConversion(tempId, picked);
-          router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+          await convertAndOpenInComposer(tempId, picked, pdfName);
 
           return;
         }
@@ -811,6 +847,7 @@ export function UploadWorkspace({
     [
       authLoaded,
       buildComposerHref,
+      convertAndOpenInComposer,
       isSignedIn,
       pathname,
       requiresAuth,
@@ -1012,22 +1049,14 @@ export function UploadWorkspace({
     if (!convertDuplicate) return;
     const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-    usePendingConversionsStore.getState().add({
-      tempId,
-      file,
-      filename,
-      sizeBytes: file.size,
-    });
-
     logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
       filename,
       documentId: existingDocId,
       resolution: "overwrite",
     });
 
-    void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+    void convertAndOpenInComposer(tempId, file, filename, existingDocId);
   };
 
   const handleConvertDuplicateCancelHero = () => {
@@ -1075,7 +1104,7 @@ export function UploadWorkspace({
               {file ? (
                 <div className="flex flex-col items-center">
                   <HeroFolderIcon />
-                  <p className="mt-6 text-[18px] font-semibold text-[#121212]">
+                  <p className="mt-6 max-w-full text-center text-[18px] font-semibold text-[#121212] [overflow-wrap:anywhere]">
                     {file.name}
                   </p>
                   <p className="mt-1 text-[14px] text-[#818285]">
@@ -1133,7 +1162,11 @@ export function UploadWorkspace({
                     className="notranslate wg-notranslate mt-5 text-[14px] text-[#8A8A8A]"
                     translate="no"
                   >
-                    {tUpload("maxFileSize")}
+                    {/* CSS content: Weglot re-translated this line and dropped the locale digits. */}
+                    <span
+                      className="after:content-[attr(data-label)]"
+                      data-label={tUpload("maxFileSize")}
+                    />
                   </p>
                 </div>
               )}
@@ -1214,26 +1247,15 @@ export function UploadWorkspace({
     if (!convertDuplicate) return;
     const { file, filename, existingDocId, tempId } = convertDuplicate;
 
-    // Same dispatch as the no-duplicate path, plus the existingDocId
-    // so the backend upserts. Placeholder row uses the existing id so
-    // the dashboard doesn't briefly show a new pending tile alongside
-    // the one about to be overwritten.
-    usePendingConversionsStore.getState().add({
-      tempId,
-      file,
-      filename,
-      sizeBytes: file.size,
-    });
-
+    // Upload into the existing doc id so the backend versions it.
     logger.event(EVENTS.UPLOAD_DUPLICATE_DETECTED, "info", {
       filename,
       documentId: existingDocId,
       resolution: "overwrite",
     });
 
-    void runPendingConversion(tempId, file, existingDocId);
     setConvertDuplicate(null);
-    router.push(withLocalePrefix(ROUTES.APP.DASHBOARD));
+    void convertAndOpenInComposer(tempId, file, filename, existingDocId);
   };
 
   const handleConvertDuplicateCancel = () => {
@@ -1293,7 +1315,7 @@ export function UploadWorkspace({
                     src="/landing/upload-image.png"
                     width={180}
                   />
-                  <p className="mt-6 text-[18px] font-semibold text-[var(--pv-text-primary)]">
+                  <p className="mt-6 max-w-full text-center text-[18px] font-semibold text-[var(--pv-text-primary)] [overflow-wrap:anywhere]">
                     {file.name}
                   </p>
                   <p className="mt-1 text-[14px] text-[var(--pv-text-secondary)]">

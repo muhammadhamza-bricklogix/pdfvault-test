@@ -88,10 +88,20 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       };
     };
 
+    // Clamp a scene point to the canvas's base dimensions so the user can't
+    // start a drag or stretch a shape past the page edge. Fabric exposes
+    // base-coord dims via getWidth()/getHeight() (invariant #1: canvas keeps
+    // base dims; zoom is a render-time transform). Called at mouse down,
+    // move, and up — any one unclamped surface lets a corner escape.
+    const clampToCanvas = (point: { x: number; y: number }) => ({
+      x: Math.max(0, Math.min(fabricCanvas.getWidth(), point.x)),
+      y: Math.max(0, Math.min(fabricCanvas.getHeight(), point.y)),
+    });
+
     const onMouseDown = (opt: TPointerEventInfo) => {
       if (!classesRef.current) return;
 
-      const pointer = fabricCanvas.getScenePoint(opt.e);
+      const pointer = clampToCanvas(fabricCanvas.getScenePoint(opt.e));
       const {
         Ellipse: FEllipse,
         Line: FLine,
@@ -193,7 +203,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
     const onMouseMove = (opt: TPointerEventInfo) => {
       if (!draggingRef.current || !tempShapeRef.current) return;
 
-      const pointer = fabricCanvas.getScenePoint(opt.e);
+      const pointer = clampToCanvas(fabricCanvas.getScenePoint(opt.e));
       const { x: sx, y: sy } = startRef.current;
       const dx = pointer.x - sx;
       const dy = pointer.y - sy;
@@ -242,7 +252,7 @@ export function useShapeTool({ fabricCanvas }: UseShapeToolParams) {
       draggingRef.current = false;
       setIsCreatingShape(false);
 
-      const pointer = fabricCanvas.getScenePoint(opt.e);
+      const pointer = clampToCanvas(fabricCanvas.getScenePoint(opt.e));
       const { x: sx, y: sy } = startRef.current;
       const dx = Math.abs(pointer.x - sx);
       const dy = Math.abs(pointer.y - sy);

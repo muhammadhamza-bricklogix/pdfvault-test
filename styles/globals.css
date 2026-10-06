@@ -368,3 +368,38 @@ body {
   }
 }
 
+
+/* Long unbroken strings (e.g. file names) wrap inside toasts instead of overflowing. */
+.toast__content {
+  min-width: 0;
+}
+
+.toast__title,
+.toast__description {
+  overflow-wrap: anywhere;
+}
+
+/* iOS Safari zooms the page when an input under 16px is focused (Fabric's hidden textarea uses 1px) and keeps that zoom. It is invisible, so 16px changes nothing visually. */
+@media (pointer: coarse) {
+  textarea[data-fabric="textarea"] {
+    font-size: 16px !important;
+  }
+}
+
+/* iOS keyboard: HeroUI sizes modals to the visible height but pins them to the page top, so an iOS pan pushes them off-screen. Follow the visible area (vars from VisualViewportSync); unset vars = HeroUI defaults. The paywall translates itself, so it is skipped. */
+@media (pointer: coarse) {
+  .modal__backdrop:not([style*="translate3d"]) {
+    top: var(--pv-vv-top, 0px);
+    height: var(--pv-vv-height, var(--visual-viewport-height));
+  }
+}
+
+@layer utilities {
+  @media (pointer: coarse) {
+    html[style*="--pv-vv-height"]
+      .modal__backdrop:not([style*="translate3d"])
+      .modal__dialog {
+      max-height: calc(var(--pv-vv-height) - 32px) !important;
+    }
+  }
+}

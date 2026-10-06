@@ -128,6 +128,23 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
     setIsOpen(false);
   };
 
+  // iOS scrolls the page to show the focused input; restore it on close so the editor top bar stays visible.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const { scrollX, scrollY } = window;
+
+    return () => {
+      const active = document.activeElement;
+
+      if (active instanceof HTMLElement) active.blur();
+      requestAnimationFrame(() => {
+        if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+          window.scrollTo(scrollX, scrollY);
+        }
+      });
+    };
+  }, [isOpen]);
+
   const goNext = () => {
     if (matches.length === 0) return;
     setActiveIndex((i) => (i + 1) % matches.length);
@@ -220,7 +237,8 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="!w-[92vw] !max-w-[520px]">
+        {/* Top-anchored on phones (HeroUI defaults to a bottom sheet) so the keyboard doesn't push it. */}
+        <Modal.Dialog className="!max-h-[calc(100dvh-32px)] !w-[92vw] !max-w-[520px] overflow-y-auto overscroll-contain max-sm:!mt-0">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>Find &amp; Replace</Modal.Heading>
@@ -233,7 +251,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
               </Label>
               <input
                 autoFocus
-                className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-default-200 px-3 py-2 text-base sm:text-sm"
                 placeholder="Search text"
                 type="text"
                 value={needle}
@@ -257,7 +275,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
                 Replace with
               </Label>
               <input
-                className="w-full rounded-md border border-default-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-default-200 px-3 py-2 text-base sm:text-sm"
                 placeholder="(leave empty to delete)"
                 type="text"
                 value={replacement}
@@ -382,7 +400,7 @@ export function FindReplaceModal({ fabricCanvas }: Props) {
             ) : null}
           </Modal.Body>
 
-          <Modal.Footer>
+          <Modal.Footer className="max-sm:flex-wrap">
             <Button
               isDisabled={matches.length === 0}
               size="sm"

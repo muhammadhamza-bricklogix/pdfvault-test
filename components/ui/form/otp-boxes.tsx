@@ -108,7 +108,7 @@ export function OtpBoxes({
     // the last box.
     const focusIndex = Math.min(index + next.length, length - 1);
 
-    refs.current[focusIndex]?.focus();
+    refs.current[focusIndex]?.focus({ preventScroll: true });
     refs.current[focusIndex]?.select();
   };
 
@@ -124,17 +124,17 @@ export function OtpBoxes({
 
           chars[index - 1] = "";
           emit(chars.join(""));
-          refs.current[index - 1]?.focus();
+          refs.current[index - 1]?.focus({ preventScroll: true });
         }
         event.preventDefault();
       }
       // Non-empty: default backspace clears the current box, then
       // the next keydown (empty) will pull focus back.
     } else if (event.key === "ArrowLeft" && index > 0) {
-      refs.current[index - 1]?.focus();
+      refs.current[index - 1]?.focus({ preventScroll: true });
       event.preventDefault();
     } else if (event.key === "ArrowRight" && index < length - 1) {
-      refs.current[index + 1]?.focus();
+      refs.current[index + 1]?.focus({ preventScroll: true });
       event.preventDefault();
     }
   };
