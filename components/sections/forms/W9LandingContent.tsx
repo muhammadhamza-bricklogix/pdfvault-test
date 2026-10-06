@@ -106,7 +106,21 @@ const BEFORE_YOU_START = [
     label: "Address & Taxpayer ID",
     items: [
       "The mailing address where you'd like to receive tax documents like a 1099",
-      "Your Social Security Number (SSN — individuals) or Employer Identification Number (EIN — businesses)",
+      // QA F-58: Weglot flipped between "Unternehmensidentifikationsnummer"
+      // and "Arbeitgeberidentifikationsnummer" for EIN. Hand-DE locks
+      // the term to "Arbeitgeberidentifikationsnummer (EIN)".
+      <LocaleText
+        key="ssn-or-ein"
+        de={
+          <>
+            Ihre Sozialversicherungsnummer (SSN — Einzelpersonen) oder
+            Arbeitgeberidentifikationsnummer (EIN — Unternehmen)
+          </>
+        }
+      >
+        Your Social Security Number (SSN — individuals) or Employer
+        Identification Number (EIN — businesses)
+      </LocaleText>,
     ],
   },
   {
@@ -132,7 +146,25 @@ const HOW_TO_STEPS = [
   {
     n: "3",
     title: "Add your address and TIN",
+    // Plain-text form used by the JSON-LD HowTo schema (step.text must
+    // be a string). The React render uses the hand-DE override below
+    // so visible copy says "Arbeitgeberidentifikationsnummer (EIN)".
     body: "Fill in your mailing address, then enter your SSN or EIN in the taxpayer ID section.",
+    // QA F-58: hand-DE keeps the EIN term consistent with other mentions.
+    bodyNode: (
+      <LocaleText
+        de={
+          <>
+            Geben Sie Ihre Postanschrift ein und tragen Sie dann Ihre SSN oder
+            Arbeitgeberidentifikationsnummer (EIN) im Abschnitt zur
+            Steueridentifikationsnummer ein.
+          </>
+        }
+      >
+        Fill in your mailing address, then enter your SSN or EIN in the taxpayer
+        ID section.
+      </LocaleText>
+    ),
   },
   {
     n: "4",
@@ -179,8 +211,28 @@ const FAQ: FaqEntry[] = [
   {
     id: "no-ein-yet",
     question: "What if I don't have an EIN yet?",
+    // Plain-text form used by the FAQPage JSON-LD schema. The React
+    // render uses answerNode below so the visible copy says
+    // "Arbeitgeberidentifikationsnummer (EIN)" consistently (QA F-58).
     answer:
       "Individuals and sole proprietors can generally use their Social Security Number instead. If you need an EIN for a registered business, you can apply for one through the IRS before completing the form.",
+    answerNode: (
+      <LocaleText
+        de={
+          <>
+            Einzelpersonen und Einzelunternehmer können in der Regel stattdessen
+            ihre Sozialversicherungsnummer verwenden. Wenn Sie für ein
+            eingetragenes Unternehmen eine Arbeitgeberidentifikationsnummer
+            (EIN) benötigen, können Sie diese vor dem Ausfüllen des Formulars
+            beim IRS beantragen.
+          </>
+        }
+      >
+        Individuals and sole proprietors can generally use their Social Security
+        Number instead. If you need an EIN for a registered business, you can
+        apply for one through the IRS before completing the form.
+      </LocaleText>
+    ),
   },
   {
     id: "fill-from-phone",
@@ -378,8 +430,10 @@ export function W9LandingContent() {
                     {group.label}
                   </p>
                   <ul className="mt-2 list-disc space-y-2 pl-6 text-sm leading-6 text-default-600 dark:text-default-400">
-                    {group.items.map((item) => (
-                      <li key={item}>{item}</li>
+                    {group.items.map((item, idx) => (
+                      <li key={typeof item === "string" ? item : `item-${idx}`}>
+                        {item}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -414,7 +468,7 @@ export function W9LandingContent() {
                       Step {step.n}. {step.title}.
                     </p>
                     <p className="mt-1 text-sm leading-6 text-default-600 dark:text-default-400">
-                      {step.body}
+                      {"bodyNode" in step ? step.bodyNode : step.body}
                     </p>
                   </div>
                 </li>
