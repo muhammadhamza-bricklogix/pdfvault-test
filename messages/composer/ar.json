@@ -60,6 +60,13 @@
     "versionHistory": "سجل الإصدارات"
   },
   "passwordModal": {
-    "notPasswordProtected": "ملف PDF هذا غير محمي بكلمة مرور — لا يوجد ما يجب إزالته."
+    "notPasswordProtected": "ملف PDF هذا غير محمي بكلمة مرور — لا يوجد ما يجب إزالته.",
+    "incorrectPassword": "كلمة المرور غير صحيحة. أدخل كلمة المرور المعينة حالياً لملف PDF هذا.",
+    "loadFailed": "تعذّر قراءة ملف PDF هذا للتحقق من كلمة المرور. قد يكون تالفاً.",
+    "verifyFailed": "تعذّر التحقق من كلمة المرور. يرجى المحاولة مرة أخرى.",
+    "alreadyUnlockedTitle": "ملف PDF مفتوح بالفعل",
+    "alreadyUnlockedBody": "يمكنك البدء بالتحرير فوراً.",
+    "removeProtectionHint": "كلمة المرور التي عيّنتها على ملف PDF مطلوبة لإزالة الحماية.",
+    "cancel": "إلغاء"
   }
 }
