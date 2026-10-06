@@ -2,7 +2,8 @@
   "nav": {
     "edit": "Bearbeiten",
     "convert": "Umwandeln",
-    "compress": "Komprimieren"
+    "compress": "Komprimieren",
+    "login": "Anmelden"
   },
   "footer": {
     "convert": "Umwandeln",
