@@ -84,6 +84,14 @@ export function WatermarkPropertiesContent({
 
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  const clearImage = useCallback(() => {
+    setConfig({ imageData: null });
+  }, [setConfig]);
+
+  const clearText = useCallback(() => {
+    setConfig({ text: "" });
+  }, [setConfig]);
+
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -134,7 +142,20 @@ export function WatermarkPropertiesContent({
           // Save the image bytes AND make sure the watermark is enabled +
           // type-switched to "image", so users who upload before flipping
           // the toggles still get a visible watermark on save/export.
-          setConfig({ enabled: true, imageData: dataUrl, type: "image" });
+          // Row 74/80: text watermark default rotation is -45° (slanted
+          // "CONFIDENTIAL" across the page — standard print convention).
+          // Image watermarks (logos, stamps) read best upright, and
+          // inheriting the -45° default when switching to image means
+          // the uploaded logo slants over whatever the user inserted —
+          // perceived as "the watermark rotated unexpectedly." Reset
+          // rotation to 0 at image upload. The Rotation controls below
+          // still let users dial in a non-zero angle after upload.
+          setConfig({
+            enabled: true,
+            imageData: dataUrl,
+            rotation: 0,
+            type: "image",
+          });
         } catch (err) {
           logger.captureError(err, "watermark.compress", {
             filename: file.name,
@@ -154,7 +175,12 @@ export function WatermarkPropertiesContent({
     <div
       className={
         scrollContainer
-          ? "flex max-h-[calc(100vh-10rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? // Row 115/121: `pb-6` keeps the custom-range Input from
+            // clipping against the scroll container's bottom edge when
+            // "Range" is picked. Without it the input corners sat on
+            // the modal's inside bottom border and the scrollbar
+            // couldn't scroll past them.
+            "flex max-h-[calc(100dvh-11rem)] min-w-48 max-w-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 pb-6 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : "flex min-w-48 max-w-full flex-col gap-4 overflow-x-hidden px-3 pb-4 sm:px-4"
       }
     >
@@ -195,17 +221,26 @@ export function WatermarkPropertiesContent({
       {config.type === "text" && (
         <>
           <Section title="Text">
-            <Input
-              aria-label="Watermark text"
-              className="text-sm"
-              placeholder="e.g. CONFIDENTIAL"
-              value={config.text}
-              // Auto-enable on first edit so users who type a watermark
-              // without flipping the Switch still get it baked at save time.
-              onChange={(e) =>
-                setConfig({ enabled: true, text: e.target.value })
-              }
-            />
+            <div className="flex flex-col gap-2">
+              <Input
+                aria-label="Watermark text"
+                className="text-sm"
+                placeholder="e.g. CONFIDENTIAL"
+                value={config.text}
+                // Auto-enable on first edit so users who type a watermark
+                // without flipping the Switch still get it baked at save time.
+                onChange={(e) =>
+                  setConfig({ enabled: true, text: e.target.value })
+                }
+              />
+              {config.text && (
+                <div className="flex justify-end px-1 py-0.5">
+                  <Button size="sm" variant="ghost" onPress={clearText}>
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
           </Section>
 
           <Section title="Font">
@@ -327,13 +362,31 @@ export function WatermarkPropertiesContent({
                 src={config.imageData}
               />
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={() => imageInputRef.current?.click()}
-            >
-              {config.imageData ? "Change Image" : "Upload Image"}
-            </Button>
+            {/* Row 111/113/119: Change Image + Remove buttons share equal
+                width via `flex-1` on both, with consistent gap-2 and no
+                asymmetric margins. Previously Change Image carried
+                `mx-1 my-1 flex-1` while Remove had no flex / margin, so the
+                two buttons rendered at different widths with an uneven gap. */}
+            <div className="flex items-center gap-2 py-0.5">
+              <Button
+                className="flex-1"
+                size="sm"
+                variant="ghost"
+                onPress={() => imageInputRef.current?.click()}
+              >
+                {config.imageData ? "Change Image" : "Upload Image"}
+              </Button>
+              {config.imageData && (
+                <Button
+                  className="flex-1"
+                  size="sm"
+                  variant="ghost"
+                  onPress={clearImage}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
             <Switch
               isSelected={config.scaleToPage}
               size="sm"

@@ -7,6 +7,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 import { PaywallProvider } from "@/components/sections/billing/PaywallProvider";
 import { AuthModal } from "@/components/shared/auth-modal";
+import { AuthReturnRestorer } from "@/components/shared/auth-return-restorer";
 import { DuplicateFilenameModal } from "@/components/shared/duplicate-filename-modal";
 import { EmailFirstModal } from "@/components/shared/email-first-modal";
 import { LoginToDownloadModal } from "@/components/shared/login-to-download-modal";
@@ -19,6 +20,7 @@ import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { OfflineBoot } from "@/components/shared/offline-boot";
 import { SentryUserContext } from "@/components/shared/sentry-user-context";
 import { UserSyncBoot } from "@/components/shared/user-sync-boot";
+import { VisualViewportSync } from "@/components/shared/visual-viewport-sync";
 import { UploadToastProvider } from "@/components/ui/upload-toast";
 
 import { QueryProvider } from "./query-provider";
@@ -45,6 +47,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <Toast.Provider gap={12} maxVisibleToasts={5} placement="top end" />
           <UploadToastProvider />
           <AuthModal />
+          <AuthReturnRestorer />
           <DuplicateFilenameModal />
           <EmailFirstModal />
           <LoginToDownloadModal />
@@ -56,6 +59,7 @@ export function AppProviders({ children, themeProps }: AppProvidersProps) {
           <SentryUserContext />
           <EditorEventsLogger />
           <LangPrefHonor />
+          <VisualViewportSync />
         </PaywallProvider>
       </QueryProvider>
     </NextThemesProvider>

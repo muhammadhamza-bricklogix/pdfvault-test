@@ -123,6 +123,7 @@ export const EVENTS = {
   HYDRATOR_POST_SIGNIN_RESTORE_OK: "hydrator.post_signin_restore_ok",
   HYDRATOR_BACKGROUND_AUTOSAVE_OK: "hydrator.background_autosave_ok",
   HYDRATOR_AUTO_LAUNCH: "hydrator.auto_launch",
+  AUTH_RETURN_RESTORED: "auth_return.restored",
 } as const;
 
 export type AppEventName = (typeof EVENTS)[keyof typeof EVENTS];

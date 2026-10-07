@@ -15,6 +15,18 @@ import { logger } from "@/lib/shared/utils/logger";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Same masking as the login/signup cards ("hou***@gmail.com").
+function maskEmailAddress(raw: string): string {
+  const at = raw.indexOf("@");
+
+  if (at <= 0) return raw;
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at);
+  const visible = local.slice(0, Math.min(3, local.length));
+
+  return `${visible}***${domain}`;
+}
+
 function safeRedirectPath(raw: string | null, fallback: string): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
     return fallback;
@@ -230,7 +242,7 @@ export function ForgotPasswordCard({
 
     if (!ok) return;
 
-    setNotice(`We sent a 6-digit code to ${value}.`);
+    setNotice(`We sent a 6-digit code to ${maskEmailAddress(value)}.`);
     setStep("reset");
   };
 
@@ -357,7 +369,7 @@ export function ForgotPasswordCard({
       <p className="mt-2 text-center text-[14px] leading-5 text-[#666666]">
         {step === "request"
           ? "Enter your email and we'll send you a code to reset it."
-          : `Enter the code we sent to ${email} and choose a new password.`}
+          : `Enter the code we sent to ${maskEmailAddress(email)} and choose a new password.`}
       </p>
 
       {step === "request" ? (
@@ -514,14 +526,17 @@ export function ForgotPasswordCard({
             {submitting ? null : <ArrowIcon />}
           </button>
 
-          <button
-            className="mt-3 block w-full text-center text-[13px] text-[#666666] hover:text-[#1a1c21] disabled:opacity-60"
-            disabled={resending}
-            type="button"
-            onClick={() => void onResend()}
-          >
-            {resending ? "Sending…" : "Didn't get it? Resend code"}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-1 text-[13px] text-[#666666]">
+            <p>Didn&apos;t get it?</p>
+            <button
+              className="cursor-pointer py-1 text-[#f12c23] underline underline-offset-2 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={resending}
+              type="button"
+              onClick={() => void onResend()}
+            >
+              {resending ? "Sending…" : "Resend code"}
+            </button>
+          </div>
         </form>
       )}
 

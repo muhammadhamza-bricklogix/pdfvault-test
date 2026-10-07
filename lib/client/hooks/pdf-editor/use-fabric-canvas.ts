@@ -108,6 +108,8 @@ export function useFabricCanvas({
       for (const property of [
         "annotationKind",
         "editorType",
+        "noteColor",
+        "noteIcon",
         "noteText",
         "linkUrl",
         "pdfTextWidth",
@@ -170,7 +172,21 @@ export function useFabricCanvas({
       const saved = getFabricJson(currentPage);
 
       if (saved) {
-        await fc.loadFromJSON(JSON.parse(saved));
+        // Gate `loadFromJSON` with `isRestoringHistory` so the per-object
+        // `object:added` events it fires don't reach the history / dirty
+        // listeners in `use-editor-history.ts` as fresh user adds. Without
+        // this, future ordering changes (e.g. moving `setFabricCanvas`
+        // earlier so listeners register before load) would cause each
+        // restored object to push a history entry and flip the dirty flag,
+        // making Ctrl+Z on a multi-page edit session strip restored
+        // content instead of the user's actual last action. Matches the
+        // post-save reload pattern in `PdfViewerCanvas.tsx:293`.
+        usePdfEditorStore.getState().setIsRestoringHistory(true);
+        try {
+          await fc.loadFromJSON(JSON.parse(saved));
+        } finally {
+          usePdfEditorStore.getState().setIsRestoringHistory(false);
+        }
 
         if (cancelled) return;
 

@@ -1,9 +1,11 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
+
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useVisualViewportFrame } from "@/lib/client/ui/visual-viewport";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -96,55 +98,9 @@ export function AuthModal() {
   // Local mode mirrors detail.mode initially so the in-card "switch"
   // link can flip tabs without dispatching a new event.
   const [mode, setMode] = useState<AuthModalMode>("login");
-  const [keyboardViewport, setKeyboardViewport] = useState<{
-    height: number;
-    top: number;
-  } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-
-  const scrollActiveElementIntoView = useCallback(
-    (block: ScrollLogicalPosition = "nearest") => {
-      const active = document.activeElement;
-
-      if (!(active instanceof HTMLElement)) return;
-      if (!dialogRef.current?.contains(active)) return;
-
-      active.scrollIntoView({
-        behavior: "smooth",
-        block,
-        inline: "nearest",
-      });
-    },
-    [],
-  );
-
-  const syncKeyboardViewport = useCallback(() => {
-    const visualViewport = window.visualViewport;
-    const active = document.activeElement;
-
-    if (
-      !visualViewport ||
-      !(active instanceof HTMLElement) ||
-      !dialogRef.current?.contains(active)
-    ) {
-      setKeyboardViewport(null);
-      return;
-    }
-
-    const keyboardIsOpen = visualViewport.height < window.innerHeight - 80;
-
-    if (!keyboardIsOpen) {
-      setKeyboardViewport(null);
-      return;
-    }
-
-    setKeyboardViewport({
-      height: Math.floor(visualViewport.height),
-      top: Math.max(0, Math.floor(visualViewport.offsetTop)),
-    });
-
-    requestAnimationFrame(() => scrollActiveElementIntoView("center"));
-  }, [scrollActiveElementIntoView]);
+  // Follows the visible area while the keyboard is open; VisualViewportSync reveals the focused field.
+  const keyboardViewport = useVisualViewportFrame(detail !== null);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -192,7 +148,6 @@ export function AuthModal() {
 
   const close = useCallback(() => {
     logger.event(EVENTS.SIGNIN_PROMPT_CANCELLED, "info");
-    setKeyboardViewport(null);
     setDetail(null);
   }, []);
 
@@ -210,30 +165,8 @@ export function AuthModal() {
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
-      setKeyboardViewport(null);
     };
   }, [close, detail]);
-
-  useEffect(() => {
-    if (!detail) return;
-
-    const visualViewport = window.visualViewport;
-
-    if (!visualViewport) return;
-
-    const handleViewportChange = () => {
-      syncKeyboardViewport();
-      scrollActiveElementIntoView("center");
-    };
-
-    visualViewport.addEventListener("resize", handleViewportChange);
-    visualViewport.addEventListener("scroll", handleViewportChange);
-
-    return () => {
-      visualViewport.removeEventListener("resize", handleViewportChange);
-      visualViewport.removeEventListener("scroll", handleViewportChange);
-    };
-  }, [detail, scrollActiveElementIntoView, syncKeyboardViewport]);
 
   const isOpen = detail !== null;
   const keyboardCardMaxHeight = keyboardViewport
@@ -276,14 +209,7 @@ export function AuthModal() {
       onClick={(event) => {
         if (event.target === event.currentTarget) close();
       }}
-      onFocusCapture={() => {
-        requestAnimationFrame(syncKeyboardViewport);
-        window.setTimeout(syncKeyboardViewport, 250);
-      }}
-      onPointerDownCapture={(event) => {
-        event.stopPropagation();
-        window.setTimeout(syncKeyboardViewport, 0);
-      }}
+      onPointerDownCapture={(event) => event.stopPropagation()}
     >
       <div aria-hidden className={styles.backdropHitbox} onClick={close} />
       {/* Centred + scrollable-when-tall pattern (Tailwind UI / Headless

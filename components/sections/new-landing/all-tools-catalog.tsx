@@ -21,6 +21,13 @@ import { LocaleNavLink } from "./locale-nav-link";
  * "All Tools" modal, the parent watches the pathname to auto-close on
  * navigation — see `landing-header.tsx`.
  */
+// The catalog renders in a portal Weglot rewrites; CSS-generated text is invisible to it.
+function CatalogText({ text }: { text: string }) {
+  return (
+    <span className="after:content-[attr(data-label)]" data-label={text} />
+  );
+}
+
 export function AllToolsCatalog() {
   // Fence the "PDFVault" brand from Weglot so it doesn't render as
   // "PDFtresor" on /de/ (QA F-02 brand-name consistency).
@@ -48,7 +55,7 @@ export function AllToolsCatalog() {
               style={{ animationDelay: `${columnIndex * 90}ms` }}
             >
               <h2 className="text-[14px] font-normal uppercase leading-[16px] tracking-[-0.02em] text-black/60">
-                {column.heading}
+                <CatalogText text={t(`categories.${column.i18nKey}`)} />
               </h2>
 
               <ul className="mt-[43px] flex flex-col gap-[27px]">
@@ -62,7 +69,7 @@ export function AllToolsCatalog() {
                         <AllToolsIcon icon={tool.icon} />
                       </span>
                       <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-                        {tool.label}
+                        <CatalogText text={t(`tools.${tool.i18nKey}`)} />
                       </span>
                     </LocaleNavLink>
                   </li>

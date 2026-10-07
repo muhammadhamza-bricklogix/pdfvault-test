@@ -245,6 +245,8 @@ interface UploadWorkspaceProps {
   /** Editor tool slug to auto-launch after the file loads
    *  (e.g. `"password"`, `"compress"`, `"manage"`). */
   tool?: string;
+  /** `TOOL_HINTS` key forwarded as `?hint=` (see `ToolLandingPage`). */
+  hint?: string;
   /** Export format to auto-fire once the file loads in the editor
    *  (e.g. `"docx"` for /convert/pdf-to-word). */
   exportFormat?: string;
@@ -264,6 +266,7 @@ interface UploadWorkspaceProps {
 export function UploadWorkspace({
   acceptExtensions,
   exportFormat,
+  hint,
   tool,
   variant = "full",
 }: UploadWorkspaceProps = {}) {
@@ -378,13 +381,14 @@ export function UploadWorkspace({
 
       if (documentId) query.set("id", documentId);
       if (tool) query.set("tool", tool);
+      if (tool && hint) query.set("hint", hint);
       if (exportFormat && !opts?.skipExport) query.set("export", exportFormat);
       const q = query.toString();
       const base = withLocalePrefix(ROUTES.TOOLS.PDF_EDITOR);
 
       return q ? `${base}?${q}` : base;
     },
-    [tool, exportFormat, withLocalePrefix],
+    [tool, hint, exportFormat, withLocalePrefix],
   );
 
   // Signed-in backend upload/conversion, then open the saved doc in composer.
@@ -1100,7 +1104,7 @@ export function UploadWorkspace({
               {file ? (
                 <div className="flex flex-col items-center">
                   <HeroFolderIcon />
-                  <p className="mt-6 text-[18px] font-semibold text-[#121212]">
+                  <p className="mt-6 max-w-full text-center text-[18px] font-semibold text-[#121212] [overflow-wrap:anywhere]">
                     {file.name}
                   </p>
                   <p className="mt-1 text-[14px] text-[#818285]">
@@ -1158,7 +1162,11 @@ export function UploadWorkspace({
                     className="notranslate wg-notranslate mt-5 text-[14px] text-[#8A8A8A]"
                     translate="no"
                   >
-                    {tUpload("maxFileSize")}
+                    {/* CSS content: Weglot re-translated this line and dropped the locale digits. */}
+                    <span
+                      className="after:content-[attr(data-label)]"
+                      data-label={tUpload("maxFileSize")}
+                    />
                   </p>
                 </div>
               )}
@@ -1307,7 +1315,7 @@ export function UploadWorkspace({
                     src="/landing/upload-image.png"
                     width={180}
                   />
-                  <p className="mt-6 text-[18px] font-semibold text-[var(--pv-text-primary)]">
+                  <p className="mt-6 max-w-full text-center text-[18px] font-semibold text-[var(--pv-text-primary)] [overflow-wrap:anywhere]">
                     {file.name}
                   </p>
                   <p className="mt-1 text-[14px] text-[var(--pv-text-secondary)]">

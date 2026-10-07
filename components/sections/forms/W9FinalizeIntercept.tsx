@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { AUTH_RETURN_PARAM } from "@/lib/client/auth/auto-signup";
 import { normalizeW9ValuesForFinalize } from "@/lib/client/forms/normalize-w9-values";
 import { savePendingW9Values } from "@/lib/client/forms/pending-w9-values";
 import { renderPdfPagesToImages } from "@/lib/client/forms/render-pdf-pages-to-images";
@@ -908,7 +909,9 @@ export function W9FinalizeIntercept() {
 
     // Small delay mirrors the pdf-composer hydrator Step 4 pattern —
     // gives the render tree a beat to settle before the paywall pops.
+    let fired = false;
     const timeoutId = window.setTimeout(() => {
+      fired = true;
       window.dispatchEvent(
         new CustomEvent(EXPORT_EVENT, {
           detail: {
@@ -917,20 +920,25 @@ export function W9FinalizeIntercept() {
           },
         }),
       );
+
+      // Strip the one-shot params so a refresh mid-paywall doesn't
+      // re-fire the download. Only after firing: stripping first
+      // re-ran this effect and cancelled the timer.
+      const cleaned = new URLSearchParams(searchParams.toString());
+
+      cleaned.delete(EXPORT_INTENT_PARAM);
+      cleaned.delete(EXPORT_FILENAME_PARAM);
+      cleaned.delete(AUTH_RETURN_PARAM);
+      const nextQuery = cleaned.toString();
+
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
     }, 400);
 
-    // Strip the one-shot params so a refresh mid-paywall doesn't
-    // re-fire the download. Match pdf-composer hydrator's URL-clean
-    // behaviour.
-    const cleaned = new URLSearchParams(searchParams.toString());
-
-    cleaned.delete(EXPORT_INTENT_PARAM);
-    cleaned.delete(EXPORT_FILENAME_PARAM);
-    const nextQuery = cleaned.toString();
-
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
-
-    return () => window.clearTimeout(timeoutId);
+    // Re-arm if a dependency change cancels the launch before it fires.
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (!fired) autoLaunchedRef.current = false;
+    };
   }, [authLoaded, isSignedIn, sessionId, searchParams, pathname, router]);
 
   // Dedup key + last successful downloadUrl. Even though the backend is

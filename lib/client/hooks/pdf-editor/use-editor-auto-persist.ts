@@ -108,8 +108,12 @@ export function useEditorAutoPersist(fabricCanvas: FabricCanvas | null) {
 
       const id = result.document.id;
 
-      if (searchParams.get("id") !== id) {
-        const params = new URLSearchParams(searchParams.toString());
+      // Read the live URL: the captured params can be stale after the upload
+      // and would put back one-shot params (e.g. `?export=`) already consumed.
+      const liveParams = new URLSearchParams(window.location.search);
+
+      if (liveParams.get("id") !== id) {
+        const params = liveParams;
 
         params.set("id", id);
         router.replace(`${ROUTES.TOOLS.PDF_EDITOR}?${params.toString()}`);

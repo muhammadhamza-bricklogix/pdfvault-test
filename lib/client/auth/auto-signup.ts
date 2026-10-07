@@ -1,6 +1,10 @@
 import type { SignInFutureResource } from "@clerk/shared/types";
 
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
+import {
+  clearAuthReturn,
+  rememberAuthReturn,
+} from "@/lib/client/auth/auth-return";
 import { getAuthToken } from "@/lib/client/auth/get-auth-token";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -25,6 +29,19 @@ function appendDocIdToRedirect(redirect: string, docId: string): string {
   const separator = redirect.includes("?") ? "&" : "?";
 
   return `${redirect}${separator}id=${encodeURIComponent(docId)}`;
+}
+
+/**
+ * Marks the finalize redirect as a post-signup return, so the destination
+ * waits for the Clerk session before auto-launching the export/paywall
+ * (the `?id=` marker is missing whenever the pre-finalize upload fails).
+ */
+export const AUTH_RETURN_PARAM = "signedup";
+
+function appendAuthReturnMarker(redirect: string): string {
+  const separator = redirect.includes("?") ? "&" : "?";
+
+  return `${redirect}${separator}${AUTH_RETURN_PARAM}=1`;
 }
 
 /**
@@ -318,7 +335,7 @@ export async function runAutoSignup(params: {
   // `default:` filter on `pdf_editor_url`) and the hydrator does
   // its normal IDB rehydrate — exactly the pre-2026-09-18 flow.
   // ─────────────────────────────────────────────────────────────
-  let effectiveRedirect = safeRedirect;
+  let effectiveRedirect = appendAuthReturnMarker(safeRedirect);
   let uploadedDocId: string | null = null;
 
   try {
@@ -332,7 +349,10 @@ export async function runAutoSignup(params: {
       });
 
       uploadedDocId = uploaded.id;
-      effectiveRedirect = appendDocIdToRedirect(safeRedirect, uploadedDocId);
+      effectiveRedirect = appendDocIdToRedirect(
+        effectiveRedirect,
+        uploadedDocId,
+      );
 
       logger.event(EVENTS.AUTH_QUICK_SIGNUP_UPLOAD_OK, "info", {
         docId: uploadedDocId,
@@ -393,6 +413,8 @@ export async function runAutoSignup(params: {
   // Invariant #15: iOS Safari commits the Clerk session cookie during a
   // full-page nav; router.push races the cookie. suppressNextUnload keeps
   // the editor's beforeunload guard quiet during the redirect.
+  // Remembered before finalize: Clerk's own page refresh can beat our redirect.
+  rememberAuthReturn(effectiveRedirect);
   const { error: finalizeError } = await signIn.finalize({
     navigate: ({ decorateUrl }) => {
       suppressNextUnload();
@@ -401,6 +423,7 @@ export async function runAutoSignup(params: {
   });
 
   if (finalizeError) {
+    clearAuthReturn();
     logger.event(EVENTS.AUTH_QUICK_SIGNUP_FINALIZE_ERROR, "error", {
       errorMessage:
         finalizeError instanceof Error

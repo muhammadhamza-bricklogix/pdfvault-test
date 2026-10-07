@@ -22,6 +22,7 @@ export function sanitizeEmail(email?: string | null): string | null {
     .replace(/[\u0300-\u036f]/g, "");
 
   const atIndex = clean.lastIndexOf("@");
+
   if (atIndex <= 0) return null;
 
   let localPart = clean.slice(0, atIndex);
@@ -29,6 +30,7 @@ export function sanitizeEmail(email?: string | null): string | null {
 
   // Remove everything between "+" and "@"
   const plusIndex = localPart.indexOf("+");
+
   if (plusIndex !== -1) {
     localPart = localPart.slice(0, plusIndex);
   }
@@ -53,9 +55,11 @@ export function sanitizePhone(phone?: string | null): string | null {
 
   const trimmed = phone.trim();
   const stripped = trimmed.replace(/[\s\-_().]/g, "");
+
   if (!stripped) return null;
 
   let e164 = stripped;
+
   if (!e164.startsWith("+")) {
     e164 = `+${e164.replace(/\+/g, "")}`;
   } else {
@@ -63,6 +67,7 @@ export function sanitizePhone(phone?: string | null): string | null {
   }
 
   const digitsOnly = e164.slice(1);
+
   if (!/^\d{7,15}$/.test(digitsOnly)) {
     return null;
   }
@@ -80,8 +85,12 @@ export async function sha256Hex(value: string): Promise<string> {
   if (typeof window !== "undefined" && window.crypto?.subtle) {
     try {
       const msgBuffer = new TextEncoder().encode(value);
-      const hashBuffer = await window.crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashBuffer = await window.crypto.subtle.digest(
+        "SHA-256",
+        msgBuffer,
+      );
       const hashArray = Array.from(new Uint8Array(hashBuffer));
+
       return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     } catch (err) {
       if (process.env.NODE_ENV !== "production") {
@@ -109,6 +118,7 @@ export async function setBingUserData(userData: BingUserData): Promise<void> {
 
   if (userData.email) {
     const cleanEmail = sanitizeEmail(userData.email);
+
     if (cleanEmail) {
       pid.em = await sha256Hex(cleanEmail);
     }
@@ -116,6 +126,7 @@ export async function setBingUserData(userData: BingUserData): Promise<void> {
 
   if (userData.phone) {
     const cleanPhone = sanitizePhone(userData.phone);
+
     if (cleanPhone) {
       pid.ph = cleanPhone;
     }

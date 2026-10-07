@@ -1,4 +1,4 @@
-import { dispatchAuthModal } from "@/components/shared/auth-modal";
+import { dispatchEmailFirstModal } from "@/components/shared/email-first-modal";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { snapshotPendingEditorFile } from "@/lib/client/upload/pending-editor-file";
 import { toast } from "@/lib/shared/utils/toast";
@@ -67,12 +67,23 @@ export async function saveBeforeAction(
         // drops my edits" bug for save-before-action callers.
         await snapshotPendingEditorFile().catch(() => undefined);
 
-        // AuthModal (2026-08-28 unify). Cards' finalize
-        // `window.location.assign(returnTo)` (item #15) lands the user
-        // back on the same route with the snapshotted file intact.
-        dispatchAuthModal({
-          mode: "login",
+        // Email-first modal (QA 2026-09-16 / CLAUDE.md auth-chain #5):
+        // first-time users dropping a PDF, adding a watermark/background,
+        // or hitting any save-gated action land on the email-input modal
+        // which probes Clerk and branches to signup (new) or login
+        // (existing). The prior `dispatchAuthModal({ mode: "login" })`
+        // dropped first-time users on a login card with no account,
+        // which they reported as "unexpected login error after adding
+        // watermark/background" (row 5 of PDF Composer bugs sheet
+        // 2026-10-03). Downstream Clerk finalize path is unchanged —
+        // either card still ends with `window.location.assign(returnTo)`
+        // so the hydrator restores the snapshotted file (chain items
+        // #1-4 / #8-12 / #15).
+        dispatchEmailFirstModal({
           redirectUrl: returnTo,
+          title: "Save your edits",
+          subtitle: "Create an account to save and continue.",
+          submitLabel: "Continue",
         });
       } else if (reason === "cancelled-duplicate") {
         // User picked Cancel on the "file already exists" prompt.

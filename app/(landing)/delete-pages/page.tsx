@@ -13,6 +13,11 @@ export const metadata: Metadata = {
 
 export default function DeletePagesLandingPage() {
   return (
-    <ToolLandingPage description={DESCRIPTION} title={TITLE} tool="manage" />
+    <ToolLandingPage
+      description={DESCRIPTION}
+      hint="delete"
+      title={TITLE}
+      tool="manage"
+    />
   );
 }

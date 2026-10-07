@@ -106,7 +106,7 @@
       "pdfToPng": "PDF to PNG",
       "pdfToJpg": "PDF to JPG",
       "extractImages": "Extract Images",
-      "removeAnnotations": "Remove Annotations",
+      "removeAnnotations": "Flatten Annotations",
       "watermark": "Watermark",
       "formsW9": "Forms (W-9)",
       "forms1099Nec": "Forms (1099-NEC)",

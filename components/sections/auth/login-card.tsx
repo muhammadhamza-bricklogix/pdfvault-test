@@ -7,6 +7,10 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { OtpBoxes } from "@/components/ui/form/otp-boxes";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import {
+  clearAuthReturn,
+  rememberAuthReturn,
+} from "@/lib/client/auth/auth-return";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -86,6 +90,13 @@ function readClerkError(err: unknown, fallback: string): string {
   const raw = first?.longMessage ?? first?.message ?? "";
 
   return humaniseClerkMessage(raw, first?.code) || fallback;
+}
+
+function isSessionExistsError(err: unknown): boolean {
+  return (
+    (err as { errors?: { code?: string }[] })?.errors?.[0]?.code ===
+    "session_exists"
+  );
 }
 
 function humaniseClerkMessage(raw: string, code?: string): string {
@@ -298,6 +309,13 @@ export function LoginCard({
     [redirectUrl, searchParams],
   );
 
+  // A session can already exist (e.g. signed in from another tab); continue instead of erroring.
+  const continueAsSignedIn = () => {
+    suppressNextUnload();
+    rememberAuthReturn(afterSignInPath);
+    window.location.assign(afterSignInPath);
+  };
+
   // Post-verify navigation. Invariant #15: iOS Safari commits the Clerk
   // session cookie during a full-page navigation; router.push outruns the
   // commit and lands on middleware that reads the user as signed-out,
@@ -306,6 +324,8 @@ export function LoginCard({
     logger.event(EVENTS.SIGNIN_FINALIZE_START, "info", {
       redirectPath: afterSignInPath,
     });
+    // Remembered before finalize: Clerk's own page refresh can beat our redirect.
+    rememberAuthReturn(afterSignInPath);
     const { error: finalizeError } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
         // AuthModal opens on TOP of the editor (2026-08-28 unify), so
@@ -334,6 +354,7 @@ export function LoginCard({
     });
 
     if (finalizeError) {
+      clearAuthReturn();
       logger.event(EVENTS.SIGNIN_FINALIZE_ERROR, "error", {
         errorMessage:
           finalizeError instanceof Error
@@ -370,6 +391,7 @@ export function LoginCard({
       // full-page redirect to Google, which trips `beforeunload` when
       // the modal is opened from the editor with unsaved edits.
       suppressNextUnload();
+      rememberAuthReturn(afterSignInPath);
       await signIn.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,
@@ -469,8 +491,15 @@ export function LoginCard({
       const message = (error as { errors?: { message?: string }[] })
         ?.errors?.[0]?.message;
 
-      // Clerk returns 422 `verification_already_sent` (or a variant
-      // like `session_exists`) when we hit sendCode a second time in
+      // Must run before the "already exists" recovery below, which would otherwise match it.
+      if (code === "session_exists") {
+        continueAsSignedIn();
+
+        return false;
+      }
+
+      // Clerk returns 422 `verification_already_sent` (or a similar
+      // variant) when we hit sendCode a second time in
       // the same flow — e.g. React StrictMode's dev double-mount,
       // fast double-click on Resend, or the user reopening the modal
       // while a code is still valid. The code IS in the user's
@@ -565,6 +594,11 @@ export function LoginCard({
   ) => {
     event.preventDefault();
     if (!signIn) return;
+    if (clerk?.isSignedIn) {
+      continueAsSignedIn();
+
+      return;
+    }
 
     const trimmedEmail = email.trim();
 
@@ -618,7 +652,7 @@ export function LoginCard({
         logger.event(EVENTS.SIGNIN_CODE_SENT, "info");
         setCode("");
         setStep("codeVerify");
-        setNotice(`We sent a 6-digit code to ${trimmedEmail}.`);
+        setNotice(`We sent a 6-digit code to ${maskEmail(trimmedEmail)}.`);
         setSubmitting(false);
 
         return;
@@ -651,6 +685,11 @@ export function LoginCard({
       });
 
       if (createError) {
+        if (isSessionExistsError(createError)) {
+          continueAsSignedIn();
+
+          return;
+        }
         const msg = readClerkError(
           createError,
           "Couldn't sign you in. Please try again.",
@@ -697,6 +736,11 @@ export function LoginCard({
       setErrors({ form: "Sign-in didn't finish. Please try again." });
       setSubmitting(false);
     } catch (err) {
+      if (isSessionExistsError(err)) {
+        continueAsSignedIn();
+
+        return;
+      }
       logger.captureError(err, "signin.credentials");
       setErrors({
         form: readClerkError(err, "Couldn't sign you in. Please try again."),
@@ -723,6 +767,11 @@ export function LoginCard({
   const onSubmitCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!signIn) return;
+    if (clerk?.isSignedIn) {
+      continueAsSignedIn();
+
+      return;
+    }
 
     const trimmedCode = code.trim();
 
@@ -744,6 +793,11 @@ export function LoginCard({
         });
 
         if (attemptError) {
+          if (isSessionExistsError(attemptError)) {
+            continueAsSignedIn();
+
+            return;
+          }
           setErrors({
             code: readClerkError(
               attemptError,
@@ -791,6 +845,11 @@ export function LoginCard({
       const attemptError = verifyResult?.error ?? null;
 
       if (attemptError) {
+        if (isSessionExistsError(attemptError)) {
+          continueAsSignedIn();
+
+          return;
+        }
         setErrors({
           code: readClerkError(
             attemptError,
@@ -814,6 +873,11 @@ export function LoginCard({
       setErrors({ code: "Verification didn't finish. Try again." });
       setSubmitting(false);
     } catch (err) {
+      if (isSessionExistsError(err)) {
+        continueAsSignedIn();
+
+        return;
+      }
       logger.captureError(err, "signin.code_verify", {
         step,
         strategy: secondFactorStrategy,
@@ -835,7 +899,7 @@ export function LoginCard({
         const sent = await sendEmailCode(email);
 
         if (sent) {
-          setNotice(`A new code was sent to ${email}.`);
+          setNotice(`A new code was sent to ${maskEmail(email)}.`);
         }
 
         return;
@@ -1253,14 +1317,17 @@ export function LoginCard({
           </button>
 
           {showResendLink ? (
-            <button
-              className="mt-3 block w-full text-center text-[13px] text-[#666666] hover:text-[#1a1c21] disabled:opacity-60"
-              disabled={resending}
-              type="button"
-              onClick={() => void onResendCode()}
-            >
-              {resending ? "Sending…" : "Didn't get it? Resend code"}
-            </button>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-1 text-[13px] text-[#666666]">
+              <p>Didn&apos;t get it?</p>
+              <button
+                className="cursor-pointer py-1 text-[#f12c23] underline underline-offset-2 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={resending}
+                type="button"
+                onClick={() => void onResendCode()}
+              >
+                {resending ? "Sending…" : "Resend code"}
+              </button>
+            </div>
           ) : null}
         </form>
       )}

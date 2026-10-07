@@ -102,6 +102,7 @@ const PAID_MEDIUMS = new Set([
 function extractHostname(url: string): string | null {
   try {
     const parsed = new URL(url);
+
     return parsed.hostname.toLowerCase();
   } catch {
     return null;
@@ -137,6 +138,7 @@ function classifyTraffic(params: {
     if (PAID_MEDIUMS.has(normMedium)) {
       return { source: "Google Ads", medium: normMedium || "cpc" };
     }
+
     return { source: "Google", medium: normMedium || "referral" };
   }
 
@@ -152,6 +154,7 @@ function classifyTraffic(params: {
     if (PAID_MEDIUMS.has(normMedium)) {
       return { source: "Bing Ads", medium: normMedium || "cpc" };
     }
+
     return { source: "Bing", medium: normMedium || "referral" };
   }
 
@@ -189,6 +192,7 @@ function classifyTraffic(params: {
   if (utmSource) {
     const formatted =
       utmSource.charAt(0).toUpperCase() + utmSource.slice(1).toLowerCase();
+
     return {
       source: PAID_MEDIUMS.has(normMedium) ? `${formatted} Ads` : formatted,
       medium: normMedium || "campaign",
@@ -198,6 +202,7 @@ function classifyTraffic(params: {
   // 5. Referrer inspection
   if (referrer) {
     const refHost = extractHostname(referrer);
+
     if (refHost) {
       // Check organic search
       for (const engine of SEARCH_ENGINE_DOMAINS) {
@@ -258,14 +263,21 @@ export function captureAcquisition(): void {
     // If an attribution session already exists and this is internal navigation
     // (no new campaign or ad click on the URL), preserve the original first touch.
     const existing = getStoredAcquisition();
-    if (!hasExplicitCampaign && existing?.source && existing.source !== "Direct") {
+
+    if (
+      !hasExplicitCampaign &&
+      existing?.source &&
+      existing.source !== "Direct"
+    ) {
       return;
     }
 
     let referrer = document.referrer ? document.referrer : null;
+
     if (referrer) {
       const refHost = extractHostname(referrer);
       const currentHost = window.location.hostname.toLowerCase();
+
       // Ignore same-origin referrer
       if (refHost === currentHost) {
         referrer = null;
@@ -310,6 +322,7 @@ export function captureAcquisition(): void {
     };
 
     const serialized = JSON.stringify(data);
+
     writeCookie(COOKIE_NAME, serialized);
     try {
       localStorage.setItem(COOKIE_NAME, serialized);
@@ -330,6 +343,7 @@ export function getStoredAcquisition(): AcquisitionData | null {
 
   // Try cookie first
   const cookieVal = readCookie(COOKIE_NAME);
+
   if (cookieVal) {
     try {
       return JSON.parse(cookieVal) as AcquisitionData;
@@ -341,6 +355,7 @@ export function getStoredAcquisition(): AcquisitionData | null {
   // Fallback to localStorage
   try {
     const storageVal = localStorage.getItem(COOKIE_NAME);
+
     if (storageVal) {
       return JSON.parse(storageVal) as AcquisitionData;
     }
@@ -365,4 +380,3 @@ export function clearStoredAcquisition(): void {
     // Fail silently
   }
 }
-
