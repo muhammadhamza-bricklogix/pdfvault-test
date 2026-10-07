@@ -355,6 +355,49 @@ async function extractSequentialTextColors(
   return colors;
 }
 
+// Icon fonts (e.g. Font Awesome) give one glyph a long name as its text
+// ("Phone-Alt"), so the run is far narrower than its characters. Real text
+// stays above ~0.28em per character; icon runs measured 0.05-0.13em.
+const ICON_EM_PER_CHAR = 0.2;
+const iconFontCache = new WeakMap<PDFPageProxy, ReadonlySet<string>>();
+
+/** Fonts on this page detected as icon fonts by `extractTextBlocks`. */
+export function getIconFontNames(
+  page: PDFPageProxy,
+): ReadonlySet<string> | undefined {
+  return iconFontCache.get(page);
+}
+
+function findIconFonts(items: unknown[]): Set<string> {
+  const stats = new Map<string, { icon: number; text: number }>();
+
+  for (const item of items) {
+    if (!item || typeof item !== "object" || !("str" in item)) continue;
+    const { str, transform, fontName, width } = item as TextItem;
+
+    if (typeof str !== "string" || typeof fontName !== "string") continue;
+    if (!Array.isArray(transform) || transform.length < 6) continue;
+    const chars = str.replace(/\s/g, "").length;
+    const fontSize = Math.hypot(transform[2] as number, transform[3] as number);
+
+    if (!chars || !(fontSize > 0)) continue;
+    const entry = stats.get(fontName) ?? { icon: 0, text: 0 };
+
+    if (chars >= 2 && width / (fontSize * chars) < ICON_EM_PER_CHAR) {
+      entry.icon += 1;
+    } else {
+      entry.text += 1;
+    }
+    stats.set(fontName, entry);
+  }
+
+  return new Set(
+    [...stats]
+      .filter(([, s]) => s.icon > 0 && s.text === 0)
+      .map(([name]) => name),
+  );
+}
+
 /**
  * Extracts text items from a PDF page and converts their positions into
  * Fabric.js canvas coordinates (base space, zoom=1).
@@ -499,6 +542,18 @@ export async function extractTextBlocks(
     }
   }
 
+  // Icon glyphs stay painted by pdf.js (see use-page-renderer); an editable
+  // copy would draw their names ("Phone-Alt") over the neighbouring text.
+  const iconFonts = findIconFonts(items);
+
+  iconFontCache.set(page, iconFonts);
+  if (iconFonts.size > 0) {
+    logger.info("[PDFedits] text: icon fonts kept native", {
+      page: page.pageNumber,
+      fonts: [...iconFonts],
+    });
+  }
+
   for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
     const item = items[itemIndex];
 
@@ -508,6 +563,7 @@ export async function extractTextBlocks(
     const { str, transform, fontName } = textItem;
 
     if (typeof str !== "string" || !str.trim()) continue;
+    if (iconFonts.has(fontName)) continue;
     // pdf.js usually emits a 6-element affine matrix here, but a malformed
     // page or a marked-content artifact can leave `transform` null/short.
     // Reading `transform[4]` on null throws TypeError and kills the page.

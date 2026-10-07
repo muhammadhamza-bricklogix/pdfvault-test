@@ -1,6 +1,10 @@
 import type { SignInFutureResource } from "@clerk/shared/types";
 
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
+import {
+  clearAuthReturn,
+  rememberAuthReturn,
+} from "@/lib/client/auth/auth-return";
 import { getAuthToken } from "@/lib/client/auth/get-auth-token";
 import { documentsService } from "@/lib/shared/api/services/documents.service";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -409,6 +413,8 @@ export async function runAutoSignup(params: {
   // Invariant #15: iOS Safari commits the Clerk session cookie during a
   // full-page nav; router.push races the cookie. suppressNextUnload keeps
   // the editor's beforeunload guard quiet during the redirect.
+  // Remembered before finalize: Clerk's own page refresh can beat our redirect.
+  rememberAuthReturn(effectiveRedirect);
   const { error: finalizeError } = await signIn.finalize({
     navigate: ({ decorateUrl }) => {
       suppressNextUnload();
@@ -417,6 +423,7 @@ export async function runAutoSignup(params: {
   });
 
   if (finalizeError) {
+    clearAuthReturn();
     logger.event(EVENTS.AUTH_QUICK_SIGNUP_FINALIZE_ERROR, "error", {
       errorMessage:
         finalizeError instanceof Error

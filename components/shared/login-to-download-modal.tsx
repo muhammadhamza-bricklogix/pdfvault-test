@@ -12,6 +12,7 @@ import {
   type EmailFirstModalDetail,
 } from "@/components/shared/email-first-modal";
 import { GoogleIcon } from "@/components/sections/auth/auth-oauth";
+import { rememberAuthReturn } from "@/lib/client/auth/auth-return";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { ROUTES } from "@/lib/shared/constants/routes";
 import { EVENTS } from "@/lib/shared/utils/analytics-events";
@@ -100,6 +101,7 @@ export function LoginToDownloadModal() {
       // beforeunload guard the same way LoginCard does when opened
       // from the editor with unsaved edits.
       suppressNextUnload();
+      rememberAuthReturn(returnTo);
       await signIn.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,

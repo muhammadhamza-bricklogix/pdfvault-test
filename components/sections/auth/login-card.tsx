@@ -7,6 +7,10 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { OtpBoxes } from "@/components/ui/form/otp-boxes";
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import {
+  clearAuthReturn,
+  rememberAuthReturn,
+} from "@/lib/client/auth/auth-return";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -308,6 +312,7 @@ export function LoginCard({
   // A session can already exist (e.g. signed in from another tab); continue instead of erroring.
   const continueAsSignedIn = () => {
     suppressNextUnload();
+    rememberAuthReturn(afterSignInPath);
     window.location.assign(afterSignInPath);
   };
 
@@ -319,6 +324,8 @@ export function LoginCard({
     logger.event(EVENTS.SIGNIN_FINALIZE_START, "info", {
       redirectPath: afterSignInPath,
     });
+    // Remembered before finalize: Clerk's own page refresh can beat our redirect.
+    rememberAuthReturn(afterSignInPath);
     const { error: finalizeError } = await signIn.finalize({
       navigate: ({ decorateUrl }) => {
         // AuthModal opens on TOP of the editor (2026-08-28 unify), so
@@ -347,6 +354,7 @@ export function LoginCard({
     });
 
     if (finalizeError) {
+      clearAuthReturn();
       logger.event(EVENTS.SIGNIN_FINALIZE_ERROR, "error", {
         errorMessage:
           finalizeError instanceof Error
@@ -383,6 +391,7 @@ export function LoginCard({
       // full-page redirect to Google, which trips `beforeunload` when
       // the modal is opened from the editor with unsaved edits.
       suppressNextUnload();
+      rememberAuthReturn(afterSignInPath);
       await signIn.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,

@@ -5,12 +5,19 @@ import type { RefObject } from "react";
 
 import { useEffect, useState } from "react";
 
+import { getIconFontNames } from "@/lib/client/pdf-editor/text-extraction";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
 // pdf.js OPS constants for text rendering operations (31–49)
 const TEXT_OPS_MIN = 31;
 const TEXT_OPS_MAX = 49;
+// pdf.js OPS codes used to keep icon-font glyphs painted (see below).
+const OP_SAVE = 10;
+const OP_RESTORE = 11;
+const OP_SET_FONT = 37;
+const TEXT_PAINT_OPS_MIN = 44; // showText
+const TEXT_PAINT_OPS_MAX = 47; // nextLineSetSpacingShowText
 
 // PRD §7.1 — cache the parsed text-op index set per page proxy. Without
 // this, every zoom change re-fetches page.getOperatorList() (the render
@@ -129,20 +136,59 @@ export function usePageRenderer({
 
             textIndices = getTextOpIndices(page, opList);
           }
+          // Icon-font glyphs have no editable overlay, so keep painting them:
+          // run text state ops and paint only text set in an icon font.
+          const iconFonts = getIconFontNames(page);
+          const keepIconText = Boolean(iconFonts && iconFonts.size > 0);
+          let scannedTo = -1;
+          let currentFont: unknown = null;
+          let fontStack: unknown[] = [];
+
           // Check the list pdf.js is drawing: getOperatorList() is unoptimized, so its indices can drift.
           operationsFilter = (i: number) => {
-            const drawnOps = (
+            const drawnList = (
               renderTask as unknown as {
                 _internalRenderTask?: {
-                  operatorList?: { fnArray?: ArrayLike<number> };
+                  operatorList?: {
+                    fnArray?: ArrayLike<number>;
+                    argsArray?: ArrayLike<unknown[] | null>;
+                  };
                 };
               } | null
-            )?._internalRenderTask?.operatorList?.fnArray;
+            )?._internalRenderTask?.operatorList;
+            const drawnOps = drawnList?.fnArray;
 
             if (drawnOps) {
               const op = drawnOps[i];
 
-              return op < TEXT_OPS_MIN || op > TEXT_OPS_MAX;
+              if (!keepIconText) {
+                return op < TEXT_OPS_MIN || op > TEXT_OPS_MAX;
+              }
+
+              if (i <= scannedTo) {
+                scannedTo = -1;
+                currentFont = null;
+                fontStack = [];
+              }
+              for (let j = scannedTo + 1; j <= i; j++) {
+                const fn = drawnOps[j];
+
+                if (fn === OP_SAVE) fontStack.push(currentFont);
+                else if (fn === OP_RESTORE) {
+                  currentFont = fontStack.pop() ?? null;
+                } else if (fn === OP_SET_FONT) {
+                  currentFont = drawnList?.argsArray?.[j]?.[0] ?? null;
+                }
+              }
+              scannedTo = i;
+
+              if (op < TEXT_PAINT_OPS_MIN || op > TEXT_PAINT_OPS_MAX) {
+                return true;
+              }
+
+              return (
+                typeof currentFont === "string" && iconFonts!.has(currentFont)
+              );
             }
 
             return !textIndices.has(i);

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { peekAuthReturn } from "@/lib/client/auth/auth-return";
 import { AUTH_RETURN_PARAM } from "@/lib/client/auth/auto-signup";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import {
@@ -584,8 +585,12 @@ export function PendingEditorFileHydrator() {
     // deep-links keep firing immediately so the EmailFirstModal
     // path is unchanged. See revert commit 21c896ea for the
     // original diagnosis.
+    // A remembered auth return also covers login (no `signedup` marker).
     const isPostSigninReturn =
-      Boolean(docId) || cameFromWelcomeEmail || isAuthReturn;
+      Boolean(docId) ||
+      cameFromWelcomeEmail ||
+      isAuthReturn ||
+      peekAuthReturn() !== null;
 
     if (isPostSigninReturn && !isSignedIn) return;
 

@@ -28,7 +28,13 @@ const RECORD_KEY = "current";
 const MAX_AGE_MS = 30 * 60 * 1000;
 
 interface PendingRecord {
-  file: File;
+  /** Legacy records stored the File itself (rejected by WebKit private mode). */
+  file?: File;
+  /** File bytes; WebKit private browsing refuses Blob/File values in IndexedDB. */
+  bytes?: ArrayBuffer;
+  name?: string;
+  type?: string;
+  lastModified?: number;
   ts: number;
   /** Serialized Map<number, string> — IDB can't store Map directly. */
   fabricState?: Array<[number, string]>;
@@ -76,12 +82,16 @@ export async function savePendingEditorFile(
   fabricJsonByPage?: Map<number, string>,
   extractedPages?: Set<number>,
 ): Promise<void> {
+  const bytes = await file.arrayBuffer();
   const db = await open();
 
   if (!db) return;
 
   const record: PendingRecord = {
-    file,
+    bytes,
+    name: file.name,
+    type: file.type,
+    lastModified: file.lastModified,
     ts: Date.now(),
     fabricState:
       fabricJsonByPage && fabricJsonByPage.size > 0
@@ -93,15 +103,21 @@ export async function savePendingEditorFile(
         : undefined,
   };
 
-  await new Promise<void>((resolve) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
+  const saved = await new Promise<boolean>((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
 
-    tx.objectStore(STORE_NAME).put(record, RECORD_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => resolve();
-    tx.onabort = () => resolve();
+      tx.objectStore(STORE_NAME).put(record, RECORD_KEY);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+      tx.onabort = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
   });
+
   db.close();
+  if (!saved) throw new Error("pending editor file: IndexedDB write failed");
 }
 
 export async function loadPendingEditorFile(): Promise<PendingEditorFileResult | null> {
@@ -125,8 +141,17 @@ export async function loadPendingEditorFile(): Promise<PendingEditorFileResult |
     return null;
   }
 
+  const file = record.bytes
+    ? new File([record.bytes], record.name ?? "document.pdf", {
+        type: record.type || "application/pdf",
+        lastModified: record.lastModified,
+      })
+    : record.file;
+
+  if (!file) return null;
+
   return {
-    file: record.file,
+    file,
     fabricJsonByPage: record.fabricState ? new Map(record.fabricState) : null,
     extractedPages: record.extractedPages
       ? new Set(record.extractedPages)

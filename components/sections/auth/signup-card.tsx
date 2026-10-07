@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PasswordRevealToggle } from "@/components/ui/form/password-reveal-toggle";
+import { rememberAuthReturn } from "@/lib/client/auth/auth-return";
 import { suppressNextUnload } from "@/lib/client/hooks/pdf-editor/use-editor-navigation-save";
 import { parseLocalePrefix } from "@/lib/shared/constants/locale-map";
 import { ROUTES } from "@/lib/shared/constants/routes";
@@ -334,6 +335,7 @@ export function SignupCard({
   // A session can already exist (e.g. signed in from another tab); continue instead of erroring.
   const continueAsSignedIn = () => {
     suppressNextUnload();
+    rememberAuthReturn(afterSignUpPath);
     window.location.assign(afterSignUpPath);
   };
 
@@ -377,6 +379,7 @@ export function SignupCard({
       // `beforeunload` guard when this modal was opened over unsaved
       // edits.
       suppressNextUnload();
+      rememberAuthReturn(afterSignUpPath);
       await signUp.sso({
         strategy: "oauth_google",
         redirectCallbackUrl: callbackWithReturn,
@@ -739,6 +742,8 @@ export function SignupCard({
             afterSignUpPath,
           });
           suppressNextUnload();
+          // Remembered before setActive: Clerk's own page refresh can beat our redirect.
+          rememberAuthReturn(afterSignUpPath);
           await setActiveSession({ session: sessionId });
           await usersService.ensureMe().catch((err) => {
             logger.warn?.("Failed to ensureMe on signup", err);
