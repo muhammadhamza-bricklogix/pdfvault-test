@@ -116,6 +116,13 @@ export type PaywallStrings = {
     cardDeclinedHeading: string;
     cardDeclinedBody: string;
     tryAnotherCard: string;
+    // Reconcile-on-widget-fail overlay (QA 2026-10-07): Solidgate's
+    // widget sometimes paints "Payment declined" even when its own
+    // server approved the auth. While we re-query the backend to find
+    // the real outcome we show this spinner instead of the misleading
+    // widget error.
+    verifyingPaymentTitle: string;
+    verifyingPaymentBody: string;
     // Loading state
     preparing: string;
   };
@@ -203,6 +210,9 @@ const en: PaywallStrings = {
     cardDeclinedBody:
       "Try another card or contact your bank. You can re-enter details below.",
     tryAnotherCard: "Try another card",
+    verifyingPaymentTitle: "Verifying your payment…",
+    verifyingPaymentBody:
+      "This usually takes a few seconds. Please don't close this window.",
     preparing: "Preparing…",
   },
 };
@@ -292,6 +302,9 @@ const de: PaywallStrings = {
     cardDeclinedBody:
       "Versuchen Sie eine andere Karte oder wenden Sie sich an Ihre Bank. Sie können die Daten unten erneut eingeben.",
     tryAnotherCard: "Andere Karte versuchen",
+    verifyingPaymentTitle: "Zahlung wird überprüft…",
+    verifyingPaymentBody:
+      "Das dauert in der Regel einige Sekunden. Bitte schließen Sie dieses Fenster nicht.",
     preparing: "Wird vorbereitet…",
   },
 };
@@ -380,6 +393,9 @@ const es: PaywallStrings = {
     cardDeclinedBody:
       "Prueba con otra tarjeta o contacta con tu banco. Puedes volver a introducir los datos abajo.",
     tryAnotherCard: "Probar con otra tarjeta",
+    verifyingPaymentTitle: "Verificando tu pago…",
+    verifyingPaymentBody:
+      "Esto suele tardar unos segundos. Por favor, no cierres esta ventana.",
     preparing: "Preparando…",
   },
 };
@@ -469,6 +485,9 @@ const fr: PaywallStrings = {
     cardDeclinedBody:
       "Essayez une autre carte ou contactez votre banque. Vous pouvez saisir à nouveau les détails ci-dessous.",
     tryAnotherCard: "Essayer une autre carte",
+    verifyingPaymentTitle: "Vérification de votre paiement…",
+    verifyingPaymentBody:
+      "Cela prend généralement quelques secondes. Veuillez ne pas fermer cette fenêtre.",
     preparing: "Préparation…",
   },
 };
@@ -560,6 +579,9 @@ const pt: PaywallStrings = {
     cardDeclinedBody:
       "Tente outro cartão ou entre em contato com seu banco. Você pode inserir os dados novamente abaixo.",
     tryAnotherCard: "Tentar outro cartão",
+    verifyingPaymentTitle: "Verificando o seu pagamento…",
+    verifyingPaymentBody:
+      "Isto costuma demorar alguns segundos. Por favor, não feche esta janela.",
     preparing: "Preparando…",
   },
 };
@@ -640,6 +662,9 @@ const ar: PaywallStrings = {
     cardDeclinedBody:
       "جرب بطاقة أخرى أو تواصل مع البنك. يمكنك إعادة إدخال البيانات أدناه.",
     tryAnotherCard: "جرب بطاقة أخرى",
+    verifyingPaymentTitle: "جارٍ التحقق من دفعتك…",
+    verifyingPaymentBody:
+      "عادةً ما يستغرق ذلك بضع ثوانٍ. يرجى عدم إغلاق هذه النافذة.",
     preparing: "جارٍ التحضير…",
   },
 };

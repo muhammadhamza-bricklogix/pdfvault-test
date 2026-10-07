@@ -326,6 +326,16 @@ export function PaywallModal({
   // paymentIntent to attach the retry to (declined intents can be
   // marked terminal on their side and won't accept a second attempt).
   const [payFailed, setPayFailed] = useState(false);
+  // Reconcile-on-widget-fail: Solidgate's SDK sometimes paints
+  // "Payment declined" even when the server-side auth succeeded (QA
+  // 2026-10-07, subscription 08e5c21a-… — webhook delivered
+  // `subscription.status=active` + `order.status=auth_ok` within 3.8s
+  // of the auth, but the user saw the widget's declined UI). While
+  // this flag is true the modal renders a "Verifying your payment…"
+  // overlay that hides the widget's incorrect error until the backend
+  // confirms the real outcome. Opening the modal, retrying, or an
+  // explicit terminal verdict all clear it.
+  const [isVerifyingDecline, setIsVerifyingDecline] = useState(false);
   // Tracks `paymentIntent` IDs that Solidgate marked terminal after a
   // decline. `handleContinue` consults this before reusing a cached
   // fullIntent/annualIntent/limitedIntent — a match forces the fetch-
@@ -478,6 +488,7 @@ export function PaywallModal({
     // decline banner if `handleContinue` reaches the pay step before
     // the fresh iframe intent settles.
     setPayFailed(false);
+    setIsVerifyingDecline(false);
     // And clear the terminal-paymentIntent tracker so a fresh modal
     // session doesn't start with stale entries — the initial intents
     // fetched on this open will have new paymentIntent IDs anyway, but
@@ -697,6 +708,7 @@ export function PaywallModal({
       setLimitedUnavailable(false);
       setError(null);
       setPayFailed(false);
+      setIsVerifyingDecline(false);
       setRetryKey(0);
     };
     // Intentionally depend only on `isOpen` — the mutation identity
@@ -722,7 +734,7 @@ export function PaywallModal({
       orderStatus === "error"
     ) {
       logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning", { orderStatus });
-      handleIframeFail();
+      paintPaymentDeclinedState();
 
       return;
     }
@@ -751,7 +763,8 @@ export function PaywallModal({
         logger.event(EVENTS.CHECKOUT_ENTITLEMENT_MISMATCH, "warning", {
           subscriptionId,
         });
-        handleIframeFail();
+        // Already synced + fetched here — no need to re-reconcile.
+        paintPaymentDeclinedState();
 
         return;
       }
@@ -779,11 +792,17 @@ export function PaywallModal({
       logger.captureError(err, "checkout.subscription_sync", {
         subscriptionId,
       });
-      handleIframeFail();
+      // Sync/fetch threw — reconcile would just hit the same error.
+      // Paint the decline directly.
+      paintPaymentDeclinedState();
     }
   };
 
-  const handleIframeFail = () => {
+  // Terminal "payment really declined" path: paints the error UI, marks
+  // the intent as spent, toasts the user. Factored out of
+  // `handleIframeFail` so the new reconcile wrapper can short-circuit
+  // past it when the backend confirms the charge actually succeeded.
+  const paintPaymentDeclinedState = useCallback(() => {
     logger.event(EVENTS.CHECKOUT_IFRAME_DECLINED, "warning");
     setPayFailed(true);
     // Mark this specific paymentIntent as terminal so a subsequent
@@ -816,6 +835,69 @@ export function PaywallModal({
       title: "Payment declined",
       description: "Your card wasn't charged. Try another card to retry.",
     });
+  }, [intent]);
+
+  // Solidgate SDK `onFail`. The widget's "declined" verdict is NOT
+  // trustworthy — see `isVerifyingDecline` doc + QA 2026-10-07. Before
+  // painting the error, force a Solidgate sync + fresh entitlement
+  // fetch. If the backend says the subscription is active, treat the
+  // outcome as a success (same path as `handleIframeSuccess` for an
+  // entitled subscription); otherwise fall through to the real
+  // declined state.
+  const handleIframeFail = async () => {
+    setIsVerifyingDecline(true);
+    try {
+      // 10s overall budget — the webhook landed at +3.8s in the
+      // observed incident, so a 10s window gives plenty of headroom
+      // without feeling unresponsive. On timeout the reconcile returns
+      // `null` and we treat it as a genuine decline.
+      const reconcile = (async () => {
+        try {
+          await syncSubscription.mutateAsync({});
+        } catch (err) {
+          logger.warn("[paywall] widget-fail reconcile: sync threw", err);
+        }
+        queryClient.removeQueries({ queryKey: billingKeys.subscription() });
+
+        return queryClient.fetchQuery({
+          queryKey: billingKeys.subscription(),
+          queryFn: billingService.getSubscription,
+        });
+      })();
+      const timeout = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 10_000),
+      );
+      const fresh = await Promise.race([reconcile, timeout]);
+
+      if (fresh?.entitled) {
+        // The widget lied — Solidgate's server actually approved the
+        // charge. Mirror `handleIframeSuccess`'s success-tail so the
+        // UX matches the normal happy path.
+        logger.event(EVENTS.CHECKOUT_IFRAME_SUCCESS, "info", {
+          reconciledFromWidgetFail: true,
+        });
+        const { setEntitledSnapshot } = await import(
+          "@/lib/client/hooks/billing/entitlement-cache"
+        );
+
+        setEntitledSnapshot(true);
+        logger.event(EVENTS.CHECKOUT_ENTITLEMENT_CONFIRMED, "info");
+        toast.success({
+          title: "Payment received",
+          description: "Your access is unlocked.",
+        });
+        setStep("success");
+
+        return;
+      }
+
+      // Reconcile confirmed the widget was telling the truth, OR the
+      // 10s budget elapsed with no entitled snapshot. Either way, the
+      // user has to try another card.
+      paintPaymentDeclinedState();
+    } finally {
+      setIsVerifyingDecline(false);
+    }
   };
 
   /**
@@ -930,6 +1012,7 @@ export function PaywallModal({
 
     setRetryLoading(true);
     setPayFailed(false);
+    setIsVerifyingDecline(false);
     createIntent.mutate(
       {
         disclaimerVersion: DISCLAIMER_VERSION,
@@ -1237,6 +1320,7 @@ export function PaywallModal({
           ) : step === "pay" ? (
             <PayStep
               intent={intent}
+              isVerifyingDecline={isVerifyingDecline}
               payFailed={payFailed}
               preview={preview}
               retryKey={retryKey}
@@ -1633,6 +1717,7 @@ function PayStep({
   onFail,
   onOrderStatus,
   payFailed,
+  isVerifyingDecline,
   retryKey,
   retryLoading,
   onRetry,
@@ -1646,6 +1731,7 @@ function PayStep({
   onFail: () => void;
   onOrderStatus: (message: unknown) => void;
   payFailed: boolean;
+  isVerifyingDecline: boolean;
   retryKey: number;
   retryLoading: boolean;
   onRetry: () => void;
@@ -1769,7 +1855,28 @@ function PayStep({
   }, [intent.amountTodayMinor, intent.currency, user]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="relative grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      {isVerifyingDecline ? (
+        <div
+          aria-live="polite"
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 rounded-xl bg-white/95 px-6 py-10 text-center backdrop-blur-sm dark:bg-black/80"
+          data-testid="paywall-verifying-decline"
+          role="status"
+        >
+          <div
+            aria-hidden="true"
+            className="h-10 w-10 animate-spin rounded-full border-4 border-[#e5e7eb] border-t-[var(--pv-brand-red,#f12c23)]"
+          />
+          <div className="flex flex-col gap-1">
+            <p className="text-[15px] font-semibold text-[#1a1c21] sm:text-[17px]">
+              {strings.pay.verifyingPaymentTitle}
+            </p>
+            <p className="max-w-[320px] text-[13px] text-[#6b6f76] sm:text-[14px]">
+              {strings.pay.verifyingPaymentBody}
+            </p>
+          </div>
+        </div>
+      ) : null}
       {/* ── Left column — payment (white) ── */}
       <div className="flex flex-col gap-0">
         {/* Back-to-plan link (QA 2026-09-11: without this the user's
