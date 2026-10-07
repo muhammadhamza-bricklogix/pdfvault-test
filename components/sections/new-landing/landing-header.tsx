@@ -398,15 +398,15 @@ export function LandingHeader() {
                     href={ROUTES.APP.DASHBOARD}
                     translate="no"
                   >
-                    <NavLabel text={tNav("dashboard")} />
-                  </LocaleNavLink>
+                    {tNav("dashboard")}
+                  </Link>
                   <button
                     className="notranslate wg-notranslate pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
                     translate="no"
                     type="button"
                     onClick={handleLogOut}
                   >
-                    <NavLabel text={tNav("logOut")} />
+                    {tNav("logOut")}
                   </button>
                 </>
               ) : (
@@ -547,8 +547,8 @@ export function LandingHeader() {
                         translate="no"
                         onClick={() => setMobileOpen(false)}
                       >
-                        <NavLabel text={tNav("dashboard")} />
-                      </LocaleNavLink>
+                        {tNav("dashboard")}
+                      </Link>
                       <button
                         className="notranslate wg-notranslate inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
                         translate="no"
@@ -558,7 +558,7 @@ export function LandingHeader() {
                           handleLogOut();
                         }}
                       >
-                        <NavLabel text={tNav("logOut")} />
+                        {tNav("logOut")}
                       </button>
                     </>
                   ) : (

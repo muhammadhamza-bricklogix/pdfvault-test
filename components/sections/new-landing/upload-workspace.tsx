@@ -437,6 +437,52 @@ export function UploadWorkspace({
     [buildComposerHref, router],
   );
 
+  // Signed-in backend upload/conversion, then open the saved doc in composer.
+  const convertAndOpenInComposer = useCallback(
+    async (
+      tempId: string,
+      source: File,
+      filename: string,
+      existingDocId?: string,
+    ) => {
+      usePendingConversionsStore.getState().add({
+        tempId,
+        file: source,
+        filename,
+        sizeBytes: source.size,
+      });
+      setOpening(true);
+      const loadingKey = toast.loading({
+        title: isPdf(source) ? "Saving to My PDFs" : "Converting to PDF",
+        description: filename,
+      });
+
+      try {
+        const created = await runPendingConversion(
+          tempId,
+          source,
+          existingDocId,
+        );
+
+        if (!created) {
+          toast.error({
+            title: "Conversion failed",
+            description: "We couldn't convert your document. Please try again.",
+          });
+          setOpening(false);
+
+          return;
+        }
+
+        usePdfEditorStore.getState().clearFile();
+        router.push(buildComposerHref(created.id));
+      } finally {
+        toast.close(loadingKey);
+      }
+    },
+    [buildComposerHref, router],
+  );
+
   const openFileInEditor = useCallback(
     async (picked: File) => {
       // Auth still hydrating — defer on EVERY route (not just
