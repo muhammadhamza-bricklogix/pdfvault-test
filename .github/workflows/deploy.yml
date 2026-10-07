@@ -65,4 +65,5 @@ jobs:
           docker push $REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
       - name: Force new deployment
+        if: ${{ vars.ALLOW_ECS_DEPLOY == 'true' }}
         run: aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
