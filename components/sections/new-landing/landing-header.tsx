@@ -399,7 +399,7 @@ export function LandingHeader() {
                     translate="no"
                   >
                     {tNav("dashboard")}
-                  </Link>
+                  </LocaleNavLink>
                   <button
                     className="notranslate wg-notranslate pv-btn-secondary hidden px-5 py-1.5 text-[14px] sm:inline-flex"
                     translate="no"
@@ -548,7 +548,7 @@ export function LandingHeader() {
                         onClick={() => setMobileOpen(false)}
                       >
                         {tNav("dashboard")}
-                      </Link>
+                      </LocaleNavLink>
                       <button
                         className="notranslate wg-notranslate inline-flex w-full justify-center rounded-full border border-[var(--pv-border-subtle)] bg-white px-5 py-2 text-[14px] font-medium"
                         translate="no"
