@@ -5,7 +5,10 @@ import type { RefObject } from "react";
 
 import { useEffect, useState } from "react";
 
-import { getIconFontNames } from "@/lib/client/pdf-editor/text-extraction";
+import {
+  getIconFontNames,
+  loadIconFontNames,
+} from "@/lib/client/pdf-editor/text-extraction";
 import { usePdfEditorStore } from "@/lib/client/stores";
 import { logger } from "@/lib/shared/utils/logger";
 
@@ -138,7 +141,10 @@ export function usePageRenderer({
           }
           // Icon-font glyphs have no editable overlay, so keep painting them:
           // run text state ops and paint only text set in an icon font.
-          const iconFonts = getIconFontNames(page);
+          const iconFonts =
+            getIconFontNames(page) ?? (await loadIconFontNames(page));
+
+          if (cancelled) return;
           const keepIconText = Boolean(iconFonts && iconFonts.size > 0);
           let scannedTo = -1;
           let currentFont: unknown = null;

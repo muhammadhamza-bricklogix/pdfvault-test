@@ -1,4 +1,4 @@
-import type { PDFPageProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
 import { logger } from "@/lib/shared/utils/logger";
@@ -368,6 +368,25 @@ export function getIconFontNames(
   return iconFontCache.get(page);
 }
 
+/** Icon fonts for a page that skipped extraction (restored from a snapshot). */
+export async function loadIconFontNames(
+  page: PDFPageProxy,
+): Promise<ReadonlySet<string>> {
+  const cached = iconFontCache.get(page);
+
+  if (cached) return cached;
+  try {
+    const { items } = await page.getTextContent();
+    const iconFonts = findIconFonts(items);
+
+    iconFontCache.set(page, iconFonts);
+
+    return iconFonts;
+  } catch {
+    return new Set();
+  }
+}
+
 function findIconFonts(items: unknown[]): Set<string> {
   const stats = new Map<string, { icon: number; text: number }>();
 
@@ -662,6 +681,56 @@ export function extractFontData(
       // during export. Logging per-page on every load was noisy.
     }
   });
+
+  return result;
+}
+
+/**
+ * Font bytes for overlay fonts not yet collected. Pages restored from a
+ * snapshot skip extraction, so their fonts would otherwise export as
+ * StandardFonts.
+ */
+export async function collectMissingFontData(
+  pdfDocument: PDFDocumentProxy,
+  pages: Iterable<number>,
+  fabricJsonByPage: Map<number, string>,
+  known: Map<string, FontData>,
+): Promise<FontData[]> {
+  const missing = new Set<string>();
+
+  fabricJsonByPage.forEach((json) => {
+    try {
+      const parsed = JSON.parse(json) as { objects?: { fontFamily?: unknown }[] };
+
+      for (const obj of parsed.objects ?? []) {
+        const family = obj.fontFamily;
+
+        if (typeof family === "string" && family && !known.has(family)) {
+          missing.add(family);
+        }
+      }
+    } catch {
+      // Unparseable page JSON: nothing to collect.
+    }
+  });
+
+  const result: FontData[] = [];
+
+  for (const pageNumber of Array.from(pages)) {
+    if (missing.size === 0) break;
+    try {
+      const page = await pdfDocument.getPage(pageNumber);
+
+      // Loads the page's fonts into commonObjs.
+      await page.getOperatorList();
+      for (const font of extractFontData(page, missing)) {
+        result.push(font);
+        missing.delete(font.loadedName);
+      }
+    } catch {
+      // Fonts we can't read fall back to StandardFonts during export.
+    }
+  }
 
   return result;
 }

@@ -10,6 +10,7 @@ import {
 } from "./materialize-page-order";
 import { mergeFabricEditsIntoPdf } from "./merge-pdf";
 import { sanitizeSourceBytesForPdfLib } from "./sanitize-source-bytes";
+import { collectMissingFontData } from "./text-extraction";
 
 export type ParsedFabricJson = {
   height: number;
@@ -756,6 +757,19 @@ export async function buildEditedPdfBytes({
     throw new Error("PDF document not loaded");
   }
 
+  let fontDataMap = fontDataByLoadedName;
+  const missingFonts = await collectMissingFontData(
+    pdfDocument,
+    extractedPages,
+    fabricJsonByPage,
+    fontDataByLoadedName,
+  );
+
+  if (missingFonts.length > 0) {
+    usePdfEditorStore.getState().addFontData(missingFonts);
+    fontDataMap = usePdfEditorStore.getState().fontDataByLoadedName;
+  }
+
   const rawSourceBytes = await file.arrayBuffer();
   const sanitizedSourceBytes = await sanitizeSourceBytesForPdfLib(
     rawSourceBytes,
@@ -834,7 +848,7 @@ export async function buildEditedPdfBytes({
   const bytes = await mergeFabricEditsIntoPdf({
     backgroundImageConfig: bgShouldBake ? backgroundImageConfig : null,
     fabricJsonByPage: mergeJsonForBake,
-    fontDataMap: fontDataByLoadedName,
+    fontDataMap,
     // QA 2026-09-07: pass the live fabric canvas + its current page so the
     // merge can raster the current page's freehand path objects directly
     // from the live canvas (already correctly painted) instead of the
